@@ -5,6 +5,7 @@ import { ChartPieRow } from "@/components/chart-pie-row"
 import { DataTable } from "@/components/data-table"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
+import { TableAndScatter } from "@/components/table-and-scatter"
 import {
   SidebarInset,
   SidebarProvider,
@@ -31,10 +32,11 @@ export default function Page() {
               <SectionCards />
               <ChartPieRow />
               <ChartBarRow />
-              <div className="px-4 lg:px-6">
+              <TableAndScatter />
+              {/* <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              <DataTable data={data} />
+              <DataTable data={data} /> */}
             </div>
           </div>
         </div>
