@@ -47,22 +47,42 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
+      title: "Bid / Job List",
       url: "#",
       icon: IconListDetails,
     },
     {
-      title: "Analytics",
+      title: "Inventory Position",
       url: "#",
       icon: IconChartBar,
     },
     {
-      title: "Projects",
+      title: "Quote Form",
       url: "#",
       icon: IconFolder,
     },
     {
-      title: "Team",
+      title: "Sale Tracker",
+      url: "#",
+      icon: IconUsers,
+    },
+    {
+      title: "Admin Portal",
+      url: "#",
+      icon: IconUsers,
+    },
+    {
+      title: "Customers",
+      url: "#",
+      icon: IconUsers,
+    },
+    {
+      title: "Reporting",
+      url: "#",
+      icon: IconUsers,
+    },
+    {
+      title: "Contract Manager",
       url: "#",
       icon: IconUsers,
     },
@@ -134,17 +154,22 @@ const data = {
   ],
   documents: [
     {
-      name: "Data Library",
+      name: "Job List",
       url: "#",
       icon: IconDatabase,
     },
     {
-      name: "Reports",
+      name: "By Phase Job List",
       url: "#",
       icon: IconReport,
     },
     {
-      name: "Word Assistant",
+      name: "Billing Tracker",
+      url: "#",
+      icon: IconFileWord,
+    },
+    {
+      name: "Equipment Tracker",
       url: "#",
       icon: IconFileWord,
     },
