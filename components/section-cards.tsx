@@ -9,15 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-interface CardData {
-  title: string
-  value: string | number
-  change?: number
-  trend?: "up" | "down" | "neutral"
-  description?: string
-  subtitle?: string
-}
+import type { CardData } from "@/data/jobs-cards"
 
 export function SectionCards({ data }: { data: CardData[] }) {
   const shouldWrap = data.length > 4
