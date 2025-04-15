@@ -18,6 +18,7 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react";
+import Link from "next/link";
 
 import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
@@ -34,7 +35,23 @@ import {
 } from "@/components/ui/sidebar";
 import { ModeToggle } from "./toggle-color";
 
-const data = {
+interface NavItem {
+  title: string;
+  url: string;
+  icon: typeof IconDashboard;
+  items?: {
+    title: string;
+    url: string;
+  }[];
+}
+
+interface Document {
+  name: string;
+  url: string;
+  icon: typeof IconDatabase;
+}
+
+export const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
@@ -43,94 +60,108 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/",
       icon: IconDashboard,
     },
     {
       title: "Bid / Job List",
-      url: "#",
+      url: "/jobs",
       icon: IconListDetails,
+      items: [
+        {
+          title: "Available Jobs",
+          url: "/jobs/available",
+        },
+        {
+          title: "Active Bids",
+          url: "/jobs/active-bids",
+        },
+        {
+          title: "Active Jobs",
+          url: "/jobs/active-jobs",
+        },
+      ],
     },
     {
       title: "Inventory Position",
-      url: "#",
+      url: "/inventory",
       icon: IconChartBar,
     },
     {
       title: "Quote Form",
-      url: "#",
+      url: "/quotes",
       icon: IconFolder,
     },
     {
       title: "Sale Tracker",
-      url: "#",
+      url: "/sales",
       icon: IconUsers,
     },
     {
       title: "Admin Portal",
-      url: "#",
+      url: "/admin",
       icon: IconUsers,
     },
     {
       title: "Customers",
-      url: "#",
+      url: "/customers",
       icon: IconUsers,
     },
     {
       title: "Reporting",
-      url: "#",
+      url: "/reports",
       icon: IconUsers,
     },
     {
       title: "Contract Manager",
-      url: "#",
+      url: "/contracts",
       icon: IconUsers,
     },
-  ],
+  ] as NavItem[],
   navClouds: [
     {
       title: "Capture",
       icon: IconCamera,
       isActive: true,
-      url: "#",
+      url: "/capture",
       items: [
         {
           title: "Active Proposals",
-          url: "#",
+          url: "/capture/active",
         },
         {
           title: "Archived",
-          url: "#",
+          url: "/capture/archived",
         },
       ],
     },
     {
       title: "Proposal",
       icon: IconFileDescription,
-      url: "#",
+      url: "/proposals",
       items: [
         {
           title: "Active Proposals",
-          url: "#",
+          url: "/proposals/active",
         },
         {
           title: "Archived",
-          url: "#",
+          url: "/proposals/archived",
         },
       ],
     },
     {
       title: "Prompts",
       icon: IconFileAi,
-      url: "#",
+      url: "/prompts",
       items: [
         {
           title: "Active Proposals",
-          url: "#",
+          url: "/prompts/active",
         },
         {
           title: "Archived",
-          url: "#",
+          url: "/prompts/archived",
         },
       ],
     },
@@ -138,42 +169,42 @@ const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: IconSettings,
     },
     {
       title: "Get Help",
-      url: "#",
+      url: "/help",
       icon: IconHelp,
     },
     {
       title: "Search",
-      url: "#",
+      url: "/search",
       icon: IconSearch,
     },
-  ],
+  ] as NavItem[],
   documents: [
     {
       name: "Job List",
-      url: "#",
+      url: "/documents/jobs",
       icon: IconDatabase,
     },
     {
       name: "By Phase Job List",
-      url: "#",
+      url: "/documents/jobs-by-phase",
       icon: IconReport,
     },
     {
       name: "Billing Tracker",
-      url: "#",
+      url: "/documents/billing",
       icon: IconFileWord,
     },
     {
       name: "Equipment Tracker",
-      url: "#",
+      url: "/documents/equipment",
       icon: IconFileWord,
     },
-  ],
+  ] as Document[],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -186,11 +217,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
-              <a href="#">
+              <Link href="/">
                 <IconInnerShadowTop className="!size-5" />
                 <span className="text-base font-semibold">Acme Inc.</span>
                 <ModeToggle />
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
