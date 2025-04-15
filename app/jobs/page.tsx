@@ -1,16 +1,15 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { ChartBarRow } from "@/components/chart-bar-row"
-import { ChartPieRow } from "@/components/chart-pie-row"
-import { SectionCards } from "@/components/section-cards"
-import { SiteHeader } from "@/components/site-header"
-import { TableAndScatter } from "@/components/table-and-scatter"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
-import { homeCards } from "@/data/home-cards"
+"use client";
 
-export default function Page() {
+import { AppSidebar } from "@/components/app-sidebar"
+import { SectionCards } from "@/components/section-cards";
+import { DataTable } from "@/components/data-table";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { SiteHeader } from "@/components/site-header"
+import { jobsCards } from "@/data/jobs-cards"
+
+import data from "@/data/data.json";
+
+export default function JobsPage() {
   return (
     <SidebarProvider
       style={
@@ -26,14 +25,12 @@ export default function Page() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards data={homeCards} />
-              <ChartPieRow />
-              <ChartBarRow />
-              <TableAndScatter />
+              <SectionCards data={jobsCards} />
+              <DataTable data={data} />
             </div>
           </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
-}
+  );
+} 
