@@ -9,13 +9,7 @@ import { getJobCards } from "@/data/jobs-cards"
 import { jobsData, type JobType } from "@/data/jobs-data"
 import { notFound } from "next/navigation";
 
-interface Props {
-  params: {
-    job: string;
-  };
-}
-
-export default function JobPage({ params }: Props) {
+export default function JobPage({ params }: any) {
   if (!['available', 'active-bids', 'active-jobs'].includes(params.job)) {
     notFound();
   }

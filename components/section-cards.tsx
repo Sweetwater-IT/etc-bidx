@@ -12,8 +12,6 @@ import {
 import type { CardData } from "@/data/jobs-cards"
 
 export function SectionCards({ data }: { data: CardData[] }) {
-  const shouldWrap = data.length > 4
-
   return (
     <div className="px-4 lg:px-6">
       <div className="flex flex-wrap w-full gap-4">
