@@ -12,11 +12,11 @@ import {
 
 interface CardData {
   title: string
-  value: string
-  change: string
-  trend: "up" | "down"
-  description: string
-  subtitle: string
+  value: string | number
+  change?: number
+  trend?: "up" | "down" | "neutral"
+  description?: string
+  subtitle?: string
 }
 
 export function SectionCards({ data }: { data: CardData[] }) {
@@ -35,28 +35,36 @@ export function SectionCards({ data }: { data: CardData[] }) {
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                 {card.value}
               </CardTitle>
-              <CardAction>
-                <Badge variant="outline" className="font-medium">
-                  {card.trend === "up" ? (
-                    <IconTrendingUp className="h-4 w-4" />
-                  ) : (
-                    <IconTrendingDown className="h-4 w-4" />
-                  )}
-                  {card.change}
-                </Badge>
-              </CardAction>
+              {card.change !== undefined && (
+                <CardAction>
+                  <Badge variant="outline" className="font-medium">
+                    {card.trend === "up" ? (
+                      <IconTrendingUp className="h-4 w-4" />
+                    ) : card.trend === "down" ? (
+                      <IconTrendingDown className="h-4 w-4" />
+                    ) : null}
+                    {card.change > 0 ? "+" : ""}{card.change}%
+                  </Badge>
+                </CardAction>
+              )}
             </CardHeader>
-            <CardFooter className="flex-col items-start gap-1.5 text-sm">
-              <div className="line-clamp-1 flex gap-2 font-medium">
-                {card.description}{" "}
-                {card.trend === "up" ? (
-                  <IconTrendingUp className="h-4 w-4" />
-                ) : (
-                  <IconTrendingDown className="h-4 w-4" />
+            {(card.description || card.subtitle) && (
+              <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                {card.description && (
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    {card.description}{" "}
+                    {card.trend === "up" ? (
+                      <IconTrendingUp className="h-4 w-4" />
+                    ) : card.trend === "down" ? (
+                      <IconTrendingDown className="h-4 w-4" />
+                    ) : null}
+                  </div>
                 )}
-              </div>
-              <div className="text-muted-foreground">{card.subtitle}</div>
-            </CardFooter>
+                {card.subtitle && (
+                  <div className="text-muted-foreground">{card.subtitle}</div>
+                )}
+              </CardFooter>
+            )}
           </Card>
         ))}
       </div>

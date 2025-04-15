@@ -39,6 +39,10 @@ interface NavItem {
   title: string;
   url: string;
   icon: typeof IconDashboard;
+  items?: {
+    title: string;
+    url: string;
+  }[];
 }
 
 interface Document {
@@ -63,6 +67,20 @@ export const data = {
       title: "Bid / Job List",
       url: "/jobs",
       icon: IconListDetails,
+      items: [
+        {
+          title: "Available Jobs",
+          url: "/jobs/available",
+        },
+        {
+          title: "Active Bids",
+          url: "/jobs/active-bids",
+        },
+        {
+          title: "Active Jobs",
+          url: "/jobs/active-jobs",
+        },
+      ],
     },
     {
       title: "Inventory Position",
