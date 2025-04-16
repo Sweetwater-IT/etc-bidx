@@ -9,21 +9,26 @@ import { data } from "@/components/app-sidebar"
 export function SiteHeader() {
   const pathname = usePathname()
 
-  // Função para encontrar o título baseado na rota atual
+  const findTitle = (items: any[]): string | undefined => {
+    for (const item of items) {
+      if (item.url === pathname) return item.title || item.name
+      if (item.items) {
+        const found = findTitle(item.items)
+        if (found) return found
+      }
+    }
+    return undefined
+  }
+
   const getCurrentTitle = () => {
-    // Procura em todas as seções do menu
     const allItems = [
       ...data.navMain,
       ...data.navClouds,
       ...data.navSecondary,
       ...data.documents.map(doc => ({ title: doc.name, url: doc.url }))
     ]
-    
-    // Encontra o item que corresponde à rota atual
-    const currentItem = allItems.find(item => item.url === pathname)
-    
-    // Se encontrou, retorna o título, senão retorna "Dashboard" para a home
-    return currentItem?.title || (pathname === "/" ? "Dashboard" : "")
+    const foundTitle = findTitle(allItems)
+    return foundTitle || (pathname === "/" ? "Dashboard" : "")
   }
 
   return (
