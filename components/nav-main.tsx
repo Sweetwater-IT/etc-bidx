@@ -37,7 +37,7 @@ export function NavMain({
 
   React.useEffect(() => {
     items.forEach((item) => {
-      if (item.items?.some(subItem => pathname?.startsWith(item.url))) {
+      if (item.items?.some(subItem => pathname?.startsWith(subItem.url))) {
         setOpenItem(item.title)
       }
     })
@@ -52,15 +52,15 @@ export function NavMain({
             <SidebarMenuItem key={item.title}>
               {item.items ? (
                 <>
-                  <SidebarMenuButton 
+                  <SidebarMenuButton
                     onClick={() => setOpenItem(openItem === item.title ? null : item.title)}
                     className={pathname?.startsWith(item.url) ? "bg-muted" : ""}
                     data-state={openItem === item.title ? "open" : "closed"}
                   >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
-                    <IconChevronDown 
-                      className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180" 
+                    <IconChevronDown
+                      className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180"
                       data-state={openItem === item.title ? "open" : "closed"}
                     />
                   </SidebarMenuButton>
@@ -68,7 +68,7 @@ export function NavMain({
                     <SidebarMenuSub>
                       {item.items.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton 
+                          <SidebarMenuSubButton
                             asChild
                             className={pathname === subItem.url ? "bg-muted" : ""}
                           >
@@ -82,8 +82,8 @@ export function NavMain({
                   )}
                 </>
               ) : (
-                <SidebarMenuButton 
-                  asChild 
+                <SidebarMenuButton
+                  asChild
                   tooltip={item.title}
                   className={pathname === item.url ? "bg-muted" : ""}
                 >

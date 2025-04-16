@@ -33,7 +33,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ModeToggle } from "./toggle-color";
 
 interface NavItem {
   title: string;
