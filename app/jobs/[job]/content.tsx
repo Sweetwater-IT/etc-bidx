@@ -11,6 +11,7 @@ import { availableJobsData, availableJobsColumns, type AvailableJob } from "@/da
 import { notFound } from "next/navigation";
 import { useState } from "react";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
+import { CardActions } from "@/components/card-actions";
 
 const AVAILABLE_JOBS_SEGMENTS = [
   { label: "All", value: "all" },
@@ -70,7 +71,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="flex flex-col gap-4 py-4 md:gap-3 md:py-6">
+              {isAvailableJobs && (
+                <CardActions
+                  createButtonLabel={addButtonLabel}
+                  onCreateClick={() => setSheetOpen(true)}
+                />
+              )}
+              
               <SectionCards data={cards} />
 
               <OpenBidSheet open={sheetOpen} onOpenChange={setSheetOpen} />
@@ -80,8 +88,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                   data={data as AvailableJob[]}
                   columns={columns}
                   segments={segments}
-                  addButtonLabel={addButtonLabel}
-                  adOnClick={() => setSheetOpen(true)}
                 />
               ) : (
                 <DataTable<JobData>
@@ -89,6 +95,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                   columns={columns}
                   segments={segments}
                   addButtonLabel={addButtonLabel}
+                  onAddClick={() => setSheetOpen(true)}
                 />
               )}
             </div>
