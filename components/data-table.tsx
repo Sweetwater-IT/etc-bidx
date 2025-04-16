@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { Segments } from "@/components/ui/segments"
 import { Button } from "@/components/ui/button"
-import { IconLayoutGrid, IconPlus, IconDotsVertical } from "@tabler/icons-react"
+import { IconLayoutGrid, IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 
 export type LegacyColumn = {
   key: string
@@ -42,8 +43,7 @@ export interface DataTableProps<TData> {
     value: string
   }[]
   addButtonLabel?: string
-  adOnClick?: () => void
-  
+  onAddClick?: () => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -135,8 +135,7 @@ export function DataTable<TData>({
   data,
   segments,
   addButtonLabel,
-  adOnClick
-  
+  onAddClick
 }: DataTableProps<TData>) {
   const columns = React.useMemo(
     () => convertToColumnDef<TData>(legacyColumns as LegacyColumn[]),
@@ -150,22 +149,31 @@ export function DataTable<TData>({
   })
 
   return (
-    <div className="space-y-4">
+    <div className="">
       <div className="flex justify-between items-center px-6">
+        {addButtonLabel && (
+          <Button size="sm" onClick={onAddClick}>
+            <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
+            {addButtonLabel}
+          </Button>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center px-6 mb-3 mt-2">
         {segments && <Segments segments={segments} />}
 
-        <div className="flex gap-2 items-center">
-          <Button variant="outline" size="sm">
-            <IconLayoutGrid className="h-4 w-4 mr-[-2px] mt-[2px]" />
-            Customize Columns
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon">
+            <IconFilter className="h-4 w-4" />
           </Button>
 
-          {addButtonLabel && (
-            <Button size="sm" onClick={adOnClick} >
-              <IconPlus className="h-4 w-4 mr-[-3px] mt-[2px]" />
-              {addButtonLabel}
-            </Button>
-          )}
+          <Button variant="outline" size="icon">
+            <IconArrowsSort className="h-4 w-4" />
+          </Button>
+
+          <Button variant="outline" size="icon">
+            <IconDotsVertical className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
