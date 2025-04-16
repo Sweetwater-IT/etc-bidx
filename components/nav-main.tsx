@@ -35,7 +35,6 @@ export function NavMain({
   const pathname = usePathname()
   const [openItem, setOpenItem] = React.useState<string | null>(null)
 
-  // Keep menu expanded when in its subroutes
   React.useEffect(() => {
     items.forEach((item) => {
       if (item.items?.some(subItem => pathname?.startsWith(item.url))) {

@@ -1,7 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { z } from "zod"
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import { format } from "date-fns"
 import {
   Table,
   TableBody,
@@ -10,105 +16,204 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Segments } from "@/components/ui/segments"
 import { Button } from "@/components/ui/button"
-import { IconLayoutGrid, IconPlus } from "@tabler/icons-react"
-import { JobData } from "@/data/jobs-data"
+import { IconLayoutGrid, IconPlus, IconDotsVertical } from "@tabler/icons-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-export const schema = z.object({
-  id: z.number(),
-  header: z.string(),
-  type: z.string(),
-  status: z.string(),
-  target: z.string(),
-  limit: z.string(),
-  reviewer: z.string(),
-})
-
-interface Segment {
-  label: string
-  value: string
+export type LegacyColumn = {
+  key: string
+  title: string
+  className?: string
 }
 
-interface DataTableProps {
-  data: JobData[]
-  segments?: Segment[]
+export interface DataTableProps<TData> {
+  columns: LegacyColumn[] | readonly LegacyColumn[]
+  data: TData[]
+  segments?: {
+    label: string
+    value: string
+  }[]
   addButtonLabel?: string
-  showCustomizeColumns?: boolean
 }
 
-export function DataTable({ 
+function formatCellValue(value: any, key: string) {
+  if (key === "status") {
+    const variant = value.toLowerCase() === "urgent" ? "destructive" : 
+                   value.toLowerCase() === "open" ? "default" : 
+                   "secondary"
+    return (
+      <Badge variant={variant} className="font-medium">
+        {value}
+      </Badge>
+    )
+  }
+
+  if (value instanceof Date) {
+    return format(value, "MMM d, yyyy")
+  }
+  if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+    try {
+      return format(new Date(value), "MMM d, yyyy")
+    } catch {
+      return value
+    }
+  }
+  return value
+}
+
+function convertToColumnDef<TData>(columns: LegacyColumn[]): ColumnDef<TData>[] {
+  const baseColumns: ColumnDef<TData>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="translate-y-[2px]"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          className="translate-y-[2px]"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    ...columns.map((col) => ({
+      accessorKey: col.key,
+      header: col.title,
+      cell: (info) => {
+        const value = info.getValue()
+        return (
+          <div className={col.className}>
+            {formatCellValue(value, col.key)}
+          </div>
+        )
+      },
+    })),
+    {
+      id: "actions",
+      cell: () => {
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <IconDotsVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>View details</DropdownMenuItem>
+              <DropdownMenuItem>Edit</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
+
+  return baseColumns
+}
+
+export function DataTable<TData>({
+  columns: legacyColumns,
   data,
   segments,
-  addButtonLabel = "Add Section",
-  showCustomizeColumns = true,
-}: DataTableProps) {
-  const [activeSegment, setActiveSegment] = React.useState(segments?.[0]?.value || "");
+  addButtonLabel,
+}: DataTableProps<TData>) {
+  const columns = React.useMemo(
+    () => convertToColumnDef<TData>(legacyColumns as LegacyColumn[]),
+    [legacyColumns]
+  )
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
 
   return (
-    <div className="px-4 lg:px-6">
-      {segments && (
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            {segments.map((segment) => (
-              <button
-                key={segment.value}
-                onClick={() => setActiveSegment(segment.value)}
-                className={`
-                  px-4 py-1.5 text-sm font-medium transition-colors rounded-md
-                  ${activeSegment === segment.value
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                  }
-                `}
-              >
-                {segment.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            {showCustomizeColumns && (
-              <Button variant="outline" size="sm" className="h-9 flex items-center">
-                <IconLayoutGrid className="mr-0 size-4 mt-[2px] md-[-6px]" />
-                Customize Columns
-              </Button>
-            )}
-            <Button size="sm" className="h-9">
-              <IconPlus className="mr-0 size-4 mt-[2px] md-[-6px]" />
+    <div className="space-y-4">
+      <div className="flex justify-between items-center px-6">
+        {segments && <Segments segments={segments} />}
+
+        <div className="flex gap-2 items-center">
+          <Button variant="outline" size="sm">
+            <IconLayoutGrid className="h-4 w-4 mr-[-2px] mt-[2px]" />
+            Customize Columns
+          </Button>
+
+          {addButtonLabel && (
+            <Button size="sm">
+              <IconPlus className="h-4 w-4 mr-[-3px] mt-[2px]" />
               {addButtonLabel}
             </Button>
-          </div>
+          )}
         </div>
-      )}
-      <div className="rounded-lg border bg-card px-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Budget</TableHead>
-              <TableHead>Deadline</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((job) => (
-              <TableRow key={job.id}>
-                <TableCell className="font-medium">{job.title}</TableCell>
-                <TableCell>{job.company}</TableCell>
-                <TableCell>{job.location}</TableCell>
-                <TableCell>{job.type}</TableCell>
-                <TableCell>{job.status}</TableCell>
-                <TableCell className="text-right">
-                  ${job.budget.toLocaleString()}
-                </TableCell>
-                <TableCell>{new Date(job.deadline).toLocaleDateString()}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      </div>
+
+      <div className="px-6">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader className="bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
-  );
+  )
 }
