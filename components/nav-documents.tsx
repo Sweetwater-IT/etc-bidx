@@ -44,7 +44,7 @@ export function NavDocuments({
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarGroupLabel>Documents</SidebarGroupLabel>
+        <SidebarGroupLabel>Project Management</SidebarGroupLabel>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.name}>
