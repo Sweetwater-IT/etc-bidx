@@ -220,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Link href="/">
                 <IconInnerShadowTop className="!size-5" />
                 <span className="text-base font-semibold">Acme Inc.</span>
-                <ModeToggle />
+                {/* <ModeToggle /> */}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

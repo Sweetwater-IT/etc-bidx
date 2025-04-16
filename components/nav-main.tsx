@@ -35,6 +35,15 @@ export function NavMain({
   const pathname = usePathname()
   const [openItem, setOpenItem] = React.useState<string | null>(null)
 
+  // Keep menu expanded when in its subroutes
+  React.useEffect(() => {
+    items.forEach((item) => {
+      if (item.items?.some(subItem => pathname?.startsWith(item.url))) {
+        setOpenItem(item.title)
+      }
+    })
+  }, [pathname, items])
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -46,7 +55,7 @@ export function NavMain({
                 <>
                   <SidebarMenuButton 
                     onClick={() => setOpenItem(openItem === item.title ? null : item.title)}
-                    className={pathname === item.url ? "bg-muted" : ""}
+                    className={pathname?.startsWith(item.url) ? "bg-muted" : ""}
                     data-state={openItem === item.title ? "open" : "closed"}
                   >
                     {item.icon && <item.icon />}
