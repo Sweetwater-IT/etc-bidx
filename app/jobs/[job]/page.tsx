@@ -9,6 +9,8 @@ import { getJobCards } from "@/data/jobs-cards"
 import { jobsData, type JobType, type JobData } from "@/data/jobs-data"
 import { availableJobsData, availableJobsColumns, type AvailableJob } from "@/data/available-jobs"
 import { notFound } from "next/navigation";
+import { useState } from "react";
+import { OpenBidSheet } from "@/components/open-bid-sheet";
 
 const AVAILABLE_JOBS_SEGMENTS = [
   { label: "All", value: "all" },
@@ -39,6 +41,8 @@ export default function JobPage({ params }: any) {
     notFound();
   }
 
+ const [sheetOpen, setSheetOpen] = useState(false)
+
   const jobType = params.job as JobType;
   const cards = getJobCards(jobType);
   
@@ -64,12 +68,17 @@ export default function JobPage({ params }: any) {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <SectionCards data={cards} />
+
+              <OpenBidSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+
               {isAvailableJobs ? (
                 <DataTable<AvailableJob>
                   data={data as AvailableJob[]}
                   columns={columns}
                   segments={segments}
                   addButtonLabel={addButtonLabel}
+                  adOnClick={() =>  setSheetOpen(true)}
+                  
                 />
               ) : (
                 <DataTable<JobData>

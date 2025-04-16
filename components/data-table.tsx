@@ -42,6 +42,8 @@ export interface DataTableProps<TData> {
     value: string
   }[]
   addButtonLabel?: string
+  adOnClick?: () => void
+  
 }
 
 function formatCellValue(value: any, key: string) {
@@ -133,6 +135,8 @@ export function DataTable<TData>({
   data,
   segments,
   addButtonLabel,
+  adOnClick
+  
 }: DataTableProps<TData>) {
   const columns = React.useMemo(
     () => convertToColumnDef<TData>(legacyColumns as LegacyColumn[]),
@@ -157,7 +161,7 @@ export function DataTable<TData>({
           </Button>
 
           {addButtonLabel && (
-            <Button size="sm">
+            <Button size="sm" onClick={adOnClick} >
               <IconPlus className="h-4 w-4 mr-[-3px] mt-[2px]" />
               {addButtonLabel}
             </Button>

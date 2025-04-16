@@ -6,6 +6,8 @@ import { data } from "@/components/app-sidebar"
 import { Input } from "@/components/ui/input"
 import { ModeToggle } from "@/components/toggle-color"
 import { IconBell, IconPower } from "@tabler/icons-react"
+import { Separator } from "./ui/separator"
+import { Button } from "./ui/button"
 
 export function SiteHeader() {
   const pathname = usePathname()

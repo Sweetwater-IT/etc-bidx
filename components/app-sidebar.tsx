@@ -33,6 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { ModeToggle } from "./toggle-color";
 
 interface NavItem {
   title: string;
@@ -221,7 +222,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                 <span className="text-base font-semibold">Established Traffic Control</span>
                 <ModeToggle />
-              </a>
+              
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
