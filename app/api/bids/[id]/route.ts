@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
+import { NextRequest, NextResponse } from 'next/server';
 
 type AvailableJobUpdate = Database['public']['Tables']['available_jobs']['Update'];
 
-// GET: Fetch a specific bid by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
@@ -50,10 +49,9 @@ export async function GET(
   }
 }
 
-// PATCH: Update a specific bid by ID
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
@@ -118,10 +116,9 @@ export async function PATCH(
   }
 }
 
-// DELETE: Delete a specific bid by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
