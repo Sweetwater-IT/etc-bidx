@@ -106,10 +106,17 @@ function convertToColumnDef<TData>(columns: LegacyColumn[]): ColumnDef<TData>[] 
         )
       },
     })),
-    {
-      id: "actions",
-      cell: () => {
-        return (
+  ]
+
+  // Add actions column as the last column
+  baseColumns.push({
+    id: "actions",
+    header: () => (
+      <div className="text-center">Actions</div>
+    ),
+    cell: () => {
+      return (
+        <div className="flex justify-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -122,10 +129,12 @@ function convertToColumnDef<TData>(columns: LegacyColumn[]): ColumnDef<TData>[] 
               <DropdownMenuItem>Edit</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
-      },
+        </div>
+      )
     },
-  ]
+    enableSorting: false,
+    enableHiding: false,
+  })
 
   return baseColumns
 }
@@ -149,7 +158,7 @@ export function DataTable<TData>({
   })
 
   return (
-    <div className="">
+    <div className="space-y-4">
       <div className="flex justify-between items-center px-6">
         {addButtonLabel && (
           <Button size="sm" onClick={onAddClick}>
@@ -179,51 +188,65 @@ export function DataTable<TData>({
 
       <div className="px-6">
         <div className="rounded-md border">
-          <Table>
-            <TableHeader className="bg-muted">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+          <div className="relative overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActions = header.column.id === "actions";
+                      return (
+                        <TableHead 
+                          key={header.id}
+                          style={isActions ? { position: 'sticky', right: 0 } : undefined}
+                          className={isActions ? "z-50 bg-muted" : undefined}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const isActions = cell.column.id === "actions";
+                        return (
+                          <TableCell 
+                            key={cell.id}
+                            style={isActions ? { position: 'sticky', right: 0 } : undefined}
+                            className={isActions ? "z-50 bg-background" : undefined}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
     </div>
