@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { Segments } from "@/components/ui/segments"
 import { Button } from "@/components/ui/button"
-import { IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react"
+import { IconLayoutGrid, IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 
 export type LegacyColumn = {
   key: string
@@ -41,10 +42,8 @@ export interface DataTableProps<TData> {
     label: string
     value: string
   }[]
-  segmentValue?: string
   addButtonLabel?: string
   onAddClick?: () => void
-  onSegmentChange?: (value: string) => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -135,10 +134,8 @@ export function DataTable<TData>({
   columns: legacyColumns,
   data,
   segments,
-  segmentValue,
   addButtonLabel,
-  onAddClick,
-  onSegmentChange
+  onAddClick
 }: DataTableProps<TData>) {
   const columns = React.useMemo(
     () => convertToColumnDef<TData>(legacyColumns as LegacyColumn[]),
@@ -163,7 +160,7 @@ export function DataTable<TData>({
       </div>
 
       <div className="flex justify-between items-center px-6 mb-3 mt-2">
-        {segments && <Segments segments={segments} onChange={onSegmentChange} value={segmentValue} />}
+        {segments && <Segments segments={segments} />}
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon">
