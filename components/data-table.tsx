@@ -42,8 +42,10 @@ export interface DataTableProps<TData> {
     label: string
     value: string
   }[]
+  segmentValue?: string
   addButtonLabel?: string
   onAddClick?: () => void
+  onSegmentChange?: (value: string) => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -134,8 +136,10 @@ export function DataTable<TData>({
   columns: legacyColumns,
   data,
   segments,
+  segmentValue,
   addButtonLabel,
-  onAddClick
+  onAddClick,
+  onSegmentChange
 }: DataTableProps<TData>) {
   const columns = React.useMemo(
     () => convertToColumnDef<TData>(legacyColumns as LegacyColumn[]),
@@ -160,7 +164,7 @@ export function DataTable<TData>({
       </div>
 
       <div className="flex justify-between items-center px-6 mb-3 mt-2">
-        {segments && <Segments segments={segments} />}
+        {segments && <Segments segments={segments} onChange={onSegmentChange} value={segmentValue} />}
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon">
