@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { Segments } from "@/components/ui/segments"
 import { Button } from "@/components/ui/button"
-import { IconLayoutGrid, IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react"
+import { IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,7 +27,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 
 export type LegacyColumn = {
   key: string
