@@ -17,42 +17,16 @@ import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
 
-const AVAILABLE_JOBS_SEGMENTS = [
-  { label: "All", value: "all" },
-  { label: "Unset", value: "unset" },
-  { label: "No Bid", value: "no-bid" },
-  { label: "Bid", value: "bid" },
-];
-
-const DEFAULT_SEGMENTS = [
-  { label: "Outline", value: "outline" },
-  { label: "Past Performance", value: "past-performance" },
-  { label: "Key Personnel", value: "key-personnel" },
-  { label: "Focus Documents", value: "focus-documents" },
-];
-
-const DEFAULT_COLUMNS = [
-  { key: "title", title: "Title" },
-  { key: "company", title: "Company" },
-  { key: "location", title: "Location" },
-  { key: "type", title: "Type" },
-  { key: "status", title: "Status" },
-  { key: "budget", title: "Budget", className: "text-right" },
-  { key: "deadline", title: "Deadline" },
-];
-
-type JobPageData = JobData | AvailableJob | ActiveBid | ActiveJob
-type JobPageColumns = typeof DEFAULT_COLUMNS[number] | typeof availableJobsColumns[number] | typeof ACTIVE_BIDS_COLUMNS[number] | typeof ACTIVE_JOBS_COLUMNS[number]
-
 interface JobPageContentProps {
   job: string
 }
+
+type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
   const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false)
   const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false)
   const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false)
-  const [activeSegment, setActiveSegment] = useState("overview")
 
   if (!['available', 'active-bids', 'active-jobs'].includes(job)) {
     notFound();
@@ -65,41 +39,44 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const isActiveBids = jobType === "active-bids";
   const isActiveJobs = jobType === "active-jobs";
 
-  let segments = DEFAULT_SEGMENTS;
-  let addButtonLabel = "Add Section";
-  let columns: JobPageColumns[] = DEFAULT_COLUMNS;
-  let data: JobPageData[] = jobsData[jobType];
+  let pageTitle = isAvailableJobs ? "Available Jobs" : 
+                 isActiveBids ? "Active Bids" : 
+                 "Active Jobs";
 
-  if (isAvailableJobs) {
-    segments = AVAILABLE_JOBS_SEGMENTS;
-    addButtonLabel = "Create Open Bid";
-    columns = Array.from(availableJobsColumns) as JobPageColumns[];
-    data = availableJobsData;
-  } else if (isActiveBids) {
-    segments = ACTIVE_BIDS_SEGMENTS;
-    addButtonLabel = "Create Active Bid";
-    columns = Array.from(ACTIVE_BIDS_COLUMNS) as JobPageColumns[];
-    data = activeBidsData;
-  } else if (isActiveJobs) {
-    segments = ACTIVE_JOBS_SEGMENTS;
-    addButtonLabel = "Create Active Job";
-    columns = Array.from(ACTIVE_JOBS_COLUMNS) as JobPageColumns[];
-    data = activeJobsData;
-  }
+  let createButtonLabel = isAvailableJobs ? "Create Open Bid" : 
+                         isActiveBids ? "Create Active Bid" : 
+                         "Create Active Job";
+
+  let data: JobPageData[] = isAvailableJobs ? availableJobsData :
+                           isActiveBids ? activeBidsData :
+                           activeJobsData;
+
+  let columns = isAvailableJobs ? availableJobsColumns :
+                isActiveBids ? ACTIVE_BIDS_COLUMNS :
+                ACTIVE_JOBS_COLUMNS;
+
+  let segments = isAvailableJobs ? [
+    { label: "All", value: "all" },
+    { label: "Unset", value: "unset" },
+    { label: "No Bid", value: "no-bid" },
+    { label: "Bid", value: "bid" },
+  ] : isActiveBids ? ACTIVE_BIDS_SEGMENTS : ACTIVE_JOBS_SEGMENTS;
 
   const handleCreateClick = () => {
-    if (isActiveBids) {
-      setCreateActiveBidSheetOpen(true)
+    if (isAvailableJobs) {
+      setOpenBidSheetOpen(true);
+    } else if (isActiveBids) {
+      setCreateActiveBidSheetOpen(true);
     } else {
-      setCreateJobSheetOpen(true)
+      setCreateJobSheetOpen(true);
     }
-  }
+  };
 
   return (
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--sidebar-width": "calc(var(--spacing) * 68)",
           "--header-height": "calc(var(--spacing) * 12)",
         } as React.CSSProperties
       }
@@ -109,13 +86,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-3 md:py-6">
-              {isAvailableJobs && (
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="flex items-center justify-between">
                 <CardActions
-                  createButtonLabel={addButtonLabel}
+                  createButtonLabel={createButtonLabel}
                   onCreateClick={handleCreateClick}
                 />
-              )}
+              </div>
 
               <SectionCards data={cards} />
 
@@ -123,19 +100,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 data={data}
                 columns={columns}
                 segments={segments}
-                addButtonLabel={isAvailableJobs ? undefined : addButtonLabel}
-                onAddClick={handleCreateClick}
+                stickyLastColumn
               />
 
-              <OpenBidSheet
-                open={openBidSheetOpen}
-                onOpenChange={setOpenBidSheetOpen}
-              />
+              {isAvailableJobs && (
+                <OpenBidSheet
+                  open={openBidSheetOpen}
+                  onOpenChange={setOpenBidSheetOpen}
+                />
+              )}
 
-              <CreateJobSheet
-                open={createJobSheetOpen}
-                onOpenChange={setCreateJobSheetOpen}
-              />
+              {isActiveJobs && (
+                <CreateJobSheet
+                  open={createJobSheetOpen}
+                  onOpenChange={setCreateJobSheetOpen}
+                />
+              )}
 
               {isActiveBids && (
                 <CreateActiveBidSheet
