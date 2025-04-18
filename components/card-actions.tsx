@@ -11,45 +11,49 @@ import { DateRange } from "react-day-picker"
 interface CardActionsProps {
   onCreateClick?: () => void
   createButtonLabel?: string
+  hideCalendar?: boolean
+  goUpActions?: boolean
 }
 
-export function CardActions({ onCreateClick, createButtonLabel = "Create Open Bid" }: CardActionsProps) {
+export function CardActions({ onCreateClick, createButtonLabel = "Create Open Bid", hideCalendar = false, goUpActions = false }: CardActionsProps) {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
     to: new Date(2024, 1, 30),
   })
 
   return (
-    <div className="flex items-center justify-between px-6 mb-1 w-full">
+    <div className={`flex items-center justify-between px-6 mb-1 w-full ${goUpActions ? "-mt-16" : ""}`}>
       <div className="flex items-center gap-2">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="min-w-[240px] justify-start text-left font-normal">
-              <IconCalendar className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "LLL d, y")} - {format(date.to, "LLL d, y")}
-                  </>
+        {!hideCalendar && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="min-w-[240px] justify-start text-left font-normal">
+                <IconCalendar className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, "LLL d, y")} - {format(date.to, "LLL d, y")}
+                    </>
+                  ) : (
+                    format(date.from, "LLL d, y")
+                  )
                 ) : (
-                  format(date.from, "LLL d, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={date?.from}
-              selected={date}
-              onSelect={setDate}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={setDate}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

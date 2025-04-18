@@ -5,6 +5,9 @@ import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { jobsData, type JobData } from "@/data/jobs-data";
+import { CardActions } from "@/components/card-actions";
+import { CreateQuoteSheet } from "@/components/create-quote-sheet";
+import { useState } from "react";
 
 const COLUMNS = [
   { key: "title", title: "Title" },
@@ -16,7 +19,16 @@ const COLUMNS = [
   { key: "deadline", title: "Deadline" },
 ];
 
+const SEGMENTS = [
+  { label: "All", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
+];
+
 export default function QuotesPage() {
+  const [isCreateQuoteOpen, setIsCreateQuoteOpen] = useState(false);
+
   return (
     <SidebarProvider
       style={
@@ -32,14 +44,30 @@ export default function QuotesPage() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="flex items-center justify-between px-0 -mb-3">
+                <CardActions
+                  createButtonLabel="Create Quote"
+                  onCreateClick={() => setIsCreateQuoteOpen(true)}
+                  hideCalendar
+                  goUpActions
+                />
+              </div>
+
               <DataTable<JobData>
                 data={jobsData.available}
                 columns={COLUMNS}
+                segments={SEGMENTS}
+                stickyLastColumn
               />
             </div>
           </div>
         </div>
       </SidebarInset>
+
+      <CreateQuoteSheet 
+        open={isCreateQuoteOpen}
+        onOpenChange={setIsCreateQuoteOpen}
+      />
     </SidebarProvider>
   );
 } 
