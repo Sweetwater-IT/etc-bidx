@@ -130,3 +130,23 @@ export async function changeBidStatus(
   
   return updateBid(id, updates);
 }
+
+/**
+ * Import jobs from Excel data
+ */
+export async function importJobs(data: any[]): Promise<{ count: number; errors?: string[] }> {
+  const response = await fetch('/api/jobs/import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ jobs: data }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to import jobs');
+  }
+
+  return response.json();
+}

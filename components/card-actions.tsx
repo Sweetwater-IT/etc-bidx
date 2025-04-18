@@ -7,19 +7,22 @@ import { format } from "date-fns"
 import { useState } from "react"
 import { IconCalendar, IconDownload, IconUpload, IconPlus } from "@tabler/icons-react"
 import { DateRange } from "react-day-picker"
+import { ImportSheet } from "./import-sheet"
 
 interface CardActionsProps {
   onCreateClick?: () => void
+  onImportSuccess?: () => void
   createButtonLabel?: string
   hideCalendar?: boolean
   goUpActions?: boolean
 }
 
-export function CardActions({ onCreateClick, createButtonLabel = "Create Open Bid", hideCalendar = false, goUpActions = false }: CardActionsProps) {
+export function CardActions({ onCreateClick, onImportSuccess, createButtonLabel = "Create Open Bid", hideCalendar = false, goUpActions = false }: CardActionsProps) {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
     to: new Date(2024, 1, 30),
   })
+  const [importOpen, setImportOpen] = useState(false)
 
   return (
     <div className={`flex items-center justify-between px-6 mb-1 w-full ${goUpActions ? "-mt-16" : ""}`}>
@@ -57,10 +60,15 @@ export function CardActions({ onCreateClick, createButtonLabel = "Create Open Bi
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
           <IconUpload className="h-4 w-4 mr-2" />
           Import
         </Button>
+        <ImportSheet 
+          open={importOpen} 
+          onOpenChange={setImportOpen} 
+          onImportSuccess={onImportSuccess} 
+        />
         <Button variant="outline" size="sm">
           <IconDownload className="h-4 w-4 mr-2" />
           Export
