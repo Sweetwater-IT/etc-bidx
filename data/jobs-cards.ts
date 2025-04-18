@@ -99,6 +99,36 @@ const baseCards: Record<JobType, CardData[]> = {
       trend: "neutral",
       description: "Average client satisfaction rating"
     }
+  ],
+  'job-list': [
+    {
+      title: "Total Jobs",
+      value: "36",
+      change: 15,
+      trend: "up",
+      description: "Jobs in the system"
+    },
+    {
+      title: "Average Salary",
+      value: "$107,500",
+      change: 8,
+      trend: "up",
+      description: "Average job budget"
+    },
+    {
+      title: "Remote Positions",
+      value: "45%",
+      change: 12,
+      trend: "up",
+      description: "Jobs with remote work"
+    },
+    {
+      title: "Urgent Positions",
+      value: "5",
+      change: -2,
+      trend: "down",
+      description: "Jobs marked as urgent"
+    }
   ]
 };
 

@@ -20,7 +20,7 @@ export function CardActions({ onCreateClick, createButtonLabel = "Create Open Bi
   })
 
   return (
-    <div className="flex items-center justify-between px-6 mb-1">
+    <div className="flex items-center justify-between px-6 mb-1 w-full">
       <div className="flex items-center gap-2">
         <Popover>
           <PopoverTrigger asChild>

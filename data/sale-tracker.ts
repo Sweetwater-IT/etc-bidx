@@ -12,10 +12,10 @@ export type SaleTrackerItem = {
 export const SALE_TRACKER_COLUMNS = [
   { key: "jobNumber", title: "Job Number" },
   { key: "description", title: "Description" },
-  { key: "quantity", title: "Quantity", className: "text-right" },
-  { key: "unitPrice", title: "Unit Price", className: "text-right" },
-  { key: "totalPrice", title: "Total Price", className: "text-right" },
-  { key: "status", title: "Status" },
+  { key: "quantity", title: "Quantity", className: "text-left" },
+  { key: "unitPrice", title: "Unit Price", className: "text-left" },
+  { key: "totalPrice", title: "Total Price", className: "text-left" },
+  { key: "status", title: "Status", className: "text-left" },
   { key: "createdAt", title: "Created At" },
 ]
 
