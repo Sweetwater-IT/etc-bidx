@@ -174,6 +174,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 <CardActions
                   createButtonLabel={createButtonLabel}
                   onCreateClick={handleCreateClick}
+                  onImportSuccess={isAvailableJobs ? loadAvailableJobs : undefined}
                 />
               </div>
 
