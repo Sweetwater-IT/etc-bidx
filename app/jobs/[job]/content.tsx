@@ -19,6 +19,7 @@ import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
 import { fetchBids } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useLoading } from "@/hooks/use-loading";
 
 // Define the AvailableJob type based on the UI display needs
 type AvailableJob = {
@@ -44,7 +45,6 @@ const mapUiStatusToDbStatus = (uiStatus?: string): 'Bid' | 'No Bid' | 'Unset' | 
   return undefined;
 }
 
-// Map between database status and UI status
 const mapDbStatusToUiStatus = (dbStatus: string): "Bid" | "No Bid" | "Unset" => {
   if (dbStatus === 'Bid') return 'Bid';
   if (dbStatus === 'No Bid') return 'No Bid';
@@ -63,8 +63,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false)
   const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false)
   const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([])
-  const [loading, setLoading] = useState(false)
   const [activeSegment, setActiveSegment] = useState("all")
+  const { startLoading, stopLoading } = useLoading();
 
   if (!['available', 'active-bids', 'active-jobs'].includes(job)) {
     notFound();
@@ -85,21 +85,17 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const loadAvailableJobs = useCallback(async () => {
     try {
       console.log('Loading available jobs with activeSegment:', activeSegment);
-      setLoading(true);
-      
-      // Convert UI segment to database status
+      startLoading();
+
       const dbStatus = mapUiStatusToDbStatus(activeSegment);
       console.log('Mapped DB status:', dbStatus);
-      
-      // Only include status in options if not 'all'
+
       const options = activeSegment !== "all" ? { status: dbStatus } : undefined;
       console.log('Fetch options:', options);
-      
-      // Fetch data from API
+
       const data = await fetchBids(options);
       console.log('Fetched data:', data);
-      
-      // Map the database jobs to UI jobs with correct status values
+
       const uiJobs = data.map(job => ({
         id: job.id,
         contractNumber: job.contract_number,
@@ -114,15 +110,15 @@ export function JobPageContent({ job }: JobPageContentProps) {
         location: job.location,
         platform: job.platform
       }));
-      
+
       setAvailableJobs(uiJobs);
     } catch (error) {
       console.error("Error loading jobs:", error);
       toast.error("Failed to load jobs. Please try again.");
     } finally {
-      setLoading(false);
+      stopLoading();
     }
-  }, [activeSegment]);
+  }, [activeSegment, startLoading, stopLoading]);
 
   useEffect(() => {
     if (job === 'available') {
@@ -138,11 +134,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
     isActiveBids ? activeBidsData :
       activeJobsData;
 
-   const columns = isAvailableJobs ? availableJobsColumns :
+  const columns = isAvailableJobs ? availableJobsColumns :
     isActiveBids ? ACTIVE_BIDS_COLUMNS :
       ACTIVE_JOBS_COLUMNS;
 
-   const segments = isAvailableJobs ? [
+  const segments = isAvailableJobs ? [
     { label: "All", value: "all" },
     { label: "Unset", value: "unset" },
     { label: "No Bid", value: "no-bid" },
@@ -183,19 +179,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
               <SectionCards data={cards} />
 
-              {loading && isAvailableJobs ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                </div>
-              ) : isAvailableJobs ? (
+              {isAvailableJobs ? (
                 <DataTable<AvailableJob>
                   data={data as AvailableJob[]}
                   columns={columns}
                   segments={segments}
                   segmentValue={activeSegment}
                   onSegmentChange={handleSegmentChange}
-                  addButtonLabel={createButtonLabel}
-                  onAddClick={() => setOpenBidSheetOpen(true)}
                 />
               ) : (
                 <DataTable<JobPageData>

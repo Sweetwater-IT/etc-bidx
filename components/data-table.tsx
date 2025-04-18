@@ -122,7 +122,7 @@ export function DataTable<TData>({
                       <IconDotsVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="z-[200]">
                     <DropdownMenuItem>View details</DropdownMenuItem>
                     <DropdownMenuItem>Edit</DropdownMenuItem>
                   </DropdownMenuContent>
@@ -133,6 +133,29 @@ export function DataTable<TData>({
           return formatCellValue(info.getValue(), column.key)
         },
       })),
+      {
+        id: "actions",
+        header: () => <div className="text-center">Actions</div>,
+        cell: () => (
+          <div className={cn(
+            "flex justify-center",
+            stickyLastColumn && "sticky right-0 bg-background"
+          )}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <IconDotsVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-[200]">
+                <DropdownMenuItem>View details</DropdownMenuItem>
+                <DropdownMenuItem>Edit</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
+      },
     ]
   }, [legacyColumns, stickyLastColumn])
 
@@ -148,8 +171,6 @@ export function DataTable<TData>({
         {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} />}
 
         <div className="flex items-center gap-2">
-         
-
           <Button variant="outline" size="icon">
             <IconFilter className="h-4 w-4" />
           </Button>
