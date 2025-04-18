@@ -7,15 +7,50 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { getJobCards } from "@/data/jobs-cards"
 import { type JobType } from "@/data/jobs-data"
-import { availableJobsData, availableJobsColumns, type AvailableJob } from "@/data/available-jobs"
+import { availableJobsColumns } from "@/data/available-jobs"
 import { activeBidsData, ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids"
 import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs"
 import { notFound } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
+import { fetchBids } from "@/lib/api-client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+// Define the AvailableJob type based on the UI display needs
+type AvailableJob = {
+  id: number
+  contractNumber: string
+  status: "Bid" | "No Bid" | "Unset"
+  requestor: string
+  owner: string
+  lettingDate: string | null
+  dueDate: string | null
+  county: string
+  branch: string
+  createdAt: string
+  location: string
+  platform: string
+}
+
+// Map between UI status and database status
+const mapUiStatusToDbStatus = (uiStatus?: string): 'Bid' | 'No Bid' | 'Unset' | undefined => {
+  if (uiStatus === 'bid') return 'Bid';
+  if (uiStatus === 'no-bid') return 'No Bid';
+  if (uiStatus === 'unset') return 'Unset';
+  return undefined;
+}
+
+// Map between database status and UI status
+const mapDbStatusToUiStatus = (dbStatus: string): "Bid" | "No Bid" | "Unset" => {
+  if (dbStatus === 'Bid') return 'Bid';
+  if (dbStatus === 'No Bid') return 'No Bid';
+  if (dbStatus === 'Unset') return 'Unset';
+  return 'Unset'; // Default fallback
+}
 
 interface JobPageContentProps {
   job: string
@@ -27,6 +62,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false)
   const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false)
   const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false)
+  const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([])
+  const [loading, setLoading] = useState(false)
+  const [activeSegment, setActiveSegment] = useState("all")
 
   if (!['available', 'active-bids', 'active-jobs'].includes(job)) {
     notFound();
@@ -39,11 +77,64 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const isActiveBids = jobType === "active-bids";
   const isActiveJobs = jobType === "active-jobs";
 
-   const createButtonLabel = isAvailableJobs ? "Create Open Bid" :
+  const handleSegmentChange = (value: string) => {
+    console.log('Segment changed to:', value);
+    setActiveSegment(value);
+  };
+
+  const loadAvailableJobs = useCallback(async () => {
+    try {
+      console.log('Loading available jobs with activeSegment:', activeSegment);
+      setLoading(true);
+      
+      // Convert UI segment to database status
+      const dbStatus = mapUiStatusToDbStatus(activeSegment);
+      console.log('Mapped DB status:', dbStatus);
+      
+      // Only include status in options if not 'all'
+      const options = activeSegment !== "all" ? { status: dbStatus } : undefined;
+      console.log('Fetch options:', options);
+      
+      // Fetch data from API
+      const data = await fetchBids(options);
+      console.log('Fetched data:', data);
+      
+      // Map the database jobs to UI jobs with correct status values
+      const uiJobs = data.map(job => ({
+        id: job.id,
+        contractNumber: job.contract_number,
+        status: mapDbStatusToUiStatus(job.status),
+        requestor: job.requestor,
+        owner: job.owner,
+        lettingDate: job.letting_date ? format(new Date(job.letting_date), "yyyy-MM-dd") : null,
+        dueDate: job.due_date ? format(new Date(job.due_date), "yyyy-MM-dd") : null,
+        county: job.county,
+        branch: job.branch,
+        createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+        location: job.location,
+        platform: job.platform
+      }));
+      
+      setAvailableJobs(uiJobs);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+      toast.error("Failed to load jobs. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeSegment]);
+
+  useEffect(() => {
+    if (job === 'available') {
+      loadAvailableJobs();
+    }
+  }, [job, loadAvailableJobs]);
+
+  const createButtonLabel = isAvailableJobs ? "Create Open Bid" :
     isActiveBids ? "Create Active Bid" :
       "Create Active Job";
 
-   const data: JobPageData[] = isAvailableJobs ? availableJobsData :
+  const data: JobPageData[] = isAvailableJobs ? availableJobs :
     isActiveBids ? activeBidsData :
       activeJobsData;
 
@@ -92,17 +183,34 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
               <SectionCards data={cards} />
 
-              <DataTable<JobPageData>
-                data={data}
-                columns={columns}
-                segments={segments}
-                stickyLastColumn
-              />
+              {loading && isAvailableJobs ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : isAvailableJobs ? (
+                <DataTable<AvailableJob>
+                  data={data as AvailableJob[]}
+                  columns={columns}
+                  segments={segments}
+                  segmentValue={activeSegment}
+                  onSegmentChange={handleSegmentChange}
+                  addButtonLabel={createButtonLabel}
+                  onAddClick={() => setOpenBidSheetOpen(true)}
+                />
+              ) : (
+                <DataTable<JobPageData>
+                  data={data as JobPageData[]}
+                  columns={columns}
+                  segments={segments}
+                  stickyLastColumn
+                />
+              )}
 
               {isAvailableJobs && (
                 <OpenBidSheet
                   open={openBidSheetOpen}
                   onOpenChange={setOpenBidSheetOpen}
+                  onSuccess={loadAvailableJobs}
                 />
               )}
 

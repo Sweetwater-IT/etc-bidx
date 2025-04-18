@@ -41,8 +41,10 @@ export interface DataTableProps<TData> {
     label: string
     value: string
   }[]
+  segmentValue?: string
   addButtonLabel?: string
   onAddClick?: () => void
+  onSegmentChange?: (value: string) => void
   stickyLastColumn?: boolean
 }
 
@@ -75,8 +77,10 @@ export function DataTable<TData>({
   columns: legacyColumns,
   data,
   segments,
+  segmentValue,
   addButtonLabel,
   onAddClick,
+  onSegmentChange,
   stickyLastColumn = false,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
@@ -141,7 +145,7 @@ export function DataTable<TData>({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center px-6 mb-3">
-        {segments && <Segments segments={segments} />}
+        {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} />}
 
         <div className="flex items-center gap-2">
          
