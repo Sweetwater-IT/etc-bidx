@@ -14,6 +14,8 @@ import { notFound } from "next/navigation";
 import { useState } from "react";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
+import { CreateJobSheet } from "@/components/create-job-sheet";
+import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
 
 const AVAILABLE_JOBS_SEGMENTS = [
   { label: "All", value: "all" },
@@ -47,7 +49,10 @@ interface JobPageContentProps {
 }
 
 export function JobPageContent({ job }: JobPageContentProps) {
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false)
+  const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false)
+  const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false)
+  const [activeSegment, setActiveSegment] = useState("overview")
 
   if (!['available', 'active-bids', 'active-jobs'].includes(job)) {
     notFound();
@@ -55,7 +60,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
   const jobType = job as JobType;
   const cards = getJobCards(jobType);
-  
+
   const isAvailableJobs = jobType === "available";
   const isActiveBids = jobType === "active-bids";
   const isActiveJobs = jobType === "active-jobs";
@@ -82,6 +87,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
     data = activeJobsData;
   }
 
+  const handleCreateClick = () => {
+    if (isActiveBids) {
+      setCreateActiveBidSheetOpen(true)
+    } else {
+      setCreateJobSheetOpen(true)
+    }
+  }
+
   return (
     <SidebarProvider
       style={
@@ -100,21 +113,36 @@ export function JobPageContent({ job }: JobPageContentProps) {
               {isAvailableJobs && (
                 <CardActions
                   createButtonLabel={addButtonLabel}
-                  onCreateClick={() => setSheetOpen(true)}
+                  onCreateClick={handleCreateClick}
                 />
               )}
-              
-              <SectionCards data={cards} />
 
-              <OpenBidSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+              <SectionCards data={cards} />
 
               <DataTable<JobPageData>
                 data={data}
                 columns={columns}
                 segments={segments}
                 addButtonLabel={isAvailableJobs ? undefined : addButtonLabel}
-                onAddClick={() => setSheetOpen(true)}
+                onAddClick={handleCreateClick}
               />
+
+              <OpenBidSheet
+                open={openBidSheetOpen}
+                onOpenChange={setOpenBidSheetOpen}
+              />
+
+              <CreateJobSheet
+                open={createJobSheetOpen}
+                onOpenChange={setCreateJobSheetOpen}
+              />
+
+              {isActiveBids && (
+                <CreateActiveBidSheet
+                  open={createActiveBidSheetOpen}
+                  onOpenChange={setCreateActiveBidSheetOpen}
+                />
+              )}
             </div>
           </div>
         </div>

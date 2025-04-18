@@ -1,4 +1,4 @@
-export type JobType = 'available' | 'active-bids' | 'active-jobs';
+export type JobType = "available" | "active-bids" | "active-jobs" | "job-list";
 
 export interface JobData {
   id: string;
@@ -97,6 +97,34 @@ export const jobsData: Record<JobType, JobData[]> = {
       description: 'Mobile app development for fitness platform',
       requirements: ['3+ years experience', 'React Native', 'Mobile design'],
       skills: ['React Native', 'TypeScript', 'Firebase', 'Redux']
+    }
+  ],
+  'job-list': [
+    {
+      id: 'job-list-001',
+      title: "Software Engineer - Cloud Infrastructure",
+      company: "TechCorp",
+      location: "Remote",
+      type: "Full-time",
+      status: "Open",
+      budget: 120000,
+      deadline: "2024-04-29",
+      description: "Looking for a senior engineer to lead cloud infrastructure projects",
+      requirements: ['5+ years experience', 'AWS certification', 'Terraform expertise'],
+      skills: ['AWS', 'Terraform', 'Kubernetes', 'Docker']
+    },
+    {
+      id: 'job-list-002',
+      title: "Frontend Developer",
+      company: "DesignHub",
+      location: "San Francisco",
+      type: "Contract",
+      status: "Urgent",
+      budget: 95000,
+      deadline: "2024-04-14",
+      description: "Seeking a frontend developer for a design system project",
+      requirements: ['3+ years experience', 'React expertise', 'UI/UX knowledge'],
+      skills: ['React', 'TypeScript', 'Tailwind CSS', 'Figma']
     }
   ]
 }; 

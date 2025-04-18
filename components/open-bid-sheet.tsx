@@ -30,7 +30,7 @@ export function OpenBidSheet({ open, onOpenChange }: OpenBidSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-screen-lg sm:w-full md:w-3/4 flex flex-col p-0" style={{width: "25%"}}>
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>Create a new Open Bid</SheetTitle>
         </SheetHeader>
