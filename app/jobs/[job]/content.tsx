@@ -6,7 +6,7 @@ import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { getJobCards } from "@/data/jobs-cards"
-import { jobsData, type JobType, type JobData } from "@/data/jobs-data"
+import { type JobType } from "@/data/jobs-data"
 import { availableJobsData, availableJobsColumns, type AvailableJob } from "@/data/available-jobs"
 import { activeBidsData, ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids"
 import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs"
@@ -39,23 +39,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
   const isActiveBids = jobType === "active-bids";
   const isActiveJobs = jobType === "active-jobs";
 
-  let pageTitle = isAvailableJobs ? "Available Jobs" : 
-                 isActiveBids ? "Active Bids" : 
-                 "Active Jobs";
+   const createButtonLabel = isAvailableJobs ? "Create Open Bid" :
+    isActiveBids ? "Create Active Bid" :
+      "Create Active Job";
 
-  let createButtonLabel = isAvailableJobs ? "Create Open Bid" : 
-                         isActiveBids ? "Create Active Bid" : 
-                         "Create Active Job";
+   const data: JobPageData[] = isAvailableJobs ? availableJobsData :
+    isActiveBids ? activeBidsData :
+      activeJobsData;
 
-  let data: JobPageData[] = isAvailableJobs ? availableJobsData :
-                           isActiveBids ? activeBidsData :
-                           activeJobsData;
+   const columns = isAvailableJobs ? availableJobsColumns :
+    isActiveBids ? ACTIVE_BIDS_COLUMNS :
+      ACTIVE_JOBS_COLUMNS;
 
-  let columns = isAvailableJobs ? availableJobsColumns :
-                isActiveBids ? ACTIVE_BIDS_COLUMNS :
-                ACTIVE_JOBS_COLUMNS;
-
-  let segments = isAvailableJobs ? [
+   const segments = isAvailableJobs ? [
     { label: "All", value: "all" },
     { label: "Unset", value: "unset" },
     { label: "No Bid", value: "no-bid" },

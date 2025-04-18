@@ -5,7 +5,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -25,7 +24,6 @@ export function CreateSaleItemSheet({ open, onOpenChange }: CreateSaleItemSheetP
   const [unitPrice, setUnitPrice] = useState("")
 
   const handleSubmit = () => {
-    // TODO: Implement form submission
     onOpenChange(false)
   }
 

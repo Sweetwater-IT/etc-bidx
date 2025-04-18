@@ -5,7 +5,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -34,7 +33,6 @@ export function CreateJobSheet({ open, onOpenChange }: CreateJobSheetProps) {
   const [status, setStatus] = useState("")
 
   const handleSubmit = () => {
-    // TODO: Implement form submission
     onOpenChange(false)
   }
 
