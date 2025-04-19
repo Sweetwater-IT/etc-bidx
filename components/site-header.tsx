@@ -7,7 +7,12 @@ import { Input } from "@/components/ui/input"
 import { ModeToggle } from "@/components/toggle-color"
 import { IconBell, IconPower } from "@tabler/icons-react"
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  customTitle?: string;
+  children?: React.ReactNode;
+}
+
+export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
   const pathname = usePathname()
 
   const findTitle = (items: any[]): string | undefined => {
@@ -22,6 +27,8 @@ export function SiteHeader() {
   }
 
   const getCurrentTitle = () => {
+    if (customTitle) return customTitle
+    
     const allItems = [
       ...data.navMain,
       ...data.navClouds,
@@ -57,7 +64,11 @@ export function SiteHeader() {
             <ModeToggle />
           </div>
         </div>
-        <h1 className="text-3xl font-bold mt-2 ml-2">{getCurrentTitle()}</h1>
+        {children ? (
+          children
+        ) : (
+          <h1 className="text-3xl font-bold mt-2 ml-2">{getCurrentTitle()}</h1>
+        )}
       </div>
     </header>
   )

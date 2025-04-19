@@ -10,7 +10,7 @@ import { type JobType } from "@/data/jobs-data"
 import { availableJobsColumns } from "@/data/available-jobs"
 import { activeBidsData, ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids"
 import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs"
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
@@ -59,6 +59,7 @@ interface JobPageContentProps {
 type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
+  const router = useRouter();
   const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false)
   const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false)
   const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false)
@@ -126,6 +127,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }
   }, [job, loadAvailableJobs]);
 
+  useEffect(() => {
+    console.log('Sheet state changed:', {
+      isActiveBids,
+      createActiveBidSheetOpen
+    });
+  }, [isActiveBids, createActiveBidSheetOpen]);
+
   const createButtonLabel = isAvailableJobs ? "Create Open Bid" :
     isActiveBids ? "Create Active Bid" :
       "Create Active Job";
@@ -149,7 +157,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     if (isAvailableJobs) {
       setOpenBidSheetOpen(true);
     } else if (isActiveBids) {
-      setCreateActiveBidSheetOpen(true);
+      router.push('/active-bid');
     } else {
       setCreateJobSheetOpen(true);
     }
