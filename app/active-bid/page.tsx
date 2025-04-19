@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -99,12 +98,6 @@ export default function ActiveBidPage() {
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1)
     }
   }
 
