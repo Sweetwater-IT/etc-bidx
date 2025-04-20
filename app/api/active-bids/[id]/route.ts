@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase';
 
 // GET: Fetch a specific active bid by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
@@ -43,7 +43,7 @@ export async function GET(
 // PATCH: Update a specific active bid
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
@@ -84,8 +84,8 @@ export async function PATCH(
 
 // DELETE: Remove a specific active bid
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: any
 ) {
   try {
     const id = parseInt(params.id);
