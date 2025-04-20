@@ -167,17 +167,17 @@ export const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "/settings",
+      url: "",
       icon: IconSettings,
     },
     {
       title: "Get Help",
-      url: "/help",
+      url: "",
       icon: IconHelp,
     },
     {
       title: "Search",
-      url: "/search",
+      url: "",
       icon: IconSearch,
     },
   ] as NavItem[],
