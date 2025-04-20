@@ -4,8 +4,11 @@ type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
 type AvailableJobUpdate = Database['public']['Tables']['available_jobs']['Update'];
 
+type BidEstimate = Database['public']['Tables']['bid_estimates']['Row'];
+type BidEstimateInsert = Database['public']['Tables']['bid_estimates']['Insert'];
+
 /**
- * Fetch all bids with optional filtering
+ * Fetch all available jobs with optional filtering
  */
 export async function fetchBids(options?: {
   status?: 'Bid' | 'No Bid' | 'Unset';
@@ -132,11 +135,89 @@ export async function changeBidStatus(
 }
 
 /**
+ * Fetch all active bids from the bid_estimates table with optional filtering
+ */
+export async function fetchActiveBids(options?: {
+  status?: string;
+  limit?: number;
+  orderBy?: string;
+  ascending?: boolean;
+}): Promise<BidEstimate[]> {
+  const params = new URLSearchParams();
+  
+  if (options?.status) {
+    params.append('status', options.status);
+  }
+  
+  if (options?.limit) {
+    params.append('limit', options.limit.toString());
+  }
+  
+  if (options?.orderBy) {
+    params.append('orderBy', options.orderBy);
+  }
+  
+  if (options?.ascending !== undefined) {
+    params.append('ascending', options.ascending.toString());
+  }
+  
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`/api/active-bids${queryString}`);
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch active bids');
+  }
+  
+  const result = await response.json();
+  return result.data;
+}
+
+/**
+ * Fetch a specific active bid by ID
+ */
+export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
+  const response = await fetch(`/api/active-bids/${id}`);
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || `Failed to fetch active bid with ID ${id}`);
+  }
+  
+  const result = await response.json();
+  return result.data;
+}
+
+/**
+ * Create a new active bid
+ */
+export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstimate> {
+  const response = await fetch('/api/active-bids', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(bid),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to create active bid');
+  }
+  
+  const result = await response.json();
+  return result.data;
+}
+
+/**
  * Import jobs from Excel data
  * @param data The Excel data to import
  * @param type The type of import (available-jobs or active-bids)
  */
-export async function importJobs(data: any[], type: 'available-jobs' | 'active-bids' = 'available-jobs'): Promise<{ count: number; errors?: string[] }> {
+export async function importJobs(
+  data: any[], 
+  type: 'available-jobs' | 'active-bids' = 'available-jobs'
+): Promise<{ count: number; errors?: string[] }> {
   // Use different endpoints based on import type
   const endpoint = type === 'available-jobs' ? '/api/jobs/import' : '/api/bids/import';
   
