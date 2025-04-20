@@ -11,30 +11,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const COLORS = ["#4285F4", "#5A9BF5", "#2B579A", "#81B4F9", "#B3D1FA"];
+const COLORS = ["#F2F2F2", "#E0E0E0", "#C7C7C7", "#A3A3A3", "#707070"];
 
 const winLossData = [
-  { name: "Chrome", value: 45 },
-  { name: "Safari", value: 25 },
-  { name: "Firefox", value: 15 },
-  { name: "Edge", value: 10 },
-  { name: "Other", value: 5 },
+  { name: "Legend 1", value: 45 },
+  { name: "Legend 2", value: 25 },
+  { name: "Legend 3", value: 15 },
+  { name: "Legend 4", value: 10 },
+  { name: "Legend 5", value: 5 },
 ];
 
 const revenueData = [
-  { name: "Product A", value: 35 },
-  { name: "Product B", value: 25 },
-  { name: "Product C", value: 20 },
-  { name: "Product D", value: 15 },
-  { name: "Others", value: 5 },
+  { name: "Legend 1", value: 35 },
+  { name: "Legend 2", value: 25 },
+  { name: "Legend 3", value: 20 },
+  { name: "Legend 4", value: 15 },
+  { name: "Legend 5", value: 5 },
 ];
 
 const profitData = [
-  { name: "Product A", value: 40 },
-  { name: "Product B", value: 30 },
-  { name: "Product C", value: 15 },
-  { name: "Product D", value: 10 },
-  { name: "Others", value: 5 },
+  { name: "Legend 1", value: 40 },
+  { name: "Legend 2", value: 30 },
+  { name: "Legend 3", value: 15 },
+  { name: "Legend 4", value: 10 },
+  { name: "Legend 5", value: 5 },
 ];
 
 const PieChartCard = ({
@@ -98,7 +98,7 @@ export function ChartPieRow() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 lg:px-6 w-full">
       <PieChartCard
-        title="Pie Chart - Legend"
+        title="Win/Loss Percentage"
         description="January - June 2024"
         data={winLossData}
       />
