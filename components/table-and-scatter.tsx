@@ -15,38 +15,45 @@ import {
 
 const tableData = [
   { 
-    id: "BID-001",
-    status: "Completed",
-    value: "$12,450",
-    growth: "+12.5%",
+    id: "All",
+    status: "$50,842",
+    value: "2",
+    growth: "2",
     isPositive: true 
   },
   { 
-    id: "BID-002",
-    status: "In Progress",
-    value: "$8,350",
-    growth: "-5.2%",
+    id: "Private",
+    status: "$50,842",
+    value: "1",
+    growth: "1",
     isPositive: false 
   },
   { 
-    id: "BID-003",
-    status: "Completed",
-    value: "$15,800",
-    growth: "+8.1%",
+    id: "PENNDOT",
+    status: "$0",
+    value: "1",
+    growth: "1",
     isPositive: true 
   },
   { 
-    id: "BID-004",
-    status: "Under Review",
-    value: "$9,200",
-    growth: "+3.2%",
+    id: "TURNPIKE",
+    status: "$0",
+    value: "0",
+    growth: "0",
     isPositive: true 
   },
   { 
-    id: "BID-005",
-    status: "Completed",
-    value: "$11,600",
-    growth: "-2.4%",
+    id: "SEPTA",
+    status: "$0",
+    value: "0",
+    growth: "0",
+    isPositive: false 
+  },
+  { 
+    id: "Other",
+    status: "$",
+    value: "0",
+    growth: "0",
     isPositive: false 
   },
 ];
@@ -56,7 +63,7 @@ export function TableAndScatter() {
     <div className="grid grid-cols-3 gap-6 px-4 lg:px-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent Bids</CardTitle>
+          <CardTitle className="text-base">Bid Summary by Owner</CardTitle>
           <CardDescription>Last 5 bids and their performance</CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,10 +71,10 @@ export function TableAndScatter() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-muted/40">
-                  <th className="pb-3 text-left font-medium">Bid ID</th>
-                  <th className="pb-3 text-left font-medium">Status</th>
-                  <th className="pb-3 text-right font-medium">Value</th>
-                  <th className="pb-3 text-right font-medium">Growth</th>
+                  <th className="pb-3 text-left font-medium">Owner</th>
+                  <th className="pb-3 text-left font-medium">Dollar Value</th>
+                  <th className="pb-3 text-right font-medium">Total Bids</th>
+                  <th className="pb-3 text-right font-medium">Bids Won</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
