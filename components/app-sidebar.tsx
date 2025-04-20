@@ -82,7 +82,7 @@ export const data = {
     },
     {
       title: "Inventory Position",
-      url: "/inventory",
+      url: "",
       icon: IconChartBar,
     },
     {
@@ -97,12 +97,12 @@ export const data = {
     },
     {
       title: "Admin Portal",
-      url: "/admin",
+      url: "",
       icon: IconUsers,
     },
     {
       title: "Customers",
-      url: "/customers",
+      url: "",
       icon: IconUsers,
     },
     {
@@ -112,7 +112,7 @@ export const data = {
     },
     {
       title: "Contract Manager",
-      url: "/contracts",
+      url: "",
       icon: IconUsers,
     },
   ] as NavItem[],
@@ -194,12 +194,12 @@ export const data = {
     },
     {
       name: "Billing Tracker",
-      url: "/documents/billing",
+      url: "",
       icon: IconFileWord,
     },
     {
       name: "Equipment Tracker",
-      url: "/documents/equipment",
+      url: "",
       icon: IconFileWord,
     },
   ] as Document[],
