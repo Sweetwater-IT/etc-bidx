@@ -6,7 +6,9 @@ type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert
 
 export async function POST(request: Request) {
   try {
-    const { jobs } = await request.json();
+    const { jobs, type = 'available-jobs' } = await request.json();
+    
+    console.log(`Processing ${type} import with ${jobs?.length || 0} records`);
     
     if (!Array.isArray(jobs) || jobs.length === 0) {
       return NextResponse.json(
@@ -22,84 +24,78 @@ export async function POST(request: Request) {
       try {
         console.log('Processing row:', job);
         
-        const status = findFieldValue(job, ['Status']);
-        const branch = findFieldValue(job, ['Branch']);
-        const contractNumber = findFieldValue(job, ['Contract Number']);
-        const county = findFieldValue(job, ['County']);
-        const dueDate = findFieldValue(job, ['Due Date']);
-        const lettingDate = findFieldValue(job, ['Letting Date']);
-        const entryDate = findFieldValue(job, ['Entry Date']);
-        const location = findFieldValue(job, ['Location']);
-        const owner = findFieldValue(job, ['Owner']);
-        const platform = findFieldValue(job, ['Platform']);
-        const requestor = findFieldValue(job, ['Requestor']);
-        const mpt = findFieldValue(job, ['MPT']);
-        const flagging = findFieldValue(job, ['Flagging']);
-        const permSigns = findFieldValue(job, ['Perm Signs']);
-        const equipmentRental = findFieldValue(job, ['Equipment Rental']);
-        const other = findFieldValue(job, ['Other']);
-        const noBidReason = findFieldValue(job, ['No Bid Reason']);
-        
-        const currentDate = new Date().toISOString().split('T')[0];
-        
-        const mappedJob: AvailableJobInsert = {
-          contract_number: contractNumber || '',
-          status: mapStatus(status || 'Unset'),
-          requestor: requestor || 'Unknown',
-          owner: owner || 'Unknown',
-          letting_date: lettingDate || currentDate, // Default to current date
-          due_date: dueDate || currentDate, // Default to current date
-          county: county || 'Unknown',
-          branch: branch || 'Unknown',
-          location: location || 'Unknown',
-          platform: platform || 'Unknown',
-          entry_date: entryDate ? new Date(entryDate).toISOString() : new Date().toISOString(),
-          mpt: Boolean(mpt || false),
-          flagging: Boolean(flagging || false),
-          perm_signs: Boolean(permSigns || false),
-          equipment_rental: Boolean(equipmentRental || false),
-          other: Boolean(other || false),
-          dbe_percentage: 0, // Not in the Excel file, default to 0
-          no_bid_reason: noBidReason || null,
-        };
-
-        if (!mappedJob.contract_number) {
-          throw new Error('Contract number is required');
+        if (type === 'available-jobs') {
+          processAvailableJob(job, validJobs, errors, jobs.indexOf(job));
+        } else {
+          errors.push(`Unknown import type: ${type}`);
         }
         
-        if (!mappedJob.requestor) {
-          console.log('Requestor missing for row, using default');
-          mappedJob.requestor = 'Unknown';
-        }
-        
-        if (!mappedJob.owner) {
-          console.log('Owner missing for row, using default');
-          mappedJob.owner = 'Unknown';
-        }
-
-        validJobs.push(mappedJob);
       } catch (error: any) {
         errors.push(`Row ${jobs.indexOf(job) + 1}: ${error.message}`);
       }
     }
 
     if (validJobs.length > 0) {
-      const { data, error } = await supabase
-        .from('available_jobs')
-        .insert(validJobs)
-        .select();
-
-      if (error) {
-        console.error('Error inserting jobs:', error);
+      const updatedJobs: AvailableJobInsert[] = [];
+      const newJobs: AvailableJobInsert[] = [];
+      const updatedCount = { new: 0, updated: 0 };
+      
+      for (const job of validJobs) {
+        const { data: existingJobs } = await supabase
+          .from('available_jobs')
+          .select('id')
+          .eq('contract_number', job.contract_number)
+          .limit(1);
+        
+        if (existingJobs && existingJobs.length > 0) {
+          const { data, error } = await supabase
+            .from('available_jobs')
+            .update(job)
+            .eq('contract_number', job.contract_number)
+            .select();
+          
+          if (!error && data) {
+            updatedJobs.push(...(data as AvailableJobInsert[]));
+            updatedCount.updated++;
+          }
+        } else {
+          newJobs.push(job);
+          newJobs.push(job);
+          updatedCount.new++;
+        }
+      }
+      
+      let insertError: any = null;
+      if (newJobs.length > 0) {
+        const { data: newJobsData, error } = await supabase
+          .from('available_jobs')
+          .insert(newJobs)
+          .select();
+          
+        if (error) {
+          insertError = error;
+        } else if (newJobsData) {
+          updatedJobs.push(...(newJobsData as AvailableJobInsert[]));
+        }
+      }
+      
+      // Check for errors
+      if (insertError) {
+        console.error('Error inserting new jobs:', insertError);
         return NextResponse.json(
-          { message: 'Failed to import jobs', error: error.message },
+          { message: 'Failed to import jobs', error: insertError.message },
           { status: 500 }
         );
       }
+      
+      const data = updatedJobs;
 
       return NextResponse.json({
         message: 'Jobs imported successfully',
         count: validJobs.length,
+        updated: updatedCount.updated > 0,
+        newCount: updatedCount.new,
+        updatedCount: updatedCount.updated,
         errors: errors.length > 0 ? errors : undefined,
         data
       });
@@ -139,6 +135,120 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
   console.log('Available keys:', objKeys);
 
   return undefined;
+}
+
+function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: string[], rowIndex: number) {
+  console.log(`Processing available job row ${rowIndex + 1}`);
+  
+  const status = findFieldValue(job, ['Status', 'Bid Status']);
+  const branch = findFieldValue(job, ['Branch', 'Office']);
+  const contractNumber = findFieldValue(job, ['Contract Number', 'Contract #', 'Contract']);
+  const county = findFieldValue(job, ['County']);
+  const dueDate = findFieldValue(job, ['Due Date', 'Bid Due Date', 'Due']);
+  const lettingDate = findFieldValue(job, ['Letting Date', 'Letting']);
+  const entryDate = findFieldValue(job, ['Entry Date', 'Date Added', 'Created Date']);
+  const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);
+  const owner = findFieldValue(job, ['Owner', 'Client', 'Agency']);
+  const platform = findFieldValue(job, ['Platform', 'Bid Platform', 'Source']);
+  const requestor = findFieldValue(job, ['Requestor', 'Estimator', 'Contact']);
+  const mpt = findFieldValue(job, ['MPT', 'Maintenance and Protection of Traffic']);
+  const flagging = findFieldValue(job, ['Flagging', 'Traffic Control']);
+  const permSigns = findFieldValue(job, ['Perm Signs', 'Permanent Signs', 'Signs']);
+  const equipmentRental = findFieldValue(job, ['Equipment Rental', 'Equipment']);
+  const other = findFieldValue(job, ['Other', 'Additional Services']);
+  const noBidReason = findFieldValue(job, ['No Bid Reason', 'Reason', 'Notes']);
+  const dbePercentage = findFieldValue(job, ['DBE %', 'DBE Percentage', 'DBE']);
+  
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  let parsedDueDate = parseExcelDate(dueDate);
+  let parsedLettingDate = parseExcelDate(lettingDate);
+  const parsedEntryDate = parseExcelDate(entryDate);
+  
+  if (parsedDueDate && parsedLettingDate) {
+    const dueDateTime = new Date(parsedDueDate).getTime();
+    const lettingDateTime = new Date(parsedLettingDate).getTime();
+    
+    if (dueDateTime > lettingDateTime) {
+      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is after letting date (${parsedLettingDate}). Setting due date equal to letting date.`);
+      errors.push(`Row ${rowIndex + 1}: Due date is after letting date. Adjusted due date to match letting date.`);
+      parsedDueDate = parsedLettingDate;
+    }
+  } else if (parsedDueDate && !parsedLettingDate) {
+    parsedLettingDate = parsedDueDate;
+  } else if (!parsedDueDate && parsedLettingDate) {
+    parsedDueDate = parsedLettingDate;
+  }
+  
+  const mappedJob: AvailableJobInsert = {
+    contract_number: contractNumber || '',
+    status: mapStatus(status || 'Unset'),
+    requestor: requestor || 'Unknown',
+    owner: owner || 'Unknown',
+    letting_date: parsedLettingDate || currentDate, // Default to current date
+    due_date: parsedDueDate || currentDate, // Default to current date
+    county: county || 'Unknown',
+    branch: branch || 'Unknown',
+    location: location || 'Unknown',
+    platform: platform || 'Unknown',
+    entry_date: parsedEntryDate || new Date().toISOString(),
+    mpt: Boolean(mpt || false),
+    flagging: Boolean(flagging || false),
+    perm_signs: Boolean(permSigns || false),
+    equipment_rental: Boolean(equipmentRental || false),
+    other: Boolean(other || false),
+    dbe_percentage: dbePercentage ? parseFloat(dbePercentage.toString()) : 0,
+    no_bid_reason: noBidReason || null,
+  };
+
+  if (!mappedJob.contract_number) {
+    throw new Error('Contract number is required');
+  }
+  
+  if (!mappedJob.requestor) {
+    console.log('Requestor missing for row, using default');
+    errors.push(`Row ${rowIndex + 1}: Requestor missing, using default 'Unknown'`);
+    mappedJob.requestor = 'Unknown';
+  }
+  
+  if (!mappedJob.owner) {
+    console.log('Owner missing for row, using default');
+    errors.push(`Row ${rowIndex + 1}: Owner missing, using default 'Unknown'`);
+    mappedJob.owner = 'Unknown';
+  }
+
+  validJobs.push(mappedJob);
+}
+
+function parseExcelDate(value: any): string | null {
+  if (!value) return null;
+  
+  if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)))) {
+    try {
+      const numericValue = typeof value === 'number' ? value : Number(value);
+      
+      if (numericValue > 1000 && numericValue < 100000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const jsDate = new Date(excelEpoch);
+        jsDate.setDate(excelEpoch.getDate() + numericValue);
+        return jsDate.toISOString();
+      }
+    } catch (error) {
+      console.error('Error parsing numeric Excel date:', error);
+    }
+  }
+  
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  } catch (error) {
+    console.error('Error parsing string date:', error);
+  }
+  
+  console.warn(`Could not parse date value: ${value}`);
+  return null;
 }
 
 function mapStatus(status: string): 'Bid' | 'No Bid' | 'Unset' {

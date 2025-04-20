@@ -158,6 +158,173 @@ export interface Database {
           updated_at?: string
           archived_at?: string
         }
+      },
+      bid_estimates: {
+        Row: {
+          id: number
+          status: string
+          letting_date: string | null
+          contract_number: string
+          contractor: string | null
+          subcontractor: string | null
+          owner: string
+          county: string
+          branch: string
+          division: string
+          estimator: string
+          start_date: string
+          end_date: string
+          project_days: number
+          base_rate: number
+          fringe_rate: number
+          rt_miles: number
+          rt_travel: number
+          emergency_job: boolean
+          rated_hours: number
+          nonrated_hours: number
+          total_hours: number
+          phases: number
+          type_iii_4ft: number
+          wings_6ft: number
+          h_stands: number
+          posts: number
+          sand_bags: number
+          covers: number
+          spring_loaded_metal_stands: number
+          hi_vertical_panels: number
+          type_xi_vertical_panels: number
+          b_lites: number
+          ac_lites: number
+          hi_signs_sq_ft: number
+          dg_signs_sq_ft: number
+          special_signs_sq_ft: number
+          tma: number
+          arrow_board: number
+          message_board: number
+          speed_trailer: number
+          pts: number
+          mpt_value: number
+          mpt_gross_profit: number
+          mpt_gm_percent: number
+          perm_sign_value: number
+          perm_sign_gross_profit: number
+          perm_sign_gm_percent: number
+          rental_value: number
+          rental_gross_profit: number
+          rental_gm_percent: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          status: string
+          letting_date?: string | null
+          contract_number: string
+          contractor?: string | null
+          subcontractor?: string | null
+          owner: string
+          county: string
+          branch: string
+          division: string
+          estimator: string
+          start_date: string
+          end_date: string
+          project_days: number
+          base_rate: number
+          fringe_rate: number
+          rt_miles: number
+          rt_travel: number
+          emergency_job?: boolean
+          rated_hours: number
+          nonrated_hours: number
+          total_hours: number
+          phases: number
+          type_iii_4ft: number
+          wings_6ft: number
+          h_stands: number
+          posts: number
+          sand_bags: number
+          covers: number
+          spring_loaded_metal_stands: number
+          hi_vertical_panels: number
+          type_xi_vertical_panels: number
+          b_lites: number
+          ac_lites: number
+          hi_signs_sq_ft: number
+          dg_signs_sq_ft: number
+          special_signs_sq_ft: number
+          tma: number
+          arrow_board: number
+          message_board: number
+          speed_trailer: number
+          pts: number
+          mpt_value: number
+          mpt_gross_profit: number
+          mpt_gm_percent: number
+          perm_sign_value: number
+          perm_sign_gross_profit: number
+          perm_sign_gm_percent: number
+          rental_value: number
+          rental_gross_profit: number
+          rental_gm_percent: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          status?: string
+          letting_date?: string | null
+          contract_number?: string
+          contractor?: string | null
+          subcontractor?: string | null
+          owner?: string
+          county?: string
+          branch?: string
+          division?: string
+          estimator?: string
+          start_date?: string
+          end_date?: string
+          project_days?: number
+          base_rate?: number
+          fringe_rate?: number
+          rt_miles?: number
+          rt_travel?: number
+          emergency_job?: boolean
+          rated_hours?: number
+          nonrated_hours?: number
+          total_hours?: number
+          phases?: number
+          type_iii_4ft?: number
+          wings_6ft?: number
+          h_stands?: number
+          posts?: number
+          sand_bags?: number
+          covers?: number
+          spring_loaded_metal_stands?: number
+          hi_vertical_panels?: number
+          type_xi_vertical_panels?: number
+          b_lites?: number
+          ac_lites?: number
+          hi_signs_sq_ft?: number
+          dg_signs_sq_ft?: number
+          special_signs_sq_ft?: number
+          tma?: number
+          arrow_board?: number
+          message_board?: number
+          speed_trailer?: number
+          pts?: number
+          mpt_value?: number
+          mpt_gross_profit?: number
+          mpt_gm_percent?: number
+          perm_sign_value?: number
+          perm_sign_gross_profit?: number
+          perm_sign_gm_percent?: number
+          rental_value?: number
+          rental_gross_profit?: number
+          rental_gm_percent?: number
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type

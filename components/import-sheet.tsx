@@ -4,19 +4,22 @@ import * as xlsx from 'xlsx'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { toast } from 'sonner'
-import { IconFileUpload, IconX } from '@tabler/icons-react'
+import { IconFileUpload, IconX, IconLoader2 } from '@tabler/icons-react'
 import { importJobs } from '@/lib/api-client'
+import { useLoading } from '@/hooks/use-loading'
 
 interface ImportSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onImportSuccess?: () => void
+  importType?: 'available-jobs' | 'active-bids'
 }
 
-export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheetProps) {
+export function ImportSheet({ open, onOpenChange, onImportSuccess, importType = 'available-jobs' }: ImportSheetProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [preview, setPreview] = useState<any[] | null>(null)
+  const { startLoading, stopLoading } = useLoading()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -55,60 +58,62 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
     if (!file) return
 
     setIsUploading(true)
+    startLoading()
     
     try {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result
-          const workbook = xlsx.read(data, { type: 'binary' })
-          const sheetName = workbook.SheetNames[0]
-          const worksheet = workbook.Sheets[sheetName]
-          const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: '' })
-          
-          // Log the data for debugging
-          console.log('Excel data to import:', jsonData)
-          
-          // Send data to API
-          const result = await importJobs(jsonData)
-          
-          if (result.count > 0) {
-            toast.success(`Successfully imported ${result.count} jobs`)
-            setFile(null)
-            setPreview(null)
-            onOpenChange(false)
-            if (onImportSuccess) {
-              onImportSuccess()
-            }
-          } else if (result.errors && result.errors.length > 0) {
-            // Show error toast with details
-            toast.error(
-              <div className="space-y-2">
-                <p>Failed to import jobs. Please check the following issues:</p>
-                <ul className="text-xs max-h-40 overflow-y-auto list-disc pl-4">
-                  {result.errors.slice(0, 5).map((error, i) => (
-                    <li key={i}>{error}</li>
-                  ))}
-                  {result.errors.length > 5 && (
-                    <li>...and {result.errors.length - 5} more errors</li>
-                  )}
-                </ul>
-              </div>
-            )
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve(e.target.result as string)
           } else {
-            toast.error('Failed to import jobs. Please check the file format.')
+            reject(new Error('Failed to read file'))
           }
-        } catch (error: any) {
-          console.error('Error processing Excel file:', error)
-          toast.error(`Error processing Excel file: ${error.message || 'Unknown error'}`)
         }
+        reader.onerror = () => reject(reader.error)
+        reader.readAsBinaryString(file)
+      })
+      
+      const workbook = xlsx.read(fileData, { type: 'binary' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: '' })
+      
+      console.log('Excel data to import:', jsonData)
+      
+      const result = await importJobs(jsonData, importType)
+          
+      if (result.count > 0) {
+        toast.success(`Successfully imported ${result.count} ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}`)
+        setFile(null)
+        setPreview(null)
+        onOpenChange(false)
+        if (onImportSuccess) {
+          onImportSuccess()
+        }
+      } else if (result.errors && result.errors.length > 0) {
+        toast.error(
+          <div className="space-y-2">
+            <p>Failed to import {importType === 'available-jobs' ? 'available jobs' : 'active bids'}. Please check the following issues:</p>
+            <ul className="text-xs max-h-40 overflow-y-auto list-disc pl-4">
+              {result.errors.slice(0, 5).map((error, i) => (
+                <li key={i}>{error}</li>
+              ))}
+              {result.errors.length > 5 && (
+                <li>...and {result.errors.length - 5} more errors</li>
+              )}
+            </ul>
+          </div>
+        )
+      } else {
+        toast.error(`Failed to import ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}. Please check the file format.`)
       }
-      reader.readAsBinaryString(file)
     } catch (error: any) {
       console.error('Error importing jobs:', error)
-      toast.error(`Error importing jobs: ${error.message || 'Please try again'}`)
+      toast.error(`Error importing ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}: ${error.message || 'Please try again'}`)
     } finally {
       setIsUploading(false)
+      stopLoading()
     }
   }
 
@@ -122,11 +127,21 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[600px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Import Jobs</SheetTitle>
+          <SheetTitle>Import {importType === 'available-jobs' ? 'Available Jobs' : 'Active Bids'}</SheetTitle>
           <div className="text-sm text-muted-foreground space-y-2">
-            <p>
-              Upload an Excel file (.xlsx) with job data to import. The file should have columns matching the job fields.
+            <p className="text-sm text-muted-foreground">
+              Upload an Excel file (.xlsx) with {importType === 'available-jobs' ? 'available jobs' : 'active bids'} data to import.
+              {importType === 'available-jobs' ? (
+                <span className="block mt-1 text-xs">
+                  Required columns: Contract Number, Branch, County, Due Date, Letting Date, Owner, Requestor, etc.
+                </span>
+              ) : (
+                <span className="block mt-1 text-xs">
+                  Required columns: Contract Number, Estimator, Owner, County, Letting Date, etc.
+                </span>
+              )}
             </p>
+            <p>The file should have columns matching the job fields.</p>
             <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-amber-800 text-xs">
               <p className="font-medium">Required columns:</p>
               <ul className="list-disc pl-4 mt-1">
@@ -217,9 +232,14 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
             <Button 
               onClick={handleImport} 
               disabled={!file || isUploading}
-              className={isUploading ? 'opacity-70 cursor-not-allowed' : ''}
+              className="min-w-[100px]"
             >
-              {isUploading ? 'Importing...' : 'Import'}
+              {isUploading ? (
+                <div className="flex items-center justify-center">
+                  <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>Importing...</span>
+                </div>
+              ) : 'Import'}
             </Button>
           </div>
         </SheetFooter>
