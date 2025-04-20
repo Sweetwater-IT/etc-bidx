@@ -52,8 +52,8 @@ interface Document {
 
 export const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "Napoleon Dunn",
+    email: "ndunn@establishedtraffic.com",
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
@@ -217,9 +217,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
               <Link href="/">
-                <IconInnerShadowTop className="!size-5" />
 
-                <span className="text-base font-semibold">Established Traffic Control</span>
+                <span className="text-base font-semibold">BidX</span>
                 {/* <ModeToggle /> */}
               
               </Link>
