@@ -30,26 +30,65 @@ export async function POST(request: Request) {
     }
 
     if (validBids.length > 0) {
-      const { data, error } = await supabase
-        .from('bid_estimates')
-        .upsert(validBids, { 
-          onConflict: 'contract_number',
-          ignoreDuplicates: false
-        })
-        .select();
-
-      if (error) {
-        console.error('Error inserting active bids:', error);
+      const updatedBids: BidEstimateInsert[] = [];
+      const newBids: BidEstimateInsert[] = [];
+      const updatedCount = { new: 0, updated: 0 };
+      
+      for (const bid of validBids) {
+        const { data: existingBids } = await supabase
+          .from('bid_estimates')
+          .select('id')
+          .eq('contract_number', bid.contract_number)
+          .limit(1);
+        
+        if (existingBids && existingBids.length > 0) {
+          const { data, error } = await supabase
+            .from('bid_estimates')
+            .update(bid)
+            .eq('contract_number', bid.contract_number)
+            .select();
+          
+          if (!error && data) {
+            // Type assertion to ensure TypeScript knows the data type
+            updatedBids.push(...(data as BidEstimateInsert[]));
+            updatedCount.updated++;
+          }
+        } else {
+          newBids.push(bid);
+          updatedCount.new++;
+        }
+      }
+      
+      let insertError: any = null;
+      if (newBids.length > 0) {
+        const { data: newBidsData, error } = await supabase
+          .from('bid_estimates')
+          .insert(newBids)
+          .select();
+          
+        if (error) {
+          insertError = error;
+        } else if (newBidsData) {
+          updatedBids.push(...(newBidsData as BidEstimateInsert[]));
+        }
+      }
+      
+      if (insertError) {
+        console.error('Error inserting new bids:', insertError);
         return NextResponse.json(
-          { message: 'Failed to import active bids', error: error.message },
+          { message: 'Failed to import active bids', error: insertError.message },
           { status: 500 }
         );
       }
+      
+      const data = updatedBids;
 
       return NextResponse.json({
         message: 'Active bids imported successfully',
         count: validBids.length,
-        updated: true,
+        updated: updatedCount.updated > 0,
+        newCount: updatedCount.new,
+        updatedCount: updatedCount.updated,
         errors: errors.length > 0 ? errors : undefined,
         data
       });

@@ -36,26 +36,66 @@ export async function POST(request: Request) {
     }
 
     if (validJobs.length > 0) {
-      const { data, error } = await supabase
-        .from('available_jobs')
-        .upsert(validJobs, { 
-          onConflict: 'contract_number',
-          ignoreDuplicates: false
-        })
-        .select();
-
-      if (error) {
-        console.error('Error inserting jobs:', error);
+      const updatedJobs: AvailableJobInsert[] = [];
+      const newJobs: AvailableJobInsert[] = [];
+      const updatedCount = { new: 0, updated: 0 };
+      
+      for (const job of validJobs) {
+        const { data: existingJobs } = await supabase
+          .from('available_jobs')
+          .select('id')
+          .eq('contract_number', job.contract_number)
+          .limit(1);
+        
+        if (existingJobs && existingJobs.length > 0) {
+          const { data, error } = await supabase
+            .from('available_jobs')
+            .update(job)
+            .eq('contract_number', job.contract_number)
+            .select();
+          
+          if (!error && data) {
+            updatedJobs.push(...(data as AvailableJobInsert[]));
+            updatedCount.updated++;
+          }
+        } else {
+          newJobs.push(job);
+          newJobs.push(job);
+          updatedCount.new++;
+        }
+      }
+      
+      let insertError: any = null;
+      if (newJobs.length > 0) {
+        const { data: newJobsData, error } = await supabase
+          .from('available_jobs')
+          .insert(newJobs)
+          .select();
+          
+        if (error) {
+          insertError = error;
+        } else if (newJobsData) {
+          updatedJobs.push(...(newJobsData as AvailableJobInsert[]));
+        }
+      }
+      
+      // Check for errors
+      if (insertError) {
+        console.error('Error inserting new jobs:', insertError);
         return NextResponse.json(
-          { message: 'Failed to import jobs', error: error.message },
+          { message: 'Failed to import jobs', error: insertError.message },
           { status: 500 }
         );
       }
+      
+      const data = updatedJobs;
 
       return NextResponse.json({
         message: 'Jobs imported successfully',
         count: validJobs.length,
-        updated: true,
+        updated: updatedCount.updated > 0,
+        newCount: updatedCount.new,
+        updatedCount: updatedCount.updated,
         errors: errors.length > 0 ? errors : undefined,
         data
       });
