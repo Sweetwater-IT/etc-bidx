@@ -84,6 +84,11 @@ const PieChartCard = ({
                   width: '100%',
                   paddingTop: '20px',
                 }}
+                formatter={(value) => (
+                  <span style={{ color: '#707070', marginRight: '10px' }}>
+                    {value}
+                  </span>
+                )}
                 className="text-sm"
               />
             </PieChart>
