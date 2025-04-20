@@ -15,6 +15,7 @@ const SALE_TRACKER_SEGMENTS = [
   { label: "All", value: "all" },
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
+  { label: "Archived", value: "archived" },
 ];
 
 const saleTrackerCards: CardData[] = [
