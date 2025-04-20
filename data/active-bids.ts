@@ -18,6 +18,7 @@ export const ACTIVE_BIDS_SEGMENTS = [
   { label: "Lost", value: "lost" },
   { label: "Draft", value: "draft" },
   { label: "Won - Pending", value: "won-pending" },
+  { label: "Archived", value: "archived" },
 ]
 
 export const ACTIVE_BIDS_COLUMNS = [
