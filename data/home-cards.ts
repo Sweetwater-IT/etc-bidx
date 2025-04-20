@@ -4,7 +4,7 @@ import { CardData } from "./jobs-cards";
 export const homeCards: CardData[] = [
   {
     title: "Sunday, April 20, 2025",
-    value: "Good Morning, Kenny",
+    value: "Good Morning, Napoleon",
     // change: 12.5,
     // trend: "up",
     // description: "Trending up this month",
