@@ -6,7 +6,7 @@ import BidSummaryStep5 from "./bid-summary-step5";
 import MUTCDSignsStep2 from "./mutcd-signs-step2";
 import TripAndLaborStep3 from "./trip-and-labor-step3";
 
-const steps = [
+// const steps = [
     // {
     //     id: "step-1",
     //     name: "Admin Information",
@@ -51,13 +51,13 @@ const steps = [
     //     description: "Add and manage bid items",
     //     fields: [{ name: "items", label: "Items", type: "table" }],
     // },
-    {
-        id: "step-5",
-        name: "Bid Summary",
-        description: "Review bid details",
-        fields: [{ name: "summary", label: "Summary", type: "summary" }],
-    },
-];
+//     {
+//         id: "step-5",
+//         name: "Bid Summary",
+//         description: "Review bid details",
+//         fields: [{ name: "summary", label: "Summary", type: "summary" }],
+//     },
+// ];
 
 const Steps = ({ formData, setFormData }: { formData: FormData; setFormData: Dispatch<SetStateAction<FormData>> }) => {
     const [currentStep, setCurrentStep] = useState(1);
