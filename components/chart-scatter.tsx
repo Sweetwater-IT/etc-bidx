@@ -41,7 +41,7 @@ export function ChartScatter() {
   return (
     <Card className="col-span-2">
       <CardHeader>
-        <CardTitle className="text-base">Scatter Plot</CardTitle>
+        <CardTitle className="text-base">MPT Bid Analysis</CardTitle>
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,8 +62,8 @@ export function ChartScatter() {
               <Scatter
                 name="Data Points"
                 data={data}
-                fill="#4285F4"
-                line={{ stroke: "#4285F4", strokeWidth: 1 }}
+                fill="#E0E0E0"
+                line={{ stroke: "#707070", strokeWidth: 1 }}
                 lineType="fitting"
               />
             </ScatterChart>
