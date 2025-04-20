@@ -24,6 +24,7 @@ const SEGMENTS = [
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
+  { label: "Archived", value: "archived" }
 ];
 
 export default function QuotesPage() {
