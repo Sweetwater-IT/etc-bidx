@@ -133,9 +133,16 @@ export async function changeBidStatus(
 
 /**
  * Import jobs from Excel data
+ * @param data The Excel data to import
+ * @param type The type of import (available-jobs or active-bids)
  */
-export async function importJobs(data: any[]): Promise<{ count: number; errors?: string[] }> {
-  const response = await fetch('/api/jobs/import', {
+export async function importJobs(data: any[], type: 'available-jobs' | 'active-bids' = 'available-jobs'): Promise<{ count: number; errors?: string[] }> {
+  // Use different endpoints based on import type
+  const endpoint = type === 'available-jobs' ? '/api/jobs/import' : '/api/bids/import';
+  
+  console.log(`Importing ${type} data to ${endpoint}`);
+  
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

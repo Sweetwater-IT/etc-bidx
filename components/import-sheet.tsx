@@ -11,9 +11,10 @@ interface ImportSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onImportSuccess?: () => void
+  importType?: 'available-jobs' | 'active-bids'
 }
 
-export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheetProps) {
+export function ImportSheet({ open, onOpenChange, onImportSuccess, importType = 'available-jobs' }: ImportSheetProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [preview, setPreview] = useState<any[] | null>(null)
@@ -70,10 +71,10 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
           console.log('Excel data to import:', jsonData)
           
           // Send data to API
-          const result = await importJobs(jsonData)
+          const result = await importJobs(jsonData, importType)
           
           if (result.count > 0) {
-            toast.success(`Successfully imported ${result.count} jobs`)
+            toast.success(`Successfully imported ${result.count} ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}`)
             setFile(null)
             setPreview(null)
             onOpenChange(false)
@@ -84,7 +85,7 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
             // Show error toast with details
             toast.error(
               <div className="space-y-2">
-                <p>Failed to import jobs. Please check the following issues:</p>
+                <p>Failed to import {importType === 'available-jobs' ? 'available jobs' : 'active bids'}. Please check the following issues:</p>
                 <ul className="text-xs max-h-40 overflow-y-auto list-disc pl-4">
                   {result.errors.slice(0, 5).map((error, i) => (
                     <li key={i}>{error}</li>
@@ -96,17 +97,17 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
               </div>
             )
           } else {
-            toast.error('Failed to import jobs. Please check the file format.')
+            toast.error(`Failed to import ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}. Please check the file format.`)
           }
         } catch (error: any) {
           console.error('Error processing Excel file:', error)
-          toast.error(`Error processing Excel file: ${error.message || 'Unknown error'}`)
+          toast.error(`Error processing Excel file for ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}: ${error.message || 'Unknown error'}`)
         }
       }
       reader.readAsBinaryString(file)
     } catch (error: any) {
       console.error('Error importing jobs:', error)
-      toast.error(`Error importing jobs: ${error.message || 'Please try again'}`)
+      toast.error(`Error importing ${importType === 'available-jobs' ? 'available jobs' : 'active bids'}: ${error.message || 'Please try again'}`)
     } finally {
       setIsUploading(false)
     }
@@ -122,11 +123,21 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess }: ImportSheet
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[600px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Import Jobs</SheetTitle>
+          <SheetTitle>Import {importType === 'available-jobs' ? 'Available Jobs' : 'Active Bids'}</SheetTitle>
           <div className="text-sm text-muted-foreground space-y-2">
-            <p>
-              Upload an Excel file (.xlsx) with job data to import. The file should have columns matching the job fields.
+            <p className="text-sm text-muted-foreground">
+              Upload an Excel file (.xlsx) with {importType === 'available-jobs' ? 'available jobs' : 'active bids'} data to import.
+              {importType === 'available-jobs' ? (
+                <span className="block mt-1 text-xs">
+                  Required columns: Contract Number, Branch, County, Due Date, Letting Date, Owner, Requestor, etc.
+                </span>
+              ) : (
+                <span className="block mt-1 text-xs">
+                  Required columns: Contract Number, Estimator, Owner, County, Letting Date, etc.
+                </span>
+              )}
             </p>
+            <p>The file should have columns matching the job fields.</p>
             <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-amber-800 text-xs">
               <p className="font-medium">Required columns:</p>
               <ul className="list-disc pl-4 mt-1">
