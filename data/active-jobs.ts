@@ -26,6 +26,7 @@ export const ACTIVE_JOBS_SEGMENTS = [
   { label: "West", value: "west" },
   { label: "Turbotville", value: "turbotville" },
   { label: "Hatfield", value: "hatfield" },
+  { label: "Archived", value: "archived" },
 ]
 
 export const ACTIVE_JOBS_COLUMNS = [
