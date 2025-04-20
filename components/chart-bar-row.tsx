@@ -34,13 +34,13 @@ const horizontalData = monthlyData.map(item => ({
   value: item.value1,
 }));
 
-const COLORS = ["#4285F4", "#81B4F9"];
+const COLORS = ["#E0E0E0", "#707070"];
 
 const HorizontalBarChart = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-base">Bar Chart - Horizontal</CardTitle>
+        <CardTitle className="text-base">Jobs Bid Summary</CardTitle>
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
       <CardContent>
@@ -114,8 +114,8 @@ export function ChartBarRow() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 lg:px-6 w-full">
       <HorizontalBarChart />
-      <VerticalBarChart title="Bar Chart - Multiple" />
-      <VerticalBarChart title="Bar Chart - Multiple" />
+      <VerticalBarChart title="Project Starts" />
+      <VerticalBarChart title="Total Hours Sold" />
     </div>
   );
 } 
