@@ -41,7 +41,7 @@ export default function ActiveBidPage() {
                             <div className="px-6">
                                 <div className="mb-6">
                                     <Link href="/jobs/active-bids" className={cn(buttonVariants({ variant: "ghost" }), "gap-2 -ml-2 mb-4")}>
-                                        <MoveLeft className="w-3" /> Back to Bid List
+                                        <MoveLeft className="w-3 mt-[1px]" /> Back to Bid List
                                     </Link>
                                     <h1 className="text-3xl font-bold">Create New Bid</h1>
                                 </div>
