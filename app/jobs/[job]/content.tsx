@@ -146,7 +146,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
               { label: "Unset", value: "unset" },
               { label: "No Bid", value: "no-bid" },
               { label: "Bid", value: "bid" },
-              { label: "Archived", value: "archived" },
           ]
         : isActiveBids
         ? ACTIVE_BIDS_SEGMENTS
