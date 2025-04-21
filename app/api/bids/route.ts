@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
-    const orderBy = searchParams.get('orderBy') || 'due_date';
+    const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
     
     let query = supabase
