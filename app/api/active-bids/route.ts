@@ -19,10 +19,12 @@ export async function GET(request: NextRequest) {
     
     if (status) {
       if (status === 'won-pending') {
-        // For won-pending, we want to match both won and pending statuses
         query = query.or('status.ilike.%won%,status.ilike.%pending%');
-        console.log('Using case-insensitive OR filter for won-pending');
+      } else if (status === 'archived') {
+        query = query.ilike('status', '%archived%');
       } else {
+        // Try case-insensitive filtering using ilike for text fields
+        // This is more reliable than exact matching with different case variations
         console.log('Using case-insensitive filter for status:', status);
         query = query.ilike('status', `%${status}%`);
       }

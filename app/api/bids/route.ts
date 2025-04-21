@@ -8,7 +8,7 @@ type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status') as 'Bid' | 'No Bid' | 'Unset' | null;
+    const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
     const orderBy = searchParams.get('orderBy') || 'due_date';
     const ascending = searchParams.get('ascending') === 'true';
@@ -19,7 +19,31 @@ export async function GET(request: NextRequest) {
       .order(orderBy, { ascending });
     
     if (status) {
-      query = query.eq('status', status);
+      // Special case for 'archived' filter - fetch from archived_available_jobs table instead
+      if (status === 'archived') {
+        query = supabase
+          .from('archived_available_jobs')
+          .select('*')
+          .order(orderBy, { ascending });
+      } else {
+        let dbStatus: string;
+        
+        switch (status) {
+          case 'bid':
+            dbStatus = 'Bid';
+            break;
+          case 'no-bid':
+            dbStatus = 'No Bid';
+            break;
+          case 'unset':
+            dbStatus = 'Unset';
+            break;
+          default:
+            dbStatus = status;
+        }
+        
+        query = query.eq('status', dbStatus);
+      }
     }
     
     query = query.limit(limit);

@@ -10,13 +10,14 @@ import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
 import { ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids";
 import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs";
-import { notFound, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { notFound } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -59,13 +60,19 @@ interface JobPageContentProps {
 type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
-    const router = useRouter();
     const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false);
     const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
     const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false);
     const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
     const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
     const [activeSegment, setActiveSegment] = useState("all");
+    const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
+    const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
+    const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
+    const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
+    
+    const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
+    const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const { startLoading, stopLoading } = useLoading();
 
     if (!["available", "active-bids", "active-jobs"].includes(job)) {
@@ -89,10 +96,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.log("Loading available jobs with activeSegment:", activeSegment);
             startLoading();
 
-            const dbStatus = mapUiStatusToDbStatus(activeSegment);
-            console.log("Mapped DB status:", dbStatus);
-
-            const options = activeSegment !== "all" ? { status: dbStatus } : undefined;
+            // Special handling for archived segment
+            let options;
+            if (activeSegment === "archived") {
+                options = { status: "archived" };
+                console.log("Using archived filter");
+            } else if (activeSegment !== "all") {
+                const dbStatus = mapUiStatusToDbStatus(activeSegment);
+                console.log("Mapped DB status:", dbStatus);
+                options = { status: dbStatus };
+            }
             console.log("Fetch options:", options);
 
             const data = await fetchBids(options);
@@ -213,12 +226,86 @@ export function JobPageContent({ job }: JobPageContentProps) {
         ? ACTIVE_BIDS_SEGMENTS
         : ACTIVE_JOBS_SEGMENTS;
 
+    const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
+        setSelectedJobsToArchive(selectedJobs);
+        setShowArchiveJobsDialog(true);
+    };
+
+    const handleArchiveAvailableJobs = async () => {
+        try {
+            startLoading();
+            const ids = selectedJobsToArchive.map(job => job.id);
+            
+            await archiveJobs(ids);
+            
+            toast.success(`Successfully archived ${ids.length} job(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+            
+            await loadAvailableJobs();
+            
+            // Reset row selection after successful archive
+            if (availableJobsTableRef.current) {
+                availableJobsTableRef.current.resetRowSelection();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error archiving jobs:', error);
+            toast.error('Failed to archive jobs. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+
+    const initiateArchiveBids = (selectedBids: ActiveBid[]) => {
+        setSelectedBidsToArchive(selectedBids);
+        setShowArchiveBidsDialog(true);
+    };
+
+    const handleArchiveActiveBids = async () => {
+        try {
+            startLoading();
+            const ids = selectedBidsToArchive.map(bid => bid.id);
+            
+            await archiveActiveBids(ids);
+            
+            toast.success(`Successfully archived ${ids.length} bid(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+            
+            await loadActiveBids();
+            
+            // Reset row selection after successful archive
+            if (activeBidsTableRef.current) {
+                activeBidsTableRef.current.resetRowSelection();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error archiving bids:', error);
+            toast.error('Failed to archive bids. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+
     const handleCreateClick = () => {
         if (isAvailableJobs) {
             setOpenBidSheetOpen(true);
         } else if (isActiveBids) {
-            router.push("/active-bid");
-        } else {
+            setCreateActiveBidSheetOpen(true);
+        } else if (isActiveJobs) {
             setCreateJobSheetOpen(true);
         }
     };
@@ -256,6 +343,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     onSegmentChange={handleSegmentChange}
+                                    onArchiveSelected={initiateArchiveJobs}
+                                    tableRef={availableJobsTableRef}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
@@ -265,6 +354,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     segmentValue={activeSegment}
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
+                                    onArchiveSelected={initiateArchiveBids}
+                                    tableRef={activeBidsTableRef}
                                 />
                             ) : (
                                 <DataTable<JobPageData>
@@ -277,9 +368,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                             {isAvailableJobs && <OpenBidSheet open={openBidSheetOpen} onOpenChange={setOpenBidSheetOpen} onSuccess={loadAvailableJobs} />}
 
-                            {isActiveJobs && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} />}
-
-                            {isActiveBids && <CreateActiveBidSheet open={createActiveBidSheetOpen} onOpenChange={setCreateActiveBidSheetOpen} />}
+                            {createJobSheetOpen && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} />}
+                            {createActiveBidSheetOpen && <CreateActiveBidSheet open={createActiveBidSheetOpen} onOpenChange={setCreateActiveBidSheetOpen} />}
+                            
+                            <ConfirmArchiveDialog
+                                isOpen={showArchiveJobsDialog}
+                                onClose={() => setShowArchiveJobsDialog(false)}
+                                onConfirm={handleArchiveAvailableJobs}
+                                itemCount={selectedJobsToArchive.length}
+                                itemType="job"
+                            />
+                            
+                            <ConfirmArchiveDialog
+                                isOpen={showArchiveBidsDialog}
+                                onClose={() => setShowArchiveBidsDialog(false)}
+                                onConfirm={handleArchiveActiveBids}
+                                itemCount={selectedBidsToArchive.length}
+                                itemType="bid"
+                            />
                         </div>
                     </div>
                 </div>

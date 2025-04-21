@@ -30,6 +30,12 @@ export interface DataTableProps<TData> {
     onAddClick?: () => void;
     onSegmentChange?: (value: string) => void;
     stickyLastColumn?: boolean;
+    onArchiveSelected?: (selectedRows: TData[]) => void;
+    // Keeping onDeleteSelected for future implementation
+    onDeleteSelected?: (selectedRows: TData[]) => void;
+    tableRef?: React.RefObject<{
+        resetRowSelection: () => void;
+    } | null>;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -64,6 +70,11 @@ export function DataTable<TData>({
     onAddClick,
     onSegmentChange,
     stickyLastColumn = false,
+    onArchiveSelected,
+    // onDeleteSelected is unused for now but kept for future implementation
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    onDeleteSelected,
+    tableRef,
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
         return [
@@ -100,6 +111,21 @@ export function DataTable<TData>({
                                     <DropdownMenuContent align="end" className="z-[200]">
                                         <DropdownMenuItem>View details</DropdownMenuItem>
                                         <DropdownMenuItem>Edit</DropdownMenuItem>
+                                        {segmentValue === 'archived' ? (
+                                            <DropdownMenuItem 
+                                                className="text-destructive"
+                                                onClick={() => {}}
+                                            >
+                                                Delete
+                                            </DropdownMenuItem>
+                                        ) : onArchiveSelected && (
+                                            <DropdownMenuItem 
+                                                className="text-destructive"
+                                                onClick={() => onArchiveSelected([info.row.original as TData])}
+                                            >
+                                                Archive
+                                            </DropdownMenuItem>
+                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -111,7 +137,7 @@ export function DataTable<TData>({
             {
                 id: "actions",
                 header: () => <div className="text-center">Actions</div>,
-                cell: () => (
+                cell: ({ row }) => (
                     <div className={cn("flex justify-center", stickyLastColumn && "sticky right-0 bg-background")}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -123,19 +149,41 @@ export function DataTable<TData>({
                             <DropdownMenuContent align="end" className="z-[200]">
                                 <DropdownMenuItem>View details</DropdownMenuItem>
                                 <DropdownMenuItem>Edit</DropdownMenuItem>
+                                {segmentValue === 'archived' ? (
+                                    <DropdownMenuItem 
+                                        className="text-destructive"
+                                        onClick={() => {}}
+                                    >
+                                        Delete
+                                    </DropdownMenuItem>
+                                ) : onArchiveSelected && (
+                                    <DropdownMenuItem 
+                                        className="text-destructive"
+                                        onClick={() => onArchiveSelected([row.original as TData])}
+                                    >
+                                        Archive
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
                 ),
             },
         ];
-    }, [legacyColumns, stickyLastColumn]);
+    }, [legacyColumns, stickyLastColumn, onArchiveSelected, segmentValue]);
 
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+    
+    // Expose the resetRowSelection method via ref
+    React.useImperativeHandle(tableRef, () => ({
+        resetRowSelection: () => {
+            table.toggleAllRowsSelected(false);
+        }
+    }), [table]);
 
     return (
         <div className="space-y-4">
@@ -151,9 +199,32 @@ export function DataTable<TData>({
                         <IconArrowsSort className="h-4 w-4" />
                     </Button>
 
-                    <Button variant="outline" size="icon">
-                        <IconDotsVertical className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                                <IconDotsVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="z-[200]">
+                            {table.getSelectedRowModel().rows.length > 0 && (
+                                segmentValue === 'archived' ? (
+                                    <DropdownMenuItem 
+                                        className="text-destructive"
+                                        onClick={() => {}}
+                                    >
+                                        Delete Selected
+                                    </DropdownMenuItem>
+                                ) : onArchiveSelected && (
+                                    <DropdownMenuItem 
+                                        className="text-destructive"
+                                        onClick={() => onArchiveSelected(table.getSelectedRowModel().rows.map(row => row.original))}
+                                    >
+                                        Archive Selected
+                                    </DropdownMenuItem>
+                                )
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
                     {addButtonLabel && (
                         <Button size="sm" onClick={onAddClick}>

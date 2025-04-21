@@ -11,7 +11,7 @@ type BidEstimateInsert = Database['public']['Tables']['bid_estimates']['Insert']
  * Fetch all available jobs with optional filtering
  */
 export async function fetchBids(options?: {
-  status?: 'Bid' | 'No Bid' | 'Unset';
+  status?: 'Bid' | 'No Bid' | 'Unset' | 'archived' | string;
   limit?: number;
   orderBy?: string;
   ascending?: boolean;
@@ -214,6 +214,48 @@ export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstima
  * @param data The Excel data to import
  * @param type The type of import (available-jobs or active-bids)
  */
+/**
+ * Archive multiple available jobs
+ */
+export async function archiveJobs(ids: number[]): Promise<{ count: number }> {
+  const response = await fetch('/api/jobs/archive', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to archive jobs');
+  }
+  
+  const result = await response.json();
+  return { count: result.count };
+}
+
+/**
+ * Archive multiple active bids
+ */
+export async function archiveActiveBids(ids: number[]): Promise<{ count: number }> {
+  const response = await fetch('/api/active-bids/archive', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to archive active bids');
+  }
+  
+  const result = await response.json();
+  return { count: result.count };
+}
+
 export async function importJobs(
   data: any[], 
   type: 'available-jobs' | 'active-bids' = 'available-jobs'
