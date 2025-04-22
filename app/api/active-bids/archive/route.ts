@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // POST: Archive multiple active bids
-// Updated on April 21, 2025 to trigger Vercel deployment
 export async function POST(request: NextRequest) {
   try {
     const { ids } = await request.json();
