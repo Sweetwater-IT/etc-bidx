@@ -10,7 +10,7 @@ import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
 import { ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids";
 import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
@@ -60,6 +60,7 @@ interface JobPageContentProps {
 type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
+    const router = useRouter();
     const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false);
     const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
     const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false);
@@ -304,7 +305,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
         if (isAvailableJobs) {
             setOpenBidSheetOpen(true);
         } else if (isActiveBids) {
-            setCreateActiveBidSheetOpen(true);
+            // Route to the active-bid page instead of opening a sheet
+            router.push("/active-bid");
         } else if (isActiveJobs) {
             setCreateJobSheetOpen(true);
         }
