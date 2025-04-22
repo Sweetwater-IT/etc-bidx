@@ -13,11 +13,12 @@ import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJ
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -26,7 +27,7 @@ import { useLoading } from "@/hooks/use-loading";
 type AvailableJob = {
     id: number;
     contractNumber: string;
-    status: "Bid" | "No Bid" | "Unset";
+    status: "Bid" | "No Bid" | "Unset" | "Archived" | string;
     requestor: string;
     owner: string;
     lettingDate: string | null;
@@ -69,8 +70,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [activeSegment, setActiveSegment] = useState("all");
     const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
     const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
+    const [showDeleteJobsDialog, setShowDeleteJobsDialog] = useState(false);
+    const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
     const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
     const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
+    const [selectedJobsToDelete, setSelectedJobsToDelete] = useState<AvailableJob[]>([]);
+    const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
     
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -102,6 +107,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
             if (activeSegment === "archived") {
                 options = { status: "archived" };
                 console.log("Using archived filter");
+                
+                // Note: The actual status values may vary in the UI vs database
             } else if (activeSegment !== "all") {
                 const dbStatus = mapUiStatusToDbStatus(activeSegment);
                 console.log("Mapped DB status:", dbStatus);
@@ -269,10 +276,136 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setShowArchiveBidsDialog(true);
     };
 
+    const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
+        console.log('initiateDeleteJobs called with:', selectedJobs);
+        
+        if (activeSegment === 'archived') {
+            setSelectedJobsToDelete(selectedJobs);
+            setShowDeleteJobsDialog(true);
+            return;
+        }
+        
+        const archivedJobs = selectedJobs.filter(job => {
+            return job.status?.toLowerCase().includes('archived');
+        });
+        
+        if (archivedJobs.length === 0) {
+            console.log('No archived jobs found, showing error');
+            toast.error('Only archived jobs can be deleted. Please select archived jobs.');
+            return;
+        }
+        
+        if (archivedJobs.length !== selectedJobs.length) {
+            toast.warning(`${selectedJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
+        }
+        
+        console.log('Setting selected jobs to delete and showing dialog');
+        setSelectedJobsToDelete(archivedJobs);
+        setShowDeleteJobsDialog(true);
+    };
+    
+    const handleDeleteArchivedJobs = async () => {
+        try {
+            startLoading();
+            const ids = selectedJobsToDelete.map(job => job.id);
+            
+            const result = await deleteArchivedJobs(ids);
+            
+            toast.success(`Successfully deleted ${result.count} archived job(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+            
+            await loadAvailableJobs();
+            
+            if (availableJobsTableRef.current) {
+                availableJobsTableRef.current.resetRowSelection();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting archived jobs:', error);
+            toast.error('Failed to delete archived jobs. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+    
+    const initiateDeleteBids = (selectedBids: ActiveBid[]) => {
+        console.log('initiateDeleteBids called with:', selectedBids);
+        
+        if (activeSegment === 'archived') {
+            setSelectedBidsToDelete(selectedBids);
+            setShowDeleteBidsDialog(true);
+            return;
+        }
+        
+        const archivedBids = selectedBids.filter(bid => {
+            return bid.status.toLowerCase().includes('archived');
+        });
+        
+        if (archivedBids.length === 0) {
+            toast.error('Only archived bids can be deleted. Please select archived bids.');
+            return;
+        }
+        
+        if (archivedBids.length !== selectedBids.length) {
+            toast.warning(`${selectedBids.length - archivedBids.length} non-archived bid(s) will be skipped.`);
+        }
+        
+        setSelectedBidsToDelete(archivedBids);
+        setShowDeleteBidsDialog(true);
+    };
+    
+    const handleDeleteArchivedBids = async () => {
+        try {
+            startLoading();
+            const ids = selectedBidsToDelete.map(bid => bid.id);
+            
+            const result = await deleteArchivedActiveBids(ids);
+            
+            toast.success(`Successfully deleted ${result.count} archived bid(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+            
+            await loadActiveBids();
+            
+            if (activeBidsTableRef.current) {
+                activeBidsTableRef.current.resetRowSelection();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting archived bids:', error);
+            toast.error('Failed to delete archived bids. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+    
     const handleArchiveActiveBids = async () => {
         try {
             startLoading();
             const ids = selectedBidsToArchive.map(bid => bid.id);
+            
+            const nonArchivedBids = selectedBidsToArchive.filter(bid => !bid.status.toLowerCase().includes('archived'));
+            if (nonArchivedBids.length !== selectedBidsToArchive.length) {
+                toast.warning(`${selectedBidsToArchive.length - nonArchivedBids.length} bid(s) are already archived and will be skipped.`);
+            }
+            
+            if (nonArchivedBids.length === 0) {
+                toast.error('No bids to archive. All selected bids are already archived.');
+                return false;
+            }
             
             await archiveActiveBids(ids);
             
@@ -346,6 +479,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     segmentValue={activeSegment}
                                     onSegmentChange={handleSegmentChange}
                                     onArchiveSelected={initiateArchiveJobs}
+                                    onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}
                                 />
                             ) : isActiveBids ? (
@@ -357,6 +491,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
                                     onArchiveSelected={initiateArchiveBids}
+                                    onDeleteSelected={initiateDeleteBids}
                                     tableRef={activeBidsTableRef}
                                 />
                             ) : (
@@ -386,6 +521,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 onClose={() => setShowArchiveBidsDialog(false)}
                                 onConfirm={handleArchiveActiveBids}
                                 itemCount={selectedBidsToArchive.length}
+                                itemType="bid"
+                            />
+                            
+                            <ConfirmDeleteDialog
+                                isOpen={showDeleteJobsDialog}
+                                onClose={() => setShowDeleteJobsDialog(false)}
+                                onConfirm={handleDeleteArchivedJobs}
+                                itemCount={selectedJobsToDelete.length}
+                                itemType="job"
+                            />
+                            
+                            <ConfirmDeleteDialog
+                                isOpen={showDeleteBidsDialog}
+                                onClose={() => setShowDeleteBidsDialog(false)}
+                                onConfirm={handleDeleteArchivedBids}
+                                itemCount={selectedBidsToDelete.length}
                                 itemType="bid"
                             />
                         </div>
