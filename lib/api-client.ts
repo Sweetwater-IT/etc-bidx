@@ -256,6 +256,51 @@ export async function archiveActiveBids(ids: number[]): Promise<{ count: number 
   return { count: result.count };
 }
 
+/**
+ * Delete multiple archived available jobs (soft delete)
+ */
+export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number }> {
+  const response = await fetch('/api/bids/delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to delete archived jobs');
+  }
+
+  const result = await response.json();
+  return { count: result.count };
+}
+
+/**
+ * Delete multiple archived active bids (soft delete)
+ */
+export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
+  const response = await fetch('/api/active-bids/delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to delete archived active bids');
+  }
+
+  const result = await response.json();
+  return { count: result.count };
+}
+
+/**
+ * Import jobs or bids from data
+ */
 export async function importJobs(
   data: any[], 
   type: 'available-jobs' | 'active-bids' = 'available-jobs'

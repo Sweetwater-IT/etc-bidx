@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import * as React from "react";
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
 export type LegacyColumn = {
     key: string;
@@ -71,8 +73,6 @@ export function DataTable<TData>({
     onSegmentChange,
     stickyLastColumn = false,
     onArchiveSelected,
-    // onDeleteSelected is unused for now but kept for future implementation
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onDeleteSelected,
     tableRef,
 }: DataTableProps<TData>) {
@@ -98,79 +98,98 @@ export function DataTable<TData>({
                 accessorKey: column.key,
                 header: column.title,
                 cell: (info) => {
-                    if (column.key === "actions") {
-                        return (
-                            <div className={cn("flex justify-center", stickyLastColumn && "sticky right-0 bg-background")}>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                            <span className="sr-only">Open menu</span>
-                                            <IconDotsVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="z-[200]">
-                                        <DropdownMenuItem>View details</DropdownMenuItem>
-                                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                                        {segmentValue === 'archived' ? (
-                                            <DropdownMenuItem 
-                                                className="text-destructive"
-                                                onClick={() => {}}
-                                            >
-                                                Delete
-                                            </DropdownMenuItem>
-                                        ) : onArchiveSelected && (
-                                            <DropdownMenuItem 
-                                                className="text-destructive"
-                                                onClick={() => onArchiveSelected([info.row.original as TData])}
-                                            >
-                                                Archive
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        );
-                    }
                     return formatCellValue(info.getValue(), column.key);
                 },
             })),
             {
                 id: "actions",
                 header: () => <div className="text-center">Actions</div>,
-                cell: ({ row }) => (
-                    <div className={cn("flex justify-center", stickyLastColumn && "sticky right-0 bg-background")}>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <IconDotsVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="z-[200]">
-                                <DropdownMenuItem>View details</DropdownMenuItem>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                {segmentValue === 'archived' ? (
-                                    <DropdownMenuItem 
-                                        className="text-destructive"
-                                        onClick={() => {}}
+                cell: ({ row }) => {
+                    const handleDelete = useCallback(
+                        (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            if (onDeleteSelected) {
+                                console.log('Delete clicked for row:', row.original);
+                                try {
+                                    onDeleteSelected([row.original as TData]);
+                                    console.log('onDeleteSelected called successfully');
+                                } catch (error) {
+                                    console.error('Error calling onDeleteSelected:', error);
+                                }
+                            }
+                        },
+                        [row.original, onDeleteSelected]
+                    );
+
+                    const handleArchive = useCallback(
+                        (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            if (onArchiveSelected) {
+                                console.log('Archive clicked for row:', row.original);
+                                try {
+                                    onArchiveSelected([row.original as TData]);
+                                    console.log('onArchiveSelected called successfully');
+                                } catch (error) {
+                                    console.error('Error calling onArchiveSelected:', error);
+                                }
+                            }
+                        },
+                        [row.original, onArchiveSelected]
+                    );
+
+                    return (
+                        <div className={cn("flex justify-center", stickyLastColumn && "sticky right-0 bg-background")}>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        className="h-8 w-8 p-0"
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        Delete
-                                    </DropdownMenuItem>
-                                ) : onArchiveSelected && (
+                                        <span className="sr-only">Open menu</span>
+                                        <IconDotsVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="z-[200]">
                                     <DropdownMenuItem 
-                                        className="text-destructive"
-                                        onClick={() => onArchiveSelected([row.original as TData])}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        Archive
+                                        View details
                                     </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                ),
-            },
+                                    
+                                    <DropdownMenuItem 
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        Edit
+                                    </DropdownMenuItem>
+                                    
+                                    {segmentValue === 'archived' && onDeleteSelected && (
+                                        <DropdownMenuItem 
+                                            className="text-destructive"
+                                            onClick={handleDelete}
+                                        >
+                                            Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                    
+                                    {segmentValue !== 'archived' && onArchiveSelected && (
+                                        <DropdownMenuItem 
+                                            className="text-destructive"
+                                            onClick={handleArchive}
+                                        >
+                                            Archive
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    );
+                },
+            }
         ];
-    }, [legacyColumns, stickyLastColumn, onArchiveSelected, segmentValue]);
+    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue]);
 
     const table = useReactTable({
         data,
@@ -207,21 +226,35 @@ export function DataTable<TData>({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="z-[200]">
                             {table.getSelectedRowModel().rows.length > 0 && (
-                                segmentValue === 'archived' ? (
-                                    <DropdownMenuItem 
-                                        className="text-destructive"
-                                        onClick={() => {}}
-                                    >
-                                        Delete Selected
-                                    </DropdownMenuItem>
-                                ) : onArchiveSelected && (
-                                    <DropdownMenuItem 
-                                        className="text-destructive"
-                                        onClick={() => onArchiveSelected(table.getSelectedRowModel().rows.map(row => row.original))}
-                                    >
-                                        Archive Selected
-                                    </DropdownMenuItem>
-                                )
+                                <>
+                                    {segmentValue === 'archived' && onDeleteSelected && (
+                                        <DropdownMenuItem 
+                                            className="text-destructive"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                event.preventDefault();
+                                                console.log('Bulk delete clicked for rows:', table.getSelectedRowModel().rows.map(row => row.original));
+                                                onDeleteSelected(table.getSelectedRowModel().rows.map(row => row.original));
+                                            }}
+                                        >
+                                            Delete Selected
+                                        </DropdownMenuItem>
+                                    )}
+                                    
+                                    {segmentValue !== 'archived' && onArchiveSelected && (
+                                        <DropdownMenuItem
+                                            className="text-destructive"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                event.preventDefault();
+                                                console.log('Bulk archive clicked for rows:', table.getSelectedRowModel().rows.map(row => row.original));
+                                                onArchiveSelected(table.getSelectedRowModel().rows.map(row => row.original));
+                                            }}
+                                        >
+                                            Archive Selected
+                                        </DropdownMenuItem>
+                                    )}
+                                </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>

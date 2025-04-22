@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         query = supabase
           .from('archived_available_jobs')
           .select('*')
+          .is('deleted_at', null)
           .order(orderBy, { ascending });
       } else {
         let dbStatus: string;

@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       if (status === 'won-pending') {
         query = query.or('status.ilike.%won%,status.ilike.%pending%');
       } else if (status === 'archived') {
-        query = query.ilike('status', '%archived%');
+        query = query
+          .ilike('status', '%archived%')
+          .is('deleted_at', null);
       } else {
         // Try case-insensitive filtering using ilike for text fields
         // This is more reliable than exact matching with different case variations
