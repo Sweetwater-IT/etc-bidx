@@ -103,7 +103,7 @@ const Steps = ({ formData, setFormData }: { formData: FormData; setFormData: Dis
                 <AdminInformationStep1 currentStep={currentStep} setCurrentStep={setCurrentStep} formData={formData} setFormData={setFormData} />
                 <MUTCDSignsStep2 currentStep={currentStep} setCurrentStep={setCurrentStep} formData={formData} setFormData={setFormData} />
                 <TripAndLaborStep3 currentStep={currentStep} setCurrentStep={setCurrentStep} formData={formData} setFormData={setFormData} />
-                <BidItemsStep4 currentStep={currentStep} setCurrentStep={setCurrentStep} formData={formData} setFormData={setFormData} />
+                <BidItemsStep4 currentStep={currentStep} setCurrentStep={setCurrentStep} />
                 <BidSummaryStep5 currentStep={currentStep} setCurrentStep={setCurrentStep} formData={formData} setFormData={setFormData} />
 
                 {/* {steps.map((step, index) => (

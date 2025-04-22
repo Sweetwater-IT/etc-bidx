@@ -1,4 +1,3 @@
-import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -133,22 +132,12 @@ interface PatternsData {
     };
 }
 
-const step = {
-    id: "step-4",
-    name: "Bid Items",
-    description: "Add and manage bid items",
-};
-
 const BidItemsStep4 = ({
     currentStep,
-    setCurrentStep,
-    formData,
-    setFormData,
+    setCurrentStep
 }: {
     currentStep: number;
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-    formData: FormData;
-    setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
     const [activeTab, setActiveTab] = useState("mpt");
     const [mptData, setMptData] = useState<MPTData>({
@@ -426,7 +415,7 @@ const BidItemsStep4 = ({
                                     <h3 className="text-base font-semibold mb-4">MPT Equipment</h3>
                                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="typeIII" className="text-sm font-medium">4' Ft Type III</Label>
+                                            <Label htmlFor="typeIII" className="text-sm font-medium">4&apos; Ft Type III</Label>
                                             <Input
                                                 id="typeIII"
                                                 type="number"
