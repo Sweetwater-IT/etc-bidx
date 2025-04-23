@@ -77,9 +77,9 @@ const MutcdSignsStep2 = ({
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [signs, setSigns] = useState<SignData[]>([]);
+  const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
   const [open, setOpen] = useState(false);
-  const [isAddingSign, setIsAddingSign] = useState(true);
+  const [isAddingSign, setIsAddingSign] = useState(signs.length === 0);
 
   const handleDesignationSelect = (currentValue: string) => {
     const newSign: SignData = {

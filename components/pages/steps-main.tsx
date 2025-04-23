@@ -11,13 +11,15 @@ const StepsMain = () => {
   const [formData, setFormData] = useState<FormData>({});
 
   return (
-    <div className="flex gap-8">
-      <Steps formData={formData} setFormData={setFormData} />
+    <div className="flex gap-8 relative min-h-screen">
+      <div className="flex-1">
+        <Steps formData={formData} setFormData={setFormData} />
+      </div>
 
       {/* Preview Cards */}
-      <div className="w-80 space-y-4">
+      <div className="w-80 space-y-4 sticky top-10 h-fit">
         <AdminInformationAccordion formData={formData} />
-        <SignSummaryAccordion />
+        <SignSummaryAccordion formData={formData} />
         <TripAndLaborSummaryAccordion />
         <BidSummaryAccordion />
       </div>
