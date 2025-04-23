@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -344,29 +346,29 @@ const BidItemsStep4 = ({
     };
 
     return (
-        <div className="relative">
+            <div className="relative">
             {/* Step Header */}
-            <button
-                onClick={() => setCurrentStep(4)}
-                className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 4 ? "text-foreground" : "text-muted-foreground"}`}
-            >
-                <div
-                    className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
+                <button
+                    onClick={() => setCurrentStep(4)}
+                    className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 4 ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                    <div
+                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
                         currentStep >= 4 
                             ? "border-primary bg-primary text-primary-foreground" 
                             : "border-muted-foreground bg-background text-muted-foreground"
-                    }`}
-                >
-                    4
-                </div>
-                <div className="flex flex-col gap-1">
+                        }`}
+                    >
+                        4
+                    </div>
+                    <div className="flex flex-col gap-1">
                     <div className="text-base font-medium">Bid Items</div>
                     <div className="text-sm text-muted-foreground">Add and manage bid items</div>
-                </div>
-            </button>
+                    </div>
+                </button>
 
             {/* Step Content */}
-            {currentStep === 4 && (
+                {currentStep === 4 && (
                 <div className="mt-2 mb-6 ml-12">
                     <Tabs defaultValue="mpt" className="w-full" onValueChange={setActiveTab} value={activeTab}>
                         <TabsList className="w-full border-0 bg-transparent p-0 [&>*]:border-0">
@@ -1333,10 +1335,10 @@ const BidItemsStep4 = ({
                                                 onChange={(e) => handlePatternsChange('configurations', 'laneClosure', e.target.value)}
                                                 className="h-9"
                                             />
-                                        </div>
-                                        <div className="space-y-2">
+                                            </div>
+                                            <div className="space-y-2">
                                             <Label htmlFor="shoulderWork" className="text-sm font-medium">Shoulder Work</Label>
-                                            <Input
+                                                <Input
                                                 id="shoulderWork"
                                                 type="number"
                                                 min="0"
@@ -1354,8 +1356,8 @@ const BidItemsStep4 = ({
                                                 value={patterns.configurations.intersection || ''}
                                                 onChange={(e) => handlePatternsChange('configurations', 'intersection', e.target.value)}
                                                 className="h-9"
-                                            />
-                                        </div>
+                                                        />
+                                                    </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="workZone" className="text-sm font-medium">Work Zone</Label>
                                             <Input
@@ -1366,7 +1368,7 @@ const BidItemsStep4 = ({
                                                 onChange={(e) => handlePatternsChange('configurations', 'workZone', e.target.value)}
                                                 className="h-9"
                                             />
-                                        </div>
+                                            </div>
                                     </div>
                                 </div>
                             </div>
@@ -1374,13 +1376,13 @@ const BidItemsStep4 = ({
                     </Tabs>
 
                     <div className="flex justify-between mt-8">
-                        <Button variant="outline" onClick={() => setCurrentStep(3)}>
-                            Back
-                        </Button>
-                        <Button onClick={() => setCurrentStep(5)}>Next</Button>
+                                <Button variant="outline" onClick={() => setCurrentStep(3)}>
+                                    Back
+                                </Button>
+                                <Button onClick={() => setCurrentStep(5)}>Next</Button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
         </div>
     );
 };

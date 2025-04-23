@@ -8,21 +8,23 @@ import Steps from "./active-bid/steps/steps";
 import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-accordion/trip-and-labor-summary-accordion";
 
 const StepsMain = () => {
-    const [formData, setFormData] = useState<FormData>({});
+  const [formData, setFormData] = useState<FormData>({});
 
-    return (
-        <div className="flex gap-8">
-            <Steps formData={formData} setFormData={setFormData} />
+  return (
+    <div className="flex gap-8 relative min-h-screen">
+      <div className="flex-1">
+        <Steps formData={formData} setFormData={setFormData} />
+      </div>
 
-            {/* Preview Cards */}
-            <div className="w-80 space-y-4">
-                <AdminInformationAccordion formData={formData} />
-                <SignSummaryAccordion />
-                <TripAndLaborSummaryAccordion />
-                <BidSummaryAccordion />
-            </div>
-        </div>
-    );
+      {/* Preview Cards */}
+      <div className="w-80 space-y-4 sticky top-10 h-fit">
+        <AdminInformationAccordion formData={formData} />
+        <SignSummaryAccordion formData={formData} />
+        <TripAndLaborSummaryAccordion />
+        <BidSummaryAccordion />
+      </div>
+    </div>
+  );
 };
 
 export default StepsMain;

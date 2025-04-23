@@ -1,3 +1,5 @@
+"use client";
+
 import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
