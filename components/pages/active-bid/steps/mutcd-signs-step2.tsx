@@ -170,10 +170,10 @@ const MutcdSignsStep2 = ({
                   )}
                 >
                   {sign.isConfiguring ? (
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {/* Designation Selection */}
-                      <div className="w-full max-w-sm">
-                        <Label className="text-sm font-medium mb-2 block">
+                      <div className="w-full">
+                        <Label className="text-base font-semibold mb-2.5 block">
                           Designation
                         </Label>
                         <Popover>
@@ -181,16 +181,13 @@ const MutcdSignsStep2 = ({
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="w-full justify-between"
+                              className="w-[200px] justify-between"
                             >
                               {sign.designation || "Select designation..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent
-                            className="w-[200px] p-0"
-                            align="start"
-                          >
+                          <PopoverContent className="w-[200px] p-0" align="start">
                             <Command>
                               <CommandInput placeholder="Search designation..." />
                               <CommandEmpty>No designation found.</CommandEmpty>
@@ -228,17 +225,17 @@ const MutcdSignsStep2 = ({
                         </Popover>
                       </div>
 
-                      {/* Other Fields */}
-                      <div className="grid grid-cols-6 gap-6">
-                        <div className="col-span-2">
-                          <Label>Dimensions</Label>
+                      {/* Other Fields in a single line */}
+                      <div className="flex flex-row gap-4 w-full">
+                        <div className="col-span-2 flex-2">
+                          <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
                           <Select
                             value={sign.dimensions}
                             onValueChange={(value) =>
                               handleSignUpdate(sign.id, "dimensions", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select dimensions" />
                             </SelectTrigger>
                             <SelectContent>
@@ -252,15 +249,15 @@ const MutcdSignsStep2 = ({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label>Sheeting</Label>
+                        <div className="flex-2">
+                          <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
                           <Select
                             value={sign.sheeting}
                             onValueChange={(value) =>
                               handleSignUpdate(sign.id, "sheeting", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
@@ -272,8 +269,8 @@ const MutcdSignsStep2 = ({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label>Quantity</Label>
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium mb-2 block">Quantity</Label>
                           <Input
                             type="number"
                             value={sign.quantity || ""}
@@ -285,18 +282,18 @@ const MutcdSignsStep2 = ({
                               )
                             }
                             min={0}
-                            className="h-10"
+                            className="w-full"
                           />
                         </div>
-                        <div>
-                          <Label>Structure</Label>
+                        <div className="flex-2">
+                          <Label className="text-sm font-medium mb-2 block">Structure</Label>
                           <Select
                             value={sign.structure}
                             onValueChange={(value) =>
                               handleSignUpdate(sign.id, "structure", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="None" />
                             </SelectTrigger>
                             <SelectContent>
@@ -308,8 +305,8 @@ const MutcdSignsStep2 = ({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label>B Lights</Label>
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium mb-2 block">B Lights</Label>
                           <Input
                             type="number"
                             value={sign.bLights || ""}
@@ -321,11 +318,11 @@ const MutcdSignsStep2 = ({
                               )
                             }
                             min={0}
-                            className="h-10"
+                            className="w-full"
                           />
                         </div>
-                        <div>
-                          <Label>Covers</Label>
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium mb-2 block">Covers</Label>
                           <Input
                             type="number"
                             value={sign.covers || ""}
@@ -337,13 +334,13 @@ const MutcdSignsStep2 = ({
                               )
                             }
                             min={0}
-                            className="h-10"
+                            className="w-full"
                           />
                         </div>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex justify-end space-x-2 pt-4">
+                      <div className="flex justify-end space-x-3 pt-6">
                         <Button
                           variant="outline"
                           onClick={() => handleSignDelete(sign.id)}
