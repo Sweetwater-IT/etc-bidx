@@ -33,9 +33,6 @@ const TripAndLaborSummaryAccordion = () => {
                 <span className="text-muted-foreground">Gross Margin:</span>
                 <span>0.00%</span>
               </div>
-              <Button className="w-full mt-4" variant="secondary">
-                View Bid Summary
-              </Button>
             </div>
           </AccordionContent>
         </AccordionItem>
