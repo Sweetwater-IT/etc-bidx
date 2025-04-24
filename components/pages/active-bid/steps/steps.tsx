@@ -40,6 +40,8 @@ const Steps = ({
         <BidItemsStep4
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
+          formData={formData}
+          setFormData={setFormData}
         />
         <BidSummaryStep5
           currentStep={currentStep}
