@@ -21,7 +21,7 @@ const StepsMain = () => {
         <AdminInformationAccordion formData={formData} />
         <SignSummaryAccordion formData={formData} />
         <TripAndLaborSummaryAccordion />
-        <BidSummaryAccordion />
+        <BidSummaryAccordion formData={formData} />
       </div>
     </div>
   );

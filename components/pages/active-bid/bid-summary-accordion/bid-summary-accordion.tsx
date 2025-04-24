@@ -1,46 +1,70 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { FormData } from "@/app/active-bid/page";
+import { ViewBidSummarySheet } from "@/components/sheets/view-bid-summary-sheet";
+import { formatCurrency } from "@/lib/utils";
 
-const BidSummaryAccordion = () => {
+interface BidSummaryAccordionProps {
+  formData: FormData;
+}
+
+const BidSummaryAccordion = ({ formData }: BidSummaryAccordionProps) => {
+  const [isViewSummaryOpen, setIsViewSummaryOpen] = useState(false);
+
   return (
-    <Card className="p-4">
-      <Accordion type="single" collapsible>
-        <AccordionItem value="item-1">
-          <AccordionTrigger className="py-0">
-            <h3 className="font-semibold">Bid Summary</h3>
+    <>
+      <Accordion type="single" collapsible className="w-full bg-card rounded-lg border shadow-sm">
+        <AccordionItem value="item-1" className="border-0">
+          <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/50">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Bid Summary</span>
+            </div>
           </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 text-sm mt-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Revenue:</span>
-                <span>$0.00</span>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-2">
+              <div className="pt-2">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-muted-foreground">Total Revenue:</span>
+                  <span className="font-medium">{formatCurrency(Number(formData.totalRevenue) || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-muted-foreground">Total Cost:</span>
+                  <span className="font-medium">{formatCurrency(Number(formData.totalCost) || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-muted-foreground">Gross Profit:</span>
+                  <span className="font-medium">{formatCurrency(Number(formData.grossProfit) || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-muted-foreground">Gross Margin:</span>
+                  <span className="font-medium">{formData.grossMargin || 0}%</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Cost:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Gross Profit:</span>
-                <span>$0.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Gross Margin:</span>
-                <span>0.00%</span>
-              </div>
-              <Button className="w-full mt-4" variant="secondary">
+
+              <Button 
+                className="w-full mt-2" 
+                variant="outline"
+                onClick={() => setIsViewSummaryOpen(true)}
+              >
                 View Bid Summary
               </Button>
             </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </Card>
+
+      <ViewBidSummarySheet
+        open={isViewSummaryOpen}
+        onOpenChange={setIsViewSummaryOpen}
+        formData={formData}
+      />
+    </>
   );
 };
 
