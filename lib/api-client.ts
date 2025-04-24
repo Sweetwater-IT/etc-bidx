@@ -85,22 +85,27 @@ export async function createBid(bid: AvailableJobInsert): Promise<AvailableJob> 
 /**
  * Update an existing bid
  */
-export async function updateBid(id: number, updates: AvailableJobUpdate): Promise<AvailableJob> {
-  const response = await fetch(`/api/bids/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(updates),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || `Failed to update bid with ID ${id}`);
+export async function updateBid(id: number, data: any) {
+  try {
+    const response = await fetch(`/api/bids/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to update bid')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error updating bid:', error)
+    throw error
   }
-  
-  const result = await response.json();
-  return result.data;
 }
 
 /**
