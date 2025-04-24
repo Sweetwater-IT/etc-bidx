@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
+import { MoreHorizontal } from "lucide-react";
 
 export type LegacyColumn = {
     key: string;
@@ -38,6 +39,10 @@ export interface DataTableProps<TData> {
     tableRef?: React.RefObject<{
         resetRowSelection: () => void;
     } | null>;
+    onRowClick?: (item: TData) => void;
+    onViewDetails?: (item: TData) => void;
+    onEdit?: (item: TData) => void;
+    onArchive?: (item: TData) => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -75,6 +80,10 @@ export function DataTable<TData>({
     onArchiveSelected,
     onDeleteSelected,
     tableRef,
+    onRowClick,
+    onViewDetails,
+    onEdit,
+    onArchive
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
         return [
@@ -149,21 +158,33 @@ export function DataTable<TData>({
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <span className="sr-only">Open menu</span>
-                                        <IconDotsVertical className="h-4 w-4" />
+                                        <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="z-[200]">
-                                    <DropdownMenuItem 
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        View details
-                                    </DropdownMenuItem>
+                                    {onViewDetails && (
+                                        <DropdownMenuItem 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                onViewDetails(row.original as TData);
+                                            }}
+                                        >
+                                            View details
+                                        </DropdownMenuItem>
+                                    )}
                                     
-                                    <DropdownMenuItem 
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        Edit
-                                    </DropdownMenuItem>
+                                    {onEdit && (
+                                        <DropdownMenuItem 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                onEdit(row.original as TData);
+                                            }}
+                                        >
+                                            Edit
+                                        </DropdownMenuItem>
+                                    )}
                                     
                                     {segmentValue === 'archived' && onDeleteSelected && (
                                         <DropdownMenuItem 
@@ -189,7 +210,7 @@ export function DataTable<TData>({
                 },
             }
         ];
-    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue]);
+    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit]);
 
     const table = useReactTable({
         data,
@@ -293,16 +314,33 @@ export function DataTable<TData>({
                             <TableBody>
                                 {table.getRowModel().rows?.length ? (
                                     table.getRowModel().rows.map((row) => (
-                                        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                                        <TableRow
+                                            key={row.id}
+                                            data-state={row.getIsSelected() && "selected"}
+                                            className={cn(
+                                                "cursor-pointer hover:bg-muted/50",
+                                                row.getIsSelected() && "bg-muted"
+                                            )}
+                                            onClick={() => {
+                                                if (onViewDetails) {
+                                                    onViewDetails(row.original as TData)
+                                                }
+                                            }}
+                                        >
                                             {row.getVisibleCells().map((cell) => {
                                                 const isActions = cell.column.id === "actions";
                                                 return (
                                                     <TableCell
                                                         key={cell.id}
-                                                        style={isActions ? { position: "sticky", right: 0 } : undefined}
-                                                        className={
-                                                            isActions ? "z-[100] bg-background/95 shadow-[-12px_0_16px_-6px_rgba(0,0,0,0.15)]" : undefined
-                                                        }
+                                                        className={cn(
+                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : "",
+                                                            cell.column.columnDef.className
+                                                        )}
+                                                        onClick={(e) => {
+                                                            if (isActions) {
+                                                                e.stopPropagation()
+                                                            }
+                                                        }}
                                                     >
                                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                     </TableCell>

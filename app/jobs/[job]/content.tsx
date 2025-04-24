@@ -22,6 +22,7 @@ import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchi
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
+import { JobDetailsSheet } from "@/components/job-details-sheet"
 
 // Define the AvailableJob type based on the UI display needs
 type AvailableJob = {
@@ -76,6 +77,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
     const [selectedJobsToDelete, setSelectedJobsToDelete] = useState<AvailableJob[]>([]);
     const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
+    const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null)
+    const [jobDetailsSheetOpen, setJobDetailsSheetOpen] = useState(false)
+    const [editJobSheetOpen, setEditJobSheetOpen] = useState(false)
     
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -445,6 +449,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const handleViewDetails = (item: AvailableJob) => {
+        console.log('View details clicked:', item)
+        setSelectedJob(item)
+        setJobDetailsSheetOpen(true)
+    }
+
+    const handleEdit = (item: AvailableJob) => {
+        console.log('Edit clicked:', item)
+        setSelectedJob(item)
+        setEditJobSheetOpen(true)
+    }
+
+    const handleArchive = (item: AvailableJob) => {
+        console.log('Archive clicked:', item)
+        initiateArchiveJobs([item])
+    }
+
     return (
         <SidebarProvider
             style={
@@ -481,6 +502,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveJobs}
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}
+                                    onViewDetails={handleViewDetails}
+                                    onEdit={handleEdit}
+                                    onArchive={handleArchive}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
@@ -503,7 +527,27 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 />
                             )}
 
-                            {isAvailableJobs && <OpenBidSheet open={openBidSheetOpen} onOpenChange={setOpenBidSheetOpen} onSuccess={loadAvailableJobs} />}
+                            {isAvailableJobs && (
+                                <>
+                                    <OpenBidSheet 
+                                        open={openBidSheetOpen} 
+                                        onOpenChange={setOpenBidSheetOpen} 
+                                        onSuccess={loadAvailableJobs} 
+                                    />
+                                    <JobDetailsSheet
+                                        open={jobDetailsSheetOpen}
+                                        onOpenChange={setJobDetailsSheetOpen}
+                                        job={selectedJob || undefined}
+                                        onEdit={handleEdit}
+                                    />
+                                    <OpenBidSheet
+                                        open={editJobSheetOpen}
+                                        onOpenChange={setEditJobSheetOpen}
+                                        onSuccess={loadAvailableJobs}
+                                        job={selectedJob || undefined}
+                                    />
+                                </>
+                            )}
 
                             {createJobSheetOpen && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} />}
                             {createActiveBidSheetOpen && <CreateActiveBidSheet open={createActiveBidSheetOpen} onOpenChange={setCreateActiveBidSheetOpen} />}
