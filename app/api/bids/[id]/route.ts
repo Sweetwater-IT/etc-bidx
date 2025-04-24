@@ -180,10 +180,18 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
-    const id = parseInt(params.id)
+    const id = parseInt(params.id);
+    
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+    
     const data = await request.json()
 
     const { error } = await supabase
@@ -225,3 +233,4 @@ export async function PUT(
     )
   }
 }
+
