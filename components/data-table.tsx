@@ -128,7 +128,7 @@ export function DataTable<TData>({
                                 }
                             }
                         },
-                        [row.original, onDeleteSelected]
+                        [row.original]
                     );
 
                     const handleArchive = useCallback(
@@ -145,7 +145,7 @@ export function DataTable<TData>({
                                 }
                             }
                         },
-                        [row.original, onArchiveSelected]
+                        [row.original]
                     );
 
                     return (
