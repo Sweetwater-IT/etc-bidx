@@ -322,8 +322,10 @@ export function DataTable<TData>({
                                                 row.getIsSelected() && "bg-muted"
                                             )}
                                             onClick={() => {
-                                                if (onViewDetails) {
-                                                    onViewDetails(row.original as TData)
+                                                if (onRowClick) {
+                                                    onRowClick(row.original as TData);
+                                                } else if (onViewDetails) {
+                                                    onViewDetails(row.original as TData);
                                                 }
                                             }}
                                         >
