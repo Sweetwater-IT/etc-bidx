@@ -128,7 +128,7 @@ export function DataTable<TData>({
                                 }
                             }
                         },
-                        [row.original, onDeleteSelected]
+                        [row.original]
                     );
 
                     const handleArchive = useCallback(
@@ -145,7 +145,7 @@ export function DataTable<TData>({
                                 }
                             }
                         },
-                        [row.original, onArchiveSelected]
+                        [row.original]
                     );
 
                     return (
@@ -333,8 +333,7 @@ export function DataTable<TData>({
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : "",
-                                                            cell.column.columnDef.className
+                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : ""
                                                         )}
                                                         onClick={(e) => {
                                                             if (isActions) {
