@@ -23,6 +23,10 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
 import { JobDetailsSheet } from "@/components/job-details-sheet"
+import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
+import { EditActiveJobSheet } from "@/components/edit-active-job-sheet"
+import { ActiveBidDetailsSheet } from "@/components/active-bid-details-sheet"
+import { EditActiveBidSheet } from "@/components/edit-active-bid-sheet"
 
 // Define the AvailableJob type based on the UI display needs
 type AvailableJob = {
@@ -59,7 +63,7 @@ interface JobPageContentProps {
     job: string;
 }
 
-type JobPageData = AvailableJob | ActiveBid | ActiveJob;
+export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
     const router = useRouter();
@@ -80,6 +84,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null)
     const [jobDetailsSheetOpen, setJobDetailsSheetOpen] = useState(false)
     const [editJobSheetOpen, setEditJobSheetOpen] = useState(false)
+    const [selectedActiveJob, setSelectedActiveJob] = useState<ActiveJob | null>(null)
+    const [activeJobDetailsSheetOpen, setActiveJobDetailsSheetOpen] = useState(false)
+    const [editActiveJobSheetOpen, setEditActiveJobSheetOpen] = useState(false)
     
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -461,10 +468,77 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setEditJobSheetOpen(true)
     }
 
+    const handleActiveJobViewDetails = (item: ActiveJob) => {
+        console.log('View details clicked:', item)
+        setSelectedActiveJob(item)
+        setActiveJobDetailsSheetOpen(true)
+    }
+
+    const handleActiveJobEdit = (item: ActiveJob) => {
+        console.log('Edit clicked:', item)
+        setSelectedActiveJob(item)
+        setEditActiveJobSheetOpen(true)
+    }
+
     const handleArchive = (item: AvailableJob) => {
         console.log('Archive clicked:', item)
         initiateArchiveJobs([item])
     }
+
+    const ActiveBidsTable = ({ bids }: { bids: ActiveBid[] }) => {
+        const [selectedBid, setSelectedBid] = useState<ActiveBid | undefined>(undefined);
+        const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
+        const [editSheetOpen, setEditSheetOpen] = useState(false);
+
+        const handleRowClick = (item: JobPageData) => {
+            if ('lettingDate' in item) { // Check if it's an ActiveBid
+                setSelectedBid(item as ActiveBid);
+                setDetailsSheetOpen(true);
+            }
+        };
+
+        const handleEdit = (item: JobPageData) => {
+            if ('lettingDate' in item) { // Check if it's an ActiveBid
+                setSelectedBid(item as ActiveBid);
+                setDetailsSheetOpen(false);
+                setEditSheetOpen(true);
+            }
+        };
+
+        const handleEditSuccess = () => {
+            setEditSheetOpen(false);
+            // TODO: Refresh the bids data
+        };
+
+        return (
+            <>
+                <DataTable<ActiveBid>
+                    columns={ACTIVE_BIDS_COLUMNS}
+                    data={bids}
+                    onRowClick={handleRowClick}
+                    segments={ACTIVE_BIDS_SEGMENTS}
+                    segmentValue={activeSegment}
+                    onSegmentChange={handleSegmentChange}
+                    stickyLastColumn
+                    onArchiveSelected={initiateArchiveBids}
+                    onDeleteSelected={initiateDeleteBids}
+                    tableRef={activeBidsTableRef}
+                />
+                <ActiveBidDetailsSheet
+                    open={detailsSheetOpen}
+                    onOpenChange={setDetailsSheetOpen}
+                    bid={selectedBid}
+                    onEdit={handleEdit}
+                />
+                <EditActiveBidSheet
+                    open={editSheetOpen}
+                    onOpenChange={setEditSheetOpen}
+                    bid={selectedBid}
+                    onSuccess={handleEditSuccess}
+                />
+            </>
+        );
+    };
 
     return (
         <SidebarProvider
@@ -507,23 +581,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchive={handleArchive}
                                 />
                             ) : isActiveBids ? (
-                                <DataTable<ActiveBid>
-                                    data={data as ActiveBid[]}
-                                    columns={columns}
-                                    segments={segments}
-                                    segmentValue={activeSegment}
-                                    onSegmentChange={handleSegmentChange}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveBids}
-                                    onDeleteSelected={initiateDeleteBids}
-                                    tableRef={activeBidsTableRef}
-                                />
+                                <ActiveBidsTable bids={data as ActiveBid[]} />
                             ) : (
                                 <DataTable<JobPageData>
                                     data={data as JobPageData[]}
                                     columns={columns}
                                     segments={segments}
                                     stickyLastColumn
+                                    onViewDetails={(item) => {
+                                        if ('jobNumber' in item) {
+                                            handleActiveJobViewDetails(item as ActiveJob);
+                                        }
+                                    }}
+                                    onEdit={(item) => {
+                                        if ('jobNumber' in item) {
+                                            handleActiveJobEdit(item as ActiveJob);
+                                        }
+                                    }}
                                 />
                             )}
 
@@ -545,6 +619,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         onOpenChange={setEditJobSheetOpen}
                                         onSuccess={loadAvailableJobs}
                                         job={selectedJob || undefined}
+                                    />
+                                </>
+                            )}
+
+                            {isActiveJobs && (
+                                <>
+                                    <ActiveJobDetailsSheet
+                                        open={activeJobDetailsSheetOpen}
+                                        onOpenChange={setActiveJobDetailsSheetOpen}
+                                        job={selectedActiveJob || undefined}
+                                        onEdit={handleActiveJobEdit}
+                                    />
+                                    <EditActiveJobSheet
+                                        open={editActiveJobSheetOpen}
+                                        onOpenChange={setEditActiveJobSheetOpen}
+                                        job={selectedActiveJob || undefined}
+                                        onSuccess={loadAvailableJobs}
                                     />
                                 </>
                             )}
