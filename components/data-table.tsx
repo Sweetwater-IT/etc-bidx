@@ -34,7 +34,6 @@ export interface DataTableProps<TData> {
     onSegmentChange?: (value: string) => void;
     stickyLastColumn?: boolean;
     onArchiveSelected?: (selectedRows: TData[]) => void;
-    // Keeping onDeleteSelected for future implementation
     onDeleteSelected?: (selectedRows: TData[]) => void;
     tableRef?: React.RefObject<{
         resetRowSelection: () => void;
@@ -322,10 +321,8 @@ export function DataTable<TData>({
                                                 row.getIsSelected() && "bg-muted"
                                             )}
                                             onClick={() => {
-                                                if (onRowClick) {
-                                                    onRowClick(row.original as TData);
-                                                } else if (onViewDetails) {
-                                                    onViewDetails(row.original as TData);
+                                                if (onViewDetails) {
+                                                    onViewDetails(row.original as TData)
                                                 }
                                             }}
                                         >
