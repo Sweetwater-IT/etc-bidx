@@ -34,7 +34,6 @@ export interface DataTableProps<TData> {
     onSegmentChange?: (value: string) => void;
     stickyLastColumn?: boolean;
     onArchiveSelected?: (selectedRows: TData[]) => void;
-    // Keeping onDeleteSelected for future implementation
     onDeleteSelected?: (selectedRows: TData[]) => void;
     tableRef?: React.RefObject<{
         resetRowSelection: () => void;
