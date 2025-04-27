@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/data-table";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 interface FormSelectProps {
   label: string;
@@ -54,6 +55,22 @@ function FormCheckbox({ id, label }: FormCheckboxProps) {
     <div className="flex items-center space-x-2">
       <Checkbox id={id} />
       <Label htmlFor={id}>{label}</Label>
+    </div>
+  );
+}
+
+interface FormInputProps {
+  label: string;
+  placeholder?: string;
+  value?: string;
+  disabled?: boolean;
+}
+
+function FormInput({ label, placeholder, value, disabled }: FormInputProps) {
+  return (
+    <div className="space-y-2 w-full">
+      <Label>{label}</Label>
+      <Input placeholder={placeholder} value={value} disabled={disabled} />
     </div>
   );
 }
@@ -190,9 +207,30 @@ export default function CreateQuotePage() {
                   />
                   <FormSelect
                     label="CC"
-                    placeholder="Select CC recipients"
+                    placeholder="Choose CC addresses"
                     options={CONTACTS}
                   />
+                  <FormSelect
+                    label="BCC"
+                    placeholder="Choose BCC addresses"
+                    options={CONTACTS}
+                  />
+                  <FormInput
+                    label="Subject"
+                    placeholder="Subject"
+                  />
+                  <FormInput
+                    label="From"
+                    value="kennethmack6@gmail.com"
+                    disabled
+                  />
+                  <div className="space-y-2 w-full">
+                    <Label>Body</Label>
+                    <Textarea 
+                      placeholder="Body"
+                      className="min-h-[150px]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -256,6 +294,23 @@ export default function CreateQuotePage() {
                     label="Flagging Terms & Conditions"
                   />
                   <FormCheckbox id="custom-terms" label="Custom" />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="rounded-lg border p-6">
+                <h2 className="mb-4 text-lg font-semibold">Notes</h2>
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    No notes for this job
+                  </div>
+                  <Textarea 
+                    placeholder="Add notes here..."
+                    className="min-h-[150px]"
+                  />
+                  <Button className="w-full cursor-pointer">
+                    Save Notes
+                  </Button>
                 </div>
               </div>
             </div>
