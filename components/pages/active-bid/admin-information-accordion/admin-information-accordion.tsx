@@ -6,9 +6,50 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
-import React from "react";
+import { fetchReferenceData } from "@/lib/api-client";
+import React, { useState, useEffect } from "react";
 
 const AdminInformationAccordion = ({ formData }: { formData: FormData }) => {
+  const [counties, setCounties] = useState<{id: number, name: string}[]>([]);
+  const [branches, setBranches] = useState<{id: number, name: string}[]>([]);
+  const [isLoading, setIsLoading] = useState({
+    counties: false,
+    branches: false,
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(prev => ({ ...prev, counties: true }));
+        const countiesData = await fetchReferenceData('counties');
+        setCounties(countiesData);
+        setIsLoading(prev => ({ ...prev, counties: false }));
+        
+        setIsLoading(prev => ({ ...prev, branches: true }));
+        const branchesData = await fetchReferenceData('branches');
+        setBranches(branchesData);
+        setIsLoading(prev => ({ ...prev, branches: false }));
+      } catch (error) {
+        console.error('Error fetching reference data:', error);
+        setIsLoading({ counties: false, branches: false });
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  const getCountyName = (countyId: string | undefined) => {
+    if (!countyId) return '-';
+    const county = counties.find(c => c.id === Number(countyId));
+    return county ? county.name : countyId;
+  };
+
+  const getBranchName = (branchId: string | undefined) => {
+    if (!branchId) return '-';
+    const branch = branches.find(b => b.id === Number(branchId));
+    return branch ? branch.name : branchId;
+  };
+
   return (
     <Card className="p-4">
       <Accordion type="single" collapsible>
@@ -23,9 +64,9 @@ const AdminInformationAccordion = ({ formData }: { formData: FormData }) => {
               <div className="text-muted-foreground">Owner</div>
               <div className="text-right">{formData.owner || "-"}</div>
               <div className="text-muted-foreground">County</div>
-              <div className="text-right">{formData.county || "-"}</div>
+              <div className="text-right">{isLoading.counties ? "Loading..." : getCountyName(formData.county)}</div>
               <div className="text-muted-foreground">Branch</div>
-              <div className="text-right">{formData.branch || "-"}</div>
+              <div className="text-right">{isLoading.branches ? "Loading..." : getBranchName(formData.branch)}</div>
               <div className="text-muted-foreground">Township</div>
               <div className="text-right">{formData.township || "-"}</div>
               <div className="text-muted-foreground">Division</div>

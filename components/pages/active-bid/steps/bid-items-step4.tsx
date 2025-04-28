@@ -461,11 +461,6 @@ const BidItemsStep4 = ({
   };
 
   const handleNext = () => {
-    // Required fields for Step 4
-    if (!formData.phases || formData.phases === 0) {
-      alert('Please specify the number of phases');
-      return;
-    }
 
     // Update all data before proceeding
     setFormData(prev => ({

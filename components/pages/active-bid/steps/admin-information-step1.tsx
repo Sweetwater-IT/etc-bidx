@@ -237,18 +237,6 @@ const AdminInformationStep1 = ({
             return !value || value === '';
         });
 
-        if (missingFields.length > 0) {
-            // Show error message
-            alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
-            return;
-        }
-
-        // Validate rate acknowledgments
-        if (!areAllRatesAcknowledged()) {
-            alert('Please acknowledge all rates before proceeding');
-            return;
-        }
-
         setCurrentStep(2);
     };
   
