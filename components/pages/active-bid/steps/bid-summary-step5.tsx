@@ -131,7 +131,8 @@ const BidSummaryStep5 = ({
             fuel_cost: formData.fuelCost ? parseFloat(formData.fuelCost) : null,
             truck_and_fuel_cost: formData.truckAndFuelCost ? parseFloat(formData.truckAndFuelCost) : null,
             
-            // Default values for equipment quantities with constraint validation
+            // Ensure all required MPT equipment fields have default values (0 if not provided)
+            // These fields are required in the database schema
             type_iii_4ft: Math.max(0, parseInt(formData.typeIii4ft || "0")),
             wings_6ft: Math.max(0, parseInt(formData.wings6ft || "0")),
             h_stands: Math.max(0, parseInt(formData.hStands || "0")),

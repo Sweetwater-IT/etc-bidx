@@ -61,6 +61,7 @@ const AdminInformationStep1 = ({
     
     // State for dropdown options
     const [counties, setCounties] = useState<{id: number, name: string}[]>([]);
+    const [branches, setBranches] = useState<{id: number, name: string}[]>([]);
     const [estimators, setEstimators] = useState<{id: number, name: string}[]>([]);
     const [divisions, setDivisions] = useState<{id: string, name: string}[]>([]);
     const [owners, setOwners] = useState<{id: string, name: string}[]>([]);
@@ -87,7 +88,7 @@ const AdminInformationStep1 = ({
                 // Fetch branches
                 setIsLoading(prev => ({ ...prev, branches: true }));
                 const branchesData = await fetchReferenceData('branches');
-                // setBranches(branchesData);
+                setBranches(branchesData);
                 setIsLoading(prev => ({ ...prev, branches: false }));
                 
                 // Fetch estimators (users)
@@ -130,15 +131,21 @@ const AdminInformationStep1 = ({
         }));
     }, [setFormData]);
 
-    // Auto-fill rates when county changes
+    // Auto-fill rates and set branch when county changes
     useEffect(() => {
-        const updateRates = async () => {
-            if (formData.county && (!toggleStates.laborRate || !toggleStates.fringeRate || !toggleStates.shopRate)) {
+        const updateRatesAndBranch = async () => {
+            if (formData.county) {
                 try {
                     const rates = await fetchCountyRates(formData.county);
                     if (rates) {
                         const updates: Partial<FormData> = {};
                         
+                        // Always set the branch value from county data
+                        if (rates.branch_id) {
+                            updates.branch = rates.branch_id.toString();
+                        }
+                        
+                        // Only update rates if not manually set
                         if (!toggleStates.laborRate) {
                             updates.laborRate = rates.labor_rate?.toString() || '';
                         }
@@ -166,7 +173,7 @@ const AdminInformationStep1 = ({
             }
         };
         
-        updateRates();
+        updateRatesAndBranch();
     }, [formData.county, toggleStates.laborRate, toggleStates.fringeRate, toggleStates.shopRate, updateFormData]);
     
 
@@ -191,11 +198,17 @@ const AdminInformationStep1 = ({
             'estimator',
             'owner',
             'county',
+            'township',
             'branch',
             'division',
             'lettingDate',
             'startDate',
             'endDate',
+            'srRoute',
+            'dbePercentage',
+            'oneWayTravelTime',
+            'oneWayMileage',
+            'dieselCost',
             'laborRate',
             'fringeRate',
             'shopRate'
@@ -271,6 +284,9 @@ const AdminInformationStep1 = ({
                                                 ))}
                                                 {field.name === 'owner' && owners.map(owner => (
                                                     <option key={owner.id} value={owner.id}>{owner.name}</option>
+                                                ))}
+                                                {field.name === 'branch' && branches.map(branch => (
+                                                    <option key={branch.id} value={branch.id}>{branch.name}</option>
                                                 ))}
                                                 {field.name === 'workType' && [
                                                     { id: 'Rated', name: 'Rated' },

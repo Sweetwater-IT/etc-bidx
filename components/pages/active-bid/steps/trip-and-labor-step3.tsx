@@ -42,7 +42,8 @@ const TripAndLaborStep3 = ({
     const requiredFields = [
       'project_days',
       'nonrated_hours',
-      'total_hours'
+      'total_hours',
+      'phases'
     ];
 
     const missingFields = requiredFields.filter(field => {
