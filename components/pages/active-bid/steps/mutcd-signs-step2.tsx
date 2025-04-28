@@ -4,7 +4,8 @@ import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState } from "react";
+import { fetchSignDesignations, fetchSignDimensions } from '@/lib/api-client';
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Trash2, Plus } from "lucide-react";
 import {
@@ -36,18 +37,49 @@ const step = {
   description: "Select and configure MUTCD signs",
 };
 
-const designations = [
+// Define the type for sign designations from the database
+type SignDesignation = {
+  id: number;
+  value: string;
+  label: string;
+  description?: string;
+  dimensions: {
+    id: number;
+    value: string;
+    width: number;
+    height: number;
+    unit: string;
+  }[];
+};
+
+// Fallback designations in case the API call fails
+const fallbackDesignations = [
   {
+    id: 1,
     value: "D10-1A",
     label: "D10-1A",
-    dimensions: ["12.0 x 36.0", "24.0 x 48.0"],
+    dimensions: [
+      { id: 1, value: "12.0 x 36.0", width: 12, height: 36, unit: "in" },
+      { id: 2, value: "24.0 x 48.0", width: 24, height: 48, unit: "in" },
+    ],
   },
   {
+    id: 2,
     value: "D10-2",
     label: "D10-2",
-    dimensions: ["12.0 x 24.0", "18.0 x 36.0"],
+    dimensions: [
+      { id: 3, value: "12.0 x 24.0", width: 12, height: 24, unit: "in" },
+      { id: 4, value: "18.0 x 36.0", width: 18, height: 36, unit: "in" },
+    ],
   },
-  { value: "D10-3", label: "D10-3", dimensions: ["12.0 x 36.0"] },
+  { 
+    id: 3,
+    value: "D10-3", 
+    label: "D10-3", 
+    dimensions: [
+      { id: 5, value: "12.0 x 36.0", width: 12, height: 36, unit: "in" }
+    ] 
+  },
 ];
 
 const sheetingOptions = ["DG", "HI"];
@@ -80,22 +112,142 @@ const MutcdSignsStep2 = ({
   const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
   const [open, setOpen] = useState(false);
   const [isAddingSign, setIsAddingSign] = useState(signs.length === 0);
+  const [designations, setDesignations] = useState<any[]>([]);
+  const [isLoadingDesignations, setIsLoadingDesignations] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dimensionsMap, setDimensionsMap] = useState<Record<string, any[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Fetch initial sign designations from the database
+  useEffect(() => {
+    const loadInitialDesignations = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchSignDesignations();
+        if (data && data.length > 0) {
+          setDesignations(data);
+        }
+      } catch (error) {
+        console.error('Error fetching sign designations:', error);
+        // Fall back to the hardcoded designations
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadInitialDesignations();
+  }, []);
+  
+  // Function to search for sign designations
+  const searchDesignations = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      // If search term is too short, load initial designations
+      const data = await fetchSignDesignations();
+      if (data && data.length > 0) {
+        setDesignations(data);
+      }
+      return;
+    }
+    
+    setIsLoadingDesignations(true);
+    try {
+      const data = await fetchSignDesignations(searchTerm);
+      if (data && data.length > 0) {
+        setDesignations(data);
+      }
+    } catch (error) {
+      console.error('Error searching sign designations:', error);
+    } finally {
+      setIsLoadingDesignations(false);
+    }
+  };
 
-  const handleDesignationSelect = (currentValue: string) => {
+  // Generate a stable ID based on timestamp and counter
+  const generateStableId = (() => {
+    let counter = 0;
+    return () => {
+      counter += 1;
+      return `sign-${Date.now()}-${counter}`;
+    };
+  })();
+
+  const handleDesignationSelect = async (currentValue: string) => {
+    // Find the selected designation to get its ID
+    const selectedDesignation = designations.find(d => d.value === currentValue);
+    
+    if (!selectedDesignation) {
+      console.error('Selected designation not found');
+      return;
+    }
+    
+    // Create new sign with default values
     const newSign: SignData = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateStableId(),
       designation: currentValue,
+      dimensions: '',  // Will be populated after fetching dimensions
+      sheeting: 'DG',  // Default sheeting
+      quantity: 1,      // Default quantity
       isConfiguring: true,
     };
-    setSigns([...signs, newSign]);
+    
+    // Add the sign to the list
+    const updatedSigns = [...signs, newSign];
+    setSigns(updatedSigns);
+    
+    // Update form data when a new sign is added
+    setFormData((prev: any) => ({
+      ...prev,
+      signs: updatedSigns.map((sign) => ({ ...sign, isConfiguring: undefined })),
+    }));
+    
+    // Fetch dimensions for this designation
+    try {
+      const dimensionsData = await fetchSignDimensions(selectedDesignation.id);
+      
+      // Update dimensions map
+      setDimensionsMap(prev => ({
+        ...prev,
+        [currentValue]: dimensionsData
+      }));
+      
+      if (dimensionsData && dimensionsData.length > 0) {
+        // Update the sign with the first dimension
+        const signIndex = updatedSigns.findIndex(s => s.id === newSign.id);
+        if (signIndex !== -1) {
+          const updatedSign = {...updatedSigns[signIndex]};
+          updatedSign.dimensions = dimensionsData[0].value;
+          
+          const newSigns = [...updatedSigns];
+          newSigns[signIndex] = updatedSign;
+          setSigns(newSigns);
+          
+          // Update form data with the updated dimension
+          setFormData((prev: any) => ({
+            ...prev,
+            signs: newSigns.map((sign) => ({ ...sign, isConfiguring: undefined })),
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching dimensions:', error);
+    }
+    
     setOpen(false);
     setIsAddingSign(false);
   };
 
   const handleSignUpdate = (id: string, field: keyof SignData, value: any) => {
-    setSigns(
-      signs.map((sign) => (sign.id === id ? { ...sign, [field]: value } : sign))
+    const updatedSigns = signs.map((sign) => 
+      sign.id === id ? { ...sign, [field]: value } : sign
     );
+    
+    setSigns(updatedSigns);
+    
+    // Update form data when a sign field is updated
+    setFormData((prev: any) => ({
+      ...prev,
+      signs: updatedSigns.map((sign) => ({ ...sign, isConfiguring: undefined })),
+    }));
   };
 
   const handleSignSave = (id: string) => {
@@ -113,7 +265,15 @@ const MutcdSignsStep2 = ({
   };
 
   const handleSignDelete = (id: string) => {
-    setSigns(signs.filter((sign) => sign.id !== id));
+    const updatedSigns = signs.filter((sign) => sign.id !== id);
+    setSigns(updatedSigns);
+    
+    // Update form data when a sign is deleted
+    setFormData((prev: any) => ({
+      ...prev,
+      signs: updatedSigns.map((sign) => ({ ...sign, isConfiguring: undefined })),
+    }));
+    
     if (signs.length === 1) {
       setIsAddingSign(true);
     }
@@ -126,6 +286,30 @@ const MutcdSignsStep2 = ({
       )
     );
     setIsAddingSign(false);
+  };
+
+  const handleNext = () => {
+    // Ensure no signs are in configuring state
+    if (signs.some(s => s.isConfiguring)) {
+      alert('Please save or cancel all sign configurations before proceeding');
+      return;
+    }
+
+    // Update form data with signs before proceeding
+    // Ensure all required fields are defined to match the FormData.SignData interface
+    setFormData(prev => ({
+      ...prev,
+      signs: signs.map(sign => ({
+        id: sign.id,
+        designation: sign.designation,
+        dimensions: sign.dimensions || '',
+        sheeting: sign.sheeting || '',
+        quantity: sign.quantity || 0
+        // Omit isConfiguring and other optional properties that aren't in the FormData.SignData interface
+      }))
+    }));
+    
+    setCurrentStep(3);
   };
 
   return (
@@ -197,13 +381,48 @@ const MutcdSignsStep2 = ({
                                     <CommandItem
                                       key={d.value}
                                       value={d.value}
-                                      onSelect={() =>
-                                        handleSignUpdate(
-                                          sign.id,
-                                          "designation",
-                                          d.value
-                                        )
-                                      }
+                                      onSelect={async () => {
+                                        // Update designation
+                                        handleSignUpdate(sign.id, "designation", d.value);
+                                        
+                                        // Find the selected designation to get its ID
+                                        const selectedDesignation = designations.find(des => des.value === d.value);
+                                        
+                                        if (selectedDesignation) {
+                                          // Fetch dimensions for this designation if not already in cache
+                                          if (!dimensionsMap[d.value]) {
+                                            try {
+                                              const dimensionsData = await fetchSignDimensions(selectedDesignation.id);
+                                              
+                                              // Update dimensions map
+                                              setDimensionsMap(prev => ({
+                                                ...prev,
+                                                [d.value]: dimensionsData
+                                              }));
+                                              
+                                              // Set default dimension if available and not already set
+                                              if (dimensionsData && dimensionsData.length > 0 && !sign.dimensions) {
+                                                handleSignUpdate(sign.id, "dimensions", dimensionsData[0].value);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error fetching dimensions:', error);
+                                            }
+                                          } else if (dimensionsMap[d.value].length > 0 && !sign.dimensions) {
+                                            // Use cached dimensions
+                                            handleSignUpdate(sign.id, "dimensions", dimensionsMap[d.value][0].value);
+                                          }
+                                        }
+                                        
+                                        // Set default sheeting if not already set
+                                        if (!sign.sheeting) {
+                                          handleSignUpdate(sign.id, "sheeting", "DG");
+                                        }
+                                        
+                                        // Set default quantity if not already set
+                                        if (!sign.quantity) {
+                                          handleSignUpdate(sign.id, "quantity", 1);
+                                        }
+                                      }}
                                     >
                                       <div className="flex items-center">
                                         <Check
@@ -239,13 +458,15 @@ const MutcdSignsStep2 = ({
                               <SelectValue placeholder="Select dimensions" />
                             </SelectTrigger>
                             <SelectContent>
-                              {designations
-                                .find((d) => d.value === sign.designation)
-                                ?.dimensions.map((dim) => (
-                                  <SelectItem key={dim} value={dim}>
-                                    {dim}
+                              {dimensionsMap[sign.designation] ? (
+                                dimensionsMap[sign.designation].map((dim) => (
+                                  <SelectItem key={dim.id} value={dim.value}>
+                                    {dim.value}
                                   </SelectItem>
-                                ))}
+                                ))
+                              ) : (
+                                <SelectItem value="loading">Loading dimensions...</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -386,7 +607,7 @@ const MutcdSignsStep2 = ({
               {isAddingSign && (
                 <div className="w-full max-w-sm">
                   <Label className="text-sm font-medium mb-2 block">
-                    Designation
+                    Designation {isLoading && "(Loading...)"}
                   </Label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
@@ -396,32 +617,37 @@ const MutcdSignsStep2 = ({
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        Select designation...
+                        Select Designation
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0" align="start">
+                    <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput placeholder="Search designation..." />
-                        <CommandEmpty>No designation found.</CommandEmpty>
+                        <CommandInput 
+                          placeholder="Search designation..." 
+                          onValueChange={(value) => searchDesignations(value)}
+                        />
                         <CommandList>
+                          <CommandEmpty>No designation found.</CommandEmpty>
                           <CommandGroup>
-                            {designations.map((designation) => (
-                              <CommandItem
-                                key={designation.value}
-                                value={designation.value}
-                                onSelect={() =>
-                                  handleDesignationSelect(designation.value)
-                                }
-                              >
-                                <div className="flex items-center">
+                            {isLoading ? (
+                              <div className="py-6 text-center text-sm">Loading...</div>
+                            ) : (
+                              designations.map((designation) => (
+                                <CommandItem
+                                  key={designation.value}
+                                  onSelect={() => handleDesignationSelect(designation.value)}
+                                >
                                   <Check
-                                    className={cn("mr-2 h-4 w-4", "opacity-0")}
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      "opacity-0"
+                                    )}
                                   />
                                   {designation.label}
-                                </div>
-                              </CommandItem>
-                            ))}
+                                </CommandItem>
+                              ))
+                            )}
                           </CommandGroup>
                         </CommandList>
                       </Command>
@@ -446,12 +672,7 @@ const MutcdSignsStep2 = ({
                 <Button variant="outline" onClick={() => setCurrentStep(1)}>
                   Back
                 </Button>
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={
-                    signs.length === 0 || signs.some((s) => s.isConfiguring)
-                  }
-                >
+                <Button onClick={handleNext}>
                   Next
                 </Button>
               </div>

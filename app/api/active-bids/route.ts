@@ -59,6 +59,58 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    const requiredFields = [
+      'status', 'contract_number', 'owner', 'county', 'branch',
+      'division', 'estimator', 'start_date', 'end_date', 'project_days',
+      'base_rate', 'fringe_rate', 'rt_miles', 'rt_travel', 'rated_hours',
+      'nonrated_hours', 'total_hours', 'phases'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !body[field]);
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Missing required fields', 
+          missingFields 
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (typeof body.start_date === 'string') {
+      body.start_date = new Date(body.start_date).toISOString();
+    }
+    
+    if (typeof body.end_date === 'string') {
+      body.end_date = new Date(body.end_date).toISOString();
+    }
+    
+    if (typeof body.letting_date === 'string' && body.letting_date) {
+      body.letting_date = new Date(body.letting_date).toISOString();
+    }
+    
+    const numericFields = [
+      'type_iii_4ft', 'wings_6ft', 'h_stands', 'posts', 'sand_bags',
+      'covers', 'spring_loaded_metal_stands', 'hi_vertical_panels',
+      'type_xi_vertical_panels', 'b_lites', 'ac_lites', 'hi_signs_sq_ft',
+      'dg_signs_sq_ft', 'special_signs_sq_ft', 'tma', 'arrow_board',
+      'message_board', 'speed_trailer', 'pts', 'mpt_value',
+      'mpt_gross_profit', 'mpt_gm_percent', 'perm_sign_value',
+      'perm_sign_gross_profit', 'perm_sign_gm_percent', 'rental_value',
+      'rental_gross_profit', 'rental_gm_percent'
+    ];
+    
+    numericFields.forEach(field => {
+      if (body[field] === undefined || body[field] === null || body[field] === '') {
+        body[field] = 0;
+      }
+    });
+    
+    if (body.emergency_job === undefined) {
+      body.emergency_job = false;
+    }
+    
     const { data, error } = await supabase
       .from('bid_estimates')
       .insert(body)

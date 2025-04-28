@@ -2,7 +2,9 @@ import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState } from "react";
+import { fetchBranchShopRate, fetchCountyRates, fetchReferenceData } from "@/lib/api-client";
+import React, { useEffect, useState, useCallback } from "react";
+import { AlertCircle } from "lucide-react";
 
 const step = {
     id: "step-1",
@@ -42,12 +44,138 @@ const AdminInformationStep1 = ({
     formData: FormData;
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-    const [toggleStates, setToggleStates] = useState({
+    // State for toggle buttons
+    const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
         laborRate: false,
         fringeRate: false,
         shopRate: false,
-        winterShutdown: false,
+        winterShutdown: false
     });
+    
+    // Function to check if all rates are acknowledged and have values
+    const areAllRatesAcknowledged = () => {
+        // All three checkboxes must be checked AND their corresponding inputs must have values
+        return toggleStates.laborRate && toggleStates.fringeRate && toggleStates.shopRate &&
+               !!formData.laborRate && !!formData.fringeRate && !!formData.shopRate;
+    };
+    
+    // State for dropdown options
+    const [counties, setCounties] = useState<{id: number, name: string}[]>([]);
+    const [branches, setBranches] = useState<{id: number, name: string}[]>([]);
+    const [estimators, setEstimators] = useState<{id: number, name: string}[]>([]);
+    const [divisions, setDivisions] = useState<{id: string, name: string}[]>([]);
+    const [owners, setOwners] = useState<{id: string, name: string}[]>([]);
+    
+    // State for loading status
+    const [isLoading, setIsLoading] = useState({
+        counties: false,
+        branches: false,
+        estimators: false,
+        divisions: false,
+        owners: false,
+    });
+    
+    // Fetch reference data for dropdowns
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch counties
+                setIsLoading(prev => ({ ...prev, counties: true }));
+                const countiesData = await fetchReferenceData('counties');
+                setCounties(countiesData);
+                setIsLoading(prev => ({ ...prev, counties: false }));
+                
+                // Fetch branches
+                setIsLoading(prev => ({ ...prev, branches: true }));
+                const branchesData = await fetchReferenceData('branches');
+                setBranches(branchesData);
+                setIsLoading(prev => ({ ...prev, branches: false }));
+                
+                // Fetch estimators (users)
+                setIsLoading(prev => ({ ...prev, estimators: true }));
+                const estimatorsData = await fetchReferenceData('users');
+                setEstimators(estimatorsData);
+                setIsLoading(prev => ({ ...prev, estimators: false }));
+                
+                // Fetch divisions
+                setIsLoading(prev => ({ ...prev, divisions: true }));
+                const divisionsData = await fetchReferenceData('divisions');
+                setDivisions(divisionsData);
+                setIsLoading(prev => ({ ...prev, divisions: false }));
+                
+                // Fetch owners
+                setIsLoading(prev => ({ ...prev, owners: true }));
+                const ownersData = await fetchReferenceData('owners');
+                setOwners(ownersData);
+                setIsLoading(prev => ({ ...prev, owners: false }));
+            } catch (error) {
+                console.error('Error fetching reference data:', error);
+                // Reset loading states
+                setIsLoading({
+                    counties: false,
+                    branches: false,
+                    estimators: false,
+                    divisions: false,
+                    owners: false,
+                });
+            }
+        };
+        
+        fetchData();
+    }, []);
+    
+    const updateFormData = useCallback((updates: Partial<FormData>) => {
+        setFormData(prev => ({
+            ...prev,
+            ...updates
+        }));
+    }, [setFormData]);
+
+    // Auto-fill rates and set branch when county changes
+    useEffect(() => {
+        const updateRatesAndBranch = async () => {
+            if (formData.county) {
+                try {
+                    const rates = await fetchCountyRates(formData.county);
+                    if (rates) {
+                        const updates: Partial<FormData> = {};
+                        
+                        // Always set the branch value from county data
+                        if (rates.branch_id) {
+                            updates.branch = rates.branch_id.toString();
+                        }
+                        
+                        // Only update rates if not manually set
+                        if (!toggleStates.laborRate) {
+                            updates.laborRate = rates.labor_rate?.toString() || '';
+                        }
+                        
+                        if (!toggleStates.fringeRate) {
+                            updates.fringeRate = rates.fringe_rate?.toString() || '';
+                        }
+                        
+                        if (!toggleStates.shopRate && rates.branch_id) {
+                            try {
+                                const shopRate = await fetchBranchShopRate(rates.branch_id);
+                                if (shopRate) {
+                                    updates.shopRate = shopRate.toString();
+                                }
+                            } catch (error) {
+                                console.error('Error fetching branch shop rate:', error);
+                            }
+                        }
+                        
+                        updateFormData(updates);
+                    }
+                } catch (error) {
+                    console.error('Error fetching county rates:', error);
+                }
+            }
+        };
+        
+        updateRatesAndBranch();
+    }, [formData.county, toggleStates.laborRate, toggleStates.fringeRate, toggleStates.shopRate, updateFormData]);
+    
 
     const handleInputChange = (field: string, value: string) => {
         setFormData((prev) => ({
@@ -61,6 +189,49 @@ const AdminInformationStep1 = ({
             ...prev,
             [field]: !prev[field],
         }));
+    };
+
+    const handleNext = () => {
+        // Required fields for Step 1
+        const requiredFields = [
+            'contractNumber',
+            'estimator',
+            'owner',
+            'county',
+            'township',
+            'branch',
+            'division',
+            'lettingDate',
+            'startDate',
+            'endDate',
+            'srRoute',
+            'dbePercentage',
+            'oneWayTravelTime',
+            'oneWayMileage',
+            'dieselCost',
+            'laborRate',
+            'fringeRate',
+            'shopRate'
+        ];
+
+        const missingFields = requiredFields.filter(field => {
+            const value = formData[field as keyof FormData];
+            return !value || value === '';
+        });
+
+        if (missingFields.length > 0) {
+            // Show error message
+            alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+            return;
+        }
+
+        // Validate rate acknowledgments
+        if (!areAllRatesAcknowledged()) {
+            alert('Please acknowledge all rates before proceeding');
+            return;
+        }
+
+        setCurrentStep(2);
     };
 
     return (
@@ -96,19 +267,42 @@ const AdminInformationStep1 = ({
                                         {field.type === "select" ? (
                                             <select
                                                 id={field.name}
-                                                value={formData[field.name] || ""}
+                                                value={String(formData[field.name] ?? "")}
                                                 onChange={(e) => handleInputChange(field.name, e.target.value)}
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                disabled={isLoading[field.name === 'county' ? 'counties' : field.name === 'branch' ? 'branches' : field.name === 'estimator' ? 'estimators' : field.name === 'division' ? 'divisions' : field.name === 'owner' ? 'owners' : ''] || false}
                                             >
-                                                <option value="">{field.placeholder}</option>
+                                                <option value="">{isLoading[field.name === 'county' ? 'counties' : field.name === 'branch' ? 'branches' : field.name === 'estimator' ? 'estimators' : field.name === 'division' ? 'divisions' : field.name === 'owner' ? 'owners' : ''] ? 'Loading...' : field.placeholder}</option>
+                                                {field.name === 'county' && counties.map(county => (
+                                                    <option key={county.id} value={county.id}>{county.name}</option>
+                                                ))}
+                                                {field.name === 'estimator' && estimators.map(estimator => (
+                                                    <option key={estimator.id} value={estimator.id}>{estimator.name}</option>
+                                                ))}
+                                                {field.name === 'division' && divisions.map(division => (
+                                                    <option key={division.id} value={division.id}>{division.name}</option>
+                                                ))}
+                                                {field.name === 'owner' && owners.map(owner => (
+                                                    <option key={owner.id} value={owner.id}>{owner.name}</option>
+                                                ))}
+                                                {field.name === 'branch' && branches.map(branch => (
+                                                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                                ))}
+                                                {field.name === 'workType' && [
+                                                    { id: 'Rated', name: 'Rated' },
+                                                    { id: 'Non-Rated', name: 'Non-Rated' },
+                                                    { id: 'Mixed', name: 'Mixed' }
+                                                ].map(type => (
+                                                    <option key={type.id} value={type.id}>{type.name}</option>
+                                                ))}
                                             </select>
                                         ) : field.type === "toggle" ? (
                                             <div className="flex items-center space-x-2">
                                                 <input
                                                     type="checkbox"
                                                     id={field.name}
-                                                    checked={toggleStates[field.name]}
-                                                    onChange={() => handleToggleChange(field.name)}
+                                                    checked={Boolean(formData[field.name])}
+                                                    onChange={() => handleInputChange(field.name, (!formData[field.name]).toString())}
                                                     className="h-4 w-4"
                                                 />
                                                 <Label htmlFor={field.name}>{field.label}</Label>
@@ -119,7 +313,7 @@ const AdminInformationStep1 = ({
                                                     id={field.name}
                                                     type={field.type}
                                                     placeholder={field.placeholder}
-                                                    value={formData[field.name] || ""}
+                                                    value={String(formData[field.name] ?? "")}
                                                     onChange={(e) => handleInputChange(field.name, e.target.value)}
                                                     className="h-10"
                                                 />
@@ -131,7 +325,7 @@ const AdminInformationStep1 = ({
                                                         <input
                                                             id={`${field.name}-toggle`}
                                                             type="checkbox"
-                                                            checked={toggleStates[field.name]}
+                                                            checked={!!toggleStates[field.name]}
                                                             onChange={() => handleToggleChange(field.name)}
                                                             className="h-4 w-4"
                                                         />
@@ -142,8 +336,21 @@ const AdminInformationStep1 = ({
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex justify-end">
-                                <Button onClick={() => setCurrentStep(2)}>Next</Button>
+                            <div className="flex flex-col gap-4">
+                                {!areAllRatesAcknowledged() && (
+                                    <div className="flex items-center gap-2 text-amber-500">
+                                        <AlertCircle size={16} />
+                                        <span>Please ensure all rate fields have values and are acknowledged by checking the boxes before proceeding.</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-end">
+                                    <Button 
+                                        onClick={handleNext}
+                                        disabled={!areAllRatesAcknowledged()}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>

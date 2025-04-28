@@ -7,6 +7,7 @@ export type Json =
   | Json[]
 
 export type JobStatus = 'Bid' | 'No Bid' | 'Unset';
+export type Market = 'MOBILIZATION' | 'LOCAL' | 'CORE';
 
 export interface Database {
   public: {
@@ -161,29 +162,21 @@ export interface Database {
       },
       bid_estimates: {
         Row: {
-          id: number
-          status: string
-          letting_date: string | null
-          contract_number: string
-          contractor: string | null
-          subcontractor: string | null
-          owner: string
-          county: string
-          branch: string
-          division: string
-          estimator: string
-          start_date: string
-          end_date: string
-          project_days: number
-          base_rate: number
-          fringe_rate: number
-          rt_miles: number
-          rt_travel: number
-          emergency_job: boolean
-          rated_hours: number
-          nonrated_hours: number
-          total_hours: number
-          phases: number
+          // Trip and Labor fields
+          number_of_personnel: number | null
+          number_of_trucks: number | null
+          trips: number | null
+          additional_trips: number | null
+          total_trips: number | null
+          additional_rated_hours: number | null
+          total_rated_hours: number | null
+          additional_nonrated_hours: number | null
+          total_nonrated_hours: number | null
+          // Mobilization fields
+          mobilization: number | null
+          fuel_cost: number | null
+          truck_and_fuel_cost: number | null
+          // MPT Equipment fields
           type_iii_4ft: number
           wings_6ft: number
           h_stands: number
@@ -214,6 +207,30 @@ export interface Database {
           rental_gm_percent: number
           created_at: string
           updated_at: string
+          summary: string | null
+          id: number
+          status: string
+          letting_date: string | null
+          contract_number: string
+          contractor: string | null
+          subcontractor: string | null
+          owner: string
+          county: string
+          branch: string
+          division: string
+          estimator: string
+          start_date: string
+          end_date: string
+          project_days: number
+          base_rate: number
+          fringe_rate: number
+          rt_miles: number
+          rt_travel: number
+          emergency_job: boolean
+          rated_hours: number
+          nonrated_hours: number
+          total_hours: number
+          phases: number
         }
         Insert: {
           id?: number
@@ -239,6 +256,21 @@ export interface Database {
           nonrated_hours: number
           total_hours: number
           phases: number
+          // Trip and Labor fields
+          number_of_personnel?: number | null
+          number_of_trucks?: number | null
+          trips?: number | null
+          additional_trips?: number | null
+          total_trips?: number | null
+          additional_rated_hours?: number | null
+          total_rated_hours?: number | null
+          additional_nonrated_hours?: number | null
+          total_nonrated_hours?: number | null
+          // Mobilization fields
+          mobilization?: number | null
+          fuel_cost?: number | null
+          truck_and_fuel_cost?: number | null
+          // MPT Equipment fields
           type_iii_4ft: number
           wings_6ft: number
           h_stands: number
@@ -269,6 +301,7 @@ export interface Database {
           rental_gm_percent: number
           created_at?: string
           updated_at?: string
+          summary?: string | null
         }
         Update: {
           id?: number
@@ -294,6 +327,21 @@ export interface Database {
           nonrated_hours?: number
           total_hours?: number
           phases?: number
+          // Trip and Labor fields
+          number_of_personnel?: number | null
+          number_of_trucks?: number | null
+          trips?: number | null
+          additional_trips?: number | null
+          total_trips?: number | null
+          additional_rated_hours?: number | null
+          total_rated_hours?: number | null
+          additional_nonrated_hours?: number | null
+          total_nonrated_hours?: number | null
+          // Mobilization fields
+          mobilization?: number | null
+          fuel_cost?: number | null
+          truck_and_fuel_cost?: number | null
+          // MPT Equipment fields
           type_iii_4ft?: number
           wings_6ft?: number
           h_stands?: number
@@ -324,6 +372,71 @@ export interface Database {
           rental_gm_percent?: number
           created_at?: string
           updated_at?: string
+          summary?: string | null
+        }
+      },
+      bid_estimate_signs: {
+        Row: {
+          id: string
+          bid_estimate_id: number
+          designation: string
+          dimensions: string
+          sheeting: string
+          quantity: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          bid_estimate_id: number
+          designation: string
+          dimensions: string
+          sheeting: string
+          quantity: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          bid_estimate_id?: number
+          designation?: string
+          dimensions?: string
+          sheeting?: string
+          quantity?: number
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      bid_estimate_items: {
+        Row: {
+          id: string
+          bid_estimate_id: number
+          category: string
+          subcategory: string
+          item_key: string
+          value: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          bid_estimate_id: number
+          category: string
+          subcategory: string
+          item_key: string
+          value: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          bid_estimate_id?: number
+          category?: string
+          subcategory?: string
+          item_key?: string
+          value?: number
+          created_at?: string
+          updated_at?: string
         }
       }
     }
@@ -336,7 +449,8 @@ export interface Database {
       // Define your functions here if needed
     }
     Enums: {
-      job_status: JobStatus
+      job_status: JobStatus,
+      market: Market
     }
   }
 }
