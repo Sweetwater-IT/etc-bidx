@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: counties; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.counties (
+CREATE TABLE IF NOT EXISTS public.counties (
     id integer NOT NULL,
     name character varying(55),
     district integer,

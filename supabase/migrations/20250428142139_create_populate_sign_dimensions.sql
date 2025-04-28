@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: sign_dimensions; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.sign_dimensions (
+CREATE TABLE IF NOT EXISTS public.sign_dimensions (
     id integer NOT NULL,
     width numeric(10,2),
     height numeric(10,2)

@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
     name character varying(55),
     email character varying(55),
     role character varying(55),

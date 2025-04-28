@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: sign_designations; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.sign_designations (
+CREATE TABLE IF NOT EXISTS public.sign_designations (
     id integer NOT NULL,
     designation character varying(100),
     description character varying(100) NOT NULL,

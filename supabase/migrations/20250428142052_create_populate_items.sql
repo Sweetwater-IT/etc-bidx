@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: items; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.items (
+CREATE TABLE IF NOT EXISTS public.items (
     id integer NOT NULL,
     name character varying(55),
     price numeric(10,2),
