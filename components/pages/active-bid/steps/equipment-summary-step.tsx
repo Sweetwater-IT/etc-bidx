@@ -46,7 +46,17 @@ const EquipmentSummaryStep = ({
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
   const [equipment, setEquipment] = useState<EquipmentData[]>(
-    Array.isArray(formData.equipment) ? formData.equipment as EquipmentData[] : []
+    (formData.equipment?.map(item => ({
+      ...item,
+      id: item.id || Math.random().toString(36).substr(2, 9),
+      itemName: item.itemName || '',
+      qty: item.qty || 0,
+      months: item.months || 0,
+      rentPrice: item.rentPrice || 0,
+      reRentCost: item.reRentCost || 0,
+      reRent: item.reRent || false,
+      isConfiguring: item.isConfiguring || false
+    })) as EquipmentData[]) || []
   );
   const [open, setOpen] = useState(false);
   const [isAddingEquipment, setIsAddingEquipment] = useState(equipment.length === 0);
@@ -299,4 +309,4 @@ const EquipmentSummaryStep = ({
   );
 };
 
-export default EquipmentSummaryStep; 
+export default EquipmentSummaryStep;
