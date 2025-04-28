@@ -167,7 +167,7 @@ const BidItemsStep4 = ({
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [activeTab, setActiveTab] = useState("equipment");
+  const [activeTab, setActiveTab] = useState("mpt");
   const [mptData, setMptData] = useState<MPTData>(
     formData.mptData || {
       mptEquipment: {
