@@ -85,10 +85,10 @@ export async function createBid(bid: AvailableJobInsert): Promise<AvailableJob> 
 /**
  * Update an existing bid
  */
-export async function updateBid(id: number, data: any) {
+export async function updateBid(id: number, data: AvailableJobUpdate): Promise<AvailableJob> {
   try {
     const response = await fetch(`/api/bids/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -101,7 +101,7 @@ export async function updateBid(id: number, data: any) {
     }
 
     const result = await response.json()
-    return result
+    return result.data
   } catch (error) {
     console.error('Error updating bid:', error)
     throw error
@@ -212,6 +212,198 @@ export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstima
   
   const result = await response.json();
   return result.data;
+}
+
+/**
+ * Update an existing active bid
+ */
+export async function updateActiveBid(id: number, data: Partial<BidEstimateInsert>): Promise<BidEstimate> {
+  try {
+    const response = await fetch(`/api/active-bids/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update active bid');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error updating active bid:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a new MPT rental record for a bid estimate
+ */
+export async function createMptRental(data: {
+  estimate_id: number;
+  target_moic?: number;
+  payback_period?: number;
+  annual_utilization?: number;
+  dispatch_fee?: number;
+  mpg_per_truck?: number;
+  revenue?: number;
+  cost?: number;
+  gross_profit?: number;
+  hours?: number;
+  static_equipment_info?: any;
+}) {
+  try {
+    const response = await fetch('/api/estimate-mpt-rental', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create MPT rental record');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error creating MPT rental record:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch MPT rental data for a bid estimate
+ */
+export async function fetchMptRental(estimateId: number) {
+  try {
+    const response = await fetch(`/api/estimate-mpt-rental?estimate_id=${estimateId}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // No MPT rental record found
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch MPT rental record');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error fetching MPT rental record:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch reference data for dropdowns
+ */
+export async function fetchReferenceData(type: 'counties' | 'branches' | 'users' | 'divisions' | 'owners') {
+  try {
+    const response = await fetch(`/api/reference-data?type=${type}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to fetch ${type}`);
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error(`Error fetching ${type}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch county rates by county ID
+ */
+export async function fetchCountyRates(countyId: number | string) {
+  try {
+    if (!countyId) return null;
+    
+    const counties = await fetchReferenceData('counties');
+    const county = counties.find(c => c.id === Number(countyId));
+    
+    if (!county) return null;
+    
+    return {
+      labor_rate: county.labor_rate,
+      fringe_rate: county.fringe_rate,
+      branch_id: county.branch
+    };
+  } catch (error) {
+    console.error('Error fetching county rates:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch branch shop rate by branch ID
+ */
+export async function fetchBranchShopRate(branchId: number | string) {
+  try {
+    if (!branchId) return null;
+    
+    const branches = await fetchReferenceData('branches');
+    const branch = branches.find(b => b.id === Number(branchId));
+    
+    if (!branch) return null;
+    
+    return branch.shop_rate;
+  } catch (error) {
+    console.error('Error fetching branch shop rate:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch sign designations with their available dimensions
+ * @param search Optional search term to filter designations
+ */
+export async function fetchSignDesignations(search?: string) {
+  try {
+    let url = '/api/signs?type=designations';
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sign designations: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching sign designations:', error);
+    return [];
+  }
+}
+
+export async function fetchSignDimensions(designationId: number | string) {
+  try {
+    const url = `/api/signs?type=dimensions&designationId=${designationId}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sign dimensions: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching sign dimensions:', error);
+    return [];
+  }
 }
 
 /**

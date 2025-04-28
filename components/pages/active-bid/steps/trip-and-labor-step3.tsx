@@ -31,55 +31,71 @@ const TripAndLaborStep3 = ({
     }));
   };
 
+  const getInputValue = (field: keyof FormData): string => {
+    const value = formData[field];
+    if (value === undefined || value === null) return "";
+    return String(value);
+  };
+
+  const handleNext = () => {
+    // Required fields for Step 3
+    const requiredFields = [
+      'project_days',
+      'nonrated_hours',
+      'total_hours'
+    ];
+
+    const missingFields = requiredFields.filter(field => {
+      const value = formData[field as keyof FormData];
+      return !value || value === '' || value === '0';
+    });
+
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    setCurrentStep(4);
+  };
+
   return (
     <div>
       <div className="relative">
         <button
           onClick={() => setCurrentStep(3)}
-          className={`group flex w-full items-start gap-4 py-4 text-left ${
-            currentStep === 3 ? "text-foreground" : "text-muted-foreground"
-          }`}
+          className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 3 ? "text-foreground" : "text-muted-foreground"}`}
         >
           <div
             className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
-              3 <= currentStep
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-muted-foreground bg-background"
+              3 <= currentStep ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground bg-background"
             }`}
           >
             3
           </div>
           <div className="flex flex-col gap-1">
             <div className="text-base font-medium">{step.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {step.description}
-            </div>
+            <div className="text-sm text-muted-foreground">{step.description}</div>
           </div>
         </button>
 
         {/* Collapsible Content */}
         {currentStep === 3 && (
-          <div className="mt-2 mb-6 ml-12">
+          <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
               {/* Personnel Section */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Personnel</h3>
                 <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-2.5">
-                    <Label
-                      htmlFor="numberOfDays"
-                      className="text-sm font-medium"
-                    >
+                    <Label htmlFor="numberOfDays" className="text-sm font-medium">
                       Number of Days
                     </Label>
                     <Input
                       id="numberOfDays"
                       type="number"
                       placeholder="Number of Days"
-                      value={formData.numberOfDays || ""}
-                      onChange={(e) =>
-                        handleInputChange("numberOfDays", e.target.value)
-                      }
+                      value={getInputValue("numberOfDays")}
+                      onChange={(e) => handleInputChange("numberOfDays", e.target.value)}
                       className="h-10"
                     />
                   </div>
@@ -94,7 +110,7 @@ const TripAndLaborStep3 = ({
                       id="numberOfPersonnel"
                       type="number"
                       placeholder="Number of Personnel"
-                      value={formData.numberOfPersonnel || ""}
+                      value={getInputValue("numberOfPersonnel")}
                       onChange={(e) =>
                         handleInputChange("numberOfPersonnel", e.target.value)
                       }
@@ -112,7 +128,7 @@ const TripAndLaborStep3 = ({
                       id="numberOfTrucks"
                       type="number"
                       placeholder="Number of Trucks"
-                      value={formData.numberOfTrucks || ""}
+                      value={getInputValue("numberOfTrucks")}
                       onChange={(e) =>
                         handleInputChange("numberOfTrucks", e.target.value)
                       }
@@ -136,7 +152,7 @@ const TripAndLaborStep3 = ({
                       id="trips"
                       type="number"
                       placeholder="Trips"
-                      value={formData.trips || ""}
+                      value={getInputValue("trips")}
                       onChange={(e) =>
                         handleInputChange("trips", e.target.value)
                       }
@@ -154,7 +170,7 @@ const TripAndLaborStep3 = ({
                       id="additionalTrips"
                       type="number"
                       placeholder="Additional Trips"
-                      value={formData.additionalTrips || ""}
+                      value={getInputValue("additionalTrips")}
                       onChange={(e) =>
                         handleInputChange("additionalTrips", e.target.value)
                       }
@@ -169,7 +185,7 @@ const TripAndLaborStep3 = ({
                       id="totalTrips"
                       type="number"
                       placeholder="Total Trips"
-                      value={formData.totalTrips || ""}
+                      value={getInputValue("totalTrips")}
                       onChange={(e) =>
                         handleInputChange("totalTrips", e.target.value)
                       }
@@ -198,7 +214,7 @@ const TripAndLaborStep3 = ({
                         id="ratedHours"
                         type="number"
                         placeholder="Rated Hours"
-                        value={formData.ratedHours || ""}
+                        value={getInputValue("ratedHours")}
                         onChange={(e) =>
                           handleInputChange("ratedHours", e.target.value)
                         }
@@ -216,7 +232,7 @@ const TripAndLaborStep3 = ({
                         id="additionalRatedHours"
                         type="number"
                         placeholder="Additional Rated Hours"
-                        value={formData.additionalRatedHours || ""}
+                        value={getInputValue("additionalRatedHours")}
                         onChange={(e) =>
                           handleInputChange(
                             "additionalRatedHours",
@@ -237,7 +253,7 @@ const TripAndLaborStep3 = ({
                         id="totalRatedHours"
                         type="number"
                         placeholder="Total Rated Hours"
-                        value={formData.totalRatedHours || ""}
+                        value={getInputValue("totalRatedHours")}
                         onChange={(e) =>
                           handleInputChange("totalRatedHours", e.target.value)
                         }
@@ -259,7 +275,7 @@ const TripAndLaborStep3 = ({
                         id="nonRatedHours"
                         type="number"
                         placeholder="Non-Rated Hours"
-                        value={formData.nonRatedHours || ""}
+                        value={getInputValue("nonRatedHours")}
                         onChange={(e) =>
                           handleInputChange("nonRatedHours", e.target.value)
                         }
@@ -277,7 +293,7 @@ const TripAndLaborStep3 = ({
                         id="additionalNonRatedHours"
                         type="number"
                         placeholder="Additional Non-Rated Hours"
-                        value={formData.additionalNonRatedHours || ""}
+                        value={getInputValue("additionalNonRatedHours")}
                         onChange={(e) =>
                           handleInputChange(
                             "additionalNonRatedHours",
@@ -298,7 +314,7 @@ const TripAndLaborStep3 = ({
                         id="totalNonRatedHours"
                         type="number"
                         placeholder="Total Non-Rated Hours"
-                        value={formData.totalNonRatedHours || ""}
+                        value={getInputValue("totalNonRatedHours")}
                         onChange={(e) =>
                           handleInputChange(
                             "totalNonRatedHours",
@@ -329,7 +345,7 @@ const TripAndLaborStep3 = ({
                       id="mobilization"
                       type="number"
                       placeholder="Mobilization"
-                      value={formData.mobilization || ""}
+                      value={getInputValue("mobilization")}
                       onChange={(e) =>
                         handleInputChange("mobilization", e.target.value)
                       }
@@ -344,7 +360,7 @@ const TripAndLaborStep3 = ({
                       id="fuelCost"
                       type="number"
                       placeholder="Fuel Cost"
-                      value={formData.fuelCost || ""}
+                      value={getInputValue("fuelCost")}
                       onChange={(e) =>
                         handleInputChange("fuelCost", e.target.value)
                       }
@@ -362,7 +378,7 @@ const TripAndLaborStep3 = ({
                       id="truckAndFuelCost"
                       type="number"
                       placeholder="Truck & Fuel Cost"
-                      value={formData.truckAndFuelCost || ""}
+                      value={getInputValue("truckAndFuelCost")}
                       onChange={(e) =>
                         handleInputChange("truckAndFuelCost", e.target.value)
                       }
@@ -377,7 +393,7 @@ const TripAndLaborStep3 = ({
                 <Button variant="outline" onClick={() => setCurrentStep(2)}>
                   Back
                 </Button>
-                <Button onClick={() => setCurrentStep(4)}>Next</Button>
+                <Button onClick={handleNext}>Next</Button>
               </div>
             </div>
           </div>

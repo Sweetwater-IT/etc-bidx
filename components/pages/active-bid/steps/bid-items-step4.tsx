@@ -168,133 +168,145 @@ const BidItemsStep4 = ({
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
   const [activeTab, setActiveTab] = useState("equipment");
-  const [mptData, setMptData] = useState<MPTData>({
-    mptEquipment: {
-      typeIII: 0,
-      wings: 0,
-      hStands: 0,
-      posts: 0,
-      covers: 0,
-      metalStands: 0,
-      sandbags: 0,
-    },
-    lightAndDrum: {
-      hiVerticalPanels: 0,
-      typeXIVerticalPanels: 0,
-      bLights: 0,
-      acLights: 0,
-    },
-  });
+  const [mptData, setMptData] = useState<MPTData>(
+    formData.mptData || {
+      mptEquipment: {
+        typeIII: 0,
+        wings: 0,
+        hStands: 0,
+        posts: 0,
+        covers: 0,
+        metalStands: 0,
+        sandbags: 0,
+      },
+      lightAndDrum: {
+        hiVerticalPanels: 0,
+        typeXIVerticalPanels: 0,
+        bLights: 0,
+        acLights: 0,
+      },
+    }
+  );
 
-  const [equipmentRental, setEquipmentRental] = useState<EquipmentRentalData>({
-    arrowBoard: {
-      type25: 0,
-      type75: 0,
-      solarAssist: 0,
-    },
-    messageBoard: {
-      fullSize: 0,
-      miniSize: 0,
-      radar: 0,
-    },
-    attenuator: {
-      standard: 0,
-      smart: 0,
-    },
-    trailer: {
-      equipment: 0,
-      storage: 0,
-      arrow: 0,
-      light: 0,
-    },
-  });
+  const [equipmentRental, setEquipmentRental] = useState<EquipmentRentalData>(
+    formData.equipmentRental || {
+      arrowBoard: {
+        type25: 0,
+        type75: 0,
+        solarAssist: 0,
+      },
+      messageBoard: {
+        fullSize: 0,
+        miniSize: 0,
+        radar: 0,
+      },
+      attenuator: {
+        standard: 0,
+        smart: 0,
+      },
+      trailer: {
+        equipment: 0,
+        storage: 0,
+        arrow: 0,
+        light: 0,
+      },
+    }
+  );
 
-  const [permanentSigns, setPermanentSigns] = useState<PermanentSignsData>({
-    regulatory: {
-      stop: 0,
-      yield: 0,
-      speedLimit: 0,
-      noParking: 0,
-      oneWay: 0,
-      doNotEnter: 0,
-    },
-    warning: {
-      pedestrian: 0,
-      school: 0,
-      merge: 0,
-      curve: 0,
-      intersection: 0,
-    },
-    guide: {
-      street: 0,
-      highway: 0,
-      mile: 0,
-      exit: 0,
-      directional: 0,
-    },
-    custom: {
-      size: "",
-      quantity: 0,
-      description: "",
-    },
-  });
+  const [permanentSigns, setPermanentSigns] = useState<PermanentSignsData>(
+    formData.permanentSigns || {
+      regulatory: {
+        stop: 0,
+        yield: 0,
+        speedLimit: 0,
+        noParking: 0,
+        oneWay: 0,
+        doNotEnter: 0,
+      },
+      warning: {
+        pedestrian: 0,
+        school: 0,
+        merge: 0,
+        curve: 0,
+        intersection: 0,
+      },
+      guide: {
+        street: 0,
+        highway: 0,
+        mile: 0,
+        exit: 0,
+        directional: 0,
+      },
+      custom: {
+        size: "",
+        quantity: 0,
+        description: "",
+      },
+    }
+  );
 
-  const [flagging, setFlagging] = useState<FlaggingData>({
-    services: {
-      trafficControl: 0,
-      policeDetail: 0,
-      uniformedFlagger: 0,
-      trafficSupervisor: 0,
-    },
-    equipment: {
-      radioUnit: 0,
-      safetyVest: 0,
-      stopSlowPaddle: 0,
-      flags: 0,
-    },
-  });
+  const [flagging, setFlagging] = useState<FlaggingData>(
+    formData.flagging || {
+      services: {
+        trafficControl: 0,
+        policeDetail: 0,
+        uniformedFlagger: 0,
+        trafficSupervisor: 0,
+      },
+      equipment: {
+        radioUnit: 0,
+        safetyVest: 0,
+        stopSlowPaddle: 0,
+        flags: 0,
+      },
+    }
+  );
 
-  const [saleItems, setSaleItems] = useState<SaleItemsData>({
-    materials: {
-      concrete: 0,
-      asphalt: 0,
-      gravel: 0,
-      sand: 0,
-    },
-    tools: {
-      shovels: 0,
-      rakes: 0,
-      wheelbarrows: 0,
-      safetyCones: 0,
-    },
-    supplies: {
-      paint: 0,
-      markers: 0,
-      tape: 0,
-      signs: 0,
-    },
-  });
+  const [saleItems, setSaleItems] = useState<SaleItemsData>(
+    formData.saleItems || {
+      materials: {
+        concrete: 0,
+        asphalt: 0,
+        gravel: 0,
+        sand: 0,
+      },
+      tools: {
+        shovels: 0,
+        rakes: 0,
+        wheelbarrows: 0,
+        safetyCones: 0,
+      },
+      supplies: {
+        paint: 0,
+        markers: 0,
+        tape: 0,
+        signs: 0,
+      },
+    }
+  );
 
-  const [patterns, setPatterns] = useState<PatternsData>({
-    pavement: {
-      milling: 0,
-      overlay: 0,
-      fullDepth: 0,
-      patching: 0,
-    },
-    markings: {
-      thermoplastic: 0,
-      paint: 0,
-      epoxy: 0,
-      preformed: 0,
-    },
-    configurations: {
-      laneClosure: 0,
-      shoulderWork: 0,
-      intersection: 0,
-      workZone: 0,
-    },
-  });
+  const [patterns, setPatterns] = useState<PatternsData>(
+    formData.patterns || {
+      pavement: {
+        milling: 0,
+        overlay: 0,
+        fullDepth: 0,
+        patching: 0,
+      },
+      markings: {
+        thermoplastic: 0,
+        paint: 0,
+        epoxy: 0,
+        preformed: 0,
+      },
+      configurations: {
+        laneClosure: 0,
+        shoulderWork: 0,
+        intersection: 0,
+        workZone: 0,
+      },
+    }
+  );
 
   const handleMPTInputChange = (
     section: "mptEquipment" | "lightAndDrum",
@@ -304,12 +316,20 @@ const BidItemsStep4 = ({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
-    setMptData((prev) => ({
-      ...prev,
+    const updatedMptData = {
+      ...mptData,
       [section]: {
-        ...prev[section],
+        ...mptData[section],
         [field]: numValue,
       },
+    };
+
+    setMptData(updatedMptData);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      mptData: updatedMptData,
     }));
   };
 
@@ -321,12 +341,20 @@ const BidItemsStep4 = ({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
-    setEquipmentRental((prev) => ({
-      ...prev,
+    const updatedEquipmentRental = {
+      ...equipmentRental,
       [section]: {
-        ...prev[section],
+        ...equipmentRental[section],
         [field]: numValue,
       },
+    };
+
+    setEquipmentRental(updatedEquipmentRental);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      equipmentRental: updatedEquipmentRental,
     }));
   };
 
@@ -335,10 +363,10 @@ const BidItemsStep4 = ({
     field: string,
     value: string
   ) => {
-    setPermanentSigns((prev) => ({
-      ...prev,
+    const updatedPermanentSigns = {
+      ...permanentSigns,
       [section]: {
-        ...prev[section],
+        ...permanentSigns[section],
         [field]:
           field === "quantity"
             ? value === ""
@@ -346,6 +374,14 @@ const BidItemsStep4 = ({
               : parseInt(value, 10)
             : value,
       },
+    };
+
+    setPermanentSigns(updatedPermanentSigns);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      permanentSigns: updatedPermanentSigns,
     }));
   };
 
@@ -357,12 +393,20 @@ const BidItemsStep4 = ({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
-    setFlagging((prev) => ({
-      ...prev,
+    const updatedFlagging = {
+      ...flagging,
       [section]: {
-        ...prev[section],
+        ...flagging[section],
         [field]: numValue,
       },
+    };
+
+    setFlagging(updatedFlagging);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      flagging: updatedFlagging,
     }));
   };
 
@@ -374,12 +418,20 @@ const BidItemsStep4 = ({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
-    setSaleItems((prev) => ({
-      ...prev,
+    const updatedSaleItems = {
+      ...saleItems,
       [section]: {
-        ...prev[section],
+        ...saleItems[section],
         [field]: numValue,
       },
+    };
+
+    setSaleItems(updatedSaleItems);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      saleItems: updatedSaleItems,
     }));
   };
 
@@ -391,13 +443,42 @@ const BidItemsStep4 = ({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
-    setPatterns((prev) => ({
-      ...prev,
+    const updatedPatterns = {
+      ...patterns,
       [section]: {
-        ...prev[section],
+        ...patterns[section],
         [field]: numValue,
       },
+    };
+
+    setPatterns(updatedPatterns);
+    
+    // Update main form data
+    setFormData((prev) => ({
+      ...prev,
+      patterns: updatedPatterns,
     }));
+  };
+
+  const handleNext = () => {
+    // Required fields for Step 4
+    if (!formData.phases || formData.phases === 0) {
+      alert('Please specify the number of phases');
+      return;
+    }
+
+    // Update all data before proceeding
+    setFormData(prev => ({
+      ...prev,
+      mptData,
+      equipmentRental,
+      permanentSigns,
+      flagging,
+      saleItems,
+      patterns
+    }));
+    
+    setCurrentStep(5);
   };
 
   return (
@@ -923,7 +1004,9 @@ const BidItemsStep4 = ({
               <Button variant="outline" onClick={() => setCurrentStep(3)}>
                 Back
               </Button>
-              <Button onClick={() => setCurrentStep(5)}>Next</Button>
+              <Button onClick={handleNext}>
+                Next
+              </Button>
             </div>
           </div>
         )}
