@@ -6,8 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { jobsData, type JobData } from "@/data/jobs-data";
 import { CardActions } from "@/components/card-actions";
-import { CreateQuoteSheet } from "@/components/create-quote-sheet";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const COLUMNS = [
   { key: "title", title: "Title" },
@@ -28,7 +27,7 @@ const SEGMENTS = [
 ];
 
 export default function QuotesPage() {
-  const [isCreateQuoteOpen, setIsCreateQuoteOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <SidebarProvider
@@ -48,7 +47,7 @@ export default function QuotesPage() {
               <div className="flex items-center justify-between px-0 -mb-3">
                 <CardActions
                   createButtonLabel="Create Quote"
-                  onCreateClick={() => setIsCreateQuoteOpen(true)}
+                  onCreateClick={() => router.push('/quotes/create')}
                   hideCalendar
                   goUpActions
                 />
@@ -64,11 +63,6 @@ export default function QuotesPage() {
           </div>
         </div>
       </SidebarInset>
-
-      <CreateQuoteSheet 
-        open={isCreateQuoteOpen}
-        onOpenChange={setIsCreateQuoteOpen}
-      />
     </SidebarProvider>
   );
 } 
