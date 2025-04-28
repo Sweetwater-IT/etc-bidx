@@ -299,7 +299,7 @@ export default function ContractPage() {
               {/* Worker's Protection Form */}
               <div className="rounded-lg border bg-card p-6">
                 <h3 className="text-lg font-semibold">
-                  Worker's Protection Form
+                  Worker&apos;s Protection Form
                 </h3>
                 <div className="mt-4 space-y-4">
                   <FormSelect
