@@ -9,19 +9,20 @@ import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-ac
 
 const StepsMain = () => {
   const [formData, setFormData] = useState<FormData>({});
+  const [currentStep, setCurrentStep] = useState(1);
 
   return (
     <div className="flex gap-8 relative min-h-screen">
       <div className="flex-1">
-        <Steps formData={formData} setFormData={setFormData} />
+        <Steps formData={formData} setFormData={setFormData} currentStep={currentStep} setCurrentStep={setCurrentStep} />
       </div>
 
       {/* Preview Cards */}
       <div className="w-80 space-y-4 sticky top-10 h-fit">
-        <AdminInformationAccordion formData={formData} />
-        <SignSummaryAccordion formData={formData} />
-        <TripAndLaborSummaryAccordion />
-        <BidSummaryAccordion formData={formData} />
+        <AdminInformationAccordion formData={formData} currentStep={currentStep} />
+        <SignSummaryAccordion formData={formData} currentStep={currentStep} />
+        <TripAndLaborSummaryAccordion currentStep={currentStep} />
+        <BidSummaryAccordion formData={formData} currentStep={currentStep} />
       </div>
     </div>
   );
