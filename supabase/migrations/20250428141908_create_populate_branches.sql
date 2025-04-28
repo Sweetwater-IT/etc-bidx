@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: branches; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.branches (
+CREATE TABLE IF NOT EXISTS public.branches (
     id integer NOT NULL,
     name character varying(55),
     address character varying(255),

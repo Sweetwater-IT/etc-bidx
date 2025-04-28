@@ -24,7 +24,7 @@ SET default_table_access_method = heap;
 -- Name: estimate_mpt_rental; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.estimate_mpt_rental (
+CREATE TABLE IF NOT EXISTS public.estimate_mpt_rental (
     id integer NOT NULL,
     estimate_id integer,
     target_moic integer,
