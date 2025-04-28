@@ -6,14 +6,19 @@ import BidSummaryStep5 from "./bid-summary-step5";
 import MUTCDSignsStep2 from "./mutcd-signs-step2";
 import TripAndLaborStep3 from "./trip-and-labor-step3";
 
+interface StepsProps {
+  formData: FormData;
+  setFormData: Dispatch<SetStateAction<FormData>>;
+  currentStep: number;
+  setCurrentStep: Dispatch<SetStateAction<number>>;
+}
+
 const Steps = ({
   formData,
   setFormData,
-}: {
-  formData: FormData;
-  setFormData: Dispatch<SetStateAction<FormData>>;
-}) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  currentStep,
+  setCurrentStep,
+}: StepsProps) => {
   return (
     <div className="flex-1">
       <div className="relative flex flex-col">

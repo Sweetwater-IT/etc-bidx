@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 
 export interface SignData {
   id: string;
@@ -18,12 +19,26 @@ export interface SignData {
   covers?: number;
 }
 
-const SignSummaryAccordion = ({ formData }: { formData: FormData }) => {
+interface SignSummaryAccordionProps {
+  formData: FormData;
+  currentStep: number;
+}
+
+const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionProps) => {
   const signs: SignData[] = formData.signs || [];
+  const [value, setValue] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (currentStep === 2) {
+      setValue(["item-1"]);
+    } else {
+      setValue([]);
+    }
+  }, [currentStep]);
 
   return (
     <Card className="p-4">
-      <Accordion type="single" collapsible>
+      <Accordion type="multiple" value={value} onValueChange={setValue}>
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
             <h3 className="font-semibold">Sign Summary</h3>

@@ -9,13 +9,19 @@ import { Card } from "@/components/ui/card";
 import { fetchReferenceData } from "@/lib/api-client";
 import React, { useState, useEffect } from "react";
 
-const AdminInformationAccordion = ({ formData }: { formData: FormData }) => {
+interface AdminInformationAccordionProps {
+  formData: FormData;
+  currentStep: number;
+}
+
+const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAccordionProps) => {
   const [counties, setCounties] = useState<{id: number, name: string}[]>([]);
   const [branches, setBranches] = useState<{id: number, name: string}[]>([]);
   const [isLoading, setIsLoading] = useState({
     counties: false,
     branches: false,
   });
+  const [value, setValue] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +44,15 @@ const AdminInformationAccordion = ({ formData }: { formData: FormData }) => {
     fetchData();
   }, []);
 
+  // Open accordion when currentStep is 1
+  useEffect(() => {
+    if (currentStep === 1) {
+      setValue(["item-1"]);
+    } else {
+      setValue([]);
+    }
+  }, [currentStep]);
+
   const getCountyName = (countyId: string | undefined) => {
     if (!countyId) return '-';
     const county = counties.find(c => c.id === Number(countyId));
@@ -52,7 +67,7 @@ const AdminInformationAccordion = ({ formData }: { formData: FormData }) => {
 
   return (
     <Card className="p-4">
-      <Accordion type="single" collapsible>
+      <Accordion type="multiple" value={value} onValueChange={setValue} className="w-full">
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
             <h3 className="font-semibold">Admin Information</h3>

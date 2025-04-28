@@ -6,11 +6,26 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 
-const TripAndLaborSummaryAccordion = () => {
+interface TripAndLaborSummaryAccordionProps {
+  currentStep: number;
+}
+
+const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccordionProps) => {
+  const [value, setValue] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (currentStep === 3) {
+      setValue(["item-1"]);
+    } else {
+      setValue([]);
+    }
+  }, [currentStep]);
+
   return (
     <Card className="p-4">
-      <Accordion type="single" collapsible>
+      <Accordion type="multiple" value={value} onValueChange={setValue}>
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
             <h3 className="font-semibold">Trip and Labor Summary</h3>

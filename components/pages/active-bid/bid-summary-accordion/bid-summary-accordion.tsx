@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -12,14 +12,24 @@ import { formatCurrency } from "@/lib/utils";
 
 interface BidSummaryAccordionProps {
   formData: FormData;
+  currentStep: number;
 }
 
-const BidSummaryAccordion = ({ formData }: BidSummaryAccordionProps) => {
+const BidSummaryAccordion = ({ formData, currentStep }: BidSummaryAccordionProps) => {
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState(false);
+  const [value, setValue] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (currentStep === 4 || currentStep === 5) {
+      setValue(["item-1"]);
+    } else {
+      setValue([]);
+    }
+  }, [currentStep]);
 
   return (
     <>
-      <Accordion type="single" collapsible className="w-full bg-card rounded-lg border shadow-sm">
+      <Accordion type="multiple" value={value} onValueChange={setValue} className="w-full bg-card rounded-lg border shadow-sm">
         <AccordionItem value="item-1" className="border-0">
           <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/50">
             <div className="flex items-center gap-2">

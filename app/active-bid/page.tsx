@@ -174,10 +174,10 @@ export interface FormData {
   laborRate?: string;
   fringeRate?: string;
   shopRate?: string;
-  
+
   // MUTCD Signs (Step 2)
   signs?: SignData[];
-  
+
   // Trip and Labor (Step 3)
   projectDays?: string;
   numberOfPersonnel?: string;
@@ -194,12 +194,12 @@ export interface FormData {
   additionalNonRatedHours?: string;
   totalNonRatedHours?: string;
   totalHours?: string;
-  
+
   // Mobilization (Step 3)
   mobilization?: string;
   fuelCost?: string;
   truckAndFuelCost?: string;
-  
+
   // Bid Items (Step 4)
   equipment?: EquipmentData[];
   summary?: string;
@@ -210,7 +210,7 @@ export interface FormData {
   flagging?: FlaggingData;
   saleItems?: SaleItemsData;
   patterns?: PatternsData;
-  
+
   // MPT items (direct fields for bid_estimates table)
   typeIii4ft?: string;
   wings6ft?: string;
@@ -231,7 +231,7 @@ export interface FormData {
   messageBoard?: string;
   speedTrailer?: string;
   pts?: string;
-  
+
   // Financial calculations
   mptValue?: string;
   mptGrossProfit?: string;
@@ -242,7 +242,7 @@ export interface FormData {
   rentalValue?: string;
   rentalGrossProfit?: string;
   rentalGmPercent?: string;
-  
+
   // MPT Rental data
   mptRental?: boolean;
   targetMoic?: string;
@@ -254,10 +254,21 @@ export interface FormData {
   rentalCost?: string;
   rentalHours?: string;
   staticEquipmentInfo?: string;
-  
+
   // Allow for additional string fields
-  [key: string]: string | number | boolean | SignData[] | EquipmentData[] | MPTData | EquipmentRentalData | 
-               PermanentSignsData | FlaggingData | SaleItemsData | PatternsData | undefined;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | SignData[]
+    | EquipmentData[]
+    | MPTData
+    | EquipmentRentalData
+    | PermanentSignsData
+    | FlaggingData
+    | SaleItemsData
+    | PatternsData
+    | undefined;
 }
 
 export default function ActiveBidPage() {
