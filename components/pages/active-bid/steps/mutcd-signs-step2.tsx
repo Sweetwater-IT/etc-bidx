@@ -289,11 +289,6 @@ const MutcdSignsStep2 = ({
   };
 
   const handleNext = () => {
-    // Ensure no signs are in configuring state
-    if (signs.some(s => s.isConfiguring)) {
-      alert('Please save or cancel all sign configurations before proceeding');
-      return;
-    }
 
     // Update form data with signs before proceeding
     // Ensure all required fields are defined to match the FormData.SignData interface

@@ -38,24 +38,6 @@ const TripAndLaborStep3 = ({
   };
 
   const handleNext = () => {
-    // Required fields for Step 3
-    const requiredFields = [
-      'project_days',
-      'nonrated_hours',
-      'total_hours',
-      'phases'
-    ];
-
-    const missingFields = requiredFields.filter(field => {
-      const value = formData[field as keyof FormData];
-      return !value || value === '' || value === '0';
-    });
-
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
     setCurrentStep(4);
   };
 
