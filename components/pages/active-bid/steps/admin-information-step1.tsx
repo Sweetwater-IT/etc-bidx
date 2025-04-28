@@ -2,25 +2,43 @@ import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-const step = {
+interface Step {
+    id: string;
+    name: string;
+    description: string;
+    fields: InputData[]
+}
+
+interface InputData {
+    name: string;
+    label: string;
+    type: 'text' | 'select' | 'date' | 'number' | 'toggle'
+    placeholder?: string
+    options?: any[]
+    hasToggle?: boolean
+}
+
+const step: Step = {
     id: "step-1",
     name: "Admin Information",
     description: "Basic information about the bid",
     fields: [
         { name: "contractNumber", label: "Contract Number*", type: "text", placeholder: "Contract Number" },
-        { name: "estimator", label: "Estimator*", type: "select", placeholder: "Ses Brunton" },
-        { name: "owner", label: "Owner*", type: "select", placeholder: "Choose" },
+        { name: "estimator", label: "Estimator*", type: "select", placeholder: "Estimator" },
+        //Potential to-do: add owners as a table in db to allow for new owners to be added from control panel
+        //for now we'll hardcode them
+        { name: "owner", label: "Owner*", type: "select", placeholder: "Choose", options: ['PENNDOT', 'TURNPIKE', 'SEPTA', 'PRIVATE', 'OTHER'] },
         { name: "county", label: "County*", type: "select", placeholder: "Choose County" },
         { name: "township", label: "Township*", type: "text", placeholder: "Township" },
-        { name: "division", label: "Division*", type: "select", placeholder: "Choose" },
+        { name: "division", label: "Division*", type: "select", placeholder: "Choose", options: ['PUBLIC', 'PRIVATE'] },
         { name: "lettingDate", label: "Letting Date*", type: "date", placeholder: "Select date" },
         { name: "startDate", label: "Start Date*", type: "date", placeholder: "Select date" },
         { name: "endDate", label: "End Date*", type: "date", placeholder: "Select date" },
         { name: "srRoute", label: "SR Route*", type: "text", placeholder: "SR Route" },
         { name: "dbePercentage", label: "DBE %*", type: "text", placeholder: "DBE %" },
-        { name: "workType", label: "Work Type", type: "select", placeholder: "Rated" },
+        { name: "workType", label: "Work Type", type: "select", placeholder: "Choose", options: ['RATED', 'NON-RATED'] },
         { name: "oneWayTravelTime", label: "One Way Travel Time (Mins)*", type: "number", placeholder: "One Way Travel Time (Mins)" },
         { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
         { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "number", placeholder: "Diesel Cost Per Gallon" },
@@ -63,6 +81,11 @@ const AdminInformationStep1 = ({
         }));
     };
 
+    //fetch users and county info
+    // useEffect(() => {
+
+    // }, [])
+
     return (
         <div>
             <div className="relative">
@@ -71,9 +94,8 @@ const AdminInformationStep1 = ({
                     className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 1 ? "text-foreground" : "text-muted-foreground"}`}
                 >
                     <div
-                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
-                            1 <= currentStep ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground bg-background"
-                        }`}
+                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${1 <= currentStep ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground bg-background"
+                            }`}
                     >
                         1
                     </div>
@@ -100,7 +122,11 @@ const AdminInformationStep1 = ({
                                                 onChange={(e) => handleInputChange(field.name, e.target.value)}
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                <option value="">{field.placeholder}</option>
+                                                {field.options && field.options.length > 0 ?
+                                                    [field.placeholder, ...field.options].map((option, index) => (
+                                                <option key={index} value={option}>{option}</option>
+                                                )) : <option value={field.placeholder}>{field.placeholder}</option>
+                                                }
                                             </select>
                                         ) : field.type === "toggle" ? (
                                             <div className="flex items-center space-x-2">
