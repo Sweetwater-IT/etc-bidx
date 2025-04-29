@@ -51,9 +51,18 @@ const MutcdSignsStep2 = ({
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>(formData.mptRental.phases[0].signs);
+  const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>(
+    formData.mptRental.phases && formData.mptRental.phases.length > 0 
+      ? formData.mptRental.phases[0].signs || [] 
+      : []
+  );
   const [open, setOpen] = useState(false);
-  const [isAddingSign, setIsAddingSign] = useState(formData.mptRental.phases[0].signs.length === 0);
+  const [isAddingSign, setIsAddingSign] = useState(
+    !(formData.mptRental.phases && 
+      formData.mptRental.phases.length > 0 && 
+      formData.mptRental.phases[0].signs && 
+      formData.mptRental.phases[0].signs.length > 0)
+  );
   const [designations, setDesignations] = useState<any[]>([]);
   const [isLoadingDesignations, setIsLoadingDesignations] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");

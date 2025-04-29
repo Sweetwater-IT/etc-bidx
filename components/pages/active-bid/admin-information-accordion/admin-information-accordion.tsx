@@ -1,4 +1,18 @@
 import { FormData } from "@/types/IFormData";
+
+function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
+  if (date instanceof Date) {
+    return date.toLocaleDateString();
+  }
+  
+  try {
+    return new Date(date).toLocaleDateString();
+  } catch (e) {
+    return date.toString();
+  }
+}
 import {
   Accordion,
   AccordionContent,
@@ -47,13 +61,13 @@ const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAc
               <div className="text-muted-foreground">Division</div>
               <div className="text-right">{formData.adminData.division || "-"}</div>
               <div className="text-muted-foreground">Start Date</div>
-              <div className="text-right">{formData.adminData.startDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(formData.adminData.startDate) || "-"}</div>
               <div className="text-muted-foreground">End Date</div>
-              <div className="text-right">{formData.adminData.endDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(formData.adminData.endDate) || "-"}</div>
               <div className="text-muted-foreground">Total Days</div>
               <div className="text-right">0</div>
               <div className="text-muted-foreground">Bid Date</div>
-              <div className="text-right">{formData.adminData.lettingDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(formData.adminData.lettingDate) || "-"}</div>
               <div className="text-muted-foreground">SR Route</div>
               <div className="text-right">{formData.adminData.srRoute || "-"}</div>
               <div className="text-muted-foreground">DBE %</div>

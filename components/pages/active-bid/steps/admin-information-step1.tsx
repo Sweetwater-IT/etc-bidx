@@ -195,12 +195,58 @@ const AdminInformationStep1 = ({
     //     updateFormData,
   // ]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+    const handleInputChange = (field: string, value: string) => {
+        setFormData((prev) => {
+            const newFormData = { ...prev };
+            
+            if (field === "contractNumber" || 
+                field === "estimator" || 
+                field === "owner" || 
+                field === "srRoute" || 
+                field === "dbePercentage") {
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    [field]: value
+                };
+            } else if (field === "township") {
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    location: value
+                };
+            } else if (field === "division") {
+                // Cast the value to the correct type for division
+                const divisionValue = (value === "PUBLIC" || value === "PRIVATE") ? value : null;
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    division: divisionValue
+                };
+            } else if (field === "county") {
+                // For county, we need to update the county object
+                const selectedCounty = counties.find(c => c.id.toString() === value);
+                if (selectedCounty) {
+                    newFormData.adminData = {
+                        ...newFormData.adminData,
+                        county: {
+                            ...newFormData.adminData.county,
+                            name: selectedCounty.name,
+                            // Keep other county properties
+                        }
+                    };
+                }
+            } else if (field === "lettingDate" || field === "startDate" || field === "endDate") {
+                // Handle date fields
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    [field]: value
+                };
+            } else {
+                // For any other fields, use the original behavior
+                newFormData[field as keyof FormData] = value as any;
+            }
+            
+            return newFormData;
+        });
+    };
 
   const handleToggleChange = (field: string) => {
     setToggleStates((prev) => ({
@@ -289,8 +335,8 @@ const AdminInformationStep1 = ({
                                                         // aria-expanded={openStates[field.name]}
                                                         className="w-full justify-between"
                                                     >
-                                                        {formData.adminData.county
-                                                            ? counties.find((county) => county.name === formData.adminData.county.name)?.name
+                                                        {formData.adminData.county && formData.adminData.county.name
+                                                            ? formData.adminData.county.name
                                                             : "Select county..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -399,7 +445,27 @@ const AdminInformationStep1 = ({
                                                     id={field.name}
                                                     type={field.type}
                                                     placeholder={field.placeholder}
-                                                    value={String(formData[field.name] ?? "")}
+                                                    value={
+                                                        field.name === "contractNumber" ? formData.adminData.contractNumber || "" :
+                                                        field.name === "township" ? formData.adminData.location || "" :
+                                                        field.name === "srRoute" ? formData.adminData.srRoute || "" :
+                                                        field.name === "dbePercentage" ? formData.adminData.dbe || "" :
+                                                        field.name === "lettingDate" ? 
+                                                            (formData.adminData.lettingDate ? 
+                                                                (typeof formData.adminData.lettingDate === 'string' ? 
+                                                                    formData.adminData.lettingDate : 
+                                                                    formData.adminData.lettingDate.toISOString().split('T')[0])
+                                                            : "") :
+                                                        field.name === "startDate" && formData.adminData.startDate ? 
+                                                            (typeof formData.adminData.startDate === 'string' ? 
+                                                                formData.adminData.startDate : 
+                                                                formData.adminData.startDate.toISOString().split('T')[0]) :
+                                                        field.name === "endDate" && formData.adminData.endDate ? 
+                                                            (typeof formData.adminData.endDate === 'string' ? 
+                                                                formData.adminData.endDate : 
+                                                                formData.adminData.endDate.toISOString().split('T')[0]) :
+                                                        String(formData[field.name] ?? "")
+                                                    }
                                                     onChange={(e) =>
                                                         handleInputChange(field.name, e.target.value)
                                                     }
