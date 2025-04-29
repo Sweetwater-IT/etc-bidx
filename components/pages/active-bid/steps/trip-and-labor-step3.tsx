@@ -164,16 +164,9 @@ const TripAndLaborStep3 = ({
                     <Label htmlFor="totalTrips" className="text-sm font-medium">
                       Total Trips
                     </Label>
-                    <Input
-                      id="totalTrips"
-                      type="number"
-                      placeholder="Total Trips"
-                      value={getInputValue("totalTrips")}
-                      onChange={(e) =>
-                        handleInputChange("totalTrips", e.target.value)
-                      }
-                      className="h-10"
-                    />
+                    <div className="h-10 flex items-center font-medium">
+                      {Number(formData.trips || 0) + Number(formData.additionalTrips || 0)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -232,16 +225,9 @@ const TripAndLaborStep3 = ({
                       >
                         Total Rated Hours
                       </Label>
-                      <Input
-                        id="totalRatedHours"
-                        type="number"
-                        placeholder="Total Rated Hours"
-                        value={getInputValue("totalRatedHours")}
-                        onChange={(e) =>
-                          handleInputChange("totalRatedHours", e.target.value)
-                        }
-                        className="h-10"
-                      />
+                      <div className="h-10 flex items-center font-medium">
+                        {Number(formData.ratedHours || 0) + Number(formData.additionalRatedHours || 0)}
+                      </div>
                     </div>
                   </div>
 
@@ -293,19 +279,9 @@ const TripAndLaborStep3 = ({
                       >
                         Total Non-Rated Hours
                       </Label>
-                      <Input
-                        id="totalNonRatedHours"
-                        type="number"
-                        placeholder="Total Non-Rated Hours"
-                        value={getInputValue("totalNonRatedHours")}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "totalNonRatedHours",
-                            e.target.value
-                          )
-                        }
-                        className="h-10"
-                      />
+                      <div className="h-10 flex items-center font-medium">
+                        {Number(formData.nonRatedHours || 0) + Number(formData.additionalNonRatedHours || 0)}
+                      </div>
                     </div>
                   </div>
                 </div>
