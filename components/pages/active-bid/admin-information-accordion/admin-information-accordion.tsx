@@ -1,4 +1,4 @@
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import {
   Accordion,
   AccordionContent,
@@ -6,7 +6,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
-import { fetchReferenceData } from "@/lib/api-client";
 import React, { useState, useEffect } from "react";
 
 interface AdminInformationAccordionProps {
@@ -15,34 +14,7 @@ interface AdminInformationAccordionProps {
 }
 
 const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAccordionProps) => {
-  const [counties, setCounties] = useState<{id: number, name: string}[]>([]);
-  const [branches, setBranches] = useState<{id: number, name: string}[]>([]);
-  const [isLoading, setIsLoading] = useState({
-    counties: false,
-    branches: false,
-  });
   const [value, setValue] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(prev => ({ ...prev, counties: true }));
-        const countiesData = await fetchReferenceData('counties');
-        setCounties(countiesData);
-        setIsLoading(prev => ({ ...prev, counties: false }));
-        
-        setIsLoading(prev => ({ ...prev, branches: true }));
-        const branchesData = await fetchReferenceData('branches');
-        setBranches(branchesData);
-        setIsLoading(prev => ({ ...prev, branches: false }));
-      } catch (error) {
-        console.error('Error fetching reference data:', error);
-        setIsLoading({ counties: false, branches: false });
-      }
-    };
-    
-    fetchData();
-  }, []);
 
   // Open accordion when currentStep is 1
   useEffect(() => {
@@ -52,18 +24,6 @@ const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAc
       setValue([]);
     }
   }, [currentStep]);
-
-  const getCountyName = (countyId: string | undefined) => {
-    if (!countyId) return '-';
-    const county = counties.find(c => c.id === Number(countyId));
-    return county ? county.name : countyId;
-  };
-
-  const getBranchName = (branchId: string | undefined) => {
-    if (!branchId) return '-';
-    const branch = branches.find(b => b.id === Number(branchId));
-    return branch ? branch.name : branchId;
-  };
 
   return (
     <Card className="p-4">
@@ -75,29 +35,29 @@ const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAc
           <AccordionContent>
             <div className="grid grid-cols-2 gap-y-2 text-sm mt-4">
               <div className="text-muted-foreground">Contract #</div>
-              <div className="text-right">{formData.contractNumber || "-"}</div>
+              <div className="text-right">{formData.adminData.contractNumber || "-"}</div>
               <div className="text-muted-foreground">Owner</div>
-              <div className="text-right">{formData.owner || "-"}</div>
+              <div className="text-right">{formData.adminData.owner || "-"}</div>
               <div className="text-muted-foreground">County</div>
-              <div className="text-right">{isLoading.counties ? "Loading..." : getCountyName(formData.county)}</div>
+              <div className="text-right">{formData.adminData.county.name || '-'}</div>
               <div className="text-muted-foreground">Branch</div>
-              <div className="text-right">{isLoading.branches ? "Loading..." : getBranchName(formData.branch)}</div>
+              <div className="text-right">{formData.adminData.county.branch || '-'}</div>
               <div className="text-muted-foreground">Township</div>
-              <div className="text-right">{formData.township || "-"}</div>
+              <div className="text-right">{formData.adminData.location || "-"}</div>
               <div className="text-muted-foreground">Division</div>
-              <div className="text-right">{formData.division || "-"}</div>
+              <div className="text-right">{formData.adminData.division || "-"}</div>
               <div className="text-muted-foreground">Start Date</div>
-              <div className="text-right">{formData.startDate || "-"}</div>
+              <div className="text-right">{formData.adminData.startDate?.toLocaleDateString() || "-"}</div>
               <div className="text-muted-foreground">End Date</div>
-              <div className="text-right">{formData.endDate || "-"}</div>
+              <div className="text-right">{formData.adminData.endDate?.toLocaleDateString() || "-"}</div>
               <div className="text-muted-foreground">Total Days</div>
               <div className="text-right">0</div>
               <div className="text-muted-foreground">Bid Date</div>
-              <div className="text-right">{formData.lettingDate || "-"}</div>
+              <div className="text-right">{formData.adminData.lettingDate?.toLocaleDateString() || "-"}</div>
               <div className="text-muted-foreground">SR Route</div>
-              <div className="text-right">{formData.srRoute || "-"}</div>
+              <div className="text-right">{formData.adminData.srRoute || "-"}</div>
               <div className="text-muted-foreground">DBE %</div>
-              <div className="text-right">{formData.dbePercentage || "%"}</div>
+              <div className="text-right">{formData.adminData.dbe || "%"}</div>
             </div>
           </AccordionContent>
         </AccordionItem>

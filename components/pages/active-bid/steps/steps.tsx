@@ -1,4 +1,4 @@
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import { Dispatch, SetStateAction, useState } from "react";
 import AdminInformationStep1 from "./admin-information-step1";
 import BidItemsStep4 from "./bid-items-step4";

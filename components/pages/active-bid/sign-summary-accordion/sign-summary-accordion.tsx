@@ -1,4 +1,4 @@
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import {
   Accordion,
   AccordionContent,
@@ -7,17 +7,7 @@ import {
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-
-export interface SignData {
-  id: string;
-  designation: string;
-  dimensions?: string;
-  sheeting?: string;
-  quantity?: number;
-  structure?: string;
-  bLights?: number;
-  covers?: number;
-}
+import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 
 interface SignSummaryAccordionProps {
   formData: FormData;
@@ -25,7 +15,7 @@ interface SignSummaryAccordionProps {
 }
 
 const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionProps) => {
-  const signs: SignData[] = formData.signs || [];
+  const signs: (PrimarySign | SecondarySign)[] = formData.mptRental.phases[0].signs;
   const [value, setValue] = useState<string[]>([]);
 
   useEffect(() => {
@@ -54,12 +44,12 @@ const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionPro
                   <div key={sign.id} className="space-y-1">
                     <div className="font-medium">{sign.designation}</div>
                     <div className="text-muted-foreground text-xs space-x-2">
-                      {sign.dimensions && <span>{sign.dimensions}</span>}
+                      {/* {sign.dimensions && <span>{sign.dimensions}</span>} */}
                       {sign.sheeting && <span>• {sign.sheeting}</span>}
                       {sign.quantity && <span>• Qty: {sign.quantity}</span>}
-                      {sign.structure && sign.structure !== "None" && <span>• {sign.structure}</span>}
+                      {/* {sign.structure && sign.structure !== "None" && <span>• {sign.structure}</span>}
                       {sign.bLights ? <span>• B Lights: {sign.bLights}</span> : null}
-                      {sign.covers ? <span>• Covers: {sign.covers}</span> : null}
+                      {sign.covers ? <span>• Covers: {sign.covers}</span> : null} */}
                     </div>
                   </div>
                 ))
