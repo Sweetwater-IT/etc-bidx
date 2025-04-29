@@ -29,7 +29,7 @@ const StepsMain = () => {
       <div className="w-80 space-y-4 sticky top-10 h-fit">
         <AdminInformationAccordion formData={formData} currentStep={currentStep} />
         <SignSummaryAccordion formData={formData} currentStep={currentStep} />
-        <TripAndLaborSummaryAccordion formData={formData} currentStep={currentStep} />
+        <TripAndLaborSummaryAccordion currentStep={currentStep}/>
         <BidSummaryAccordion formData={formData} currentStep={currentStep} />
       </div>
     </div>
