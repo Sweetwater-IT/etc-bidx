@@ -357,8 +357,8 @@ export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental
   let totalFuelCost = 0;
 
   mptRental.phases.forEach(phase => {
-    let phaseTrips = getTotalTripsPerPhase(phase);
-    let phaseTrucks = Number(phase.numberTrucks) || 0;
+    const phaseTrips = getTotalTripsPerPhase(phase);
+    const phaseTrucks = Number(phase.numberTrucks) || 0;
     totalDispatchFee += Number(mptRental.dispatchFee || 0) * Number(phaseTrips || 0) * Number(phaseTrucks || 0);
     totalFuelCost += (
       (Number(phaseTrips || 0) *
