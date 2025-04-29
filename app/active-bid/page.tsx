@@ -10,12 +10,9 @@ import { fetchBidById } from "@/lib/api-client";
 import { MoveLeft } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
-
-
-
-export default function ActiveBidPage() {
+function ActiveBidContent() {
   const searchParams = useSearchParams();
   const jobId = searchParams.get("jobId");
   const source = searchParams.get("source");
@@ -31,6 +28,22 @@ export default function ActiveBidPage() {
         setIsLoading(true);
         const job = await fetchBidById(parseInt(jobId));
         console.log('Fetched job data:', job);
+        
+        let formattedLettingDate = '';
+        if (job.letting_date) {
+          if (typeof job.letting_date === 'string' && job.letting_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            formattedLettingDate = job.letting_date;
+          } else {
+            try {
+              const date = new Date(job.letting_date);
+              if (!isNaN(date.getTime())) {
+                formattedLettingDate = date.toISOString().split('T')[0];
+              }
+            } catch (error) {
+              console.error('Error formatting letting date:', error);
+            }
+          }
+        }
         
         const mappedData = {
           adminData: {
@@ -56,7 +69,7 @@ export default function ActiveBidPage() {
             srRoute: '',
             location: job.location || '',
             division: job.platform || '',
-            lettingDate: job.letting_date || '',
+            lettingDate: formattedLettingDate || '',
             startDate: null,
             endDate: job.due_date || '',
             dbe: job.dbe_percentage ? job.dbe_percentage.toString() : '',
@@ -104,48 +117,55 @@ export default function ActiveBidPage() {
   }, [jobId]);
   
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col -mt-8">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="px-6">
-                <div className="mb-6">
-                  <Link
-                    href="/jobs/active-bids"
-                    className={cn(
-                      buttonVariants({ variant: "ghost" }),
-                      "gap-2 -ml-2 mb-4"
-                    )}
-                  >
-                    <MoveLeft className="w-3 mt-[1px]" /> Back to Bid List
-                  </Link>
-                  <h1 className="text-3xl font-bold">Create New Bid</h1>
-                  {source && <p className="text-muted-foreground">Source: {source}</p>}
-                </div>
-
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-64">
-                    <p>Loading job data...</p>
-                  </div>
-                ) : (
-                  /* Pass the job data to StepsMain */
-                  <StepsMain initialData={jobData} />
+    <div className="flex flex-1 flex-col">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="px-6">
+            <div className="mb-6">
+              <Link
+                href="/jobs/active-bids"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "gap-2 -ml-2 mb-4"
                 )}
-              </div>
+              >
+                <MoveLeft className="w-3 mt-[1px]" /> Back to Bid List
+              </Link>
+              <h1 className="text-3xl font-bold">Create New Bid</h1>
+              {source && <p className="text-muted-foreground">Source: {source}</p>}
             </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <p>Loading job data...</p>
+              </div>
+            ) : (
+              <StepsMain initialData={jobData} />
+            )}
           </div>
         </div>
-      </SidebarInset>
+      </div>
+    </div>
+  );
+}
+
+export default function ActiveBidPage() {
+  return (
+    <SidebarProvider
+      style={{
+        "--sidebar-width": "calc(var(--spacing) * 68)",
+        "--header-height": "calc(var(--spacing) * 12)",
+      } as React.CSSProperties}
+    >
+      <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col -mt-8">
+            <ActiveBidContent />
+          </div>
+        </SidebarInset>
+      </Suspense>
     </SidebarProvider>
   );
 }
