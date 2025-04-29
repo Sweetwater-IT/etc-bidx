@@ -263,7 +263,6 @@ const AdminInformationStep1 = ({
                     </div>
                 </button>
 
-                {/* Collapsible Content */}
                 {currentStep === 1 && (
                     <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
                         <div className="space-y-8">
