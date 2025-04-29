@@ -24,7 +24,9 @@ const step: Step = {
     fields: [
         { name: "contractNumber", label: "Contract Number*", type: "text", placeholder: "Contract Number" },
         { name: "estimator", label: "Estimator*", type: "select", placeholder: "Estimator" },
-        { name: "owner", label: "Owner*", type: "select", placeholder: "Choose" },
+        //Potential to-do: add owners as a table in db to allow for new owners to be added from control panel
+        //for now we'll hardcode them
+        { name: "owner", label: "Owner*", type: "select", placeholder: "Choose", },
         { name: "county", label: "County*", type: "select", placeholder: "Choose County" },
         { name: "township", label: "Township*", type: "text", placeholder: "Township" },
         { name: "division", label: "Division*", type: "select", placeholder: "Choose", options: ['PUBLIC', 'PRIVATE'] },
@@ -78,7 +80,9 @@ const AdminInformationStep1 = ({
 
     // State for dropdown options
     const [counties, setCounties] = useState<{ id: number; name: string }[]>([]);
-    const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
+    const [estimators, setEstimators] = useState<{ id: number; name: string }[]>(
+        []
+    );
     const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
 
     // State for loading status
@@ -272,7 +276,52 @@ const AdminInformationStep1 = ({
                                         >
                                             {field.label}
                                         </Label>
-                                        {field.type === "select" ? (
+                                        {field.name === "county" ? (
+                                            <Popover 
+                                                open={openStates[field.name]} 
+                                                onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
+                                            >
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={openStates[field.name]}
+                                                        className="w-full justify-between"
+                                                    >
+                                                        {formData.county
+                                                            ? counties.find((county) => county.id.toString() === formData.county)?.name
+                                                            : "Select county..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search county..." />
+                                                        <CommandEmpty>No county found.</CommandEmpty>
+                                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                                            {counties.map((county) => (
+                                                                <CommandItem
+                                                                    key={county.id}
+                                                                    value={county.name}
+                                                                    onSelect={() => {
+                                                                        handleInputChange("county", county.id.toString());
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData.county === county.id.toString() ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {county.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        ) : field.type === "select" ? (
                                             <Popover 
                                                 open={openStates[field.name]} 
                                                 onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
@@ -391,13 +440,35 @@ const AdminInformationStep1 = ({
                                                 </Label>
                                             </div>
                                         ) : (
-                                            <Input
-                                                id={field.name}
-                                                type={field.type}
-                                                value={formData[field.name as keyof FormData] as string}
-                                                onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                className="w-full"
-                                            />
+                                            <div className="space-y-2">
+                                                <Input
+                                                    id={field.name}
+                                                    type={field.type}
+                                                    placeholder={field.placeholder}
+                                                    value={String(formData[field.name] ?? "")}
+                                                    onChange={(e) =>
+                                                        handleInputChange(field.name, e.target.value)
+                                                    }
+                                                    className="h-10"
+                                                />
+                                                {field.hasToggle && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Label
+                                                            htmlFor={`${field.name}-toggle`}
+                                                            className="text-sm text-muted-foreground"
+                                                        >
+                                                            Use this rate?
+                                                        </Label>
+                                                        <input
+                                                            id={`${field.name}-toggle`}
+                                                            type="checkbox"
+                                                            checked={!!toggleStates[field.name]}
+                                                            onChange={() => handleToggleChange(field.name)}
+                                                            className="h-4 w-4"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 ))}
