@@ -6,6 +6,9 @@ import BidSummaryAccordion from "./active-bid/bid-summary-accordion/bid-summary-
 import SignSummaryAccordion from "./active-bid/sign-summary-accordion/sign-summary-accordion";
 import Steps from "./active-bid/steps/steps";
 import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-accordion/trip-and-labor-summary-accordion";
+import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
+import { defaultMPTObject } from "@/types/default-objects/defaultMPTObject";
+import { EstimateProvider } from "@/contexts/EstimateContext";
 
 interface StepsMainProps {
   initialData?: Partial<FormData> | null;
@@ -91,6 +94,7 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
   }, [initialData]);
 
   return (
+    <EstimateProvider>
     <div className="flex gap-8 relative min-h-screen">
       <div className="flex-1">
         <Steps formData={formData} setFormData={setFormData} currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -104,6 +108,7 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
         <BidSummaryAccordion formData={formData} currentStep={currentStep} />
       </div>
     </div>
+    </EstimateProvider>
   );
 };
 
