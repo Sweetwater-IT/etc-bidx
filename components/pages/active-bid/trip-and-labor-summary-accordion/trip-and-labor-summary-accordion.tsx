@@ -7,12 +7,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-
+import { FormData } from "@/app/active-bid/page";
 interface TripAndLaborSummaryAccordionProps {
   currentStep: number;
+  formData: FormData;
 }
 
-const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccordionProps) => {
+const TripAndLaborSummaryAccordion = ({ currentStep, formData }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
 
   useEffect(() => {
@@ -33,20 +34,28 @@ const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccord
           <AccordionContent>
             <div className="space-y-2 text-sm mt-4">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Revenue:</span>
-                <span>$0.00</span>
+                <span className="text-muted-foreground">Number of Days:</span>
+                <span>{String(formData.numberOfDays || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Cost:</span>
-                <span>$0.00</span>
+                <span className="text-muted-foreground">Number of Personnel:</span>
+                <span>{String(formData.numberOfPersonnel || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Gross Profit:</span>
-                <span>$0.00</span>
+                <span className="text-muted-foreground">Number of Trucks:</span>
+                <span>{String(formData.numberOfTrucks || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Gross Margin:</span>
-                <span>0.00%</span>
+                <span className="text-muted-foreground">Total Trips:</span>
+                <span>{Number(formData.trips || 0) + Number(formData.additionalTrips || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Rated Hours:</span>
+                <span>{Number(formData.ratedHours || 0) + Number(formData.additionalRatedHours || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Non-Rated Hours:</span>
+                <span>{Number(formData.nonRatedHours || 0) + Number(formData.additionalNonRatedHours || 0)}</span>
               </div>
             </div>
           </AccordionContent>
