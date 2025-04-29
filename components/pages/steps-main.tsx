@@ -8,6 +8,7 @@ import Steps from "./active-bid/steps/steps";
 import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-accordion/trip-and-labor-summary-accordion";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultMPTObject } from "@/types/default-objects/defaultMPTObject";
+import { EstimateProvider } from "@/contexts/EstimateContext";
 
 const StepsMain = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -20,6 +21,7 @@ const StepsMain = () => {
   const [currentStep, setCurrentStep] = useState(1);
 
   return (
+    <EstimateProvider>
     <div className="flex gap-8 relative min-h-screen">
       <div className="flex-1">
         <Steps formData={formData} setFormData={setFormData} currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -33,6 +35,7 @@ const StepsMain = () => {
         <BidSummaryAccordion formData={formData} currentStep={currentStep} />
       </div>
     </div>
+    </EstimateProvider>
   );
 };
 
