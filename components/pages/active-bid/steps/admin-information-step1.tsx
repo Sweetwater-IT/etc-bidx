@@ -15,6 +15,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 const step: Step = {
     id: "step-1",
@@ -93,7 +94,7 @@ const AdminInformationStep1 = ({
         owners: false,
     });
 
-    const [open, setOpen] = useState(false);
+    const [openStates, setOpenStates] = useState<Record<string, boolean>>({});
 
     // Fetch reference data for dropdowns
     useEffect(() => {
@@ -262,7 +263,6 @@ const AdminInformationStep1 = ({
                     </div>
                 </button>
 
-                {/* Collapsible Content */}
                 {currentStep === 1 && (
                     <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
                         <div className="space-y-8">
@@ -276,12 +276,15 @@ const AdminInformationStep1 = ({
                                             {field.label}
                                         </Label>
                                         {field.name === "county" ? (
-                                            <Popover open={open} onOpenChange={setOpen}>
+                                            <Popover 
+                                                open={openStates[field.name]} 
+                                                onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
+                                            >
                                                 <PopoverTrigger asChild>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        aria-expanded={open}
+                                                        aria-expanded={openStates[field.name]}
                                                         className="w-full justify-between"
                                                     >
                                                         {formData.adminData.county
@@ -301,7 +304,7 @@ const AdminInformationStep1 = ({
                                                                     value={county.name}
                                                                     onSelect={() => {
                                                                         handleInputChange("county", county.id.toString());
-                                                                        setOpen(false);
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
                                                                     }}
                                                                 >
                                                                     <Check
@@ -318,80 +321,122 @@ const AdminInformationStep1 = ({
                                                 </PopoverContent>
                                             </Popover>
                                         ) : field.type === "select" ? (
-                                            <select
-                                                id={field.name}
-                                                value={String(formData[field.name] ?? "")}
-                                                onChange={(e) =>
-                                                    handleInputChange(field.name, e.target.value)
-                                                }
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                disabled={
-                                                    isLoading[
-                                                    field.name === "county"
-                                                        ? "counties"
-                                                        : field.name === "branch"
-                                                            ? "branches"
-                                                            : field.name === "estimator"
-                                                                ? "estimators"
-                                                                : field.name === "division"
-                                                                    ? "divisions"
-                                                                    : field.name === "owner"
-                                                                        ? "owners"
-                                                                        : ""
-                                                    ] || false
-                                                }
+                                            <Popover 
+                                                open={openStates[field.name]} 
+                                                onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
                                             >
-                                                <option value="">
-                                                    {isLoading[
-                                                        field.name === "county"
-                                                            ? "counties"
-                                                            : field.name === "branch"
-                                                                ? "branches"
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={openStates[field.name]}
+                                                        className="w-full justify-between"
+                                                    >
+                                                        {formData[field.name as keyof FormData]
+                                                            ? field.name === "county"
+                                                                ? counties.find((county) => county.id.toString() === formData[field.name as keyof FormData])?.name
                                                                 : field.name === "estimator"
-                                                                    ? "estimators"
-                                                                    : field.name === "division"
-                                                                        ? "divisions"
-                                                                        : field.name === "owner"
-                                                                            ? "owners"
-                                                                            : ""
-                                                    ]
-                                                        ? "Loading..."
-                                                        : field.placeholder}
-                                                </option>
-                                                {field.name === "estimator" &&
-                                                    estimators.map((estimator) => (
-                                                        <option key={estimator.id} value={estimator.id}>
-                                                            {estimator.name}
-                                                        </option>
-                                                    ))}
-                                                {field.name === "owner" &&
-                                                    owners.map((owner) => (
-                                                        <option key={owner.id} value={owner.name}>
-                                                            {owner.name}
-                                                        </option>
-                                                    ))}
-                                                {(field.name === "workType" || field.name === 'division') && field.options &&
-                                                    field.options.map((type, index) => (
-                                                        <option key={index} value={type}>
-                                                            {type}
-                                                        </option>
-                                                    ))}
-                                            </select>
+                                                                    ? estimators.find((estimator) => estimator.id.toString() === formData[field.name as keyof FormData])?.name
+                                                                    : field.name === "owner"
+                                                                        ? owners.find((owner) => owner.id.toString() === formData[field.name as keyof FormData])?.name
+                                                                        : field.options?.find(
+                                                                            (option) => option === formData[field.name as keyof FormData]
+                                                                        )
+                                                            : `Select ${field.label.toLowerCase()}...`}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder={`Search ${field.label.toLowerCase()}...`} />
+                                                        <CommandEmpty>No {field.label.toLowerCase()} found.</CommandEmpty>
+                                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                                            {field.name === "county" && counties.map((county) => (
+                                                                <CommandItem
+                                                                    key={county.id}
+                                                                    value={county.name}
+                                                                    onSelect={() => {
+                                                                        handleInputChange(field.name, county.id.toString());
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData[field.name as keyof FormData] === county.id.toString() ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {county.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                            {field.name === "estimator" && estimators.map((estimator) => (
+                                                                <CommandItem
+                                                                    key={estimator.id}
+                                                                    value={estimator.name}
+                                                                    onSelect={() => {
+                                                                        handleInputChange(field.name, estimator.id.toString());
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData[field.name as keyof FormData] === estimator.id.toString() ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {estimator.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                            {field.name === "owner" && owners.map((owner) => (
+                                                                <CommandItem
+                                                                    key={owner.id}
+                                                                    value={owner.name}
+                                                                    onSelect={() => {
+                                                                        handleInputChange(field.name, owner.id.toString());
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData[field.name as keyof FormData] === owner.id.toString() ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {owner.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                            {(field.name === "workType" || field.name === "division") && field.options?.map((option) => (
+                                                                <CommandItem
+                                                                    key={option}
+                                                                    value={option}
+                                                                    onSelect={() => {
+                                                                        handleInputChange(field.name, option);
+                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData[field.name as keyof FormData] === option ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {option}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                         ) : field.type === "toggle" ? (
                                             <div className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
+                                                <Switch
                                                     id={field.name}
-                                                    checked={Boolean(formData[field.name])}
-                                                    onChange={() =>
-                                                        handleInputChange(
-                                                            field.name,
-                                                            (!formData[field.name]).toString()
-                                                        )
-                                                    }
-                                                    className="h-4 w-4"
+                                                    checked={formData[field.name as keyof FormData] as boolean}
+                                                    onCheckedChange={(checked) => handleInputChange(field.name, checked.toString())}
                                                 />
-                                                <Label htmlFor={field.name}>{field.label}</Label>
+                                                <Label htmlFor={field.name} className="text-sm">
+                                                    {field.label}
+                                                </Label>
                                             </div>
                                         ) : (
                                             <div className="space-y-2">
