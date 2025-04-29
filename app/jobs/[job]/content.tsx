@@ -88,6 +88,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [activeJobDetailsSheetOpen, setActiveJobDetailsSheetOpen] = useState(false)
     const [editActiveJobSheetOpen, setEditActiveJobSheetOpen] = useState(false)
     
+    interface JobCounts {
+        all: number;
+        unset: number;
+        'no-bid': number;
+        bid: number;
+        archived: number;
+    }
+    
+    const [jobCounts, setJobCounts] = useState<JobCounts>({
+        all: 0,
+        unset: 0,
+        'no-bid': 0,
+        bid: 0,
+        archived: 0
+    });
+    
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const { startLoading, stopLoading } = useLoading();
@@ -203,22 +219,58 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [activeSegment, startLoading, stopLoading]);
 
     // This effect will run whenever activeSegment changes
+    // Function to fetch job counts for all segments
+    const fetchJobCounts = useCallback(async () => {
+        if (!isAvailableJobs) return;
+        
+        try {
+            startLoading();
+            
+            // Fetch all jobs with no status filter to get the true total count
+            // Use a high limit to ensure we get all records
+            const allJobs = await fetchBids({ limit: 1000 });
+            
+            // Fetch counts for each status separately
+            const [unsetJobs, noBidJobs, bidJobs, archivedJobs] = await Promise.all([
+                fetchBids({ status: "Unset", limit: 1000 }),   // Unset jobs
+                fetchBids({ status: "No Bid", limit: 1000 }),  // No Bid jobs
+                fetchBids({ status: "Bid", limit: 1000 }),     // Bid jobs
+                fetchBids({ status: "archived", limit: 1000 }) // Archived jobs
+            ]);
+            
+            setJobCounts({
+                all: allJobs.length,          // Actual count from API without status filter
+                unset: unsetJobs.length,      // Count of Unset jobs
+                'no-bid': noBidJobs.length,   // Count of No Bid jobs
+                bid: bidJobs.length,          // Count of Bid jobs
+                archived: archivedJobs.length // Count of Archived jobs
+            });
+        } catch (error) {
+            console.error("Error fetching job counts:", error);
+            toast.error("Failed to fetch job counts");
+        } finally {
+            stopLoading();
+        }
+    }, [isAvailableJobs, startLoading, stopLoading]);
+    
     useEffect(() => {
         if (isAvailableJobs) {
             loadAvailableJobs();
+            fetchJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
         }
-    }, [activeSegment, isAvailableJobs, isActiveBids, loadAvailableJobs, loadActiveBids]);
+    }, [isAvailableJobs, isActiveBids, loadAvailableJobs, loadActiveBids, activeSegment, fetchJobCounts]);
 
     // This effect will run when the job type changes
     useEffect(() => {
         if (job === "available") {
             loadAvailableJobs();
+            fetchJobCounts();
         } else if (job === "active-bids") {
             loadActiveBids();
         }
-    }, [job, loadAvailableJobs, loadActiveBids]);
+    }, [job, loadAvailableJobs, loadActiveBids, fetchJobCounts]);
 
     useEffect(() => {
         console.log("Sheet state changed:", {
@@ -233,13 +285,15 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : ACTIVE_JOBS_COLUMNS;
 
+
+
     const segments = isAvailableJobs
         ? [
-              { label: "All", value: "all" },
-              { label: "Unset", value: "unset" },
-              { label: "No Bid", value: "no-bid" },
-              { label: "Bid", value: "bid" },
-              { label: "Archived", value: "archived" }, // Added from new-tab-archived
+              { label: `All (${jobCounts.all || 0})`, value: "all" },
+              { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
+              { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
+              { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
+              { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
           ]
         : isActiveBids
         ? ACTIVE_BIDS_SEGMENTS
