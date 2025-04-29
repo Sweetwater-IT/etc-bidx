@@ -1,6 +1,6 @@
 "use client";
 
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,31 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Trash2, Plus } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
-interface EquipmentData {
-  id: string;
-  itemName: string;
-  qty: number;
-  months: number;
-  rentPrice: number;
-  reRentCost: number;
-  reRent: boolean;
-  isConfiguring?: boolean;
-}
+import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
 
 const EquipmentSummaryStep = ({
   currentStep,
@@ -45,34 +21,22 @@ const EquipmentSummaryStep = ({
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [equipment, setEquipment] = useState<EquipmentData[]>(
-    (formData.equipment?.map(item => ({
-      ...item,
-      id: item.id || Math.random().toString(36).substr(2, 9),
-      itemName: item.itemName || '',
-      qty: item.qty || 0,
-      months: item.months || 0,
-      rentPrice: item.rentPrice || 0,
-      reRentCost: item.reRentCost || 0,
-      reRent: item.reRent || false,
-      isConfiguring: item.isConfiguring || false
-    })) as EquipmentData[]) || []
-  );
+  const [equipment, setEquipment] = useState<EquipmentRentalItem[]>(formData.equipmentItems);
   const [open, setOpen] = useState(false);
   const [isAddingEquipment, setIsAddingEquipment] = useState(equipment.length === 0);
   const [newItemName, setNewItemName] = useState("");
 
   const handleItemNameSubmit = () => {
     if (newItemName.trim()) {
-      const newEquipment: EquipmentData = {
-        id: Math.random().toString(36).substr(2, 9),
-        itemName: newItemName.trim(),
-        qty: 0,
+      const newEquipment: EquipmentRentalItem = {
+        name: newItemName.trim(),
+        quantity: 0,
         months: 0,
         rentPrice: 0,
-        reRentCost: 0,
-        reRent: false,
-        isConfiguring: true,
+        reRentPrice: 0,
+        reRentForCurrentJob: false,
+        usefulLifeYrs: 0,
+        totalCost: 0,
       };
       setEquipment([...equipment, newEquipment]);
       setNewItemName("");
@@ -80,18 +44,18 @@ const EquipmentSummaryStep = ({
     }
   };
 
-  const handleEquipmentUpdate = (id: string, field: keyof EquipmentData, value: any) => {
+  const handleEquipmentUpdate = (name: string, field: keyof EquipmentRentalItem, value: any) => {
     setEquipment(
       equipment.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
+        item.name === name ? { ...item, [field]: value } : item
       )
     );
   };
 
-  const handleEquipmentSave = (id: string) => {
+  const handleEquipmentSave = (name: string) => {
     setEquipment(
       equipment.map((item) =>
-        item.id === id ? { ...item, isConfiguring: false } : item
+        item.name === name ? { ...item, isConfiguring: false } : item
       )
     );
     setIsAddingEquipment(true);
@@ -102,22 +66,22 @@ const EquipmentSummaryStep = ({
     }));
   };
 
-  const handleEquipmentDelete = (id: string) => {
-    setEquipment(equipment.filter((item) => item.id !== id));
+  const handleEquipmentDelete = (name: string) => {
+    setEquipment(equipment.filter((item) => item.name !== name));
     // Update formData to remove the deleted equipment
     setFormData((prev: any) => ({
       ...prev,
-      equipment: prev.equipment?.filter((item: EquipmentData) => item.id !== id) || []
+      equipment: prev.equipment?.filter((item: EquipmentRentalItem) => item.name !== name) || []
     }));
     if (equipment.length === 1) {
       setIsAddingEquipment(true);
     }
   };
 
-  const handleEditEquipment = (id: string) => {
+  const handleEditEquipment = (name: string) => {
     setEquipment(
       equipment.map((item) =>
-        item.id === id ? { ...item, isConfiguring: true } : item
+        item.name === name ? { ...item, isConfiguring: true } : item
       )
     );
     setIsAddingEquipment(false);
@@ -129,146 +93,36 @@ const EquipmentSummaryStep = ({
         {/* Equipment List */}
         {equipment.map((item) => (
           <div
-            key={item.id}
+            key={item.name}
             className={cn(
-              "rounded-lg border bg-card text-card-foreground shadow-sm mb-2",
-              item.isConfiguring ? "p-5" : "p-4"
+              "rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
             )}
-          >
-            {item.isConfiguring ? (
-              <div className="space-y-4 mt-4">
-                {/* Item Name */}
-                <div className="w-full">
-                  <Label className="text-base font-semibold mb-2.5 block">
-                    Item Name
-                  </Label>
-                  <Input
-                    value={item.itemName}
-                    onChange={(e) =>
-                      handleEquipmentUpdate(item.id, "itemName", e.target.value)
-                    }
-                    className="w-[200px]"
-                  />
-                </div>
-
-                <div className="flex flex-row gap-4 w-full">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium mb-2 block">Qty</Label>
-                    <Input
-                      type="number"
-                      value={item.qty || ""}
-                      onChange={(e) =>
-                        handleEquipmentUpdate(
-                          item.id,
-                          "qty",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      min={0}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium mb-2 block">Months</Label>
-                    <Input
-                      type="number"
-                      value={item.months || ""}
-                      onChange={(e) =>
-                        handleEquipmentUpdate(
-                          item.id,
-                          "months",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      min={0}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium mb-2 block">Rent Price ($)</Label>
-                    <Input
-                      type="number"
-                      value={item.rentPrice || ""}
-                      onChange={(e) =>
-                        handleEquipmentUpdate(
-                          item.id,
-                          "rentPrice",
-                          parseFloat(e.target.value)
-                        )
-                      }
-                      min={0}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium mb-2 block">Re-Rent Cost ($)</Label>
-                    <Input
-                      type="number"
-                      value={item.reRentCost || ""}
-                      onChange={(e) =>
-                        handleEquipmentUpdate(
-                          item.id,
-                          "reRentCost",
-                          parseFloat(e.target.value)
-                        )
-                      }
-                      min={0}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium mb-2 block">Re-Rent</Label>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`reRent-${item.id}`}
-                        checked={item.reRent}
-                        onCheckedChange={(checked) =>
-                          handleEquipmentUpdate(item.id, "reRent", checked)
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEquipmentDelete(item.id)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={() => handleEquipmentSave(item.id)}>
-                    Save Equipment
-                  </Button>
-                </div>
-              </div>
-            ) : (
+          >     
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="font-medium">{item.itemName}</div>
+                  <div className="font-medium">{item.name}</div>
                   <div className="text-sm text-muted-foreground">
-                    Qty: {item.qty} • Months: {item.months} • Rent: ${item.rentPrice}
+                    Qty: {item.quantity} • Months: {item.months} • Rent: ${item.rentPrice}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleEditEquipment(item.id)}
+                    onClick={() => handleEditEquipment(item.name)}
                   >
                     Edit
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleEquipmentDelete(item.id)}
+                    onClick={() => handleEquipmentDelete(item.name)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            )}
+            
           </div>
         ))}
 

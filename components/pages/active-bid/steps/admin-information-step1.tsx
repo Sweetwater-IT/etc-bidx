@@ -1,4 +1,4 @@
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,9 +71,9 @@ const AdminInformationStep1 = ({
             toggleStates.laborRate &&
             toggleStates.fringeRate &&
             toggleStates.shopRate &&
-            !!formData.laborRate &&
-            !!formData.fringeRate &&
-            !!formData.shopRate
+            !!formData.adminData.county.laborRate &&
+            !!formData.adminData.county.fringeRate &&
+            !!formData.adminData.county.shopRate
         );
     };
 
@@ -142,56 +142,56 @@ const AdminInformationStep1 = ({
         [setFormData]
     );
 
-    // Auto-fill rates and set branch when county changes
-    useEffect(() => {
-        const updateRatesAndBranch = async () => {
-            if (formData.county) {
-                try {
-                    const rates = await fetchCountyRates(formData.county);
-                    if (rates) {
-                        const updates: Partial<FormData> = {};
+    // TO-DO just take this whole thing out and get the information from the first api call to the counties
+    // useEffect(() => {
+    //     const updateRatesAndBranch = async () => {
+    //         if (formData.adminData.county) {
+    //             try {
+    //                 const rates = await fetchCountyRates(formData.adminData.county.name);
+    //                 if (rates) {
+    //                     const updates: Partial<FormData> = {};
 
-                        // Always set the branch value from county data
-                        if (rates.branch_id) {
-                            updates.branch = rates.branch_id.toString();
-                        }
+    //                     // Always set the branch value from county data
+    //                     if (rates.branch_id) {
+    //                         updates.adminData.county.branch = rates.branch_id.toString();
+    //                     }
 
-                        // Only update rates if not manually set
-                        if (!toggleStates.laborRate) {
-                            updates.laborRate = rates.labor_rate?.toString() || "";
-                        }
+    //                     // Only update rates if not manually set
+    //                     if (!toggleStates.laborRate) {
+    //                         updates.laborRate = rates.labor_rate?.toString() || "";
+    //                     }
 
-                        if (!toggleStates.fringeRate) {
-                            updates.fringeRate = rates.fringe_rate?.toString() || "";
-                        }
+    //                     if (!toggleStates.fringeRate) {
+    //                         updates.fringeRate = rates.fringe_rate?.toString() || "";
+    //                     }
 
-                        if (!toggleStates.shopRate && rates.branch_id) {
-                            try {
-                                const shopRate = await fetchBranchShopRate(rates.branch_id);
-                                if (shopRate) {
-                                    updates.shopRate = shopRate.toString();
-                                }
-                            } catch (error) {
-                                console.error("Error fetching branch shop rate:", error);
-                            }
-                        }
+    //                     if (!toggleStates.shopRate && rates.branch_id) {
+    //                         try {
+    //                             const shopRate = await fetchBranchShopRate(rates.branch_id);
+    //                             if (shopRate) {
+    //                                 updates.shopRate = shopRate.toString();
+    //                             }
+    //                         } catch (error) {
+    //                             console.error("Error fetching branch shop rate:", error);
+    //                         }
+    //                     }
 
-                        updateFormData(updates);
-                    }
-                } catch (error) {
-                    console.error("Error fetching county rates:", error);
-                }
-            }
-        };
+    //                     updateFormData(updates);
+    //                 }
+    //             } catch (error) {
+    //                 console.error("Error fetching county rates:", error);
+    //             }
+    //         }
+    //     };
 
-        updateRatesAndBranch();
-    }, [
-        formData.county,
-        toggleStates.laborRate,
-        toggleStates.fringeRate,
-        toggleStates.shopRate,
-        updateFormData,
-    ]);
+    //     updateRatesAndBranch();
+    // }, [
+    //     formData.adminData.county,
+    //     toggleStates.laborRate,
+    //     toggleStates.fringeRate,
+    //     toggleStates.shopRate,
+    //     updateFormData,
+    // ]);
 
     const handleInputChange = (field: string, value: string) => {
         setFormData((prev) => ({
@@ -208,32 +208,32 @@ const AdminInformationStep1 = ({
     };
 
     const handleNext = () => {
-        // Required fields for Step 1
-        const requiredFields = [
-            "contractNumber",
-            "estimator",
-            "owner",
-            "county",
-            "township",
-            "branch",
-            "division",
-            "lettingDate",
-            "startDate",
-            "endDate",
-            "srRoute",
-            "dbePercentage",
-            "oneWayTravelTime",
-            "oneWayMileage",
-            "dieselCost",
-            "laborRate",
-            "fringeRate",
-            "shopRate",
-        ];
+        // Don't need required fields as it's possible not all are known at the time
+        // const requiredFields = [
+        //     "contractNumber",
+        //     "estimator",
+        //     "owner",
+        //     "county",
+        //     "township",
+        //     "branch",
+        //     "division",
+        //     "lettingDate",
+        //     "startDate",
+        //     "endDate",
+        //     "srRoute",
+        //     "dbePercentage",
+        //     "oneWayTravelTime",
+        //     "oneWayMileage",
+        //     "dieselCost",
+        //     "laborRate",
+        //     "fringeRate",
+        //     "shopRate",
+        // ];
 
-        const missingFields = requiredFields.filter((field) => {
-            const value = formData[field as keyof FormData];
-            return !value || value === "";
-        });
+        // const missingFields = requiredFields.filter((field) => {
+        //     const value = formData[field as keyof FormData];
+        //     return !value || value === "";
+        // });
 
         setCurrentStep(2);
     };
@@ -284,8 +284,8 @@ const AdminInformationStep1 = ({
                                                         aria-expanded={open}
                                                         className="w-full justify-between"
                                                     >
-                                                        {formData.county
-                                                            ? counties.find((county) => county.id.toString() === formData.county)?.name
+                                                        {formData.adminData.county
+                                                            ? counties.find((county) => county.name === formData.adminData.county.name)?.name
                                                             : "Select county..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -307,7 +307,7 @@ const AdminInformationStep1 = ({
                                                                     <Check
                                                                         className={cn(
                                                                             "mr-2 h-4 w-4",
-                                                                            formData.county === county.id.toString() ? "opacity-100" : "opacity-0"
+                                                                            formData.adminData.county.name === county.name ? "opacity-100" : "opacity-0"
                                                                         )}
                                                                     />
                                                                     {county.name}

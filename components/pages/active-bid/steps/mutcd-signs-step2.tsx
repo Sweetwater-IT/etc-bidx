@@ -1,6 +1,5 @@
 "use client";
-
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,73 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { Step } from "@/types/IStep";
 
-const step = {
+const step : Step = {
   id: "step-2",
   name: "MUTCD Signs",
   description: "Select and configure MUTCD signs",
+  fields: []
 };
 
-// Define the type for sign designations from the database
-type SignDesignation = {
-  id: number;
-  value: string;
-  label: string;
-  description?: string;
-  dimensions: {
-    id: number;
-    value: string;
-    width: number;
-    height: number;
-    unit: string;
-  }[];
-};
-
-// Fallback designations in case the API call fails
-const fallbackDesignations = [
-  {
-    id: 1,
-    value: "D10-1A",
-    label: "D10-1A",
-    dimensions: [
-      { id: 1, value: "12.0 x 36.0", width: 12, height: 36, unit: "in" },
-      { id: 2, value: "24.0 x 48.0", width: 24, height: 48, unit: "in" },
-    ],
-  },
-  {
-    id: 2,
-    value: "D10-2",
-    label: "D10-2",
-    dimensions: [
-      { id: 3, value: "12.0 x 24.0", width: 12, height: 24, unit: "in" },
-      { id: 4, value: "18.0 x 36.0", width: 18, height: 36, unit: "in" },
-    ],
-  },
-  { 
-    id: 3,
-    value: "D10-3", 
-    label: "D10-3", 
-    dimensions: [
-      { id: 5, value: "12.0 x 36.0", width: 12, height: 36, unit: "in" }
-    ] 
-  },
-];
-
-const sheetingOptions = ["DG", "HI"];
-const structureOptions = ["None", "Square Post", "U-Channel"];
-
-interface SignData {
-  id: string;
-  designation: string;
-  dimensions?: string;
-  sheeting?: string;
-  quantity?: number;
-  structure?: string;
-  bLights?: number;
-  covers?: number;
-  isConfiguring?: boolean;
-  secondarySigns?: SignData[];
-}
 
 const MutcdSignsStep2 = ({
   currentStep,
@@ -109,9 +51,9 @@ const MutcdSignsStep2 = ({
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
+  const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>(formData.mptRental.phases[0].signs);
   const [open, setOpen] = useState(false);
-  const [isAddingSign, setIsAddingSign] = useState(signs.length === 0);
+  const [isAddingSign, setIsAddingSign] = useState(formData.mptRental.phases[0].signs.length === 0);
   const [designations, setDesignations] = useState<any[]>([]);
   const [isLoadingDesignations, setIsLoadingDesignations] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,13 +123,18 @@ const MutcdSignsStep2 = ({
     }
     
     // Create new sign with default values
-    const newSign: SignData = {
+    const newSign: PrimarySign = {
       id: generateStableId(),
       designation: currentValue,
-      dimensions: '',  // Will be populated after fetching dimensions
+      width: 0,
+      height: 0,
       sheeting: 'DG',  // Default sheeting
-      quantity: 1,      // Default quantity
-      isConfiguring: true,
+      quantity: 1,
+      associatedStructure: 'none',
+      bLights: 0,
+      covers: 0,
+      isCustom: false,
+      description: ''
     };
     
     // Add the sign to the list
@@ -215,7 +162,7 @@ const MutcdSignsStep2 = ({
         const signIndex = updatedSigns.findIndex(s => s.id === newSign.id);
         if (signIndex !== -1) {
           const updatedSign = {...updatedSigns[signIndex]};
-          updatedSign.dimensions = dimensionsData[0].value;
+          updatedSign.width = dimensionsData[0].value;
           
           const newSigns = [...updatedSigns];
           newSigns[signIndex] = updatedSign;
@@ -236,7 +183,7 @@ const MutcdSignsStep2 = ({
     setIsAddingSign(false);
   };
 
-  const handleSignUpdate = (id: string, field: keyof SignData, value: any) => {
+  const handleSignUpdate = (id: string, field: keyof PrimarySign | keyof SecondarySign, value: any) => {
     const updatedSigns = signs.map((sign) => 
       sign.id === id ? { ...sign, [field]: value } : sign
     );
@@ -297,7 +244,7 @@ const MutcdSignsStep2 = ({
       signs: signs.map(sign => ({
         id: sign.id,
         designation: sign.designation,
-        dimensions: sign.dimensions || '',
+        dimensions: sign.width || '',
         sheeting: sign.sheeting || '',
         quantity: sign.quantity || 0
         // Omit isConfiguring and other optional properties that aren't in the FormData.SignData interface
@@ -344,11 +291,10 @@ const MutcdSignsStep2 = ({
                 <div
                   key={sign.id}
                   className={cn(
-                    "rounded-lg border bg-card text-card-foreground shadow-sm",
-                    sign.isConfiguring ? "p-6" : "p-4"
+                    "rounded-lg border bg-card text-card-foreground shadow-sm p-4"
                   )}
                 >
-                  {sign.isConfiguring ? (
+                  {true ? (
                     <div className="space-y-8">
                       {/* Designation Selection */}
                       <div className="w-full">
@@ -396,15 +342,15 @@ const MutcdSignsStep2 = ({
                                               }));
                                               
                                               // Set default dimension if available and not already set
-                                              if (dimensionsData && dimensionsData.length > 0 && !sign.dimensions) {
-                                                handleSignUpdate(sign.id, "dimensions", dimensionsData[0].value);
+                                              if (dimensionsData && dimensionsData.length > 0 && !sign.width) {
+                                                handleSignUpdate(sign.id, "width", dimensionsData[0].value);
                                               }
                                             } catch (error) {
                                               console.error('Error fetching dimensions:', error);
                                             }
-                                          } else if (dimensionsMap[d.value].length > 0 && !sign.dimensions) {
+                                          } else if (dimensionsMap[d.value].length > 0 && !sign.width) {
                                             // Use cached dimensions
-                                            handleSignUpdate(sign.id, "dimensions", dimensionsMap[d.value][0].value);
+                                            handleSignUpdate(sign.id, "width", dimensionsMap[d.value][0].value);
                                           }
                                         }
                                         
@@ -440,7 +386,7 @@ const MutcdSignsStep2 = ({
                       </div>
 
                       {/* Other Fields in a single line */}
-                      <div className="flex flex-row gap-4 w-full">
+                      {/* <div className="flex flex-row gap-4 w-full">
                         <div className="col-span-2 flex-2">
                           <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
                           <Select
@@ -553,7 +499,7 @@ const MutcdSignsStep2 = ({
                             className="w-full"
                           />
                         </div>
-                      </div>
+                      </div> */}
 
                       {/* Action Buttons */}
                       <div className="flex justify-end space-x-3 pt-6">
@@ -573,7 +519,7 @@ const MutcdSignsStep2 = ({
                       <div className="flex items-center space-x-4">
                         <div className="font-medium">{sign.designation}</div>
                         <div className="text-sm text-muted-foreground">
-                          {sign.dimensions} • {sign.sheeting} • Qty:{" "}
+                          {sign.width} x {sign.height} • {sign.sheeting} • Qty:{" "}
                           {sign.quantity}
                         </div>
                       </div>
