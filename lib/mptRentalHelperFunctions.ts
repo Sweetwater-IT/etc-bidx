@@ -651,6 +651,10 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   return nonRatedHours
 }
 export function getTotalTripsPerPhase(phase: Phase): number {
-  const relevantEquipmentTotals = phase.standardEquipment.fourFootTypeIII.quantity + phase.standardEquipment.hStand.quantity + phase.standardEquipment.post.quantity
-  return (safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
+  const fourFootTypeIII = phase?.standardEquipment?.fourFootTypeIII?.quantity || 0;
+  const hStand = phase?.standardEquipment?.hStand?.quantity || 0;
+  const post = phase?.standardEquipment?.post?.quantity || 0;
+  
+  const relevantEquipmentTotals = fourFootTypeIII + hStand + post;
+  return (safeNumber(phase?.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
 }

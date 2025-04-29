@@ -18,7 +18,7 @@ import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -284,21 +284,38 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobsData;
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : ACTIVE_JOBS_COLUMNS;
+    
+    const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
+        console.log('Marking job as bid job:', job);
+        
+        const queryParams = new URLSearchParams({
+            jobId: job.id.toString(),
+            source: 'available-jobs'
+        }).toString();
+        
+        router.push(`/active-bid?${queryParams}`);
+    }, [router]);
+    
+    const handleUpdateStatus = useCallback(async (job: AvailableJob, status: 'Bid' | 'No Bid' | 'Unset') => {
+        try {
+            startLoading();
+            await changeBidStatus(job.id, status);
+            toast.success(`Job status updated to ${status}`);
+            await loadAvailableJobs();
+        } catch (error) {
+            console.error('Error updating job status:', error);
+            toast.error('Failed to update job status');
+        } finally {
+            stopLoading();
+        }
+    }, [loadAvailableJobs, startLoading, stopLoading]);
 
-
-
-    const segments = isAvailableJobs
-        ? [
-              { label: `All (${jobCounts.all || 0})`, value: "all" },
-              { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
-              { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
-              { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
-              { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
-          ]
-        : isActiveBids
-        ? ACTIVE_BIDS_SEGMENTS
-        : ACTIVE_JOBS_SEGMENTS;
-
+    const handleEdit = (item: AvailableJob) => {
+        console.log('Edit clicked:', item)
+        setSelectedJob(item)
+        setEditJobSheetOpen(true)
+    }
+    
     const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
         setSelectedJobsToArchive(selectedJobs);
         setShowArchiveJobsDialog(true);
@@ -499,6 +516,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const handleViewDetails = (item: AvailableJob) => {
+        setSelectedJob(item)
+        setJobDetailsSheetOpen(true)
+    }
+
+    const segments = isAvailableJobs
+        ? [
+              { label: `All (${jobCounts.all || 0})`, value: "all" },
+              { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
+              { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
+              { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
+              { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
+          ]
+        : isActiveBids
+        ? ACTIVE_BIDS_SEGMENTS
+        : ACTIVE_JOBS_SEGMENTS;
+
     const handleCreateClick = () => {
         if (isAvailableJobs) {
             setOpenBidSheetOpen(true);
@@ -508,18 +542,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else if (isActiveJobs) {
             setCreateJobSheetOpen(true);
         }
-    };
-
-    const handleViewDetails = (item: AvailableJob) => {
-        console.log('View details clicked:', item)
-        setSelectedJob(item)
-        setJobDetailsSheetOpen(true)
-    }
-
-    const handleEdit = (item: AvailableJob) => {
-        console.log('Edit clicked:', item)
-        setSelectedJob(item)
-        setEditJobSheetOpen(true)
     }
 
     const handleActiveJobViewDetails = (item: ActiveJob) => {
@@ -633,6 +655,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onViewDetails={handleViewDetails}
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
+                                    onMarkAsBidJob={handleMarkAsBidJob}
+                                    onUpdateStatus={handleUpdateStatus}
+                                    stickyLastColumn
                                 />
                             ) : isActiveBids ? (
                                 <ActiveBidsTable bids={data as ActiveBid[]} />

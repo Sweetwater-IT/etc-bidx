@@ -195,10 +195,54 @@ const AdminInformationStep1 = ({
     // ]);
 
     const handleInputChange = (field: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            [field]: value,
-        }));
+        setFormData((prev) => {
+            const newFormData = { ...prev };
+            
+            if (field === "contractNumber" || 
+                field === "estimator" || 
+                field === "owner" || 
+                field === "srRoute" || 
+                field === "dbePercentage") {
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    [field]: value
+                };
+            } else if (field === "township") {
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    location: value
+                };
+            } else if (field === "division") {
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    division: value
+                };
+            } else if (field === "county") {
+                // For county, we need to update the county object
+                const selectedCounty = counties.find(c => c.id.toString() === value);
+                if (selectedCounty) {
+                    newFormData.adminData = {
+                        ...newFormData.adminData,
+                        county: {
+                            ...newFormData.adminData.county,
+                            name: selectedCounty.name,
+                            // Keep other county properties
+                        }
+                    };
+                }
+            } else if (field === "lettingDate" || field === "startDate" || field === "endDate") {
+                // Handle date fields
+                newFormData.adminData = {
+                    ...newFormData.adminData,
+                    [field]: value
+                };
+            } else {
+                // For any other fields, use the original behavior
+                newFormData[field as keyof FormData] = value as any;
+            }
+            
+            return newFormData;
+        });
     };
 
     const handleToggleChange = (field: string) => {
@@ -287,8 +331,8 @@ const AdminInformationStep1 = ({
                                                         aria-expanded={openStates[field.name]}
                                                         className="w-full justify-between"
                                                     >
-                                                        {formData.adminData.county
-                                                            ? counties.find((county) => county.name === formData.adminData.county.name)?.name
+                                                        {formData.adminData.county && formData.adminData.county.name
+                                                            ? formData.adminData.county.name
                                                             : "Select county..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -332,17 +376,14 @@ const AdminInformationStep1 = ({
                                                         aria-expanded={openStates[field.name]}
                                                         className="w-full justify-between"
                                                     >
-                                                        {formData[field.name as keyof FormData]
-                                                            ? field.name === "county"
-                                                                ? counties.find((county) => county.id.toString() === formData[field.name as keyof FormData])?.name
-                                                                : field.name === "estimator"
-                                                                    ? estimators.find((estimator) => estimator.id.toString() === formData[field.name as keyof FormData])?.name
-                                                                    : field.name === "owner"
-                                                                        ? owners.find((owner) => owner.id.toString() === formData[field.name as keyof FormData])?.name
-                                                                        : field.options?.find(
-                                                                            (option) => option === formData[field.name as keyof FormData]
-                                                                        )
-                                                            : `Select ${field.label.toLowerCase()}...`}
+                                                        {field.name === "contractNumber" ? formData.adminData.contractNumber :
+                                                         field.name === "estimator" ? formData.adminData.estimator :
+                                                         field.name === "owner" ? formData.adminData.owner :
+                                                         field.name === "county" ? formData.adminData.county?.name :
+                                                         field.name === "township" ? formData.adminData.location :
+                                                         field.name === "division" ? formData.adminData.division :
+                                                         field.name === "workType" ? formData.adminData.rated :
+                                                         `Select ${field.label.toLowerCase()}...`}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -351,100 +392,35 @@ const AdminInformationStep1 = ({
                                                         <CommandInput placeholder={`Search ${field.label.toLowerCase()}...`} />
                                                         <CommandEmpty>No {field.label.toLowerCase()} found.</CommandEmpty>
                                                         <CommandGroup className="max-h-[200px] overflow-y-auto">
-                                                            {field.name === "county" && counties.map((county) => (
-                                                                <CommandItem
-                                                                    key={county.id}
-                                                                    value={county.name}
-                                                                    onSelect={() => {
-                                                                        handleInputChange(field.name, county.id.toString());
-                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            formData[field.name as keyof FormData] === county.id.toString() ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {county.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                            {field.name === "estimator" && estimators.map((estimator) => (
-                                                                <CommandItem
-                                                                    key={estimator.id}
-                                                                    value={estimator.name}
-                                                                    onSelect={() => {
-                                                                        handleInputChange(field.name, estimator.id.toString());
-                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            formData[field.name as keyof FormData] === estimator.id.toString() ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {estimator.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                            {field.name === "owner" && owners.map((owner) => (
-                                                                <CommandItem
-                                                                    key={owner.id}
-                                                                    value={owner.name}
-                                                                    onSelect={() => {
-                                                                        handleInputChange(field.name, owner.id.toString());
-                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            formData[field.name as keyof FormData] === owner.id.toString() ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {owner.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                            {(field.name === "workType" || field.name === "division") && field.options?.map((option) => (
-                                                                <CommandItem
-                                                                    key={option}
-                                                                    value={option}
-                                                                    onSelect={() => {
-                                                                        handleInputChange(field.name, option);
-                                                                        setOpenStates(prev => ({...prev, [field.name]: false}));
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            formData[field.name as keyof FormData] === option ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {option}
-                                                                </CommandItem>
-                                                            ))}
                                                         </CommandGroup>
                                                     </Command>
                                                 </PopoverContent>
                                             </Popover>
-                                        ) : field.type === "toggle" ? (
-                                            <div className="flex items-center space-x-2">
-                                                <Switch
-                                                    id={field.name}
-                                                    checked={formData[field.name as keyof FormData] as boolean}
-                                                    onCheckedChange={(checked) => handleInputChange(field.name, checked.toString())}
-                                                />
-                                                <Label htmlFor={field.name} className="text-sm">
-                                                    {field.label}
-                                                </Label>
-                                            </div>
                                         ) : (
                                             <div className="space-y-2">
                                                 <Input
                                                     id={field.name}
                                                     type={field.type}
                                                     placeholder={field.placeholder}
-                                                    value={String(formData[field.name] ?? "")}
+                                                    value={
+                                                        field.name === "contractNumber" ? formData.adminData.contractNumber || "" :
+                                                        field.name === "township" ? formData.adminData.location || "" :
+                                                        field.name === "srRoute" ? formData.adminData.srRoute || "" :
+                                                        field.name === "dbePercentage" ? formData.adminData.dbe || "" :
+                                                        field.name === "lettingDate" && formData.adminData.lettingDate ? 
+                                                            (typeof formData.adminData.lettingDate === 'string' ? 
+                                                                formData.adminData.lettingDate : 
+                                                                formData.adminData.lettingDate.toISOString().split('T')[0]) :
+                                                        field.name === "startDate" && formData.adminData.startDate ? 
+                                                            (typeof formData.adminData.startDate === 'string' ? 
+                                                                formData.adminData.startDate : 
+                                                                formData.adminData.startDate.toISOString().split('T')[0]) :
+                                                        field.name === "endDate" && formData.adminData.endDate ? 
+                                                            (typeof formData.adminData.endDate === 'string' ? 
+                                                                formData.adminData.endDate : 
+                                                                formData.adminData.endDate.toISOString().split('T')[0]) :
+                                                        String(formData[field.name] ?? "")
+                                                    }
                                                     onChange={(e) =>
                                                         handleInputChange(field.name, e.target.value)
                                                     }
