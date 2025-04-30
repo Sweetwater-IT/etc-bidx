@@ -11,6 +11,7 @@ import { ViewBidSummarySheet } from "@/components/sheets/view-bid-summary-sheet"
 import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { AdminData } from "@/types/TAdminData";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 interface BidSummaryAccordionProps {
   formData: FormData;
@@ -24,9 +25,11 @@ interface BidSummary{
   grossMargin:  number
 }
 
-const BidSummaryAccordion = ({ formData, currentStep }: BidSummaryAccordionProps) => {
+const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState(false);
   const [value, setValue] = useState<string[]>([]);
+
+  const { adminData, mptRental} = useEstimate();
 
   const [bidSummary, setBidSummary] = useState<BidSummary>({
     revenue: 0,
@@ -36,7 +39,7 @@ const BidSummaryAccordion = ({ formData, currentStep }: BidSummaryAccordionProps
   });
 
   useEffect(() => {
-    const allTotals = getAllTotals(formData.adminData, formData.mptRental)
+    const allTotals = getAllTotals(adminData, mptRental)
 
     //just doing mpt for now
     setBidSummary({
@@ -56,9 +59,6 @@ const BidSummaryAccordion = ({ formData, currentStep }: BidSummaryAccordionProps
     }
   }, [currentStep]);
 
-  useEffect(() => {
-    console.log(formData)
-  }, [formData])
 
   return (
     <>
@@ -105,7 +105,6 @@ const BidSummaryAccordion = ({ formData, currentStep }: BidSummaryAccordionProps
       <ViewBidSummarySheet
         open={isViewSummaryOpen}
         onOpenChange={setIsViewSummaryOpen}
-        formData={formData}
       />
     </>
   );

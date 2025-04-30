@@ -384,10 +384,13 @@ export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental
 export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating): AllTotals {
   //this gets all mpt rental stuff
   const mptRentalStats = calculateEquipmentCostSummary(mptRental);
+  console.log(mptRentalStats)
   //this gets all light and drum channelizer stuff
   const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
+  console.log(lightAndDrumRentalStats)
   //this gets all sign stuff
   const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
+  console.log(totalSignCostStats)
   //this gets all labor stats
   const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
   //this gets all truck and fuel stats
