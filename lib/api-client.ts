@@ -1,4 +1,5 @@
 import { Database } from '@/types/database.types';
+import { County } from '@/types/TCounty';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -17,31 +18,31 @@ export async function fetchBids(options?: {
   ascending?: boolean;
 }): Promise<AvailableJob[]> {
   const params = new URLSearchParams();
-  
+
   if (options?.status) {
     params.append('status', options.status);
   }
-  
+
   if (options?.limit) {
     params.append('limit', options.limit.toString());
   }
-  
+
   if (options?.orderBy) {
     params.append('orderBy', options.orderBy);
   }
-  
+
   if (options?.ascending !== undefined) {
     params.append('ascending', options.ascending.toString());
   }
-  
+
   const queryString = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`/api/bids${queryString}`);
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to fetch bids');
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -51,12 +52,12 @@ export async function fetchBids(options?: {
  */
 export async function fetchBidById(id: number): Promise<AvailableJob> {
   const response = await fetch(`/api/bids/${id}`);
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || `Failed to fetch bid with ID ${id}`);
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -72,12 +73,12 @@ export async function createBid(bid: AvailableJobInsert): Promise<AvailableJob> 
     },
     body: JSON.stringify(bid),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to create bid');
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -115,7 +116,7 @@ export async function deleteBid(id: number): Promise<void> {
   const response = await fetch(`/api/bids/${id}`, {
     method: 'DELETE',
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || `Failed to delete bid with ID ${id}`);
@@ -126,16 +127,16 @@ export async function deleteBid(id: number): Promise<void> {
  * Change a bid's status
  */
 export async function changeBidStatus(
-  id: number, 
+  id: number,
   status: 'Bid' | 'No Bid' | 'Unset',
   noBidReason?: string
 ): Promise<AvailableJob> {
   const updates: AvailableJobUpdate = { status };
-  
+
   if (status === 'No Bid' && noBidReason) {
     updates.no_bid_reason = noBidReason;
   }
-  
+
   return updateBid(id, updates);
 }
 
@@ -149,31 +150,31 @@ export async function fetchActiveBids(options?: {
   ascending?: boolean;
 }): Promise<BidEstimate[]> {
   const params = new URLSearchParams();
-  
+
   if (options?.status) {
     params.append('status', options.status);
   }
-  
+
   if (options?.limit) {
     params.append('limit', options.limit.toString());
   }
-  
+
   if (options?.orderBy) {
     params.append('orderBy', options.orderBy);
   }
-  
+
   if (options?.ascending !== undefined) {
     params.append('ascending', options.ascending.toString());
   }
-  
+
   const queryString = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`/api/active-bids${queryString}`);
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to fetch active bids');
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -183,12 +184,12 @@ export async function fetchActiveBids(options?: {
  */
 export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
   const response = await fetch(`/api/active-bids/${id}`);
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || `Failed to fetch active bid with ID ${id}`);
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -204,12 +205,12 @@ export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstima
     },
     body: JSON.stringify(bid),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to create active bid');
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -226,12 +227,12 @@ export async function updateActiveBid(id: number, data: Partial<BidEstimateInser
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to update active bid');
     }
-    
+
     const result = await response.json();
     return result.data;
   } catch (error) {
@@ -264,12 +265,12 @@ export async function createMptRental(data: {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to create MPT rental record');
     }
-    
+
     const result = await response.json();
     return result.data;
   } catch (error) {
@@ -284,7 +285,7 @@ export async function createMptRental(data: {
 export async function fetchMptRental(estimateId: number) {
   try {
     const response = await fetch(`/api/estimate-mpt-rental?estimate_id=${estimateId}`);
-    
+
     if (!response.ok) {
       if (response.status === 404) {
         return null; // No MPT rental record found
@@ -292,7 +293,7 @@ export async function fetchMptRental(estimateId: number) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to fetch MPT rental record');
     }
-    
+
     const result = await response.json();
     return result.data;
   } catch (error) {
@@ -304,62 +305,43 @@ export async function fetchMptRental(estimateId: number) {
 /**
  * Fetch reference data for dropdowns
  */
-export async function fetchReferenceData(type: 'counties' | 'branches' | 'users' | 'owners') {
+export async function fetchReferenceData(type: 'counties' | 'users' | 'owners') {
   try {
     const response = await fetch(`/api/reference-data?type=${type}`);
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || `Failed to fetch ${type}`);
     }
-    
+
     const result = await response.json();
-    return result.data;
+
+    let formattedData = result.data;
+    if (type === 'counties') {
+      // format database rows into County objects
+      formattedData = result.data.map(countyRow => ({
+        id: countyRow.id,
+        name: countyRow.name,
+        district: countyRow.district,
+        branch: countyRow.branches.name,
+        laborRate: countyRow.labor_rate,
+        fringeRate: countyRow.fringe_rate,
+        shopRate: countyRow.branches?.shop_rate,
+        flaggingRate: countyRow.flagging_rate,
+        flaggingBaseRate: countyRow.flagging_base_rate,
+        flaggingFringeRate: countyRow.flagging_fringe_rate,
+        ratedTargetGM: countyRow.flagging_rated_target_gm,
+        nonRatedTargetGM: countyRow.flagging_non_rated_target_gm,
+        insurance: countyRow.insurance,
+        fuel: countyRow.fuel,
+        market: (countyRow.market as 'MOBILIZATION' | 'CORE' | 'LOCAL')
+      })) as County[];
+    }
+    
+    return formattedData;
   } catch (error) {
     console.error(`Error fetching ${type}:`, error);
     throw error;
-  }
-}
-
-/**
- * Fetch county rates by county ID
- */
-export async function fetchCountyRates(countyId: number | string) {
-  try {
-    if (!countyId) return null;
-    
-    const counties = await fetchReferenceData('counties');
-    const county = counties.find(c => c.id === Number(countyId));
-    
-    if (!county) return null;
-    
-    return {
-      labor_rate: county.labor_rate,
-      fringe_rate: county.fringe_rate,
-      branch_id: county.branch
-    };
-  } catch (error) {
-    console.error('Error fetching county rates:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch branch shop rate by branch ID
- */
-export async function fetchBranchShopRate(branchId: number | string) {
-  try {
-    if (!branchId) return null;
-    
-    const branches = await fetchReferenceData('branches');
-    const branch = branches.find(b => b.id === Number(branchId));
-    
-    if (!branch) return null;
-    
-    return branch.shop_rate;
-  } catch (error) {
-    console.error('Error fetching branch shop rate:', error);
-    return null;
   }
 }
 
@@ -373,13 +355,13 @@ export async function fetchSignDesignations(search?: string) {
     if (search) {
       url += `&search=${encodeURIComponent(search)}`;
     }
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch sign designations: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.data;
   } catch (error) {
@@ -391,13 +373,13 @@ export async function fetchSignDesignations(search?: string) {
 export async function fetchSignDimensions(designationId: number | string) {
   try {
     const url = `/api/signs?type=dimensions&designationId=${designationId}`;
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch sign dimensions: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.data;
   } catch (error) {
@@ -422,12 +404,12 @@ export async function archiveJobs(ids: number[]): Promise<{ count: number }> {
     },
     body: JSON.stringify({ ids }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to archive jobs');
   }
-  
+
   const result = await response.json();
   return { count: result.count };
 }
@@ -443,12 +425,12 @@ export async function archiveActiveBids(ids: number[]): Promise<{ count: number 
     },
     body: JSON.stringify({ ids }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to archive active bids');
   }
-  
+
   const result = await response.json();
   return { count: result.count };
 }
@@ -499,14 +481,14 @@ export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: 
  * Import jobs or bids from data
  */
 export async function importJobs(
-  data: any[], 
+  data: any[],
   type: 'available-jobs' | 'active-bids' = 'available-jobs'
 ): Promise<{ count: number; errors?: string[] }> {
   // Use different endpoints based on import type
   const endpoint = type === 'available-jobs' ? '/api/jobs/import' : '/api/bids/import';
-  
+
   console.log(`Importing ${type} data to ${endpoint}`);
-  
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
