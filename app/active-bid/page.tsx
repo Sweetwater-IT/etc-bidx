@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
+
 function ActiveBidContent() {
   const searchParams = useSearchParams();
   const jobId = searchParams.get("jobId");
