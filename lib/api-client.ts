@@ -304,7 +304,7 @@ export async function fetchMptRental(estimateId: number) {
 /**
  * Fetch reference data for dropdowns
  */
-export async function fetchReferenceData(type: 'counties' | 'branches' | 'users' | 'owners') {
+export async function fetchReferenceData(type: 'counties' | 'branches' | 'users' | 'owners' | 'mpt equipment') {
   try {
     const response = await fetch(`/api/reference-data?type=${type}`);
     
