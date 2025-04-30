@@ -281,14 +281,21 @@ function calculateCostMetrics<K extends EquipmentType | SheetingType>(
       continue;
     }
 
-    const itemCost = item.totalQuantity * staticInfo.price;
+    // Use safeNumber to prevent NaN values
+    const quantity = safeNumber(item.totalQuantity);
+    const price = safeNumber(staticInfo.price);
+    const discountRate = safeNumber(staticInfo.discountRate);
+    const usefulLife = safeNumber(staticInfo.usefulLife) || 365; 
+    const daysRequired = safeNumber(item.totalDaysRequired);
+
+    const itemCost = quantity * price;
     totalCost += itemCost;
 
-    const itemRevenue = itemCost - (itemCost * (staticInfo.discountRate / 100));
+    const itemRevenue = itemCost - (itemCost * (discountRate / 100));
     totalRevenue += itemRevenue;
 
-    const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
-    const itemDepreciationCost = dailyDepreciation * item.totalDaysRequired * item.totalQuantity;
+    const dailyDepreciation = usefulLife > 0 ? price / (usefulLife * 365) : 0;
+    const itemDepreciationCost = dailyDepreciation * daysRequired * quantity;
     totalDepreciationCost += itemDepreciationCost;
   }
 
@@ -308,132 +315,190 @@ function calculateCostMetrics<K extends EquipmentType | SheetingType>(
 
 // Function to calculate labor cost summary
 export function calculateLaborCostSummary(adminData: AdminData, mptRental: MPTRentalEstimating): LaborCostSummary {
+  try {
+    const phaseTotals = returnPhaseTotals(mptRental);
 
-  const totalRatedHours = mptRental.phases.reduce((sum, phase) => sum + getRatedHoursPerPhase(phase) + phase.additionalRatedHours, 0);
-  const totalNonRatedHours = mptRental.phases.reduce((sum, phase) => sum + getNonRatedHoursPerPhase(adminData, phase) + phase.additionalNonRatedHours, 0)
+    const laborRate = safeNumber(adminData?.county?.laborRate);
+    const fringeRate = safeNumber(adminData?.county?.fringeRate);
+    const totalRate = laborRate + fringeRate;
 
-  const rateLaborCostPerHour = adminData.rated === 'RATED' ? Number(adminData.county.laborRate) + Number(adminData.county.fringeRate) : safeNumber(adminData.county.shopRate);
-  const totalRatedHourCost = totalRatedHours * rateLaborCostPerHour;
+    const ratedLaborHours = safeNumber(phaseTotals.totalPersonnel) * 8 * safeNumber(phaseTotals.totalDays) + safeNumber(phaseTotals.totalAdditionalRatedHours);
+    const nonRatedLaborHours = safeNumber(phaseTotals.totalPersonnel) * 8 * safeNumber(phaseTotals.totalDays) + safeNumber(phaseTotals.totalAdditionalNonRatedHours);
 
-  const nonRatedLaborCostPerHour = adminData.county.shopRate ?? 0;
-  const totalNonRatedHourCost = totalNonRatedHours * nonRatedLaborCostPerHour;
+    const totalRatedLaborCost = ratedLaborHours * totalRate;
+    const totalNonRateLaborCost = nonRatedLaborHours * totalRate;
 
-  // Assuming labor rate markup percentage is 100%
-  const rateLaborRevenue = totalRatedHourCost * 2;
-  const nonRateLaborRevenue = totalNonRatedHourCost * 2;
-  const totalLaborRevenue = rateLaborRevenue + nonRateLaborRevenue;
+    const isRated = adminData?.rated === 'RATED';
+    const totalRatedLaborRevenue = totalRatedLaborCost * 2;
+    const nonRateLaborRevenue = totalNonRateLaborCost * 2;
+    const revenue = isRated ? totalRatedLaborRevenue : nonRateLaborRevenue;
+    
+    const ratedGrossProfit = totalRatedLaborRevenue - totalRatedLaborCost;
+    const nonRateGrossProfit = nonRateLaborRevenue - totalNonRateLaborCost;
+    const grossProfit = isRated ? ratedGrossProfit : nonRateGrossProfit;
+    
+    const nonRateGrossMargin = nonRateLaborRevenue !== 0 ? (nonRateGrossProfit / nonRateLaborRevenue) * 100 : 0;
+    const grossMargin = revenue !== 0 ? (grossProfit / revenue) * 100 : 0;
 
-  const grossProfit = totalLaborRevenue - (totalRatedHourCost + totalNonRatedHourCost);
-  const grossMargin = totalLaborRevenue !== 0 ? (grossProfit / totalLaborRevenue) * 100 : 0;
-
-  const laborCostSummary: LaborCostSummary = {
-    totalNonRateLaborCost: totalNonRatedHourCost,
-    totalRatedLaborCost: totalRatedHourCost,
-    totalRatedLaborRevenue: totalRatedHourCost * 2,
-    revenue: totalLaborRevenue,
-    grossProfit: grossProfit,
-    grossMargin: grossMargin,
-    nonRateLaborRevenue: nonRateLaborRevenue,
-    nonRateGrossProfit: nonRateLaborRevenue - totalNonRatedHourCost,
-    nonRateGrossMargin: nonRateLaborRevenue !== 0 ? ((nonRateLaborRevenue - totalNonRatedHourCost) / nonRateLaborRevenue) * 100 : 0,
-    ratedLaborHours: totalRatedHours,
-    nonRatedLaborHours: totalNonRatedHours
-  };
-
-  return laborCostSummary;
+    return {
+      totalRatedLaborCost,
+      totalNonRateLaborCost,
+      totalRatedLaborRevenue,
+      revenue,
+      grossProfit,
+      grossMargin,
+      nonRateLaborRevenue,
+      nonRateGrossProfit,
+      nonRateGrossMargin,
+      ratedLaborHours,
+      nonRatedLaborHours
+    };
+  } catch (error) {
+    console.error('Error calculating labor cost summary:', error);
+    return {
+      totalRatedLaborCost: 0,
+      totalNonRateLaborCost: 0,
+      totalRatedLaborRevenue: 0,
+      revenue: 0,
+      grossProfit: 0,
+      grossMargin: 0,
+      nonRateLaborRevenue: 0,
+      nonRateGrossProfit: 0,
+      nonRateGrossMargin: 0,
+      ratedLaborHours: 0,
+      nonRatedLaborHours: 0
+    };
+  }
 }
 
 interface TruckAndFuelCostSummary {
-    cost: number;
-    revenue : number;
-    grossProfit : number;
-    grossMargin : number;
+  cost: number;
+  revenue: number;
+  grossProfit: number;
+  grossMargin: number;
 }
 
 // Function to calculate truck and fuel cost summary
 export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental: MPTRentalEstimating): TruckAndFuelCostSummary {
-
-  let totalDispatchFee = 0;
-  let totalFuelCost = 0;
-
-  mptRental.phases.forEach(phase => {
-    const phaseTrips = getTotalTripsPerPhase(phase);
-    const phaseTrucks = Number(phase.numberTrucks) || 0;
-    totalDispatchFee += Number(mptRental.dispatchFee || 0) * Number(phaseTrips || 0) * Number(phaseTrucks || 0);
-    totalFuelCost += (
-      (Number(phaseTrips || 0) *
-        Number(phaseTrucks || 0) *
-        2 *
-        Number(adminData.owMileage || 0)) /
-      Number(mptRental.mpgPerTruck || 1)
-    ) * Number(adminData.fuelCostPerGallon || 0);
-  });
-
-
-
-  const grossMargin = totalFuelCost > 0 ? (totalDispatchFee / (totalFuelCost + totalDispatchFee)) * 100 : 0;
-
-  return {
-    cost: totalFuelCost,
-    revenue: totalDispatchFee + totalFuelCost,
-    grossProfit: totalDispatchFee,
-    grossMargin
-  };
+  try {
+    const phaseTotals = returnPhaseTotals(mptRental);
+    
+    const totalTruckDays = safeNumber(phaseTotals.totalTrucks) * safeNumber(phaseTotals.totalDays);
+    const totalTrips = safeNumber(phaseTotals.totalTrips);
+    const owMileage = safeNumber(adminData?.owMileage);
+    const fuelCostPerGallon = safeNumber(adminData?.fuelCostPerGallon);
+    const mpgPerTruck = safeNumber(mptRental?.mpgPerTruck) || 1;
+    const dispatchFee = safeNumber(mptRental?.dispatchFee);
+    
+    const totalMiles = totalTrips * owMileage * 2;
+    
+    const fuelCost = (totalMiles / mpgPerTruck) * fuelCostPerGallon;
+    
+    const dispatchFeeTotal = dispatchFee * totalTrips;
+    
+    const totalCost = fuelCost + dispatchFeeTotal;
+    
+    const markup = 1.1; 
+    const revenue = totalCost * markup;
+    
+    const grossProfit = revenue - totalCost;
+    const grossMargin = revenue !== 0 ? (grossProfit / revenue) * 100 : 0;
+    
+    return {
+      cost: totalCost,
+      revenue,
+      grossProfit,
+      grossMargin
+    };
+  } catch (error) {
+    console.error('Error calculating truck and fuel cost summary:', error);
+    return {
+      cost: 0,
+      revenue: 0,
+      grossProfit: 0,
+      grossMargin: 0
+    };
+  }
 }
 
 export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating): AllTotals {
-  //this gets all mpt rental stuff
-  const mptRentalStats = calculateEquipmentCostSummary(mptRental);
-  console.log(mptRentalStats)
-  //this gets all light and drum channelizer stuff
-  const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
-  console.log(lightAndDrumRentalStats)
-  //this gets all sign stuff
-  const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
-  console.log(totalSignCostStats)
-  //this gets all labor stats
-  const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
-  //this gets all truck and fuel stats
-  const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
+  
+  if (!mptRental.phases || mptRental.phases.length === 0) {
+    console.warn('No phases found in mptRental data');
+    return getEmptyTotals();
+  }
+  
+  if (!mptRental.staticEquipmentInfo || Object.keys(mptRental.staticEquipmentInfo).length === 0) {
+    console.warn('No static equipment info found');
+    return getEmptyTotals();
+  }
+  
+  try {
+    const mptRentalStats = calculateEquipmentCostSummary(mptRental);
+    const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
+    
+    const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
+    
+    const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
+    
+    const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
 
-  const mptTotalCost = mptRentalStats.depreciationCost +
-    lightAndDrumRentalStats.total.depreciationCost +
-    totalSignCostStats.HI.depreciationCost +
-    totalSignCostStats.DG.depreciationCost +
-    totalSignCostStats.Special.depreciationCost +
-    totalRatedLaborStats.totalRatedLaborCost +
-    totalRatedLaborStats.totalNonRateLaborCost +
-    (totalTruckAndFuelStats?.cost || 0);
+    const mptTotalCost = safeNumber(mptRentalStats.depreciationCost) +
+      safeNumber(lightAndDrumRentalStats.total.depreciationCost) +
+      safeNumber(totalSignCostStats.HI.depreciationCost) +
+      safeNumber(totalSignCostStats.DG.depreciationCost) +
+      safeNumber(totalSignCostStats.Special.depreciationCost) +
+      safeNumber(totalRatedLaborStats.totalRatedLaborCost) +
+      safeNumber(totalRatedLaborStats.totalNonRateLaborCost) +
+      safeNumber(totalTruckAndFuelStats?.cost);
 
-  const mptTotalRevenue = mptRentalStats.revenue +
-    lightAndDrumRentalStats.total.revenue +
-    totalSignCostStats.HI.revenue +
-    totalSignCostStats.DG.revenue +
-    totalSignCostStats.Special.revenue +
-    totalRatedLaborStats.revenue +
-    (totalTruckAndFuelStats?.revenue || 0);
+    const mptTotalRevenue = safeNumber(mptRentalStats.revenue) +
+      safeNumber(lightAndDrumRentalStats.total.revenue) +
+      safeNumber(totalSignCostStats.HI.revenue) +
+      safeNumber(totalSignCostStats.DG.revenue) +
+      safeNumber(totalSignCostStats.Special.revenue) +
+      safeNumber(totalRatedLaborStats.revenue) +
+      safeNumber(totalTruckAndFuelStats?.revenue);
 
-  const mptGrossProfit = mptRentalStats.grossProfit +
-    lightAndDrumRentalStats.total.grossProfit +
-    totalSignCostStats.HI.grossProfit +
-    totalSignCostStats.DG.grossProfit +
-    totalSignCostStats.Special.grossProfit +
-    totalRatedLaborStats.grossProfit +
-    (totalTruckAndFuelStats?.grossProfit || 0);
+    const mptGrossProfit = safeNumber(mptRentalStats.grossProfit) +
+      safeNumber(lightAndDrumRentalStats.total.grossProfit) +
+      safeNumber(totalSignCostStats.HI.grossProfit) +
+      safeNumber(totalSignCostStats.DG.grossProfit) +
+      safeNumber(totalSignCostStats.Special.grossProfit) +
+      safeNumber(totalRatedLaborStats.grossProfit) +
+      safeNumber(totalTruckAndFuelStats?.grossProfit);
 
+    const totalRevenue = mptTotalRevenue;
+    const totalGrossProfit = mptGrossProfit;
+    const mptGrossMargin = mptTotalRevenue !== 0 ? (mptGrossProfit / mptTotalRevenue) * 100 : 0;
+    const totalGrossMargin = totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
 
-  const totalRevenue = mptTotalRevenue
-  const totalGrossProfit = mptGrossProfit
+    return {
+      mptTotalCost,
+      mptTotalRevenue,
+      mptGrossProfit,
+      mptGrossMargin,
+      totalRevenue,
+      totalCost: mptTotalCost,
+      totalGrossProfit,
+      totalGrossMargin,
+    };
+  } catch (error) {
+    console.error('Error calculating totals:', error);
+    return getEmptyTotals();
+  }
+}
 
+function getEmptyTotals(): AllTotals {
   return {
-    mptTotalCost,
-    mptTotalRevenue,
-    mptGrossProfit,
-    mptGrossMargin: mptTotalRevenue !== 0 ? (mptGrossProfit / mptTotalRevenue) * 100 : 0,
-    totalRevenue,
-    totalCost: mptTotalCost,
-    totalGrossProfit,
-    totalGrossMargin: totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0,
+    mptTotalCost: 0,
+    mptTotalRevenue: 0,
+    mptGrossProfit: 0,
+    mptGrossMargin: 0,
+    totalRevenue: 0,
+    totalCost: 0,
+    totalGrossProfit: 0,
+    totalGrossMargin: 0,
   };
 }
 
