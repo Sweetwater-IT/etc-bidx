@@ -31,14 +31,10 @@ const Steps = ({
         <MUTCDSignsStep2
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
-          formData={formData}
-          setFormData={setFormData}
         />
         <TripAndLaborStep3
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
-          formData={formData}
-          setFormData={setFormData}
         />
         <BidItemsStep4
           currentStep={currentStep}
