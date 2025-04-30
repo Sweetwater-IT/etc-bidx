@@ -66,7 +66,7 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
   return (
     <EstimateProvider>
     <div className="flex gap-20 relative min-h-screen justify-between pr-12">
-      <div className="flex-1 max-w-[50vw]">
+      <div className="flex-1 max-w-[44vw]">
         <Steps formData={formData} setFormData={setFormData} currentStep={currentStep} setCurrentStep={setCurrentStep} />
       </div>
 

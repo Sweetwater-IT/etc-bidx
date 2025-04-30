@@ -614,39 +614,29 @@ const BidItemsStep4 = ({
                     <h3 className="text-base font-semibold mb-4">
                       MPT Equipment
                     </h3>
-                    <div className="grid grid-cols-12 gap-4 mb-4">
-                      <div className="col-span-4 font-medium">Item Name</div>
-                      <div className="col-span-4 font-medium">Quantity</div>
-                      <div className="col-span-4 font-medium">Cost</div>
-                    </div>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
                       {standardEquipmentList.map((equipmentKey) => (
                         equipmentKey === 'sandbag' ? (
-                          <div key={equipmentKey} className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-4">{formatLabel(equipmentKey)}</div>
-                            <div className="col-span-4">{sandbagQuantity}</div>
-                            <div className="col-span-4">
-                              ${getEquipmentPrice(equipmentKey).toFixed(2)}
-                            </div>
+                          <div key={equipmentKey} className="flex flex-col gap-2">
+                            <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
+                            <div>{sandbagQuantity}</div>
                           </div>
                         ) : (
-                          <div key={equipmentKey} className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-4">{formatLabel(equipmentKey)}</div>
-                            <div className="col-span-4">
-                              <Input
-                                type="number"
-                                min={getMinQuantity(equipmentKey)}
-                                value={getEquipmentQuantity(equipmentKey)}
-                                onChange={(e) => handleStandardInputChange(
-                                  parseFloat(e.target.value) || 0,
-                                  equipmentKey,
-                                  'quantity'
-                                )}
-                              />
-                            </div>
-                            <div className="col-span-4">
-                              ${getEquipmentPrice(equipmentKey).toFixed(2)}
-                            </div>
+                          <div key={equipmentKey} className="flex flex-col gap-2">
+                            <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                            <Input
+                              type="number"
+                              min={getMinQuantity(equipmentKey)}
+                              value={getEquipmentQuantity(equipmentKey)}
+                              onChange={(e) => handleStandardInputChange(
+                                parseFloat(e.target.value) || 0,
+                                equipmentKey,
+                                'quantity'
+                              )}
+                              className="w-1/3"
+                            />
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
                           </div>
                         )
                       ))}
@@ -671,38 +661,25 @@ const BidItemsStep4 = ({
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-12 gap-4 mb-4">
-                      <div className="col-span-3 font-medium">Item Name</div>
-                      <div className="col-span-3 font-medium">Quantity</div>
-                      <div className="col-span-2 font-medium">Cost</div>
-                      <div className="col-span-2 font-medium">Daily Price</div>
-                      {adminData?.emergencyJob && <div className="col-span-2 font-medium">Emergency Rate</div>}
-                    </div>
-                    
                     <div className="space-y-4">
                       {lightAndDrumList.map((equipmentKey) => (
-                        <div key={equipmentKey} className="grid grid-cols-12 gap-4 items-center">
-                          <div className="col-span-3">{formatLabel(equipmentKey)}</div>
-                          <div className="col-span-3">
-                            <Input
-                              type="number"
-                              min={getMinQuantity(equipmentKey)}
-                              value={getEquipmentQuantity(equipmentKey)}
-                              onChange={(e) => handleStandardInputChange(
-                                parseFloat(e.target.value) || 0,
-                                equipmentKey,
-                                'quantity'
-                              )}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            ${getEquipmentPrice(equipmentKey).toFixed(2)}
-                          </div>
-                          <div className="col-span-2">
-                            ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey)).toFixed(2)}
-                          </div>
+                        <div key={equipmentKey} className="flex flex-col gap-2">
+                          <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                          <Input
+                            type="number"
+                            min={getMinQuantity(equipmentKey)}
+                            value={getEquipmentQuantity(equipmentKey)}
+                            onChange={(e) => handleStandardInputChange(
+                              parseFloat(e.target.value) || 0,
+                              equipmentKey,
+                              'quantity'
+                            )}
+                            className="w-1/3"
+                          />
+                          <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey)).toFixed(2)}</div>
                           {adminData?.emergencyJob && (
-                            <div className="col-span-2">
+                            <div className="flex items-center gap-2">
                               <Input
                                 type="number"
                                 min={0}
@@ -718,6 +695,8 @@ const BidItemsStep4 = ({
                                     }
                                   }
                                 })}
+                                className="w-1/3"
+                                placeholder="Emergency Rate"
                               />
                             </div>
                           )}
@@ -735,7 +714,7 @@ const BidItemsStep4 = ({
                     </h3>
                     <div className="grid grid-cols-12 gap-4 mb-4">
                       <div className="col-span-3">
-                        <Label htmlFor="itemName">Item Name</Label>
+                        <Label className="mb-2" htmlFor="itemName">Item Name</Label>
                         <Input
                           id="itemName"
                           value={itemName}
@@ -744,7 +723,7 @@ const BidItemsStep4 = ({
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label htmlFor="quantity">Quantity</Label>
+                        <Label className="mb-2" htmlFor="quantity">Quantity</Label>
                         <Input
                           id="quantity"
                           type="number"
@@ -755,7 +734,7 @@ const BidItemsStep4 = ({
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label htmlFor="cost">Cost</Label>
+                        <Label className="mb-2" htmlFor="cost">Cost</Label>
                         <Input
                           id="cost"
                           type="number"
@@ -767,7 +746,7 @@ const BidItemsStep4 = ({
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label htmlFor="usefulLife">Useful Life (days)</Label>
+                        <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
                         <Input
                           id="usefulLife"
                           type="number"
