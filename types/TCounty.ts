@@ -1,4 +1,5 @@
 export type County = {
+    id: number;
     name: string;
     district: number;
     branch: string;

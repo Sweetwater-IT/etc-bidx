@@ -15,7 +15,12 @@ interface SignSummaryAccordionProps {
 }
 
 const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionProps) => {
-  const signs: (PrimarySign | SecondarySign)[] = formData.mptRental.phases[0].signs;
+  const signs: (PrimarySign | SecondarySign)[] = 
+    formData.mptRental.phases && 
+    formData.mptRental.phases.length > 0 && 
+    formData.mptRental.phases[0].signs 
+      ? formData.mptRental.phases[0].signs 
+      : [];
   const [value, setValue] = useState<string[]>([]);
 
   useEffect(() => {

@@ -1,4 +1,3 @@
-import { FormData } from "@/types/IFormData";
 import {
   Accordion,
   AccordionContent,
@@ -7,14 +6,41 @@ import {
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
 import React, { useState, useEffect } from "react";
+import { useEstimate } from "@/contexts/EstimateContext";
+
+function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
+  if (date instanceof Date) {
+    return date.toLocaleDateString();
+  }
+  
+  try {
+    return new Date(date).toLocaleDateString();
+  } catch (e) {
+    return date.toString();
+  }
+}
 
 interface AdminInformationAccordionProps {
-  formData: FormData;
   currentStep: number;
 }
 
-const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAccordionProps) => {
+const AdminInformationAccordion = ({ currentStep }: AdminInformationAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
+  const { adminData } = useEstimate();
+
+  // Calculate total days between start and end date
+  const getTotalDays = () => {
+    if (adminData.startDate && adminData.endDate) {
+      const start = new Date(adminData.startDate);
+      const end = new Date(adminData.endDate);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+    return 0;
+  };
 
   // Open accordion when currentStep is 1
   useEffect(() => {
@@ -35,29 +61,38 @@ const AdminInformationAccordion = ({ formData, currentStep }: AdminInformationAc
           <AccordionContent>
             <div className="grid grid-cols-2 gap-y-2 text-sm mt-4">
               <div className="text-muted-foreground">Contract #</div>
-              <div className="text-right">{formData.adminData.contractNumber || "-"}</div>
+              <div className="text-right">{adminData.contractNumber || "-"}</div>
               <div className="text-muted-foreground">Owner</div>
-              <div className="text-right">{formData.adminData.owner || "-"}</div>
+              <div className="text-right">{adminData.owner || "-"}</div>
               <div className="text-muted-foreground">County</div>
-              <div className="text-right">{formData.adminData.county.name || '-'}</div>
+              <div className="text-right">{adminData.county?.name || '-'}</div>
               <div className="text-muted-foreground">Branch</div>
-              <div className="text-right">{formData.adminData.county.branch || '-'}</div>
+              <div className="text-right">{adminData.county?.branch || '-'}</div>
               <div className="text-muted-foreground">Township</div>
-              <div className="text-right">{formData.adminData.location || "-"}</div>
+              <div className="text-right">{adminData.location || "-"}</div>
               <div className="text-muted-foreground">Division</div>
-              <div className="text-right">{formData.adminData.division || "-"}</div>
+              <div className="text-right">{adminData.division || "-"}</div>
               <div className="text-muted-foreground">Start Date</div>
-              <div className="text-right">{formData.adminData.startDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(adminData.startDate) || "-"}</div>
               <div className="text-muted-foreground">End Date</div>
-              <div className="text-right">{formData.adminData.endDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(adminData.endDate) || "-"}</div>
               <div className="text-muted-foreground">Total Days</div>
-              <div className="text-right">0</div>
+              <div className="text-right">{getTotalDays()}</div>
               <div className="text-muted-foreground">Bid Date</div>
-              <div className="text-right">{formData.adminData.lettingDate?.toLocaleDateString() || "-"}</div>
+              <div className="text-right">{formatDate(adminData.lettingDate) || "-"}</div>
               <div className="text-muted-foreground">SR Route</div>
-              <div className="text-right">{formData.adminData.srRoute || "-"}</div>
+              <div className="text-right">{adminData.srRoute || "-"}</div>
               <div className="text-muted-foreground">DBE %</div>
-              <div className="text-right">{formData.adminData.dbe || "%"}</div>
+              <div className="text-right">{adminData.dbe || "-"}</div>
+              
+              {(adminData.winterStart || adminData.winterEnd) && (
+                <>
+                  <div className="text-muted-foreground">Winter Start</div>
+                  <div className="text-right">{formatDate(adminData.winterStart) || "-"}</div>
+                  <div className="text-muted-foreground">Winter End</div>
+                  <div className="text-right">{formatDate(adminData.winterEnd) || "-"}</div>
+                </>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
