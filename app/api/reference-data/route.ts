@@ -22,16 +22,24 @@ export async function GET(request: NextRequest) {
         // Fetch counties with their rates
         ({ data, error } = await supabase
           .from('counties')
-          .select('id, name, labor_rate, fringe_rate, market, branch')
-          .order('name'));
-        break;
-
-      case 'branches':
-        // Fetch branches with shop rates
-        ({ data, error } = await supabase
-          .from('branches')
-          .select('id, name, shop_rate')
-          .order('name'));
+          .select(`
+            id,
+            name,
+            district,
+            branches ( id, name, shop_rate ),
+            labor_rate,
+            fringe_rate,
+            market,
+            flagging_rate,
+            insurance,
+            fuel,
+            flagging_non_rated_target_gm,
+            flagging_rated_target_gm,
+            flagging_base_rate,
+            flagging_fringe_rate
+          `)
+          .order('name')
+        );
         break;
 
       case 'users':
@@ -58,6 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (error) {
+      console.error(error)
       return NextResponse.json(
         { success: false, message: `Failed to fetch ${type}`, error: error.message },
         { status: 500 }
