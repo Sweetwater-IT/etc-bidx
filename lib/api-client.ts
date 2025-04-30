@@ -351,7 +351,7 @@ export async function fetchReferenceData(type: 'counties' | 'users' | 'owners') 
  */
 export async function fetchSignDesignations(search?: string) {
   try {
-    let url = '/api/signs';
+    const url = '/api/signs';
 
     const response = await fetch(url);
 

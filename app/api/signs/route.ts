@@ -5,15 +5,12 @@ import { supabase } from '@/lib/supabase';
 export async function GET() {
   try {
 
-    let data;
-    let error;
-
-    ({ data, error } = await supabase.
+    const { data, error } = await supabase.
       from('sign_dimension_options').
       select(`
         sign_designations (designation, description, sheeting),
         sign_dimensions (width, height)
-      `))
+      `)
 
     if (error) {
       console.error(error)
