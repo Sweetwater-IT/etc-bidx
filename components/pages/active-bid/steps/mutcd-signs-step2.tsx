@@ -105,8 +105,8 @@ const MutcdSignsStep2 = ({
 }: {
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-  formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormDat>>;
+  formData: any;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
 }) => {
   const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
   const [open, setOpen] = useState(false);
