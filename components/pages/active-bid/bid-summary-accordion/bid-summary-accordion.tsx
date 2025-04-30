@@ -48,7 +48,7 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
       grossProfit: allTotals.mptGrossProfit,
       grossMargin: allTotals.mptGrossMargin
     })
-  }, [])
+  }, [adminData, mptRental])
 
 
   useEffect(() => {
