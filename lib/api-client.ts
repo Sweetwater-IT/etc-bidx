@@ -346,15 +346,12 @@ export async function fetchReferenceData(type: 'counties' | 'users' | 'owners') 
 }
 
 /**
- * Fetch sign designations with their available dimensions
+ * Fetch sign designations with their corresponding dimension options
  * @param search Optional search term to filter designations
  */
 export async function fetchSignDesignations(search?: string) {
   try {
-    let url = '/api/signs?type=designations';
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
+    let url = '/api/signs';
 
     const response = await fetch(url);
 
@@ -366,24 +363,6 @@ export async function fetchSignDesignations(search?: string) {
     return data.data;
   } catch (error) {
     console.error('Error fetching sign designations:', error);
-    return [];
-  }
-}
-
-export async function fetchSignDimensions(designationId: number | string) {
-  try {
-    const url = `/api/signs?type=dimensions&designationId=${designationId}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch sign dimensions: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error fetching sign dimensions:', error);
     return [];
   }
 }

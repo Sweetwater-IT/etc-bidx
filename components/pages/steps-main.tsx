@@ -16,38 +16,7 @@ interface StepsMainProps {
 
 const StepsMain = ({ initialData }: StepsMainProps) => {
   const defaultFormData: FormData = {
-    adminData: {
-      contractNumber: '',
-      estimator: '',
-      division: null,
-      lettingDate: null,
-      owner: null,
-      county: {
-        id: 0,
-        name: '',
-        district: 0,
-        branch: '',
-        laborRate: 0,
-        fringeRate: 0,
-        shopRate: 0,
-        flaggingRate: 0,
-        flaggingBaseRate: 0,
-        flaggingFringeRate: 0,
-        ratedTargetGM: 0,
-        nonRatedTargetGM: 0,
-        insurance: 0,
-        fuel: 0,
-        market: 'CORE'
-      },
-      srRoute: '',
-      location: '',
-      dbe: '',
-      startDate: null,
-      endDate: null,
-      emergencyJob: false,
-      rated: 'NON-RATED',
-      emergencyFields: {}
-    },
+    adminData: defaultAdminObject,
     mptRental: {
       targetMOIC: 0,
       paybackPeriod: 0,
@@ -104,7 +73,7 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
       {/* Preview Cards */}
       <div className="w-80 space-y-4 sticky top-10 h-fit">
         <AdminInformationAccordion currentStep={currentStep} />
-        <SignSummaryAccordion formData={formData} currentStep={currentStep} />
+        <SignSummaryAccordion currentStep={currentStep} />
         <TripAndLaborSummaryAccordion currentStep={currentStep}/>
         <BidSummaryAccordion formData={formData} currentStep={currentStep} />
       </div>

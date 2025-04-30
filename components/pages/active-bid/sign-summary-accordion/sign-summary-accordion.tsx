@@ -1,4 +1,3 @@
-import { FormData } from "@/types/IFormData";
 import {
   Accordion,
   AccordionContent,
@@ -8,20 +7,22 @@ import {
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 interface SignSummaryAccordionProps {
-  formData: FormData;
   currentStep: number;
 }
 
-const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionProps) => {
-  const signs: (PrimarySign | SecondarySign)[] = 
-    formData.mptRental.phases && 
-    formData.mptRental.phases.length > 0 && 
-    formData.mptRental.phases[0].signs 
-      ? formData.mptRental.phases[0].signs 
-      : [];
+const SignSummaryAccordion = ({ currentStep }: SignSummaryAccordionProps) => {
+  const { mptRental } = useEstimate();
   const [value, setValue] = useState<string[]>([]);
+
+  const signs: (PrimarySign | SecondarySign)[] = 
+    mptRental.phases && 
+    mptRental.phases.length > 0 && 
+    mptRental.phases[0].signs 
+      ? mptRental.phases[0].signs 
+      : [];
 
   useEffect(() => {
     if (currentStep === 2) {
@@ -30,6 +31,17 @@ const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionPro
       setValue([]);
     }
   }, [currentStep]);
+
+  // Function to display associated structure in a readable format
+  const formatStructure = (structure: string): string => {
+    switch(structure) {
+      case 'fourFootTypeIII': return '4\' Type III';
+      case 'hStand': return 'H Stand';
+      case 'post': return 'Post';
+      case 'none': return 'None';
+      default: return structure;
+    }
+  };
 
   return (
     <Card className="p-4">
@@ -47,19 +59,54 @@ const SignSummaryAccordion = ({ formData, currentStep }: SignSummaryAccordionPro
               ) : (
                 signs.map((sign) => (
                   <div key={sign.id} className="space-y-1">
-                    <div className="font-medium">{sign.designation}</div>
+                    <div className="font-medium">
+                      {sign.designation} 
+                      {sign.description && ` - ${sign.description}`}
+                    </div>
                     <div className="text-muted-foreground text-xs space-x-2">
-                      {/* {sign.dimensions && <span>{sign.dimensions}</span>} */}
+                      {sign.width && sign.height && (
+                        <span>{sign.width} x {sign.height}</span>
+                      )}
                       {sign.sheeting && <span>• {sign.sheeting}</span>}
                       {sign.quantity && <span>• Qty: {sign.quantity}</span>}
-                      {/* {sign.structure && sign.structure !== "None" && <span>• {sign.structure}</span>}
-                      {sign.bLights ? <span>• B Lights: {sign.bLights}</span> : null}
-                      {sign.covers ? <span>• Covers: {sign.covers}</span> : null} */}
+                      {"associatedStructure" in sign && sign.associatedStructure !== "none" && (
+                        <span>• Structure: {formatStructure(sign.associatedStructure)}</span>
+                      )}
+                      {"bLights" in sign && sign.bLights > 0 && (
+                        <span>• B Lights: {sign.bLights}</span>
+                      )}
+                      {"covers" in sign && sign.covers > 0 && (
+                        <span>• Covers: {sign.covers}</span>
+                      )}
+                      {"primarySignId" in sign && (
+                        <span className="italic">• Secondary Sign</span>
+                      )}
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {/* Equipment Summary based on signs */}
+            {signs.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="font-medium mb-2">Equipment Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {mptRental.phases?.[0]?.standardEquipment && 
+                   Object.entries(mptRental.phases[0].standardEquipment)
+                    .filter(([_, details]) => details.quantity > 0)
+                    .map(([key, details]) => (
+                      <div key={key} className="flex justify-between">
+                        <span>{key === 'fourFootTypeIII' ? '4\' Type III' : 
+                               key === 'hStand' ? 'H Stand' : 
+                               key === 'BLights' ? 'B Lights' : key}</span>
+                        <span className="font-medium">{details.quantity}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>
