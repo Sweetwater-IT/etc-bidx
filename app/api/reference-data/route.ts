@@ -41,6 +41,17 @@ export async function GET(request: NextRequest) {
           .order('name')
         );
         break;
+      
+      case 'mpt equipment':
+        ({ data, error} = await supabase
+          .from('items')
+          .select(`
+            name,
+            price,
+            depreciation_rate_useful_life,
+            payback_period
+          `))
+        break;
 
       case 'users':
         // Fetch users for estimator dropdown

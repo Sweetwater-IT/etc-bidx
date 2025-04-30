@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 interface ViewBidSummarySheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formData: FormData;
 }
 
 export function ViewBidSummarySheet({
   open,
   onOpenChange,
-  formData,
 }: ViewBidSummarySheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

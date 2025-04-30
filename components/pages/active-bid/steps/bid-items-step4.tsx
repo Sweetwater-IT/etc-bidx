@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { 
-  Plus 
+  Plus,
+  Loader
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -18,12 +19,23 @@ import {
   Phase, 
   SheetingType 
 } from "@/types/MPTEquipment";
+import { safeNumber } from "@/lib/safe-number";
+import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
+import { fetchReferenceData } from "@/lib/api-client";
 
 const step = {
   id: "step-4",
   name: "Bid Items",
   description: "Configure bid items",
 };
+
+// Default values for payback calculations and truck/fuel data
+const DEFAULT_PAYBACK_PERIOD = 5; // 5 years
+const DEFAULT_MPG_PER_TRUCK = 8;
+const DEFAULT_FUEL_MULTIPLIER = 1;
+const DEFAULT_DISPATCH_FEE = 75;
+const DEFAULT_ANNUAL_UTILIZATION = 0.75;
+const DEFAULT_TARGET_MOIC = 2;
 
 // Mapping for equipment labels
 const labelMapping: Record<string, string> = {
@@ -61,34 +73,21 @@ const lightAndDrumList: EquipmentType[] = [
   "sharps"
 ];
 
-// Helper functions
-const safeNumber = (value: any): number => {
-  if (typeof value === 'number' && !isNaN(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = parseFloat(value);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
-};
+// Sign mapping for database names and sheeting types
+interface SignMapping {
+  key: SheetingType;
+  label: string;
+  dbName: string;
+}
+
+const signList: SignMapping[] = [
+  { key: 'HI', label: 'HI', dbName: 'HI Signs' },
+  { key: 'DG', label: 'DG', dbName: 'DG Signs' },
+  { key: 'Special', label: 'Special', dbName: 'Special Signs' }
+];
 
 const formatLabel = (key: string) => {
   return labelMapping[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
-};
-
-// Placeholder calculation functions - replace with actual implementations
-const getAssociatedSignEquipment = (phase: Phase) => {
-  return {
-    bLights: 0,
-    acLights: 0,
-    cover: 0,
-    type3: 0,
-    hStand: 0,
-    post: 0
-  };
-};
-
-const calculateLightDailyRateCosts = (mptRental: any, cost: number) => {
-  return cost / 365; // Simple placeholder calculation
 };
 
 const BidItemsStep4 = ({
@@ -107,23 +106,301 @@ const BidItemsStep4 = ({
     usefulLife: 0
   });
   const [itemName, setItemName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const currentPhase = 0; // Using first phase as default
   
   // Fetch equipment data
   useEffect(() => {
-    const fetchEquipmentPrice = async () => {
+    const initializeEquipmentData = async () => {
+      setIsLoading(true);
+      
       try {
-        // Mock API call or actual implementation
-        // Replace with actual API calls if available
-        console.log("Fetching equipment pricing data...");
-        // In a real implementation, you would call your API and update the context
+        // Set default values for truck and fuel costs
+        dispatch({
+          type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
+          payload: { key: 'mpgPerTruck', value: DEFAULT_MPG_PER_TRUCK }
+        });
+        
+        dispatch({
+          type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
+          payload: { key: 'dispatchFee', value: DEFAULT_DISPATCH_FEE }
+        });
+        
+        // Set default values for payback calculations
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'targetMOIC', value: DEFAULT_TARGET_MOIC }
+        });
+        
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'paybackPeriod', value: DEFAULT_PAYBACK_PERIOD }
+        });
+        
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'annualUtilization', value: DEFAULT_ANNUAL_UTILIZATION }
+        });
+        
+        // Fetch equipment data from API
+        const equipmentData = await fetchReferenceData('mpt equipment');
+        
+        if (Array.isArray(equipmentData)) {
+          // Process regular equipment data
+          equipmentData.forEach(item => {
+            if (!item) return;
+            
+            // Find matching equipment type
+            const equipmentType = getEquipmentTypeFromName(item.name);
+            if (!equipmentType) return;
+            
+            // Update price
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'price', 
+                value: parseFloat(item.price) || 0 
+              },
+            });
+            
+            // Update useful life
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'usefulLife', 
+                value: item.depreciation_rate_useful_life || 365 
+              },
+            });
+            
+            // Update payback period (using default if not available)
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'paybackPeriod', 
+                value: item.payback_period || DEFAULT_PAYBACK_PERIOD 
+              },
+            });
+            
+            // Update discount rate if available
+            if (item.discount_rate !== undefined) {
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: equipmentType, 
+                  property: 'discountRate', 
+                  value: parseFloat(item.discount_rate) || 0 
+                },
+              });
+            }
+          });
+          
+          // Process sign data separately
+          signList.forEach(sign => {
+            const matchedItem = equipmentData.find((item: any) => item.name === sign.dbName);
+            if (matchedItem) {
+              const price = parseFloat(matchedItem.price);
+              
+              // Update price
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'price', 
+                  value: price 
+                },
+              });
+              
+              // Update useful life
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'usefulLife', 
+                  value: matchedItem.depreciation_rate_useful_life || 365 
+                },
+              });
+              
+              // Update payback period
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'paybackPeriod', 
+                  value: matchedItem.payback_period || DEFAULT_PAYBACK_PERIOD 
+                },
+              });
+              
+              // Update discount rate if available
+              if (matchedItem.discount_rate) {
+                dispatch({
+                  type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                  payload: { 
+                    type: sign.key, 
+                    property: 'discountRate', 
+                    value: parseFloat(matchedItem.discount_rate) || 0 
+                  },
+                });
+              }
+            } else {
+              console.warn(`No matching sign data found for database name: ${sign.dbName}`);
+              
+              // Set default values for signs if not found
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'price', 
+                  value: getDefaultSignPrice(sign.key)
+                },
+              });
+              
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'usefulLife', 
+                  value: 365 // 1 year default
+                },
+              });
+              
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'paybackPeriod', 
+                  value: DEFAULT_PAYBACK_PERIOD
+                },
+              });
+            }
+          });
+        }
       } catch (error) {
-        console.error('Error fetching equipment data:', error);
+        console.error('Error initializing equipment data:', error);
+        
+        // Set default values for all equipment types in case of error
+        [...standardEquipmentList, ...lightAndDrumList].forEach(equipmentType => {
+          // Set default price (placeholder)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'price', 
+              value: getDefaultPrice(equipmentType)
+            },
+          });
+          
+          // Set default useful life (365 days = 1 year)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'usefulLife', 
+              value: 365 
+            },
+          });
+          
+          // Set default payback period
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'paybackPeriod', 
+              value: DEFAULT_PAYBACK_PERIOD 
+            },
+          });
+        });
+        
+        // Set default values for signs
+        signList.forEach(sign => {
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'price', 
+              value: getDefaultSignPrice(sign.key)
+            },
+          });
+          
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'usefulLife', 
+              value: 365 
+            },
+          });
+          
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'paybackPeriod', 
+              value: DEFAULT_PAYBACK_PERIOD 
+            },
+          });
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchEquipmentPrice();
-  }, []);
+    initializeEquipmentData();
+  }, [dispatch]);
+  
+  // Helper function to map API item name to equipment type
+  const getEquipmentTypeFromName = (name: string): EquipmentType | null => {
+    // Map database names to equipment types
+    const nameToType: Record<string, EquipmentType> = {
+      "4' Ft Type III": "fourFootTypeIII",
+      "H Stands": "hStand",
+      "Posts 12ft": "post",
+      "6 Ft Wings": "sixFootWings",
+      "SL Metal Stands": "metalStands",
+      "Covers": "covers",
+      "Sand bag": "sandbag",
+      "HI Vertical Panels": "HIVP",
+      "Type XI Vertical Panels": "TypeXIVP",
+      "B-Lites": "BLights",
+      "A/C-Lites": "ACLights",
+      "Sharps": "sharps",
+    };
+    
+    return nameToType[name] || null;
+  };
+  
+  // Helper function to get default price for equipment type (fallback values)
+  const getDefaultPrice = (equipmentType: EquipmentType): number => {
+    const defaultPrices: Record<string, number> = {
+      fourFootTypeIII: 200,
+      hStand: 150,
+      post: 100,
+      sixFootWings: 180,
+      metalStands: 120,
+      covers: 50,
+      sandbag: 10,
+      HIVP: 80,
+      TypeXIVP: 90,
+      BLights: 70,
+      ACLights: 120,
+      sharps: 60
+    };
+    
+    return defaultPrices[equipmentType] || 100;
+  };
+  
+  // Helper function to get default price for sign sheeting types
+  const getDefaultSignPrice = (sheetingType: SheetingType): number => {
+    const defaultSignPrices: Record<SheetingType, number> = {
+      HI: 150,
+      DG: 120,
+      Special: 200
+    };
+    
+    return defaultSignPrices[sheetingType] || 150;
+  };
   
   // Calculate sandbag quantity based on equipment
   useEffect(() => {
@@ -150,7 +427,9 @@ const BidItemsStep4 = ({
   }, [
     mptRental?.phases?.[currentPhase]?.standardEquipment?.fourFootTypeIII?.quantity, 
     mptRental?.phases?.[currentPhase]?.standardEquipment?.hStand?.quantity, 
-    mptRental?.phases?.[currentPhase]?.standardEquipment?.sixFootWings?.quantity
+    mptRental?.phases?.[currentPhase]?.standardEquipment?.sixFootWings?.quantity,
+    dispatch,
+    currentPhase
   ]);
   
   // Handle equipment input changes
@@ -250,7 +529,7 @@ const BidItemsStep4 = ({
         return 0;
     }
   };
-
+  
   return (
     <div>
       <div className="relative">
@@ -296,12 +575,6 @@ const BidItemsStep4 = ({
                   MPT
                 </TabsTrigger>
                 <TabsTrigger
-                  value="light-drum"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Light & Drum Rental
-                </TabsTrigger>
-                <TabsTrigger
                   value="equipment"
                   className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
                 >
@@ -333,9 +606,10 @@ const BidItemsStep4 = ({
                 </TabsTrigger>
               </TabsList>
 
-              {/* MPT Equipment Tab */}
+              {/* MPT Equipment Tab (combined with Light & Drum) */}
               <TabsContent value="mpt" className="mt-6">
-                <div className="space-y-6">
+                <div className="space-y-8">
+                  {/* MPT Equipment Section */}
                   <div>
                     <h3 className="text-base font-semibold mb-4">
                       MPT Equipment
@@ -378,12 +652,10 @@ const BidItemsStep4 = ({
                       ))}
                     </div>
                   </div>
-                </div>
-              </TabsContent>
 
-              {/* Light and Drum Rental Tab */}
-              <TabsContent value="light-drum" className="mt-6">
-                <div className="space-y-6">
+                  <Separator className="my-6" />
+
+                  {/* Light and Drum Rental Section */}
                   <div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-base font-semibold">
