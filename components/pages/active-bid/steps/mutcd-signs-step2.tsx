@@ -1,6 +1,5 @@
 "use client";
 
-import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,7 +106,7 @@ const MutcdSignsStep2 = ({
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  setFormData: React.Dispatch<React.SetStateAction<FormDat>>;
 }) => {
   const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
   const [open, setOpen] = useState(false);
