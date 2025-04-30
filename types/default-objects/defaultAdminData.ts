@@ -8,6 +8,7 @@ export const defaultAdminObject: AdminData = {
     lettingDate: null,
     owner: null,
     county: {
+        id: 0,
         name: '',
         district: 0,
         branch: '',
