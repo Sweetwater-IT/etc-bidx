@@ -27,8 +27,6 @@ const Steps = ({
         <AdminInformationStep1
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
-          formData={formData}
-          setFormData={setFormData}
         />
         <MUTCDSignsStep2
           currentStep={currentStep}
