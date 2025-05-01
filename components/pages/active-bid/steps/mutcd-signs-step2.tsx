@@ -329,41 +329,15 @@ const MutcdSignsStep2 = ({
           const height = parseFloat(dimensionParts[1].trim());
 
           if (!isNaN(width) && !isNaN(height)) {
-            // Update both width and height at once
+            // Update both width and height at once in local state only
             const updatedSigns = signs.map((sign) => {
               if (sign.id === id) {
                 return { ...sign, width, height };
               }
               return sign;
             });
-
             setSigns(updatedSigns);
-
-            // Update context for both dimensions
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "width",
-                value: width,
-              },
-            });
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "height",
-                value: height,
-              },
-            });
-          } else {
-            console.error("Failed to parse dimension values:", dimensionParts);
           }
-        } else {
-          console.error("Invalid dimension format:", value);
         }
       } catch (error) {
         console.error("Error handling dimension selection:", error);
@@ -371,31 +345,13 @@ const MutcdSignsStep2 = ({
       return;
     }
 
-    try {
-      // Regular field update
-      const updatedSigns = signs.map((sign) =>
-        sign.id === id ? { ...sign, [field]: value } : sign
-      );
+    // Regular field update - only update local state
+    const updatedSigns = signs.map((sign) =>
+      sign.id === id ? { ...sign, [field]: value } : sign
+    );
+    setSigns(updatedSigns);
 
-      setSigns(updatedSigns);
-
-      // Update context for the field, but only if it's not dimensionSelection
-      if (field !== "dimensionSelection") {
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: field,
-            value: value,
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Error updating sign:", error);
-    }
-
-    // If designation changed, update other related fields
+    // If designation changed, update other related fields in local state only
     if (field === "designation") {
       try {
         const selectedDesignation = designationData.find(
@@ -409,7 +365,7 @@ const MutcdSignsStep2 = ({
           ) {
             const { width, height } = selectedDesignation.dimensions[0];
 
-            // Update local state
+            // Update local state only
             const updatedWithDimensions = signs.map((sign) =>
               sign.id === id
                 ? {
@@ -422,47 +378,6 @@ const MutcdSignsStep2 = ({
                 : sign
             );
             setSigns(updatedWithDimensions);
-
-            // Update context for each field
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "width",
-                value: width,
-              },
-            });
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "height",
-                value: height,
-              },
-            });
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "sheeting",
-                value: selectedDesignation.sheeting,
-              },
-            });
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "description",
-                value: selectedDesignation.description,
-              },
-            });
           } else {
             // If multiple dimensions, update just the sheeting and description
             const updatedWithExtra = signs.map((sign) =>
@@ -475,26 +390,6 @@ const MutcdSignsStep2 = ({
                 : sign
             );
             setSigns(updatedWithExtra);
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "sheeting",
-                value: selectedDesignation.sheeting,
-              },
-            });
-
-            dispatch({
-              type: "UPDATE_MPT_SIGN",
-              payload: {
-                phase: currentPhase,
-                signId: id,
-                key: "description",
-                value: selectedDesignation.description,
-              },
-            });
           }
         }
       } catch (error) {
@@ -508,122 +403,40 @@ const MutcdSignsStep2 = ({
       const signToSave = signs.find((sign) => sign.id === id);
       if (!signToSave) return;
 
-      // Check if this is a new sign or an update
+      // Remove isConfiguring from the sign object
+      const { isConfiguring, ...signWithoutConfiguring } = signToSave;
+
+      // Update local state first - completely replace the signs array
+      const newSigns = signs.map(sign => 
+        sign.id === id ? signWithoutConfiguring : sign
+      );
+      setSigns(newSigns);
+
+      // Then update context
       const isNewSign = !mptRental?.phases?.[currentPhase]?.signs?.some(
         (s) => s.id === id
       );
 
       if (isNewSign) {
-        // For new signs, use ADD_MPT_SIGN
+        // For new signs, add without isConfiguring
         dispatch({
           type: "ADD_MPT_SIGN",
           payload: {
             phaseNumber: currentPhase,
-            sign: signToSave,
+            sign: signWithoutConfiguring,
           },
         });
+        setIsAddingSign(true);
       } else {
-        // For existing signs, update all fields
+        // For existing signs, update all fields at once
         dispatch({
-          type: "UPDATE_MPT_SIGN",
+          type: "ADD_BATCH_MPT_SIGNS",
           payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "width",
-            value: signToSave.width,
+            phaseNumber: currentPhase,
+            signs: newSigns,
           },
         });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "height",
-            value: signToSave.height,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "sheeting",
-            value: signToSave.sheeting,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "quantity",
-            value: signToSave.quantity,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "bLights",
-            value: signToSave.bLights,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "covers",
-            value: signToSave.covers,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "description",
-            value: signToSave.description,
-          },
-        });
-
-        dispatch({
-          type: "UPDATE_MPT_SIGN",
-          payload: {
-            phase: currentPhase,
-            signId: id,
-            key: "designation",
-            value: signToSave.designation,
-          },
-        });
-
-        if ("associatedStructure" in signToSave) {
-          dispatch({
-            type: "UPDATE_MPT_SIGN",
-            payload: {
-              phase: currentPhase,
-              signId: id,
-              key: "associatedStructure",
-              value: signToSave.associatedStructure,
-            },
-          });
-        }
       }
-
-      // Mark as not configuring after saving
-      setSigns(
-        signs.map((sign) =>
-          sign.id === id ? { ...sign, isConfiguring: false } : sign
-        )
-      );
-      setIsAddingSign(true);
     } catch (error) {
       console.error("Error saving sign:", error);
     }
