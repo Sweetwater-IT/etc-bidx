@@ -86,27 +86,6 @@ const SignSummaryAccordion = ({ currentStep }: SignSummaryAccordionProps) => {
                 ))
               )}
             </div>
-
-            {/* Equipment Summary based on signs */}
-            {signs.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <h4 className="font-medium mb-2">Equipment Summary</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {mptRental.phases?.[0]?.standardEquipment && 
-                   Object.entries(mptRental.phases[0].standardEquipment)
-                    .filter(([_, details]) => details.quantity > 0)
-                    .map(([key, details]) => (
-                      <div key={key} className="flex justify-between">
-                        <span>{key === 'fourFootTypeIII' ? '4\' Type III' : 
-                               key === 'hStand' ? 'H Stand' : 
-                               key === 'BLights' ? 'B Lights' : key}</span>
-                        <span className="font-medium">{details.quantity}</span>
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>
