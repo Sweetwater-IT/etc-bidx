@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { GlobalLoading } from "@/components/global-loading";
 import { Toaster } from "@/components/ui/sonner";
+import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,9 +38,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <GlobalLoading />
-          <Toaster />
+          <MantineProvider
+            theme={{
+              primaryColor: 'blue',
+              fontFamily: 'var(--font-geist-sans)',
+            }}
+          >
+            <Notifications position="top-right" />
+            {children}
+            <GlobalLoading />
+            <Toaster />
+          </MantineProvider>
         </ThemeProvider>
       </body>
     </html>
