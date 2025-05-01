@@ -1,1390 +1,900 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import React, { useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Plus,
+  Loader
+} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useEstimate } from "@/contexts/EstimateContext";
+import { 
+  EquipmentType, 
+  DynamicEquipmentInfo, 
+  CustomLightAndDrumItem, 
+  Phase, 
+  SheetingType 
+} from "@/types/MPTEquipment";
+import { safeNumber } from "@/lib/safe-number";
+import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
+import { fetchReferenceData } from "@/lib/api-client";
 
-interface MPTData {
-    mptEquipment: {
-        typeIII: number;
-        wings: number;
-        hStands: number;
-        posts: number;
-        covers: number;
-        metalStands: number;
-        sandbags: number;
-    };
-    lightAndDrum: {
-        hiVerticalPanels: number;
-        typeXIVerticalPanels: number;
-        bLights: number;
-        acLights: number;
-    };
+const step = {
+  id: "step-4",
+  name: "Bid Items",
+  description: "Configure bid items",
+};
+
+// Default values for payback calculations and truck/fuel data
+const DEFAULT_PAYBACK_PERIOD = 5; // 5 years
+const DEFAULT_MPG_PER_TRUCK = 8;
+const DEFAULT_FUEL_MULTIPLIER = 1;
+const DEFAULT_DISPATCH_FEE = 75;
+const DEFAULT_ANNUAL_UTILIZATION = 0.75;
+const DEFAULT_TARGET_MOIC = 2;
+
+// Mapping for equipment labels
+const labelMapping: Record<string, string> = {
+  fourFootTypeIII: "Four Foot Type III",
+  hStand: "H Stand",
+  post: "Post",
+  sandbag: "Sandbags",
+  sixFootWings: "Six Foot Wings",
+  metalStands: "Metal Stands",
+  covers: "Covers",
+  HIVP: "HI Vertical Panels",
+  TypeXIVP: "Type XI Vertical Panels",
+  BLights: "B-Lights",
+  ACLights: "AC Lights",
+  sharps: "Sharps"
+};
+
+// Standard equipment list
+const standardEquipmentList: EquipmentType[] = [
+  "fourFootTypeIII",
+  "hStand",
+  "post",
+  "sixFootWings",
+  "metalStands",
+  "covers",
+  "sandbag"
+];
+
+// Light and drum list
+const lightAndDrumList: EquipmentType[] = [
+  "HIVP",
+  "TypeXIVP",
+  "BLights",
+  "ACLights",
+  "sharps"
+];
+
+// Sign mapping for database names and sheeting types
+interface SignMapping {
+  key: SheetingType;
+  label: string;
+  dbName: string;
 }
 
-interface EquipmentRentalData {
-    arrowBoard: {
-        type25: number;
-        type75: number;
-        solarAssist: number;
-    };
-    messageBoard: {
-        fullSize: number;
-        miniSize: number;
-        radar: number;
-    };
-    attenuator: {
-        standard: number;
-        smart: number;
-    };
-    trailer: {
-        equipment: number;
-        storage: number;
-        arrow: number;
-        light: number;
-    };
-}
+const signList: SignMapping[] = [
+  { key: 'HI', label: 'HI', dbName: 'HI Signs' },
+  { key: 'DG', label: 'DG', dbName: 'DG Signs' },
+  { key: 'Special', label: 'Special', dbName: 'Special Signs' }
+];
 
-interface PermanentSignsData {
-    regulatory: {
-        stop: number;
-        yield: number;
-        speedLimit: number;
-        noParking: number;
-        oneWay: number;
-        doNotEnter: number;
-    };
-    warning: {
-        pedestrian: number;
-        school: number;
-        merge: number;
-        curve: number;
-        intersection: number;
-    };
-    guide: {
-        street: number;
-        highway: number;
-        mile: number;
-        exit: number;
-        directional: number;
-    };
-    custom: {
-        size: string;
-        quantity: number;
-        description: string;
-    };
-}
-
-interface FlaggingData {
-    services: {
-        trafficControl: number;
-        policeDetail: number;
-        uniformedFlagger: number;
-        trafficSupervisor: number;
-    };
-    equipment: {
-        radioUnit: number;
-        safetyVest: number;
-        stopSlowPaddle: number;
-        flags: number;
-    };
-}
-
-interface SaleItemsData {
-    materials: {
-        concrete: number;
-        asphalt: number;
-        gravel: number;
-        sand: number;
-    };
-    tools: {
-        shovels: number;
-        rakes: number;
-        wheelbarrows: number;
-        safetyCones: number;
-    };
-    supplies: {
-        paint: number;
-        markers: number;
-        tape: number;
-        signs: number;
-    };
-}
-
-interface PatternsData {
-    pavement: {
-        milling: number;
-        overlay: number;
-        fullDepth: number;
-        patching: number;
-    };
-    markings: {
-        thermoplastic: number;
-        paint: number;
-        epoxy: number;
-        preformed: number;
-    };
-    configurations: {
-        laneClosure: number;
-        shoulderWork: number;
-        intersection: number;
-        workZone: number;
-    };
-}
+const formatLabel = (key: string) => {
+  return labelMapping[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
+};
 
 const BidItemsStep4 = ({
-    currentStep,
-    setCurrentStep
+  currentStep,
+  setCurrentStep,
 }: {
-    currentStep: number;
-    setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }) => {
-    const [activeTab, setActiveTab] = useState("mpt");
-    const [mptData, setMptData] = useState<MPTData>({
-        mptEquipment: {
-            typeIII: 0,
-            wings: 0,
-            hStands: 0,
-            posts: 0,
-            covers: 0,
-            metalStands: 0,
-            sandbags: 0,
-        },
-        lightAndDrum: {
-            hiVerticalPanels: 0,
-            typeXIVerticalPanels: 0,
-            bLights: 0,
-            acLights: 0,
-        },
-    });
-
-    const [equipmentRental, setEquipmentRental] = useState<EquipmentRentalData>({
-        arrowBoard: {
-            type25: 0,
-            type75: 0,
-            solarAssist: 0,
-        },
-        messageBoard: {
-            fullSize: 0,
-            miniSize: 0,
-            radar: 0,
-        },
-        attenuator: {
-            standard: 0,
-            smart: 0,
-        },
-        trailer: {
-            equipment: 0,
-            storage: 0,
-            arrow: 0,
-            light: 0,
-        },
-    });
-
-    const [permanentSigns, setPermanentSigns] = useState<PermanentSignsData>({
-        regulatory: {
-            stop: 0,
-            yield: 0,
-            speedLimit: 0,
-            noParking: 0,
-            oneWay: 0,
-            doNotEnter: 0,
-        },
-        warning: {
-            pedestrian: 0,
-            school: 0,
-            merge: 0,
-            curve: 0,
-            intersection: 0,
-        },
-        guide: {
-            street: 0,
-            highway: 0,
-            mile: 0,
-            exit: 0,
-            directional: 0,
-        },
-        custom: {
-            size: '',
-            quantity: 0,
-            description: '',
-        },
-    });
-
-    const [flagging, setFlagging] = useState<FlaggingData>({
-        services: {
-            trafficControl: 0,
-            policeDetail: 0,
-            uniformedFlagger: 0,
-            trafficSupervisor: 0,
-        },
-        equipment: {
-            radioUnit: 0,
-            safetyVest: 0,
-            stopSlowPaddle: 0,
-            flags: 0,
-        },
-    });
-
-    const [saleItems, setSaleItems] = useState<SaleItemsData>({
-        materials: {
-            concrete: 0,
-            asphalt: 0,
-            gravel: 0,
-            sand: 0,
-        },
-        tools: {
-            shovels: 0,
-            rakes: 0,
-            wheelbarrows: 0,
-            safetyCones: 0,
-        },
-        supplies: {
-            paint: 0,
-            markers: 0,
-            tape: 0,
-            signs: 0,
-        },
-    });
-
-    const [patterns, setPatterns] = useState<PatternsData>({
-        pavement: {
-            milling: 0,
-            overlay: 0,
-            fullDepth: 0,
-            patching: 0,
-        },
-        markings: {
-            thermoplastic: 0,
-            paint: 0,
-            epoxy: 0,
-            preformed: 0,
-        },
-        configurations: {
-            laneClosure: 0,
-            shoulderWork: 0,
-            intersection: 0,
-            workZone: 0,
-        },
-    });
-
-    const handleMPTInputChange = (section: 'mptEquipment' | 'lightAndDrum', field: string, value: string) => {
-        const numValue = value === '' ? 0 : parseInt(value, 10);
-        if (isNaN(numValue) || numValue < 0) return;
-
-        setMptData(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue
+  const { mptRental, adminData, dispatch } = useEstimate();
+  const [activeTab, setActiveTab] = useState("mpt");
+  const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
+  const [newCustomItem, setNewCustomItem] = useState<Omit<CustomLightAndDrumItem, 'id'>>({
+    quantity: 0,
+    cost: 0,
+    usefulLife: 0
+  });
+  const [itemName, setItemName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const currentPhase = 0; // Using first phase as default
+  
+  // Fetch equipment data
+  useEffect(() => {
+    const initializeEquipmentData = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Set default values for truck and fuel costs
+        dispatch({
+          type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
+          payload: { key: 'mpgPerTruck', value: DEFAULT_MPG_PER_TRUCK }
+        });
+        
+        dispatch({
+          type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
+          payload: { key: 'dispatchFee', value: DEFAULT_DISPATCH_FEE }
+        });
+        
+        // Set default values for payback calculations
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'targetMOIC', value: DEFAULT_TARGET_MOIC }
+        });
+        
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'paybackPeriod', value: DEFAULT_PAYBACK_PERIOD }
+        });
+        
+        dispatch({
+          type: 'UPDATE_PAYBACK_CALCULATIONS',
+          payload: { key: 'annualUtilization', value: DEFAULT_ANNUAL_UTILIZATION }
+        });
+        
+        // Fetch equipment data from API
+        const equipmentData = await fetchReferenceData('mpt equipment');
+        
+        if (Array.isArray(equipmentData)) {
+          // Process regular equipment data
+          equipmentData.forEach(item => {
+            if (!item) return;
+            
+            // Find matching equipment type
+            const equipmentType = getEquipmentTypeFromName(item.name);
+            if (!equipmentType) return;
+            
+            // Update price
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'price', 
+                value: parseFloat(item.price) || 0 
+              },
+            });
+            
+            // Update useful life
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'usefulLife', 
+                value: item.depreciation_rate_useful_life || 365 
+              },
+            });
+            
+            // Update payback period (using default if not available)
+            dispatch({
+              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+              payload: { 
+                type: equipmentType, 
+                property: 'paybackPeriod', 
+                value: item.payback_period || DEFAULT_PAYBACK_PERIOD 
+              },
+            });
+            
+            // Update discount rate if available
+            if (item.discount_rate !== undefined) {
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: equipmentType, 
+                  property: 'discountRate', 
+                  value: parseFloat(item.discount_rate) || 0 
+                },
+              });
             }
-        }));
+          });
+          
+          // Process sign data separately
+          signList.forEach(sign => {
+            const matchedItem = equipmentData.find((item: any) => item.name === sign.dbName);
+            if (matchedItem) {
+              const price = parseFloat(matchedItem.price);
+              
+              // Update price
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'price', 
+                  value: price 
+                },
+              });
+              
+              // Update useful life
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'usefulLife', 
+                  value: matchedItem.depreciation_rate_useful_life || 365 
+                },
+              });
+              
+              // Update payback period
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'paybackPeriod', 
+                  value: matchedItem.payback_period || DEFAULT_PAYBACK_PERIOD 
+                },
+              });
+              
+              // Update discount rate if available
+              if (matchedItem.discount_rate) {
+                dispatch({
+                  type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                  payload: { 
+                    type: sign.key, 
+                    property: 'discountRate', 
+                    value: parseFloat(matchedItem.discount_rate) || 0 
+                  },
+                });
+              }
+            } else {
+              console.warn(`No matching sign data found for database name: ${sign.dbName}`);
+              
+              // Set default values for signs if not found
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'price', 
+                  value: getDefaultSignPrice(sign.key)
+                },
+              });
+              
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'usefulLife', 
+                  value: 365 // 1 year default
+                },
+              });
+              
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: { 
+                  type: sign.key, 
+                  property: 'paybackPeriod', 
+                  value: DEFAULT_PAYBACK_PERIOD
+                },
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing equipment data:', error);
+        
+        // Set default values for all equipment types in case of error
+        [...standardEquipmentList, ...lightAndDrumList].forEach(equipmentType => {
+          // Set default price (placeholder)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'price', 
+              value: getDefaultPrice(equipmentType)
+            },
+          });
+          
+          // Set default useful life (365 days = 1 year)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'usefulLife', 
+              value: 365 
+            },
+          });
+          
+          // Set default payback period
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: equipmentType, 
+              property: 'paybackPeriod', 
+              value: DEFAULT_PAYBACK_PERIOD 
+            },
+          });
+        });
+        
+        // Set default values for signs
+        signList.forEach(sign => {
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'price', 
+              value: getDefaultSignPrice(sign.key)
+            },
+          });
+          
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'usefulLife', 
+              value: 365 
+            },
+          });
+          
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: { 
+              type: sign.key, 
+              property: 'paybackPeriod', 
+              value: DEFAULT_PAYBACK_PERIOD 
+            },
+          });
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const handleEquipmentRentalChange = (section: keyof EquipmentRentalData, field: string, value: string) => {
-        const numValue = value === '' ? 0 : parseInt(value, 10);
-        if (isNaN(numValue) || numValue < 0) return;
-
-        setEquipmentRental(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue
-            }
-        }));
+    initializeEquipmentData();
+  }, [dispatch]);
+  
+  // Helper function to map API item name to equipment type
+  const getEquipmentTypeFromName = (name: string): EquipmentType | null => {
+    // Map database names to equipment types
+    const nameToType: Record<string, EquipmentType> = {
+      "4' Ft Type III": "fourFootTypeIII",
+      "H Stands": "hStand",
+      "Posts 12ft": "post",
+      "6 Ft Wings": "sixFootWings",
+      "SL Metal Stands": "metalStands",
+      "Covers": "covers",
+      "Sand Bag": "sandbag",
+      "HI Vertical Panels": "HIVP",
+      "Type XI Vertical Panels": "TypeXIVP",
+      "B-Lites": "BLights",
+      "A/C-Lites": "ACLights",
+      "Sharps": "sharps",
     };
-
-    const handlePermanentSignsChange = (section: keyof PermanentSignsData, field: string, value: string) => {
-        setPermanentSigns(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: field === 'quantity' ? (value === '' ? 0 : parseInt(value, 10)) : value
-            }
-        }));
+    
+    return nameToType[name] || null;
+  };
+  
+  // Helper function to get default price for equipment type (fallback values)
+  const getDefaultPrice = (equipmentType: EquipmentType): number => {
+    const defaultPrices: Record<string, number> = {
+      fourFootTypeIII: 200,
+      hStand: 150,
+      post: 100,
+      sixFootWings: 180,
+      metalStands: 120,
+      covers: 50,
+      sandbag: 10,
+      HIVP: 80,
+      TypeXIVP: 90,
+      BLights: 70,
+      ACLights: 120,
+      sharps: 60
     };
-
-    const handleFlaggingChange = (section: keyof FlaggingData, field: string, value: string) => {
-        const numValue = value === '' ? 0 : parseInt(value, 10);
-        if (isNaN(numValue) || numValue < 0) return;
-
-        setFlagging(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue
-            }
-        }));
+    
+    return defaultPrices[equipmentType] || 100;
+  };
+  
+  // Helper function to get default price for sign sheeting types
+  const getDefaultSignPrice = (sheetingType: SheetingType): number => {
+    const defaultSignPrices: Record<SheetingType, number> = {
+      HI: 150,
+      DG: 120,
+      Special: 200
     };
+    
+    return defaultSignPrices[sheetingType] || 150;
+  };
+  
+  // Calculate sandbag quantity based on equipment
+  useEffect(() => {
+    if (mptRental?.phases && mptRental.phases[currentPhase]) {
+      const phase = mptRental.phases[currentPhase];
+      const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
+      const fourFootTypeIIIQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+      const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
+      
+      const calculatedSandbagQuantity = (hStandQuantity * 6) + (fourFootTypeIIIQuantity * 10) + (sixFootWingsQuantity * 4);
+      
+      dispatch({
+        type: 'ADD_MPT_ITEM_NOT_SIGN',
+        payload: {
+          phaseNumber: currentPhase,
+          equipmentType: 'sandbag',
+          equipmentProperty: 'quantity',
+          value: calculatedSandbagQuantity
+        }
+      });
+      
+      setSandbagQuantity(calculatedSandbagQuantity);
+    }
+  }, [
+    mptRental?.phases?.[currentPhase]?.standardEquipment?.fourFootTypeIII?.quantity, 
+    mptRental?.phases?.[currentPhase]?.standardEquipment?.hStand?.quantity, 
+    mptRental?.phases?.[currentPhase]?.standardEquipment?.sixFootWings?.quantity,
+    dispatch,
+    currentPhase
+  ]);
+  
+  // Handle equipment input changes
+  const handleStandardInputChange = (
+    value: number,
+    equipmentKey: EquipmentType,
+    property: keyof DynamicEquipmentInfo
+  ) => {
+    dispatch({
+      type: 'ADD_MPT_ITEM_NOT_SIGN',
+      payload: {
+        phaseNumber: currentPhase,
+        equipmentType: equipmentKey,
+        equipmentProperty: property,
+        value: safeNumber(value, 0) as number
+      },
+    });
+  };
+  
+  // Handle custom item input changes
+  const handleNewItemInputChange = (field: keyof Omit<CustomLightAndDrumItem, 'id'>, value: number) => {
+    setNewCustomItem(prev => ({
+      ...prev,
+      [field]: safeNumber(value, 0)
+    }));
+  };
+  
+  // Add custom item to the list
+  const handleAddCustomItem = () => {
+    if (itemName && newCustomItem.quantity > 0 && newCustomItem.cost > 0) {
+      dispatch({
+        type: 'ADD_LIGHT_AND_DRUM_CUSTOM_ITEM',
+        payload: {
+          phaseNumber: currentPhase,
+          item: {
+            id: itemName,
+            ...newCustomItem,
+          },
+        },
+      });
+      setNewCustomItem({
+        quantity: 0,
+        cost: 0,
+        usefulLife: 0
+      });
+      setItemName('');
+    }
+  };
+  
+  // Handle emergency job toggle
+  const handleEmergencyJobChange = (checked: boolean) => {
+    dispatch({ 
+      type: 'UPDATE_ADMIN_DATA', 
+      payload: { 
+        key: 'emergencyJob', 
+        value: checked 
+      } 
+    });
+  };
 
-    const handleSaleItemsChange = (section: keyof SaleItemsData, field: string, value: string) => {
-        const numValue = value === '' ? 0 : parseInt(value, 10);
-        if (isNaN(numValue) || numValue < 0) return;
+  const handleNext = () => {    
+    setCurrentStep(5);
+  };
 
-        setSaleItems(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue
-            }
-        }));
-    };
+  // Safely get equipment quantities
+  const getEquipmentQuantity = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
+    return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity, undefined);
+  };
+  
+  // Safely get equipment price
+  const getEquipmentPrice = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.staticEquipmentInfo || !mptRental.staticEquipmentInfo[equipmentKey]) return undefined;
+    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price, undefined);
+  };
+  
+  // Get minimum allowed quantity for an equipment type
+  const getMinQuantity = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
+    
+    const associatedEquipment = getAssociatedSignEquipment(mptRental.phases[currentPhase]);
+    
+    switch (equipmentKey) {
+      case 'covers': 
+        return associatedEquipment.cover;
+      case 'fourFootTypeIII':
+        return associatedEquipment.type3;
+      case 'hStand':
+        return associatedEquipment.hStand;
+      case 'post':
+        return associatedEquipment.post;
+      case 'BLights':
+        return associatedEquipment.bLights;
+      case 'ACLights':
+        return associatedEquipment.acLights;
+      default:
+        return 0;
+    }
+  };
+  
+  return (
+    <div>
+      <div className="relative">
+        <button
+          onClick={() => setCurrentStep(4)}
+          className={cn(
+            "group flex w-full items-start gap-4 py-4 text-left",
+            currentStep === 4 ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          <div
+            className={cn(
+              "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm",
+              4 <= currentStep
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted-foreground bg-background"
+            )}
+          >
+            4
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="text-base font-medium">{step.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {step.description}
+            </div>
+          </div>
+        </button>
 
-    const handlePatternsChange = (section: keyof PatternsData, field: string, value: string) => {
-        const numValue = value === '' ? 0 : parseInt(value, 10);
-        if (isNaN(numValue) || numValue < 0) return;
-
-        setPatterns(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue
-            }
-        }));
-    };
-
-    return (
-            <div className="relative">
-            {/* Step Header */}
-                <button
-                    onClick={() => setCurrentStep(4)}
-                    className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 4 ? "text-foreground" : "text-muted-foreground"}`}
+        {/* Collapsible Content */}
+        {currentStep === 4 && (
+          <div className="mt-2 mb-6 ml-12">
+            <Tabs
+              defaultValue="mpt"
+              className="w-full"
+              onValueChange={setActiveTab}
+              value={activeTab}
+            >
+              <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
+                <TabsTrigger
+                  value="mpt"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
                 >
-                    <div
-                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
-                        currentStep >= 4 
-                            ? "border-primary bg-primary text-primary-foreground" 
-                            : "border-muted-foreground bg-background text-muted-foreground"
-                        }`}
-                    >
-                        4
+                  MPT
+                </TabsTrigger>
+                <TabsTrigger
+                  value="equipment"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+                >
+                  Equipment Rental
+                </TabsTrigger>
+                <TabsTrigger
+                  value="permanent"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+                >
+                  Permanent Signs
+                </TabsTrigger>
+                <TabsTrigger
+                  value="flagging"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+                >
+                  Flagging
+                </TabsTrigger>
+                <TabsTrigger
+                  value="sale"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+                >
+                  Sale Items
+                </TabsTrigger>
+                <TabsTrigger
+                  value="patterns"
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+                >
+                  Patterns
+                </TabsTrigger>
+              </TabsList>
+
+              {/* MPT Equipment Tab (combined with Light & Drum) */}
+              <TabsContent value="mpt" className="mt-6">
+                <div className="space-y-8">
+                  {/* MPT Equipment Section */}
+                  <div>
+                    <h3 className="text-base font-semibold mb-4">
+                      MPT Equipment
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {standardEquipmentList.map((equipmentKey) => (
+                        equipmentKey === 'sandbag' ? (
+                          <div key={equipmentKey} className="flex flex-col gap-2">
+                            <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                            <div>{sandbagQuantity}</div>
+                          </div>
+                        ) : (
+                          <div key={equipmentKey} className="flex flex-col gap-2">
+                            <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                            <Input
+                              type="number"
+                              min={getMinQuantity(equipmentKey)}
+                              value={getEquipmentQuantity(equipmentKey) || ''}
+                              onChange={(e) => handleStandardInputChange(
+                                parseFloat(e.target.value) || 0,
+                                equipmentKey,
+                                'quantity'
+                              )}
+                              className="w-1/3"
+                            />
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                          </div>
+                        )
+                      ))}
                     </div>
-                    <div className="flex flex-col gap-1">
-                    <div className="text-base font-medium">Bid Items</div>
-                    <div className="text-sm text-muted-foreground">Add and manage bid items</div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* Light and Drum Rental Section */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-base font-semibold">
+                        Light and Drum Rental
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="emergency-job"
+                          checked={adminData?.emergencyJob || false}
+                          onCheckedChange={handleEmergencyJobChange}
+                        />
+                        <Label htmlFor="emergency-job">Emergency Job</Label>
+                      </div>
                     </div>
-                </button>
-
-            {/* Step Content */}
-                {currentStep === 4 && (
-                <div className="mt-2 mb-6 ml-12">
-                    <Tabs defaultValue="mpt" className="w-full" onValueChange={setActiveTab} value={activeTab}>
-                        <TabsList className="w-full border-0 bg-transparent p-0 [&>*]:border-0">
-                            <TabsTrigger 
-                                value="mpt" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                MPT
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="equipment" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                Equipment Rental
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="permanent" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                Permanent Signs
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="flagging" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                Flagging
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="sale" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                Sale Items
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="patterns" 
-                                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                            >
-                                Patterns
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="mpt" className="mt-6">
-                            {/* MPT Equipment Section */}
-                            <div className="space-y-6">
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">MPT Equipment</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="typeIII" className="text-sm font-medium">4&apos; Ft Type III</Label>
-                                            <Input
-                                                id="typeIII"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.typeIII || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'typeIII', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="wings" className="text-sm font-medium">6 Ft Wings</Label>
-                                            <Input
-                                                id="wings"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.wings || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'wings', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="hStands" className="text-sm font-medium">H Stands</Label>
-                                            <Input
-                                                id="hStands"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.hStands || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'hStands', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="posts" className="text-sm font-medium">Posts</Label>
-                                            <Input
-                                                id="posts"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.posts || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'posts', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="covers" className="text-sm font-medium">Covers</Label>
-                                            <Input
-                                                id="covers"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.covers || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'covers', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="metalStands" className="text-sm font-medium">Metal Stands</Label>
-                                            <Input
-                                                id="metalStands"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.metalStands || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'metalStands', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2 col-span-2">
-                                            <Label htmlFor="sandbags" className="text-sm font-medium">Sandbags, Empty</Label>
-                                            <Input
-                                                id="sandbags"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.mptEquipment.sandbags || ''}
-                                                onChange={(e) => handleMPTInputChange('mptEquipment', 'sandbags', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Light and Drum Rental Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Light and Drum Rental</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="hiVerticalPanels" className="text-sm font-medium">HI Vertical Panels</Label>
-                                            <Input
-                                                id="hiVerticalPanels"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.lightAndDrum.hiVerticalPanels || ''}
-                                                onChange={(e) => handleMPTInputChange('lightAndDrum', 'hiVerticalPanels', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="typeXIVerticalPanels" className="text-sm font-medium">Type XI Vertical Panels</Label>
-                                            <Input
-                                                id="typeXIVerticalPanels"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.lightAndDrum.typeXIVerticalPanels || ''}
-                                                onChange={(e) => handleMPTInputChange('lightAndDrum', 'typeXIVerticalPanels', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="bLights" className="text-sm font-medium">B-Lights</Label>
-                                            <Input
-                                                id="bLights"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.lightAndDrum.bLights || ''}
-                                                onChange={(e) => handleMPTInputChange('lightAndDrum', 'bLights', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acLights" className="text-sm font-medium">A-C Lights</Label>
-                                            <Input
-                                                id="acLights"
-                                                type="number"
-                                                min="0"
-                                                value={mptData.lightAndDrum.acLights || ''}
-                                                onChange={(e) => handleMPTInputChange('lightAndDrum', 'acLights', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                    
+                    <div className="space-y-4">
+                      {lightAndDrumList.map((equipmentKey) => (
+                        <div key={equipmentKey} className="flex flex-col gap-2">
+                          <div className="font-medium">{formatLabel(equipmentKey)}</div>
+                          <Input
+                            type="number"
+                            min={getMinQuantity(equipmentKey)}
+                            value={getEquipmentQuantity(equipmentKey) || ''}
+                            onChange={(e) => handleStandardInputChange(
+                              parseFloat(e.target.value) || 0,
+                              equipmentKey,
+                              'quantity'
+                            )}
+                            className="w-1/3"
+                          />
+                          <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                          <div className="text-sm text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
+                          {adminData?.emergencyJob && (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || ''}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_ADMIN_DATA',
+                                  payload: {
+                                    key: 'emergencyFields',
+                                    value: {
+                                      ...adminData?.emergencyFields,
+                                      [`emergency${equipmentKey}`]: parseFloat(e.target.value) || 0
+                                    }
+                                  }
+                                })}
+                                className="w-1/3"
+                                placeholder="Emergency Rate"
+                              />
                             </div>
-                        </TabsContent>
-
-                        <TabsContent value="equipment" className="mt-6">
-                            <div className="space-y-6">
-                                {/* Arrow Board Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Arrow Board</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="type25" className="text-sm font-medium">Type 25</Label>
-                                            <Input
-                                                id="type25"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.arrowBoard.type25 || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('arrowBoard', 'type25', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="type75" className="text-sm font-medium">Type 75</Label>
-                                            <Input
-                                                id="type75"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.arrowBoard.type75 || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('arrowBoard', 'type75', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="solarAssist" className="text-sm font-medium">Solar Assist</Label>
-                                            <Input
-                                                id="solarAssist"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.arrowBoard.solarAssist || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('arrowBoard', 'solarAssist', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Message Board Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Message Board</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="fullSize" className="text-sm font-medium">Full Size</Label>
-                                            <Input
-                                                id="fullSize"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.messageBoard.fullSize || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('messageBoard', 'fullSize', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="miniSize" className="text-sm font-medium">Mini Size</Label>
-                                            <Input
-                                                id="miniSize"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.messageBoard.miniSize || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('messageBoard', 'miniSize', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="radar" className="text-sm font-medium">Radar</Label>
-                                            <Input
-                                                id="radar"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.messageBoard.radar || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('messageBoard', 'radar', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Attenuator Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Attenuator</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="standard" className="text-sm font-medium">Standard</Label>
-                                            <Input
-                                                id="standard"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.attenuator.standard || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('attenuator', 'standard', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="smart" className="text-sm font-medium">Smart</Label>
-                                            <Input
-                                                id="smart"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.attenuator.smart || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('attenuator', 'smart', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Trailer Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Trailer</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="equipment" className="text-sm font-medium">Equipment</Label>
-                                            <Input
-                                                id="equipment"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.trailer.equipment || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('trailer', 'equipment', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="storage" className="text-sm font-medium">Storage</Label>
-                                            <Input
-                                                id="storage"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.trailer.storage || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('trailer', 'storage', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="arrow" className="text-sm font-medium">Arrow</Label>
-                                            <Input
-                                                id="arrow"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.trailer.arrow || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('trailer', 'arrow', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="light" className="text-sm font-medium">Light</Label>
-                                            <Input
-                                                id="light"
-                                                type="number"
-                                                min="0"
-                                                value={equipmentRental.trailer.light || ''}
-                                                onChange={(e) => handleEquipmentRentalChange('trailer', 'light', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="permanent" className="mt-6">
-                            <div className="space-y-6">
-                                {/* Regulatory Signs Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Regulatory Signs</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="stop" className="text-sm font-medium">Stop</Label>
-                                            <Input
-                                                id="stop"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.stop || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'stop', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="yield" className="text-sm font-medium">Yield</Label>
-                                            <Input
-                                                id="yield"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.yield || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'yield', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="speedLimit" className="text-sm font-medium">Speed Limit</Label>
-                                            <Input
-                                                id="speedLimit"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.speedLimit || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'speedLimit', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="noParking" className="text-sm font-medium">No Parking</Label>
-                                            <Input
-                                                id="noParking"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.noParking || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'noParking', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="oneWay" className="text-sm font-medium">One Way</Label>
-                                            <Input
-                                                id="oneWay"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.oneWay || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'oneWay', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="doNotEnter" className="text-sm font-medium">Do Not Enter</Label>
-                                            <Input
-                                                id="doNotEnter"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.regulatory.doNotEnter || ''}
-                                                onChange={(e) => handlePermanentSignsChange('regulatory', 'doNotEnter', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Warning Signs Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Warning Signs</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="pedestrian" className="text-sm font-medium">Pedestrian</Label>
-                                            <Input
-                                                id="pedestrian"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.warning.pedestrian || ''}
-                                                onChange={(e) => handlePermanentSignsChange('warning', 'pedestrian', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="school" className="text-sm font-medium">School</Label>
-                                            <Input
-                                                id="school"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.warning.school || ''}
-                                                onChange={(e) => handlePermanentSignsChange('warning', 'school', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="merge" className="text-sm font-medium">Merge</Label>
-                                            <Input
-                                                id="merge"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.warning.merge || ''}
-                                                onChange={(e) => handlePermanentSignsChange('warning', 'merge', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="curve" className="text-sm font-medium">Curve</Label>
-                                            <Input
-                                                id="curve"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.warning.curve || ''}
-                                                onChange={(e) => handlePermanentSignsChange('warning', 'curve', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="intersection" className="text-sm font-medium">Intersection</Label>
-                                            <Input
-                                                id="intersection"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.warning.intersection || ''}
-                                                onChange={(e) => handlePermanentSignsChange('warning', 'intersection', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Guide Signs Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Guide Signs</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="street" className="text-sm font-medium">Street Name</Label>
-                                            <Input
-                                                id="street"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.guide.street || ''}
-                                                onChange={(e) => handlePermanentSignsChange('guide', 'street', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="highway" className="text-sm font-medium">Highway</Label>
-                                            <Input
-                                                id="highway"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.guide.highway || ''}
-                                                onChange={(e) => handlePermanentSignsChange('guide', 'highway', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="mile" className="text-sm font-medium">Mile Marker</Label>
-                                            <Input
-                                                id="mile"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.guide.mile || ''}
-                                                onChange={(e) => handlePermanentSignsChange('guide', 'mile', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exit" className="text-sm font-medium">Exit</Label>
-                                            <Input
-                                                id="exit"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.guide.exit || ''}
-                                                onChange={(e) => handlePermanentSignsChange('guide', 'exit', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="directional" className="text-sm font-medium">Directional</Label>
-                                            <Input
-                                                id="directional"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.guide.directional || ''}
-                                                onChange={(e) => handlePermanentSignsChange('guide', 'directional', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Custom Signs Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Custom Signs</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="size" className="text-sm font-medium">Size</Label>
-                                            <Input
-                                                id="size"
-                                                type="text"
-                                                value={permanentSigns.custom.size}
-                                                onChange={(e) => handlePermanentSignsChange('custom', 'size', e.target.value)}
-                                                className="h-9"
-                                                placeholder="e.g., 24x36"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="quantity" className="text-sm font-medium">Quantity</Label>
-                                            <Input
-                                                id="quantity"
-                                                type="number"
-                                                min="0"
-                                                value={permanentSigns.custom.quantity || ''}
-                                                onChange={(e) => handlePermanentSignsChange('custom', 'quantity', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2 col-span-2">
-                                            <Label htmlFor="description" className="text-sm font-medium">Description</Label>
-                                            <Input
-                                                id="description"
-                                                type="text"
-                                                value={permanentSigns.custom.description}
-                                                onChange={(e) => handlePermanentSignsChange('custom', 'description', e.target.value)}
-                                                className="h-9"
-                                                placeholder="Enter custom sign description"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="flagging" className="mt-6">
-                            <div className="space-y-6">
-                                {/* Flagging Services Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Flagging Services</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="trafficControl" className="text-sm font-medium">Traffic Control</Label>
-                                            <Input
-                                                id="trafficControl"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.services.trafficControl || ''}
-                                                onChange={(e) => handleFlaggingChange('services', 'trafficControl', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="policeDetail" className="text-sm font-medium">Police Detail</Label>
-                                            <Input
-                                                id="policeDetail"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.services.policeDetail || ''}
-                                                onChange={(e) => handleFlaggingChange('services', 'policeDetail', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="uniformedFlagger" className="text-sm font-medium">Uniformed Flagger</Label>
-                                            <Input
-                                                id="uniformedFlagger"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.services.uniformedFlagger || ''}
-                                                onChange={(e) => handleFlaggingChange('services', 'uniformedFlagger', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="trafficSupervisor" className="text-sm font-medium">Traffic Supervisor</Label>
-                                            <Input
-                                                id="trafficSupervisor"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.services.trafficSupervisor || ''}
-                                                onChange={(e) => handleFlaggingChange('services', 'trafficSupervisor', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Flagging Equipment Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Flagging Equipment</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="radioUnit" className="text-sm font-medium">Radio Unit</Label>
-                                            <Input
-                                                id="radioUnit"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.equipment.radioUnit || ''}
-                                                onChange={(e) => handleFlaggingChange('equipment', 'radioUnit', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="safetyVest" className="text-sm font-medium">Safety Vest</Label>
-                                            <Input
-                                                id="safetyVest"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.equipment.safetyVest || ''}
-                                                onChange={(e) => handleFlaggingChange('equipment', 'safetyVest', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="stopSlowPaddle" className="text-sm font-medium">Stop/Slow Paddle</Label>
-                                            <Input
-                                                id="stopSlowPaddle"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.equipment.stopSlowPaddle || ''}
-                                                onChange={(e) => handleFlaggingChange('equipment', 'stopSlowPaddle', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="flags" className="text-sm font-medium">Flags</Label>
-                                            <Input
-                                                id="flags"
-                                                type="number"
-                                                min="0"
-                                                value={flagging.equipment.flags || ''}
-                                                onChange={(e) => handleFlaggingChange('equipment', 'flags', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="sale" className="mt-6">
-                            <div className="space-y-6">
-                                {/* Materials Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Materials</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="concrete" className="text-sm font-medium">Concrete</Label>
-                                            <Input
-                                                id="concrete"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.materials.concrete || ''}
-                                                onChange={(e) => handleSaleItemsChange('materials', 'concrete', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="asphalt" className="text-sm font-medium">Asphalt</Label>
-                                            <Input
-                                                id="asphalt"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.materials.asphalt || ''}
-                                                onChange={(e) => handleSaleItemsChange('materials', 'asphalt', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="gravel" className="text-sm font-medium">Gravel</Label>
-                                            <Input
-                                                id="gravel"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.materials.gravel || ''}
-                                                onChange={(e) => handleSaleItemsChange('materials', 'gravel', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="sand" className="text-sm font-medium">Sand</Label>
-                                            <Input
-                                                id="sand"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.materials.sand || ''}
-                                                onChange={(e) => handleSaleItemsChange('materials', 'sand', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Tools Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Tools</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="shovels" className="text-sm font-medium">Shovels</Label>
-                                            <Input
-                                                id="shovels"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.tools.shovels || ''}
-                                                onChange={(e) => handleSaleItemsChange('tools', 'shovels', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="rakes" className="text-sm font-medium">Rakes</Label>
-                                            <Input
-                                                id="rakes"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.tools.rakes || ''}
-                                                onChange={(e) => handleSaleItemsChange('tools', 'rakes', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="wheelbarrows" className="text-sm font-medium">Wheelbarrows</Label>
-                                            <Input
-                                                id="wheelbarrows"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.tools.wheelbarrows || ''}
-                                                onChange={(e) => handleSaleItemsChange('tools', 'wheelbarrows', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="safetyCones" className="text-sm font-medium">Safety Cones</Label>
-                                            <Input
-                                                id="safetyCones"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.tools.safetyCones || ''}
-                                                onChange={(e) => handleSaleItemsChange('tools', 'safetyCones', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Supplies Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Supplies</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="paint" className="text-sm font-medium">Paint</Label>
-                                            <Input
-                                                id="paint"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.supplies.paint || ''}
-                                                onChange={(e) => handleSaleItemsChange('supplies', 'paint', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="markers" className="text-sm font-medium">Markers</Label>
-                                            <Input
-                                                id="markers"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.supplies.markers || ''}
-                                                onChange={(e) => handleSaleItemsChange('supplies', 'markers', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="tape" className="text-sm font-medium">Tape</Label>
-                                            <Input
-                                                id="tape"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.supplies.tape || ''}
-                                                onChange={(e) => handleSaleItemsChange('supplies', 'tape', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="signs" className="text-sm font-medium">Signs</Label>
-                                            <Input
-                                                id="signs"
-                                                type="number"
-                                                min="0"
-                                                value={saleItems.supplies.signs || ''}
-                                                onChange={(e) => handleSaleItemsChange('supplies', 'signs', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="patterns" className="mt-6">
-                            <div className="space-y-6">
-                                {/* Pavement Patterns Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Pavement Patterns</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="milling" className="text-sm font-medium">Milling</Label>
-                                            <Input
-                                                id="milling"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.pavement.milling || ''}
-                                                onChange={(e) => handlePatternsChange('pavement', 'milling', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="overlay" className="text-sm font-medium">Overlay</Label>
-                                            <Input
-                                                id="overlay"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.pavement.overlay || ''}
-                                                onChange={(e) => handlePatternsChange('pavement', 'overlay', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="fullDepth" className="text-sm font-medium">Full Depth</Label>
-                                            <Input
-                                                id="fullDepth"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.pavement.fullDepth || ''}
-                                                onChange={(e) => handlePatternsChange('pavement', 'fullDepth', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="patching" className="text-sm font-medium">Patching</Label>
-                                            <Input
-                                                id="patching"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.pavement.patching || ''}
-                                                onChange={(e) => handlePatternsChange('pavement', 'patching', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Markings Patterns Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Markings Patterns</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="thermoplastic" className="text-sm font-medium">Thermoplastic</Label>
-                                            <Input
-                                                id="thermoplastic"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.markings.thermoplastic || ''}
-                                                onChange={(e) => handlePatternsChange('markings', 'thermoplastic', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="paint" className="text-sm font-medium">Paint</Label>
-                                            <Input
-                                                id="paint"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.markings.paint || ''}
-                                                onChange={(e) => handlePatternsChange('markings', 'paint', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="epoxy" className="text-sm font-medium">Epoxy</Label>
-                                            <Input
-                                                id="epoxy"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.markings.epoxy || ''}
-                                                onChange={(e) => handlePatternsChange('markings', 'epoxy', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="preformed" className="text-sm font-medium">Preformed</Label>
-                                            <Input
-                                                id="preformed"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.markings.preformed || ''}
-                                                onChange={(e) => handlePatternsChange('markings', 'preformed', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Configuration Patterns Section */}
-                                <div>
-                                    <h3 className="text-base font-semibold mb-4">Configuration Patterns</h3>
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="laneClosure" className="text-sm font-medium">Lane Closure</Label>
-                                            <Input
-                                                id="laneClosure"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.configurations.laneClosure || ''}
-                                                onChange={(e) => handlePatternsChange('configurations', 'laneClosure', e.target.value)}
-                                                className="h-9"
-                                            />
-                                            </div>
-                                            <div className="space-y-2">
-                                            <Label htmlFor="shoulderWork" className="text-sm font-medium">Shoulder Work</Label>
-                                                <Input
-                                                id="shoulderWork"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.configurations.shoulderWork || ''}
-                                                onChange={(e) => handlePatternsChange('configurations', 'shoulderWork', e.target.value)}
-                                                className="h-9"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="intersection" className="text-sm font-medium">Intersection</Label>
-                                            <Input
-                                                id="intersection"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.configurations.intersection || ''}
-                                                onChange={(e) => handlePatternsChange('configurations', 'intersection', e.target.value)}
-                                                className="h-9"
-                                                        />
-                                                    </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="workZone" className="text-sm font-medium">Work Zone</Label>
-                                            <Input
-                                                id="workZone"
-                                                type="number"
-                                                min="0"
-                                                value={patterns.configurations.workZone || ''}
-                                                onChange={(e) => handlePatternsChange('configurations', 'workZone', e.target.value)}
-                                                className="h-9"
-                                            />
-                                            </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-
-                    <div className="flex justify-between mt-8">
-                                <Button variant="outline" onClick={() => setCurrentStep(3)}>
-                                    Back
-                                </Button>
-                                <Button onClick={() => setCurrentStep(5)}>Next</Button>
+                          )}
                         </div>
+                      ))}
                     </div>
-                )}
-        </div>
-    );
+                  </div>
+                  
+                  <Separator className="my-6" />
+                  
+                  {/* Custom Equipment Section */}
+                  <div>
+                    <h3 className="text-base font-semibold mb-4">
+                      Custom Equipment
+                    </h3>
+                    <div className="grid grid-cols-12 gap-4 mb-4">
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="itemName">Item Name</Label>
+                        <Input
+                          id="itemName"
+                          value={itemName}
+                          onChange={(e) => setItemName(e.target.value)}
+                          placeholder="Enter item name"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min={0}
+                          value={newCustomItem.quantity || ''}
+                          onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="cost">Cost</Label>
+                        <Input
+                          id="cost"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={newCustomItem.cost || ''}
+                          onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
+                        <Input
+                          id="usefulLife"
+                          type="number"
+                          min={0}
+                          value={newCustomItem.usefulLife || ''}
+                          onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleAddCustomItem}
+                      className="mt-2"
+                      disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Custom Item
+                    </Button>
+                  </div>
+                  
+                  {/* Custom Items List */}
+                  {mptRental?.phases?.[currentPhase]?.customLightAndDrumItems?.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-base font-semibold mb-4">
+                        Custom Items
+                      </h3>
+                      <div className="grid grid-cols-12 gap-4 mb-4">
+                        <div className="col-span-2 font-medium">Item Name</div>
+                        <div className="col-span-3 font-medium">Quantity</div>
+                        <div className="col-span-3 font-medium">Cost</div>
+                        <div className="col-span-2 font-medium">Useful Life</div>
+                        <div className="col-span-2 font-medium">Daily Price</div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {mptRental.phases[currentPhase].customLightAndDrumItems.map((item) => (
+                          <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                            <div className="col-span-2">{item.id}</div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.quantity}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: currentPhase,
+                                    id: item.id,
+                                    key: 'quantity',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={item.cost}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: currentPhase,
+                                    id: item.id,
+                                    key: 'cost',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.usefulLife}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: currentPhase,
+                                    id: item.id,
+                                    key: 'usefulLife',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              ${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Equipment Tab */}
+              <TabsContent value="equipment" className="mt-6">
+                <div className="text-center py-6 text-muted-foreground">
+                  Equipment Rental will be implemented here
+                </div>
+              </TabsContent>
+
+              {/* Permanent Signs Tab */}
+              <TabsContent value="permanent" className="mt-6">
+                <div className="text-center py-6 text-muted-foreground">
+                  Permanent Signs will be implemented here
+                </div>
+              </TabsContent>
+
+              {/* Flagging Tab */}
+              <TabsContent value="flagging" className="mt-6">
+                <div className="text-center py-6 text-muted-foreground">
+                  Flagging Services will be implemented here
+                </div>
+              </TabsContent>
+
+              {/* Sale Items Tab */}
+              <TabsContent value="sale" className="mt-6">
+                <div className="text-center py-6 text-muted-foreground">
+                  Sale Items will be implemented here
+                </div>
+              </TabsContent>
+
+              {/* Patterns Tab */}
+              <TabsContent value="patterns" className="mt-6">
+                <div className="text-center py-6 text-muted-foreground">
+                  Pavement Patterns will be implemented here
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between mt-8">
+              <Button variant="outline" onClick={() => setCurrentStep(3)}>
+                Back
+              </Button>
+              <Button onClick={handleNext}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default BidItemsStep4;

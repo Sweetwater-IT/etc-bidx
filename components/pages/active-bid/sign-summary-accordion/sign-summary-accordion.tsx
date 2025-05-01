@@ -1,4 +1,3 @@
-import { FormData } from "@/app/active-bid/page";
 import {
   Accordion,
   AccordionContent,
@@ -6,24 +5,47 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { useEstimate } from "@/contexts/EstimateContext";
 
-export interface SignData {
-  id: string;
-  designation: string;
-  dimensions?: string;
-  sheeting?: string;
-  quantity?: number;
-  structure?: string;
-  bLights?: number;
-  covers?: number;
+interface SignSummaryAccordionProps {
+  currentStep: number;
 }
 
-const SignSummaryAccordion = ({ formData }: { formData: FormData }) => {
-  const signs: SignData[] = formData.signs || [];
+const SignSummaryAccordion = ({ currentStep }: SignSummaryAccordionProps) => {
+  const { mptRental } = useEstimate();
+  const [value, setValue] = useState<string[]>([]);
+
+  const signs: (PrimarySign | SecondarySign)[] = 
+    mptRental.phases && 
+    mptRental.phases.length > 0 && 
+    mptRental.phases[0].signs 
+      ? mptRental.phases[0].signs 
+      : [];
+
+  useEffect(() => {
+    if (currentStep === 2) {
+      setValue(["item-1"]);
+    } else {
+      setValue([]);
+    }
+  }, [currentStep]);
+
+  // Function to display associated structure in a readable format
+  const formatStructure = (structure: string): string => {
+    switch(structure) {
+      case 'fourFootTypeIII': return '4\' Type III';
+      case 'hStand': return 'H Stand';
+      case 'post': return 'Post';
+      case 'none': return 'None';
+      default: return structure;
+    }
+  };
 
   return (
     <Card className="p-4">
-      <Accordion type="single" collapsible>
+      <Accordion type="multiple" value={value} onValueChange={setValue}>
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
             <h3 className="font-semibold">Sign Summary</h3>
@@ -37,14 +59,28 @@ const SignSummaryAccordion = ({ formData }: { formData: FormData }) => {
               ) : (
                 signs.map((sign) => (
                   <div key={sign.id} className="space-y-1">
-                    <div className="font-medium">{sign.designation}</div>
+                    <div className="font-medium">
+                      {sign.designation} 
+                      {sign.description && ` - ${sign.description}`}
+                    </div>
                     <div className="text-muted-foreground text-xs space-x-2">
-                      {sign.dimensions && <span>{sign.dimensions}</span>}
+                      {sign.width && sign.height && (
+                        <span>{sign.width} x {sign.height}</span>
+                      )}
                       {sign.sheeting && <span>• {sign.sheeting}</span>}
                       {sign.quantity && <span>• Qty: {sign.quantity}</span>}
-                      {sign.structure && sign.structure !== "None" && <span>• {sign.structure}</span>}
-                      {sign.bLights ? <span>• B Lights: {sign.bLights}</span> : null}
-                      {sign.covers ? <span>• Covers: {sign.covers}</span> : null}
+                      {"associatedStructure" in sign && sign.associatedStructure !== "none" && (
+                        <span>• Structure: {formatStructure(sign.associatedStructure)}</span>
+                      )}
+                      {"bLights" in sign && sign.bLights > 0 && (
+                        <span>• B Lights: {sign.bLights}</span>
+                      )}
+                      {"covers" in sign && sign.covers > 0 && (
+                        <span>• Covers: {sign.covers}</span>
+                      )}
+                      {"primarySignId" in sign && (
+                        <span className="italic">• Secondary Sign</span>
+                      )}
                     </div>
                   </div>
                 ))

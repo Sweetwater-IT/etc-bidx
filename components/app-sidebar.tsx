@@ -112,7 +112,7 @@ export const data = {
     },
     {
       title: "Contract Manager",
-      url: "",
+      url: "/contracts",
       icon: IconUsers,
     },
   ] as NavItem[],

@@ -1,10 +1,9 @@
 "use client";
-
-import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState } from "react";
+import { fetchSignDesignations } from "@/lib/api-client";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Trash2, Plus } from "lucide-react";
 import {
@@ -29,103 +28,539 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PrimarySign, SecondarySign, SheetingType } from "@/types/MPTEquipment";
+import { Step } from "@/types/IStep";
+import { useEstimate } from "@/contexts/EstimateContext";
 
-const step = {
+const step: Step = {
   id: "step-2",
   name: "MUTCD Signs",
   description: "Select and configure MUTCD signs",
+  fields: [],
 };
 
-const designations = [
-  {
-    value: "D10-1A",
-    label: "D10-1A",
-    dimensions: ["12.0 x 36.0", "24.0 x 48.0"],
-  },
-  {
-    value: "D10-2",
-    label: "D10-2",
-    dimensions: ["12.0 x 24.0", "18.0 x 36.0"],
-  },
-  { value: "D10-3", label: "D10-3", dimensions: ["12.0 x 36.0"] },
-];
-
-const sheetingOptions = ["DG", "HI"];
-const structureOptions = ["None", "Square Post", "U-Channel"];
-
-interface SignData {
-  id: string;
+// Type definitions for processed sign data
+interface SignDesignation {
   designation: string;
-  dimensions?: string;
-  sheeting?: string;
-  quantity?: number;
-  structure?: string;
+  description: string;
+  sheeting: SheetingType;
+  dimensions: SignDimension[];
+}
+
+interface SignDimension {
+  width: number;
+  height: number;
+}
+
+interface ExtendedPrimarySign extends PrimarySign {
+  isConfiguring?: boolean;
+}
+
+interface ExtendedSecondarySign extends SecondarySign {
+  isConfiguring?: boolean;
   bLights?: number;
   covers?: number;
-  isConfiguring?: boolean;
-  secondarySigns?: SignData[];
 }
 
 const MutcdSignsStep2 = ({
   currentStep,
   setCurrentStep,
-  formData,
-  setFormData,
 }: {
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-  formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }) => {
-  const [signs, setSigns] = useState<SignData[]>(formData.signs as SignData[] || []);
+  const { mptRental, dispatch } = useEstimate();
+  const currentPhase = 0; // Use first phase for now
+
+  // Safely get the signs array with error handling
+  const getSafeSignsArray = () => {
+    try {
+      if (!mptRental) return [];
+      if (!mptRental.phases) return [];
+      if (mptRental.phases.length === 0) return [];
+      if (!mptRental.phases[0]) return [];
+      if (!mptRental.phases[0].signs) return [];
+      return mptRental.phases[0].signs || [];
+    } catch (error) {
+      console.error("Error getting signs array:", error);
+      return [];
+    }
+  };
+
+  // Use useEffect to keep signs state in sync with mptRental
+  useEffect(() => {
+    setSigns(getSafeSignsArray());
+  }, [mptRental]);
+
+  const [signs, setSigns] = useState<
+    (ExtendedPrimarySign | ExtendedSecondarySign)[]
+  >(getSafeSignsArray());
   const [open, setOpen] = useState(false);
   const [isAddingSign, setIsAddingSign] = useState(signs.length === 0);
+  const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
+  const [filteredDesignations, setFilteredDesignations] = useState<
+    SignDesignation[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDesignationSelect = (currentValue: string) => {
-    const newSign: SignData = {
-      id: Math.random().toString(36).substr(2, 9),
-      designation: currentValue,
+  // Fetch all sign designations and dimensions at once
+  useEffect(() => {
+    const loadSignData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchSignDesignations();
+        if (data && Array.isArray(data) && data.length > 0) {
+          // Process the nested data structure from the API
+          const processedData = processSignData(data);
+          setDesignationData(processedData);
+          setFilteredDesignations(processedData);
+        } else {
+          console.warn("No sign data returned from API or invalid format");
+          setDesignationData([]);
+          setFilteredDesignations([]);
+        }
+      } catch (error) {
+        console.error("Error fetching sign data:", error);
+        setDesignationData([]);
+        setFilteredDesignations([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSignData();
+  }, []);
+
+  // Safe process sign data function with error handling
+  const processSignData = (apiData: any[]) => {
+    if (!Array.isArray(apiData)) {
+      console.error("API data is not an array");
+      return [];
+    }
+
+    const processedData: SignDesignation[] = [];
+
+    try {
+      apiData.forEach((item) => {
+        if (!item) return;
+
+        // Validate that necessary properties exist
+        if (!item.sign_designations || !item.sign_dimensions) return;
+
+        const designation = item.sign_designations.designation;
+        if (!designation) return;
+
+        const description = item.sign_designations.description || "";
+        const sheeting =
+          (item.sign_designations.sheeting as SheetingType) || "DG";
+
+        let width: number;
+        let height: number;
+
+        try {
+          width = parseFloat(item.sign_dimensions.width);
+          height = parseFloat(item.sign_dimensions.height);
+
+          // Skip if dimensions are invalid
+          if (isNaN(width) || isNaN(height)) return;
+        } catch (e) {
+          return; // Skip this item if dimensions can't be parsed
+        }
+
+        // Find if this designation already exists in our processed data
+        const existingIndex = processedData.findIndex(
+          (d) => d.designation === designation
+        );
+
+        if (existingIndex >= 0) {
+          // Add the dimension to the existing designation
+          processedData[existingIndex].dimensions.push({ width, height });
+        } else {
+          // Create a new designation entry
+          processedData.push({
+            designation,
+            description,
+            sheeting,
+            dimensions: [{ width, height }],
+          });
+        }
+      });
+
+      // Sort dimensions within each designation for consistent display
+      processedData.forEach((designation) => {
+        if (!designation.dimensions) designation.dimensions = [];
+
+        designation.dimensions.sort((a, b) => {
+          // Sort first by width, then by height
+          if (a.width !== b.width) {
+            return a.width - b.width;
+          }
+          return a.height - b.height;
+        });
+      });
+
+      return processedData;
+    } catch (error) {
+      console.error("Error processing sign data:", error);
+      return [];
+    }
+  };
+
+  // Filter designations based on search term
+  const filterDesignations = (searchTerm: string) => {
+    if (!Array.isArray(designationData)) {
+      setFilteredDesignations([]);
+      return;
+    }
+
+    if (!searchTerm || searchTerm.length < 2) {
+      setFilteredDesignations(designationData);
+      return;
+    }
+
+    try {
+      const filtered = designationData.filter(
+        (item) =>
+          item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      setFilteredDesignations(filtered);
+    } catch (error) {
+      console.error("Error filtering designations:", error);
+      setFilteredDesignations([]);
+    }
+  };
+
+  // Generate a stable ID based on timestamp and counter
+  const generateStableId = (() => {
+    let counter = 0;
+    return () => {
+      counter += 1;
+      return `sign-${Date.now()}-${counter}`;
+    };
+  })();
+
+  const getAvailableDimensions = (sign: ExtendedPrimarySign | ExtendedSecondarySign) => {
+    try {
+      if (!sign || !sign.designation) return [];
+
+      const designationInfo = designationData.find(
+        (d) => d.designation === sign.designation
+      );
+
+      if (!designationInfo) return [];
+
+      return (designationInfo.dimensions || []).filter(
+        (dim) =>
+          typeof dim.width === "number" &&
+          !isNaN(dim.width) &&
+          typeof dim.height === "number" &&
+          !isNaN(dim.height)
+      );
+    } catch (error) {
+      console.error("Error getting available dimensions:", error);
+      return [];
+    }
+  };
+
+  const handleDesignationSelect = (designationValue: string) => {
+    // Find the selected designation data
+    const selectedDesignation = designationData.find(
+      (d) => d.designation === designationValue
+    );
+
+    if (!selectedDesignation) {
+      console.error("Selected designation not found");
+      return;
+    }
+
+    // Create new sign with default values from the selected designation
+    const defaultDimension =
+      selectedDesignation.dimensions &&
+      selectedDesignation.dimensions.length > 0
+        ? selectedDesignation.dimensions[0]
+        : { width: 0, height: 0 };
+
+    const newSign: ExtendedPrimarySign = {
+      id: generateStableId(),
+      designation: designationValue,
+      width: defaultDimension.width,
+      height: defaultDimension.height,
+      sheeting: selectedDesignation.sheeting,
+      quantity: 1,
+      associatedStructure: "none",
+      bLights: 0,
+      covers: 0,
+      isCustom: false,
+      description: selectedDesignation.description,
       isConfiguring: true,
     };
-    setSigns([...signs, newSign]);
+
+    // Add the new sign to the list
+    const updatedSigns = [...signs, newSign];
+    setSigns(updatedSigns);
+
+    // Update context with the new sign
+    dispatch({
+      type: "ADD_MPT_SIGN",
+      payload: {
+        phaseNumber: currentPhase,
+        sign: newSign,
+      },
+    });
+
     setOpen(false);
     setIsAddingSign(false);
   };
 
-  const handleSignUpdate = (id: string, field: keyof SignData, value: any) => {
-    setSigns(
-      signs.map((sign) => (sign.id === id ? { ...sign, [field]: value } : sign))
+  const handleSignUpdate = (
+    id: string,
+    field: keyof PrimarySign | keyof SecondarySign | "dimensionSelection",
+    value: any
+  ) => {
+    // Special handling for dimension selection
+    if (field === "dimensionSelection" && typeof value === "string") {
+      try {
+        // Parse dimensions from format "width x height"
+        const dimensionParts = value.split("x");
+        if (dimensionParts.length === 2) {
+          const width = parseFloat(dimensionParts[0].trim());
+          const height = parseFloat(dimensionParts[1].trim());
+
+          if (!isNaN(width) && !isNaN(height)) {
+            // Update both width and height at once in local state only
+            const updatedSigns = signs.map((sign) => {
+              if (sign.id === id) {
+                return { ...sign, width, height };
+              }
+              return sign;
+            });
+            setSigns(updatedSigns);
+          }
+        }
+      } catch (error) {
+        console.error("Error handling dimension selection:", error);
+      }
+      return;
+    }
+
+    // Regular field update - only update local state
+    const updatedSigns = signs.map((sign) =>
+      sign.id === id ? { ...sign, [field]: value } : sign
     );
+    setSigns(updatedSigns);
+
+    // If designation changed, update other related fields in local state only
+    if (field === "designation") {
+      try {
+        const selectedDesignation = designationData.find(
+          (d) => d.designation === value
+        );
+        if (selectedDesignation) {
+          // If there's only one dimension option, set it automatically
+          if (
+            selectedDesignation.dimensions &&
+            selectedDesignation.dimensions.length === 1
+          ) {
+            const { width, height } = selectedDesignation.dimensions[0];
+
+            // Update local state only
+            const updatedWithDimensions = signs.map((sign) =>
+              sign.id === id
+                ? {
+                    ...sign,
+                    width,
+                    height,
+                    sheeting: selectedDesignation.sheeting,
+                    description: selectedDesignation.description,
+                  }
+                : sign
+            );
+            setSigns(updatedWithDimensions);
+          } else {
+            // If multiple dimensions, update just the sheeting and description
+            const updatedWithExtra = signs.map((sign) =>
+              sign.id === id
+                ? {
+                    ...sign,
+                    sheeting: selectedDesignation.sheeting,
+                    description: selectedDesignation.description,
+                  }
+                : sign
+            );
+            setSigns(updatedWithExtra);
+          }
+        }
+      } catch (error) {
+        console.error("Error updating sign after designation change:", error);
+      }
+    }
   };
 
   const handleSignSave = (id: string) => {
-    setSigns(
-      signs.map((sign) =>
-        sign.id === id ? { ...sign, isConfiguring: false } : sign
-      )
-    );
-    setIsAddingSign(true);
-    // Update form data
-    setFormData((prev: any) => ({
-      ...prev,
-      signs: signs.map((sign) => ({ ...sign, isConfiguring: undefined })),
-    }));
+    try {
+      const signToSave = signs.find((sign) => sign.id === id);
+      if (!signToSave) return;
+
+      // Remove isConfiguring from the sign object
+      const { isConfiguring, ...signWithoutConfiguring } = signToSave;
+
+      // Update local state first - completely replace the signs array
+      const newSigns = signs.map(sign => 
+        sign.id === id ? signWithoutConfiguring : sign
+      );
+      setSigns(newSigns);
+
+      // Then update context
+      const isNewSign = !mptRental?.phases?.[currentPhase]?.signs?.some(
+        (s) => s.id === id
+      );
+
+      if (isNewSign) {
+        // For new signs, add without isConfiguring
+        dispatch({
+          type: "ADD_MPT_SIGN",
+          payload: {
+            phaseNumber: currentPhase,
+            sign: signWithoutConfiguring,
+          },
+        });
+        setIsAddingSign(true);
+      } else {
+        // For existing signs, update all fields at once
+        dispatch({
+          type: "ADD_BATCH_MPT_SIGNS",
+          payload: {
+            phaseNumber: currentPhase,
+            signs: newSigns,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error saving sign:", error);
+    }
   };
 
   const handleSignDelete = (id: string) => {
-    setSigns(signs.filter((sign) => sign.id !== id));
-    if (signs.length === 1) {
-      setIsAddingSign(true);
+    try {
+      // Find if any secondary signs need to be deleted
+      const isPrimarySign = signs.find((s) => s.id === id);
+      const isSecondary = isPrimarySign && "primarySignId" in isPrimarySign;
+
+      // For primary signs, also delete associated secondary signs
+      if (isPrimarySign && !isSecondary) {
+        const secondarySigns = signs.filter(
+          (s) => "primarySignId" in s && s.primarySignId === id
+        );
+
+        // Delete secondary signs from context
+        secondarySigns.forEach((secondarySign) => {
+          dispatch({
+            type: "DELETE_MPT_SIGN",
+            payload: secondarySign.id,
+          });
+        });
+      }
+
+      // Update signs state
+      const updatedSigns = isSecondary
+        ? signs.filter((sign) => sign.id !== id)
+        : signs.filter((sign) => {
+            // For primary signs, also filter out the secondary signs
+            if (sign.id === id) return false;
+            if ("primarySignId" in sign && sign.primarySignId === id)
+              return false;
+            return true;
+          });
+
+      setSigns(updatedSigns);
+
+      // Update context when a sign is deleted
+      dispatch({
+        type: "DELETE_MPT_SIGN",
+        payload: id,
+      });
+
+      if (signs.length === 1) {
+        setIsAddingSign(true);
+      }
+    } catch (error) {
+      console.error("Error deleting sign:", error);
     }
   };
 
   const handleEditSign = (id: string) => {
-    setSigns(
-      signs.map((sign) =>
-        sign.id === id ? { ...sign, isConfiguring: true } : sign
-      )
-    );
-    setIsAddingSign(false);
+    try {
+      setSigns(
+        signs.map((sign) =>
+          sign.id === id ? { ...sign, isConfiguring: true } : sign
+        )
+      );
+      setIsAddingSign(false);
+    } catch (error) {
+      console.error("Error editing sign:", error);
+    }
+  };
+
+  const handleNext = () => {
+    setCurrentStep(3);
+  };
+
+  // Add a secondary sign to a primary sign
+  const handleAddSecondarySign = (primarySignId: string) => {
+    try {
+      // Find the primary sign
+      const primarySign = signs.find((s) => s.id === primarySignId) as
+        | ExtendedPrimarySign
+        | undefined;
+
+      if (!primarySign || "primarySignId" in primarySign) {
+        console.error("Cannot add a secondary sign to a non-primary sign");
+        return;
+      }
+
+      // Create a new secondary sign with the same designation as primary
+      const newSecondarySign: ExtendedSecondarySign = {
+        id: generateStableId(),
+        primarySignId: primarySignId,
+        designation: primarySign.designation, // Use primary sign's designation
+        width: primarySign.width, // Use primary sign's dimensions initially
+        height: primarySign.height,
+        quantity: primarySign.quantity, // Inherit quantity from primary
+        sheeting: primarySign.sheeting || "HI", // Inherit sheeting from primary
+        isCustom: false,
+        description: primarySign.description || "", // Use primary sign's description
+        isConfiguring: true,
+        bLights: 0,
+        covers: 0,
+      };
+
+      // Add the new sign to the list
+      const updatedSigns = [...signs, newSecondarySign];
+      setSigns(updatedSigns);
+
+      // Update context with the new secondary sign
+      dispatch({
+        type: "ADD_MPT_SIGN",
+        payload: {
+          phaseNumber: currentPhase,
+          sign: newSecondarySign,
+        },
+      });
+
+      // Set isAddingSign to false to prevent adding another sign
+      setIsAddingSign(false);
+    } catch (error) {
+      console.error("Error adding secondary sign:", error);
+    }
+  };
+
+  // Safe check if a sign is primary
+  const isPrimarySign = (
+    sign: ExtendedPrimarySign | ExtendedSecondarySign
+  ): sign is ExtendedPrimarySign => {
+    return !("primarySignId" in sign);
   };
 
   return (
@@ -161,232 +596,306 @@ const MutcdSignsStep2 = ({
           <div className="mt-2 mb-6 ml-12">
             <div className="space-y-6">
               {/* Signs List */}
-              {signs.map((sign) => (
-                <div
-                  key={sign.id}
-                  className={cn(
-                    "rounded-lg border bg-card text-card-foreground shadow-sm",
-                    sign.isConfiguring ? "p-6" : "p-4"
-                  )}
-                >
-                  {sign.isConfiguring ? (
-                    <div className="space-y-8">
-                      {/* Designation Selection */}
-                      <div className="w-full">
-                        <Label className="text-base font-semibold mb-2.5 block">
-                          Designation
-                        </Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-[200px] justify-between"
-                            >
-                              {sign.designation || "Select designation..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[200px] p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Search designation..." />
-                              <CommandEmpty>No designation found.</CommandEmpty>
-                              <CommandList>
-                                <CommandGroup>
-                                  {designations.map((d) => (
-                                    <CommandItem
-                                      key={d.value}
-                                      value={d.value}
-                                      onSelect={() =>
-                                        handleSignUpdate(
-                                          sign.id,
-                                          "designation",
-                                          d.value
-                                        )
-                                      }
-                                    >
-                                      <div className="flex items-center">
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            sign.designation === d.value
-                                              ? "opacity-100"
-                                              : "opacity-0"
-                                          )}
-                                        />
-                                        {d.label}
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+              {signs.map((sign: any) => {
+                const dimensions = getAvailableDimensions(sign);
+                const hasDimensionOptions = dimensions.length > 1;
+                const primary = isPrimarySign(sign);
 
-                      {/* Other Fields in a single line */}
-                      <div className="flex flex-row gap-4 w-full">
-                        <div className="col-span-2 flex-2">
-                          <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
-                          <Select
-                            value={sign.dimensions}
-                            onValueChange={(value) =>
-                              handleSignUpdate(sign.id, "dimensions", value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select dimensions" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {designations
-                                .find((d) => d.value === sign.designation)
-                                ?.dimensions.map((dim) => (
-                                  <SelectItem key={dim} value={dim}>
-                                    {dim}
+                return (
+                  <div
+                    key={sign.id}
+                    className={cn(
+                      "rounded-lg border bg-card text-card-foreground shadow-sm p-4",
+                      !primary ? "border-blue-200" : ""
+                    )}
+                  >
+                    {sign.isConfiguring ? (
+                      <div className="space-y-8">
+                        {/* Secondary Sign Indicator */}
+                        {!primary && (
+                          <div className="p-2 bg-blue-50 text-blue-600 rounded-md mb-4">
+                            <p className="text-sm">
+                              This is a secondary sign associated with a primary sign
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="w-full">
+                          <Label className="text-base font-semibold mb-2.5 block">
+                            Designation
+                          </Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full sm:w-[300px] justify-between"
+                              >
+                                <span className="truncate">
+                                  {mptRental?.phases?.[currentPhase]?.signs?.find(s => s.id === sign.id)?.designation || "Select designation..."}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search designation..."
+                                  onValueChange={filterDesignations}
+                                />
+                                <CommandEmpty>
+                                  No designation found.
+                                </CommandEmpty>
+                                <CommandList>
+                                  <CommandGroup>
+                                    {filteredDesignations.map((item) => (
+                                      <CommandItem
+                                        key={item.designation}
+                                        value={item.designation}
+                                        onSelect={() =>
+                                          handleSignUpdate(
+                                            sign.id,
+                                            "designation",
+                                            item.designation
+                                          )
+                                        }
+                                      >
+                                        <div className="flex items-center w-full">
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              sign.designation === item.designation
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">
+                                              {item.designation}
+                                            </span>
+                                            {item.description && (
+                                              <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                {item.description}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="flex-2">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Dimensions
+                            </Label>
+                            <Select
+                              value={
+                                sign.width && sign.height
+                                  ? `${sign.width}x${sign.height}`
+                                  : undefined
+                              }
+                              onValueChange={(value) =>
+                                handleSignUpdate(
+                                  sign.id,
+                                  "dimensionSelection",
+                                  value
+                                )
+                              }
+                            >
+                              <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectValue placeholder="Select dimensions" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableDimensions(sign).map((dim, index) => (
+                                  <SelectItem
+                                    key={index}
+                                    value={`${dim.width}x${dim.height}`}
+                                  >
+                                    {dim.width} x {dim.height}
                                   </SelectItem>
                                 ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-2">
-                          <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                          <Select
-                            value={sign.sheeting}
-                            onValueChange={(value) =>
-                              handleSignUpdate(sign.id, "sheeting", value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sheetingOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                          <Input
-                            type="number"
-                            value={sign.quantity || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "quantity",
-                                parseInt(e.target.value)
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                          />
-                        </div>
-                        <div className="flex-2">
-                          <Label className="text-sm font-medium mb-2 block">Structure</Label>
-                          <Select
-                            value={sign.structure}
-                            onValueChange={(value) =>
-                              handleSignUpdate(sign.id, "structure", value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="None" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {structureOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">B Lights</Label>
-                          <Input
-                            type="number"
-                            value={sign.bLights || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "bLights",
-                                parseInt(e.target.value)
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">Covers</Label>
-                          <Input
-                            type="number"
-                            value={sign.covers || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "covers",
-                                parseInt(e.target.value)
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex justify-end space-x-3 pt-6">
-                        <Button
-                          variant="outline"
-                          onClick={() => handleSignDelete(sign.id)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button onClick={() => handleSignSave(sign.id)}>
-                          Save Sign
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="font-medium">{sign.designation}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {sign.dimensions} • {sign.sheeting} • Qty:{" "}
-                          {sign.quantity}
+                          <div className="flex-2">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Sheeting
+                            </Label>
+                            <Select
+                              value={sign.sheeting || "HI"}
+                              onValueChange={(value) =>
+                                handleSignUpdate(sign.id, "sheeting", value)
+                              }
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="HI">HI</SelectItem>
+                                <SelectItem value="DG">DG</SelectItem>
+                                <SelectItem value="Special">Special</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Quantity
+                            </Label>
+                            <Input
+                              type="number"
+                              value={sign.quantity || ""}
+                              onChange={(e) =>
+                                handleSignUpdate(
+                                  sign.id,
+                                  "quantity",
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
+                              min={0}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {primary && (
+                            <>
+                              <div className="flex-2">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  Structure
+                                </Label>
+                                <Select
+                                  value={sign.associatedStructure || "none"}
+                                  onValueChange={(value) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "associatedStructure",
+                                      value
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="None" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="fourFootTypeIII">
+                                      Four Foot Type III
+                                    </SelectItem>
+                                    <SelectItem value="hStand">H Stand</SelectItem>
+                                    <SelectItem value="post">Post</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex-1">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  B Lights
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={sign.bLights || ""}
+                                  onChange={(e) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "bLights",
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  min={0}
+                                  className="w-full"
+                                />
+                              </div>
+
+                              <div className="flex-1">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  Covers
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={sign.covers || ""}
+                                  onChange={(e) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "covers",
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  min={0}
+                                  className="w-full"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end space-x-3 pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleSignDelete(sign.id)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button onClick={() => handleSignSave(sign.id)}>
+                            Save Sign
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditSign(sign.id)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleSignDelete(sign.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">
+                            {sign.designation}{" "}
+                            {sign.description && `- ${sign.description}`}
+                            {!primary && " (Secondary)"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {sign.width}x{sign.height} • Qty: {sign.quantity} •
+                            B Lights: {sign.bLights} • Covers: {sign.covers}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {primary && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleAddSecondarySign(sign.id)}
+                            >
+                              Add Secondary
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSign(sign.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSignDelete(sign.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Add Sign Button or Initial Designation Input */}
               {isAddingSign && (
-                <div className="w-full max-w-sm">
+                <div className="w-full max-w-md">
                   <Label className="text-sm font-medium mb-2 block">
-                    Designation
+                    Designation {isLoading && "(Loading...)"}
                   </Label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
@@ -396,32 +905,46 @@ const MutcdSignsStep2 = ({
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        Select designation...
+                        Select Designation
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0" align="start">
+                    <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput placeholder="Search designation..." />
-                        <CommandEmpty>No designation found.</CommandEmpty>
+                        <CommandInput
+                          placeholder="Search designation..."
+                          onValueChange={filterDesignations}
+                        />
                         <CommandList>
+                          <CommandEmpty>No designation found.</CommandEmpty>
                           <CommandGroup>
-                            {designations.map((designation) => (
-                              <CommandItem
-                                key={designation.value}
-                                value={designation.value}
-                                onSelect={() =>
-                                  handleDesignationSelect(designation.value)
-                                }
-                              >
-                                <div className="flex items-center">
-                                  <Check
-                                    className={cn("mr-2 h-4 w-4", "opacity-0")}
-                                  />
-                                  {designation.label}
-                                </div>
-                              </CommandItem>
-                            ))}
+                            {isLoading ? (
+                              <div className="py-6 text-center text-sm">
+                                Loading...
+                              </div>
+                            ) : (
+                              filteredDesignations.map((item) => (
+                                <CommandItem
+                                  key={item.designation}
+                                  value={item.designation}
+                                  onSelect={() =>
+                                    handleDesignationSelect(item.designation)
+                                  }
+                                >
+                                  <div className="flex items-center">
+                                    <Check className="mr-2 h-4 w-4 opacity-0" />
+                                    <span className="font-medium">
+                                      {item.designation}
+                                    </span>
+                                    {item.description && (
+                                      <span className="ml-2 text-muted-foreground text-xs">
+                                        - {item.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))
+                            )}
                           </CommandGroup>
                         </CommandList>
                       </Command>
@@ -446,14 +969,7 @@ const MutcdSignsStep2 = ({
                 <Button variant="outline" onClick={() => setCurrentStep(1)}>
                   Back
                 </Button>
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={
-                    signs.length === 0 || signs.some((s) => s.isConfiguring)
-                  }
-                >
-                  Next
-                </Button>
+                <Button onClick={handleNext}>Next</Button>
               </div>
             </div>
           </div>

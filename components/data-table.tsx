@@ -21,6 +21,8 @@ export type LegacyColumn = {
     className?: string;
 };
 
+
+
 export interface DataTableProps<TData> {
     columns: LegacyColumn[] | readonly LegacyColumn[];
     data: TData[];
@@ -34,7 +36,6 @@ export interface DataTableProps<TData> {
     onSegmentChange?: (value: string) => void;
     stickyLastColumn?: boolean;
     onArchiveSelected?: (selectedRows: TData[]) => void;
-    // Keeping onDeleteSelected for future implementation
     onDeleteSelected?: (selectedRows: TData[]) => void;
     tableRef?: React.RefObject<{
         resetRowSelection: () => void;
@@ -43,6 +44,8 @@ export interface DataTableProps<TData> {
     onViewDetails?: (item: TData) => void;
     onEdit?: (item: TData) => void;
     onArchive?: (item: TData) => void;
+    onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
+    onUpdateStatus?: (item: TData, status: 'Bid' | 'No Bid' | 'Unset' | 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -80,10 +83,10 @@ export function DataTable<TData>({
     onArchiveSelected,
     onDeleteSelected,
     tableRef,
-    onRowClick,
     onViewDetails,
     onEdit,
-    onArchive
+    onMarkAsBidJob,
+    onUpdateStatus
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
         return [
@@ -162,6 +165,93 @@ export function DataTable<TData>({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="z-[200]">
+                                    {onMarkAsBidJob && 'status' in row.original && (row.original as any).status === 'Bid' && (
+                                        <DropdownMenuItem
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                onMarkAsBidJob(row.original as TData);
+                                            }}
+                                        >
+                                            Bid Job
+                                        </DropdownMenuItem>
+                                    )}
+                                    
+                                    {onUpdateStatus && 'status' in row.original && segments && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <DropdownMenuItem>
+                                                    Mark as
+                                                    <span className="ml-auto">
+                                                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M6 3L10 7.5L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
+                                                        </svg>
+                                                    </span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent side="right" sideOffset={2} className="w-36">
+                                                {segments
+                                                    .filter(segment => {
+                                                        if (segment.value === 'all' || segment.value === 'archived') {
+                                                            return false;
+                                                        }
+                                                        
+                                                        const currentStatus = String((row.original as any).status);
+                                                        let currentSegmentValue = '';
+                                                        
+                                                        if (currentStatus === 'Bid') {
+                                                            currentSegmentValue = 'bid';
+                                                        } else if (currentStatus === 'No Bid') {
+                                                            currentSegmentValue = 'no-bid';
+                                                        } else if (currentStatus === 'Unset') {
+                                                            currentSegmentValue = 'unset';
+                                                        } else {
+                                                            currentSegmentValue = currentStatus.toLowerCase().replace(/\s+/g, '-');
+                                                        }
+                                                        
+                                                        return segment.value !== currentSegmentValue;
+                                                    })
+                                                    .map(segment => {
+                                                        let statusValue: string;
+                                                        
+                                                        if ('contractNumber' in row.original && !('lettingDate' in row.original)) {
+                                                            if (segment.value === 'bid') statusValue = 'Bid';
+                                                            else if (segment.value === 'no-bid') statusValue = 'No Bid';
+                                                            else if (segment.value === 'unset') statusValue = 'Unset';
+                                                            else statusValue = segment.value;
+                                                        } 
+                                                        else if ('lettingDate' in row.original) {
+                                                            if (segment.value === 'won') statusValue = 'Won';
+                                                            else if (segment.value === 'pending') statusValue = 'Pending';
+                                                            else if (segment.value === 'lost') statusValue = 'Lost';
+                                                            else if (segment.value === 'draft') statusValue = 'Draft';
+                                                            else if (segment.value === 'won-pending') statusValue = 'Won - Pending';
+                                                            else statusValue = segment.value;
+                                                        }
+                                                        else {
+                                                            statusValue = segment.value;
+                                                        }
+                                                        
+                                                        const cleanLabel = segment.label.split(' (')[0];
+                                                        
+                                                        return (
+                                                            <DropdownMenuItem
+                                                                key={segment.value}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    e.preventDefault();
+                                                                    onUpdateStatus(row.original as TData, statusValue as any);
+                                                                }}
+                                                            >
+                                                                {cleanLabel}
+                                                            </DropdownMenuItem>
+                                                        );
+                                                    })
+                                                }
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                    
                                     {onViewDetails && (
                                         <DropdownMenuItem 
                                             onClick={(e) => {
@@ -210,7 +300,7 @@ export function DataTable<TData>({
                 },
             }
         ];
-    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit]);
+    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit, onMarkAsBidJob, onUpdateStatus, segments]);
 
     const table = useReactTable({
         data,
@@ -322,10 +412,8 @@ export function DataTable<TData>({
                                                 row.getIsSelected() && "bg-muted"
                                             )}
                                             onClick={() => {
-                                                if (onRowClick) {
-                                                    onRowClick(row.original as TData);
-                                                } else if (onViewDetails) {
-                                                    onViewDetails(row.original as TData);
+                                                if (onViewDetails) {
+                                                    onViewDetails(row.original as TData)
                                                 }
                                             }}
                                         >

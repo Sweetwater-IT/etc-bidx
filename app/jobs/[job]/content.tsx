@@ -18,7 +18,7 @@ import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -87,6 +87,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [selectedActiveJob, setSelectedActiveJob] = useState<ActiveJob | null>(null)
     const [activeJobDetailsSheetOpen, setActiveJobDetailsSheetOpen] = useState(false)
     const [editActiveJobSheetOpen, setEditActiveJobSheetOpen] = useState(false)
+    
+    interface JobCounts {
+        all: number;
+        unset: number;
+        'no-bid': number;
+        bid: number;
+        archived: number;
+    }
+    
+    const [jobCounts, setJobCounts] = useState<JobCounts>({
+        all: 0,
+        unset: 0,
+        'no-bid': 0,
+        bid: 0,
+        archived: 0
+    });
     
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -165,6 +181,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
             const data = await fetchActiveBids({
                 status: statusFilter,
+                orderBy: 'created_at',
+                ascending: false
             });
             
             if (data.length === 0) {
@@ -203,22 +221,58 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [activeSegment, startLoading, stopLoading]);
 
     // This effect will run whenever activeSegment changes
+    // Function to fetch job counts for all segments
+    const fetchJobCounts = useCallback(async () => {
+        if (!isAvailableJobs) return;
+        
+        try {
+            startLoading();
+            
+            // Fetch all jobs with no status filter to get the true total count
+            // Use a high limit to ensure we get all records
+            const allJobs = await fetchBids({ limit: 1000 });
+            
+            // Fetch counts for each status separately
+            const [unsetJobs, noBidJobs, bidJobs, archivedJobs] = await Promise.all([
+                fetchBids({ status: "Unset", limit: 1000 }),   // Unset jobs
+                fetchBids({ status: "No Bid", limit: 1000 }),  // No Bid jobs
+                fetchBids({ status: "Bid", limit: 1000 }),     // Bid jobs
+                fetchBids({ status: "archived", limit: 1000 }) // Archived jobs
+            ]);
+            
+            setJobCounts({
+                all: allJobs.length,          // Actual count from API without status filter
+                unset: unsetJobs.length,      // Count of Unset jobs
+                'no-bid': noBidJobs.length,   // Count of No Bid jobs
+                bid: bidJobs.length,          // Count of Bid jobs
+                archived: archivedJobs.length // Count of Archived jobs
+            });
+        } catch (error) {
+            console.error("Error fetching job counts:", error);
+            toast.error("Failed to fetch job counts");
+        } finally {
+            stopLoading();
+        }
+    }, [isAvailableJobs, startLoading, stopLoading]);
+    
     useEffect(() => {
         if (isAvailableJobs) {
             loadAvailableJobs();
+            fetchJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
         }
-    }, [activeSegment, isAvailableJobs, isActiveBids, loadAvailableJobs, loadActiveBids]);
+    }, [isAvailableJobs, isActiveBids, loadAvailableJobs, loadActiveBids, activeSegment, fetchJobCounts]);
 
     // This effect will run when the job type changes
     useEffect(() => {
         if (job === "available") {
             loadAvailableJobs();
+            fetchJobCounts();
         } else if (job === "active-bids") {
             loadActiveBids();
         }
-    }, [job, loadAvailableJobs, loadActiveBids]);
+    }, [job, loadAvailableJobs, loadActiveBids, fetchJobCounts]);
 
     useEffect(() => {
         console.log("Sheet state changed:", {
@@ -232,19 +286,59 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobsData;
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : ACTIVE_JOBS_COLUMNS;
+    
+    const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
+        console.log('Marking job as bid job:', job);
+        
+        const queryParams = new URLSearchParams({
+            jobId: job.id.toString(),
+            source: 'available-jobs'
+        }).toString();
+        
+        router.push(`/active-bid?${queryParams}`);
+    }, [router]);
+    
+    const handleUpdateStatus = useCallback(async (job: AvailableJob, status: 'Bid' | 'No Bid' | 'Unset') => {
+        try {
+            startLoading();
+            await changeBidStatus(job.id, status);
+            toast.success(`Job status updated to ${status}`);
+            await loadAvailableJobs();
+            await fetchJobCounts();
+        } catch (error) {
+            console.error('Error updating job status:', error);
+            toast.error('Failed to update job status');
+        } finally {
+            stopLoading();
+        }
+    }, [loadAvailableJobs, fetchJobCounts, startLoading, stopLoading]);
+    
+    const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => {
+        try {
+            startLoading();            
+            await changeActiveBidStatus(bid.id, status);
 
-    const segments = isAvailableJobs
-        ? [
-              { label: "All", value: "all" },
-              { label: "Unset", value: "unset" },
-              { label: "No Bid", value: "no-bid" },
-              { label: "Bid", value: "bid" },
-              { label: "Archived", value: "archived" }, // Added from new-tab-archived
-          ]
-        : isActiveBids
-        ? ACTIVE_BIDS_SEGMENTS
-        : ACTIVE_JOBS_SEGMENTS;
+            setActiveBids(prevBids => 
+                prevBids.map(item => 
+                    item.id === bid.id ? { ...item, status } : item
+                )
+            );
+            
+            toast.success(`Bid status updated to ${status}`);
+        } catch (error) {
+            console.error('Error updating bid status:', error);
+            toast.error('Failed to update bid status');
+        } finally {
+            stopLoading();
+        }
+    }, [startLoading, stopLoading]);
 
+    const handleEdit = (item: AvailableJob) => {
+        console.log('Edit clicked:', item)
+        setSelectedJob(item)
+        setEditJobSheetOpen(true)
+    }
+    
     const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
         setSelectedJobsToArchive(selectedJobs);
         setShowArchiveJobsDialog(true);
@@ -445,6 +539,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const handleViewDetails = (item: AvailableJob) => {
+        setSelectedJob(item)
+        setJobDetailsSheetOpen(true)
+    }
+
+    const segments = isAvailableJobs
+        ? [
+              { label: `All (${jobCounts.all || 0})`, value: "all" },
+              { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
+              { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
+              { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
+              { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
+          ]
+        : isActiveBids
+        ? ACTIVE_BIDS_SEGMENTS
+        : ACTIVE_JOBS_SEGMENTS;
+
     const handleCreateClick = () => {
         if (isAvailableJobs) {
             setOpenBidSheetOpen(true);
@@ -454,18 +565,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else if (isActiveJobs) {
             setCreateJobSheetOpen(true);
         }
-    };
-
-    const handleViewDetails = (item: AvailableJob) => {
-        console.log('View details clicked:', item)
-        setSelectedJob(item)
-        setJobDetailsSheetOpen(true)
-    }
-
-    const handleEdit = (item: AvailableJob) => {
-        console.log('Edit clicked:', item)
-        setSelectedJob(item)
-        setEditJobSheetOpen(true)
     }
 
     const handleActiveJobViewDetails = (item: ActiveJob) => {
@@ -523,6 +622,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     onArchiveSelected={initiateArchiveBids}
                     onDeleteSelected={initiateDeleteBids}
                     tableRef={activeBidsTableRef}
+                    onViewDetails={(item) => {
+                        if ('lettingDate' in item) {
+                            setSelectedBid(item as ActiveBid);
+                            setDetailsSheetOpen(true);
+                        }
+                    }}
+                    onEdit={handleEdit}
+                    onUpdateStatus={(item, status) => {
+                        if ('lettingDate' in item) {
+                            // For active bids, the status passed from the DataTable component is already
+                            // in the correct format ('Won', 'Pending', 'Lost', etc.) because we're showing those
+                            // exact values in the dropdown menu
+                            const bidStatus = status as 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending';
+                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                        }
+                    }}
                 />
                 <ActiveBidDetailsSheet
                     open={detailsSheetOpen}
@@ -579,6 +694,27 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onViewDetails={handleViewDetails}
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
+                                    onMarkAsBidJob={handleMarkAsBidJob}
+                                    onUpdateStatus={(item, status: string) => {
+                                        // Map segment values to proper status values if needed
+                                        let statusValue: 'Bid' | 'No Bid' | 'Unset';
+                                        
+                                        if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
+                                            statusValue = status as 'Bid' | 'No Bid' | 'Unset';
+                                        } else if (status === 'bid') {
+                                            statusValue = 'Bid';
+                                        } else if (status === 'no-bid') {
+                                            statusValue = 'No Bid';
+                                        } else if (status === 'unset') {
+                                            statusValue = 'Unset';
+                                        } else {
+                                            console.error('Invalid status value:', status);
+                                            return;
+                                        }
+                                        
+                                        handleUpdateStatus(item, statusValue);
+                                    }}
+                                    stickyLastColumn
                                 />
                             ) : isActiveBids ? (
                                 <ActiveBidsTable bids={data as ActiveBid[]} />

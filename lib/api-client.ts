@@ -1,4 +1,5 @@
 import { Database } from '@/types/database.types';
+import { County } from '@/types/TCounty';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -85,10 +86,10 @@ export async function createBid(bid: AvailableJobInsert): Promise<AvailableJob> 
 /**
  * Update an existing bid
  */
-export async function updateBid(id: number, data: any) {
+export async function updateBid(id: number, data: AvailableJobUpdate): Promise<AvailableJob> {
   try {
     const response = await fetch(`/api/bids/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -101,7 +102,7 @@ export async function updateBid(id: number, data: any) {
     }
 
     const result = await response.json()
-    return result
+    return result.data
   } catch (error) {
     console.error('Error updating bid:', error)
     throw error
@@ -212,6 +213,168 @@ export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstima
   
   const result = await response.json();
   return result.data;
+}
+
+/**
+ * Update an existing active bid
+ */
+export async function updateActiveBid(id: number, data: Partial<BidEstimateInsert>): Promise<BidEstimate> {
+  try {
+    const response = await fetch(`/api/active-bids/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update active bid');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error updating active bid:', error);
+    throw error;
+  }
+}
+
+/**
+ * Change an active bid's status
+ */
+export async function changeActiveBidStatus(
+  id: number, 
+  status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending'
+): Promise<BidEstimate> {
+  return updateActiveBid(id, { status });
+}
+
+/**
+ * Create a new MPT rental record for a bid estimate
+ */
+export async function createMptRental(data: {
+  estimate_id: number;
+  target_moic?: number;
+  payback_period?: number;
+  annual_utilization?: number;
+  dispatch_fee?: number;
+  mpg_per_truck?: number;
+  revenue?: number;
+  cost?: number;
+  gross_profit?: number;
+  hours?: number;
+  static_equipment_info?: any;
+}) {
+  try {
+    const response = await fetch('/api/estimate-mpt-rental', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create MPT rental record');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error creating MPT rental record:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch MPT rental data for a bid estimate
+ */
+export async function fetchMptRental(estimateId: number) {
+  try {
+    const response = await fetch(`/api/estimate-mpt-rental?estimate_id=${estimateId}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // No MPT rental record found
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch MPT rental record');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Error fetching MPT rental record:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch reference data for dropdowns
+ */
+export async function fetchReferenceData(type: 'counties' | 'users' | 'owners' | 'mpt equipment') {
+  try {
+    const response = await fetch(`/api/reference-data?type=${type}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to fetch ${type}`);
+    }
+
+    const result = await response.json();
+
+    let formattedData = result.data;
+    if (type === 'counties') {
+      // format database rows into County objects
+      formattedData = result.data.map(countyRow => ({
+        id: countyRow.id,
+        name: countyRow.name,
+        district: countyRow.district,
+        branch: countyRow.branches.name,
+        laborRate: countyRow.labor_rate,
+        fringeRate: countyRow.fringe_rate,
+        shopRate: countyRow.branches?.shop_rate,
+        flaggingRate: countyRow.flagging_rate,
+        flaggingBaseRate: countyRow.flagging_base_rate,
+        flaggingFringeRate: countyRow.flagging_fringe_rate,
+        ratedTargetGM: countyRow.flagging_rated_target_gm,
+        nonRatedTargetGM: countyRow.flagging_non_rated_target_gm,
+        insurance: countyRow.insurance,
+        fuel: countyRow.fuel,
+        market: (countyRow.market as 'MOBILIZATION' | 'CORE' | 'LOCAL')
+      })) as County[];
+    }
+    
+    return formattedData;
+  } catch (error) {
+    console.error(`Error fetching ${type}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch sign designations with their corresponding dimension options
+ * @param search Optional search term to filter designations
+ */
+export async function fetchSignDesignations(search?: string) {
+  try {
+    const url = '/api/signs';
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sign designations: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching sign designations:', error);
+    return [];
+  }
 }
 
 /**

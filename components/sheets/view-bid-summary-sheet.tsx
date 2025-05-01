@@ -1,5 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { FormData } from "@/app/active-bid/page";
+import { FormData } from "@/types/IFormData";
 import { formatCurrency } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 interface ViewBidSummarySheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formData: FormData;
 }
 
 export function ViewBidSummarySheet({
   open,
   onOpenChange,
-  formData,
 }: ViewBidSummarySheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

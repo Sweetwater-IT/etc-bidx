@@ -67,7 +67,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
         {children ? (
           children
         ) : (
-          <h1 className="text-3xl font-bold mt-2 ml-2">{getCurrentTitle()}</h1>
+          <h1 className="text-3xl font-bold mt-2 ml-0">{getCurrentTitle()}</h1>
         )}
       </div>
     </header>

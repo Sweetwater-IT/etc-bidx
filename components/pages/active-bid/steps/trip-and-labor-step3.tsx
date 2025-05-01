@@ -1,169 +1,381 @@
 "use client";
 
-import { FormData } from "@/app/active-bid/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState } from "react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import React, { useEffect, useState } from "react";
+import { useEstimate } from "@/contexts/EstimateContext";
+import {
+  calculateTruckAndFuelCostSummary,
+  getNonRatedHoursPerPhase,
+  getRatedHoursPerPhase,
+  getTotalTripsPerPhase,
+} from "@/lib/mptRentalHelperFunctions";
+import { safeNumber } from "@/lib/safe-number";
 
 const step = {
-    id: "step-3",
-    name: "Trip and Labor",
-    description: "Input trip and labor details",
-    fields: [
-        { name: "numberOfDays", label: "Number of Days", type: "number", placeholder: "Number of Days", hasToggle: false },
-        { name: "numberOfPersonnel", label: "Number of Personnel", type: "number", placeholder: "Number of Personnel", hasToggle: false },
-        { name: "numberOfTrucks", label: "Number of Trucks", type: "number", placeholder: "Number of Trucks", hasToggle: false },
-        { name: "trips", label: "Trips", type: "number", placeholder: "Trips", hasToggle: false },
-        { name: "additionalTrips", label: "Additional Trips", type: "number", placeholder: "Additional Trips", hasToggle: false },
-        { name: "totalTrips", label: "Total Trips", type: "number", placeholder: "Total Trips", hasToggle: false },
-        { name: "ratedHours", label: "Rated Hours", type: "number", placeholder: "Rated Hours", hasToggle: false },
-        { name: "additionalRatedHours", label: "Additional Rated Hours", type: "number", placeholder: "Additional Rated Hours", hasToggle: false },
-        { name: "totalRatedHours", label: "Total Rated Hours", type: "number", placeholder: "Total Rated Hours", hasToggle: false },
-        { name: "nonRatedHours", label: "Non-Rated Hours", type: "number", placeholder: "Non-Rated Hours", hasToggle: false },
-        {
-            name: "additionalNonRatedHours",
-            label: "Additional Non-Rated Hours",
-            type: "number",
-            placeholder: "Additional Non-Rated Hours",
-            hasToggle: false,
-        },
-        {
-            name: "totalNonRatedHours",
-            label: "Total Non-Rated Hours",
-            type: "number",
-            placeholder: "Total Non-Rated Hours",
-            hasToggle: false,
-        },
-        { name: "mobilization", label: "Mobilization", type: "number", placeholder: "Mobilization", hasToggle: false },
-        { name: "fuelCost", label: "Fuel Cost", type: "number", placeholder: "Fuel Cost", hasToggle: false },
-        { name: "truckFuelCost", label: "Truck & Fuel Cost", type: "number", placeholder: "Truck & Fuel Cost", hasToggle: false },
-    ],
+  id: "step-3",
+  name: "Trip and Labor",
+  description: "Input trip and labor details",
 };
 
 const TripAndLaborStep3 = ({
-    currentStep,
-    setCurrentStep,
-    formData,
-    setFormData,
+  currentStep,
+  setCurrentStep,
 }: {
-    currentStep: number;
-    setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-    formData: FormData;
-    setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }) => {
-    const [toggleStates, setToggleStates] = useState({
-        laborRate: false,
-        fringeRate: false,
-        shopRate: false,
-        winterShutdown: false,
+  const currentPhase = 0;
+  const { mptRental, adminData, dispatch } = useEstimate();
+  const currentPhaseData = mptRental?.phases?.[currentPhase] || { days: 0, personnel: 0, numberTrucks: 0, additionalRatedHours: 0, additionalNonRatedHours: 0, maintenanceTrips: 0 };
+
+  const safeCalculate = <T extends unknown[]>(fn: (...args: T) => number | undefined, ...args: T): number => {
+    try {
+      return fn(...args) || 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+  
+  const formatForDisplay = (value: number | undefined): string => {
+    if (value === undefined || value === 0 || Number.isNaN(value)) {
+      return '';
+    }
+    return value.toFixed(1);
+  };
+
+  const handleInputChange = (name: any, value: number | undefined) => {
+    dispatch({
+      type: "UPDATE_MPT_PHASE_TRIP_AND_LABOR",
+      payload: {
+        key: name,
+        value: value ?? 0,
+        phase: currentPhase,
+      },
     });
+  };
 
-    const handleInputChange = (field: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            [field]: value,
-        }));
-    };
+  const handleNext = () => {
+    setCurrentStep(4);
+  };
 
-    const handleToggleChange = (field: string) => {
-        setToggleStates((prev) => ({
-            ...prev,
-            [field]: !prev[field],
-        }));
-    };
+  const handleBack = () => {
+    setCurrentStep(2);
+  };
 
-    return (
-        <div>
-            <div className="relative">
-                <button
-                    onClick={() => setCurrentStep(3)}
-                    className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 3 ? "text-foreground" : "text-muted-foreground"}`}
-                >
-                    <div
-                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${
-                            3 <= currentStep ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground bg-background"
-                        }`}
-                    >
-                        3
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <div className="text-base font-medium">{step.name}</div>
-                        <div className="text-sm text-muted-foreground">{step.description}</div>
-                    </div>
-                </button>
-
-                {/* Collapsible Content */}
-                {currentStep === 3 && (
-                    <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
-                        <div className="space-y-8">
-                            <div className="max-w-xl grid grid-cols-2 gap-6">
-                                {step.fields.map((field) => (
-                                    <div key={field.name} className="space-y-2.5">
-                                        <Label htmlFor={field.name} className="text-sm font-medium text-muted-foreground">
-                                            {field.label}
-                                        </Label>
-                                        {field.type === "select" ? (
-                                            <select
-                                                id={field.name}
-                                                value={formData[field.name] || ""}
-                                                onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">{field.placeholder}</option>
-                                            </select>
-                                        ) : field.type === "toggle" ? (
-                                            <div className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id={field.name}
-                                                    checked={toggleStates[field.name]}
-                                                    onChange={() => handleToggleChange(field.name)}
-                                                    className="h-4 w-4"
-                                                />
-                                                <Label htmlFor={field.name}>{field.label}</Label>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                <Input
-                                                    id={field.name}
-                                                    type={field.type}
-                                                    placeholder={field.placeholder}
-                                                    value={formData[field.name] || ""}
-                                                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                    className="h-10"
-                                                />
-                                                {field.hasToggle && (
-                                                    <div className="flex items-center gap-2">
-                                                        <Label htmlFor={`${field.name}-toggle`} className="text-sm text-muted-foreground">
-                                                            Use this rate?
-                                                        </Label>
-                                                        <input
-                                                            id={`${field.name}-toggle`}
-                                                            type="checkbox"
-                                                            checked={toggleStates[field.name]}
-                                                            onChange={() => handleToggleChange(field.name)}
-                                                            className="h-4 w-4"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex justify-between">
-                                <Button variant="outline" onClick={() => setCurrentStep(2)}>
-                                    Back
-                                </Button>
-                                <Button onClick={() => setCurrentStep(4)}>Next</Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+  return (
+    <div>
+      <div className="relative">
+        <button
+          onClick={() => setCurrentStep(3)}
+          className={cn(
+            "group flex w-full items-start gap-4 py-4 text-left",
+            currentStep === 3 ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          <div
+            className={cn(
+              "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm",
+              3 <= currentStep
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted-foreground bg-background"
+            )}
+          >
+            3
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="text-base font-medium">{step.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {step.description}
             </div>
-        </div>
-    );
+          </div>
+        </button>
+
+        {/* Collapsible Content */}
+        {currentStep === 3 && (
+          <div className="mt-3 mb-6 ml-12">
+            <div className="space-y-8">
+              {/* Personnel Section */}
+              <div>
+                <div className="text-base font-semibold mb-4 text-muted-foreground">Personnel</div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Number of Days
+                    </Label>
+                    <Input
+                      type="number"
+                      value={mptRental.phases[0].days || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "days",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Number of Days"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Number of Personnel
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={currentPhaseData.personnel || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "personnel",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Number of Personnel"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Number of Trucks
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={currentPhaseData.numberTrucks || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "numberTrucks",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Number of Trucks"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+
+              <div>
+                <div className="text-base font-semibold mb-4 mt-5 text-muted-foreground">Trips</div>
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">Trips</Label>
+                    <Input
+                      type="number"
+                      value={formatForDisplay(currentPhaseData ? (getTotalTripsPerPhase(currentPhaseData) - (currentPhaseData.maintenanceTrips * 2)) : 0)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "maintenanceTrips",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Trips"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Additional Trips
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={currentPhaseData.maintenanceTrips || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "maintenanceTrips",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Additional Trips"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Label className="flex items-center text-muted-foreground">
+                      Total Trips:
+                    </Label>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      {getTotalTripsPerPhase(currentPhaseData) || ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-2" />
+              {/* Hours Section */}
+              <div>
+                <div className="text-base font-semibold mb-4 mt-5 text-muted-foreground">Hours</div>
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Rated Hours
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formatForDisplay(getRatedHoursPerPhase(currentPhaseData) - (currentPhaseData.additionalRatedHours || 0))}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "additionalRatedHours",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Rated Hours"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Additional Rated Hours
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={currentPhaseData.additionalRatedHours || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "additionalRatedHours",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Additional Rated Hours"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Label className="flex items-center text-muted-foreground">
+                      Total Rated Hours:
+                    </Label>
+                    <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
+                      {formatForDisplay(safeCalculate(getRatedHoursPerPhase, currentPhaseData))}
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Non-Rated Hours
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formatForDisplay(safeNumber(getNonRatedHoursPerPhase(adminData || {}, currentPhaseData) - (currentPhaseData.additionalNonRatedHours || 0), 0))}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "additionalNonRatedHours",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Non-Rated Hours"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Additional Non-Rated Hours
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={currentPhaseData.additionalNonRatedHours || ''}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "additionalNonRatedHours",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Additional Non-Rated Hours"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Label className="flex items-center text-muted-foreground">
+                      Total Non-Rated Hours:
+                    </Label>
+                    <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
+                      {formatForDisplay(safeCalculate(getNonRatedHoursPerPhase, adminData || {}, currentPhaseData))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-2" />
+              {/* Mobilization Section */}
+              <div>
+                <div className="text-base font-semibold mb-4 mt-5 text-muted-foreground">Mobilization</div>
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Mobilization
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formatForDisplay(safeCalculate(
+                        () => (currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * (mptRental?.dispatchFee || 0)
+                      ))}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "mobilization",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Mobilization"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">Fuel Cost</Label>
+                    <Input
+                      type="number"
+                      value={formatForDisplay(safeCalculate(
+                        () => ((((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * 2 * 
+                          (adminData?.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 1)) * (adminData?.fuelCostPerGallon ?? 0))
+                      ))}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "fuelCost",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Fuel Cost"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center mb-2 text-muted-foreground">
+                      Truck & Fuel Cost
+                    </Label>
+                    <Input
+                      type="number"
+                      value={(() => {
+                        const fuelCost = safeCalculate(
+                          () => ((((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * 2 * 
+                            (adminData?.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 1)) * (adminData?.fuelCostPerGallon ?? 0))
+                        );
+                        
+                        const mobilizationCost = safeCalculate(
+                          () => ((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * (mptRental?.dispatchFee || 0))
+                        );
+                        
+                        const total = fuelCost + mobilizationCost;
+                        return formatForDisplay(total);
+                      })()}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "truckAndFuelCost",
+                          e.target.value === "" ? undefined : parseFloat(e.target.value)
+                        )
+                      }
+                      placeholder="Truck & Fuel Cost"
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Navigation Buttons */}
+              <div className="flex justify-between pt-4">
+                <Button variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button onClick={handleNext}>Next</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default TripAndLaborStep3;
