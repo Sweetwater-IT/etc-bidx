@@ -444,7 +444,7 @@ const BidItemsStep4 = ({
         phaseNumber: currentPhase,
         equipmentType: equipmentKey,
         equipmentProperty: property,
-        value: safeNumber(value)
+        value: safeNumber(value, 0) as number
       },
     });
   };
@@ -453,7 +453,7 @@ const BidItemsStep4 = ({
   const handleNewItemInputChange = (field: keyof Omit<CustomLightAndDrumItem, 'id'>, value: number) => {
     setNewCustomItem(prev => ({
       ...prev,
-      [field]: safeNumber(value),
+      [field]: safeNumber(value, 0)
     }));
   };
   
@@ -495,20 +495,20 @@ const BidItemsStep4 = ({
   };
 
   // Safely get equipment quantities
-  const getEquipmentQuantity = (equipmentKey: EquipmentType): number => {
-    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return 0;
-    return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity);
+  const getEquipmentQuantity = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
+    return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity, undefined);
   };
   
   // Safely get equipment price
-  const getEquipmentPrice = (equipmentKey: EquipmentType): number => {
-    if (!mptRental?.staticEquipmentInfo || !mptRental.staticEquipmentInfo[equipmentKey]) return 0;
-    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price);
+  const getEquipmentPrice = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.staticEquipmentInfo || !mptRental.staticEquipmentInfo[equipmentKey]) return undefined;
+    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price, undefined);
   };
   
   // Get minimum allowed quantity for an equipment type
-  const getMinQuantity = (equipmentKey: EquipmentType): number => {
-    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return 0;
+  const getMinQuantity = (equipmentKey: EquipmentType): number | undefined => {
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
     
     const associatedEquipment = getAssociatedSignEquipment(mptRental.phases[currentPhase]);
     
@@ -619,7 +619,7 @@ const BidItemsStep4 = ({
                         equipmentKey === 'sandbag' ? (
                           <div key={equipmentKey} className="flex flex-col gap-2">
                             <div className="font-medium">{formatLabel(equipmentKey)}</div>
-                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
                             <div>{sandbagQuantity}</div>
                           </div>
                         ) : (
@@ -628,7 +628,7 @@ const BidItemsStep4 = ({
                             <Input
                               type="number"
                               min={getMinQuantity(equipmentKey)}
-                              value={getEquipmentQuantity(equipmentKey)}
+                              value={getEquipmentQuantity(equipmentKey) || ''}
                               onChange={(e) => handleStandardInputChange(
                                 parseFloat(e.target.value) || 0,
                                 equipmentKey,
@@ -636,7 +636,7 @@ const BidItemsStep4 = ({
                               )}
                               className="w-1/3"
                             />
-                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
+                            <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
                           </div>
                         )
                       ))}
@@ -668,7 +668,7 @@ const BidItemsStep4 = ({
                           <Input
                             type="number"
                             min={getMinQuantity(equipmentKey)}
-                            value={getEquipmentQuantity(equipmentKey)}
+                            value={getEquipmentQuantity(equipmentKey) || ''}
                             onChange={(e) => handleStandardInputChange(
                               parseFloat(e.target.value) || 0,
                               equipmentKey,
@@ -676,15 +676,15 @@ const BidItemsStep4 = ({
                             )}
                             className="w-1/3"
                           />
-                          <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey).toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey)).toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                          <div className="text-sm text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
                           {adminData?.emergencyJob && (
                             <div className="flex items-center gap-2">
                               <Input
                                 type="number"
                                 min={0}
                                 step={0.01}
-                                value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || "0"}
+                                value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || ''}
                                 onChange={(e) => dispatch({
                                   type: 'UPDATE_ADMIN_DATA',
                                   payload: {
@@ -728,9 +728,9 @@ const BidItemsStep4 = ({
                           id="quantity"
                           type="number"
                           min={0}
-                          value={newCustomItem.quantity === 0 ? "" : newCustomItem.quantity}
+                          value={newCustomItem.quantity || ''}
                           onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
-                          placeholder="0"
+                          placeholder=""
                         />
                       </div>
                       <div className="col-span-3">
@@ -740,9 +740,9 @@ const BidItemsStep4 = ({
                           type="number"
                           min={0}
                           step={0.01}
-                          value={newCustomItem.cost === 0 ? "" : newCustomItem.cost}
+                          value={newCustomItem.cost || ''}
                           onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
+                          placeholder=""
                         />
                       </div>
                       <div className="col-span-3">
@@ -751,9 +751,9 @@ const BidItemsStep4 = ({
                           id="usefulLife"
                           type="number"
                           min={0}
-                          value={newCustomItem.usefulLife === 0 ? "" : newCustomItem.usefulLife}
+                          value={newCustomItem.usefulLife || ''}
                           onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
-                          placeholder="0"
+                          placeholder=""
                         />
                       </div>
                     </div>
