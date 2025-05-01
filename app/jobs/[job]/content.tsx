@@ -18,7 +18,7 @@ import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -181,6 +181,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
             const data = await fetchActiveBids({
                 status: statusFilter,
+                orderBy: 'created_at',
+                ascending: false
             });
             
             if (data.length === 0) {
@@ -302,13 +304,34 @@ export function JobPageContent({ job }: JobPageContentProps) {
             await changeBidStatus(job.id, status);
             toast.success(`Job status updated to ${status}`);
             await loadAvailableJobs();
+            await fetchJobCounts();
         } catch (error) {
             console.error('Error updating job status:', error);
             toast.error('Failed to update job status');
         } finally {
             stopLoading();
         }
-    }, [loadAvailableJobs, startLoading, stopLoading]);
+    }, [loadAvailableJobs, fetchJobCounts, startLoading, stopLoading]);
+    
+    const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => {
+        try {
+            startLoading();            
+            await changeActiveBidStatus(bid.id, status);
+
+            setActiveBids(prevBids => 
+                prevBids.map(item => 
+                    item.id === bid.id ? { ...item, status } : item
+                )
+            );
+            
+            toast.success(`Bid status updated to ${status}`);
+        } catch (error) {
+            console.error('Error updating bid status:', error);
+            toast.error('Failed to update bid status');
+        } finally {
+            stopLoading();
+        }
+    }, [startLoading, stopLoading]);
 
     const handleEdit = (item: AvailableJob) => {
         console.log('Edit clicked:', item)
@@ -599,6 +622,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     onArchiveSelected={initiateArchiveBids}
                     onDeleteSelected={initiateDeleteBids}
                     tableRef={activeBidsTableRef}
+                    onViewDetails={(item) => {
+                        if ('lettingDate' in item) {
+                            setSelectedBid(item as ActiveBid);
+                            setDetailsSheetOpen(true);
+                        }
+                    }}
+                    onEdit={handleEdit}
+                    onUpdateStatus={(item, status) => {
+                        if ('lettingDate' in item) {
+                            // For active bids, the status passed from the DataTable component is already
+                            // in the correct format ('Won', 'Pending', 'Lost', etc.) because we're showing those
+                            // exact values in the dropdown menu
+                            const bidStatus = status as 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending';
+                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                        }
+                    }}
                 />
                 <ActiveBidDetailsSheet
                     open={detailsSheetOpen}
@@ -656,7 +695,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
                                     onMarkAsBidJob={handleMarkAsBidJob}
-                                    onUpdateStatus={handleUpdateStatus}
+                                    onUpdateStatus={(item, status: string) => {
+                                        // Map segment values to proper status values if needed
+                                        let statusValue: 'Bid' | 'No Bid' | 'Unset';
+                                        
+                                        if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
+                                            statusValue = status as 'Bid' | 'No Bid' | 'Unset';
+                                        } else if (status === 'bid') {
+                                            statusValue = 'Bid';
+                                        } else if (status === 'no-bid') {
+                                            statusValue = 'No Bid';
+                                        } else if (status === 'unset') {
+                                            statusValue = 'Unset';
+                                        } else {
+                                            console.error('Invalid status value:', status);
+                                            return;
+                                        }
+                                        
+                                        handleUpdateStatus(item, statusValue);
+                                    }}
                                     stickyLastColumn
                                 />
                             ) : isActiveBids ? (

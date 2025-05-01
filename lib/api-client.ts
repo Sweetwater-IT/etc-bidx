@@ -242,6 +242,16 @@ export async function updateActiveBid(id: number, data: Partial<BidEstimateInser
 }
 
 /**
+ * Change an active bid's status
+ */
+export async function changeActiveBidStatus(
+  id: number, 
+  status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending'
+): Promise<BidEstimate> {
+  return updateActiveBid(id, { status });
+}
+
+/**
  * Create a new MPT rental record for a bid estimate
  */
 export async function createMptRental(data: {
