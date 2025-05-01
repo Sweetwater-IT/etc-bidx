@@ -102,7 +102,7 @@ export const data = {
     },
     {
       title: "Customers",
-      url: "",
+      url: "/customers",
       icon: IconUsers,
     },
     {
