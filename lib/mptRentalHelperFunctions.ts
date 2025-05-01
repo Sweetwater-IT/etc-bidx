@@ -285,7 +285,7 @@ function calculateCostMetrics<K extends EquipmentType | SheetingType>(
     const quantity = safeNumber(item.totalQuantity);
     const price = safeNumber(staticInfo.price);
     const discountRate = safeNumber(staticInfo.discountRate);
-    const usefulLife = safeNumber(staticInfo.usefulLife) || 365; 
+    const usefulLife = safeNumber(staticInfo.usefulLife) || 365;
     const daysRequired = safeNumber(item.totalDaysRequired);
 
     const itemCost = quantity * price;
@@ -332,11 +332,11 @@ export function calculateLaborCostSummary(adminData: AdminData, mptRental: MPTRe
     const totalRatedLaborRevenue = totalRatedLaborCost * 2;
     const nonRateLaborRevenue = totalNonRateLaborCost * 2;
     const revenue = isRated ? totalRatedLaborRevenue : nonRateLaborRevenue;
-    
+
     const ratedGrossProfit = totalRatedLaborRevenue - totalRatedLaborCost;
     const nonRateGrossProfit = nonRateLaborRevenue - totalNonRateLaborCost;
     const grossProfit = isRated ? ratedGrossProfit : nonRateGrossProfit;
-    
+
     const nonRateGrossMargin = nonRateLaborRevenue !== 0 ? (nonRateGrossProfit / nonRateLaborRevenue) * 100 : 0;
     const grossMargin = revenue !== 0 ? (grossProfit / revenue) * 100 : 0;
 
@@ -380,67 +380,55 @@ interface TruckAndFuelCostSummary {
 
 // Function to calculate truck and fuel cost summary
 export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental: MPTRentalEstimating): TruckAndFuelCostSummary {
-  try {
-    const phaseTotals = returnPhaseTotals(mptRental);
-    
-    const totalTruckDays = safeNumber(phaseTotals.totalTrucks) * safeNumber(phaseTotals.totalDays);
-    const totalTrips = safeNumber(phaseTotals.totalTrips);
-    const owMileage = safeNumber(adminData?.owMileage);
-    const fuelCostPerGallon = safeNumber(adminData?.fuelCostPerGallon);
-    const mpgPerTruck = safeNumber(mptRental?.mpgPerTruck) || 1;
-    const dispatchFee = safeNumber(mptRental?.dispatchFee);
-    
-    const totalMiles = totalTrips * owMileage * 2;
-    
-    const fuelCost = (totalMiles / mpgPerTruck) * fuelCostPerGallon;
-    
-    const dispatchFeeTotal = dispatchFee * totalTrips;
-    
-    const totalCost = fuelCost + dispatchFeeTotal;
-    
-    const markup = 1.1; 
-    const revenue = totalCost * markup;
-    
-    const grossProfit = revenue - totalCost;
-    const grossMargin = revenue !== 0 ? (grossProfit / revenue) * 100 : 0;
-    
-    return {
-      cost: totalCost,
-      revenue,
-      grossProfit,
-      grossMargin
-    };
-  } catch (error) {
-    console.error('Error calculating truck and fuel cost summary:', error);
-    return {
-      cost: 0,
-      revenue: 0,
-      grossProfit: 0,
-      grossMargin: 0
-    };
-  }
+
+  let totalDispatchFee = 0;
+  let totalFuelCost = 0;
+
+  mptRental.phases.forEach(phase => {
+    let phaseTrips = getTotalTripsPerPhase(phase);
+    let phaseTrucks = Number(phase.numberTrucks) || 0;
+    totalDispatchFee += Number(mptRental.dispatchFee || 0) * Number(phaseTrips || 0) * Number(phaseTrucks || 0);
+    totalFuelCost += (
+      (Number(phaseTrips || 0) *
+        Number(phaseTrucks || 0) *
+        2 *
+        Number(adminData.owMileage || 0)) /
+      Number(mptRental.mpgPerTruck || 1)
+    ) * Number(adminData.fuelCostPerGallon || 0);
+  });
+
+
+
+  const grossMargin = totalFuelCost > 0 ? (totalDispatchFee / (totalFuelCost + totalDispatchFee)) * 100 : 0;
+
+  return {
+    cost: totalFuelCost,
+    revenue: totalDispatchFee + totalFuelCost,
+    grossProfit: totalDispatchFee,
+    grossMargin
+  };
 }
 
 export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating): AllTotals {
-  
+
   if (!mptRental.phases || mptRental.phases.length === 0) {
     console.warn('No phases found in mptRental data');
     return getEmptyTotals();
   }
-  
+
   if (!mptRental.staticEquipmentInfo || Object.keys(mptRental.staticEquipmentInfo).length === 0) {
     console.warn('No static equipment info found');
     return getEmptyTotals();
   }
-  
+
   try {
     const mptRentalStats = calculateEquipmentCostSummary(mptRental);
     const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
-    
+
     const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
-    
+
     const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
-    
+
     const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
 
     const mptTotalCost = safeNumber(mptRentalStats.depreciationCost) +
@@ -722,7 +710,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   const fourFootTypeIII = phase?.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const hStand = phase?.standardEquipment?.hStand?.quantity || 0;
   const post = phase?.standardEquipment?.post?.quantity || 0;
-  
+
   const relevantEquipmentTotals = fourFootTypeIII + hStand + post;
   return (safeNumber(phase?.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
 }

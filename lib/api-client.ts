@@ -1,4 +1,5 @@
 import { Database } from '@/types/database.types';
+import { County } from '@/types/TCounty';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -304,17 +305,40 @@ export async function fetchMptRental(estimateId: number) {
 /**
  * Fetch reference data for dropdowns
  */
-export async function fetchReferenceData(type: 'counties' | 'branches' | 'users' | 'owners' | 'mpt equipment') {
+export async function fetchReferenceData(type: 'counties' | 'users' | 'owners' | 'mpt equipment') {
   try {
     const response = await fetch(`/api/reference-data?type=${type}`);
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || `Failed to fetch ${type}`);
     }
-    
+
     const result = await response.json();
-    return result.data;
+
+    let formattedData = result.data;
+    if (type === 'counties') {
+      // format database rows into County objects
+      formattedData = result.data.map(countyRow => ({
+        id: countyRow.id,
+        name: countyRow.name,
+        district: countyRow.district,
+        branch: countyRow.branches.name,
+        laborRate: countyRow.labor_rate,
+        fringeRate: countyRow.fringe_rate,
+        shopRate: countyRow.branches?.shop_rate,
+        flaggingRate: countyRow.flagging_rate,
+        flaggingBaseRate: countyRow.flagging_base_rate,
+        flaggingFringeRate: countyRow.flagging_fringe_rate,
+        ratedTargetGM: countyRow.flagging_rated_target_gm,
+        nonRatedTargetGM: countyRow.flagging_non_rated_target_gm,
+        insurance: countyRow.insurance,
+        fuel: countyRow.fuel,
+        market: (countyRow.market as 'MOBILIZATION' | 'CORE' | 'LOCAL')
+      })) as County[];
+    }
+    
+    return formattedData;
   } catch (error) {
     console.error(`Error fetching ${type}:`, error);
     throw error;
@@ -322,86 +346,23 @@ export async function fetchReferenceData(type: 'counties' | 'branches' | 'users'
 }
 
 /**
- * Fetch county rates by county ID
- */
-export async function fetchCountyRates(countyId: number | string) {
-  try {
-    if (!countyId) return null;
-    
-    const counties = await fetchReferenceData('counties');
-    const county = counties.find(c => c.id === Number(countyId));
-    
-    if (!county) return null;
-    
-    return {
-      labor_rate: county.labor_rate,
-      fringe_rate: county.fringe_rate,
-      branch_id: county.branch
-    };
-  } catch (error) {
-    console.error('Error fetching county rates:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch branch shop rate by branch ID
- */
-export async function fetchBranchShopRate(branchId: number | string) {
-  try {
-    if (!branchId) return null;
-    
-    const branches = await fetchReferenceData('branches');
-    const branch = branches.find(b => b.id === Number(branchId));
-    
-    if (!branch) return null;
-    
-    return branch.shop_rate;
-  } catch (error) {
-    console.error('Error fetching branch shop rate:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch sign designations with their available dimensions
+ * Fetch sign designations with their corresponding dimension options
  * @param search Optional search term to filter designations
  */
 export async function fetchSignDesignations(search?: string) {
   try {
-    let url = '/api/signs?type=designations';
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
-    
+    const url = '/api/signs';
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch sign designations: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.data;
   } catch (error) {
     console.error('Error fetching sign designations:', error);
-    return [];
-  }
-}
-
-export async function fetchSignDimensions(designationId: number | string) {
-  try {
-    const url = `/api/signs?type=dimensions&designationId=${designationId}`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch sign dimensions: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error fetching sign dimensions:', error);
     return [];
   }
 }
