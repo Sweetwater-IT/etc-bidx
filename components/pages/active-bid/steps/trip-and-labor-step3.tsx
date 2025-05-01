@@ -8,20 +8,12 @@ import { cn } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import {
+  calculateTruckAndFuelCostSummary,
   getNonRatedHoursPerPhase,
   getRatedHoursPerPhase,
   getTotalTripsPerPhase,
 } from "@/lib/mptRentalHelperFunctions";
-
-// Helper functions based on the provided Mantine component
-const safeNumber = (value: any): number => {
-  if (typeof value === "number" && !isNaN(value)) return value;
-  if (typeof value === "string") {
-    const parsed = parseFloat(value);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
-};
+import { safeNumber } from "@/lib/safe-number";
 
 const step = {
   id: "step-3",
@@ -38,49 +30,6 @@ const TripAndLaborStep3 = ({
 }) => {
   const { mptRental, adminData, dispatch } = useEstimate();
   const currentPhase = 0; // Using first phase as default, adjust as needed
-
-  const [ratedHours, setRatedHours] = useState<number>(0);
-  const [productivityTrips, setProductivityTrips] = useState<number>(0);
-  const [nonRatedHours, setNonRatedHours] = useState<number>(0);
-  const [totalTrips, setTotalTrips] = useState<number>(0);
-
-  useEffect(() => {
-    if (mptRental && mptRental.phases && mptRental.phases[currentPhase]) {
-      const phase = mptRental.phases[currentPhase];
-      setRatedHours(getRatedHoursPerPhase(phase));
-      setProductivityTrips(
-        getTotalTripsPerPhase(phase) - safeNumber(phase.maintenanceTrips) * 2
-      );
-      setNonRatedHours(getNonRatedHoursPerPhase(adminData, phase));
-      setTotalTrips(getTotalTripsPerPhase(phase));
-    }
-  }, [
-    adminData?.owTravelTimeMins,
-    mptRental?.phases[currentPhase]?.personnel,
-    mptRental?.phases[currentPhase]?.numberTrucks,
-    mptRental?.phases[currentPhase]?.maintenanceTrips,
-    mptRental?.phases[currentPhase]?.standardEquipment?.fourFootTypeIII,
-    mptRental?.phases[currentPhase]?.standardEquipment?.post,
-    mptRental?.phases[currentPhase]?.standardEquipment?.hStand,
-  ]);
-
-  useEffect(() => {
-    if (!mptRental || !mptRental.phases || !mptRental.phases[currentPhase]) {
-      return;
-    }
-
-    const personnel = mptRental.phases[currentPhase].personnel || 0;
-    const defaultTrucks = personnel > 2 ? Math.ceil(personnel / 2) : 1;
-
-    dispatch({
-      type: "UPDATE_MPT_PHASE_TRIP_AND_LABOR",
-      payload: {
-        key: "numberTrucks",
-        value: defaultTrucks,
-        phase: currentPhase,
-      },
-    });
-  }, [mptRental?.phases[currentPhase]?.personnel]);
 
   const handleInputChange = (name: any, value: number | undefined) => {
     dispatch({
@@ -99,41 +48,6 @@ const TripAndLaborStep3 = ({
 
   const handleBack = () => {
     setCurrentStep(2);
-  };
-
-  // Helper function to safely get values from MPT rental phase
-  const getPhaseValue = (key: any, defaultValue: any = undefined) => {
-    if (!mptRental || !mptRental.phases || !mptRental.phases[currentPhase]) {
-      return defaultValue;
-    }
-
-    const value = mptRental.phases[currentPhase][key];
-    return value !== undefined && value !== null ? value : defaultValue;
-  };
-
-  // Calculate derived values
-  const calculateMobilization = () => {
-    const numberTrucks = getPhaseValue("numberTrucks", 0);
-    const dispatchFee = mptRental?.dispatchFee || 0;
-    return safeNumber(numberTrucks * totalTrips * dispatchFee).toFixed(1);
-  };
-
-  const calculateFuelCost = () => {
-    const numberTrucks = getPhaseValue("numberTrucks", 0);
-    const owMileage = adminData?.owMileage || 0;
-    const mpgPerTruck = mptRental?.mpgPerTruck || 1; // Avoid division by zero
-    const fuelCostPerGallon = adminData?.fuelCostPerGallon || 0;
-
-    return safeNumber(
-      ((numberTrucks * totalTrips * 2 * owMileage) / mpgPerTruck) *
-        fuelCostPerGallon
-    ).toFixed(1);
-  };
-
-  const calculateTotalTruckFuelCosts = () => {
-    const mobilization = parseFloat(calculateMobilization());
-    const fuelCost = parseFloat(calculateFuelCost());
-    return safeNumber(mobilization + fuelCost).toFixed(1);
   };
 
   return (
@@ -178,7 +92,7 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("days") === 0 ? "" : getPhaseValue("days")}
+                      value={0}
                       onChange={(e) =>
                         handleInputChange(
                           "days",
@@ -195,7 +109,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={getPhaseValue("personnel") === 0 ? "" : getPhaseValue("personnel")}
+                      value={mptRental.phases[0].personnel}
                       onChange={(e) =>
                         handleInputChange(
                           "personnel",
@@ -212,7 +126,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={getPhaseValue("numberTrucks") === 0 ? "" : getPhaseValue("numberTrucks")}
+                      value={mptRental.phases[0].numberTrucks}
                       onChange={(e) =>
                         handleInputChange(
                           "numberTrucks",
@@ -234,7 +148,7 @@ const TripAndLaborStep3 = ({
                     <Label className="flex items-center mb-2 text-muted-foreground">Trips</Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("trips") === 0 ? "" : getPhaseValue("trips")}
+                      value={getTotalTripsPerPhase(mptRental.phases[0]) - (mptRental.phases[0].maintenanceTrips * 2)}
                       onChange={(e) =>
                         handleInputChange(
                           "trips",
@@ -251,7 +165,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={getPhaseValue("maintenanceTrips") === 0 ? "" : getPhaseValue("maintenanceTrips")}
+                      value={mptRental.phases[0].maintenanceTrips}
                       onChange={(e) =>
                         handleInputChange(
                           "maintenanceTrips",
@@ -266,7 +180,7 @@ const TripAndLaborStep3 = ({
                       Total Trips:
                     </Label>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      {safeNumber(totalTrips)}
+                      {getTotalTripsPerPhase(mptRental.phases[0])}
                     </div>
                   </div>
                 </div>
@@ -282,7 +196,7 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("ratedHours") === 0 ? "" : getPhaseValue("ratedHours")}
+                      value={getRatedHoursPerPhase(mptRental.phases[0]) - mptRental.phases[0].additionalRatedHours}
                       onChange={(e) =>
                         handleInputChange(
                           "ratedHours",
@@ -300,7 +214,7 @@ const TripAndLaborStep3 = ({
                       type="number"
                       min={0}
                       step={0.1}
-                      value={getPhaseValue("additionalRatedHours") === 0 ? "" : getPhaseValue("additionalRatedHours")}
+                      value={mptRental.phases[0].additionalRatedHours}
                       onChange={(e) =>
                         handleInputChange(
                           "additionalRatedHours",
@@ -316,7 +230,7 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
                       {safeNumber(
-                        ratedHours + getPhaseValue("additionalRatedHours", 0)
+                        getRatedHoursPerPhase(mptRental.phases[0])
                       ).toFixed(1)}
                     </div>
                   </div>
@@ -327,7 +241,7 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("nonRatedHours") === 0 ? "" : getPhaseValue("nonRatedHours")}
+                      value={getNonRatedHoursPerPhase(adminData, mptRental.phases[0]) - mptRental.phases[0].additionalNonRatedHours}
                       onChange={(e) =>
                         handleInputChange(
                           "nonRatedHours",
@@ -345,7 +259,7 @@ const TripAndLaborStep3 = ({
                       type="number"
                       min={0}
                       step={0.1}
-                      value={getPhaseValue("additionalNonRatedHours") === 0 ? "" : getPhaseValue("additionalNonRatedHours")}
+                      value={mptRental.phases[0].additionalNonRatedHours}
                       onChange={(e) =>
                         handleInputChange(
                           "additionalNonRatedHours",
@@ -360,9 +274,7 @@ const TripAndLaborStep3 = ({
                       Total Non-Rated Hours:
                     </Label>
                     <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
-                      {safeNumber(
-                        nonRatedHours +
-                          getPhaseValue("additionalNonRatedHours", 0)
+                      {safeNumber(getNonRatedHoursPerPhase(adminData, mptRental.phases[0])
                       ).toFixed(1)}
                     </div>
                   </div>
@@ -379,7 +291,7 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("mobilization") === 0 ? "" : getPhaseValue("mobilization")}
+                      value={safeNumber((mptRental?.phases[0].numberTrucks || 0) * getTotalTripsPerPhase(mptRental.phases[0]) * (mptRental?.dispatchFee || 0)).toFixed(1)}
                       onChange={(e) =>
                         handleInputChange(
                           "mobilization",
@@ -393,7 +305,8 @@ const TripAndLaborStep3 = ({
                     <Label className="flex items-center mb-2 text-muted-foreground">Fuel Cost</Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("fuelCost") === 0 ? "" : getPhaseValue("fuelCost")}
+                      value={safeNumber(((((mptRental?.phases[0].numberTrucks || 0) * getTotalTripsPerPhase(mptRental.phases[0]) * 2 * 
+                        (adminData.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 0)) * (adminData.fuelCostPerGallon ?? 0))).toFixed(1)}
                       onChange={(e) =>
                         handleInputChange(
                           "fuelCost",
@@ -409,7 +322,9 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={getPhaseValue("truckAndFuelCost") === 0 ? "" : getPhaseValue("truckAndFuelCost")}
+                      value={safeNumber((((((mptRental?.phases[0].numberTrucks || 0) * getTotalTripsPerPhase(mptRental.phases[0]) * 2 * (adminData.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 0)) * (adminData.fuelCostPerGallon ?? 0)) +
+                      (mptRental?.phases[0].numberTrucks || 0) * getTotalTripsPerPhase(mptRental.phases[0]) * (mptRental?.dispatchFee || 0))).toFixed(1)
+                    }
                       onChange={(e) =>
                         handleInputChange(
                           "truckAndFuelCost",

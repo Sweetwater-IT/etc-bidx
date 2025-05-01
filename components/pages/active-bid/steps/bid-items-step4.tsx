@@ -360,7 +360,7 @@ const BidItemsStep4 = ({
       "6 Ft Wings": "sixFootWings",
       "SL Metal Stands": "metalStands",
       "Covers": "covers",
-      "Sand bag": "sandbag",
+      "Sand Bag": "sandbag",
       "HI Vertical Panels": "HIVP",
       "Type XI Vertical Panels": "TypeXIVP",
       "B-Lites": "BLights",

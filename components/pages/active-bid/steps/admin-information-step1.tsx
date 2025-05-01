@@ -51,6 +51,11 @@ const AdminInformationStep1 = ({
 }) => {
 
   const { adminData, dispatch } = useEstimate();
+
+  useEffect(() => {
+    dispatch({type: 'ADD_MPT_RENTAL'})
+    dispatch({type: 'ADD_MPT_PHASE'})
+  }, [])
   
   // State for toggle buttons
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
