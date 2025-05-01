@@ -28,8 +28,24 @@ const TripAndLaborStep3 = ({
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }) => {
+  const currentPhase = 0;
   const { mptRental, adminData, dispatch } = useEstimate();
-  const currentPhase = 0; // Using first phase as default, adjust as needed
+  const currentPhaseData = mptRental?.phases?.[currentPhase] || { days: 0, personnel: 0, numberTrucks: 0, additionalRatedHours: 0, additionalNonRatedHours: 0, maintenanceTrips: 0 };
+
+  const safeCalculate = <T extends unknown[]>(fn: (...args: T) => number | undefined, ...args: T): number => {
+    try {
+      return fn(...args) || 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+  
+  const formatForDisplay = (value: number | undefined): string => {
+    if (value === undefined || value === 0 || Number.isNaN(value)) {
+      return '';
+    }
+    return value.toFixed(1);
+  };
 
   const handleInputChange = (name: any, value: number | undefined) => {
     dispatch({
@@ -109,7 +125,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={mptRental.phases[0].personnel || ''}
+                      value={currentPhaseData.personnel || ''}
                       onChange={(e) =>
                         handleInputChange(
                           "personnel",
@@ -126,7 +142,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={mptRental.phases[0].numberTrucks || ''}
+                      value={currentPhaseData.numberTrucks || ''}
                       onChange={(e) =>
                         handleInputChange(
                           "numberTrucks",
@@ -148,10 +164,10 @@ const TripAndLaborStep3 = ({
                     <Label className="flex items-center mb-2 text-muted-foreground">Trips</Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={formatForDisplay(currentPhaseData ? (getTotalTripsPerPhase(currentPhaseData) - (currentPhaseData.maintenanceTrips * 2)) : 0)}
                       onChange={(e) =>
                         handleInputChange(
-                          "trips",
+                          "maintenanceTrips",
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
@@ -165,7 +181,7 @@ const TripAndLaborStep3 = ({
                     <Input
                       type="number"
                       min={0}
-                      value={mptRental.phases[0].maintenanceTrips || ''}
+                      value={currentPhaseData.maintenanceTrips || ''}
                       onChange={(e) =>
                         handleInputChange(
                           "maintenanceTrips",
@@ -180,7 +196,7 @@ const TripAndLaborStep3 = ({
                       Total Trips:
                     </Label>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      {getTotalTripsPerPhase(mptRental.phases[0])}
+                      {getTotalTripsPerPhase(currentPhaseData) || ''}
                     </div>
                   </div>
                 </div>
@@ -196,10 +212,10 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={formatForDisplay(getRatedHoursPerPhase(currentPhaseData) - (currentPhaseData.additionalRatedHours || 0))}
                       onChange={(e) =>
                         handleInputChange(
-                          "ratedHours",
+                          "additionalRatedHours",
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
@@ -214,7 +230,7 @@ const TripAndLaborStep3 = ({
                       type="number"
                       min={0}
                       step={0.1}
-                      value={mptRental.phases[0].additionalRatedHours || ''}
+                      value={currentPhaseData.additionalRatedHours || ''}
                       onChange={(e) =>
                         handleInputChange(
                           "additionalRatedHours",
@@ -229,9 +245,7 @@ const TripAndLaborStep3 = ({
                       Total Rated Hours:
                     </Label>
                     <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
-                      {safeNumber(
-                        getRatedHoursPerPhase(mptRental.phases[0])
-                      )?.toFixed(1) || ''}
+                      {formatForDisplay(safeCalculate(getRatedHoursPerPhase, currentPhaseData))}
                     </div>
                   </div>
 
@@ -241,10 +255,10 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={formatForDisplay(safeNumber(getNonRatedHoursPerPhase(adminData || {}, currentPhaseData) - (currentPhaseData.additionalNonRatedHours || 0), 0))}
                       onChange={(e) =>
                         handleInputChange(
-                          "nonRatedHours",
+                          "additionalNonRatedHours",
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
@@ -259,7 +273,7 @@ const TripAndLaborStep3 = ({
                       type="number"
                       min={0}
                       step={0.1}
-                      value={mptRental.phases[0].additionalNonRatedHours || ''}
+                      value={currentPhaseData.additionalNonRatedHours || ''}
                       onChange={(e) =>
                         handleInputChange(
                           "additionalNonRatedHours",
@@ -274,8 +288,7 @@ const TripAndLaborStep3 = ({
                       Total Non-Rated Hours:
                     </Label>
                     <div className="h-10 flex items-center not-last:pl-1 text-sm text-muted-foreground">
-                      {safeNumber(getNonRatedHoursPerPhase(adminData, mptRental.phases[0])
-                      )?.toFixed(1) || ''}
+                      {formatForDisplay(safeCalculate(getNonRatedHoursPerPhase, adminData || {}, currentPhaseData))}
                     </div>
                   </div>
                 </div>
@@ -291,7 +304,9 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={formatForDisplay(safeCalculate(
+                        () => (currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * (mptRental?.dispatchFee || 0)
+                      ))}
                       onChange={(e) =>
                         handleInputChange(
                           "mobilization",
@@ -305,7 +320,10 @@ const TripAndLaborStep3 = ({
                     <Label className="flex items-center mb-2 text-muted-foreground">Fuel Cost</Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={formatForDisplay(safeCalculate(
+                        () => ((((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * 2 * 
+                          (adminData?.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 1)) * (adminData?.fuelCostPerGallon ?? 0))
+                      ))}
                       onChange={(e) =>
                         handleInputChange(
                           "fuelCost",
@@ -321,7 +339,19 @@ const TripAndLaborStep3 = ({
                     </Label>
                     <Input
                       type="number"
-                      value={''}
+                      value={(() => {
+                        const fuelCost = safeCalculate(
+                          () => ((((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * 2 * 
+                            (adminData?.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 1)) * (adminData?.fuelCostPerGallon ?? 0))
+                        );
+                        
+                        const mobilizationCost = safeCalculate(
+                          () => ((currentPhaseData.numberTrucks || 0) * getTotalTripsPerPhase(currentPhaseData) * (mptRental?.dispatchFee || 0))
+                        );
+                        
+                        const total = fuelCost + mobilizationCost;
+                        return formatForDisplay(total);
+                      })()}
                       onChange={(e) =>
                         handleInputChange(
                           "truckAndFuelCost",
