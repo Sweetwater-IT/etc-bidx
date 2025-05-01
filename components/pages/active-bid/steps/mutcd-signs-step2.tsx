@@ -819,11 +819,7 @@ const MutcdSignsStep2 = ({
                                 className="w-full sm:w-[300px] justify-between"
                               >
                                 <span className="truncate">
-                                  {(() => {
-                                    const currentSign = mptRental?.phases?.[currentPhase]?.signs?.find(s => s.id === sign.id);
-                                    if (!currentSign?.designation) return "Select designation...";
-                                    return `${currentSign.designation}${currentSign.description ? ` - ${currentSign.description.slice(0, 30)}${currentSign.description.length > 30 ? '...' : ''}` : ''}`;
-                                  })()}
+                                  {mptRental?.phases?.[currentPhase]?.signs?.find(s => s.id === sign.id)?.designation || "Select designation..."}
                                 </span>
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
