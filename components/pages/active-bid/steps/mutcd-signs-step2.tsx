@@ -52,6 +52,16 @@ interface SignDimension {
   height: number;
 }
 
+interface ExtendedPrimarySign extends PrimarySign {
+  isConfiguring?: boolean;
+}
+
+interface ExtendedSecondarySign extends SecondarySign {
+  isConfiguring?: boolean;
+  bLights?: number;
+  covers?: number;
+}
+
 const MutcdSignsStep2 = ({
   currentStep,
   setCurrentStep,
@@ -77,9 +87,14 @@ const MutcdSignsStep2 = ({
     }
   };
 
-  const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>(
-    getSafeSignsArray()
-  );
+  // Use useEffect to keep signs state in sync with mptRental
+  useEffect(() => {
+    setSigns(getSafeSignsArray());
+  }, [mptRental]);
+
+  const [signs, setSigns] = useState<
+    (ExtendedPrimarySign | ExtendedSecondarySign)[]
+  >(getSafeSignsArray());
   const [open, setOpen] = useState(false);
   const [isAddingSign, setIsAddingSign] = useState(signs.length === 0);
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
@@ -226,6 +241,29 @@ const MutcdSignsStep2 = ({
     };
   })();
 
+  const getAvailableDimensions = (sign: ExtendedPrimarySign | ExtendedSecondarySign) => {
+    try {
+      if (!sign || !sign.designation) return [];
+
+      const designationInfo = designationData.find(
+        (d) => d.designation === sign.designation
+      );
+
+      if (!designationInfo) return [];
+
+      return (designationInfo.dimensions || []).filter(
+        (dim) =>
+          typeof dim.width === "number" &&
+          !isNaN(dim.width) &&
+          typeof dim.height === "number" &&
+          !isNaN(dim.height)
+      );
+    } catch (error) {
+      console.error("Error getting available dimensions:", error);
+      return [];
+    }
+  };
+
   const handleDesignationSelect = (designationValue: string) => {
     // Find the selected designation data
     const selectedDesignation = designationData.find(
@@ -244,7 +282,7 @@ const MutcdSignsStep2 = ({
         ? selectedDesignation.dimensions[0]
         : { width: 0, height: 0 };
 
-    const newSign: PrimarySign = {
+    const newSign: ExtendedPrimarySign = {
       id: generateStableId(),
       designation: designationValue,
       width: defaultDimension.width,
@@ -256,13 +294,14 @@ const MutcdSignsStep2 = ({
       covers: 0,
       isCustom: false,
       description: selectedDesignation.description,
+      isConfiguring: true,
     };
 
-    // Add the sign to the list
+    // Add the new sign to the list
     const updatedSigns = [...signs, newSign];
     setSigns(updatedSigns);
 
-    // Update context when a new sign is added
+    // Update context with the new sign
     dispatch({
       type: "ADD_MPT_SIGN",
       payload: {
@@ -340,6 +379,7 @@ const MutcdSignsStep2 = ({
 
       setSigns(updatedSigns);
 
+      // Update context for the field, but only if it's not dimensionSelection
       if (field !== "dimensionSelection") {
         dispatch({
           type: "UPDATE_MPT_SIGN",
@@ -465,6 +505,119 @@ const MutcdSignsStep2 = ({
 
   const handleSignSave = (id: string) => {
     try {
+      const signToSave = signs.find((sign) => sign.id === id);
+      if (!signToSave) return;
+
+      // Check if this is a new sign or an update
+      const isNewSign = !mptRental?.phases?.[currentPhase]?.signs?.some(
+        (s) => s.id === id
+      );
+
+      if (isNewSign) {
+        // For new signs, use ADD_MPT_SIGN
+        dispatch({
+          type: "ADD_MPT_SIGN",
+          payload: {
+            phaseNumber: currentPhase,
+            sign: signToSave,
+          },
+        });
+      } else {
+        // For existing signs, update all fields
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "width",
+            value: signToSave.width,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "height",
+            value: signToSave.height,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "sheeting",
+            value: signToSave.sheeting,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "quantity",
+            value: signToSave.quantity,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "bLights",
+            value: signToSave.bLights,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "covers",
+            value: signToSave.covers,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "description",
+            value: signToSave.description,
+          },
+        });
+
+        dispatch({
+          type: "UPDATE_MPT_SIGN",
+          payload: {
+            phase: currentPhase,
+            signId: id,
+            key: "designation",
+            value: signToSave.designation,
+          },
+        });
+
+        if ("associatedStructure" in signToSave) {
+          dispatch({
+            type: "UPDATE_MPT_SIGN",
+            payload: {
+              phase: currentPhase,
+              signId: id,
+              key: "associatedStructure",
+              value: signToSave.associatedStructure,
+            },
+          });
+        }
+      }
+
+      // Mark as not configuring after saving
       setSigns(
         signs.map((sign) =>
           sign.id === id ? { ...sign, isConfiguring: false } : sign
@@ -541,33 +694,12 @@ const MutcdSignsStep2 = ({
     setCurrentStep(3);
   };
 
-  // Get available dimensions for a sign - safely
-  const getAvailableDimensions = (sign: PrimarySign | SecondarySign) => {
-    try {
-      if (!sign || !sign.designation) return [];
-
-      const designationInfo = designationData.find(
-        (d) => d.designation === sign.designation
-      );
-      return (designationInfo?.dimensions || []).filter(
-        (dim) =>
-          typeof dim.width === "number" &&
-          !isNaN(dim.width) &&
-          typeof dim.height === "number" &&
-          !isNaN(dim.height)
-      );
-    } catch (error) {
-      console.error("Error getting available dimensions:", error);
-      return [];
-    }
-  };
-
   // Add a secondary sign to a primary sign
   const handleAddSecondarySign = (primarySignId: string) => {
     try {
       // Find the primary sign
       const primarySign = signs.find((s) => s.id === primarySignId) as
-        | PrimarySign
+        | ExtendedPrimarySign
         | undefined;
 
       if (!primarySign || "primarySignId" in primarySign) {
@@ -575,17 +707,20 @@ const MutcdSignsStep2 = ({
         return;
       }
 
-      // Create a new secondary sign
-      const newSecondarySign: SecondarySign = {
+      // Create a new secondary sign with the same designation as primary
+      const newSecondarySign: ExtendedSecondarySign = {
         id: generateStableId(),
         primarySignId: primarySignId,
-        designation: "",
-        width: 0,
-        height: 0,
+        designation: primarySign.designation, // Use primary sign's designation
+        width: primarySign.width, // Use primary sign's dimensions initially
+        height: primarySign.height,
         quantity: primarySign.quantity, // Inherit quantity from primary
         sheeting: primarySign.sheeting || "HI", // Inherit sheeting from primary
         isCustom: false,
-        description: "",
+        description: primarySign.description || "", // Use primary sign's description
+        isConfiguring: true,
+        bLights: 0,
+        covers: 0,
       };
 
       // Add the new sign to the list
@@ -600,6 +735,9 @@ const MutcdSignsStep2 = ({
           sign: newSecondarySign,
         },
       });
+
+      // Set isAddingSign to false to prevent adding another sign
+      setIsAddingSign(false);
     } catch (error) {
       console.error("Error adding secondary sign:", error);
     }
@@ -607,8 +745,8 @@ const MutcdSignsStep2 = ({
 
   // Safe check if a sign is primary
   const isPrimarySign = (
-    sign: PrimarySign | SecondarySign
-  ): sign is PrimarySign => {
+    sign: ExtendedPrimarySign | ExtendedSecondarySign
+  ): sign is ExtendedPrimarySign => {
     return !("primarySignId" in sign);
   };
 
@@ -658,247 +796,288 @@ const MutcdSignsStep2 = ({
                       !primary ? "border-blue-200" : ""
                     )}
                   >
-                    <div className="space-y-8">
-                      {/* Secondary Sign Indicator */}
-                      {!primary && (
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-md mb-4">
-                          <p className="text-sm">
-                            This is a secondary sign associated with a primary
-                            sign.
-                          </p>
-                        </div>
-                      )}
+                    {sign.isConfiguring ? (
+                      <div className="space-y-8">
+                        {/* Secondary Sign Indicator */}
+                        {!primary && (
+                          <div className="p-2 bg-blue-50 text-blue-600 rounded-md mb-4">
+                            <p className="text-sm">
+                              This is a secondary sign associated with a primary sign
+                            </p>
+                          </div>
+                        )}
 
-                      <div className="w-full">
-                        <Label className="text-base font-semibold mb-2.5 block">
-                          Designation
-                        </Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-full sm:w-[300px] justify-between"
+                        <div className="w-full">
+                          <Label className="text-base font-semibold mb-2.5 block">
+                            Designation
+                          </Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full sm:w-[300px] justify-between"
+                              >
+                                <span className="truncate">
+                                  {(() => {
+                                    const currentSign = mptRental?.phases?.[currentPhase]?.signs?.find(s => s.id === sign.id);
+                                    if (!currentSign?.designation) return "Select designation...";
+                                    return `${currentSign.designation}${currentSign.description ? ` - ${currentSign.description.slice(0, 30)}${currentSign.description.length > 30 ? '...' : ''}` : ''}`;
+                                  })()}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search designation..."
+                                  onValueChange={filterDesignations}
+                                />
+                                <CommandEmpty>
+                                  No designation found.
+                                </CommandEmpty>
+                                <CommandList>
+                                  <CommandGroup>
+                                    {filteredDesignations.map((item) => (
+                                      <CommandItem
+                                        key={item.designation}
+                                        value={item.designation}
+                                        onSelect={() =>
+                                          handleSignUpdate(
+                                            sign.id,
+                                            "designation",
+                                            item.designation
+                                          )
+                                        }
+                                      >
+                                        <div className="flex items-center w-full">
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              sign.designation === item.designation
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">
+                                              {item.designation}
+                                            </span>
+                                            {item.description && (
+                                              <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                {item.description}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="flex-2">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Dimensions
+                            </Label>
+                            <Select
+                              value={
+                                sign.width && sign.height
+                                  ? `${sign.width}x${sign.height}`
+                                  : undefined
+                              }
+                              onValueChange={(value) =>
+                                handleSignUpdate(
+                                  sign.id,
+                                  "dimensionSelection",
+                                  value
+                                )
+                              }
                             >
-                              {sign.designation || "Select designation..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-[300px] p-0"
-                            align="start"
-                          >
-                            <Command>
-                              <CommandInput
-                                placeholder="Search designation..."
-                                onValueChange={filterDesignations}
-                              />
-                              <CommandEmpty>No designation found.</CommandEmpty>
-                              <CommandList>
-                                <CommandGroup>
-                                  {filteredDesignations.map((item) => (
-                                    <CommandItem
-                                      key={item.designation}
-                                      value={item.designation}
-                                      onSelect={() =>
-                                        handleSignUpdate(
-                                          sign.id,
-                                          "designation",
-                                          item.designation
-                                        )
-                                      }
-                                    >
-                                      <div className="flex items-center">
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            sign.designation ===
-                                              item.designation
-                                              ? "opacity-100"
-                                              : "opacity-0"
-                                          )}
-                                        />
-                                        <span className="font-medium">
-                                          {item.designation}
-                                        </span>
-                                        {item.description && (
-                                          <span className="ml-2 text-muted-foreground text-xs">
-                                            - {item.description}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                              <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectValue placeholder="Select dimensions" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableDimensions(sign).map((dim, index) => (
+                                  <SelectItem
+                                    key={index}
+                                    value={`${dim.width}x${dim.height}`}
+                                  >
+                                    {dim.width} x {dim.height}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex-2">
-                          <Label className="text-sm font-medium mb-2 block">
-                            Dimensions
-                          </Label>
-                          <Select
-                            value={
-                              sign.width && sign.height
-                                ? `${sign.width}x${sign.height}`
-                                : undefined
-                            }
-                            onValueChange={(value) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "dimensionSelection",
-                                value
-                              )
-                            }
-                          >
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                              <SelectValue placeholder="Select dimensions" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {dimensions.map((dim, index) => (
-                                <SelectItem
-                                  key={index}
-                                  value={`${dim.width}x${dim.height}`}
+                          <div className="flex-2">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Sheeting
+                            </Label>
+                            <Select
+                              value={sign.sheeting || "HI"}
+                              onValueChange={(value) =>
+                                handleSignUpdate(sign.id, "sheeting", value)
+                              }
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="HI">HI</SelectItem>
+                                <SelectItem value="DG">DG</SelectItem>
+                                <SelectItem value="Special">Special</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium mb-2 block">
+                              Quantity
+                            </Label>
+                            <Input
+                              type="number"
+                              value={sign.quantity || ""}
+                              onChange={(e) =>
+                                handleSignUpdate(
+                                  sign.id,
+                                  "quantity",
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
+                              min={0}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {primary && (
+                            <>
+                              <div className="flex-2">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  Structure
+                                </Label>
+                                <Select
+                                  value={sign.associatedStructure || "none"}
+                                  onValueChange={(value) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "associatedStructure",
+                                      value
+                                    )
+                                  }
                                 >
-                                  {dim.width} x {dim.height}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="None" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="fourFootTypeIII">
+                                      Four Foot Type III
+                                    </SelectItem>
+                                    <SelectItem value="hStand">H Stand</SelectItem>
+                                    <SelectItem value="post">Post</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex-1">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  B Lights
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={sign.bLights || ""}
+                                  onChange={(e) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "bLights",
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  min={0}
+                                  className="w-full"
+                                />
+                              </div>
+
+                              <div className="flex-1">
+                                <Label className="text-sm font-medium mb-2 block">
+                                  Covers
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={sign.covers || ""}
+                                  onChange={(e) =>
+                                    handleSignUpdate(
+                                      sign.id,
+                                      "covers",
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  min={0}
+                                  className="w-full"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
 
-                        <div className="flex-2">
-                          <Label className="text-sm font-medium mb-2 block">
-                            Sheeting
-                          </Label>
-                          <Select
-                            value={sign.sheeting || "HI"}
-                            onValueChange={(value) =>
-                              handleSignUpdate(sign.id, "sheeting", value)
-                            }
+                        <div className="flex justify-end space-x-3 pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleSignDelete(sign.id)}
                           >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="HI">HI</SelectItem>
-                              <SelectItem value="DG">DG</SelectItem>
-                              <SelectItem value="Special">Special</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">
-                            Quantity
-                          </Label>
-                          <Input
-                            type="number"
-                            value={sign.quantity || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "quantity",
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                            disabled={!primary} // Secondary signs inherit quantity
-                          />
-                        </div>
-
-                        <div className="flex-2">
-                          <Label className="text-sm font-medium mb-2 block">
-                            Structure
-                          </Label>
-                          <Select
-                            value={sign.associatedStructure || "none"}
-                            onValueChange={(value) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "associatedStructure",
-                                value
-                              )
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="None" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fourFootTypeIII">
-                                Four Foot Type III
-                              </SelectItem>
-                              <SelectItem value="hStand">H Stand</SelectItem>
-                              <SelectItem value="post">Post</SelectItem>
-                              <SelectItem value="none">None</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">
-                            B Lights
-                          </Label>
-                          <Input
-                            type="number"
-                            value={sign.bLights || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "bLights",
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                          />
-                        </div>
-
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium mb-2 block">
-                            Covers
-                          </Label>
-                          <Input
-                            type="number"
-                            value={sign.covers || ""}
-                            onChange={(e) =>
-                              handleSignUpdate(
-                                sign.id,
-                                "covers",
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            min={0}
-                            className="w-full"
-                          />
+                            Cancel
+                          </Button>
+                          <Button onClick={() => handleSignSave(sign.id)}>
+                            Save Sign
+                          </Button>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-6">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleSignDelete(sign.id)}
-                      >
-                        Cancel
-                      </Button>
-                      {/* {primary && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleAddSecondarySign(sign.id)}
-                        >
-                          Add Secondary
-                        </Button>
-                      )} */}
-                      <Button onClick={() => handleSignSave(sign.id)}>
-                        Save Sign
-                      </Button>
-                    </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">
+                            {sign.designation}{" "}
+                            {sign.description && `- ${sign.description}`}
+                            {!primary && " (Secondary)"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {sign.width}x{sign.height} • Qty: {sign.quantity} •
+                            B Lights: {sign.bLights} • Covers: {sign.covers}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {primary && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleAddSecondarySign(sign.id)}
+                            >
+                              Add Secondary
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSign(sign.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSignDelete(sign.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
