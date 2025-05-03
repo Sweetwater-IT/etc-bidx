@@ -67,6 +67,13 @@ export async function GET(request: NextRequest) {
           .from('owners')
           .select('id, name'))
         break;
+        
+      case 'contractors':
+        ({ data, error } = await supabase
+          .from('contractors')
+          .select('id, name')
+          .order('name'))
+        break;
 
 
       default:

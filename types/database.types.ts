@@ -12,6 +12,165 @@ export type Market = 'MOBILIZATION' | 'LOCAL' | 'CORE';
 export interface Database {
   public: {
     Tables: {
+      job_numbers: {
+        Row: {
+          id: number
+          branch_code: string
+          owner_type: string
+          year: number
+          sequential_number: number
+          job_number: string
+          is_assigned: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          branch_code: string
+          owner_type: string
+          year: number
+          sequential_number: number
+          job_number?: string
+          is_assigned?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          branch_code?: string
+          owner_type?: string
+          year?: number
+          sequential_number?: number
+          job_number?: string
+          is_assigned?: boolean
+          created_at?: string
+        }
+      }
+      jobs: {
+        Row: {
+          id: number
+          job_number: string
+          branch_code: string
+          owner_type: string
+          year: number
+          sequential_number: number
+          job_details: Json
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          job_number: string
+          branch_code: string
+          owner_type: string
+          year: number
+          sequential_number: number
+          job_details?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          job_number?: string
+          branch_code?: string
+          owner_type?: string
+          year?: number
+          sequential_number?: number
+          job_details?: Json
+          created_at?: string
+        }
+      }
+      contractors: {
+        Row: {
+          id: number
+          name: string
+          address_name: string | null
+          address_contact: string | null
+          address_type: number | null
+          default_address: boolean | null
+          address: string | null
+          city: string | null
+          state: string | null
+          zip: string | null
+          residential: boolean | null
+          main_phone: string | null
+          fax: string | null
+          web: string | null
+          credit_limit: number | null
+          status: string | null
+          active: boolean | null
+          number: number | null
+          payment_terms: string | null
+          tax_exempt: boolean | null
+          shipping_terms: string | null
+          quick_books_class_name: string | null
+          to_be_emailed: boolean | null
+          to_be_printed: boolean | null
+          created: string | null
+          updated: string | null
+          customer_number: string | null
+          email: string | null
+          display_name: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          address_name?: string | null
+          address_contact?: string | null
+          address_type?: number | null
+          default_address?: boolean | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip?: string | null
+          residential?: boolean | null
+          main_phone?: string | null
+          fax?: string | null
+          web?: string | null
+          credit_limit?: number | null
+          status?: string | null
+          active?: boolean | null
+          number?: number | null
+          payment_terms?: string | null
+          tax_exempt?: boolean | null
+          shipping_terms?: string | null
+          quick_books_class_name?: string | null
+          to_be_emailed?: boolean | null
+          to_be_printed?: boolean | null
+          created?: string | null
+          updated?: string | null
+          customer_number?: string | null
+          email?: string | null
+          display_name?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          address_name?: string | null
+          address_contact?: string | null
+          address_type?: number | null
+          default_address?: boolean | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip?: string | null
+          residential?: boolean | null
+          main_phone?: string | null
+          fax?: string | null
+          web?: string | null
+          credit_limit?: number | null
+          status?: string | null
+          active?: boolean | null
+          number?: number | null
+          payment_terms?: string | null
+          tax_exempt?: boolean | null
+          shipping_terms?: string | null
+          quick_books_class_name?: string | null
+          to_be_emailed?: boolean | null
+          to_be_printed?: boolean | null
+          created?: string | null
+          updated?: string | null
+          customer_number?: string | null
+          email?: string | null
+          display_name?: string | null
+        }
+      }
       available_jobs: {
         Row: {
           id: number
