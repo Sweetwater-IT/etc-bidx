@@ -10,13 +10,19 @@ export async function GET(request: NextRequest) {
     let query = supabase.from('jobs').select('*, job_numbers!inner(*)');
     
     if (branch && branch !== 'all') {
-      const branchCodeMap: Record<string, string> = {
-        'hatfield': '10',
-        'turbotville': '20',
-        'west': '30'
-      };
-      const branchCode = branchCodeMap[branch.toLowerCase()] || branch;
-      query = query.eq('branch_code', branchCode);
+      if (branch === 'archived') {
+        query = query.contains('job_details', { projectStatus: 'Archived' });
+      } else {
+        const branchCodeMap: Record<string, string> = {
+          'hatfield': '10',
+          'turbotville': '20',
+          'west': '30',
+        };
+        const branchCode = branchCodeMap[branch];
+        if (branchCode) {
+          query = query.eq('branch_code', branchCode);
+        }
+      }
     }
     
     const { data: jobs, error } = await query;
@@ -123,7 +129,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.json();
 
-    const { division } = formData;
+    const { division, customSequentialNumber } = formData;
     const ownerTypeMap: Record<string, string> = {
       'PUBLIC': '22',
       'PRIVATE': '21'
@@ -133,18 +139,46 @@ export async function POST(request: NextRequest) {
     const branchCode = '10';
     const currentYear = new Date().getFullYear();
     
-    const { data: highestSequential } = await supabase
-      .from('job_numbers')
-      .select('sequential_number')
-      .eq('branch_code', branchCode)
-      .eq('owner_type', ownerTypeCode)
-      .eq('year', currentYear)
-      .order('sequential_number', { ascending: false })
-      .limit(1);
+    let sequentialNumber: number;
     
-    let sequentialNumber = 1;
-    if (highestSequential && highestSequential.length > 0) {
-      sequentialNumber = highestSequential[0].sequential_number + 1;
+    if (customSequentialNumber) {
+      sequentialNumber = parseInt(customSequentialNumber, 10);
+      if (isNaN(sequentialNumber) || sequentialNumber < 1 || sequentialNumber > 999) {
+        return NextResponse.json(
+          { error: 'Invalid sequential number. Must be between 1 and 999.' },
+          { status: 400 }
+        );
+      }
+      
+      const { data: existingJobNumber } = await supabase
+        .from('job_numbers')
+        .select('id')
+        .eq('branch_code', branchCode)
+        .eq('owner_type', ownerTypeCode)
+        .eq('year', currentYear)
+        .eq('sequential_number', sequentialNumber)
+        .single();
+      
+      if (existingJobNumber) {
+        return NextResponse.json(
+          { error: 'This job number is already taken. Please choose another.' },
+          { status: 409 }
+        );
+      }
+    } else {
+      const { data: highestSequential } = await supabase
+        .from('job_numbers')
+        .select('sequential_number')
+        .eq('branch_code', branchCode)
+        .eq('owner_type', ownerTypeCode)
+        .eq('year', currentYear)
+        .order('sequential_number', { ascending: false })
+        .limit(1);
+      
+      sequentialNumber = 1;
+      if (highestSequential && highestSequential.length > 0) {
+        sequentialNumber = highestSequential[0].sequential_number + 1;
+      }
     }
     
     const { data: jobNumberData, error: jobNumberError } = await supabase
