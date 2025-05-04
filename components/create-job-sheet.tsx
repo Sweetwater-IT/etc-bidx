@@ -59,6 +59,24 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
   const [owners, setOwners] = useState<{ id: string; name: string }[]>([])
   const [contractors, setContractors] = useState<{ id: number; name: string }[]>([])
   
+  const [countyRates, setCountyRates] = useState({
+    laborRate: "",
+    fringeRate: "",
+    shopRate: ""
+  })
+  
+  const [customValues, setCustomValues] = useState({
+    laborRate: false,
+    fringeRate: false,
+    shopRate: false
+  })
+  
+  const [useCustomValues, setUseCustomValues] = useState({
+    laborRate: false,
+    fringeRate: false,
+    shopRate: false
+  })
+  
   // Loading states
   const [isLoading, setIsLoading] = useState({
     counties: false,
@@ -109,14 +127,45 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
     setFormData(prev => ({ ...prev, [field]: value }))
   }
   
+  const handleUseCustomValueChange = (field: 'laborRate' | 'fringeRate' | 'shopRate', checked: boolean) => {
+    setUseCustomValues(prev => ({
+      ...prev,
+      [field]: checked
+    }));
+  }
+  
   const handleCountyChange = (countyId: string) => {
     const selectedCounty = counties.find(c => c.id.toString() === countyId)
     if (selectedCounty) {
-      setFormData(prev => ({
-        ...prev,
-        county: countyId
-      }))
-      setOpenCounty(false)
+      const newCountyRates = {
+        laborRate: selectedCounty.laborRate.toString(),
+        fringeRate: selectedCounty.fringeRate.toString(),
+        shopRate: selectedCounty.shopRate.toString()
+      };
+      setCountyRates(newCountyRates);
+      
+      setCustomValues({
+        laborRate: false,
+        fringeRate: false,
+        shopRate: false
+      });
+      
+      setUseCustomValues({
+        laborRate: false,
+        fringeRate: false,
+        shopRate: false
+      });
+      
+      const updatedFormData = { 
+        ...formData, 
+        county: countyId,
+        laborRate: newCountyRates.laborRate,
+        fringeRate: newCountyRates.fringeRate,
+        shopRate: newCountyRates.shopRate
+      };
+      
+      setFormData(updatedFormData);
+      setOpenCounty(false);
     }
   }
   
@@ -433,8 +482,29 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter labor rate" 
                   className="h-10 border-gray-200"
                   value={formData.laborRate}
-                  onChange={(e) => handleInputChange("laborRate", e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    handleInputChange("laborRate", newValue);
+                    
+                    if (newValue !== countyRates.laborRate) {
+                      setCustomValues(prev => ({ ...prev, laborRate: true }));
+                    } else {
+                      setCustomValues(prev => ({ ...prev, laborRate: false }));
+                    }
+                  }}
                 />
+                <div className="flex items-center mt-1">
+                  <input
+                    type="checkbox"
+                    id="use-labor-rate"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    checked={useCustomValues.laborRate}
+                    onChange={(e) => handleUseCustomValueChange('laborRate', e.target.checked)}
+                  />
+                  <label htmlFor="use-labor-rate" className="ml-2 text-xs text-gray-600">
+                    Use this value
+                  </label>
+                </div>
               </div>
               <div>
                 <Label htmlFor="fringe-rate" className="text-sm font-medium mb-1.5">Fringe Rate*</Label>
@@ -443,8 +513,29 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter fringe rate" 
                   className="h-10 border-gray-200"
                   value={formData.fringeRate}
-                  onChange={(e) => handleInputChange("fringeRate", e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    handleInputChange("fringeRate", newValue);
+                    
+                    if (newValue !== countyRates.fringeRate) {
+                      setCustomValues(prev => ({ ...prev, fringeRate: true }));
+                    } else {
+                      setCustomValues(prev => ({ ...prev, fringeRate: false }));
+                    }
+                  }}
                 />
+                <div className="flex items-center mt-1">
+                  <input
+                    type="checkbox"
+                    id="use-fringe-rate"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    checked={useCustomValues.fringeRate}
+                    onChange={(e) => handleUseCustomValueChange('fringeRate', e.target.checked)}
+                  />
+                  <label htmlFor="use-fringe-rate" className="ml-2 text-xs text-gray-600">
+                    Use this value
+                  </label>
+                </div>
               </div>
               <div>
                 <Label htmlFor="shop-rate" className="text-sm font-medium mb-1.5">Shop Rate*</Label>
@@ -453,8 +544,29 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter shop rate" 
                   className="h-10 border-gray-200"
                   value={formData.shopRate}
-                  onChange={(e) => handleInputChange("shopRate", e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    handleInputChange("shopRate", newValue);
+                    
+                    if (newValue !== countyRates.shopRate) {
+                      setCustomValues(prev => ({ ...prev, shopRate: true }));
+                    } else {
+                      setCustomValues(prev => ({ ...prev, shopRate: false }));
+                    }
+                  }}
                 />
+                <div className="flex items-center mt-1">
+                  <input
+                    type="checkbox"
+                    id="use-shop-rate"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    checked={useCustomValues.shopRate}
+                    onChange={(e) => handleUseCustomValueChange('shopRate', e.target.checked)}
+                  />
+                  <label htmlFor="use-shop-rate" className="ml-2 text-xs text-gray-600">
+                    Use this value
+                  </label>
+                </div>
               </div>
             </div>
           </div>
