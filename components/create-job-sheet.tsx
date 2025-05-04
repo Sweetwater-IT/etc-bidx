@@ -29,9 +29,10 @@ interface CreateJobSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   customSequentialNumber?: string
+  onSuccess?: () => void
 }
 
-export function CreateJobSheet({ open, onOpenChange, customSequentialNumber }: CreateJobSheetProps) {
+export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onSuccess }: CreateJobSheetProps) {
   // Form data
   const [formData, setFormData] = useState({
     customer: "",
@@ -153,6 +154,10 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber }: C
       const jobData = await response.json();
       toast.success(`Job created successfully: ${jobData.job_number}`);
       onOpenChange(false);
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error('Error creating job:', error);
     }
