@@ -10,7 +10,7 @@ import { getJobCards } from "@/data/jobs-cards";
 import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
 import { ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids";
-import { ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs";
+import { type ActiveJob } from "@/data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
@@ -109,6 +109,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
         unset: 0,
         'no-bid': 0,
         bid: 0,
+        archived: 0
+    });
+    
+    const [activeJobCounts, setActiveJobCounts] = useState({
+        all: 0,
+        west: 0,
+        turbotville: 0,
+        hatfield: 0,
         archived: 0
     });
     
@@ -244,6 +252,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
             
             const data = await response.json();
             setActiveJobs(data);
+            
+            const allJobsResponse = await fetch(`/api/jobs?branch=all`);
+            if (allJobsResponse.ok) {
+                const allJobs = await allJobsResponse.json();
+                
+                if (allJobs.length > 0) {
+                    console.log('Sample job structure:', allJobs[0]);
+                }
+                
+                const counts = {
+                    all: allJobs.length,
+                    west: allJobs.filter(job => job.branch === 'West' || job.branch_code === '30').length,
+                    turbotville: allJobs.filter(job => job.branch === 'Turbotville' || job.branch_code === '20').length,
+                    hatfield: allJobs.filter(job => job.branch === 'Hatfield' || job.branch_code === '10').length,
+                    archived: allJobs.filter(job => job.job_details?.projectStatus === 'Archived').length
+                };
+                
+                setActiveJobCounts(counts);
+            }
         } catch (error) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
@@ -676,11 +703,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
         : isActiveBids
         ? ACTIVE_BIDS_SEGMENTS
         : [
-            { label: "All", value: "all" },
-            { label: "West", value: "west" },
-            { label: "Turbotville", value: "turbotville" },
-            { label: "Hatfield", value: "hatfield" },
-            { label: "Archived", value: "archived" },
+            { label: `All (${activeJobCounts.all || 0})`, value: "all" },
+            { label: `West (${activeJobCounts.west || 0})`, value: "west" },
+            { label: `Turbotville (${activeJobCounts.turbotville || 0})`, value: "turbotville" },
+            { label: `Hatfield (${activeJobCounts.hatfield || 0})`, value: "hatfield" },
+            { label: `Archived (${activeJobCounts.archived || 0})`, value: "archived" },
         ];
 
     const handleCreateClick = () => {

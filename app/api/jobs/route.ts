@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    query = query.order('created_at', { ascending: false });
+    
     const { data: jobs, error } = await query;
     
     if (error) {
