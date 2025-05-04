@@ -28,9 +28,11 @@ import { toast } from "sonner"
 interface CreateJobSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  customSequentialNumber?: string
+  onSuccess?: () => void
 }
 
-export function CreateJobSheet({ open, onOpenChange }: CreateJobSheetProps) {
+export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onSuccess }: CreateJobSheetProps) {
   // Form data
   const [formData, setFormData] = useState({
     customer: "",
@@ -131,12 +133,17 @@ export function CreateJobSheet({ open, onOpenChange }: CreateJobSheetProps) {
         return;
       }
       
+      const requestData = {
+        ...formData,
+        customSequentialNumber: customSequentialNumber
+      };
+      
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestData),
       });
       
       if (!response.ok) {
@@ -147,6 +154,10 @@ export function CreateJobSheet({ open, onOpenChange }: CreateJobSheetProps) {
       const jobData = await response.json();
       toast.success(`Job created successfully: ${jobData.job_number}`);
       onOpenChange(false);
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error('Error creating job:', error);
     }

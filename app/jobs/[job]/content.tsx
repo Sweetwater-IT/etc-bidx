@@ -2,6 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SectionCards } from "@/components/section-cards";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -9,7 +10,7 @@ import { getJobCards } from "@/data/jobs-cards";
 import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
 import { ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids";
-import { activeJobsData, ACTIVE_JOBS_COLUMNS, ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs";
+import { ACTIVE_JOBS_SEGMENTS, type ActiveJob } from "@/data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
@@ -27,6 +28,8 @@ import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
 import { EditActiveJobSheet } from "@/components/edit-active-job-sheet"
 import { ActiveBidDetailsSheet } from "@/components/active-bid-details-sheet"
 import { EditActiveBidSheet } from "@/components/edit-active-bid-sheet"
+import { EditJobNumberDialog } from "@/components/edit-job-number-dialog";
+import { PencilIcon } from "lucide-react";
 
 // Define the AvailableJob type based on the UI display needs
 type AvailableJob = {
@@ -72,6 +75,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false);
     const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
     const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
+    const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+    const [nextJobNumber, setNextJobNumber] = useState<string>("");
+    const [editJobNumberOpen, setEditJobNumberOpen] = useState(false);
+    const [jobNumberYear, setJobNumberYear] = useState<string>("");
+    const [jobNumberSequential, setJobNumberSequential] = useState<string>("");
     const [activeSegment, setActiveSegment] = useState("all");
     const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
     const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
@@ -173,43 +181,36 @@ export function JobPageContent({ job }: JobPageContentProps) {
     // Load active bids data
     const loadActiveBids = useCallback(async () => {
         try {
-            console.log("Loading active bids with activeSegment:", activeSegment);
             startLoading();
 
-            const statusFilter = activeSegment !== "all" ? activeSegment : undefined;
-            console.log("Using status filter for API call:", statusFilter);
-
-            const data = await fetchActiveBids({
-                status: statusFilter,
-                orderBy: 'created_at',
-                ascending: false
-            });
-            
-            if (data.length === 0) {
-                console.log("No records found with status filter:", statusFilter);
+            let options;
+            if (activeSegment !== "all") {
+                options = { division: activeSegment };
             }
 
-            // Map the data to the format expected by the DataTable
-            const mappedBids = data.map((bid) => ({
-                id: bid.id,
-                lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "MMM d, yyyy") : "-",
-                contractNumber: bid.contract_number,
-                contractor: bid.contractor || "-",
-                subcontractor: bid.subcontractor || "-",
-                owner: bid.owner,
-                county: bid.county,
-                branch: bid.branch,
-                estimator: bid.estimator,
-                status: bid.status,
-                division: bid.division,
-                startDate: format(new Date(bid.start_date), "MMM d, yyyy"),
-                endDate: format(new Date(bid.end_date), "MMM d, yyyy"),
-                projectDays: bid.project_days,
-                totalHours: bid.total_hours,
-                mptValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.mpt_value),
-                permSignValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.perm_sign_value),
-                rentalValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.rental_value),
-            }));
+            const data = await fetchActiveBids(options);
+            const mappedBids = data.map(bid => {
+                return {
+                    id: bid.id,
+                    lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "MMM d, yyyy") : "-",
+                    contractNumber: bid.contract_number,
+                    contractor: bid.contractor || "-",
+                    subcontractor: bid.subcontractor || "-",
+                    owner: bid.owner,
+                    county: bid.county,
+                    branch: bid.branch,
+                    estimator: bid.estimator,
+                    status: bid.status,
+                    division: bid.division,
+                    startDate: format(new Date(bid.start_date), "MMM d, yyyy"),
+                    endDate: format(new Date(bid.end_date), "MMM d, yyyy"),
+                    projectDays: bid.project_days,
+                    totalHours: bid.total_hours,
+                    mptValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.mpt_value),
+                    permSignValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.perm_sign_value),
+                    rentalValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.rental_value),
+                };
+            });
 
             setActiveBids(mappedBids);
         } catch (error) {
@@ -219,6 +220,106 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [activeSegment, startLoading, stopLoading]);
+
+    const loadActiveJobs = useCallback(async () => {
+        try {
+            startLoading();
+
+            let branchFilter = activeSegment;
+            if (activeSegment === 'hatfield') {
+                branchFilter = 'hatfield';
+            } else if (activeSegment === 'turbotville') {
+                branchFilter = 'turbotville';
+            } else if (activeSegment === 'west') {
+                branchFilter = 'west'; // Branch code 30
+            } else if (activeSegment === 'archived') {
+                branchFilter = 'archived';
+            }
+            
+            const response = await fetch(`/api/jobs?branch=${branchFilter}`);
+            
+            if (!response.ok) {
+                throw new Error(`Error fetching jobs: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            setActiveJobs(data);
+        } catch (error) {
+            console.error("Error loading active jobs:", error);
+            toast.error("Failed to load active jobs. Please try again.");
+        } finally {
+            stopLoading();
+        }
+    }, [activeSegment, startLoading, stopLoading]);
+    
+    const fetchNextJobNumber = useCallback(async () => {
+        try {
+            const response = await fetch('/api/jobs/next-job-number');
+            if (!response.ok) {
+                throw new Error('Failed to fetch next job number');
+            }
+            
+            const data = await response.json();
+            setNextJobNumber(data.nextJobNumber);
+            
+            if (data.nextJobNumber) {
+                const parts = data.nextJobNumber.split('-');
+                if (parts.length === 3) {
+                    const yearAndSequential = parts[2]; // e.g., "2025001"
+                    const year = yearAndSequential.substring(0, 4); // e.g., "2025"
+                    const sequential = yearAndSequential.substring(4); // e.g., "001"
+                    
+                    setJobNumberYear(year);
+                    setJobNumberSequential(sequential);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching next job number:", error);
+        }
+    }, []);
+    
+    const handleUpdateJobNumber = useCallback(async (newSequential: string) => {
+        try {
+            const parts = nextJobNumber.split('-');
+            if (parts.length !== 3) {
+                throw new Error('Invalid job number format');
+            }
+            
+            const branchCode = parts[0];
+            const ownerTypeCode = parts[1];
+            const sequentialNumber = parseInt(newSequential, 10);
+            
+            const checkResponse = await fetch('/api/jobs/check-job-number', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    branchCode,
+                    ownerTypeCode,
+                    year: parseInt(jobNumberYear, 10),
+                    sequentialNumber
+                }),
+            });
+            
+            const checkData = await checkResponse.json();
+            
+            if (!checkData.isAvailable) {
+                toast.error('This job number is already taken. Please choose another.');
+                return false;
+            }
+            
+            const newJobNumber = `${branchCode}-${ownerTypeCode}-${jobNumberYear}${newSequential}`;
+            setNextJobNumber(newJobNumber);
+            setJobNumberSequential(newSequential);
+            
+            return true;
+        } catch (error) {
+            console.error('Error updating job number:', error);
+            toast.error('Failed to update job number');
+            return false;
+        }
+    }, [nextJobNumber, jobNumberYear]);
 
     // This effect will run whenever activeSegment changes
     // Function to fetch job counts for all segments
@@ -261,8 +362,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
+        } else if (isActiveJobs) {
+            loadActiveJobs();
         }
-    }, [isAvailableJobs, isActiveBids, loadAvailableJobs, loadActiveBids, activeSegment, fetchJobCounts]);
+    }, [isAvailableJobs, isActiveBids, isActiveJobs, loadAvailableJobs, loadActiveBids, loadActiveJobs, activeSegment, fetchJobCounts]);
 
     // This effect will run when the job type changes
     useEffect(() => {
@@ -271,8 +374,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchJobCounts();
         } else if (job === "active-bids") {
             loadActiveBids();
+        } else if (job === "active-jobs") {
+            loadActiveJobs();
+            fetchNextJobNumber(); // Fetch next job number when active-jobs is selected
         }
-    }, [job, loadAvailableJobs, loadActiveBids, fetchJobCounts]);
+    }, [job, loadAvailableJobs, loadActiveBids, loadActiveJobs, fetchJobCounts, fetchNextJobNumber]);
 
     useEffect(() => {
         console.log("Sheet state changed:", {
@@ -283,9 +389,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
-    const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobsData;
+    const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
 
-    const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : ACTIVE_JOBS_COLUMNS;
+    // Custom columns for active jobs that match the image
+    const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
+        { key: "jobNumber", title: "Job Number" },
+        { key: "bidNumber", title: "Bid Number" },
+        { key: "projectStatus", title: "Project Status" },
+        { key: "billingStatus", title: "Billing Status" },
+        { key: "contractNumber", title: "Contract Number" },
+        { key: "location", title: "Location" },
+        { key: "county", title: "County" },
+        { key: "branch", title: "Branch" },
+        { key: "contractor", title: "Contractor" },
+        { key: "startDate", title: "Start Date" },
+        { key: "endDate", title: "End Date" },
+    ];
+    
+    const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
     
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         console.log('Marking job as bid job:', job);
@@ -554,7 +675,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
           ]
         : isActiveBids
         ? ACTIVE_BIDS_SEGMENTS
-        : ACTIVE_JOBS_SEGMENTS;
+        : [
+            { label: "All", value: "all" },
+            { label: "West", value: "west" },
+            { label: "Turbotville", value: "turbotville" },
+            { label: "Hatfield", value: "hatfield" },
+            { label: "Archived", value: "archived" },
+        ];
 
     const handleCreateClick = () => {
         if (isAvailableJobs) {
@@ -670,13 +797,30 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 <div className="flex flex-1 flex-col">
                     <div className="@container/main flex flex-1 flex-col gap-2">
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <div className="flex items-center justify-between">
-                                <CardActions
-                                    createButtonLabel={createButtonLabel}
-                                    onCreateClick={handleCreateClick}
-                                    onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                    importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                />
+                            <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <CardActions
+                                            createButtonLabel={createButtonLabel}
+                                            onCreateClick={handleCreateClick}
+                                            onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
+                                            importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
+                                        />
+                                    </div>
+                                    {isActiveJobs && nextJobNumber && (
+                                        <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
+                                            <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6" 
+                                                onClick={() => setEditJobNumberOpen(true)}
+                                            >
+                                                <PencilIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <SectionCards data={cards} />
@@ -723,6 +867,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     data={data as JobPageData[]}
                                     columns={columns}
                                     segments={segments}
+                                    segmentValue={activeSegment}
+                                    onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
                                     onViewDetails={(item) => {
                                         if ('jobNumber' in item) {
@@ -776,7 +922,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 </>
                             )}
 
-                            {createJobSheetOpen && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} />}
+                            {createJobSheetOpen && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} customSequentialNumber={jobNumberSequential} onSuccess={loadActiveJobs} />}
                             {createActiveBidSheetOpen && <CreateActiveBidSheet open={createActiveBidSheetOpen} onOpenChange={setCreateActiveBidSheetOpen} />}
                             
                             <ConfirmArchiveDialog
@@ -809,6 +955,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 onConfirm={handleDeleteArchivedBids}
                                 itemCount={selectedBidsToDelete.length}
                                 itemType="bid"
+                            />
+                            
+                            <EditJobNumberDialog
+                                isOpen={editJobNumberOpen}
+                                onClose={() => setEditJobNumberOpen(false)}
+                                currentSequential={jobNumberSequential}
+                                year={jobNumberYear}
+                                onSave={handleUpdateJobNumber}
                             />
                         </div>
                     </div>
