@@ -1,21 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { GlobalLoading } from "@/components/global-loading";
 import { Toaster } from "@/components/ui/sonner";
-import { MantineProvider } from "@mantine/core";
-import { Notifications } from "@mantine/notifications";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "ETC",
@@ -29,26 +16,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <MantineProvider
-            theme={{
-              primaryColor: 'blue',
-              fontFamily: 'var(--font-geist-sans)',
-            }}
-          >
-            <Notifications position="top-right" />
             {children}
             <GlobalLoading />
             <Toaster />
-          </MantineProvider>
         </ThemeProvider>
       </body>
     </html>
