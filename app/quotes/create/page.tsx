@@ -18,18 +18,24 @@ import { DataTable } from "@/components/data-table";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { sendQuoteEmail } from "@/lib/api-client";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface FormSelectProps {
   label: string;
   placeholder: string;
   options: { value: string; label: string }[];
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
-function FormSelect({ label, placeholder, options }: FormSelectProps) {
+function FormSelect({ label, placeholder, options, value, onValueChange }: FormSelectProps) {
   return (
     <div className="space-y-2 w-full">
       <Label>{label}</Label>
-      <Select>
+      <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -64,13 +70,19 @@ interface FormInputProps {
   placeholder?: string;
   value?: string;
   disabled?: boolean;
+  onChange?: (value: string) => void;
 }
 
-function FormInput({ label, placeholder, value, disabled }: FormInputProps) {
+function FormInput({ label, placeholder, value, disabled, onChange }: FormInputProps) {
   return (
     <div className="space-y-2 w-full">
       <Label>{label}</Label>
-      <Input placeholder={placeholder} value={value} disabled={disabled} />
+      <Input 
+        placeholder={placeholder} 
+        value={value} 
+        disabled={disabled} 
+        onChange={e => onChange && onChange(e.target.value)}
+      />
     </div>
   );
 }
@@ -100,12 +112,52 @@ const CUSTOMERS = [
 ];
 
 const CONTACTS = [
-  { value: "contact1", label: "Contact 1" },
+  { value: "kennethmack6@gmail.com", label: "Contact 1" },
   { value: "contact2", label: "Contact 2" },
 ];
 
 export default function CreateQuotePage() {
   const router = useRouter();
+  const [sending, setSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState("kennethmack6@gmail.com");
+
+  const quoteId = `Q-${Math.floor(100 + Math.random() * 900)}`;
+  
+  const handleSendQuote = async () => {
+    if (!selectedEmail) {
+      setEmailError("Please select an email address in the 'To' field.");
+      return;
+    }
+    
+    setSending(true);
+    setEmailError(null);
+    
+    try {
+      const success = await sendQuoteEmail(selectedEmail, {
+        quoteId,
+        customerName: "Sample Customer",
+        projectName: "Sample Project",
+        totalAmount: 1250.00,
+        createdBy: "System User",
+        createdAt: format(new Date(), "PPP"),
+      });
+      
+      if (success) {
+        setEmailSent(true);
+        toast.success(`Email sent successfully to ${selectedEmail}!`);
+        setTimeout(() => setEmailSent(false), 5000); // Clear success message after 5 seconds
+      } else {
+        setEmailError("Failed to send email. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error sending quote email:", error);
+      setEmailError("An error occurred while sending the email.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <SidebarProvider
@@ -123,10 +175,25 @@ export default function CreateQuotePage() {
           <div className="flex items-center justify-between border-b px-6 py-3">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold">Quote Form</h1>
+              {emailSent && (
+                <Badge className="bg-green-100 text-green-800 ml-2">
+                  Email Sent Successfully
+                </Badge>
+              )}
+              {emailError && (
+                <Badge className="bg-red-100 text-red-800 ml-2">
+                  {emailError}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline">Preview Quote</Button>
-              <Button>Send Quote</Button>
+              <Button 
+                onClick={handleSendQuote} 
+                disabled={sending}
+              >
+                {sending ? "Sending..." : "Send Quote"}
+              </Button>
               <Button variant="outline">Download</Button>
             </div>
           </div>
@@ -197,13 +264,20 @@ export default function CreateQuotePage() {
               <div className="rounded-lg border p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Email Details</h2>
-                  <Button>Add New Contact</Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSendQuote} disabled={sending} variant="outline">
+                      {sending ? "Sending..." : "Send Test Email"}
+                    </Button>
+                    <Button>Add New Contact</Button>
+                  </div>
                 </div>
                 <div className="space-y-4">
                   <FormSelect
                     label="To"
                     placeholder="Point of Contact"
                     options={CONTACTS}
+                    value={selectedEmail}
+                    onValueChange={setSelectedEmail}
                   />
                   <FormSelect
                     label="CC"
@@ -221,7 +295,7 @@ export default function CreateQuotePage() {
                   />
                   <FormInput
                     label="From"
-                    value="kennethmack6@gmail.com"
+                    value={process.env.SENDGRID_FROM_EMAIL || "it@establishedtraffic.com"}
                     disabled
                   />
                   <div className="space-y-2 w-full">
@@ -240,10 +314,10 @@ export default function CreateQuotePage() {
               {/* Quote Number */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="text-sm">
-                  Quote Number: <span className="font-medium">Q-106</span>
+                  Quote Number: <span className="font-medium">{quoteId}</span>
                 </div>
-                <Badge variant="outline" className="bg-brown-50 text-brown-900">
-                  NOT SENT
+                <Badge variant="outline" className={emailSent ? "bg-green-50 text-green-900" : "bg-brown-50 text-brown-900"}>
+                  {emailSent ? "SENT" : "NOT SENT"}
                 </Badge>
               </div>
 
