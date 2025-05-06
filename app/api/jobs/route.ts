@@ -7,7 +7,9 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const branch = url.searchParams.get('branch');
     
-    let query = supabase.from('jobs').select('*, job_numbers!inner(*)');
+    let query = supabase.from('jobs')
+      .select('*, job_numbers!inner(*)')
+      .order('created_at', { ascending: false });
     
     if (branch && branch !== 'all') {
       if (branch === 'archived') {

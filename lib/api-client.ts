@@ -493,3 +493,42 @@ export async function importJobs(
 
   return response.json();
 }
+
+/**
+ * Send an email notification for a new quote
+ */
+export async function sendQuoteEmail(
+  recipientEmail: string,
+  quoteData: {
+    quoteId: string;
+    customerName: string;
+    projectName: string;
+    totalAmount: number;
+    createdBy: string;
+    createdAt: string;
+  }
+): Promise<boolean> {
+  try {
+    const response = await fetch('/api/quotes/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipientEmail,
+        quoteData,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error sending quote email:', errorData);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error sending quote email:', error);
+    return false;
+  }
+}
