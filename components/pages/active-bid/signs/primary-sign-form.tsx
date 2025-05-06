@@ -294,8 +294,7 @@ const PrimarySignForm = ({
           payload: {
             phase: currentPhase,
             signId: sign.id,
-            //@ts-ignore
-            key,
+            key: key as keyof PrimarySign ,
             value
           }
         });
