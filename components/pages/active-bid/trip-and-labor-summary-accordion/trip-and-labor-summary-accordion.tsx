@@ -5,11 +5,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { getTotalTripsPerPhase } from "@/lib/mptRentalHelperFunctions";
 
 interface TripAndLaborSummaryAccordionProps {
   currentStep: number;
+  currentPhase: number;
 }
 
 // Helper function to safely convert values to numbers
@@ -22,13 +24,12 @@ const safeNumber = (value: any): number => {
   return 0;
 };
 
-const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccordionProps) => {
+const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
-  const { mptRental } = useEstimate();
-  const currentPhase = 0;
+  const { mptRental, adminData } = useEstimate();
 
   useEffect(() => {
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       setValue(["item-1"]);
     } else {
       setValue([]);
@@ -42,12 +43,63 @@ const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccord
     return mptRental.phases[currentPhase][key] || 0;
   };
 
+  const formatForDisplay = (value: number | undefined): string => {
+    if (value === undefined || value === 0 || Number.isNaN(value)) {
+      return '';
+    }
+    return value.toFixed(1);
+  };
+
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || Number.isNaN(value)) {
+      return '';
+    }
+    return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  };
+
+  // Memoize the current phase data
+  const currentPhaseData = useMemo(() => {
+    return mptRental?.phases?.[currentPhase] || { 
+      days: 0, 
+      personnel: 0, 
+      numberTrucks: 0, 
+      additionalRatedHours: 0, 
+      additionalNonRatedHours: 0, 
+      maintenanceTrips: 0 
+    };
+  }, [mptRental?.phases, currentPhase]);
+  
+  // Memoize cost calculations
+  const { mobilizationCost, fuelCost, truckAndFuelCost } = useMemo(() => {
+    const mobilization = (currentPhaseData.numberTrucks || 0) * 
+      getTotalTripsPerPhase(currentPhaseData) * 
+      (mptRental?.dispatchFee || 0);
+    
+    const fuel = (((currentPhaseData.numberTrucks || 0) * 
+      getTotalTripsPerPhase(currentPhaseData) * 2 *
+      (adminData?.owMileage ?? 0)) / 
+      (mptRental?.mpgPerTruck || 1)) * 
+      (adminData?.fuelCostPerGallon ?? 0);
+    
+    return {
+      mobilizationCost: mobilization,
+      fuelCost: fuel,
+      truckAndFuelCost: mobilization + fuel
+    };
+  }, [
+    currentPhaseData, 
+    mptRental?.dispatchFee, 
+    mptRental?.mpgPerTruck,
+    adminData?.owMileage, 
+    adminData?.fuelCostPerGallon
+  ]);
+
   return (
     <Card className="p-4">
       <Accordion type="multiple" value={value} onValueChange={setValue}>
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
-            <h3 className="font-semibold">Trip and Labor Summary</h3>
+            <h3 className="font-semibold">Trip and Labor Summary - Phase {currentPhase + 1}</h3>
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 text-sm mt-4">
@@ -74,6 +126,18 @@ const TripAndLaborSummaryAccordion = ({ currentStep }: TripAndLaborSummaryAccord
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Non-Rated Hours:</span>
                 <span>{safeNumber(getPhaseValue("nonRatedHours") + getPhaseValue("additionalNonRatedHours")).toFixed(1)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Mobilization: </span>
+                <span>{formatCurrency(mobilizationCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Fuel Cost:</span>
+                <span>{formatCurrency(fuelCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Truck & Fuel Cost:</span>
+                <span>{formatCurrency(truckAndFuelCost)}</span>
               </div>
             </div>
           </AccordionContent>

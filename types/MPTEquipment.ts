@@ -28,6 +28,18 @@ interface AllEquipmentMapping {
   dbName: string;
 }
 
+export interface SignDesignation {
+  designation: string;
+  description: string;
+  sheeting: SheetingType;
+  dimensions: SignDimension[];
+}
+
+export interface SignDimension {
+  width: number;
+  height: number;
+}
+
 
 export const equipmentList: EquipmentMapping[] = [
   { key: 'fourFootTypeIII', label: "4' Ft Type III", dbName: "4' Ft Type III" },

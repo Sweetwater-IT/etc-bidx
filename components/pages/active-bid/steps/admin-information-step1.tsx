@@ -54,7 +54,6 @@ const AdminInformationStep1 = ({
 
   useEffect(() => {
     dispatch({type: 'ADD_MPT_RENTAL'})
-    dispatch({type: 'ADD_MPT_PHASE'})
   }, [])
   
   // State for toggle buttons

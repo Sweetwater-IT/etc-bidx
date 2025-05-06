@@ -11,21 +11,22 @@ import { useEstimate } from "@/contexts/EstimateContext";
 
 interface SignSummaryAccordionProps {
   currentStep: number;
+  currentPhase: number;
 }
 
-const SignSummaryAccordion = ({ currentStep }: SignSummaryAccordionProps) => {
+const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordionProps) => {
   const { mptRental } = useEstimate();
   const [value, setValue] = useState<string[]>([]);
 
   const signs: (PrimarySign | SecondarySign)[] = 
     mptRental.phases && 
     mptRental.phases.length > 0 && 
-    mptRental.phases[0].signs 
-      ? mptRental.phases[0].signs 
+    mptRental.phases[currentPhase].signs 
+      ? mptRental.phases[currentPhase].signs 
       : [];
 
   useEffect(() => {
-    if (currentStep === 2) {
+    if (currentStep === 3) {
       setValue(["item-1"]);
     } else {
       setValue([]);
@@ -48,7 +49,7 @@ const SignSummaryAccordion = ({ currentStep }: SignSummaryAccordionProps) => {
       <Accordion type="multiple" value={value} onValueChange={setValue}>
         <AccordionItem value="item-1">
           <AccordionTrigger className="py-0">
-            <h3 className="font-semibold">Sign Summary</h3>
+            <h3 className="font-semibold">Sign Summary - Phase {currentPhase + 1}</h3>
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 text-sm mt-4">
