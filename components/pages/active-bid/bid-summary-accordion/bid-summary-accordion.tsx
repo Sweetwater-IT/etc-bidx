@@ -14,7 +14,6 @@ import { AdminData } from "@/types/TAdminData";
 import { useEstimate } from "@/contexts/EstimateContext";
 
 interface BidSummaryAccordionProps {
-  formData: FormData;
   currentStep: number;
 }
 
