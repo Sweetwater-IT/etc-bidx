@@ -97,11 +97,14 @@ export type EstimateAction =
 	| { type: "UPDATE_FLAGGING"; payload: { key: keyof Flagging; value: any } }
 	| { type: 'ADD_SERVICE_WORK' }
 	| { type: 'UPDATE_SERVICE_WORK'; payload: { key: keyof Flagging; value: any } }
-	| { type: "INITIALIZE_RENTAL_ITEMS" }
 	| { type: "ADD_RENTAL_ITEM"; payload: EquipmentRentalItem }
 	| {
 		type: "UPDATE_RENTAL_ITEM";
 		payload: { index: number; key: keyof EquipmentRentalItem; value: any };
+	}
+	| {
+		type: 'DELETE_RENTAL_ITEM',
+		payload: {index: number}
 	}
     //comment out permanent sign related dispatches for now
 	// | { type: "ADD_PERMANENT_SIGNS" }

@@ -1,6 +1,6 @@
-export const safeNumber = (value: number | null | undefined, defaultValue: number | undefined = 0): number | undefined => {
+export const safeNumber = (value: number | null | undefined): number => {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return defaultValue;
+    return 0;
   }
   return Number(value);
 };

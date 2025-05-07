@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { County } from "@/types/TCounty";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const step: Step = {
   id: "step-1",
@@ -54,6 +55,8 @@ const AdminInformationStep1 = ({
 
   useEffect(() => {
     dispatch({type: 'ADD_MPT_RENTAL'})
+    dispatch({ type: 'ADD_FLAGGING' });
+    dispatch({ type: 'ADD_SERVICE_WORK' })
   }, [])
   
   // State for toggle buttons
@@ -72,6 +75,8 @@ const AdminInformationStep1 = ({
   // State for popover open states
   const [openStates, setOpenStates] = useState({
     county: false,
+    estimator: false,
+    owner: false,
   });
 
   // State for loading status
@@ -226,6 +231,22 @@ const AdminInformationStep1 = ({
     }
   };
 
+  const handleEstimatorChange = (estimatorName: string) => {
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: { key: 'estimator', value: estimatorName }
+    });
+    setOpenStates(prev => ({ ...prev, estimator: false }));
+  };
+
+  const handleOwnerChange = (ownerName: string) => {
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: { key: 'owner', value: ownerName }
+    });
+    setOpenStates(prev => ({ ...prev, owner: false }));
+  };
+
   const handleRateChange = (field: string, value: string) => {
     const numValue = Number(value);
     if (field === "laborRate") {
@@ -294,30 +315,34 @@ const AdminInformationStep1 = ({
                     >
                       {field.label}
                     </Label>
-                    {field.name === "county" ? (
+                    {field.name === "county" || field.name === "estimator" || field.name === "owner" ? (
                       <Popover
-                        open={openStates.county}
-                        onOpenChange={(open) => setOpenStates(prev => ({...prev, county: open}))}
+                        open={openStates[field.name]}
+                        onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
                       >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={openStates.county}
+                            aria-expanded={openStates[field.name]}
                             className="w-full justify-between"
                           >
-                            {adminData.county && adminData.county.name
-                              ? adminData.county.name
-                              : "Select county..."}
+                            {field.name === "county" ? 
+                              (adminData.county && adminData.county.name ? adminData.county.name : "Select county...") :
+                             field.name === "estimator" ? 
+                              (adminData.estimator || "Select estimator...") :
+                             field.name === "owner" ? 
+                              (adminData.owner || "Select owner...") :
+                              "Select..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                           <Command>
-                            <CommandInput placeholder="Search county..." />
-                            <CommandEmpty>No county found.</CommandEmpty>
+                            <CommandInput placeholder={`Search ${field.name}...`} />
+                            <CommandEmpty>No {field.name} found.</CommandEmpty>
                             <CommandGroup className="max-h-[200px] overflow-y-auto">
-                              {counties.map((county) => (
+                              {field.name === "county" && counties.map((county) => (
                                 <CommandItem
                                   key={county.id}
                                   value={county.name}
@@ -332,73 +357,57 @@ const AdminInformationStep1 = ({
                                   {county.name}
                                 </CommandItem>
                               ))}
+                              {field.name === "estimator" && estimators.map((estimator) => (
+                                <CommandItem
+                                  key={estimator.id}
+                                  value={estimator.name}
+                                  onSelect={() => handleEstimatorChange(estimator.name)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      adminData.estimator === estimator.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {estimator.name}
+                                </CommandItem>
+                              ))}
+                              {field.name === "owner" && owners.map((owner) => (
+                                <CommandItem
+                                  key={owner.id}
+                                  value={owner.name}
+                                  onSelect={() => handleOwnerChange(owner.name)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      adminData.owner === owner.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {owner.name}
+                                </CommandItem>
+                              ))}
                             </CommandGroup>
                           </Command>
                         </PopoverContent>
                       </Popover>
-                    ) : field.type === "select" ? (
-                      <select
-                        id={field.name}
+                    ) : field.name === "division" || field.name === "workType" ? (
+                      <RadioGroup
                         value={
-                          field.name === "estimator" ? adminData.estimator || "" :
-                          field.name === "owner" ? adminData.owner || "" :
                           field.name === "division" ? adminData.division || "" :
                           field.name === "workType" ? (adminData.rated === "RATED" ? "RATED" : "NON-RATED") : ""
                         }
-                        onChange={(e) => handleInputChange(field.name, e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={
-                          isLoading[
-                          field.name === "county"
-                            ? "counties"
-                            : field.name === "branch"
-                              ? "branches"
-                              : field.name === "estimator"
-                                ? "estimators"
-                                : field.name === "division"
-                                  ? "divisions"
-                                  : field.name === "owner"
-                                    ? "owners"
-                                    : ""
-                          ] || false
-                        }
+                        onValueChange={(value) => handleInputChange(field.name, value)}
+                        className="flex flex-col space-y-1"
                       >
-                        <option value="">
-                          {isLoading[
-                            field.name === "county"
-                              ? "counties"
-                              : field.name === "branch"
-                                ? "branches"
-                                : field.name === "estimator"
-                                  ? "estimators"
-                                  : field.name === "division"
-                                    ? "divisions"
-                                    : field.name === "owner"
-                                      ? "owners"
-                                      : ""
-                          ]
-                            ? "Loading..."
-                            : field.placeholder}
-                        </option>
-                        {field.name === "estimator" &&
-                          estimators.map((estimator) => (
-                            <option key={estimator.id} value={estimator.name}>
-                              {estimator.name}
-                            </option>
+                        {field.options &&
+                          field.options.map((option, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <RadioGroupItem value={option} id={`${field.name}-${option}`} />
+                              <Label htmlFor={`${field.name}-${option}`}>{option}</Label>
+                            </div>
                           ))}
-                        {field.name === "owner" &&
-                          owners.map((owner) => (
-                            <option key={owner.id} value={owner.name}>
-                              {owner.name}
-                            </option>
-                          ))}
-                        {(field.name === "workType" || field.name === 'division') && field.options &&
-                          field.options.map((type, index) => (
-                            <option key={index} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                      </select>
+                      </RadioGroup>
                     ) : field.type === "toggle" ? (
                       <div>
                         <div className="flex items-center space-x-2">

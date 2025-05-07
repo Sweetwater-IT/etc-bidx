@@ -444,6 +444,13 @@ export const estimateReducer = (
 					}),
 				};
 
+		case "DELETE_RENTAL_ITEM":
+			if (!state.equipmentRental) return state;
+			else return {
+				...state,
+				equipmentRental: state.equipmentRental.filter((item, index) => index !== action.payload.index )
+			}
+
 		// case "ADD_PERMANENT_SIGNS":
 		// 	return {
 		// 		...state,

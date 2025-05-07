@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { AdminData } from "@/types/TAdminData";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 interface BidSummaryAccordionProps {
   currentStep: number;
@@ -28,7 +29,7 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState(false);
   const [value, setValue] = useState<string[]>([]);
 
-  const { adminData, mptRental} = useEstimate();
+  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems} = useEstimate();
 
   const [bidSummary, setBidSummary] = useState<BidSummary>({
     revenue: 0,
@@ -38,16 +39,16 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
   });
 
   useEffect(() => {
-    const allTotals = getAllTotals(adminData, mptRental)
+    const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems)
 
     //just doing mpt for now
     setBidSummary({
-      revenue: allTotals.mptTotalRevenue,
+      revenue: allTotals.totalRevenue,
       cost: allTotals.totalCost,
-      grossProfit: allTotals.mptGrossProfit,
+      grossProfit: allTotals.totalGrossProfit,
       grossMargin: allTotals.mptGrossMargin
     })
-  }, [adminData, mptRental])
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 
 
   useEffect(() => {
