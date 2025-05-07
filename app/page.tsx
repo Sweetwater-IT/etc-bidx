@@ -5,6 +5,7 @@ import { ChartPieRow } from "@/components/chart-pie-row";
 import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { TableAndScatter } from "@/components/table-and-scatter";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { homeCards } from "@/data/home-cards";
 import { RotateCcw } from "lucide-react";
@@ -29,8 +30,24 @@ export default function Page() {
                                 <RotateCcw className="w-4 cursor-pointer hover:text-muted-foreground ml-auto" />
                                 <CalendarInDashboard />
                             </div>
-
-                            <SectionCards data={homeCards} />
+                            {/**Not rendering this as section-cards because the style is slightly different for a row of 6 */}
+                            <div className="px-6">
+                                <div className="flex flex-wrap w-full gap-2">
+                                    {homeCards.map((card, index) => (
+                                        <Card
+                                            key={index}
+                                            className="@container/card grow basis-0"
+                                        >
+                                            <CardHeader>
+                                                <CardDescription>{card.title}</CardDescription>
+                                                <CardTitle className="text-lg font-semibold tabular-nums @[250px]/card:text-3xl">
+                                                    {card.value}
+                                                </CardTitle>
+                                            </CardHeader>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
                             <ChartPieRow />
                             <ChartBarRow />
                             <TableAndScatter />
