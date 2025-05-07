@@ -207,7 +207,7 @@ const FlaggingServicesTab = () => {
       ? Number(safeNumber(flagging?.TMA.quantity) * flagging.TMA.cost) 
       : 0;
 
-    let lumpSum = flaggingCostSummary.totalFlaggingCost / (1 - (rate / 100));
+    const lumpSum = flaggingCostSummary.totalFlaggingCost / (1 - (rate / 100));
     const lumpSumWithEquipment = arrowBoardsCost + messageBoardsCost + tmaCost + lumpSum;
     const totalHours = Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + flagging.onSiteJobHours;
     const hourlyRate = flagging.personnel !== 0 ? safeNumber(lumpSum / (flagging.personnel * totalHours)) : 0;

@@ -7,6 +7,49 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const branch = url.searchParams.get('branch');
     
+    // First, fetch all users to create a map of user IDs to names
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, email, name');
+    
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+    }
+    
+    console.log('Users query result:', users ? `Found ${users.length} users` : 'No users found or null result');
+    
+    // Check if the users table exists
+    const { data: tables } = await supabase
+      .from('pg_tables')
+      .select('tablename')
+      .eq('schemaname', 'public');
+    
+    console.log('Available tables:', tables?.map(t => t.tablename));
+    
+    // Create a map of user IDs to full names
+    const userMap = new Map();
+    
+    if (users && users.length > 0) {
+      console.log('Processing users:', users.length);
+      
+      users.forEach(user => {
+        // Create a full name for each user
+        const fullName = user.name || user.email || `User ${user.id}`;
+        
+        console.log(`User ID ${user.id} (${typeof user.id}): ${fullName}`);
+        
+        // Store the ID as a number (since database IDs are integers)
+        userMap.set(Number(user.id), fullName);
+      });
+    } else {
+      console.log('No users found, creating fallback map');
+      // Create a fallback map with some common IDs
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(id => {
+        userMap.set(id, `User ${id}`);
+      });
+    }
+    
+    // Now fetch jobs with filtering
     let query = supabase.from('jobs')
       .select('*, job_numbers!inner(*)')
       .order('created_at', { ascending: false });
@@ -38,9 +81,11 @@ export async function GET(request: NextRequest) {
       );
     }
     
+    // Fetch reference data from the database
     const { data: counties } = await supabase.from('counties').select('id, name');
     const { data: contractors } = await supabase.from('contractors').select('id, name');
     
+    // Create maps for looking up names by ID
     const countyMap = new Map();
     const contractorMap = new Map();
     
@@ -56,11 +101,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    if (jobs.length > 0) {
-      console.log('First job from database:', jobs[0]);
-      console.log('job_details content:', jobs[0].job_details);
-    }
-
+    // Process all jobs
     const formattedJobs = jobs.map(job => {
       const jobDetails = job.job_details || {};
       
@@ -70,64 +111,103 @@ export async function GET(request: NextRequest) {
         '30': 'West'
       };
       
+      // Extract contract number
       const contractNumber = jobDetails.contractNumber || '';
       
-      const bidNumber = jobDetails.bidNumber || '';
-      
+      // Extract contractor information
       const contractorId = jobDetails.customer || jobDetails.contractor || '';
       const contractorName = contractorMap.get(contractorId) || contractorId;
       
+      // Extract project status
       const projectStatus = jobDetails.projectStatus || 'In Progress';
       
+      // Extract billing status
       const billingStatus = jobDetails.billingStatus || 'Current';
       
+      // Extract location
       const location = jobDetails.township 
         ? `${jobDetails.township}${jobDetails.srRoute ? ` - ${jobDetails.srRoute}` : ''}` 
         : jobDetails.location || '';
       
+      // Extract county
       const countyId = jobDetails.county || '';
       const countyName = countyMap.get(countyId) || countyId;
       
+      // Extract dates
       const startDate = jobDetails.startDate || '';
       const endDate = jobDetails.endDate || '';
       
+      // Extract rates
       const laborRate = parseFloat(jobDetails.laborRate) || 0;
       const fringeRate = parseFloat(jobDetails.fringeRate) || 0;
+      
+      // Extract letting date - check multiple possible field names
+      const lettingDate = 
+        jobDetails.lettingDate || 
+        jobDetails.letting_date || 
+        jobDetails.bidDate || 
+        jobDetails.bid_date || 
+        null;
+      
+      // Extract estimator ID and convert to number
+      let estimatorId: string | null = null;
+      let estimatorName = 'Not Assigned';
+      
+      const rawEstimatorId = 
+        jobDetails.estimator || 
+        jobDetails.Estimator || 
+        jobDetails.bidEstimator || 
+        jobDetails.bid_estimator || 
+        null;
+      
+      if (rawEstimatorId !== null && rawEstimatorId !== undefined) {
+        // Convert string ID to number (since database IDs are integers)
+        estimatorId = String(rawEstimatorId);
+        const numericId = parseInt(estimatorId);
+        
+        if (!isNaN(numericId)) {
+          // Look up the name in our map using the numeric ID
+          const lookupName = userMap.get(numericId);
+          if (lookupName) {
+            estimatorName = lookupName;
+          } else {
+            estimatorName = `Unknown User (ID: ${numericId})`;
+          }
+        } else {
+          estimatorName = `Unknown User (ID: ${estimatorId})`;
+        }
+      }
       
       return {
         id: job.id,
         jobNumber: job.job_number,
-        bidNumber: bidNumber,
+        contractNumber: contractNumber,
+        contractor: contractorName,
         projectStatus: projectStatus,
         billingStatus: billingStatus,
-        contractNumber: contractNumber,
         location: location,
         county: countyName,
         branch: branchNameMap[job.branch_code] || job.branch_code,
-        contractor: contractorName,
         startDate: startDate,
         endDate: endDate,
         laborRate: laborRate,
         fringeRate: fringeRate,
-        mpt: jobDetails.mpt || false,
-        rental: jobDetails.rental || false,
-        permSigns: jobDetails.permSigns || false,
-        flagging: jobDetails.flagging || false,
-        saleItems: jobDetails.saleItems || false,
-        overdays: parseInt(jobDetails.overdays) || 0,
-        createdAt: job.created_at
+        createdAt: job.created_at,
+        lettingDate: lettingDate,
+        estimator: estimatorName,
+        estimatorId: estimatorId
       };
     });
     
     return NextResponse.json(formattedJobs);
   } catch (error) {
+    console.error('Error in GET /api/jobs:', error);
     return NextResponse.json(
       { error: 'Unexpected error fetching jobs' },
       { status: 500 }
     );
   }
 }
-
 
 export async function POST(request: NextRequest) {
   try {
