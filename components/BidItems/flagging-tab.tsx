@@ -553,90 +553,102 @@ const FlaggingServicesTab = () => {
         {/* Flagging Cost Summary Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Flagging Cost Summary</CardTitle>
+            <CardTitle className="text-center text-lg">Flagging Cost Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="font-medium">Description</div>
-              <div className="font-medium">Hours</div>
-              <div className="font-medium">Cost</div>
-              
-              <div>On Site Job Hours</div>
-              <div>
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-1">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="on-site-hours" className="text-base">On Site Job Hours</Label>
+                  <span className="text-sm text-muted-foreground">
+                    ${flaggingCostSummary && flaggingCostSummary.onSiteJobHoursCost ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  </span>
+                </div>
                 <Input
+                  id="on-site-hours"
                   type="number"
                   min={0}
                   value={safeNumber(flagging?.onSiteJobHours) || ""}
                   onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
                   disabled={flagging?.standardPricing}
+                  className="w-40 text-right"
                 />
               </div>
-              <div className="flex items-center">
-                ${flaggingCostSummary ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
               
-              <div>Round Trip Travel Time Hours</div>
-              <div>
+              <div className="flex flex-col space-y-1">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="travel-time" className="text-base">Round Trip Travel Time Hours</Label>
+                  <span className="text-sm text-muted-foreground">
+                    ${flaggingCostSummary && flaggingCostSummary.rtTravelTimeHoursCost ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  </span>
+                </div>
                 <Input
+                  id="travel-time"
                   type="number"
                   value={Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}
                   disabled
+                  className="w-40 text-right"
                 />
               </div>
-              <div className="flex items-center">
-                ${flaggingCostSummary ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              
+              <div className="flex justify-between items-center">
+                <Label className="text-base">Over Time Hours</Label>
+                <span>{getOvertimeHours()}</span>
               </div>
               
-              <div>Over Time Hours</div>
-              <div>{getOvertimeHours()}</div>
-              <div></div>
-              
-              <div className="font-medium">Total Hours</div>
-              <div>{getTotalHours()}</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <div className="flex justify-between items-center pt-3 border-t">
+                <Label className="text-base font-medium">Total Hours</Label>
+                <span className="font-medium">{getTotalHours()}</span>
               </div>
               
-              <div></div>
-              <div className="font-medium">Total Labor Cost</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <div className="flex justify-between items-center">
+                <span className="text-base font-medium">Total Labor Cost</span>
+                <span className="font-medium">
+                  ${flaggingCostSummary && flaggingCostSummary.totalLaborCost ? flaggingCostSummary.totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                </span>
               </div>
               
-              <div></div>
-              <div className="font-medium">Truck and Fuel Cost</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <div className="flex justify-between items-center">
+                <span className="text-base font-medium">Truck and Fuel Cost</span>
+                <span className="font-medium">
+                  ${flaggingCostSummary && flaggingCostSummary.totalFuelCost ? flaggingCostSummary.totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                </span>
               </div>
               
-              <div></div>
-              <div className="font-medium">Additional Costs</div>
-              <div>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="additional-costs" className="text-base font-medium">Additional Costs</Label>
                 <Input
+                  id="additional-costs"
                   type="number"
                   min={0}
                   step={0.01}
                   value={safeNumber(flagging?.additionalEquipmentCost) || ""}
                   onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
                   disabled={flagging?.standardPricing}
+                  className="w-40 text-right"
                 />
               </div>
               
-              <div></div>
-              <div className="font-bold">Total Cost</div>
-              <div className="font-bold">
-                ${flaggingCostSummary ? flaggingCostSummary.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <div className="flex justify-between items-center pt-3 border-t">
+                <span className="text-base font-bold">Total Cost</span>
+                <span className="font-bold">
+                  ${flaggingCostSummary && flaggingCostSummary.totalFlaggingCost ? flaggingCostSummary.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                </span>
               </div>
               
-              <div></div>
-              <div className="font-medium">Total Cost Per Hour</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalCostPerHour.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <div className="flex justify-between items-center">
+                <span className="text-base font-medium">Total Cost Per Hour</span>
+                <span className="font-medium">
+                  ${flaggingCostSummary && flaggingCostSummary.totalCostPerHour ? flaggingCostSummary.totalCostPerHour.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                </span>
               </div>
               
-              <div></div>
-              <div>Total Equipment Revenue</div>
-              <div>${displayEquipCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="flex justify-between items-center">
+                <span className="text-base">Total Equipment Revenue</span>
+                <span>
+                  ${displayEquipCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
