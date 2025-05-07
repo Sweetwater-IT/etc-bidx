@@ -22,7 +22,8 @@ import {
 import { safeNumber } from "@/lib/safe-number";
 import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
 import { fetchReferenceData } from "@/lib/api-client";
-
+import EquipmentRentalTab from "@/components/BidItems/equipment-rental-tab";
+import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -444,7 +445,7 @@ const BidItemsStep5 = ({
         phaseNumber: currentPhase,
         equipmentType: equipmentKey,
         equipmentProperty: property,
-        value: safeNumber(value, 0) as number
+        value: safeNumber(value)
       },
     });
   };
@@ -453,7 +454,7 @@ const BidItemsStep5 = ({
   const handleNewItemInputChange = (field: keyof Omit<CustomLightAndDrumItem, 'id'>, value: number) => {
     setNewCustomItem(prev => ({
       ...prev,
-      [field]: safeNumber(value, 0)
+      [field]: safeNumber(value)
     }));
   };
 
@@ -497,13 +498,13 @@ const BidItemsStep5 = ({
   // Safely get equipment quantities
   const getEquipmentQuantity = (equipmentKey: EquipmentType): number | undefined => {
     if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
-    return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity, undefined);
+    return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity);
   };
 
   // Safely get equipment price
   const getEquipmentPrice = (equipmentKey: EquipmentType): number | undefined => {
     if (!mptRental?.staticEquipmentInfo || !mptRental.staticEquipmentInfo[equipmentKey]) return undefined;
-    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price, undefined);
+    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price);
   };
 
   // Get minimum allowed quantity for an equipment type
@@ -858,7 +859,7 @@ const BidItemsStep5 = ({
               {/* Equipment Tab */}
               <TabsContent value="equipment" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  Equipment Rental will be implemented here
+                  <EquipmentRentalTab/>
                 </div>
               </TabsContent>
 
@@ -872,7 +873,7 @@ const BidItemsStep5 = ({
               {/* Flagging Tab */}
               <TabsContent value="flagging" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  Flagging Services will be implemented here
+                  <FlaggingServicesTab/>
                 </div>
               </TabsContent>
 

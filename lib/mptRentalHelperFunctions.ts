@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Temporarily disabling type checking for this entire file until we can properly fix the types
-
 import { Phase } from "@/types/MPTEquipment";
 import { MPTRentalEstimating } from "@/types/MPTEquipment";
 import { EquipmentType } from "@/types/MPTEquipment";
@@ -8,9 +5,13 @@ import { SheetingType } from "@/types/MPTEquipment";
 import { MPTEquipmentCost } from "@/types/MPTEquipmentCost";
 import { AdminData } from "@/types/TAdminData";
 import { LaborCostSummary } from "@/types/ILaborCostSummary";
+import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
+import { RentalItemSummary, RentalSummary } from "@/types/IRentalSummary";
+import { Flagging } from "@/types/TFlagging";
+import { FlaggingSummary } from "@/types/TFlaggingSummary";
+import { SaleItem } from "@/types/TSaleItem";
 import { safeNumber } from "./safe-number";
-import { LightAndDrumCostSummary } from "@/types/ILightAndDrumCostSummary";
-import { AllTotals } from "@/types/IAllTotals";
+// import { PermanentSigns, PMSEquipment } from "@/types/PermanentSigns";
 
 // Function to get equipment totals per phase
 export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Record<EquipmentType, { totalDaysRequired: number; totalQuantity: number }> {
@@ -284,21 +285,14 @@ function calculateCostMetrics<K extends EquipmentType | SheetingType>(
       continue;
     }
 
-    // Use safeNumber to prevent NaN values and provide defaults for calculations
-    const quantity = safeNumber(item.totalQuantity, 0) as number;
-    const price = safeNumber(staticInfo.price, 0) as number;
-    const discountRate = safeNumber(staticInfo.discountRate, 0) as number;
-    const usefulLife = safeNumber(staticInfo.usefulLife, 365) as number;
-    const daysRequired = safeNumber(item.totalDaysRequired, 0) as number;
-
-    const itemCost = quantity * price;
+    const itemCost = item.totalQuantity * staticInfo.price;
     totalCost += itemCost;
 
-    const itemRevenue = itemCost - (itemCost * (discountRate / 100));
+    const itemRevenue = itemCost - (itemCost * (staticInfo.discountRate / 100));
     totalRevenue += itemRevenue;
 
-    const dailyDepreciation = usefulLife > 0 ? price / (usefulLife * 365) : 0;
-    const itemDepreciationCost = dailyDepreciation * daysRequired * quantity;
+    const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
+    const itemDepreciationCost = dailyDepreciation * item.totalDaysRequired * item.totalQuantity;
     totalDepreciationCost += itemDepreciationCost;
   }
 
@@ -316,73 +310,41 @@ function calculateCostMetrics<K extends EquipmentType | SheetingType>(
   return costMetrics;
 }
 
+// Function to calculate labor cost summary
 export function calculateLaborCostSummary(adminData: AdminData, mptRental: MPTRentalEstimating): LaborCostSummary {
-  try {
-    // Ensure we have valid phase totals with default values if needed
-    const phaseTotals = returnPhaseTotals(mptRental) || { 
-      totalPersonnel: 0, 
-      totalDays: 0, 
-      totalAdditionalRatedHours: 0, 
-      totalAdditionalNonRatedHours: 0 
-    };
 
-    const laborRate = safeNumber(adminData?.county?.laborRate, 0) as number;
-    const fringeRate = safeNumber(adminData?.county?.fringeRate, 0) as number;
-    const totalRate = laborRate + fringeRate;
+  const totalRatedHours = mptRental.phases.reduce((sum, phase) => sum + getRatedHoursPerPhase(phase) + phase.additionalRatedHours, 0);
+  const totalNonRatedHours = mptRental.phases.reduce((sum, phase) => sum + getNonRatedHoursPerPhase(adminData, phase) + phase.additionalNonRatedHours, 0)
 
-    // Use safe values with defaults for all calculations
-    const totalPersonnel = safeNumber(phaseTotals.totalPersonnel, 0) as number;
-    const totalDays = safeNumber(phaseTotals.totalDays, 0) as number;
-    const additionalRatedHours = safeNumber(phaseTotals.totalAdditionalRatedHours, 0) as number;
-    const additionalNonRatedHours = safeNumber(phaseTotals.totalAdditionalNonRatedHours, 0) as number;
-    
-    const ratedLaborHours = totalPersonnel * 8 * totalDays + additionalRatedHours;
-    const nonRatedLaborHours = totalPersonnel * 8 * totalDays + additionalNonRatedHours;
+  const rateLaborCostPerHour = adminData.rated === 'RATED' ? safeNumber(Number(adminData.county.laborRate) + Number(adminData.county.fringeRate)) : safeNumber(adminData.county.shopRate);
+  const totalRatedHourCost = totalRatedHours * rateLaborCostPerHour!
 
-    const totalRatedLaborCost = ratedLaborHours * totalRate;
-    const totalNonRateLaborCost = nonRatedLaborHours * totalRate;
+  const nonRatedLaborCostPerHour = adminData.county.shopRate ?? 0;
+  const totalNonRatedHourCost = totalNonRatedHours * nonRatedLaborCostPerHour;
 
-    const isRated = adminData?.rated === 'RATED' || false;
-    const totalRatedLaborRevenue = totalRatedLaborCost * 2;
-    const nonRateLaborRevenue = totalNonRateLaborCost * 2;
-    const revenue = isRated ? totalRatedLaborRevenue : nonRateLaborRevenue;
+  // Assuming labor rate markup percentage is 100%
+  const rateLaborRevenue = totalRatedHourCost * 2;
+  const nonRateLaborRevenue = totalNonRatedHourCost * 2;
+  const totalLaborRevenue = rateLaborRevenue + nonRateLaborRevenue;
 
-    const ratedGrossProfit = totalRatedLaborRevenue - totalRatedLaborCost;
-    const nonRateGrossProfit = nonRateLaborRevenue - totalNonRateLaborCost;
-    const grossProfit = isRated ? ratedGrossProfit : nonRateGrossProfit;
+  const grossProfit = totalLaborRevenue - (totalRatedHourCost + totalNonRatedHourCost);
+  const grossMargin = totalLaborRevenue !== 0 ? (grossProfit / totalLaborRevenue) * 100 : 0;
 
-    const nonRateGrossMargin = nonRateLaborRevenue !== 0 ? (nonRateGrossProfit / nonRateLaborRevenue) * 100 : 0;
-    const grossMargin = revenue !== 0 ? (grossProfit / revenue) * 100 : 0;
+  const laborCostSummary: LaborCostSummary = {
+    totalNonRateLaborCost: totalNonRatedHourCost,
+    totalRatedLaborCost: totalRatedHourCost,
+    totalRatedLaborRevenue: totalRatedHourCost * 2,
+    revenue: totalLaborRevenue,
+    grossProfit: grossProfit,
+    grossMargin: grossMargin,
+    nonRateLaborRevenue: nonRateLaborRevenue,
+    nonRateGrossProfit: nonRateLaborRevenue - totalNonRatedHourCost,
+    nonRateGrossMargin: nonRateLaborRevenue !== 0 ? ((nonRateLaborRevenue - totalNonRatedHourCost) / nonRateLaborRevenue) * 100 : 0,
+    ratedLaborHours: totalRatedHours,
+    nonRatedLaborHours: totalNonRatedHours
+  };
 
-    return {
-      totalRatedLaborCost,
-      totalNonRateLaborCost,
-      totalRatedLaborRevenue,
-      revenue,
-      grossProfit,
-      grossMargin,
-      nonRateLaborRevenue,
-      nonRateGrossProfit,
-      nonRateGrossMargin,
-      ratedLaborHours,
-      nonRatedLaborHours
-    };
-  } catch (error) {
-    console.error('Error calculating labor cost summary:', error);
-    return {
-      totalRatedLaborCost: 0,
-      totalNonRateLaborCost: 0,
-      totalRatedLaborRevenue: 0,
-      revenue: 0,
-      grossProfit: 0,
-      grossMargin: 0,
-      nonRateLaborRevenue: 0,
-      nonRateGrossProfit: 0,
-      nonRateGrossMargin: 0,
-      ratedLaborHours: 0,
-      nonRatedLaborHours: 0
-    };
-  }
+  return laborCostSummary;
 }
 
 interface TruckAndFuelCostSummary {
@@ -399,8 +361,8 @@ export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental
   let totalFuelCost = 0;
 
   mptRental.phases.forEach(phase => {
-    const phaseTrips = getTotalTripsPerPhase(phase);
-    const phaseTrucks = Number(phase.numberTrucks) || 0;
+    let phaseTrips = getTotalTripsPerPhase(phase);
+    let phaseTrucks = Number(phase.numberTrucks) || 0;
     totalDispatchFee += Number(mptRental.dispatchFee || 0) * Number(phaseTrips || 0) * Number(phaseTrucks || 0);
     totalFuelCost += (
       (Number(phaseTrips || 0) *
@@ -423,113 +385,210 @@ export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental
   };
 }
 
-// @ts-nocheck - Temporarily disabling type checking for this entire function until we can properly fix the types
-export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating): AllTotals {
-
-  if (!mptRental.phases || mptRental.phases.length === 0) {
-    console.warn('No phases found in mptRental data');
-    return getEmptyTotals();
-  }
-
-  if (!mptRental.staticEquipmentInfo || Object.keys(mptRental.staticEquipmentInfo).length === 0) {
-    console.warn('No static equipment info found');
-    return getEmptyTotals();
-  }
-
-  try {
-    const mptRentalStats = calculateEquipmentCostSummary(mptRental);
-    const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
-
-    const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
-
-    const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
-
-    const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
-
-    // Temporary simplified calculation to bypass TypeScript errors
-    // We'll restore the full calculation logic later
-    
-    // Set default values for all stats to avoid undefined errors
-    const defaultStats = { depreciationCost: 0, revenue: 0, grossProfit: 0 };
-    const defaultTotal = { depreciationCost: 0, revenue: 0, grossProfit: 0 };
-    const defaultSignStats = { HI: defaultStats, DG: defaultStats, Special: defaultStats };
-    const defaultLaborStats = { totalRatedLaborCost: 0, totalNonRateLaborCost: 0, revenue: 0, grossProfit: 0 };
-    const defaultTruckStats = { cost: 0, revenue: 0, grossProfit: 0 };
-    
-    // Use the stats objects with defaults
-    const mptRentalStatsWithDefaults = mptRentalStats || defaultStats;
-    const lightAndDrumRentalStatsWithDefaults = { total: (lightAndDrumRentalStats?.total || defaultTotal) };
-    const totalSignCostStatsWithDefaults = totalSignCostStats || defaultSignStats;
-    const totalRatedLaborStatsWithDefaults = totalRatedLaborStats || defaultLaborStats;
-    const totalTruckAndFuelStatsWithDefaults = totalTruckAndFuelStats || defaultTruckStats;
-    
-    // Calculate totals using the objects with defaults
-    const mptTotalCost = 
-      safeNumber(mptRentalStatsWithDefaults.depreciationCost, 0) +
-      safeNumber(lightAndDrumRentalStatsWithDefaults.total.depreciationCost, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.HI.depreciationCost, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.DG.depreciationCost, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.Special.depreciationCost, 0) +
-      safeNumber(totalRatedLaborStatsWithDefaults.totalRatedLaborCost, 0) +
-      safeNumber(totalRatedLaborStatsWithDefaults.totalNonRateLaborCost, 0) +
-      safeNumber(totalTruckAndFuelStatsWithDefaults.cost, 0);
-    
-    const mptTotalRevenue = 
-      safeNumber(mptRentalStatsWithDefaults.revenue, 0) +
-      safeNumber(lightAndDrumRentalStatsWithDefaults.total.revenue, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.HI.revenue, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.DG.revenue, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.Special.revenue, 0) +
-      safeNumber(totalRatedLaborStatsWithDefaults.revenue, 0) +
-      safeNumber(totalTruckAndFuelStatsWithDefaults.revenue, 0);
-    
-    const mptGrossProfit = 
-      safeNumber(mptRentalStatsWithDefaults.grossProfit, 0) +
-      safeNumber(lightAndDrumRentalStatsWithDefaults.total.grossProfit, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.HI.grossProfit, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.DG.grossProfit, 0) +
-      safeNumber(totalSignCostStatsWithDefaults.Special.grossProfit, 0) +
-      safeNumber(totalRatedLaborStatsWithDefaults.grossProfit, 0) +
-      safeNumber(totalTruckAndFuelStatsWithDefaults.grossProfit, 0);
-
-    const totalRevenue = mptTotalRevenue;
-    const totalGrossProfit = mptGrossProfit;
-    const mptGrossMargin = mptTotalRevenue !== 0 ? (mptGrossProfit / mptTotalRevenue) * 100 : 0;
-    const totalGrossMargin = totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
-
-    return {
-      mptTotalCost,
-      mptTotalRevenue,
-      mptGrossProfit,
-      mptGrossMargin,
-      totalRevenue,
-      totalCost: mptTotalCost,
-      totalGrossProfit,
-      totalGrossMargin,
-    };
-  } catch (error) {
-    console.error('Error calculating totals:', error);
-    return getEmptyTotals();
+export interface AllTotals {
+  mptTotalCost: number,
+  mptTotalRevenue: number,
+  mptGrossProfit: number,
+  mptGrossMargin: number,
+  totalRevenue: number,
+  totalCost: number,
+  totalGrossProfit: number,
+  totalGrossMargin: number,
+  revenuePercentages: {
+    mpt: number,
+    rental: number,
+    flagging: number,
+    sale: number
   }
 }
 
-function getEmptyTotals(): AllTotals {
+export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating, rentalEquipment: EquipmentRentalItem[], flagging: Flagging, serviceWork: Flagging, saleItems: SaleItem[]): AllTotals {
+  //this gets all mpt rental stuff
+  const mptRentalStats = calculateEquipmentCostSummary(mptRental);
+  //this gets all light and drum channelizer stuff
+  const lightAndDrumRentalStats = calculateLightAndDrumCostSummary(adminData, mptRental);
+  //this gets all sign stuff
+  const totalSignCostStats = calculateTotalSignCostSummary(mptRental);
+  //this gets all labor stats
+  const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
+  //this gets all truck and fuel stats
+  const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
+
+  const mptTotalCost = mptRentalStats.depreciationCost +
+    lightAndDrumRentalStats.total.depreciationCost +
+    totalSignCostStats.HI.depreciationCost +
+    totalSignCostStats.DG.depreciationCost +
+    totalSignCostStats.Special.depreciationCost +
+    totalRatedLaborStats.totalRatedLaborCost +
+    totalRatedLaborStats.totalNonRateLaborCost +
+    (totalTruckAndFuelStats?.cost || 0);
+
+  const mptTotalRevenue = mptRentalStats.revenue +
+    lightAndDrumRentalStats.total.revenue +
+    totalSignCostStats.HI.revenue +
+    totalSignCostStats.DG.revenue +
+    totalSignCostStats.Special.revenue +
+    totalRatedLaborStats.revenue +
+    (totalTruckAndFuelStats?.revenue || 0);
+
+  const mptGrossProfit = mptRentalStats.grossProfit +
+    lightAndDrumRentalStats.total.grossProfit +
+    totalSignCostStats.HI.grossProfit +
+    totalSignCostStats.DG.grossProfit +
+    totalSignCostStats.Special.grossProfit +
+    totalRatedLaborStats.grossProfit +
+    (totalTruckAndFuelStats?.grossProfit || 0);
+
+
+  const rentalTotalRevenue = rentalEquipment ? calculateRentalSummary(rentalEquipment).totalRevenue : 0;
+  const rentalTotalCost = rentalEquipment ? calculateRentalSummary(rentalEquipment).totalCost : 0;
+  const rentalTotalGrossProfit = rentalEquipment ? calculateRentalSummary(rentalEquipment).totalGrossProfit : 0;
+
+  const serviceWorkTotalRevenue = serviceWork ? calculateFlaggingCostSummary(adminData, serviceWork, true).totalRevenue : 0;
+  const serviceWorkTotalCost = serviceWork ? calculateFlaggingCostSummary(adminData, serviceWork, true).totalFlaggingCost : 0;
+
+  const flaggingRevenue = flagging ? calculateFlaggingCostSummary(adminData, flagging, false).totalRevenue : 0;
+  const flaggingCost = flagging ? calculateFlaggingCostSummary(adminData, flagging, false).totalFlaggingCost : 0;
+  const flaggingTotalRevenue = flaggingRevenue + serviceWorkTotalRevenue;
+  const flaggingTotalCost = flaggingCost + serviceWorkTotalCost;
+  const flaggingTotalGrossProfit = flagging.standardPricing ? 0 : flaggingTotalRevenue - flaggingTotalCost;
+
+  const saleTotalRevenue = saleItems ? saleItems.reduce((sum, item) => sum + (item.quotePrice * (1 + (item.markupPercentage / 100)) * item.quantity), 0) : 0;
+  const saleTotalCost = saleItems ? saleItems.reduce((sum, item) => sum + (item.quotePrice * item.quantity), 0) : 0;
+  const saleTotalGrossProfit = saleTotalRevenue - saleTotalCost
+
+  const totalRevenue = mptTotalRevenue + rentalTotalRevenue + saleTotalRevenue + flaggingTotalRevenue;
+  const totalGrossProfit = mptGrossProfit + rentalTotalGrossProfit + flaggingTotalGrossProfit + saleTotalGrossProfit;
+
   return {
-    mptTotalCost: 0,
-    mptTotalRevenue: 0,
-    mptGrossProfit: 0,
-    mptGrossMargin: 0,
-    totalRevenue: 0,
-    totalCost: 0,
-    totalGrossProfit: 0,
-    totalGrossMargin: 0,
+    mptTotalCost,
+    mptTotalRevenue,
+    mptGrossProfit,
+    mptGrossMargin: mptTotalRevenue !== 0 ? (mptGrossProfit / mptTotalRevenue) * 100 : 0,
+    totalRevenue,
+    totalCost: mptTotalCost + rentalTotalCost + flaggingTotalCost + saleTotalCost,
+    totalGrossProfit,
+    totalGrossMargin: totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0,
+    revenuePercentages: {
+      mpt: totalRevenue !== 0 ? mptTotalRevenue / totalRevenue * 100 : 0,
+      rental: totalRevenue !== 0 ? rentalTotalRevenue / totalRevenue * 100 : 0,
+      flagging: totalRevenue !== 0 ? flaggingTotalRevenue / totalRevenue * 100 : 0,
+      sale: totalRevenue !== 0 ? saleTotalRevenue / totalRevenue * 100 : 0
+    }
   };
 }
 
-// MPTRentalHelperFunctions.ts
+export function calculateRentalSummary(rentalEquipment: EquipmentRentalItem[]): RentalSummary {
+  // Group items by name
+  const groupedItems = rentalEquipment
+    .filter((item) => item.name !== '')
+    .reduce((acc, item) => {
+      if (!acc[item.name]) {
+        acc[item.name] = [];
+      }
+      acc[item.name].push(item);
+      return acc;
+    }, {} as Record<string, EquipmentRentalItem[]>);
 
+  // Calculate summary for each unique item
+  const itemSummaries: RentalItemSummary[] = Object.entries(groupedItems).map(
+    ([name, items]) => {
+      // Calculate total quantity and months
+      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+      const totalMonths = items.reduce((sum, item) => sum + item.months, 0);
+
+      // Check if any item in the group is set for re-rent
+      const reRentItem = items.find((item) => item.reRentForCurrentJob);
+
+      if (reRentItem) {
+        // Handle re-rent calculations
+        const totalRevenue = totalQuantity * reRentItem.rentPrice * totalMonths;
+        const monthlyReRentCost = reRentItem.reRentPrice * 1.06 * totalMonths * totalQuantity;
+        const grossMargin = totalRevenue - monthlyReRentCost;
+
+        return {
+          name,
+          totalQuantity,
+          totalMonths,
+          totalRevenue,
+          cost: monthlyReRentCost,
+          depreciation: monthlyReRentCost, // Depreciation is disregarded in re-rent scenarios
+          grossProfit: grossMargin, // Using grossMargin as grossProfit for re-rent
+          grossProfitMargin: totalRevenue > 0 ? grossMargin / totalRevenue : 0,
+          reRentDetails: {
+            monthlyReRentCost: monthlyReRentCost,
+            grossReRentProfit: grossMargin,
+            grossReRentProfitMargin: grossMargin / totalRevenue
+          },
+        };
+      }
+
+      // Use the first item's rent price (assuming consistent pricing)
+      const rentPrice = items[0].rentPrice || 0;
+      const totalRevenue = totalQuantity * rentPrice * totalMonths;
+
+      // Depreciation calculation (using first item's total cost and useful life)
+      const totalCost = items[0].totalCost || 0;
+      const usefulLifeYrs = items[0].usefulLifeYrs || 0;
+
+      let depreciation = 0;
+      if (usefulLifeYrs > 0) {
+        depreciation =
+          (totalCost / (usefulLifeYrs * 12)) * totalMonths * totalQuantity;
+      }
+
+      // Gross Profit calculations
+      const grossProfit = totalRevenue - depreciation;
+      const grossProfitMargin =
+        totalRevenue > 0 ? grossProfit / totalRevenue : 0;
+
+      return {
+        name,
+        totalQuantity,
+        totalMonths,
+        // cost: totalQuantity === 0 ? 0 : totalCost,  // Set to 0 if quantity is 0
+        totalRevenue,
+        depreciation,
+        grossProfit,
+        grossProfitMargin,
+        reRentDetails: undefined,
+      };
+    }
+  );
+
+  // Calculate overall summary
+  const totalRevenue = itemSummaries.reduce(
+    (sum, item) => sum + item.totalRevenue,
+    0
+  );
+  const totalGrossProfit = itemSummaries.reduce(
+    (sum, item) => sum + item.grossProfit,
+    0
+  );
+
+  const totalCost = itemSummaries.reduce(
+    (sum, item) => sum + item.depreciation,
+    0
+  )
+  const totalGrossProfitMargin =
+    totalRevenue > 0 ? totalGrossProfit / totalRevenue : 0;
+
+  return {
+    items: itemSummaries,
+    totalCost,
+    totalRevenue,
+    totalGrossProfit,
+    totalGrossProfitMargin,
+  };
+}
 const LIGHT_EQUIPMENT_TYPES = ['BLights', 'ACLights', 'TypeXIVP', 'HIVP', 'sharps'] as const;
 type LightEquipmentType = typeof LIGHT_EQUIPMENT_TYPES[number];
+
+export interface LightAndDrumCostSummary {
+  standardEquipment: MPTEquipmentCost;
+  customEquipment: MPTEquipmentCost;
+  total: MPTEquipmentCost;
+}
 
 export function calculateLightAndDrumCostSummary(adminData: AdminData, equipmentRental: MPTRentalEstimating): LightAndDrumCostSummary {
   const totals = getEquipmentTotalsPerPhase(equipmentRental);
@@ -743,10 +802,162 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   return nonRatedHours
 }
 export function getTotalTripsPerPhase(phase: Phase): number {
-  const fourFootTypeIII = phase?.standardEquipment?.fourFootTypeIII?.quantity || 0;
-  const hStand = phase?.standardEquipment?.hStand?.quantity || 0;
-  const post = phase?.standardEquipment?.post?.quantity || 0;
-
-  const relevantEquipmentTotals = fourFootTypeIII + hStand + post;
-  return (safeNumber(phase?.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
+  const relevantEquipmentTotals = phase.standardEquipment.fourFootTypeIII.quantity + phase.standardEquipment.hStand.quantity + phase.standardEquipment.post.quantity
+  return (safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
 }
+
+export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
+  // Helper function to ensure values are valid numbers
+  const toNumber = (value: any): number => {
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Sanitize inputs
+  const personnel = toNumber(flagging?.personnel);
+  const onSiteJobHours = toNumber(flagging?.onSiteJobHours);
+  const rtTravelTimeHours = Math.ceil((toNumber(adminData.owTravelTimeMins) * 2) / 60);
+  const laborRate = isServiceWork ? toNumber(adminData?.county.laborRate) : toNumber(adminData?.county.flaggingBaseRate);
+  const fringeRate = isServiceWork ? toNumber(adminData?.county.fringeRate) : toNumber(adminData?.county.flaggingFringeRate);
+  const flaggingRate = isServiceWork ? toNumber(adminData.county.shopRate) : toNumber(adminData.county.flaggingRate);
+  const generalLiability = toNumber(flagging?.generalLiability);
+  const workerComp = toNumber(flagging?.workerComp);
+  const numberTrucks = toNumber(flagging?.numberTrucks);
+  const owMiles = toNumber(adminData.owMileage);
+  const fuelCostPerGallon = toNumber(flagging?.fuelCostPerGallon);
+  const fuelEconomyMPG = toNumber(flagging?.fuelEconomyMPG);
+  const truckDispatchFee = toNumber(flagging?.truckDispatchFee);
+  const additionalEquipmentCost = toNumber(flagging?.additionalEquipmentCost);
+  const arrowBoardsCost = flagging.arrowBoards.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
+  const messageBoardsCost = flagging.messageBoards.includeInLumpSum ? toNumber(safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost) : 0;
+  const tmaCost = flagging.TMA.includeInLumpSum ? toNumber(safeNumber(flagging.TMA.quantity) * flagging.TMA.cost) : 0;
+
+  // Calculate costs
+  const payRateToUse = adminData.rated === 'RATED' ? laborRate + fringeRate : flaggingRate;
+
+  //this is correct up to v7 of flagging
+  const onSiteJobHoursNoOvertime = onSiteJobHours > 8 ? 8 : onSiteJobHours
+  const onSiteJobHoursNoOvertimeCost = onSiteJobHoursNoOvertime * personnel * payRateToUse;
+
+  //new calcs
+  const timeAndAHalfRate = payRateToUse * 1.5;
+  const onSiteJobHoursOvertime = onSiteJobHours > 8 ? onSiteJobHours - onSiteJobHoursNoOvertime : 0
+  const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel
+
+  //new travel time calcs
+  const travelPayRate = ((onSiteJobHours > 8) || (onSiteJobHours + rtTravelTimeHours > 8)) ? flaggingRate * 1.5 : flaggingRate;
+  const travelTimeCost = travelPayRate * rtTravelTimeHours * personnel
+
+  // get the total labor cost
+  const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost
+  // get the total travel time cost
+  const rtTravelTimeHoursCost = onSiteJobHours + rtTravelTimeHours <= 8 ? (rtTravelTimeHours * flaggingRate * personnel) : travelTimeCost
+
+  const totalHoursCost = onSiteJobHoursCost + rtTravelTimeHoursCost;
+  const totalLaborCost = totalHoursCost + ((totalHoursCost / 1000) * (generalLiability === 0 ? 113.55 : generalLiability)) + ((totalHoursCost / 100) * (workerComp === 0 ? 4.96 : workerComp));
+
+  // Fix fuel cost calculation
+  console.log('fuel economy per galloon is ' + fuelEconomyMPG)
+  const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 50 : truckDispatchFee) : 0
+
+  let totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
+
+  // Prevent division by zero for cost per hour
+  const totalHours = onSiteJobHours + rtTravelTimeHours;
+  const totalCostPerHour = totalHours > 0 ? totalFlaggingCost / totalHours : 0;
+
+  const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost
+  let totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
+  let totalRevenue = totalRevenueNoEquip + totalEquipCost
+
+  return {
+    onSiteJobHoursCost,
+    rtTravelTimeHoursCost,
+    overTimeHoursCost: onSiteJobHoursOvertimeCost,
+    totalHoursCost,
+    totalFuelCost,
+    totalLaborCost,
+    totalFlaggingCost,
+    totalCostPerHour,
+    totalRevenue,
+    totalHours,
+    totalEquipCost
+  };
+}
+
+export const calculateSaleItemMargin = (item: SaleItem) => {
+  const salePrice = item.quotePrice * (1 + item.markupPercentage / 100);
+  const totalSale = salePrice * item.quantity;
+  const totalCost = item.quotePrice * item.quantity;
+  const grossProfit = totalSale - totalCost;
+  return {
+    salePrice: totalSale,
+    grossProfit: grossProfit,
+    margin: grossProfit / totalSale
+  }
+};
+
+// export const calculatePMSTypeBSummary = (permanentSigns: PermanentSigns, adminData: AdminData, mptRental: MPTRentalEstimating) => {
+//   let totalCost = 0;
+//   let totalRevenue = 0;
+
+//   // First get all totals of all pms type b equipment
+//   Object.entries(permanentSigns.pmsTypeB).filter(entry => {
+//     const value = entry[1];
+//     return typeof value !== 'number' && typeof value !== 'string' && Object.hasOwn(value, 'quantity');
+//   }).forEach(([key, value]) => {
+//     const typedValue = value as PMSEquipment;
+
+//     // Calculate item cost
+//     const itemCost = typedValue.quantity * typedValue.unitCost;
+//     // Calculate item revenue with markup
+//     const itemRevenue = itemCost * (1 + (typedValue.markup / 100));
+
+//     // Add to running totals
+//     totalCost += itemCost;
+//     totalRevenue += itemRevenue;
+//   });
+
+//   // Apply the same fix to custom items
+//   permanentSigns.pmsTypeB.customItems.forEach(customItem => {
+//     const itemCost = customItem.quantity * customItem.unitCost;
+//     const itemRevenue = itemCost * (1 + (customItem.markup / 100));
+
+//     totalCost += itemCost;
+//     totalRevenue += itemRevenue;
+//   });
+
+//   let laborCost;
+//   if (permanentSigns.separateMobilization) {
+//     // If separate mobilization is true, include travel time in calculation
+//     laborCost = (((((safeNumber(adminData.owTravelTimeMins) * 2) / 60) * adminData.county.shopRateFromBranch * permanentSigns.personnel * permanentSigns.OWtrips)) /
+//       ((permanentSigns.pmsTypeB.twelveFtSquarePost.quantity / permanentSigns.installedPostManHours) * (adminData.county.fringeRate + adminData.county.laborRate) * permanentSigns.personnel));
+//   } else {
+//     laborCost = (((adminData.county.shopRateFromBranch * permanentSigns.personnel * permanentSigns.OWtrips)) /
+//       ((permanentSigns.pmsTypeB.twelveFtSquarePost.quantity / permanentSigns.installedPostManHours) * (adminData.county.fringeRate + adminData.county.laborRate) * permanentSigns.personnel));
+//   }
+//   //markup is 100% for pms type b
+//   const laborRevenue = laborCost * 2;
+//   let fuelCost
+//   // fuel cost calculation
+//   if (permanentSigns.separateMobilization) {
+//     fuelCost = ((((safeNumber(adminData.owMileage) * 2) * permanentSigns.OWtrips) / mptRental.mpgPerTruck) + (permanentSigns.OWtrips * mptRental.dispatchFee))
+//   }
+//   else {
+//     fuelCost = ((permanentSigns.OWtrips / mptRental.mpgPerTruck) + (permanentSigns.OWtrips * mptRental.dispatchFee))
+//   }
+
+//   //markup for pmsTypeB fuel is 0 
+//   const fuelRevenue = fuelCost;
+
+//   totalCost += laborCost + fuelCost;
+//   totalRevenue += laborRevenue + fuelRevenue;
+
+//   const grossProfit = totalRevenue - totalCost;
+//   return {
+//     totalCost,
+//     totalRevenue,
+//     grossProfit,
+//     grossMargin: grossProfit / totalRevenue
+//   };
+// };
