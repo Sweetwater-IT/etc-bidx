@@ -19,11 +19,19 @@ export async function GET(request: NextRequest) {
     
     if (status) {
       if (status === 'won-pending') {
-        query = query.or('status.ilike.%won%,status.ilike.%pending%');
+        // Use exact matching for 'Won - Pending' status (case-insensitive)
+        // This ensures we don't get regular 'Pending' bids
+        query = query.ilike('status', 'won-pending');
+      } else if (status === 'won') {
+        // Use exact matching for 'Won' status (case-insensitive)
+        query = query.ilike('status', 'won');
       } else if (status === 'archived') {
         query = query
           .ilike('status', '%archived%')
           .is('deleted_at', null);
+      } else if (status === 'won,won-pending') {
+        // Special case for getting both Won and Won - Pending
+        query = query.or('status.ilike.Won,status.ilike.{Won - Pending}');
       } else {
         // Try case-insensitive filtering using ilike for text fields
         // This is more reliable than exact matching with different case variations
