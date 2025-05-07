@@ -361,8 +361,8 @@ export function calculateTruckAndFuelCostSummary(adminData: AdminData, mptRental
   let totalFuelCost = 0;
 
   mptRental.phases.forEach(phase => {
-    let phaseTrips = getTotalTripsPerPhase(phase);
-    let phaseTrucks = Number(phase.numberTrucks) || 0;
+    const phaseTrips = getTotalTripsPerPhase(phase);
+    const phaseTrucks = Number(phase.numberTrucks) || 0;
     totalDispatchFee += Number(mptRental.dispatchFee || 0) * Number(phaseTrips || 0) * Number(phaseTrucks || 0);
     totalFuelCost += (
       (Number(phaseTrips || 0) *
@@ -860,15 +860,15 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   console.log('fuel economy per galloon is ' + fuelEconomyMPG)
   const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 50 : truckDispatchFee) : 0
 
-  let totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
+  const totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
 
   // Prevent division by zero for cost per hour
   const totalHours = onSiteJobHours + rtTravelTimeHours;
   const totalCostPerHour = totalHours > 0 ? totalFlaggingCost / totalHours : 0;
 
   const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost
-  let totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
-  let totalRevenue = totalRevenueNoEquip + totalEquipCost
+  const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
+  const totalRevenue = totalRevenueNoEquip + totalEquipCost
 
   return {
     onSiteJobHoursCost,
