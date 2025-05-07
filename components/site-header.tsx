@@ -1,11 +1,19 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { data } from "@/components/app-sidebar"
 import { Input } from "@/components/ui/input"
 import { ModeToggle } from "@/components/toggle-color"
-import { IconBell, IconPower } from "@tabler/icons-react"
+import { IconBell, IconPower, IconPlus, IconBriefcase, IconClipboard, IconBuilding, IconUser, IconFileText } from "@tabler/icons-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -14,6 +22,11 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleNewItem = (route: string) => {
+    router.push(route)
+  }
 
   const findTitle = (items: any[]): string | undefined => {
     for (const item of items) {
@@ -39,6 +52,44 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
     return foundTitle || (pathname === "/" ? "Dashboard" : "")
   }
 
+  // Novo componente para o menu de criação
+  function DropdownNewMenu({ handleNewItem }: { handleNewItem: (route: string) => void }) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <IconPlus className="size-4" />
+            New
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleNewItem('/jobs/available')}>
+            <IconBriefcase className="size-4 mr-2" />
+            Available Job
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleNewItem('/jobs/active-bids')}>
+            <IconClipboard className="size-4 mr-2" />
+            Active Bid
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleNewItem('/jobs/active-jobs')}>
+            <IconBuilding className="size-4 mr-2" />
+            Active Job
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => handleNewItem('/customers')}>
+            <IconUser className="size-4 mr-2" />
+            Customer
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => handleNewItem('/quotes/create')}>
+            <IconFileText className="size-4 mr-2" />
+            Quote
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) pt-16 mb-12">
       <div className="flex w-full flex-col gap-2 px-4 lg:gap-4 lg:px-6">
@@ -54,6 +105,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            <DropdownNewMenu handleNewItem={handleNewItem} />
             <button className="relative rounded-lg p-2 hover:bg-muted">
               <IconBell className="size-5" />
               <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
