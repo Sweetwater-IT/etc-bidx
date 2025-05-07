@@ -68,8 +68,8 @@ export default function ContractsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        let combinedData: ContractData[] = [];
         
+        // Always fetch ALL data for accurate counts, regardless of current segment
         const counts = {
           all: 0,
           won: 0,
@@ -77,154 +77,172 @@ export default function ContractsPage() {
           jobs: 0
         };
         
-        if (currentSegment !== "jobs") {
-          let bidData: any[] = [];
+        // 1. First, fetch ALL won and won-pending bids to get accurate counts
+        console.log('Fetching all bids for counts...');
+        const allBidsResponse = await fetch(`/api/active-bids?status=won,won-pending`);
+        const allBidsResult = await allBidsResponse.json();
+        
+        let allBids: any[] = [];
+        if (allBidsResult.success && allBidsResult.data) {
+          allBids = allBidsResult.data;
+          console.log(`Found ${allBids.length} total bids (won + won-pending)`);
           
-          let statusFilter = '';
+          // Log all bid statuses to debug
+          console.log('All bid statuses:', allBids.map(bid => ({ id: bid.id, status: bid.status })));
           
-          if (currentSegment === "all") {
-            statusFilter = "won,won-pending";
-            console.log('Fetching both Won and Won-Pending bids...');
-          } else if (currentSegment === "won") {
-            statusFilter = "won";
-            console.log('Fetching only Won bids...');
-          } else if (currentSegment === "won-pending") {
-            statusFilter = "won-pending";
-            console.log('Fetching only Won-Pending bids...');
-          }
-          
-          const bidResponse = await fetch(`/api/active-bids?status=${statusFilter}`);
-          const apiResult = await bidResponse.json();
-          
-          if (apiResult.success && apiResult.data) {
-            console.log(`Found ${apiResult.data.length} bids with status: ${statusFilter}`);
-            bidData = apiResult.data;
+          // Count bids by status (case-insensitive)
+          allBids.forEach(bid => {
+            // Convert status to lowercase for consistent comparison
+            const lowerStatus = bid.status.toLowerCase();
             
-            if (statusFilter.includes('won,won-pending')) {
-              counts.all += bidData.length;
-              
-              bidData.forEach(bid => {
-                if (bid.status === 'won') {
-                  counts.won++;
-                } else if (bid.status === 'won-pending') {
-                  counts["won-pending"]++;
-                }
-              });
-            } else if (statusFilter === 'won') {
-              counts.won += bidData.length;
-              counts.all += bidData.length;
-            } else if (statusFilter === 'won-pending') {
-              counts["won-pending"] += bidData.length;
-              counts.all += bidData.length;
+            if (lowerStatus === 'won') {
+              counts.won++;
+              console.log(`Bid ${bid.id} has status 'won'`);
+            } else if (lowerStatus === 'won-pending' || lowerStatus === 'won - pending') {
+              counts["won-pending"]++;
+              console.log(`Bid ${bid.id} has status 'won-pending'`);
+            } else {
+              console.log(`Bid ${bid.id} has unexpected status: '${bid.status}'`);
             }
-            
-            if (bidData.length > 0) {
-              console.log('Sample bid data:', bidData[0]);
-              console.log('Sample bid status:', bidData[0].status);
-            }
-          } else {
-            console.log(`No bids found with status: ${statusFilter}`);
-          }
+          });
           
-          const bidResult = { 
-            success: true, 
-            data: bidData 
-          };
-          
-          console.log(`Combined bid data: ${bidResult.data.length} records`);
-          
-          if (bidResult.data.length > 0) {
-            console.log('First bid data from bid_estimates:', bidResult.data[0]);
-            
-            const bidData = bidResult.data.map((bid: any) => {
-              if (bid.id === bidResult.data[0]?.id) {
-                console.log('letting_date from bid_estimates:', bid.letting_date);
-                console.log('estimator from bid_estimates:', bid.estimator);
-              }
-              
-              const displayStatus = bid.status ? 
-                bid.status
-                  .split('-')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ') : '';
-              
-              return {
-                id: bid.id,
-                letting_date: formatDate(bid.letting_date),
-                contract_number: bid.contract_number || '',
-                contractor: bid.contractor || 'Not Specified',
-                status: displayStatus,
-                county: bid.county || '',
-                branch: bid.branch || '',
-                estimator: bid.estimator || 'Not Assigned',
-                created_at: formatDate(bid.created_at),
-                source: "bid" as const
-              };
-            });
-            combinedData = [...combinedData, ...bidData];
-          } else {
-            console.log("No bid data found with the specified status");
-          }
+          // Total bids count
+          counts.all += allBids.length;
         }
         
-        if (currentSegment === "all" || currentSegment === "jobs") {
-          const jobsResponse = await fetch("/api/jobs");
-          const jobsData = await jobsResponse.json();
-          
-          if (Array.isArray(jobsData)) {
-            counts.jobs += jobsData.length;
-            counts.all += jobsData.length;
-            
-            if (jobsData.length > 0) {
-              console.log('First job data from jobs table:', jobsData[0]);
-              
-              const firstJobDetails = jobsData[0].job_details || {};
-              console.log('Job details JSONB for first job:', firstJobDetails);
-              
-            }
-            
-            const formattedJobs = jobsData.map((job: any) => {
-              if (job.id === jobsData[0]?.id) {
-                console.log('First job from API:', job);
-                console.log('Letting date from job:', job.lettingDate);
-                console.log('Estimator from job:', job.estimator);
-              }
-              
-              const displayStatus = job.projectStatus ? 
-                job.projectStatus
-                  .split(/[-\s]/)
-                  .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ') : 'Active';
-              
-              return {
-                id: job.id,
-                letting_date: formatDate(job.lettingDate), // Use the lettingDate field from the API
-                contract_number: job.contractNumber || '',
-                contractor: job.contractor || 'Not Specified',
-                status: displayStatus,
-                county: job.county || '',
-                branch: job.branch || '',
-                estimator: job.estimator || 'Not Assigned', // Use the estimator field from the API
-                created_at: formatDate(job.createdAt),
-                source: "job" as const,
-                job_number: job.jobNumber
-              };
-            });
-            combinedData = [...combinedData, ...formattedJobs];
-          } else {
-            console.error("Failed to fetch jobs or invalid response format");
-          }
+        // 2. Fetch all jobs to get accurate job counts
+        const jobsResponse = await fetch("/api/jobs");
+        const jobsData = await jobsResponse.json();
+        
+        let allJobs: any[] = [];
+        if (Array.isArray(jobsData)) {
+          allJobs = jobsData;
+          counts.jobs = allJobs.length;
+          counts.all += allJobs.length; // Add jobs to the total count
         }
         
-        // Sort combined data by created_at (newest first)
-        combinedData.sort((a, b) => {
+        // 3. Now prepare the data for the current segment
+        let displayData: ContractData[] = [];
+        
+        if (currentSegment === "all") {
+          // Format all bids
+          const formattedBids = allBids.map((bid: any) => {
+            const displayStatus = bid.status ? 
+              bid.status
+                .split('-')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ') : '';
+            
+            return {
+              id: bid.id,
+              letting_date: formatDate(bid.letting_date),
+              contract_number: bid.contract_number || '',
+              contractor: bid.contractor || 'Not Specified',
+              status: displayStatus,
+              county: bid.county || '',
+              branch: bid.branch || '',
+              estimator: bid.estimator || 'Not Assigned',
+              created_at: formatDate(bid.created_at),
+              source: "bid" as const
+            };
+          });
+          
+          // Format all jobs
+          const formattedJobs = allJobs.map((job: any) => {
+            const displayStatus = job.projectStatus ? 
+              job.projectStatus
+                .split(/[-\s]/)
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ') : 'Active';
+            
+            return {
+              id: job.id,
+              letting_date: formatDate(job.lettingDate),
+              contract_number: job.contractNumber || '',
+              contractor: job.contractor || 'Not Specified',
+              status: displayStatus,
+              county: job.county || '',
+              branch: job.branch || '',
+              estimator: job.estimator || 'Not Assigned',
+              created_at: formatDate(job.createdAt),
+              source: "job" as const,
+              job_number: job.jobNumber
+            };
+          });
+          
+          // Combine data for 'all' segment
+          displayData = [...formattedBids, ...formattedJobs];
+        } else if (currentSegment === "won") {
+          // Filter and format only won bids (case-insensitive)
+          const wonBids = allBids.filter(bid => bid.status.toLowerCase() === 'won');
+          console.log(`Found ${wonBids.length} bids with status 'won' (case-insensitive)`);
+          displayData = wonBids.map((bid: any) => {
+            return {
+              id: bid.id,
+              letting_date: formatDate(bid.letting_date),
+              contract_number: bid.contract_number || '',
+              contractor: bid.contractor || 'Not Specified',
+              status: 'Won',
+              county: bid.county || '',
+              branch: bid.branch || '',
+              estimator: bid.estimator || 'Not Assigned',
+              created_at: formatDate(bid.created_at),
+              source: "bid" as const
+            };
+          });
+        } else if (currentSegment === "won-pending") {
+          // Filter and format only won-pending bids (case-insensitive)
+          const pendingBids = allBids.filter(bid => {
+            const lowerStatus = bid.status.toLowerCase();
+            return lowerStatus === 'won-pending' || lowerStatus === 'won - pending';
+          });
+          console.log(`Found ${pendingBids.length} bids with status 'won-pending' (case-insensitive)`);
+          displayData = pendingBids.map((bid: any) => {
+            return {
+              id: bid.id,
+              letting_date: formatDate(bid.letting_date),
+              contract_number: bid.contract_number || '',
+              contractor: bid.contractor || 'Not Specified',
+              status: 'Won Pending',
+              county: bid.county || '',
+              branch: bid.branch || '',
+              estimator: bid.estimator || 'Not Assigned',
+              created_at: formatDate(bid.created_at),
+              source: "bid" as const
+            };
+          });
+        } else if (currentSegment === "jobs") {
+          // Format only jobs
+          displayData = allJobs.map((job: any) => {
+            const displayStatus = job.projectStatus ? 
+              job.projectStatus
+                .split(/[-\s]/)
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ') : 'Active';
+            
+            return {
+              id: job.id,
+              letting_date: formatDate(job.lettingDate),
+              contract_number: job.contractNumber || '',
+              contractor: job.contractor || 'Not Specified',
+              status: displayStatus,
+              county: job.county || '',
+              branch: job.branch || '',
+              estimator: job.estimator || 'Not Assigned',
+              created_at: formatDate(job.createdAt),
+              source: "job" as const,
+              job_number: job.jobNumber
+            };
+          });
+        }
+        
+        // Sort by created_at date (newest first)
+        displayData.sort((a, b) => {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
         
-        // Update the contracts state with the combined data
-        setContracts(combinedData);
-        
-        // Update the segment counts state
+        // Update states
+        setContracts(displayData);
         setSegmentCounts(counts);
         console.log('Updated segment counts:', counts);
       } catch (error) {
