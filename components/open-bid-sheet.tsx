@@ -14,8 +14,20 @@ import {
   MapPinIcon,
   LayersIcon,
   GlobeIcon,
+  Check,
+  ChevronsUpDown,
+  Search,
 } from "lucide-react"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { useState, useEffect } from "react"
 import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client"
@@ -60,6 +72,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [counties, setCounties] = useState<County[]>([])
   const [branches, setBranches] = useState<{id: string, name: string}[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  
+  // State for popover open states
+  const [openStates, setOpenStates] = useState({
+    requestor: false,
+    owner: false,
+  })
 
   useEffect(() => {
     async function loadReferenceData() {
@@ -86,11 +104,23 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         
         setBranches(branchesData)
         
-        if (!job && usersData.length && ownersData.length && countiesData.length && branchesData.length) {
-          setRequestor(usersData[0].id)
-          setOwner(ownersData[0].id)
-          setCounty(countiesData[0].id.toString())
-          setBranch(branchesData[0].id)
+        if (!job && usersData.length && ownersData.length && countiesData.length) {
+          console.log(usersData[0]?.id)
+          console.log(ownersData[0]?.id)
+          console.log(countiesData[0]?.id)
+          setRequestor(usersData[0]?.id)
+          setOwner(ownersData[0]?.id)
+          
+          // Set county and automatically set branch based on county
+          const initialCountyId = countiesData[0]?.id.toString()
+          setCounty(initialCountyId)
+          
+          // Get branch from county
+          const selectedCounty = countiesData.find(c => c.id.toString() === initialCountyId)
+          if (selectedCounty?.branch) {
+            const branchId = selectedCounty.branch.toLowerCase().replace(/\s+/g, '-')
+            setBranch(branchId)
+          }
         }
       } catch (error) {
         console.error('Error loading reference data:', error)
@@ -252,66 +282,109 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
                 <div className="space-y-2 w-full">
                   <Label>Requestor <span className="text-red-500">*</span></Label>
-                  <Select value={requestor} onValueChange={setRequestor} disabled={isLoading}>
-                    <SelectTrigger className="w-full pl-9 relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select a requestor">
-                        {requestor && users.find(u => u.id === requestor)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.length > 0 ? (
-                        users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Popover
+                    open={openStates.requestor}
+                    onOpenChange={(open) => setOpenStates(prev => ({...prev, requestor: open}))}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openStates.requestor}
+                        className="w-full justify-between text-left font-normal"
+                        disabled={isLoading}
+                      >
+                        <span>
+                          {requestor ? users.find(u => u.id === requestor)?.name || "Select requestor..." : "Select requestor..."}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search requestor..." />
+                        <CommandEmpty>No requestor found.</CommandEmpty>
+                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                          {users.length > 0 ? (
+                            users.map((user) => (
+                              <CommandItem
+                                key={user.id}
+                                value={user.name}
+                                onSelect={() => {
+                                  setRequestor(user.id);
+                                  setOpenStates(prev => ({...prev, requestor: false}));
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    requestor === user.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {user.name}
+                              </CommandItem>
+                            ))
+                          ) : (
+                            <CommandItem disabled>Loading requestors...</CommandItem>
+                          )}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2 w-full">
                   <Label>Owner</Label>
-                  <Select value={owner} onValueChange={setOwner} disabled={isLoading}>
-                    <SelectTrigger className="w-full pl-9 relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select an owner">
-                        {owner && owners.find(o => o.id === owner)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {owners.length > 0 ? (
-                        owners.map(owner => (
-                          <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>Loading owners...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Popover
+                    open={openStates.owner}
+                    onOpenChange={(open) => setOpenStates(prev => ({...prev, owner: open}))}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between text-left font-normal"
+                        disabled={isLoading}
+                      >
+                        <span>
+                          {owner ? owners.find(o => o.id === owner)?.name || "Select owner..." : "Select owner..."}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Command>
+                        <CommandInput placeholder="Search owner..." />
+                        <CommandEmpty>No owner found.</CommandEmpty>
+                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                          {owners.length > 0 ? (
+                            owners.map((ownerItem) => (
+                              <CommandItem
+                                key={ownerItem.id}
+                                value={ownerItem.name}
+                                onSelect={() => {
+                                  setOwner(ownerItem.id);
+                                  setOpenStates(prev => ({...prev, owner: false}));
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    owner === ownerItem.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {ownerItem.name}
+                              </CommandItem>
+                            ))
+                          ) : (
+                            <CommandItem disabled>Loading owners...</CommandItem>
+                          )}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Branch</Label>
-                  <Select value={branch} onValueChange={setBranch} disabled={isLoading}>
-                    <SelectTrigger className="w-full pl-9 relative">
-                      <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select a branch">
-                        {branch && branches.find(b => b.id === branch)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.length > 0 ? (
-                        branches.map(branch => (
-                          <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>Loading branches...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Branch is automatically set based on county */}
 
                 <div className="space-y-2 w-full">
                   <Label>Platform</Label>
@@ -353,10 +426,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full pl-9 relative justify-start text-left font-normal"
+                        className="w-full justify-between text-left font-normal"
                       >
-                        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        {dueDate ? format(dueDate, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+                        <span>
+                          {dueDate ? format(dueDate, "PPP") : "Select date"}
+                        </span>
+                        <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -372,23 +447,59 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
                 <div className="space-y-2 w-full">
                   <Label>County <span className="text-red-500">*</span></Label>
-                  <Select value={county} onValueChange={setCounty} disabled={isLoading}>
-                    <SelectTrigger className="w-full pl-9 relative">
-                      <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="County">
-                        {county && counties.find(c => c.id.toString() === county)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {counties.length > 0 ? (
-                        counties.map(county => (
-                          <SelectItem key={county.id} value={county.id.toString()}>{county.name}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>Loading counties...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={isLoading}>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between text-left font-normal"
+                      >
+                        <span>
+                          {county && counties.find(c => c.id.toString() === county)
+                            ? counties.find(c => c.id.toString() === county)?.name
+                            : "Select county..."}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search county..." className="h-9" />
+                        <CommandEmpty>No county found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandList>
+                            {counties.length > 0 ? (
+                              counties.map((countyItem) => (
+                                <CommandItem
+                                  key={countyItem.id}
+                                  value={countyItem.name}
+                                  onSelect={() => {
+                                    const countyId = countyItem.id.toString();
+                                    setCounty(countyId);
+                                    // Auto-set branch based on county
+                                    if (countyItem.branch) {
+                                      const branchId = countyItem.branch.toLowerCase().replace(/\s+/g, '-');
+                                      setBranch(branchId);
+                                    }
+                                  }}
+                                >
+                                  {countyItem.name}
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      county === countyItem.id.toString() ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))
+                            ) : (
+                              <CommandItem disabled>Loading counties...</CommandItem>
+                            )}
+                          </CommandList>
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2 w-full">
