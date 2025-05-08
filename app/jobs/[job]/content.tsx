@@ -19,7 +19,7 @@ import { OpenBidSheet } from "@/components/open-bid-sheet";
 import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus } from "@/lib/api-client";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "@/lib/api-client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
@@ -73,29 +73,44 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false);
     const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
     const [createActiveBidSheetOpen, setCreateActiveBidSheetOpen] = useState(false);
-    const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
-    const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
-    const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
     const [nextJobNumber, setNextJobNumber] = useState<string>("");
     const [editJobNumberOpen, setEditJobNumberOpen] = useState(false);
     const [jobNumberYear, setJobNumberYear] = useState<string>("");
     const [jobNumberSequential, setJobNumberSequential] = useState<string>("");
     const [activeSegment, setActiveSegment] = useState("all");
-    const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
-    const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
-    const [showDeleteJobsDialog, setShowDeleteJobsDialog] = useState(false);
-    const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
+    //THESE ARE OPEN BIDS
+    //sets the table data
+    const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
+    //tracks the state of open bids to archive
     const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
-    const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
+    //tracks the state of open bids to delete when on the archived tab
     const [selectedJobsToDelete, setSelectedJobsToDelete] = useState<AvailableJob[]>([]);
-    const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
+    //tracks individual selected open bids when clicking on the row to open the editing sidebar
     const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null)
+    //opens the confirmation to archive the open bids
+    const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
+    //opens the confirmation to delete the open bids
+    const [showDeleteJobsDialog, setShowDeleteJobsDialog] = useState(false);
+    //THESE ARE ESTIMATES
+    const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
+    const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
+    const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
+    const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
+    const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
+    //ACTIVE JOBS (IE WON JOBS)
+    const [showArchiveActiveJobsDialog, setShowArchiveActiveJobsDialog] = useState<boolean>(false);
+    const [showDeleteActiveJobsDialog, setShowDeleteActiveJobsDialog] = useState<boolean>(false);
+    const [selectedActiveJobsToArchive, setSelectedActiveJobsToArchive] = useState<ActiveJob[]>([]);
+    const [selectedActiveJobsToDelete, setSelectedActiveJobsToDelete] = useState<ActiveJob[]>([]);
     const [jobDetailsSheetOpen, setJobDetailsSheetOpen] = useState(false)
     const [editJobSheetOpen, setEditJobSheetOpen] = useState(false)
-    const [selectedActiveJob, setSelectedActiveJob] = useState<ActiveJob | null>(null)
+    const [selectedActiveJob, setSelectedActiveJob] = useState<ActiveJob| null>(null)
     const [activeJobDetailsSheetOpen, setActiveJobDetailsSheetOpen] = useState(false)
     const [editActiveJobSheetOpen, setEditActiveJobSheetOpen] = useState(false)
-    
+    const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+
+    const activeJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
+
     interface JobCounts {
         all: number;
         unset: number;
@@ -103,7 +118,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         bid: number;
         archived: number;
     }
-    
+
     const [jobCounts, setJobCounts] = useState<JobCounts>({
         all: 0,
         unset: 0,
@@ -111,7 +126,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         bid: 0,
         archived: 0
     });
-    
+
     const [activeJobCounts, setActiveJobCounts] = useState({
         all: 0,
         west: 0,
@@ -119,7 +134,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         hatfield: 0,
         archived: 0
     });
-    
+
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const { startLoading, stopLoading } = useLoading();
@@ -150,7 +165,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             if (activeSegment === "archived") {
                 options = { status: "archived" };
                 console.log("Using archived filter");
-                
+
                 // Note: The actual status values may vary in the UI vs database
             } else if (activeSegment !== "all") {
                 const dbStatus = mapUiStatusToDbStatus(activeSegment);
@@ -232,19 +247,29 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const loadActiveJobs = useCallback(async () => {
         try {
             startLoading();
-
-            let branchFilter = activeSegment;
-            if (activeSegment === 'hatfield') {
-                branchFilter = 'hatfield';
-            } else if (activeSegment === 'turbotville') {
-                branchFilter = 'turbotville';
-            } else if (activeSegment === 'west') {
-                branchFilter = 'west'; // Branch code 30
-            } else if (activeSegment === 'archived') {
-                branchFilter = 'archived';
+    
+            let queryParams = new URLSearchParams();
+            
+            if (activeSegment === 'archived') {
+                // Filter by status = 'Archived' instead of by branch
+                queryParams.append('status', 'Archived');
+            } else if (activeSegment !== 'all') {
+                // When not 'all' or 'archived', filter by branch
+                let branchCode;
+                if (activeSegment === 'hatfield') {
+                    branchCode = '10';
+                } else if (activeSegment === 'turbotville') {
+                    branchCode = '20';
+                } else if (activeSegment === 'west') {
+                    branchCode = '30';
+                }
+                
+                if (branchCode) {
+                    queryParams.append('branch', branchCode);
+                }
             }
             
-            const response = await fetch(`/api/jobs?branch=${branchFilter}`);
+            const response = await fetch(`/api/jobs?${queryParams.toString()}`);
             
             if (!response.ok) {
                 throw new Error(`Error fetching jobs: ${response.statusText}`);
@@ -253,23 +278,18 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const data = await response.json();
             setActiveJobs(data);
             
-            const allJobsResponse = await fetch(`/api/jobs?branch=all`);
+            // Then fetch counts for all categories
+            const allJobsResponse = await fetch('/api/jobs?counts=true');
             if (allJobsResponse.ok) {
-                const allJobs = await allJobsResponse.json();
+                const counts = await allJobsResponse.json();
                 
-                if (allJobs.length > 0) {
-                    console.log('Sample job structure:', allJobs[0]);
-                }
-                
-                const counts = {
-                    all: allJobs.length,
-                    west: allJobs.filter(job => job.branch === 'West' || job.branch_code === '30').length,
-                    turbotville: allJobs.filter(job => job.branch === 'Turbotville' || job.branch_code === '20').length,
-                    hatfield: allJobs.filter(job => job.branch === 'Hatfield' || job.branch_code === '10').length,
-                    archived: allJobs.filter(job => job.job_details?.projectStatus === 'Archived').length
-                };
-                
-                setActiveJobCounts(counts);
+                setActiveJobCounts({
+                    all: counts.all || 0,
+                    west: counts.west || 0,
+                    turbotville: counts.turbotville || 0,
+                    hatfield: counts.hatfield || 0,
+                    archived: counts.archived || 0
+                });
             }
         } catch (error) {
             console.error("Error loading active jobs:", error);
@@ -278,24 +298,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [activeSegment, startLoading, stopLoading]);
-    
     const fetchNextJobNumber = useCallback(async () => {
         try {
             const response = await fetch('/api/jobs/next-job-number');
             if (!response.ok) {
                 throw new Error('Failed to fetch next job number');
             }
-            
+
             const data = await response.json();
             setNextJobNumber(data.nextJobNumber);
-            
+
             if (data.nextJobNumber) {
                 const parts = data.nextJobNumber.split('-');
                 if (parts.length === 3) {
                     const yearAndSequential = parts[2]; // e.g., "2025001"
                     const year = yearAndSequential.substring(0, 4); // e.g., "2025"
                     const sequential = yearAndSequential.substring(4); // e.g., "001"
-                    
+
                     setJobNumberYear(year);
                     setJobNumberSequential(sequential);
                 }
@@ -304,18 +323,18 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error fetching next job number:", error);
         }
     }, []);
-    
+
     const handleUpdateJobNumber = useCallback(async (newSequential: string) => {
         try {
             const parts = nextJobNumber.split('-');
             if (parts.length !== 3) {
                 throw new Error('Invalid job number format');
             }
-            
+
             const branchCode = parts[0];
             const ownerTypeCode = parts[1];
             const sequentialNumber = parseInt(newSequential, 10);
-            
+
             const checkResponse = await fetch('/api/jobs/check-job-number', {
                 method: 'POST',
                 headers: {
@@ -328,18 +347,18 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     sequentialNumber
                 }),
             });
-            
+
             const checkData = await checkResponse.json();
-            
+
             if (!checkData.isAvailable) {
                 toast.error('This job number is already taken. Please choose another.');
                 return false;
             }
-            
+
             const newJobNumber = `${branchCode}-${ownerTypeCode}-${jobNumberYear}${newSequential}`;
             setNextJobNumber(newJobNumber);
             setJobNumberSequential(newSequential);
-            
+
             return true;
         } catch (error) {
             console.error('Error updating job number:', error);
@@ -352,14 +371,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
     // Function to fetch job counts for all segments
     const fetchJobCounts = useCallback(async () => {
         if (!isAvailableJobs) return;
-        
+
         try {
             startLoading();
-            
+
             // Fetch all jobs with no status filter to get the true total count
             // Use a high limit to ensure we get all records
             const allJobs = await fetchBids({ limit: 1000 });
-            
+
             // Fetch counts for each status separately
             const [unsetJobs, noBidJobs, bidJobs, archivedJobs] = await Promise.all([
                 fetchBids({ status: "Unset", limit: 1000 }),   // Unset jobs
@@ -367,7 +386,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 fetchBids({ status: "Bid", limit: 1000 }),     // Bid jobs
                 fetchBids({ status: "archived", limit: 1000 }) // Archived jobs
             ]);
-            
+
             setJobCounts({
                 all: allJobs.length,          // Actual count from API without status filter
                 unset: unsetJobs.length,      // Count of Unset jobs
@@ -382,7 +401,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [isAvailableJobs, startLoading, stopLoading]);
-    
+
     useEffect(() => {
         if (isAvailableJobs) {
             loadAvailableJobs();
@@ -432,20 +451,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "startDate", title: "Start Date" },
         { key: "endDate", title: "End Date" },
     ];
-    
+
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
-    
+
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         console.log('Marking job as bid job:', job);
-        
+
         const queryParams = new URLSearchParams({
             jobId: job.id.toString(),
             source: 'available-jobs'
         }).toString();
-        
+
         router.push(`/active-bid?${queryParams}`);
     }, [router]);
-    
+
     const handleUpdateStatus = useCallback(async (job: AvailableJob, status: 'Bid' | 'No Bid' | 'Unset') => {
         try {
             startLoading();
@@ -460,18 +479,18 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [loadAvailableJobs, fetchJobCounts, startLoading, stopLoading]);
-    
+
     const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => {
         try {
-            startLoading();            
+            startLoading();
             await changeActiveBidStatus(bid.id, status);
 
-            setActiveBids(prevBids => 
-                prevBids.map(item => 
+            setActiveBids(prevBids =>
+                prevBids.map(item =>
                     item.id === bid.id ? { ...item, status } : item
                 )
             );
-            
+
             toast.success(`Bid status updated to ${status}`);
         } catch (error) {
             console.error('Error updating bid status:', error);
@@ -486,31 +505,149 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(item)
         setEditJobSheetOpen(true)
     }
-    
+
     const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
         setSelectedJobsToArchive(selectedJobs);
         setShowArchiveJobsDialog(true);
+    };
+
+    //active jobs i.e. jobs 
+    const initiateArchiveActiveJobs = (selectedJobs: ActiveJob[]) => {
+        setSelectedActiveJobsToArchive(selectedJobs);
+        setShowArchiveActiveJobsDialog(true);
+    };
+    const initiateDeleteActiveJobs = (selectedJobs: ActiveJob[]) => {
+        console.log('initiateDeleteActiveJobs called with:', selectedJobs);
+
+        if (activeSegment === 'archived') {
+            setSelectedActiveJobsToDelete(selectedJobs);
+            setShowDeleteActiveJobsDialog(true);
+            return;
+        }
+
+        const archivedJobs = selectedJobs.filter(job => {
+            return job.status.toLowerCase().includes('archived');
+        });
+
+        if (archivedJobs.length === 0) {
+            console.log('No archived jobs found, showing error');
+            toast.error('Only archived jobs can be deleted. Please select archived jobs.');
+            return;
+        }
+
+        if (archivedJobs.length !== selectedJobs.length) {
+            toast.warning(`${selectedJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
+        }
+
+        console.log('Setting selected jobs to delete and showing dialog');
+        setSelectedActiveJobsToDelete(archivedJobs);
+        setShowDeleteActiveJobsDialog(true);
+    };
+    const handleArchiveActiveJobs = async () => {
+        try {
+            startLoading();
+            const ids = selectedActiveJobsToArchive.map(job => job.jobNumber);
+
+            await archiveActiveJobs(ids)
+
+            toast.success(`Successfully archived ${ids.length} job(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+
+            await loadActiveJobs();
+
+            // Reset row selection after successful archive
+            if (activeJobsTableRef.current) {
+                activeJobsTableRef.current.resetRowSelection();
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error archiving jobs:', error);
+            toast.error('Failed to archive jobs. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+    const handleDeleteActiveJobs = async () => {
+        try {
+            startLoading();
+            const ids = selectedActiveJobsToDelete.map(job => job.jobNumber);
+
+            await deleteArchivedActiveJobs(ids)
+
+            const count = ids.length;
+
+            toast.success(`Successfully deleted ${count} archived job(s)`, {
+                duration: 5000,
+                position: 'top-center'
+            });
+
+            await loadActiveJobs();
+
+            if (activeJobsTableRef.current) {
+                activeJobsTableRef.current.resetRowSelection();
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error deleting archived jobs:', error);
+            toast.error('Failed to delete archived jobs. Please try again.', {
+                duration: 5000,
+                position: 'top-center'
+            });
+            return false;
+        } finally {
+            stopLoading();
+        }
+    };
+
+    const handleArchiveActiveJob = (item: ActiveJob) => {
+        console.log('Archive clicked for active job:', item);
+
+        if ('jobNumber' in item) {
+            // This is an active job
+            initiateArchiveActiveJobs([item as ActiveJob]);
+        }
+    };
+
+    // Implementation of handleJobDeletion (for single job deletion)
+    const handleDeleteActiveJob = (item: ActiveJob) => {
+        console.log('Delete clicked for active job:', item);
+
+        if ('jobNumber' in item) {
+            if (item.status.toLowerCase().includes('archived')) {
+                initiateDeleteActiveJobs([item]);
+            } else {
+                toast.error('Only archived jobs can be deleted');
+            }
+        }
     };
 
     const handleArchiveAvailableJobs = async () => {
         try {
             startLoading();
             const ids = selectedJobsToArchive.map(job => job.id);
-            
+
             await archiveJobs(ids);
-            
+
             toast.success(`Successfully archived ${ids.length} job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-            
+
             await loadAvailableJobs();
-            
+
             // Reset row selection after successful archive
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error archiving jobs:', error);
@@ -531,50 +668,50 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
         console.log('initiateDeleteJobs called with:', selectedJobs);
-        
+
         if (activeSegment === 'archived') {
             setSelectedJobsToDelete(selectedJobs);
             setShowDeleteJobsDialog(true);
             return;
         }
-        
+
         const archivedJobs = selectedJobs.filter(job => {
             return job.status?.toLowerCase().includes('archived');
         });
-        
+
         if (archivedJobs.length === 0) {
             console.log('No archived jobs found, showing error');
             toast.error('Only archived jobs can be deleted. Please select archived jobs.');
             return;
         }
-        
+
         if (archivedJobs.length !== selectedJobs.length) {
             toast.warning(`${selectedJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
         }
-        
+
         console.log('Setting selected jobs to delete and showing dialog');
         setSelectedJobsToDelete(archivedJobs);
         setShowDeleteJobsDialog(true);
     };
-    
+
     const handleDeleteArchivedJobs = async () => {
         try {
             startLoading();
             const ids = selectedJobsToDelete.map(job => job.id);
-            
+
             const result = await deleteArchivedJobs(ids);
-            
+
             toast.success(`Successfully deleted ${result.count} archived job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-            
+
             await loadAvailableJobs();
-            
+
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting archived jobs:', error);
@@ -587,51 +724,51 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     };
-    
+
     const initiateDeleteBids = (selectedBids: ActiveBid[]) => {
         console.log('initiateDeleteBids called with:', selectedBids);
-        
+
         if (activeSegment === 'archived') {
             setSelectedBidsToDelete(selectedBids);
             setShowDeleteBidsDialog(true);
             return;
         }
-        
+
         const archivedBids = selectedBids.filter(bid => {
             return bid.status.toLowerCase().includes('archived');
         });
-        
+
         if (archivedBids.length === 0) {
             toast.error('Only archived bids can be deleted. Please select archived bids.');
             return;
         }
-        
+
         if (archivedBids.length !== selectedBids.length) {
             toast.warning(`${selectedBids.length - archivedBids.length} non-archived bid(s) will be skipped.`);
         }
-        
+
         setSelectedBidsToDelete(archivedBids);
         setShowDeleteBidsDialog(true);
     };
-    
+
     const handleDeleteArchivedBids = async () => {
         try {
             startLoading();
             const ids = selectedBidsToDelete.map(bid => bid.id);
-            
+
             const result = await deleteArchivedActiveBids(ids);
-            
+
             toast.success(`Successfully deleted ${result.count} archived bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-            
+
             await loadActiveBids();
-            
+
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting archived bids:', error);
@@ -644,36 +781,36 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     };
-    
+
     const handleArchiveActiveBids = async () => {
         try {
             startLoading();
             const ids = selectedBidsToArchive.map(bid => bid.id);
-            
+
             const nonArchivedBids = selectedBidsToArchive.filter(bid => !bid.status.toLowerCase().includes('archived'));
             if (nonArchivedBids.length !== selectedBidsToArchive.length) {
                 toast.warning(`${selectedBidsToArchive.length - nonArchivedBids.length} bid(s) are already archived and will be skipped.`);
             }
-            
+
             if (nonArchivedBids.length === 0) {
                 toast.error('No bids to archive. All selected bids are already archived.');
                 return false;
             }
-            
+
             await archiveActiveBids(ids);
-            
+
             toast.success(`Successfully archived ${ids.length} bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-            
+
             await loadActiveBids();
-            
+
             // Reset row selection after successful archive
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error archiving bids:', error);
@@ -694,21 +831,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const segments = isAvailableJobs
         ? [
-              { label: `All (${jobCounts.all || 0})`, value: "all" },
-              { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
-              { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
-              { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
-              { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
-          ]
+            { label: `All (${jobCounts.all || 0})`, value: "all" },
+            { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
+            { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
+            { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
+            { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
+        ]
         : isActiveBids
-        ? ACTIVE_BIDS_SEGMENTS
-        : [
-            { label: `All (${activeJobCounts.all || 0})`, value: "all" },
-            { label: `West (${activeJobCounts.west || 0})`, value: "west" },
-            { label: `Turbotville (${activeJobCounts.turbotville || 0})`, value: "turbotville" },
-            { label: `Hatfield (${activeJobCounts.hatfield || 0})`, value: "hatfield" },
-            { label: `Archived (${activeJobCounts.archived || 0})`, value: "archived" },
-        ];
+            ? ACTIVE_BIDS_SEGMENTS
+            : [
+                { label: `All (${activeJobCounts.all || 0})`, value: "all" },
+                { label: `West (${activeJobCounts.west || 0})`, value: "west" },
+                { label: `Turbotville (${activeJobCounts.turbotville || 0})`, value: "turbotville" },
+                { label: `Hatfield (${activeJobCounts.hatfield || 0})`, value: "hatfield" },
+                { label: `Archived (${activeJobCounts.archived || 0})`, value: "archived" },
+            ];
 
     const handleCreateClick = () => {
         if (isAvailableJobs) {
@@ -837,10 +974,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     {isActiveJobs && nextJobNumber && (
                                         <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
                                             <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-6 w-6" 
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
                                                 onClick={() => setEditJobNumberOpen(true)}
                                             >
                                                 <PencilIcon className="h-4 w-4" />
@@ -869,7 +1006,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onUpdateStatus={(item, status: string) => {
                                         // Map segment values to proper status values if needed
                                         let statusValue: 'Bid' | 'No Bid' | 'Unset';
-                                        
+
                                         if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
                                             statusValue = status as 'Bid' | 'No Bid' | 'Unset';
                                         } else if (status === 'bid') {
@@ -882,7 +1019,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             console.error('Invalid status value:', status);
                                             return;
                                         }
-                                        
+
                                         handleUpdateStatus(item, statusValue);
                                     }}
                                     stickyLastColumn
@@ -890,13 +1027,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : isActiveBids ? (
                                 <ActiveBidsTable bids={data as ActiveBid[]} />
                             ) : (
-                                <DataTable<JobPageData>
-                                    data={data as JobPageData[]}
+                                <DataTable<ActiveJob>
+                                    data={data as ActiveJob[]}
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
+                                    onArchiveSelected={initiateArchiveActiveJobs}
+                                    onDeleteSelected={initiateDeleteActiveJobs}
+                                    tableRef={activeJobsTableRef}
                                     onViewDetails={(item) => {
                                         if ('jobNumber' in item) {
                                             handleActiveJobViewDetails(item as ActiveJob);
@@ -907,15 +1047,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             handleActiveJobEdit(item as ActiveJob);
                                         }
                                     }}
+                                    onArchive={handleArchiveActiveJob}
                                 />
                             )}
 
                             {isAvailableJobs && (
                                 <>
-                                    <OpenBidSheet 
-                                        open={openBidSheetOpen} 
-                                        onOpenChange={setOpenBidSheetOpen} 
-                                        onSuccess={loadAvailableJobs} 
+                                    <OpenBidSheet
+                                        open={openBidSheetOpen}
+                                        onOpenChange={setOpenBidSheetOpen}
+                                        onSuccess={loadAvailableJobs}
                                     />
                                     <JobDetailsSheet
                                         open={jobDetailsSheetOpen}
@@ -951,7 +1092,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                             {createJobSheetOpen && <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} customSequentialNumber={jobNumberSequential} onSuccess={loadActiveJobs} />}
                             {createActiveBidSheetOpen && <CreateActiveBidSheet open={createActiveBidSheetOpen} onOpenChange={setCreateActiveBidSheetOpen} />}
-                            
+
                             <ConfirmArchiveDialog
                                 isOpen={showArchiveJobsDialog}
                                 onClose={() => setShowArchiveJobsDialog(false)}
@@ -959,7 +1100,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 itemCount={selectedJobsToArchive.length}
                                 itemType="job"
                             />
-                            
+
                             <ConfirmArchiveDialog
                                 isOpen={showArchiveBidsDialog}
                                 onClose={() => setShowArchiveBidsDialog(false)}
@@ -967,7 +1108,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 itemCount={selectedBidsToArchive.length}
                                 itemType="bid"
                             />
-                            
+
                             <ConfirmDeleteDialog
                                 isOpen={showDeleteJobsDialog}
                                 onClose={() => setShowDeleteJobsDialog(false)}
@@ -975,7 +1116,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 itemCount={selectedJobsToDelete.length}
                                 itemType="job"
                             />
-                            
+
                             <ConfirmDeleteDialog
                                 isOpen={showDeleteBidsDialog}
                                 onClose={() => setShowDeleteBidsDialog(false)}
@@ -983,7 +1124,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 itemCount={selectedBidsToDelete.length}
                                 itemType="bid"
                             />
-                            
+
+                            <ConfirmArchiveDialog
+                                isOpen={showArchiveActiveJobsDialog}
+                                onClose={() => setShowArchiveActiveJobsDialog(false)}
+                                onConfirm={handleArchiveActiveJobs}
+                                itemCount={selectedActiveJobsToArchive.length}
+                                itemType="job"
+                            />
+
+                            <ConfirmDeleteDialog
+                                isOpen={showDeleteActiveJobsDialog}
+                                onClose={() => setShowDeleteActiveJobsDialog(false)}
+                                onConfirm={handleDeleteActiveJobs}
+                                itemCount={selectedActiveJobsToDelete.length}
+                                itemType="job"
+                            />
+
                             <EditJobNumberDialog
                                 isOpen={editJobNumberOpen}
                                 onClose={() => setEditJobNumberOpen(false)}

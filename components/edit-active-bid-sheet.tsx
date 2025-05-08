@@ -34,9 +34,29 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
         permSignValue: bid.permSignValue || '',
         rentalValue: bid.rentalValue || ''
       });
-      setLettingDate(bid.lettingDate ? new Date(bid.lettingDate) : undefined);
-      setStartDate(bid.startDate ? new Date(bid.startDate) : undefined);
-      setEndDate(bid.endDate ? new Date(bid.endDate) : undefined);
+      try {
+        setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ? 
+          new Date(bid.lettingDate) : undefined);
+      } catch (e) {
+        console.error("Invalid letting date format:", bid.lettingDate);
+        setLettingDate(undefined);
+      }
+      
+      try {
+        setStartDate((bid.startDate && bid.startDate !== '-') ? 
+          new Date(bid.startDate) : undefined);
+      } catch (e) {
+        console.error("Invalid start date format:", bid.startDate);
+        setStartDate(undefined);
+      }
+      
+      try {
+        setEndDate((bid.endDate && bid.endDate !== '-') ? 
+          new Date(bid.endDate) : undefined);
+      } catch (e) {
+        console.error("Invalid end date format:", bid.endDate);
+        setEndDate(undefined);
+      }
     } else {
       setFormData({});
       setLettingDate(undefined);
