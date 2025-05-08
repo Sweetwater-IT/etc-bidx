@@ -18,8 +18,9 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { useState, useEffect } from "react"
-import { createBid, updateBid } from "@/lib/api-client"
+import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client"
 import { toast } from "sonner"
+import { County } from "@/types/TCounty"
 
 interface OpenBidSheetProps {
   open: boolean
@@ -45,14 +46,64 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [lettingDate, setLettingDate] = useState<Date>()
   const [dueDate, setDueDate] = useState<Date>()
   const [contractNumber, setContractNumber] = useState('')
-  const [requestor, setRequestor] = useState('john-doe')
-  const [owner, setOwner] = useState('penndot')
-  const [county, setCounty] = useState('allegheny')
-  const [branch, setBranch] = useState('construction')
+  const [requestor, setRequestor] = useState('')
+  const [owner, setOwner] = useState('')
+  const [county, setCounty] = useState('')
+  const [branch, setBranch] = useState('')
   const [location, setLocation] = useState('')
   const [platform, setPlatform] = useState('ecms')
   const [status, setStatus] = useState<'Bid' | 'No Bid' | 'Unset'>('Unset')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const [users, setUsers] = useState<{id: string, name: string}[]>([])
+  const [owners, setOwners] = useState<{id: string, name: string}[]>([])
+  const [counties, setCounties] = useState<County[]>([])
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadReferenceData() {
+      setIsLoading(true)
+      try {
+        const [usersData, ownersData, countiesData] = await Promise.all([
+          fetchReferenceData('users'),
+          fetchReferenceData('owners'),
+          fetchReferenceData('counties')
+        ])
+        
+        setUsers(usersData)
+        setOwners(ownersData)
+        setCounties(countiesData)
+        
+        const branchNames = countiesData.map(county => county.branch)
+        const uniqueBranchNames = Array.from(new Set(branchNames))
+        const branchesData = uniqueBranchNames
+          .filter((branchName): branchName is string => typeof branchName === 'string')
+          .map(branchName => ({
+            id: branchName.toLowerCase().replace(/\s+/g, '-'),
+            name: branchName
+          }))
+        
+        setBranches(branchesData)
+        
+        if (!job && usersData.length && ownersData.length && countiesData.length && branchesData.length) {
+          setRequestor(usersData[0].id)
+          setOwner(ownersData[0].id)
+          setCounty(countiesData[0].id.toString())
+          setBranch(branchesData[0].id)
+        }
+      } catch (error) {
+        console.error('Error loading reference data:', error)
+        toast.error('Failed to load form data. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    if (open) {
+      loadReferenceData()
+    }
+  }, [open, job])
 
   // Reset form when job changes
   useEffect(() => {
@@ -69,12 +120,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined)
       setDueDate(job.dueDate ? new Date(job.dueDate) : undefined)
     } else {
-      // Reset form when creating new bid
+      // Form will be reset with default values from the reference data
       setContractNumber('')
-      setRequestor('john-doe')
-      setOwner('penndot')
-      setCounty('allegheny')
-      setBranch('construction')
       setLocation('')
       setPlatform('ecms')
       setStatus('Unset')
@@ -205,44 +252,63 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
                 <div className="space-y-2 w-full">
                   <Label>Requestor <span className="text-red-500">*</span></Label>
-                  <Select value={requestor} onValueChange={setRequestor}>
+                  <Select value={requestor} onValueChange={setRequestor} disabled={isLoading}>
                     <SelectTrigger className="w-full pl-9 relative">
                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select a requestor" />
+                      <SelectValue placeholder="Select a requestor">
+                        {requestor && users.find(u => u.id === requestor)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="john-doe">John Doe</SelectItem>
-                      <SelectItem value="jane-smith">Jane Smith</SelectItem>
-                      <SelectItem value="alex-johnson">Alex Johnson</SelectItem>
+                      {users.length > 0 ? (
+                        users.map(user => (
+                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2 w-full">
                   <Label>Owner</Label>
-                  <Select value={owner} onValueChange={setOwner}>
+                  <Select value={owner} onValueChange={setOwner} disabled={isLoading}>
                     <SelectTrigger className="w-full pl-9 relative">
                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue />
+                      <SelectValue placeholder="Select an owner">
+                        {owner && owners.find(o => o.id === owner)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="penndot">PENNDOT</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {owners.length > 0 ? (
+                        owners.map(owner => (
+                          <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>Loading owners...</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2 w-full">
                   <Label>Branch</Label>
-                  <Select value={branch} onValueChange={setBranch}>
+                  <Select value={branch} onValueChange={setBranch} disabled={isLoading}>
                     <SelectTrigger className="w-full pl-9 relative">
                       <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select a branch" />
+                      <SelectValue placeholder="Select a branch">
+                        {branch && branches.find(b => b.id === branch)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="construction">Construction</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="design">Design</SelectItem>
+                      {branches.length > 0 ? (
+                        branches.map(branch => (
+                          <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>Loading branches...</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -306,14 +372,21 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
                 <div className="space-y-2 w-full">
                   <Label>County <span className="text-red-500">*</span></Label>
-                  <Select value={county} onValueChange={setCounty}>
+                  <Select value={county} onValueChange={setCounty} disabled={isLoading}>
                     <SelectTrigger className="w-full pl-9 relative">
                       <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="County" />
+                      <SelectValue placeholder="County">
+                        {county && counties.find(c => c.id.toString() === county)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="allegheny">Allegheny</SelectItem>
-                      <SelectItem value="philadelphia">Philadelphia</SelectItem>
+                      {counties.length > 0 ? (
+                        counties.map(county => (
+                          <SelectItem key={county.id} value={county.id.toString()}>{county.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>Loading counties...</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
