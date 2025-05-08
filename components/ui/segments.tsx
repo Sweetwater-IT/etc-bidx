@@ -8,9 +8,10 @@ type SegmentsProps = {
   }[]
   onChange?: (value: string) => void
   value?: string
+  counts?: Record<string, number>
 }
 
-export function Segments({ segments, onChange, value }: SegmentsProps) {
+export function Segments({ segments, onChange, value, counts }: SegmentsProps) {
   const [internalValue, setInternalValue] = useState(segments[0]?.value)
   
   const activeSegment = value !== undefined ? value : internalValue;
@@ -26,13 +27,13 @@ export function Segments({ segments, onChange, value }: SegmentsProps) {
   };
 
   return (
-    <div className="inline-flex rounded-lg border p-1 bg-background">
+    <div className="inline-flex rounded-lg border p-1">
       {segments.map((segment) => (
         <Button
           key={segment.value}
           variant={activeSegment === segment.value ? "default" : "ghost"}
           size="sm"
-          className="rounded-md"
+          className={`rounded-md ${activeSegment === segment.value ? "bg-black text-white" : "bg-white text-black"}`}
           onClick={() => handleSegmentChange(segment.value)}
         >
           {segment.label}

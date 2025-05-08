@@ -125,15 +125,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const activeJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
 
-    interface JobCounts {
-        all: number;
-        unset: number;
-        'no-bid': number;
-        bid: number;
-        archived: number;
-    }
-
-    const [jobCounts, setJobCounts] = useState<JobCounts>({
+    const [jobCounts, setJobCounts] = useState<Record<string, number>>({
         all: 0,
         unset: 0,
         'no-bid': 0,
@@ -141,11 +133,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
         archived: 0
     });
 
-    const [activeJobCounts, setActiveJobCounts] = useState({
+    const [activeJobCounts, setActiveJobCounts] = useState<Record<string, number>>({
         all: 0,
         west: 0,
         turbotville: 0,
         hatfield: 0,
+        archived: 0
+    });
+
+    const [activeBidCounts, setActiveBidCounts] = useState<Record<string, number>>({
+        all: 0,
+        won: 0,
+        pending: 0,
+        lost: 0,
+        draft: 0,
+        'won-pending': 0,
         archived: 0
     });
 
@@ -237,7 +239,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
             };
             
             if (activeSegment !== "all") {
-                options.division = activeSegment;
+                const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
+                
+                if (statusValues.includes(activeSegment.toLowerCase())) {
+                    options.status = activeSegment;
+                } else {
+                    options.division = activeSegment;
+                }
             }
 
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
@@ -253,15 +261,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const uiBids = data.map((bid: any) => ({
                 id: bid.id,
                 contractNumber: bid.contract_number,
-                status: bid.status,
-                requestor: bid.estimator,
-                owner: bid.owner,
-                lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : null,
-                dueDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : null,
-                county: bid.county,
-                branch: bid.branch,
+                contractor: bid.contractor || "Unknown",
+                subcontractor: bid.subcontractor || "",
+                owner: bid.owner || "Unknown",
+                county: bid.county || "Unknown",
+                branch: bid.branch || "Unknown",
+                estimator: bid.estimator || "Unknown",
+                status: bid.status || "Unknown",
+                division: bid.division || "",
+                lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : "",
+                startDate: bid.start_date ? format(new Date(bid.start_date), "yyyy-MM-dd") : "",
+                endDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : "",
+                projectDays: bid.project_days || 0,
+                totalHours: bid.total_hours || 0,
+                mptValue: bid.mpt_value || "$0",
+                permSignValue: bid.perm_sign_value || "$0",
+                rentalValue: bid.rental_value || "$0",
                 createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-                division: bid.division,
             }));
 
             setActiveBids(uiBids);
@@ -300,13 +316,18 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
-                jobNumber: job.job_number,
-                contractNumber: job.contract_number,
-                status: job.project_status,
-                contractor: job.contractor,
+                jobNumber: job.jobNumber,
+                bidNumber: job.bidNumber || "",  // This field might not exist in the API response
+                projectStatus: job.projectStatus,
+                billingStatus: job.billingStatus,
+                contractNumber: job.contractNumber,
+                location: job.location,
                 county: job.county,
                 branch: job.branch,
-                createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                contractor: job.contractor,
+                startDate: job.startDate,
+                endDate: job.endDate,
+                createdAt: job.createdAt ? format(new Date(job.createdAt), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
             }));
 
             setActiveJobs(uiJobs);
@@ -422,6 +443,66 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [isAvailableJobs, startLoading, stopLoading]);
+    
+    const fetchActiveJobCounts = useCallback(async () => {
+        if (!isActiveJobs) return;
+        
+        try {
+            startLoading();
+            
+            const response = await fetch('/api/jobs?counts=true');
+            if (!response.ok) {
+                throw new Error('Failed to fetch active job counts');
+            }
+            
+            const countData = await response.json();
+            console.log('Active job counts:', countData);
+            
+            setActiveJobCounts({
+                all: countData.all || 0,
+                west: countData.west || 0,
+                turbotville: countData.turbotville || 0,
+                hatfield: countData.hatfield || 0,
+                archived: countData.archived || 0
+            });
+        } catch (error) {
+            console.error("Error fetching active job counts:", error);
+            toast.error("Failed to fetch active job counts");
+        } finally {
+            stopLoading();
+        }
+    }, [isActiveJobs, startLoading, stopLoading]);
+    
+    const fetchActiveBidCounts = useCallback(async () => {
+        if (!isActiveBids) return;
+        
+        try {
+            startLoading();
+            
+            const response = await fetch('/api/active-bids?counts=true');
+            if (!response.ok) {
+                throw new Error('Failed to fetch active bid counts');
+            }
+            
+            const countData = await response.json();
+            console.log('Active bid counts:', countData);
+            
+            setActiveBidCounts({
+                all: countData.all || 0,
+                won: countData.won || 0,
+                pending: countData.pending || 0,
+                lost: countData.lost || 0,
+                draft: countData.draft || 0,
+                'won-pending': countData['won-pending'] || 0,
+                archived: countData.archived || 0
+            });
+        } catch (error) {
+            console.error("Error fetching active bid counts:", error);
+            toast.error("Failed to fetch active bid counts");
+        } finally {
+            stopLoading();
+        }
+    }, [isActiveBids, startLoading, stopLoading]);
 
     useEffect(() => {
         if (isAvailableJobs) {
@@ -431,21 +512,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
             loadActiveBids();
         } else if (isActiveJobs) {
             loadActiveJobs();
+            fetchActiveJobCounts();
         }
-    }, [isAvailableJobs, isActiveBids, isActiveJobs, loadAvailableJobs, loadActiveBids, loadActiveJobs, activeSegment, fetchJobCounts]);
+    }, [isAvailableJobs, isActiveBids, isActiveJobs, loadAvailableJobs, loadActiveBids, loadActiveJobs, activeSegment, fetchJobCounts, fetchActiveJobCounts]);
 
-    // This effect will run when the job type changes
     useEffect(() => {
-        if (job === "available") {
+        if (isAvailableJobs) {
             loadAvailableJobs();
             fetchJobCounts();
-        } else if (job === "active-bids") {
+        } else if (isActiveBids) {
             loadActiveBids();
-        } else if (job === "active-jobs") {
+            fetchActiveBidCounts();
+        } else if (isActiveJobs) {
             loadActiveJobs();
+            fetchActiveJobCounts();
             fetchNextJobNumber(); // Fetch next job number when active-jobs is selected
         }
-    }, [job, loadAvailableJobs, loadActiveBids, loadActiveJobs, fetchJobCounts, fetchNextJobNumber]);
+    }, [job, loadAvailableJobs, loadActiveBids, loadActiveJobs, fetchJobCounts, fetchNextJobNumber, fetchActiveJobCounts, fetchActiveBidCounts, isAvailableJobs, isActiveBids, isActiveJobs]);
 
     useEffect(() => {
         console.log("Sheet state changed:", {
@@ -859,7 +942,15 @@ export function JobPageContent({ job }: JobPageContentProps) {
             { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
         ]
         : isActiveBids
-            ? ACTIVE_BIDS_SEGMENTS
+            ? [
+                { label: `All (${activeBidCounts.all || 0})`, value: "all" },
+                { label: `Won (${activeBidCounts.won || 0})`, value: "won" },
+                { label: `Pending (${activeBidCounts.pending || 0})`, value: "pending" },
+                { label: `Lost (${activeBidCounts.lost || 0})`, value: "lost" },
+                { label: `Draft (${activeBidCounts.draft || 0})`, value: "draft" },
+                { label: `Won - Pending (${activeBidCounts['won-pending'] || 0})`, value: "won-pending" },
+                { label: `Archived (${activeBidCounts.archived || 0})`, value: "archived" }
+            ]
             : [
                 { label: `All (${activeJobCounts.all || 0})`, value: "all" },
                 { label: `West (${activeJobCounts.west || 0})`, value: "west" },
@@ -927,8 +1018,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     columns={ACTIVE_BIDS_COLUMNS}
                     data={bids}
                     onRowClick={handleRowClick}
-                    segments={ACTIVE_BIDS_SEGMENTS}
+                    segments={segments}
                     segmentValue={activeSegment}
+                    segmentCounts={activeBidCounts}
                     onSegmentChange={handleSegmentChange}
                     stickyLastColumn
                     onArchiveSelected={initiateArchiveBids}
@@ -1023,6 +1115,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
+                                    segmentCounts={jobCounts}
                                     onSegmentChange={handleSegmentChange}
                                     onArchiveSelected={initiateArchiveJobs}
                                     onDeleteSelected={initiateDeleteJobs}
@@ -1067,6 +1160,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
+                                    segmentCounts={activeJobCounts}
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
                                     onArchiveSelected={initiateArchiveActiveJobs}
@@ -1083,6 +1177,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         }
                                     }}
                                     onArchive={handleArchiveActiveJob}
+                                    // Pagination props
+                                    pageCount={activeJobsPageCount}
+                                    pageIndex={activeJobsPageIndex}
+                                    pageSize={activeJobsPageSize}
+                                    onPageChange={setActiveJobsPageIndex}
+                                    onPageSizeChange={setActiveJobsPageSize}
+                                    totalCount={activeJobsTotalCount}
                                 />
                             )}
 

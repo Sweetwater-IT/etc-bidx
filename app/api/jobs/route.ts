@@ -8,26 +8,35 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status');
     const counts = url.searchParams.get('counts');
     
-    // If counts is requested, return count data
     if (counts) {
-      const { data: allJobs, error } = await supabase.from('jobs').select('*, job_details');
-      
-      if (error) {
+      try {
+        const { data: allJobs, error: allJobsError } = await supabase
+          .from('jobs')
+          .select('id, branch_code, status');
+        
+        if (allJobsError) {
+          return NextResponse.json(
+            { error: 'Failed to fetch job counts', details: allJobsError },
+            { status: 500 }
+          );
+        }
+        
+        const countData = {
+          all: allJobs.length,
+          west: allJobs.filter(job => job.branch_code === '30').length,
+          turbotville: allJobs.filter(job => job.branch_code === '20').length,
+          hatfield: allJobs.filter(job => job.branch_code === '10').length,
+          archived: allJobs.filter(job => job.status === 'Archived').length
+        };
+        
+        return NextResponse.json(countData);
+      } catch (error) {
+        console.error('Error fetching job counts:', error);
         return NextResponse.json(
-          { error: 'Failed to fetch job counts', details: error },
+          { error: 'Unexpected error fetching job counts' },
           { status: 500 }
         );
       }
-      
-      const countData = {
-        all: allJobs.length,
-        west: allJobs.filter(job => job.branch_code === '30').length,
-        turbotville: allJobs.filter(job => job.branch_code === '20').length,
-        hatfield: allJobs.filter(job => job.branch_code === '10').length,
-        archived: allJobs.filter(job => job.status === 'Archived').length
-      };
-      
-      return NextResponse.json(countData);
     }
     
     // Get pagination parameters
