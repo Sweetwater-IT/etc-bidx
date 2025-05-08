@@ -126,16 +126,14 @@ export default function CreateQuotePage() {
   const quoteId = `Q-${Math.floor(100 + Math.random() * 900)}`;
   
   const handleSendQuote = async () => {
-    if (!selectedEmail) {
-      setEmailError("Please select an email address in the 'To' field.");
-      return;
-    }
+    // Use environment variable if it exists, otherwise use hardcoded email
+    const targetEmail = process.env.SENDGRID_TO_EMAIL || "ndunn@establishedtraffic.com";
     
     setSending(true);
     setEmailError(null);
     
     try {
-      const success = await sendQuoteEmail(selectedEmail, {
+      const success = await sendQuoteEmail(targetEmail, {
         quoteId,
         customerName: "Sample Customer",
         projectName: "Sample Project",
@@ -146,7 +144,7 @@ export default function CreateQuotePage() {
       
       if (success) {
         setEmailSent(true);
-        toast.success(`Email sent successfully to ${selectedEmail}!`);
+        toast.success(`Email sent successfully to ${targetEmail}!`);
         setTimeout(() => setEmailSent(false), 5000); // Clear success message after 5 seconds
       } else {
         setEmailError("Failed to send email. Please try again.");
