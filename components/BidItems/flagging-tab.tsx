@@ -241,11 +241,7 @@ const FlaggingServicesTab = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-base font-semibold mb-4">
-        Flagging Services
-      </h3>
-      
+    <div className="space-y-6">      
       {/* Standard Pricing Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -261,61 +257,58 @@ const FlaggingServicesTab = () => {
 
       <div className="space-y-8">
         {/* General Settings Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col justify-center">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="standard-pricing">Standard Pricing</Label>
+
+        <h3 className="text-lg font-medium mb-3 text-left">General Settings</h3>
+          <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="standard-pricing" className="text-base">Standard Pricing</Label>
+                <div className="flex items-center space-x-2">
                   <Switch
                     id="standard-pricing"
                     checked={flagging?.standardPricing || false}
                     onCheckedChange={handleStandardPricingToggle}
                   />
+                  {flagging?.standardPricing && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setDialogOpen(true)}
+                    >
+                      Edit
+                    </Button>
+                  )}
                 </div>
-                
-                {flagging?.standardPricing && (
-                  <Button 
-                    variant="outline" 
-                    className="mt-2"
-                    onClick={() => setDialogOpen(true)}
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <Label htmlFor="rate-type" className="text-base whitespace-nowrap">Rate Type</Label>
+                <div className="w-40">
+                  <Select
+                    value={adminData.rated || ""}
+                    onValueChange={(value) => dispatch({
+                      type: 'UPDATE_ADMIN_DATA',
+                      payload: {
+                        key: 'rated',
+                        value
+                      }
+                    })}
+                    disabled={flagging?.standardPricing}
                   >
-                    Edit Standard Pricing
-                  </Button>
-                )}
+                    <SelectTrigger id="rate-type" className="w-full">
+                      <SelectValue placeholder="Select rate type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rated">Rated</SelectItem>
+                      <SelectItem value="nonRated">Non-Rated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="rate-type">Rate Type</Label>
-                <Select
-                  value={adminData.rated || ""}
-                  onValueChange={(value) => dispatch({
-                    type: 'UPDATE_ADMIN_DATA',
-                    payload: {
-                      key: 'rated',
-                      value
-                    }
-                  })}
-                  disabled={flagging?.standardPricing}
-                >
-                  <SelectTrigger id="rate-type" className="w-full">
-                    <Clock className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Select rate type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rated">Rated</SelectItem>
-                    <SelectItem value="nonRated">Non-Rated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="gas-cost">Gas Cost Per Gallon ($)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="gas-cost" className="text-base">Gas Cost Per Gallon ($)</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-2 h-4 w-4" />
+                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
                     id="gas-cost"
                     type="number"
@@ -324,363 +317,360 @@ const FlaggingServicesTab = () => {
                     value={safeNumber(flagging?.fuelCostPerGallon) || ""}
                     onChange={(e) => handleInputChange('fuelCostPerGallon', parseFloat(e.target.value) || 0)}
                     disabled={flagging?.standardPricing}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-muted-foreground">County: {adminData.county?.name || "N/A"}</span>
-                <span className="text-sm text-muted-foreground">Branch: {adminData.county?.branch || "N/A"}</span>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <Label htmlFor="flagging-rate">Flagging Rate</Label>
-                  <div className="flex items-center">
-                    <DollarSign className="mr-1 h-4 w-4" />
-                    <Input
-                      id="flagging-rate"
-                      value={adminData.county?.flaggingRate || ""}
-                      disabled
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Label htmlFor="flagging-base-rate">Flagging Base Rate</Label>
-                  <div className="flex items-center">
-                    <DollarSign className="mr-1 h-4 w-4" />
-                    <Input
-                      id="flagging-base-rate"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={adminData.county?.flaggingBaseRate || ""}
-                      onChange={(e) => handleCountyRateChange('flaggingBaseRate', parseFloat(e.target.value) || 0)}
-                      disabled={flagging?.standardPricing}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Label htmlFor="flagging-fringe-rate">Flagging Fringe Rate</Label>
-                  <div className="flex items-center">
-                    <DollarSign className="mr-1 h-4 w-4" />
-                    <Input
-                      id="flagging-fringe-rate"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={adminData.county?.flaggingFringeRate || ""}
-                      onChange={(e) => handleCountyRateChange('flaggingFringeRate', parseFloat(e.target.value) || 0)}
-                      disabled={flagging?.standardPricing}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Resources and Equipment Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resources and Equipment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="personnel">Personnel</Label>
-                <div className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  <Input
-                    id="personnel"
-                    type="number"
-                    min={0}
-                    value={safeNumber(flagging?.personnel) || ""}
-                    onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
-                    placeholder="Number of personnel"
+                    className="w-40 text-right"
                   />
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="trucks">Number of Trucks</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="flagging-rate" className="text-base">Flagging Rate</Label>
                 <div className="flex items-center">
-                  <Truck className="mr-2 h-4 w-4" />
+                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
-                    id="trucks"
-                    type="number"
-                    min={0}
-                    value={safeNumber(flagging?.numberTrucks) || ""}
-                    onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
-                    placeholder="Number of trucks"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="ow-miles">One-Way Miles</Label>
-                <div className="flex items-center">
-                  <Input
-                    id="ow-miles"
-                    type="number"
-                    min={0}
-                    value={safeNumber(adminData?.owMileage) || ""}
+                    id="flagging-rate"
+                    value={adminData.county?.flaggingRate || ""}
                     disabled
-                    placeholder="One-way mileage"
+                    className="w-40 text-right"
                   />
-                </div>
-              </div>
-            </div>
-            
-            <Separator className="my-6" />
-            
-            {/* Equipment Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Arrow Boards ($/day)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={flagging?.arrowBoards.cost || ""}
-                    onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
-                    className="w-24"
-                  />
-                </div>
-                <div className="flex items-center">
-                  <CornerDownRight className="mr-2 h-4 w-4" />
-                  <Input
-                    type="number"
-                    min={0}
-                    value={safeNumber(flagging?.arrowBoards.quantity) || ""}
-                    onChange={(e) => handleEquipmentInputChange('arrowBoards', 'quantity', parseInt(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
-                    placeholder="Quantity"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-arrow-boards"
-                    checked={flagging?.arrowBoards.includeInLumpSum || false}
-                    onCheckedChange={(checked) => 
-                      handleEquipmentInputChange('arrowBoards', 'includeInLumpSum', checked === true)
-                    }
-                  />
-                  <Label htmlFor="include-arrow-boards">Include in lump sum</Label>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Message Boards ($/day)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="flagging-base-rate" className="text-base">Flagging Base Rate</Label>
+                <div className="flex items-center">
+                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
+                    id="flagging-base-rate"
                     type="number"
                     min={0}
                     step={0.01}
-                    value={flagging?.messageBoards.cost || ""}
-                    onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
-                    className="w-24"
-                  />
-                </div>
-                <div className="flex items-center">
-                  <Keyboard className="mr-2 h-4 w-4" />
-                  <Input
-                    type="number"
-                    min={0}
-                    value={safeNumber(flagging?.messageBoards.quantity) || ""}
-                    onChange={(e) => handleEquipmentInputChange('messageBoards', 'quantity', parseInt(e.target.value) || 0)}
+                    value={adminData.county?.flaggingBaseRate || ""}
+                    onChange={(e) => handleCountyRateChange('flaggingBaseRate', parseFloat(e.target.value) || 0)}
                     disabled={flagging?.standardPricing}
-                    placeholder="Quantity"
+                    className="w-40 text-right"
                   />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-message-boards"
-                    checked={flagging?.messageBoards.includeInLumpSum || false}
-                    onCheckedChange={(checked) => 
-                      handleEquipmentInputChange('messageBoards', 'includeInLumpSum', checked === true)
-                    }
-                  />
-                  <Label htmlFor="include-message-boards">Include in lump sum</Label>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>TMA ($/day)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="flagging-fringe-rate" className="text-base">Flagging Fringe Rate</Label>
+                <div className="flex items-center">
+                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
+                    id="flagging-fringe-rate"
                     type="number"
                     min={0}
                     step={0.01}
-                    value={flagging?.TMA.cost || ""}
-                    onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
-                    className="w-24"
-                  />
-                </div>
-                <div className="flex items-center">
-                  <Car className="mr-2 h-4 w-4" />
-                  <Input
-                    type="number"
-                    min={0}
-                    value={safeNumber(flagging?.TMA.quantity) || ""}
-                    onChange={(e) => handleEquipmentInputChange('TMA', 'quantity', parseInt(e.target.value) || 0)}
+                    value={adminData.county?.flaggingFringeRate || ""}
+                    onChange={(e) => handleCountyRateChange('flaggingFringeRate', parseFloat(e.target.value) || 0)}
                     disabled={flagging?.standardPricing}
-                    placeholder="Quantity"
+                    className="w-40 text-right"
                   />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-tma"
-                    checked={flagging?.TMA.includeInLumpSum || false}
-                    onCheckedChange={(checked) => 
-                      handleEquipmentInputChange('TMA', 'includeInLumpSum', checked === true)
-                    }
-                  />
-                  <Label htmlFor="include-tma">Include in lump sum</Label>
                 </div>
               </div>
+          </div>
+          
+        <Separator className="my-2" />
+        {/* Resources and Equipment Section */}
+        <h3 className="text-lg font-medium mb-3 text-left">Resources and Equipment</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="personnel" className="text-base">Personnel</Label>
+            <div className="flex items-center">
+              <Input
+                id="personnel"
+                type="number"
+                min={0}
+                value={safeNumber(flagging?.personnel) || ""}
+                onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
+                disabled={flagging?.standardPricing}
+                className="w-40 text-right"
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Label htmlFor="trucks" className="text-base">Number of Trucks</Label>
+            <div className="flex items-center">
+              <Input
+                id="trucks"
+                type="number"
+                min={0}
+                value={safeNumber(flagging?.numberTrucks) || ""}
+                onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
+                disabled={flagging?.standardPricing}
+                className="w-40 text-right"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Label htmlFor="ow-miles" className="text-base">One-Way Miles</Label>
+            <div className="flex items-center">
+              <Input
+                id="ow-miles"
+                type="number"
+                min={0}
+                value={safeNumber(adminData?.owMileage) || ""}
+                disabled
+                className="w-40 text-right"
+              />
+            </div>
+          </div>
+          
+          {/* Arrow Boards */}
+          <div className="flex justify-between items-center">
+            <Label className="text-base">Arrow Boards ($/day)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={flagging?.arrowBoards.cost || ""}
+              onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <CornerDownRight className="mr-2 h-4 w-4" />
+              <Label className="text-base">Quantity</Label>
+            </div>
+            <Input
+              type="number"
+              min={0}
+              value={safeNumber(flagging?.arrowBoards.quantity) || ""}
+              onChange={(e) => handleEquipmentInputChange('arrowBoards', 'quantity', parseInt(e.target.value) || 0)}
+              disabled={flagging?.standardPricing}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center mb-4">
+            <Label htmlFor="include-arrow-boards" className="text-base">Include in lump sum</Label>
+            <Checkbox
+              id="include-arrow-boards"
+              checked={flagging?.arrowBoards.includeInLumpSum || false}
+              onCheckedChange={(checked) => 
+                handleEquipmentInputChange('arrowBoards', 'includeInLumpSum', checked === true)
+              }
+            />
+          </div>
+          
+          {/* Message Boards */}
+          <div className="flex justify-between items-center">
+            <Label className="text-base">Message Boards ($/day)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={flagging?.messageBoards.cost || ""}
+              onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <Keyboard className="mr-2 h-4 w-4" />
+              <Label className="text-base">Quantity</Label>
+            </div>
+            <Input
+              type="number"
+              min={0}
+              value={safeNumber(flagging?.messageBoards.quantity) || ""}
+              onChange={(e) => handleEquipmentInputChange('messageBoards', 'quantity', parseInt(e.target.value) || 0)}
+              disabled={flagging?.standardPricing}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center mb-4">
+            <Label htmlFor="include-message-boards" className="text-base">Include in lump sum</Label>
+            <Checkbox
+              id="include-message-boards"
+              checked={flagging?.messageBoards.includeInLumpSum || false}
+              onCheckedChange={(checked) => 
+                handleEquipmentInputChange('messageBoards', 'includeInLumpSum', checked === true)
+              }
+            />
+          </div>
+          
+          {/* TMA */}
+          <div className="flex justify-between items-center">
+            <Label className="text-base">TMA ($/day)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={flagging?.TMA.cost || ""}
+              onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <Car className="mr-2 h-4 w-4" />
+              <Label className="text-base">Quantity</Label>
+            </div>
+            <Input
+              type="number"
+              min={0}
+              value={safeNumber(flagging?.TMA.quantity) || ""}
+              onChange={(e) => handleEquipmentInputChange('TMA', 'quantity', parseInt(e.target.value) || 0)}
+              disabled={flagging?.standardPricing}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Label htmlFor="include-tma" className="text-base">Include in lump sum</Label>
+            <Checkbox
+              id="include-tma"
+              checked={flagging?.TMA.includeInLumpSum || false}
+              onCheckedChange={(checked) => 
+                handleEquipmentInputChange('TMA', 'includeInLumpSum', checked === true)
+              }
+            />
+          </div>
+        </div>
 
+        
+        <Separator className="my-2" />
         {/* Flagging Cost Summary Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Flagging Cost Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="font-medium">Description</div>
-              <div className="font-medium">Hours</div>
-              <div className="font-medium">Cost</div>
-              
-              <div>On Site Job Hours</div>
-              <div>
-                <Input
-                  type="number"
-                  min={0}
-                  value={safeNumber(flagging?.onSiteJobHours) || ""}
-                  onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
-                  disabled={flagging?.standardPricing}
-                />
-              </div>
-              <div className="flex items-center">
-                ${flaggingCostSummary ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div>Round Trip Travel Time Hours</div>
-              <div>
-                <Input
-                  type="number"
-                  value={Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}
-                  disabled
-                />
-              </div>
-              <div className="flex items-center">
-                ${flaggingCostSummary ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div>Over Time Hours</div>
-              <div>{getOvertimeHours()}</div>
-              <div></div>
-              
-              <div className="font-medium">Total Hours</div>
-              <div>{getTotalHours()}</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div></div>
-              <div className="font-medium">Total Labor Cost</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div></div>
-              <div className="font-medium">Truck and Fuel Cost</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div></div>
-              <div className="font-medium">Additional Costs</div>
-              <div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={safeNumber(flagging?.additionalEquipmentCost) || ""}
-                  onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
-                  disabled={flagging?.standardPricing}
-                />
-              </div>
-              
-              <div></div>
-              <div className="font-bold">Total Cost</div>
-              <div className="font-bold">
-                ${flaggingCostSummary ? flaggingCostSummary.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div></div>
-              <div className="font-medium">Total Cost Per Hour</div>
-              <div className="font-medium">
-                ${flaggingCostSummary ? flaggingCostSummary.totalCostPerHour.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </div>
-              
-              <div></div>
-              <div>Total Equipment Revenue</div>
-              <div>${displayEquipCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <h3 className="text-lg font-medium mb-3 text-left">Cost Summary</h3>
+        <div className="space-y-4">
+          <div className="flex flex-col space-y-1">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="on-site-hours" className="text-base">On Site Job Hours</Label>
+              <span className="text-sm text-muted-foreground">
+                ${flaggingCostSummary && flaggingCostSummary.onSiteJobHoursCost ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-
+            <Input
+              id="on-site-hours"
+              type="number"
+              min={0}
+              value={safeNumber(flagging?.onSiteJobHours) || ""}
+              onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
+              disabled={flagging?.standardPricing}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="travel-time" className="text-base">Round Trip Travel Time Hours</Label>
+              <span className="text-sm text-muted-foreground">
+                ${flaggingCostSummary && flaggingCostSummary.rtTravelTimeHoursCost ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              </span>
+            </div>
+            <Input
+              id="travel-time"
+              type="number"
+              value={Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}
+              disabled
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Label className="text-base">Over Time Hours</Label>
+            <span>{getOvertimeHours()}</span>
+          </div>
+          
+          <div className="flex justify-between items-center pt-3 border-t">
+            <Label className="text-base font-medium">Total Hours</Label>
+            <span className="font-medium">{getTotalHours()}</span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-base font-medium">Total Labor Cost</span>
+            <span className="font-medium">
+              ${flaggingCostSummary && flaggingCostSummary.totalLaborCost ? flaggingCostSummary.totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-base font-medium">Truck and Fuel Cost</span>
+            <span className="font-medium">
+              ${flaggingCostSummary && flaggingCostSummary.totalFuelCost ? flaggingCostSummary.totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Label htmlFor="additional-costs" className="text-base font-medium">Additional Costs</Label>
+            <Input
+              id="additional-costs"
+              type="number"
+              min={0}
+              step={0.01}
+              value={safeNumber(flagging?.additionalEquipmentCost) || ""}
+              onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
+              disabled={flagging?.standardPricing}
+              className="w-40 text-right"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center pt-3 border-t">
+            <span className="text-base font-bold">Total Cost</span>
+            <span className="font-bold">
+              ${flaggingCostSummary && flaggingCostSummary.totalFlaggingCost ? flaggingCostSummary.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-base font-medium">Total Cost Per Hour</span>
+            <span className="font-medium">
+              ${flaggingCostSummary && flaggingCostSummary.totalCostPerHour ? flaggingCostSummary.totalCostPerHour.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-base">Total Equipment Revenue</span>
+            <span>
+              ${displayEquipCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+         
+        
+        <Separator className="my-2" />
         {/* Flagging Pricing Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Flagging Pricing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div className="font-medium">Gross Margin Target</div>
-              <div className="font-medium">Lump Sum</div>
-              <div className="font-medium">Hourly Rate / Man</div>
-              <div className="font-medium text-center">Use this price?</div>
-            </div>
+        <h3 className="text-lg font-medium mb-3 text-left">Flagging Pricing</h3>
+        <div className="grid grid-cols-4 gap-4 mb-4">
+          <div className="font-medium">Gross Margin Target</div>
+          <div className="font-medium">Lump Sum</div>
+          <div className="font-medium">Hourly Rate / Man</div>
+          <div className="font-medium text-center">Use this price?</div>
+        </div>
             
-            {/* Markup Rates */}
-            {(adminData?.rated === 'RATED' ? RATED_MARKUP_PERCENTAGES : NON_RATED_MARKUP_PERCENTAGES).map(rate => {
-              const { lumpSumWithEquipment, hourlyRate } = calculateMarkupValues(rate);
+        {/* Markup Rates */}
+        {(adminData?.rated === 'RATED' ? RATED_MARKUP_PERCENTAGES : NON_RATED_MARKUP_PERCENTAGES).map(rate => {
+          const { lumpSumWithEquipment, hourlyRate } = calculateMarkupValues(rate);
               
-              return (
-                <div key={rate} className="grid grid-cols-4 gap-4 py-2 border-t">
-                  <div>{rate}%</div>
-                  <div>${safeNumber(lumpSumWithEquipment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div>${hourlyRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={flagging?.markupRate === rate}
-                      disabled={flagging?.standardPricing}
-                      onCheckedChange={(checked) => {
-                        setSelectedMarkupRate(null);
-                        if (checked) {
-                          setSelectedMarkupRate(rate);
-                          handleInputChange('markupRate', rate);
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+          return (
+            <div key={rate} className="grid grid-cols-4 gap-4 py-2 border-t">
+              <div>{rate}%</div>
+              <div>${safeNumber(lumpSumWithEquipment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div>${hourlyRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={flagging?.markupRate === rate}
+                  disabled={flagging?.standardPricing}
+                  onCheckedChange={(checked) => {
+                    setSelectedMarkupRate(null);
+                    if (checked) {
+                      setSelectedMarkupRate(rate);
+                      handleInputChange('markupRate', rate);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          );
+          })}
       </div>
     </div>
   );
