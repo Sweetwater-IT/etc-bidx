@@ -248,7 +248,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         try {
             startLoading();
     
-            let queryParams = new URLSearchParams();
+            const queryParams = new URLSearchParams();
             
             if (activeSegment === 'archived') {
                 // Filter by status = 'Archived' instead of by branch
