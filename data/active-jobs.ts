@@ -19,6 +19,7 @@ export type ActiveJob = {
   saleItems: boolean
   overdays: number
   createdAt: string
+  status: string
 }
 
 export const ACTIVE_JOBS_SEGMENTS = [
@@ -51,51 +52,3 @@ export const ACTIVE_JOBS_COLUMNS = [
   { key: "overdays", title: "Overdays", className: "text-right" },
   { key: "createdAt", title: "Created At" },
 ]
-
-export const activeJobsData: ActiveJob[] = [
-  {
-    jobNumber: "J001",
-    bidNumber: "B001",
-    projectStatus: "In Progress",
-    billingStatus: "Current",
-    contractNumber: "CNT001",
-    location: "Philadelphia",
-    county: "Philadelphia",
-    branch: "West",
-    contractor: "Contractor A",
-    startDate: "2024-01-15",
-    endDate: "2024-06-15",
-    laborRate: 45.50,
-    fringeRate: 15.75,
-    mpt: true,
-    rental: false,
-    permSigns: true,
-    flagging: true,
-    saleItems: false,
-    overdays: 0,
-    createdAt: "2024-01-01",
-  },
-  {
-    jobNumber: "J002",
-    bidNumber: "B002",
-    projectStatus: "Planned",
-    billingStatus: "Pending",
-    contractNumber: "CNT002",
-    location: "Pittsburgh",
-    county: "Allegheny",
-    branch: "Turbotville",
-    contractor: "Contractor B",
-    startDate: "2024-02-01",
-    endDate: "2024-08-01",
-    laborRate: 42.75,
-    fringeRate: 14.25,
-    mpt: false,
-    rental: true,
-    permSigns: true,
-    flagging: false,
-    saleItems: true,
-    overdays: 2,
-    createdAt: "2024-01-05",
-  },
-  // Add more example data as needed
-] 

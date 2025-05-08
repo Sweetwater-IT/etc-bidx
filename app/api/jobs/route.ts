@@ -1,63 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET endpoint to fetch jobs with filtering
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const branch = url.searchParams.get('branch');
+    const status = url.searchParams.get('status');
+    const counts = url.searchParams.get('counts');
     
-    // First, fetch all users to create a map of user IDs to names
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, email, name');
-    
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
-    }
-    
-    console.log('Users query result:', users ? `Found ${users.length} users` : 'No users found or null result');
-    
-    // Check if the users table exists
-    const { data: tables } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public');
-    
-    console.log('Available tables:', tables?.map(t => t.tablename));
-    
-    // Create a map of user IDs to full names
-    const userMap = new Map();
-    
-    if (users && users.length > 0) {
-      console.log('Processing users:', users.length);
+    // If counts is requested, return count data
+    if (counts) {
+      const { data: allJobs, error } = await supabase.from('jobs').select('*, job_details');
       
-      users.forEach(user => {
-        // Create a full name for each user
-        const fullName = user.name || user.email || `User ${user.id}`;
-        
-        console.log(`User ID ${user.id} (${typeof user.id}): ${fullName}`);
-        
-        // Store the ID as a number (since database IDs are integers)
-        userMap.set(Number(user.id), fullName);
-      });
-    } else {
-      console.log('No users found, creating fallback map');
-      // Create a fallback map with some common IDs
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(id => {
-        userMap.set(id, `User ${id}`);
-      });
+      if (error) {
+        return NextResponse.json(
+          { error: 'Failed to fetch job counts', details: error },
+          { status: 500 }
+        );
+      }
+      
+      const countData = {
+        all: allJobs.length,
+        west: allJobs.filter(job => job.branch_code === '30').length,
+        turbotville: allJobs.filter(job => job.branch_code === '20').length,
+        hatfield: allJobs.filter(job => job.branch_code === '10').length,
+        archived: allJobs.filter(job => job.status === 'Archived').length
+      };
+      
+      return NextResponse.json(countData);
     }
     
-    // Now fetch jobs with filtering
+    // Normal job query
     let query = supabase.from('jobs')
       .select('*, job_numbers!inner(*)')
       .order('created_at', { ascending: false });
     
-    if (branch && branch !== 'all') {
+    // Apply filters based on parameters
+    if (status) {
+      // Filter by status (e.g., 'Archived')
+      query = query.eq('status', status);
+    } else if (branch && branch !== 'all') {
       if (branch === 'archived') {
-        query = query.contains('job_details', { projectStatus: 'Archived' });
+        // Legacy support for 'archived' in branch parameter
+        query = query.eq('status', 'Archived');
       } else {
+        // Filter by branch code
         const branchCodeMap: Record<string, string> = {
           'hatfield': '10',
           'turbotville': '20',
@@ -69,8 +56,6 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-    
-    query = query.order('created_at', { ascending: false });
     
     const { data: jobs, error } = await query;
     
@@ -101,7 +86,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Process all jobs
+    // Process all jobs    
     const formattedJobs = jobs.map(job => {
       const jobDetails = job.job_details || {};
       
@@ -140,44 +125,7 @@ export async function GET(request: NextRequest) {
       // Extract rates
       const laborRate = parseFloat(jobDetails.laborRate) || 0;
       const fringeRate = parseFloat(jobDetails.fringeRate) || 0;
-      
-      // Extract letting date - check multiple possible field names
-      const lettingDate = 
-        jobDetails.lettingDate || 
-        jobDetails.letting_date || 
-        jobDetails.bidDate || 
-        jobDetails.bid_date || 
-        null;
-      
-      // Extract estimator ID and convert to number
-      let estimatorId: string | null = null;
-      let estimatorName = 'Not Assigned';
-      
-      const rawEstimatorId = 
-        jobDetails.estimator || 
-        jobDetails.Estimator || 
-        jobDetails.bidEstimator || 
-        jobDetails.bid_estimator || 
-        null;
-      
-      if (rawEstimatorId !== null && rawEstimatorId !== undefined) {
-        // Convert string ID to number (since database IDs are integers)
-        estimatorId = String(rawEstimatorId);
-        const numericId = parseInt(estimatorId);
-        
-        if (!isNaN(numericId)) {
-          // Look up the name in our map using the numeric ID
-          const lookupName = userMap.get(numericId);
-          if (lookupName) {
-            estimatorName = lookupName;
-          } else {
-            estimatorName = `Unknown User (ID: ${numericId})`;
-          }
-        } else {
-          estimatorName = `Unknown User (ID: ${estimatorId})`;
-        }
-      }
-      
+     
       return {
         id: job.id,
         jobNumber: job.job_number,
@@ -192,10 +140,13 @@ export async function GET(request: NextRequest) {
         endDate: endDate,
         laborRate: laborRate,
         fringeRate: fringeRate,
-        createdAt: job.created_at,
-        lettingDate: lettingDate,
-        estimator: estimatorName,
-        estimatorId: estimatorId
+        mpt: jobDetails.mpt || false,
+        rental: jobDetails.rental || false,
+        permSigns: jobDetails.permSigns || false,
+        flagging: jobDetails.flagging || false,
+        saleItems: jobDetails.saleItems || false,
+        overdays: parseInt(jobDetails.overdays) || 0,
+        createdAt: job.created_at
       };
     });
     

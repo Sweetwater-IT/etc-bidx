@@ -411,11 +411,24 @@ export function DataTable<TData>({
                                                 "cursor-pointer hover:bg-muted/50",
                                                 row.getIsSelected() && "bg-muted"
                                             )}
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                                //don't open sidebar for checkbox for each row
+                                                const target = e.target as HTMLElement;
+                                                
+                                                if (target.dataset.slot === 'checkbox') {
+                                                    return;
+                                                }
+                                                
+                                                const checkbox = target.closest('[data-slot="checkbox"]');
+                                                if (checkbox) {
+                                                    return;
+                                                }
+                                                
                                                 if (onViewDetails) {
-                                                    onViewDetails(row.original as TData)
+                                                    onViewDetails(row.original as TData);
                                                 }
                                             }}
+                                            
                                         >
                                             {row.getVisibleCells().map((cell) => {
                                                 const isActions = cell.column.id === "actions";

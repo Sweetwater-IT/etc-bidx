@@ -469,6 +469,53 @@ export async function archiveActiveBids(ids: number[]): Promise<{ count: number 
 }
 
 /**
+ * Archive multiple active jobs
+ */
+export async function archiveActiveJobs(ids: string[]): Promise<{ count: number }> {
+  //putting this in active-jobs folder for now, in the future we need to move this to open bids
+  const response = await fetch('/api/jobs/active-jobs/archive', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to archive active jobs');
+  }
+
+  const result = await response.json();
+  return { count: result.count };
+}
+
+/**
+ * 
+ * @param ids job numbers
+ * @returns count of how many active jobs were deleted
+ */
+export async function deleteArchivedActiveJobs(ids: string[]): Promise<{ count: number }> {
+  //putting this in active-jobs folder for now, in the future we need to move this to open bids
+  const response = await fetch('/api/jobs/active-jobs/archive', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to archive active jobs');
+  }
+
+  const result = await response.json();
+  return { count: result.count };
+}
+
+
+/**
  * Delete multiple archived available jobs (soft delete)
  */
 export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number }> {
@@ -493,8 +540,8 @@ export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number
  * Delete multiple archived active bids (soft delete)
  */
 export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
-  const response = await fetch('/api/active-bids/delete', {
-    method: 'POST',
+  const response = await fetch('/api/active-bids', {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
