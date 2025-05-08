@@ -15,7 +15,44 @@ export async function GET(request: NextRequest) {
     const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
     const division = searchParams.get('division');
-
+    const counts = searchParams.get('counts');
+    
+    if (counts) {
+      try {
+        const { data: allBids, error: allBidsError } = await supabase
+          .from('bid_estimates')
+          .select('id, status, division');
+        
+        if (allBidsError) {
+          return NextResponse.json(
+            { error: 'Failed to fetch bid counts', details: allBidsError },
+            { status: 500 }
+          );
+        }
+        
+        const countData = {
+          all: allBids.length,
+          won: allBids.filter(bid => bid.status?.toLowerCase().includes('won') && !bid.status?.toLowerCase().includes('pending')).length,
+          pending: allBids.filter(bid => bid.status?.toLowerCase().includes('pending')).length,
+          lost: allBids.filter(bid => bid.status?.toLowerCase().includes('lost')).length,
+          draft: allBids.filter(bid => bid.status?.toLowerCase().includes('draft')).length,
+          'won-pending': allBids.filter(bid => 
+            bid.status?.toLowerCase().includes('won') && 
+            bid.status?.toLowerCase().includes('pending')
+          ).length,
+          archived: allBids.filter(bid => bid.status?.toLowerCase().includes('archived')).length
+        };
+        
+        return NextResponse.json(countData);
+      } catch (error) {
+        console.error('Error fetching bid counts:', error);
+        return NextResponse.json(
+          { error: 'Unexpected error fetching bid counts' },
+          { status: 500 }
+        );
+      }
+    }
+    
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
@@ -64,8 +101,22 @@ export async function GET(request: NextRequest) {
 
     // Apply division filter if provided
     if (division && division !== 'all') {
-      countQuery = countQuery.eq('division', division);
-      dataQuery = dataQuery.eq('division', division);
+      const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
+      
+      if (statusValues.includes(division.toLowerCase())) {
+        
+        if (division.toLowerCase() === 'won-pending') {
+          const orCondition = 'status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
+          countQuery = countQuery.or(orCondition);
+          dataQuery = dataQuery.or(orCondition);
+        } else {
+          countQuery = countQuery.ilike('status', `%${division}%`);
+          dataQuery = dataQuery.ilike('status', `%${division}%`);
+        }
+      } else {
+        countQuery = countQuery.eq('division', division);
+        dataQuery = dataQuery.eq('division', division);
+      }
     }
 
     // Execute both queries in parallel

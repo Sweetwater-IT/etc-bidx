@@ -47,8 +47,6 @@ export type LegacyColumn = {
     className?: string;
 };
 
-
-
 export interface DataTableProps<TData> {
     columns: LegacyColumn[] | readonly LegacyColumn[];
     data: TData[];
@@ -57,6 +55,7 @@ export interface DataTableProps<TData> {
         value: string;
     }[];
     segmentValue?: string;
+    segmentCounts?: Record<string, number>;
     addButtonLabel?: string;
     onAddClick?: () => void;
     onSegmentChange?: (value: string) => void;
@@ -71,7 +70,7 @@ export interface DataTableProps<TData> {
     onEdit?: (item: TData) => void;
     onArchive?: (item: TData) => void;
     onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
-    onUpdateStatus?: (item: TData, status: 'Bid' | 'No Bid' | 'Unset' | 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => void;
+    onUpdateStatus?: (item: TData, status: string) => void;
     
     // Pagination props
     pageCount?: number;
@@ -110,6 +109,7 @@ export function DataTable<TData>({
     data,
     segments,
     segmentValue,
+    segmentCounts,
     addButtonLabel,
     onAddClick,
     onSegmentChange,
@@ -377,7 +377,7 @@ export function DataTable<TData>({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center px-6 mb-3">
-                {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} />}
+                {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} counts={segmentCounts} />}
 
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon">
