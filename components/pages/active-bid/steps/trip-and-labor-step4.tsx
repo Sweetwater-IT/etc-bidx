@@ -79,7 +79,7 @@ const TripAndLaborStep4 = ({
               {/* Personnel Section */}
               <div>
                 <div className="text-base font-semibold mb-4 text-muted-foreground">Personnel</div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col gap-4 w-1/3">
                   <div>
                     <Label className="flex items-center mb-2 text-muted-foreground">
                       Number of Personnel
@@ -94,7 +94,6 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
-                      placeholder="Number of Personnel"
                     />
                   </div>
                   <div>
@@ -111,7 +110,6 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
-                      placeholder="Number of Trucks"
                     />
                   </div>
                 </div>
@@ -121,7 +119,7 @@ const TripAndLaborStep4 = ({
 
               <div>
                 <div className="text-base font-semibold mb-4 mt-5 text-muted-foreground">Additional Inputs</div>
-                <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="flex flex-col gap-4 w-1/3">
                   <div>
                     <Label className="flex items-center mb-2 text-muted-foreground">
                       Additional Trips
@@ -136,7 +134,6 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
-                      placeholder="Additional Trips"
                     />
                   </div>
                   <div>
@@ -154,7 +151,6 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
-                      placeholder="Additional Rated Hours"
                     />
                   </div>
                   <div>
@@ -172,7 +168,6 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
-                      placeholder="Additional Non-Rated Hours"
                     />
                   </div>
                 </div>

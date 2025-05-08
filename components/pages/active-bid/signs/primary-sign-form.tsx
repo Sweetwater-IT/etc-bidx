@@ -52,14 +52,12 @@ interface PrimarySignFormProps {
   sign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const PrimarySignForm = ({ 
   sign, 
   currentPhase, 
   setIsConfiguring,
-  setIsAddingSign
 }: PrimarySignFormProps) => {
   const { dispatch } = useEstimate();
   const [localSign, setLocalSign] = useState<PrimarySign>({...sign});
@@ -302,12 +300,10 @@ const PrimarySignForm = ({
     });
     
     setIsConfiguring(false);
-    setIsAddingSign(true);
   };
 
   const handleCancel = () => {
     setIsConfiguring(false);
-    setIsAddingSign(true);
   };
 
   // Get available dimensions for the selected designation

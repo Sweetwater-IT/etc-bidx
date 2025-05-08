@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Step } from "@/types/IStep";
-import { useEstimate } from "@/contexts/EstimateContext";
 import SignList from "../signs/sign-list";
 import AddSignControl from "../signs/add-sign-control";
 
@@ -24,15 +23,6 @@ const MutcdSignsStep3 = ({
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   currentPhase: number;
 }) => {
-  const { mptRental } = useEstimate();
-  const [isAddingSign, setIsAddingSign] = useState(false);
-  
-  // Initialize isAddingSign based on current phase signs
-  useEffect(() => {
-    const currentSigns = mptRental?.phases?.[currentPhase]?.signs || [];
-    setIsAddingSign(currentSigns.length === 0);
-  }, [mptRental, currentPhase]);
-
   const handleNext = () => {
     setCurrentStep(4);
   };
@@ -71,15 +61,11 @@ const MutcdSignsStep3 = ({
             <div className="space-y-6">
               {/* Signs List */}
               <SignList 
-                currentPhase={currentPhase} 
-                isAddingSign={isAddingSign}
-                setIsAddingSign={setIsAddingSign}
+                currentPhase={currentPhase}
               />
 
               {/* Add Sign Control */}
-              <AddSignControl 
-                isAddingSign={isAddingSign}
-                setIsAddingSign={setIsAddingSign}
+              <AddSignControl
                 currentPhase={currentPhase}
               />
 

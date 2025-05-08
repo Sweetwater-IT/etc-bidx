@@ -10,21 +10,18 @@ interface SecondarySignItemProps {
   secondarySign: SecondarySign;
   primarySign: PrimarySign;
   currentPhase: number;
-  setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SecondarySignItem = ({ 
   secondarySign, 
   primarySign,
   currentPhase,
-  setIsAddingSign 
 }: SecondarySignItemProps) => {
   const { dispatch } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(false);
 
   const handleEditSign = () => {
     setIsConfiguring(true);
-    setIsAddingSign(false);
   };
 
   const handleSignDelete = (id: string) => {
@@ -42,7 +39,6 @@ const SecondarySignItem = ({
           primarySign={primarySign}
           currentPhase={currentPhase}
           setIsConfiguring={setIsConfiguring}
-          setIsAddingSign={setIsAddingSign}
         />
       ) : (
         <div className="flex justify-between items-center">
