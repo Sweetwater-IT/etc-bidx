@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
         address_contact,
         address_type,
         default_address,
+        display_name,
         address,
         city,
         state,
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
         to_be_emailed,
         to_be_printed,
         created,
-        updated
+        updated,
+        customer_contacts ( id, name, role, phone, email)
       `)
       .order(orderBy, { ascending });
 
