@@ -9,23 +9,33 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
+    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
     
-    let query = supabase
-      .from('available_jobs')
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
+    
+    let tableName = 'available_jobs';
+    let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
+    let dataQuery = supabase
+      .from(tableName)
       .select('*')
-      .order(orderBy, { ascending });
+      .order(orderBy, { ascending })
+      .range(offset, offset + limit - 1);
     
     if (status) {
       // Special case for 'archived' filter - fetch from archived_available_jobs table instead
       if (status === 'archived') {
-        query = supabase
-          .from('archived_available_jobs')
+        tableName = 'archived_available_jobs';
+        countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true }).is('deleted_at', null);
+        dataQuery = supabase
+          .from(tableName)
           .select('*')
           .is('deleted_at', null)
-          .order(orderBy, { ascending });
+          .order(orderBy, { ascending })
+          .range(offset, offset + limit - 1);
       } else {
         let dbStatus: string;
         
@@ -43,22 +53,38 @@ export async function GET(request: NextRequest) {
             dbStatus = status;
         }
         
-        query = query.eq('status', dbStatus);
+        countQuery = countQuery.eq('status', dbStatus);
+        dataQuery = dataQuery.eq('status', dbStatus);
       }
     }
     
-    query = query.limit(limit);
+    // Execute both queries in parallel
+    const [countResult, dataResult] = await Promise.all([
+      countQuery,
+      dataQuery
+    ]);
     
-    const { data, error } = await query;
-    
-    if (error) {
+    if (countResult.error || dataResult.error) {
+      const error = countResult.error || dataResult.error;
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch bids', error: error.message },
+        { success: false, message: 'Failed to fetch bids', error: error?.message },
         { status: 500 }
       );
     }
     
-    return NextResponse.json({ success: true, data });
+    const totalCount = countResult.count || 0;
+    const pageCount = Math.ceil(totalCount / limit);
+    
+    return NextResponse.json({
+      success: true, 
+      data: dataResult.data || [],
+      pagination: {
+        page,
+        pageSize: limit,
+        pageCount,
+        totalCount
+      }
+    });
     
   } catch (error) {
     console.error('Unexpected error:', error);
