@@ -81,6 +81,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
     //THESE ARE OPEN BIDS
     //sets the table data
     const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
+    const [availableJobsPageIndex, setAvailableJobsPageIndex] = useState(0);
+    const [availableJobsPageSize, setAvailableJobsPageSize] = useState(25);
+    const [availableJobsPageCount, setAvailableJobsPageCount] = useState(0);
+    const [availableJobsTotalCount, setAvailableJobsTotalCount] = useState(0);
     //tracks the state of open bids to archive
     const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
     //tracks the state of open bids to delete when on the archived tab
@@ -91,13 +95,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
     //opens the confirmation to delete the open bids
     const [showDeleteJobsDialog, setShowDeleteJobsDialog] = useState(false);
+    
     //THESE ARE ESTIMATES
+    const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
+    const [activeBidsPageIndex, setActiveBidsPageIndex] = useState(0);
+    const [activeBidsPageSize, setActiveBidsPageSize] = useState(25);
+    const [activeBidsPageCount, setActiveBidsPageCount] = useState(0);
+    const [activeBidsTotalCount, setActiveBidsTotalCount] = useState(0);
     const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
     const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
     const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
     const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
-    const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
+    
     //ACTIVE JOBS (IE WON JOBS)
+    const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+    const [activeJobsPageIndex, setActiveJobsPageIndex] = useState(0);
+    const [activeJobsPageSize, setActiveJobsPageSize] = useState(25);
+    const [activeJobsPageCount, setActiveJobsPageCount] = useState(0);
+    const [activeJobsTotalCount, setActiveJobsTotalCount] = useState(0);
     const [showArchiveActiveJobsDialog, setShowArchiveActiveJobsDialog] = useState<boolean>(false);
     const [showDeleteActiveJobsDialog, setShowDeleteActiveJobsDialog] = useState<boolean>(false);
     const [selectedActiveJobsToArchive, setSelectedActiveJobsToArchive] = useState<ActiveJob[]>([]);
@@ -107,7 +122,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [selectedActiveJob, setSelectedActiveJob] = useState<ActiveJob| null>(null)
     const [activeJobDetailsSheetOpen, setActiveJobDetailsSheetOpen] = useState(false)
     const [editActiveJobSheetOpen, setEditActiveJobSheetOpen] = useState(false)
-    const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
 
     const activeJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
 
@@ -161,23 +175,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
             startLoading();
 
             // Special handling for archived segment
-            let options;
+            const options: any = {
+                limit: availableJobsPageSize,
+                page: availableJobsPageIndex + 1, // API uses 1-based indexing
+            };
+            
             if (activeSegment === "archived") {
-                options = { status: "archived" };
+                options.status = "archived";
                 console.log("Using archived filter");
-
-                // Note: The actual status values may vary in the UI vs database
             } else if (activeSegment !== "all") {
                 const dbStatus = mapUiStatusToDbStatus(activeSegment);
                 console.log("Mapped DB status:", dbStatus);
-                options = { status: dbStatus };
+                options.status = dbStatus;
             }
             console.log("Fetch options:", options);
 
-            const data = await fetchBids(options);
+            const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch available jobs');
+            }
+            const result = await response.json();
+            const { data, pagination } = result;
+            
             console.log("Fetched data:", data);
+            console.log("Pagination:", pagination);
 
-            const uiJobs = data.map((job) => ({
+            const uiJobs = data.map((job: any) => ({
                 id: job.id,
                 contractNumber: job.contract_number,
                 status: mapDbStatusToUiStatus(job.status),
@@ -193,111 +216,109 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }));
 
             setAvailableJobs(uiJobs);
+            setAvailableJobsPageCount(pagination.pageCount);
+            setAvailableJobsTotalCount(pagination.totalCount);
         } catch (error) {
             console.error("Error loading jobs:", error);
             toast.error("Failed to load jobs. Please try again.");
         } finally {
             stopLoading();
         }
-    }, [activeSegment, startLoading, stopLoading]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading]);
 
     // Load active bids data
     const loadActiveBids = useCallback(async () => {
         try {
             startLoading();
 
-            let options;
+            const options: any = {
+                limit: activeBidsPageSize,
+                page: activeBidsPageIndex + 1, // API uses 1-based indexing
+            };
+            
             if (activeSegment !== "all") {
-                options = { division: activeSegment };
+                options.division = activeSegment;
             }
 
-            const data = await fetchActiveBids(options);
-            const mappedBids = data.map(bid => {
-                return {
-                    id: bid.id,
-                    lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "MMM d, yyyy") : "-",
-                    contractNumber: bid.contract_number,
-                    contractor: bid.contractor || "-",
-                    subcontractor: bid.subcontractor || "-",
-                    owner: bid.owner,
-                    county: bid.county,
-                    branch: bid.branch,
-                    estimator: bid.estimator,
-                    status: bid.status,
-                    division: bid.division,
-                    startDate: format(new Date(bid.start_date), "MMM d, yyyy"),
-                    endDate: format(new Date(bid.end_date), "MMM d, yyyy"),
-                    projectDays: bid.project_days,
-                    totalHours: bid.total_hours,
-                    mptValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.mpt_value),
-                    permSignValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.perm_sign_value),
-                    rentalValue: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(bid.rental_value),
-                };
-            });
+            const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch active bids');
+            }
+            const result = await response.json();
+            const { data, pagination } = result;
+            
+            console.log("Fetched active bids:", data);
+            console.log("Pagination:", pagination);
 
-            setActiveBids(mappedBids);
+            const uiBids = data.map((bid: any) => ({
+                id: bid.id,
+                contractNumber: bid.contract_number,
+                status: bid.status,
+                requestor: bid.estimator,
+                owner: bid.owner,
+                lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : null,
+                dueDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : null,
+                county: bid.county,
+                branch: bid.branch,
+                createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                division: bid.division,
+            }));
+
+            setActiveBids(uiBids);
+            setActiveBidsPageCount(pagination.pageCount);
+            setActiveBidsTotalCount(pagination.totalCount);
         } catch (error) {
             console.error("Error loading active bids:", error);
             toast.error("Failed to load active bids. Please try again.");
         } finally {
             stopLoading();
         }
-    }, [activeSegment, startLoading, stopLoading]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading]);
 
     const loadActiveJobs = useCallback(async () => {
         try {
             startLoading();
-    
-            const queryParams = new URLSearchParams();
+
+            const options: any = {
+                limit: activeJobsPageSize,
+                page: activeJobsPageIndex + 1, // API uses 1-based indexing
+            };
             
-            if (activeSegment === 'archived') {
-                // Filter by status = 'Archived' instead of by branch
-                queryParams.append('status', 'Archived');
-            } else if (activeSegment !== 'all') {
-                // When not 'all' or 'archived', filter by branch
-                let branchCode;
-                if (activeSegment === 'hatfield') {
-                    branchCode = '10';
-                } else if (activeSegment === 'turbotville') {
-                    branchCode = '20';
-                } else if (activeSegment === 'west') {
-                    branchCode = '30';
-                }
-                
-                if (branchCode) {
-                    queryParams.append('branch', branchCode);
-                }
+            if (activeSegment !== "all") {
+                options.branch = activeSegment;
             }
-            
-            const response = await fetch(`/api/jobs?${queryParams.toString()}`);
-            
+
+            const response = await fetch(`/api/jobs?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
-                throw new Error(`Error fetching jobs: ${response.statusText}`);
+                throw new Error('Failed to fetch active jobs');
             }
-            
-            const data = await response.json();
-            setActiveJobs(data);
-            
-            // Then fetch counts for all categories
-            const allJobsResponse = await fetch('/api/jobs?counts=true');
-            if (allJobsResponse.ok) {
-                const counts = await allJobsResponse.json();
-                
-                setActiveJobCounts({
-                    all: counts.all || 0,
-                    west: counts.west || 0,
-                    turbotville: counts.turbotville || 0,
-                    hatfield: counts.hatfield || 0,
-                    archived: counts.archived || 0
-                });
-            }
+            const result = await response.json();
+            const { data, pagination } = result;
+
+            console.log("Fetched active jobs:", data);
+            console.log("Pagination:", pagination);
+
+            const uiJobs = data.map((job: any) => ({
+                id: job.id,
+                jobNumber: job.job_number,
+                contractNumber: job.contract_number,
+                status: job.project_status,
+                contractor: job.contractor,
+                county: job.county,
+                branch: job.branch,
+                createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+            }));
+
+            setActiveJobs(uiJobs);
+            setActiveJobsPageCount(pagination.pageCount);
+            setActiveJobsTotalCount(pagination.totalCount);
         } catch (error) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
         } finally {
             stopLoading();
         }
-    }, [activeSegment, startLoading, stopLoading]);
+    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading]);
     const fetchNextJobNumber = useCallback(async () => {
         try {
             const response = await fetch('/api/jobs/next-job-number');
@@ -897,7 +918,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
         const handleEditSuccess = () => {
             setEditSheetOpen(false);
-            // TODO: Refresh the bids data
+            loadActiveBids();
         };
 
         return (
@@ -929,6 +950,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
                         }
                     }}
+                    // Pagination props
+                    pageCount={activeBidsPageCount}
+                    pageIndex={activeBidsPageIndex}
+                    pageSize={activeBidsPageSize}
+                    onPageChange={setActiveBidsPageIndex}
+                    onPageSizeChange={setActiveBidsPageSize}
+                    totalCount={activeBidsTotalCount}
                 />
                 <ActiveBidDetailsSheet
                     open={detailsSheetOpen}
@@ -1023,6 +1051,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         handleUpdateStatus(item, statusValue);
                                     }}
                                     stickyLastColumn
+                                    // Pagination props
+                                    pageCount={availableJobsPageCount}
+                                    pageIndex={availableJobsPageIndex}
+                                    pageSize={availableJobsPageSize}
+                                    onPageChange={setAvailableJobsPageIndex}
+                                    onPageSizeChange={setAvailableJobsPageSize}
+                                    totalCount={availableJobsTotalCount}
                                 />
                             ) : isActiveBids ? (
                                 <ActiveBidsTable bids={data as ActiveBid[]} />

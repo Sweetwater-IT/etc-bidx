@@ -6,51 +6,91 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 1000;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
+    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
+    const division = searchParams.get('division');
 
-    let query = supabase
-      .from('bid_estimates')
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
+
+    // Base query for both count and data
+    const baseQuery = supabase.from('bid_estimates');
+    
+    // Count query to get total records
+    let countQuery = baseQuery.select('id', { count: 'exact', head: true });
+    
+    // Data query to get paginated results
+    let dataQuery = baseQuery
       .select('*')
-      .order(orderBy, { ascending });
+      .order(orderBy, { ascending })
+      .range(offset, offset + limit - 1);
 
     console.log('API received status filter:', status);
+    console.log('API received division filter:', division);
 
+    // Apply filters to both queries
     if (status) {
       if (status === 'won-pending') {
         // Use case-insensitive matching for 'won-pending' status
-        query = query.or('status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending');
+        const orCondition = 'status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
+        countQuery = countQuery.or(orCondition);
+        dataQuery = dataQuery.or(orCondition);
       } else if (status === 'won') {
         // Use case-insensitive matching for 'won' status
-        query = query.or('status.ilike.won,status.ilike.Won');
+        const orCondition = 'status.ilike.won,status.ilike.Won';
+        countQuery = countQuery.or(orCondition);
+        dataQuery = dataQuery.or(orCondition);
       } else if (status === 'archived') {
-        query = query
-          .ilike('status', '%archived%')
-          .is('deleted_at', null);
+        countQuery = countQuery.ilike('status', '%archived%').is('deleted_at', null);
+        dataQuery = dataQuery.ilike('status', '%archived%').is('deleted_at', null);
       } else if (status === 'won,won-pending') {
         // Special case for getting both won and won-pending with all case variations
-        query = query.or('status.ilike.won,status.ilike.Won,status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending');
+        const orCondition = 'status.ilike.won,status.ilike.Won,status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
+        countQuery = countQuery.or(orCondition);
+        dataQuery = dataQuery.or(orCondition);
       } else {
         // Try case-insensitive filtering using ilike for text fields
-        // This is more reliable than exact matching with different case variations
         console.log('Using case-insensitive filter for status:', status);
-        query = query.ilike('status', `%${status}%`);
+        countQuery = countQuery.ilike('status', `%${status}%`);
+        dataQuery = dataQuery.ilike('status', `%${status}%`);
       }
     }
 
-    query = query.limit(limit);
+    // Apply division filter if provided
+    if (division && division !== 'all') {
+      countQuery = countQuery.eq('division', division);
+      dataQuery = dataQuery.eq('division', division);
+    }
 
-    const { data, error } = await query;
+    // Execute both queries in parallel
+    const [countResult, dataResult] = await Promise.all([
+      countQuery,
+      dataQuery
+    ]);
 
-    if (error) {
+    if (countResult.error || dataResult.error) {
+      const error = countResult.error || dataResult.error;
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch active bids', error: error.message },
+        { success: false, message: 'Failed to fetch active bids', error: error?.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    const totalCount = countResult.count || 0;
+    const pageCount = Math.ceil(totalCount / limit);
+
+    return NextResponse.json({
+      success: true, 
+      data: dataResult.data || [],
+      pagination: {
+        page,
+        pageSize: limit,
+        pageCount,
+        totalCount
+      }
+    });
 
   } catch (error) {
     console.error('Unexpected error:', error);

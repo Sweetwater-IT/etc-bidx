@@ -30,19 +30,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(countData);
     }
     
-    // Normal job query
-    let query = supabase.from('jobs')
+    // Get pagination parameters
+    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 25;
+    const page = url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : 1;
+    
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
+    
+    // Base query for both count and data
+    const baseQuery = supabase.from('jobs');
+    
+    // Count query to get total records
+    let countQuery = baseQuery.select('id', { count: 'exact', head: true });
+    
+    // Data query to get paginated results
+    let dataQuery = baseQuery
       .select('*, job_numbers!inner(*)')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
     
     // Apply filters based on parameters
     if (status) {
       // Filter by status (e.g., 'Archived')
-      query = query.eq('status', status);
+      countQuery = countQuery.eq('status', status);
+      dataQuery = dataQuery.eq('status', status);
     } else if (branch && branch !== 'all') {
       if (branch === 'archived') {
         // Legacy support for 'archived' in branch parameter
-        query = query.eq('status', 'Archived');
+        countQuery = countQuery.eq('status', 'Archived');
+        dataQuery = dataQuery.eq('status', 'Archived');
       } else {
         // Filter by branch code
         const branchCodeMap: Record<string, string> = {
@@ -52,19 +68,29 @@ export async function GET(request: NextRequest) {
         };
         const branchCode = branchCodeMap[branch];
         if (branchCode) {
-          query = query.eq('branch_code', branchCode);
+          countQuery = countQuery.eq('branch_code', branchCode);
+          dataQuery = dataQuery.eq('branch_code', branchCode);
         }
       }
     }
     
-    const { data: jobs, error } = await query;
+    // Execute both queries in parallel
+    const [countResult, dataResult] = await Promise.all([
+      countQuery,
+      dataQuery
+    ]);
     
-    if (error) {
+    if (countResult.error || dataResult.error) {
+      const error = countResult.error || dataResult.error;
       return NextResponse.json(
         { error: 'Failed to fetch jobs', details: error },
         { status: 500 }
       );
     }
+    
+    const jobs = dataResult.data || [];
+    const totalCount = countResult.count || 0;
+    const pageCount = Math.ceil(totalCount / limit);
     
     // Fetch reference data from the database
     const { data: counties } = await supabase.from('counties').select('id, name');
@@ -150,7 +176,15 @@ export async function GET(request: NextRequest) {
       };
     });
     
-    return NextResponse.json(formattedJobs);
+    return NextResponse.json({
+      data: formattedJobs,
+      pagination: {
+        page,
+        pageSize: limit,
+        pageCount,
+        totalCount
+      }
+    });
   } catch (error) {
     console.error('Error in GET /api/jobs:', error);
     return NextResponse.json(

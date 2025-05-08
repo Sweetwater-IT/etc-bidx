@@ -7,13 +7,39 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Segments } from "@/components/ui/segments";
 import { Button } from "@/components/ui/button";
-import { IconPlus, IconDotsVertical, IconFilter, IconArrowsSort } from "@tabler/icons-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    ChevronsLeft, 
+    ChevronsRight, 
+    MoreHorizontal,
+    Archive,
+    Edit,
+    Eye,
+    Trash,
+    Filter,
+    ArrowUpDown
+} from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
-import { MoreHorizontal } from "lucide-react";
 
 export type LegacyColumn = {
     key: string;
@@ -46,6 +72,14 @@ export interface DataTableProps<TData> {
     onArchive?: (item: TData) => void;
     onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
     onUpdateStatus?: (item: TData, status: 'Bid' | 'No Bid' | 'Unset' | 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => void;
+    
+    // Pagination props
+    pageCount?: number;
+    pageIndex?: number;
+    pageSize?: number;
+    onPageChange?: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
+    totalCount?: number;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -86,7 +120,14 @@ export function DataTable<TData>({
     onViewDetails,
     onEdit,
     onMarkAsBidJob,
-    onUpdateStatus
+    onUpdateStatus,
+    // Pagination props
+    pageCount,
+    pageIndex = 0,
+    pageSize = 10,
+    onPageChange,
+    onPageSizeChange,
+    totalCount
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
         return [
@@ -306,6 +347,24 @@ export function DataTable<TData>({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        manualPagination: true,
+        pageCount: pageCount || Math.ceil(data.length / (pageSize || 25)),
+        state: {
+            pagination: {
+                pageIndex: pageIndex || 0,
+                pageSize: pageSize || 25,
+            },
+        },
+        onPaginationChange: updater => {
+            if (typeof updater === 'function') {
+                const newPagination = updater({
+                    pageIndex: pageIndex || 0,
+                    pageSize: pageSize || 25,
+                });
+                onPageChange?.(newPagination.pageIndex);
+                onPageSizeChange?.(newPagination.pageSize);
+            }
+        },
     });
     
     // Expose the resetRowSelection method via ref
@@ -322,17 +381,17 @@ export function DataTable<TData>({
 
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon">
-                        <IconFilter className="h-4 w-4" />
+                        <Filter className="h-4 w-4" />
                     </Button>
 
                     <Button variant="outline" size="icon">
-                        <IconArrowsSort className="h-4 w-4" />
+                        <ArrowUpDown className="h-4 w-4" />
                     </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon">
-                                <IconDotsVertical className="h-4 w-4" />
+                                <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="z-[200]">
@@ -462,6 +521,78 @@ export function DataTable<TData>({
                     </div>
                 </div>
             </div>
+            
+            {/* Pagination */}
+            {onPageChange && (
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                    <div className="flex-1 text-sm text-muted-foreground">
+                        {totalCount !== undefined && (
+                            <p>Showing {pageIndex * pageSize + 1} to {Math.min((pageIndex + 1) * pageSize, totalCount)} of {totalCount} entries</p>
+                        )}
+                    </div>
+                    <div className="flex items-center space-x-6 lg:space-x-8">
+                        <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+                            <Select
+                                value={pageSize.toString()}
+                                onValueChange={(value) => onPageSizeChange?.(Number(value))}
+                            >
+                                <SelectTrigger className="h-8 w-[70px]">
+                                    <SelectValue placeholder={pageSize.toString()} />
+                                </SelectTrigger>
+                                <SelectContent side="top">
+                                    {[25, 50].map((size) => (
+                                        <SelectItem key={size} value={size.toString()}>
+                                            {size}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                className="hidden h-8 w-8 p-0 lg:flex"
+                                onClick={() => onPageChange(0)}
+                                disabled={pageIndex === 0}
+                            >
+                                <span className="sr-only">Go to first page</span>
+                                <ChevronsLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                                onClick={() => onPageChange(pageIndex - 1)}
+                                disabled={pageIndex === 0}
+                            >
+                                <span className="sr-only">Go to previous page</span>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center justify-center text-sm font-medium">
+                                Page {pageIndex + 1} of {pageCount || 1}
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                                onClick={() => onPageChange(pageIndex + 1)}
+                                disabled={pageIndex === (pageCount || 1) - 1}
+                            >
+                                <span className="sr-only">Go to next page</span>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="hidden h-8 w-8 p-0 lg:flex"
+                                onClick={() => onPageChange((pageCount || 1) - 1)}
+                                disabled={pageIndex === (pageCount || 1) - 1}
+                            >
+                                <span className="sr-only">Go to last page</span>
+                                <ChevronsRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
