@@ -1,11 +1,10 @@
 import { FormData } from "@/types/IFormData";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createActiveBid } from "@/lib/api-client";
 import { Database } from "@/types/database.types";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 const step = {
     id: "step-5",
@@ -22,6 +21,8 @@ const BidSummaryStep5 = ({
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>
 }) => {
     const router = useRouter();
+
+    const {adminData, mptRental } = useEstimate();
 
     const [toggleStates, setToggleStates] = useState({
         laborRate: false,
@@ -65,6 +66,7 @@ const BidSummaryStep5 = ({
         //     setIsSubmitting(false);
         //     return;
         //   }
+          await createActiveBid(adminData, mptRental)
           
           // Redirect to active bids page
           router.push("/jobs/active-bids");
@@ -101,8 +103,8 @@ const BidSummaryStep5 = ({
                 {currentStep === 6 && (
                     <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
                         <div className="space-y-8">
-                            <div className="max-w-xl grid grid-cols-2 gap-6">
-                                {/* {step.fields.map((field) => (
+                            {/* <div className="max-w-xl grid grid-cols-2 gap-6">
+                                {step.fields.map((field) => (
                                     <div key={field.name} className="space-y-2.5">
                                         <Label htmlFor={field.name} className="text-sm font-medium text-muted-foreground">
                                             {field.label}
@@ -154,8 +156,8 @@ const BidSummaryStep5 = ({
                                             </div>
                                         )}
                                     </div>
-                                ))} */}
-                            </div>
+                                ))}
+                            </div> */}
                             <div className="space-y-4">
                                 {error && (
                                     <div className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded-md">

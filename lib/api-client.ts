@@ -1,5 +1,7 @@
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
+import { MPTRentalEstimating } from '@/types/MPTEquipment';
+import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
@@ -198,13 +200,18 @@ export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
 /**
  * Create a new active bid
  */
-export async function createActiveBid(bid: BidEstimateInsert): Promise<BidEstimate> {
+export async function createActiveBid(adminData: AdminData, mptRental: MPTRentalEstimating): Promise<BidEstimate> {
   const response = await fetch('/api/active-bids', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(bid),
+    body: JSON.stringify({
+      data: {
+        adminData,
+        mptRental
+      }
+    }),
   });
 
   if (!response.ok) {
@@ -388,7 +395,7 @@ export async function fetchCustomers() {
       state: customer.state,
       zip: customer.zip,
       customerNumber: customer.customer_number,
-      mainPhone : customer.main_phone,
+      mainPhone: customer.main_phone,
       paymentTerms: customer.payment_terms
     }
     ))
