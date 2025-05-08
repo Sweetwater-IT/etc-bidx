@@ -688,8 +688,8 @@ const BidItemsStep5 = ({
                           <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
                           <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
                           {adminData?.emergencyJob && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <Label htmlFor={`emergency-${equipmentKey}`} className="w-20">Emergency:</Label>
+                            <div className="flex flex-col w-1/3 gap-2 mt-2">
+                              <Label htmlFor={`emergency-${equipmentKey}`} className="text-muted-foreground">Emergency Rate:</Label>
                               <Input
                                 id={`emergency-${equipmentKey}`}
                                 type="number"
@@ -707,7 +707,6 @@ const BidItemsStep5 = ({
                                   }
                                 })}
                                 className="w-full"
-                                placeholder="Emergency Rate"
                               />
                             </div>
                           )}
