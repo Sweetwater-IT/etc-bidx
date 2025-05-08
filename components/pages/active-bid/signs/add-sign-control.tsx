@@ -23,14 +23,10 @@ import { processSignData } from "./process-sign-data";
 import { generateUniqueId } from "./generate-stable-id";
 
 interface AddSignControlProps {
-  isAddingSign: boolean;
-  setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
   currentPhase: number;
 }
 
-const AddSignControl = ({ 
-  isAddingSign, 
-  setIsAddingSign, 
+const AddSignControl = ({
   currentPhase 
 }: AddSignControlProps) => {
   const { dispatch } = useEstimate();
@@ -135,13 +131,7 @@ const AddSignControl = ({
     });
 
     setOpen(false);
-    setIsAddingSign(false);
   };
-
-  // If not in adding mode, just return null or a button
-  if (!isAddingSign) {
-    return null;
-  }
 
   return (
     <div className="w-full max-w-md">

@@ -86,7 +86,7 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm text-muted-foreground">Gross Margin:</span>
-                  <span className="font-medium">{bidSummary.grossMargin || 0}%</span>
+                  <span className="font-medium">{(bidSummary.grossMargin || 0).toFixed(2)}%</span>
                 </div>
               </div>
 

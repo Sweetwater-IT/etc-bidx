@@ -615,20 +615,19 @@ const BidItemsStep5 = ({
                     <h3 className="text-base font-semibold mb-4">
                       MPT Equipment - Phase {currentPhase + 1}
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex flex-col w-1/3 gap-0">
                       {standardEquipmentList.map((equipmentKey) => (
                         equipmentKey === 'sandbag' ? (
-                          <div key={equipmentKey} className="border p-4 rounded-md">
+                          <div key={equipmentKey} className="p-2 rounded-md">
                             <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                            <div className="text-sm text-muted-foreground mb-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
-                            <div className="font-semibold">Quantity: {sandbagQuantity}</div>
+                            <div className="text-muted-foreground">Quantity: {sandbagQuantity}</div>
+                            <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
                           </div>
                         ) : (
-                          <div key={equipmentKey} className="border p-4 rounded-md">
+                          <div key={equipmentKey} className="p-4 rounded-md">
                             <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                            <div className="text-sm text-muted-foreground mb-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
-                            <div className="flex items-center gap-2">
-                              <Label htmlFor={`quantity-${equipmentKey}`} className="w-20">Quantity:</Label>
+                            <div className="flex flex-col gap-2">
+                              <Label htmlFor={`quantity-${equipmentKey}`} className="flex text-muted-foreground">Quantity:</Label>
                               <Input
                                 id={`quantity-${equipmentKey}`}
                                 type="number"
@@ -642,6 +641,7 @@ const BidItemsStep5 = ({
                                 className="w-full"
                               />
                             </div>
+                            <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
                           </div>
                         )
                       ))}
@@ -666,14 +666,12 @@ const BidItemsStep5 = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex flex-col">
                       {lightAndDrumList.map((equipmentKey) => (
-                        <div key={equipmentKey} className="border p-4 rounded-md">
+                        <div key={equipmentKey} className="p-2 rounded-md">
                           <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                          <div className="text-sm text-muted-foreground mb-1">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
-                          <div className="text-sm text-muted-foreground mb-2">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Label htmlFor={`quantity-light-${equipmentKey}`} className="w-20">Quantity:</Label>
+                          <div className="flex flex-col w-1/3 gap-2 mb-2">
+                            <Label htmlFor={`quantity-light-${equipmentKey}`} className="text-muted-foreground">Quantity:</Label>
                             <Input
                               id={`quantity-light-${equipmentKey}`}
                               type="number"
@@ -687,6 +685,8 @@ const BidItemsStep5 = ({
                               className="w-full"
                             />
                           </div>
+                          <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                          <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
                           {adminData?.emergencyJob && (
                             <div className="flex items-center gap-2 mt-2">
                               <Label htmlFor={`emergency-${equipmentKey}`} className="w-20">Emergency:</Label>

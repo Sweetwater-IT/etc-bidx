@@ -8,20 +8,7 @@ import { Card } from "@/components/ui/card";
 import React, { useState, useEffect, SetStateAction, Dispatch } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { Button } from "@/components/ui/button";
-
-function formatDate(date: Date | string | null | undefined): string {
-    if (!date) return '';
-
-    if (date instanceof Date) {
-        return date.toLocaleDateString();
-    }
-
-    try {
-        return new Date(date).toLocaleDateString();
-    } catch (e) {
-        return date.toString();
-    }
-}
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface AdminInformationAccordionProps {
     currentStep: number;
@@ -35,7 +22,7 @@ const PhaseSummaryAccordion = ({ currentStep, setCurrentPhase, setCurrentStep, c
     const { mptRental } = useEstimate();
 
     useEffect(() => {
-        if (currentStep === 2 || currentStep === 3 || currentStep === 4) {
+        if (currentStep === 2 || currentStep === 3 || currentStep === 4 || mptRental.phases.length > 1) {
             setValue(["item-1"]);
         } else {
             setValue([]);
@@ -52,12 +39,17 @@ const PhaseSummaryAccordion = ({ currentStep, setCurrentPhase, setCurrentStep, c
                     <AccordionContent>
                         <div className="grid grid-cols-2 md:grid-cols-1 gap-y-2 text-sm mt-4">
                             {mptRental.phases.map((phase, index) => (
-                                <Button className={`${currentPhase === index ? 'bg-black text-white' : 'bg-accent text-black hover:text-white'}`} key={index} onClick={() => {
-                                    setCurrentPhase(index)
-                                    setCurrentStep(2)
-                                }}>
-                                    Phase {index + 1}: {phase.name} {formatDate(phase.startDate)} - {formatDate(phase.endDate)}
-                                </Button>
+                                <div className={`${currentPhase === index ? 'bg-muted' : ''} p-2 rounded-sm cursor-pointer hover:bg-muted`} key={index}>
+                                    <div className={`font-medium`} onClick={() => {
+                                        setCurrentPhase(index)
+                                        setCurrentStep(2)
+                                    }}>
+                                        Phase {index + 1}: {phase.name ?? ''}
+                                    </div>
+                                    <div className='ml-4 text-muted-foreground text-xs space-x-2'>
+                                        {formatDate(phase.startDate)} - {formatDate(phase.endDate)}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </AccordionContent>

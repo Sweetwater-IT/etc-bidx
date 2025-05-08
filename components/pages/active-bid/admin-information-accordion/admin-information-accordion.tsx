@@ -7,20 +7,7 @@ import {
 import { Card } from "@/components/ui/card";
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
-
-function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return '';
-  
-  if (date instanceof Date) {
-    return date.toLocaleDateString();
-  }
-  
-  try {
-    return new Date(date).toLocaleDateString();
-  } catch (e) {
-    return date.toString();
-  }
-}
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface AdminInformationAccordionProps {
   currentStep: number;
@@ -78,7 +65,7 @@ const AdminInformationAccordion = ({ currentStep }: AdminInformationAccordionPro
               <div className="text-right">{formatDate(adminData.endDate) || "-"}</div>
               <div className="text-muted-foreground">Total Days</div>
               <div className="text-right">{getTotalDays()}</div>
-              <div className="text-muted-foreground">Bid Date</div>
+              <div className="text-muted-foreground">Letting Date</div>
               <div className="text-right">{formatDate(adminData.lettingDate) || "-"}</div>
               <div className="text-muted-foreground">SR Route</div>
               <div className="text-right">{adminData.srRoute || "-"}</div>

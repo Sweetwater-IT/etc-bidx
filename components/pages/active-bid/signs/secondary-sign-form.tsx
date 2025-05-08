@@ -36,7 +36,6 @@ interface SecondarySignFormProps {
   primarySign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SecondarySignForm = ({ 
@@ -44,7 +43,6 @@ const SecondarySignForm = ({
   primarySign,
   currentPhase, 
   setIsConfiguring,
-  setIsAddingSign
 }: SecondarySignFormProps) => {
   const { dispatch } = useEstimate();
   const [localSign, setLocalSign] = useState<SecondarySign>({...sign});
@@ -190,12 +188,10 @@ const SecondarySignForm = ({
     });
     
     setIsConfiguring(false);
-    setIsAddingSign(true);
   };
 
   const handleCancel = () => {
     setIsConfiguring(false);
-    setIsAddingSign(true);
   };
 
   // Get available dimensions for the selected designation

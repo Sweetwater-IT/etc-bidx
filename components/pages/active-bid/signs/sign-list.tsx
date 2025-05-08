@@ -8,11 +8,9 @@ import { Plus } from "lucide-react";
 
 interface SignListProps {
   currentPhase: number;
-  isAddingSign: boolean;
-  setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const SignList = ({ currentPhase, isAddingSign, setIsAddingSign }: SignListProps) => {
+const SignList = ({ currentPhase }: SignListProps) => {
   const { mptRental } = useEstimate();
   const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>([]);
 
@@ -58,20 +56,8 @@ const SignList = ({ currentPhase, isAddingSign, setIsAddingSign }: SignListProps
           primarySign={sign}
           secondarySigns={getSecondarySignsForPrimary(sign.id)}
           currentPhase={currentPhase}
-          setIsAddingSign={setIsAddingSign}
         />
       ))}
-
-      {!isAddingSign && signs.length > 0 && (
-        <Button
-          variant="outline"
-          onClick={() => setIsAddingSign(true)}
-          className="w-full"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Another Sign
-        </Button>
-      )}
     </div>
   );
 };

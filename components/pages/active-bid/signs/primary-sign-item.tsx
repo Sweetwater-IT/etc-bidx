@@ -12,21 +12,18 @@ interface PrimarySignItemProps {
     primarySign: PrimarySign;
     secondarySigns: SecondarySign[];
     currentPhase: number;
-    setIsAddingSign: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const PrimarySignItem = ({
     primarySign,
     secondarySigns,
     currentPhase,
-    setIsAddingSign
 }: PrimarySignItemProps) => {
     const { dispatch, mptRental } = useEstimate();
     const [isConfiguring, setIsConfiguring] = useState(false);
 
     const handleEditSign = () => {
         setIsConfiguring(true);
-        setIsAddingSign(false);
     };
 
     const handleAddSecondarySign = (primarySignId: string) => {
@@ -51,9 +48,6 @@ const PrimarySignItem = ({
                 sign: newSecondarySign,
             },
         });
-
-        // Set isAddingSign to false to prevent adding another sign
-        setIsAddingSign(false);
     };
 
     const handleSignDelete = (id: string) => {
@@ -75,10 +69,6 @@ const PrimarySignItem = ({
 
         // Update equipment based on removed sign
         updateEquipmentQuantities(primarySign, "delete");
-
-        if (secondarySigns.length === 0) {
-            setIsAddingSign(true);
-        }
     };
 
     // Helper to update equipment quantities when deleting signs
@@ -130,7 +120,6 @@ const PrimarySignItem = ({
                     sign={primarySign}
                     currentPhase={currentPhase}
                     setIsConfiguring={setIsConfiguring}
-                    setIsAddingSign={setIsAddingSign}
                 />
             ) : (
                 <div className="flex justify-between items-center">
@@ -177,7 +166,6 @@ const PrimarySignItem = ({
                     secondarySign={secondarySign}
                     primarySign={primarySign}
                     currentPhase={currentPhase}
-                    setIsAddingSign={setIsAddingSign}
                 />
             ))}
         </div>
