@@ -1079,6 +1079,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     segmentValue={activeSegment}
                     segmentCounts={activeBidCounts}
                     onSegmentChange={handleSegmentChange}
+                    selectedItem={detailsSheetOpen && selectedBid ? selectedBid : undefined}
                     stickyLastColumn
                     onArchiveSelected={initiateArchiveBids}
                     onDeleteSelected={initiateDeleteBids}
@@ -1182,6 +1183,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
                                     onMarkAsBidJob={handleMarkAsBidJob}
+                                    selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
                                     onUpdateStatus={(item, status: string) => {
                                         // Map segment values to proper status values if needed
                                         let statusValue: 'Bid' | 'No Bid' | 'Unset';
@@ -1224,6 +1226,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveActiveJobs}
                                     onDeleteSelected={initiateDeleteActiveJobs}
                                     tableRef={activeJobsTableRef}
+                                    selectedItem={activeJobDetailsSheetOpen && selectedActiveJob ? selectedActiveJob : undefined}
                                     onViewDetails={(item) => {
                                         if ('jobNumber' in item) {
                                             handleActiveJobViewDetails(item as ActiveJob);

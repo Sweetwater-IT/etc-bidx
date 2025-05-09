@@ -71,6 +71,7 @@ export interface DataTableProps<TData> {
     onArchive?: (item: TData) => void;
     onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
     onUpdateStatus?: (item: TData, status: string) => void;
+    selectedItem?: TData;
     
     // Pagination props
     pageCount?: number;
@@ -104,6 +105,24 @@ function formatCellValue(value: any, key: string) {
     return value;
 }
 
+function isRowSelected<T extends Record<string, any>>(row: T, selectedItem: T): boolean {
+    if (!row || !selectedItem) return false;
+    
+    if ('contractNumber' in row && 'contractNumber' in selectedItem) {
+        return row.contractNumber === selectedItem.contractNumber;
+    }
+    
+    if ('jobNumber' in row && 'jobNumber' in selectedItem) {
+        return row.jobNumber === selectedItem.jobNumber;
+    }
+    
+    if ('id' in row && 'id' in selectedItem) {
+        return row.id === selectedItem.id;
+    }
+    
+    return false;
+}
+
 export function DataTable<TData>({
     columns: legacyColumns,
     data,
@@ -117,14 +136,16 @@ export function DataTable<TData>({
     onArchiveSelected,
     onDeleteSelected,
     tableRef,
+    onRowClick,
     onViewDetails,
     onEdit,
+    onArchive,
     onMarkAsBidJob,
     onUpdateStatus,
-    // Pagination props
+    selectedItem,
     pageCount,
     pageIndex = 0,
-    pageSize = 10,
+    pageSize = 25,
     onPageChange,
     onPageSizeChange,
     totalCount
@@ -468,7 +489,8 @@ export function DataTable<TData>({
                                             data-state={row.getIsSelected() && "selected"}
                                             className={cn(
                                                 "cursor-pointer hover:bg-muted/50",
-                                                row.getIsSelected() && "bg-muted"
+                                                row.getIsSelected() && "bg-muted",
+                                                selectedItem && isRowSelected(row.original as Record<string, any>, selectedItem as Record<string, any>) && "bg-blue-100 border-l-4 border-blue-500"
                                             )}
                                             onClick={(e) => {
                                                 //don't open sidebar for checkbox for each row
