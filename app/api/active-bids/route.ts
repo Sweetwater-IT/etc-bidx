@@ -184,12 +184,12 @@ export async function POST(request: NextRequest) {
     const projectDays = mptRental.phases.reduce((acc, phase) => acc + phase.days, 0);
 
     const bidEstimate = {
-      status: body.status || 'ACTIVE',
+      status: 'pending',
       
       contract_number: adminData.contractNumber,
       letting_date: adminData.lettingDate ? new Date(adminData.lettingDate).toISOString() : null,
-      contractor: body.contractor || null,
-      subcontractor: body.subcontractor || null,
+      contractor: null,
+      subcontractor: null,
       owner: adminData.owner || '',
       county: adminData.county.name,
       branch: adminData.county.branch,
@@ -287,6 +287,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      console.error(error)
       return NextResponse.json(
         { success: false, message: 'Failed to create active bid', error: error.message },
         { status: 500 }

@@ -857,7 +857,6 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const totalLaborCost = totalHoursCost + ((totalHoursCost / 1000) * (generalLiability === 0 ? 113.55 : generalLiability)) + ((totalHoursCost / 100) * (workerComp === 0 ? 4.96 : workerComp));
 
   // Fix fuel cost calculation
-  console.log('fuel economy per galloon is ' + fuelEconomyMPG)
   const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 50 : truckDispatchFee) : 0
 
   const totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
