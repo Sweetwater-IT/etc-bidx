@@ -14,11 +14,29 @@ interface ActiveJobDetailsSheetProps {
   onOpenChange: (open: boolean) => void;
   job?: ActiveJob;
   onEdit?: (job: ActiveJob) => void;
+  onNavigate?: (direction: 'up' | 'down') => void;
 }
 
-export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit }: ActiveJobDetailsSheetProps) {
+export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: ActiveJobDetailsSheetProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' && onNavigate) {
+        e.preventDefault();
+        onNavigate('down');
+      } else if (e.key === 'ArrowUp' && onNavigate) {
+        e.preventDefault();
+        onNavigate('up');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onNavigate]);
 
   // Update dates when job changes
   useEffect(() => {
@@ -46,7 +64,7 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit }: Activ
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Job Details</SheetTitle>
+          <SheetTitle>Job Details {job?.jobNumber ? `- ${job.jobNumber}` : ''}</SheetTitle>
         </SheetHeader>
         
         {job && (

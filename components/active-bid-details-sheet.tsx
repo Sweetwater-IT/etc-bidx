@@ -15,12 +15,30 @@ interface ActiveBidDetailsSheetProps {
   onOpenChange: (open: boolean) => void;
   bid?: ActiveBid;
   onEdit?: (item: JobPageData) => void;
+  onNavigate?: (direction: 'up' | 'down') => void;
 }
 
-export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit }: ActiveBidDetailsSheetProps) {
+export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavigate }: ActiveBidDetailsSheetProps) {
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' && onNavigate) {
+        e.preventDefault();
+        onNavigate('down');
+      } else if (e.key === 'ArrowUp' && onNavigate) {
+        e.preventDefault();
+        onNavigate('up');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onNavigate]);
 
   useEffect(() => {
     if (bid) {
@@ -70,7 +88,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit }: Activ
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Bid Details</SheetTitle>
+          <SheetTitle>Bid Details {bid?.contractNumber ? `- ${bid.contractNumber}` : ''}</SheetTitle>
         </SheetHeader>
         
         <div className="flex flex-col h-full">
