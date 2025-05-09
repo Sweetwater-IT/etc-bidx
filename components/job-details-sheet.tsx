@@ -44,9 +44,28 @@ interface JobDetailsSheetProps {
   }) => void
 }
 
-export function JobDetailsSheet({ open, onOpenChange, job, onEdit }: JobDetailsSheetProps) {
+export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: JobDetailsSheetProps & {
+  onNavigate?: (direction: 'up' | 'down') => void
+}) {
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
+  
+  useEffect(() => {
+    if (!open) return
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' && onNavigate) {
+        e.preventDefault()
+        onNavigate('down')
+      } else if (e.key === 'ArrowUp' && onNavigate) {
+        e.preventDefault()
+        onNavigate('up')
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, onNavigate])
 
   // Update dates when job changes
   useEffect(() => {
@@ -70,7 +89,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit }: JobDetailsS
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Job Details</SheetTitle>
+          <SheetTitle>Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
         </SheetHeader>
         
         <div className="flex-1 overflow-y-auto">

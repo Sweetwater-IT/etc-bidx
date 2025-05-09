@@ -932,6 +932,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(item)
         setJobDetailsSheetOpen(true)
     }
+    
+    const handleJobNavigation = (direction: 'up' | 'down') => {
+        if (!selectedJob || !availableJobs.length) return
+        
+        const currentIndex = availableJobs.findIndex(job => 
+            job.contractNumber === selectedJob.contractNumber
+        )
+        
+        if (currentIndex === -1) return
+        
+        let nextIndex
+        if (direction === 'down') {
+            nextIndex = (currentIndex + 1) % availableJobs.length
+        } else {
+            nextIndex = (currentIndex - 1 + availableJobs.length) % availableJobs.length
+        }
+        
+        setSelectedJob(availableJobs[nextIndex])
+    }
 
     const segments = isAvailableJobs
         ? [
@@ -975,6 +994,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedActiveJob(item)
         setActiveJobDetailsSheetOpen(true)
     }
+    
+    const handleActiveJobNavigation = (direction: 'up' | 'down') => {
+        if (!selectedActiveJob || !activeJobs.length) return;
+        
+        const currentIndex = activeJobs.findIndex(job => 
+            job.jobNumber === selectedActiveJob.jobNumber
+        );
+        
+        if (currentIndex === -1) return;
+        
+        let nextIndex;
+        if (direction === 'down') {
+            nextIndex = (currentIndex + 1) % activeJobs.length;
+        } else {
+            nextIndex = (currentIndex - 1 + activeJobs.length) % activeJobs.length;
+        }
+        
+        setSelectedActiveJob(activeJobs[nextIndex]);
+    }
 
     const handleActiveJobEdit = (item: ActiveJob) => {
         console.log('Edit clicked:', item)
@@ -997,6 +1035,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 setSelectedBid(item as ActiveBid);
                 setDetailsSheetOpen(true);
             }
+        };
+        
+        const handleBidNavigation = (direction: 'up' | 'down') => {
+            if (!selectedBid || !bids.length) return;
+            
+            const currentIndex = bids.findIndex(bid => 
+                bid.contractNumber === selectedBid.contractNumber
+            );
+            
+            if (currentIndex === -1) return;
+            
+            let nextIndex;
+            if (direction === 'down') {
+                nextIndex = (currentIndex + 1) % bids.length;
+            } else {
+                nextIndex = (currentIndex - 1 + bids.length) % bids.length;
+            }
+            
+            setSelectedBid(bids[nextIndex]);
         };
 
         const handleEdit = (item: JobPageData) => {
@@ -1022,6 +1079,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     segmentValue={activeSegment}
                     segmentCounts={activeBidCounts}
                     onSegmentChange={handleSegmentChange}
+                    selectedItem={detailsSheetOpen && selectedBid ? selectedBid : undefined}
                     stickyLastColumn
                     onArchiveSelected={initiateArchiveBids}
                     onDeleteSelected={initiateDeleteBids}
@@ -1055,6 +1113,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     onOpenChange={setDetailsSheetOpen}
                     bid={selectedBid}
                     onEdit={handleEdit}
+                    onNavigate={handleBidNavigation}
                 />
                 <EditActiveBidSheet
                     open={editSheetOpen}
@@ -1124,6 +1183,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
                                     onMarkAsBidJob={handleMarkAsBidJob}
+                                    selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
                                     onUpdateStatus={(item, status: string) => {
                                         // Map segment values to proper status values if needed
                                         let statusValue: 'Bid' | 'No Bid' | 'Unset';
@@ -1166,6 +1226,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveActiveJobs}
                                     onDeleteSelected={initiateDeleteActiveJobs}
                                     tableRef={activeJobsTableRef}
+                                    selectedItem={activeJobDetailsSheetOpen && selectedActiveJob ? selectedActiveJob : undefined}
                                     onViewDetails={(item) => {
                                         if ('jobNumber' in item) {
                                             handleActiveJobViewDetails(item as ActiveJob);
@@ -1199,6 +1260,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         onOpenChange={setJobDetailsSheetOpen}
                                         job={selectedJob || undefined}
                                         onEdit={handleEdit}
+                                        onNavigate={handleJobNavigation}
                                     />
                                     <OpenBidSheet
                                         open={editJobSheetOpen}
@@ -1216,6 +1278,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         onOpenChange={setActiveJobDetailsSheetOpen}
                                         job={selectedActiveJob || undefined}
                                         onEdit={handleActiveJobEdit}
+                                        onNavigate={handleActiveJobNavigation}
                                     />
                                     <EditActiveJobSheet
                                         open={editActiveJobSheetOpen}
