@@ -524,8 +524,6 @@ const BidItemsStep5 = ({
         return associatedEquipment.post;
       case 'BLights':
         return associatedEquipment.bLights;
-      case 'ACLights':
-        return associatedEquipment.acLights;
       default:
         return 0;
     }

@@ -40,14 +40,10 @@ const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLabo
     if (!mptRental || !mptRental.phases || !mptRental.phases[currentPhase]) {
       return 0;
     }
-    return mptRental.phases[currentPhase][key] || 0;
-  };
-
-  const formatForDisplay = (value: number | undefined): string => {
-    if (value === undefined || value === 0 || Number.isNaN(value)) {
-      return '';
+    if (key === 'trips') {
+      return getTotalTripsPerPhase(mptRental.phases[currentPhase])
     }
-    return value.toFixed(1);
+    return mptRental.phases[currentPhase][key] || 0;
   };
 
   const formatCurrency = (value: number | undefined): string => {
