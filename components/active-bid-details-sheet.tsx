@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { EyeIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Bid Details {bid?.contractNumber ? `- ${bid.contractNumber}` : ''}</SheetTitle>
+          <div className="flex items-center gap-2">
+            <SheetTitle>Bid Details {bid?.contractNumber ? `- ${bid.contractNumber}` : ''}</SheetTitle>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+          </div>
         </SheetHeader>
         
         <div className="flex flex-col h-full">
@@ -100,8 +104,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                   <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={lettingDate ? format(lettingDate, 'MM/dd/yyyy') : ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
+                    tabIndex={-1}
                   />
                 </div>
               </div>
@@ -112,8 +118,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                   <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={bid?.contractNumber || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
                   />
                 </div>
               </div>
@@ -125,8 +132,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.contractor || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
                     />
                   </div>
                 </div>
@@ -137,8 +145,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.subcontractor || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
                     />
                   </div>
                 </div>
@@ -150,8 +159,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={bid?.owner || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
                   />
                 </div>
               </div>
@@ -201,8 +211,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.status || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -214,8 +226,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                   <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={bid?.division || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
                   />
                 </div>
               </div>
@@ -227,8 +240,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={startDate ? format(startDate, 'MM/dd/yyyy') : ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -239,8 +254,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={endDate ? format(endDate, 'MM/dd/yyyy') : ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -253,8 +270,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.projectDays || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -265,8 +284,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.totalHours || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -279,8 +300,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.mptValue || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -291,8 +314,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       value={bid?.permSignValue || ''} 
-                      className="pl-9" 
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                       readOnly
+                      disabled
+                      tabIndex={-1}
                     />
                   </div>
                 </div>
@@ -304,8 +329,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                   <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={bid?.rentalValue || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
+                    tabIndex={-1}
                   />
                 </div>
               </div>
