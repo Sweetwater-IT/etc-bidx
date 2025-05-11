@@ -61,7 +61,7 @@ export const StandardConditions = () => (
         <View style={styles.bulletPoint}>
             <Text style={styles.bullet}>• </Text>
             <Text style={styles.bulletText}>
-                <Text style={[styles.boldText, styles.underlineText]}>NOTIFICATION OF WORK.</Text> <Text style={styles.boldText}>ESTABLISHED TRAFFIC CONTROL, INC.,</Text> must be notified within <Text style={styles.underlineText}>30 days of bid date</Text> if Contractor is utilizing our proposal. <Text style={styles.boldText}>ESTABLISHED TRAFFIC CONTROL, INC.,</Text> will require a minimum of <Text style={styles.underlineText}>2 weeks' notice (4-5 weeks for permanent signs)</Text> for all projects to start and/or change.
+                <Text style={[styles.boldText, styles.underlineText]}>NOTIFICATION OF WORK.</Text> <Text style={styles.boldText}>ESTABLISHED TRAFFIC CONTROL, INC.,</Text> must be notified within <Text style={styles.underlineText}>30 days of bid date</Text> if Contractor is utilizing our proposal. <Text style={styles.boldText}>ESTABLISHED TRAFFIC CONTROL, INC.,</Text> will require a minimum of <Text style={styles.underlineText}>{`2 weeks' notice (4-5 weeks for permanent signs)`}</Text> for all projects to start and/or change.
             </Text>
         </View>
 

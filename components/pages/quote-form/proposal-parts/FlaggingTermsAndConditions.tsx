@@ -162,9 +162,9 @@ export const StandardFlaggingTermsConditions = () => (
         <View style={styles.bulletPoint}>
             <Text style={styles.bullet}>• </Text>
             <Text style={styles.bulletText}>
-                <Text style={styles.boldText}>MINIMUM CHARGES.</Text> In addition to any applicable equipment charges, it is Established Traffic Control's
+                <Text style={styles.boldText}>MINIMUM CHARGES.</Text>{` In addition to any applicable equipment charges, it is Established Traffic Control's
                 policy to bill a minimum of 4 hours per crew member per day of scheduled work within our local and core
-                service area
+                service area`}
             </Text>
         </View>
 
