@@ -363,49 +363,6 @@ export async function fetchReferenceData(type: 'counties' | 'users' | 'owners' |
   }
 }
 
-/***
- * Fetch customer (contractor) data
- */
-export async function fetchCustomers() {
-
-  try {
-    const response = await fetch('/api/contractors?ascending=true')
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Failed to fetch customers`);
-    }
-
-    const result = await response.json();
-
-    const data: Customer[] = (result.data as any[]).map(customer => ({
-      id: customer.id,
-      name: customer.name,
-      displayName: customer.display_name,
-      emails: customer.customer_contacts.map(customerContact => customerContact.email),
-      phones: customer.customer_contacts.map(customerContact => customerContact.phone),
-      names: customer.customer_contacts.map(customerContact => customerContact.name),
-      roles: customer.customer_contacts.map(customerContact => customerContact.role),
-      contactIds: customer.customer_contacts.map(customerContact => customerContact.id),
-      address: customer.address,
-      url: customer.web,
-      created: customer.created,
-      updated: customer.updated,
-      city: customer.city,
-      state: customer.state,
-      zip: customer.zip,
-      customerNumber: customer.customer_number,
-      mainPhone: customer.main_phone,
-      paymentTerms: customer.payment_terms
-    }
-    ))
-    return data
-  } catch (error) {
-    console.error(`Error fetching customers:`, error);
-    throw error;
-  }
-}
-
 /**
  * Fetch sign designations with their corresponding dimension options
  * @param search Optional search term to filter designations

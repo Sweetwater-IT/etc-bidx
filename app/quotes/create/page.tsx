@@ -18,10 +18,11 @@ import { DataTable } from "@/components/data-table";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sendQuoteEmail } from "@/lib/api-client";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useCustomers } from "@/hooks/use-customers";
 
 interface FormSelectProps {
   label: string;
@@ -106,14 +107,8 @@ const PAYMENT_TERMS = [
   { value: "net60", label: "Net 60" },
 ];
 
-const CUSTOMERS = [
-  { value: "customer1", label: "Customer 1" },
-  { value: "customer2", label: "Customer 2" },
-];
-
 const CONTACTS = [
   { value: "kennethmack6@gmail.com", label: "Contact 1" },
-  { value: "contact2", label: "Contact 2" },
 ];
 
 export default function CreateQuotePage() {
@@ -124,6 +119,12 @@ export default function CreateQuotePage() {
   const [selectedEmail, setSelectedEmail] = useState("kennethmack6@gmail.com");
 
   const quoteId = `Q-${Math.floor(100 + Math.random() * 900)}`;
+
+  const { customers, getCustomers, isLoading } = useCustomers();
+
+  useEffect(() => {
+    getCustomers();
+  }, [])
   
   const handleSendQuote = async () => {
     // Use environment variable if it exists, otherwise use hardcoded email
@@ -223,7 +224,7 @@ export default function CreateQuotePage() {
                     <FormSelect
                       label="Customers"
                       placeholder="Select customers"
-                      options={CUSTOMERS}
+                      options={customers.map(c => ({label: c.name, value : c.name}))}
                     />
                   </div>
                   <div className="flex items-center h-full pt-5">
