@@ -46,7 +46,7 @@ export function QuoteItems() {
     if (!item.associatedItems || item.associatedItems.length === 0) {
       return item.unitPrice;
     }
-    
+
     return item.associatedItems.reduce((acc, associatedItem) =>
       acc + (associatedItem.quantity * associatedItem.unitPrice), 0);
   };
@@ -157,9 +157,9 @@ export function QuoteItems() {
       prevItems.map(item =>
         item.id === parentItemId
           ? {
-              ...item,
-              associatedItems: item.associatedItems?.filter(ai => ai.id !== subItemId) || []
-            }
+            ...item,
+            associatedItems: item.associatedItems?.filter(ai => ai.id !== subItemId) || []
+          }
           : item
       )
     );
@@ -186,40 +186,40 @@ export function QuoteItems() {
       {/* Items List */}
       <div className="space-y-4">
         {/* Header */}
-        <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
-          <div className="col-span-2">Item # / SKU</div>
-          <div className="col-span-2">Description</div>
-          <div className="col-span-1">UOM</div>
-          <div className="col-span-1">Qty</div>
-          <div className="col-span-2">Unit Price</div>
-          <div className="col-span-2">Discount</div>
-          <div className="col-span-2">Extended Price</div>
+        <div className="flex gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
+          <div style={{ flexBasis: "16.67%" }}>Item # / SKU</div>
+          <div style={{ flexBasis: "16.67%" }}>Description</div>
+          <div style={{ flexBasis: "12.5%" }}>UOM</div>
+          <div style={{ flexBasis: "8.33%" }}>Qty</div>
+          <div style={{ flexBasis: "12.5%" }}>Unit Price</div>
+          <div style={{ flexBasis: "16.67%" }}>Discount</div>
+          <div className="flex-1 text-right">Extended Price</div>
         </div>
 
         {/* Items */}
         {quoteItems.map((item) => {
           const hasAssociatedItems = item.associatedItems && item.associatedItems.length > 0;
           const displayUnitPrice = hasAssociatedItems ? calculateCompositeUnitPrice(item) : item.unitPrice;
-          
+
           return (
             <div key={item.id} className="space-y-4">
               {/* Main Item Row */}
-              <div className="grid grid-cols-12 gap-4 items-center border rounded-lg p-4">
-                <div className="col-span-2">
+              <div className="flex gap-4 items-center rounded-lg">
+                <div style={{ flexBasis: "16.67%" }}>
                   <Input
                     placeholder="Item Number"
                     value={item.itemNumber}
                     onChange={(e) => handleItemUpdate(item.id, 'itemNumber', e.target.value)}
                   />
                 </div>
-                <div className="col-span-2">
+                <div style={{ flexBasis: "16.67%" }}>
                   <Input
                     placeholder="Description"
                     value={item.description}
                     onChange={(e) => handleItemUpdate(item.id, 'description', e.target.value)}
                   />
                 </div>
-                <div className="col-span-1">
+                <div style={{ flexBasis: "12.5%" }}>
                   <Select
                     value={item.uom}
                     onValueChange={(value) => handleItemUpdate(item.id, 'uom', value)}
@@ -234,7 +234,7 @@ export function QuoteItems() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-1">
+                <div style={{ flexBasis: "8.33%" }}>
                   <Input
                     type="number"
                     placeholder="Qty"
@@ -242,7 +242,7 @@ export function QuoteItems() {
                     onChange={(e) => handleItemUpdate(item.id, 'quantity', Number(e.target.value))}
                   />
                 </div>
-                <div className="col-span-2">
+                <div style={{ flexBasis: "12.5%" }}>
                   <Input
                     type="number"
                     placeholder="Unit Price"
@@ -252,13 +252,13 @@ export function QuoteItems() {
                     className={hasAssociatedItems ? "bg-muted" : ""}
                   />
                 </div>
-                <div className="col-span-2">
-                  <div className="flex gap-1">
+                <div style={{ flexBasis: "16.67%" }}>
+                  <div className="flex max-w-40">
                     <Select
                       value={item.discountType}
                       onValueChange={(value) => handleItemUpdate(item.id, 'discountType', value)}
                     >
-                      <SelectTrigger className="w-16">
+                      <SelectTrigger className="shrink-[2]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -271,14 +271,12 @@ export function QuoteItems() {
                       placeholder="Discount"
                       value={item.discount || ''}
                       onChange={(e) => handleItemUpdate(item.id, 'discount', Number(e.target.value))}
-                      className="flex-1"
                     />
                   </div>
                 </div>
-                <div className="col-span-1 text-right">
-                  ${calculateExtendedPrice(item)}
-                </div>
-                <div className="col-span-1 flex justify-end">
+
+                <div className="flex-1 flex items-center justify-end gap-2">
+                  <div>${calculateExtendedPrice(item)}</div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -293,22 +291,22 @@ export function QuoteItems() {
               {item.associatedItems && item.associatedItems.length > 0 && (
                 <div className="ml-8 space-y-2">
                   {item.associatedItems.map((subItem) => (
-                    <div key={subItem.id} className="grid grid-cols-12 gap-4 items-center bg-muted/50 rounded p-4">
-                      <div className="col-span-2">
+                    <div key={subItem.id} className="flex gap-4 items-center bg-muted/50 rounded p-4">
+                      <div style={{ flexBasis: "16.67%" }}>
                         <Input
                           placeholder="Sub Item #"
                           value={subItem.itemNumber}
                           onChange={(e) => handleCompositeItemUpdate(item.id, subItem.id, 'itemNumber', e.target.value)}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div style={{ flexBasis: "16.67%" }}>
                         <Input
                           placeholder="Description"
                           value={subItem.description}
                           onChange={(e) => handleCompositeItemUpdate(item.id, subItem.id, 'description', e.target.value)}
                         />
                       </div>
-                      <div className="col-span-1">
+                      <div style={{ flexBasis: "12.5%" }}>
                         <Select
                           value={subItem.uom}
                           onValueChange={(value) => handleCompositeItemUpdate(item.id, subItem.id, 'uom', value)}
@@ -323,7 +321,7 @@ export function QuoteItems() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="col-span-1">
+                      <div style={{ flexBasis: "12%" }}>
                         <Input
                           type="number"
                           placeholder="Qty"
@@ -331,7 +329,7 @@ export function QuoteItems() {
                           onChange={(e) => handleCompositeItemUpdate(item.id, subItem.id, 'quantity', Number(e.target.value))}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div style={{ flexBasis: "20%" }}>
                         <Input
                           type="number"
                           placeholder="Unit Price"
@@ -339,10 +337,10 @@ export function QuoteItems() {
                           onChange={(e) => handleCompositeItemUpdate(item.id, subItem.id, 'unitPrice', Number(e.target.value))}
                         />
                       </div>
-                      <div className="col-span-3 text-right">
+                      <div style={{ flexBasis: "10%" }} className="text-right">
                         ${(subItem.quantity * subItem.unitPrice).toFixed(2)}
                       </div>
-                      <div className="col-span-1 flex justify-end">
+                      <div className=" flex justify-end">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -357,7 +355,13 @@ export function QuoteItems() {
               )}
 
               {/* Notes and Add Sub-Item */}
-              <div className="ml-8 space-y-2">
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Notes"
+                  value={item.notes || ''}
+                  onChange={(e) => handleItemUpdate(item.id, 'notes', e.target.value)}
+                  className="min-h-[60px]"
+                />
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -369,12 +373,6 @@ export function QuoteItems() {
                     Add Sub Item
                   </Button>
                 </div>
-                <Textarea
-                  placeholder="Notes"
-                  value={item.notes || ''}
-                  onChange={(e) => handleItemUpdate(item.id, 'notes', e.target.value)}
-                  className="min-h-[60px]"
-                />
               </div>
             </div>
           );
@@ -382,22 +380,22 @@ export function QuoteItems() {
 
         {/* Add Custom Item Form */}
         {showCustomForm && (
-          <div className="grid grid-cols-12 gap-4 items-center border rounded-lg p-4 bg-muted/50">
-            <div className="col-span-2">
+          <div className="flex gap-2 items-center rounded-lg">
+            <div style={{ flexBasis: "16.67%" }}>
               <Input
                 placeholder="Item Number"
                 value={newQuoteItem.itemNumber}
                 onChange={(e) => handleCustomItemChange('itemNumber', e.target.value)}
               />
             </div>
-            <div className="col-span-2">
+            <div style={{ flexBasis: "16.67%" }}>
               <Input
                 placeholder="Description"
                 value={newQuoteItem.description}
                 onChange={(e) => handleCustomItemChange('description', e.target.value)}
               />
             </div>
-            <div className="col-span-1">
+            <div style={{ flexBasis: "12.5%" }}>
               <Select
                 value={newQuoteItem.uom}
                 onValueChange={(value) => handleCustomItemChange('uom', value)}
@@ -412,7 +410,7 @@ export function QuoteItems() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-1">
+            <div style={{ flexBasis: "8.33%" }}>
               <Input
                 type="number"
                 placeholder="Qty"
@@ -420,7 +418,7 @@ export function QuoteItems() {
                 onChange={(e) => handleCustomItemChange('quantity', Number(e.target.value))}
               />
             </div>
-            <div className="col-span-2">
+            <div style={{ flexBasis: "12.5%" }}>
               <Input
                 type="number"
                 placeholder="Unit Price"
@@ -428,13 +426,13 @@ export function QuoteItems() {
                 onChange={(e) => handleCustomItemChange('unitPrice', Number(e.target.value))}
               />
             </div>
-            <div className="col-span-2">
+            <div style={{ flexBasis: "22%" }}>
               <div className="flex gap-1">
                 <Select
                   value={newQuoteItem.discountType}
                   onValueChange={(value) => handleCustomItemChange('discountType', value)}
                 >
-                  <SelectTrigger className="w-16">
+                  <SelectTrigger className="max-w-18">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,12 +445,12 @@ export function QuoteItems() {
                   placeholder="Discount"
                   value={newQuoteItem.discount || ''}
                   onChange={(e) => handleCustomItemChange('discount', Number(e.target.value))}
-                  className="flex-1"
+                  className="grow"
                 />
               </div>
             </div>
-            <div className="col-span-2">
-              <Button onClick={handleAddCustomItem} className="w-full">
+            <div className="shrink-[2] max-w-20">
+              <Button onClick={handleAddCustomItem}>
                 Add
               </Button>
             </div>
