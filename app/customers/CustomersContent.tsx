@@ -2,7 +2,7 @@
 import { CardActions } from '@/components/card-actions'
 import { DataTable } from '@/components/data-table'
 import { Toaster } from '@/components/ui/sonner';
-import { fetchCustomers } from '@/lib/api-client';
+import { useCustomers } from '@/hooks/use-customers';
 import { Customer } from '@/types/Customer';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner';
@@ -38,23 +38,19 @@ const SEGMENTS = [
 
 const CustomersContent = () => {
 
-    const [data, setData] = useState<Customer[]>();
+    const { customers, isLoading, error, getCustomers } = useCustomers();
 
     useEffect(() => {
-        const fetchData = async() => {
-            try{
-                const customerResponse = await fetchCustomers();
-                setData(customerResponse)
-            } catch(error) {
-                console.error(error)
-                toast.error((error as Error).message);
-            }
-        }
-        fetchData();
+        getCustomers();
     }, [])
+
+    if(error){
+        toast.error(error);
+    }
 
     return (
         <div className="flex flex-col items-center justify-between">
+            
             <div className="flex items-center justify-between px-0 -mb-3 ml-auto">
             <CardActions
                 createButtonLabel="Create Customer"
@@ -62,12 +58,12 @@ const CustomersContent = () => {
                 goUpActions
             />
             </div>
-            {!!data && <div className='w-full mt-3'>
+            {!isLoading && <div className='w-full mt-3'>
                 <DataTable<Customer>
                     columns={COLUMNS}
                     segments={SEGMENTS}
                     stickyLastColumn
-                    data={data}
+                    data={customers}
                 />
             </div>}
         </div>
