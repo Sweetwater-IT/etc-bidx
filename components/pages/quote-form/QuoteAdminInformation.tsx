@@ -14,13 +14,14 @@ import { MultiSelect } from "@/components/ui/multiselect";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 
 const PAYMENT_TERMS = [
-  { value: "net30", label: "Net 30" },
-  { value: "net60", label: "Net 60" },
-  { value: "1%10Net30", label: "1%10 Net 30" },
-  { value: "cod", label: "COD" },
-  { value: "cc", label: "Credit Card" },
-  { value: "net15", label: "Net 15" }
+  { value: "1%10 NET 30", label: "1%10 NET 30" },
+  { value: "COD", label: "COD" },
+  { value: "CC", label: "CC" },
+  { value: "NET15", label: "NET15" },
+  { value: "NET30", label: "NET30" }
 ];
+
+export type PaymentTerms = '1%10 NET 30' | 'COD' | 'CC' | 'NET15' | 'NET30'
 
 export function QuoteAdminInformation() {
   const {

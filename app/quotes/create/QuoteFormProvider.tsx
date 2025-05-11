@@ -44,6 +44,8 @@ interface QuoteFormState {
   setIncludeFiles: (files: Record<AttachmentNames, boolean> | ((prev: Record<AttachmentNames, boolean>) => Record<AttachmentNames, boolean>)) => void;
   includeTerms: Record<TermsNames, boolean>;
   setIncludeTerms: (terms: Record<TermsNames, boolean> | ((prev: Record<TermsNames, boolean>) => Record<TermsNames, boolean>)) => void;
+  customTerms: string;
+  setCustomTerms: (customTerms: string | ((prev: string) => string)) => void;
   
   // UI state
   sending: boolean;
@@ -84,6 +86,7 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [selectedEmail, setSelectedEmail] = useState("");
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
+  const [customTerms, setCustomTerms] = useState<string>('');
   
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
   const [paymentTerms, setPaymentTerms] = useState<string>("net30");
@@ -183,6 +186,8 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     setIncludeFiles,
     includeTerms,
     setIncludeTerms,
+    customTerms,
+    setCustomTerms,
     sending,
     setSending,
     emailSent,
