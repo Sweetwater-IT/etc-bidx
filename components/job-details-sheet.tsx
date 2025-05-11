@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
-import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon } from "lucide-react"
+import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon, EyeIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useState, useEffect } from "react"
@@ -89,7 +89,10 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
+          <div className="flex items-center gap-2">
+            <SheetTitle>Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+          </div>
         </SheetHeader>
         
         <div className="flex-1 overflow-y-auto">
@@ -101,8 +104,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                   <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={job?.contractNumber || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
                   />
                 </div>
               </div>
@@ -113,8 +117,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                   <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     value={job?.status || ''} 
-                    className="pl-9" 
+                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                     readOnly
+                    disabled
                   />
                 </div>
               </div>
@@ -126,8 +131,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.requestor || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -138,8 +144,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.owner || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -150,8 +157,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.county || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -162,8 +170,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.branch || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -174,8 +183,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.location || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -186,8 +196,9 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   value={job?.platform || ''} 
-                  className="pl-9" 
+                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
                   readOnly
+                  disabled
                 />
               </div>
             </div>
