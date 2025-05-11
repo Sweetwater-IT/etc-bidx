@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
-import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon } from "lucide-react"
+import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon, EyeIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useState, useEffect } from "react"
@@ -91,7 +91,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
         <SheetHeader className="p-6 pb-0">
           <div className="flex items-center gap-2">
             <SheetTitle>Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md">View Only</span>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
           </div>
         </SheetHeader>
         

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HashIcon, LayersIcon, UserIcon, CalendarIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon } from "lucide-react";
+import { HashIcon, LayersIcon, UserIcon, CalendarIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon, EyeIcon } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
 
 interface ActiveJobDetailsSheetProps {
@@ -66,7 +66,7 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
         <SheetHeader className="p-6 pb-0">
           <div className="flex items-center gap-2">
             <SheetTitle>Job Details {job?.jobNumber ? `- ${job.jobNumber}` : ''}</SheetTitle>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md">View Only</span>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
           </div>
         </SheetHeader>
         
