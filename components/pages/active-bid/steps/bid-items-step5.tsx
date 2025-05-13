@@ -25,6 +25,7 @@ import { fetchReferenceData } from "@/lib/api-client";
 import EquipmentRentalTab from "@/components/BidItems/equipment-rental-tab";
 import SaleItemsStep from "./sale-items-step";
 import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
+import ServiceWorkTab from "@/components/BidItems/service-work-tab";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -885,7 +886,7 @@ const BidItemsStep5 = ({
               {/* Patterns Tab */}
               <TabsContent value="patterns" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  Pavement Patterns will be implemented here
+                  <ServiceWorkTab/>
                 </div>
               </TabsContent>
             </Tabs>
