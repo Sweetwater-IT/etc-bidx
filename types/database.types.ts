@@ -171,6 +171,38 @@ export interface Database {
           display_name?: string | null
         }
       }
+      customer_contacts: {
+        Row: {
+          id: number
+          contractor_id: number
+          email: string | null
+          phone: string | null
+          created: string
+          updated: string | null
+          name: string | null
+          role: string | null
+        }
+        Insert: {
+          id?: number
+          contractor_id: number
+          email?: string | null
+          phone?: string | null
+          created?: string
+          updated?: string | null
+          name?: string | null
+          role?: string | null
+        }
+        Update: {
+          id?: number
+          contractor_id?: number
+          email?: string | null
+          phone?: string | null
+          created?: string
+          updated?: string | null
+          name?: string | null
+          role?: string | null
+        }
+      }
       available_jobs: {
         Row: {
           id: number
