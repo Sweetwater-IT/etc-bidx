@@ -23,6 +23,7 @@ import { safeNumber } from "@/lib/safe-number";
 import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
 import { fetchReferenceData } from "@/lib/api-client";
 import EquipmentRentalTab from "@/components/BidItems/equipment-rental-tab";
+import SaleItemsStep from "./sale-items-step";
 import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
 const step = {
   id: "step-5",
@@ -877,7 +878,7 @@ const BidItemsStep5 = ({
               {/* Sale Items Tab */}
               <TabsContent value="sale" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  Sale Items will be implemented here
+                  <SaleItemsStep/>
                 </div>
               </TabsContent>
 
