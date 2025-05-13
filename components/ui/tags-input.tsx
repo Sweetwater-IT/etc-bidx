@@ -152,7 +152,7 @@ export function TagsInput({
                 selectedIndex === filteredOptions.length && "bg-gray-100"
               )}
             >
-              Add "{inputValue}"
+              Add {`"${inputValue}"`}
             </div>
           )}
         </div>
