@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useQuoteForm } from "./QuoteFormProvider";
-import { QuoteAdminInformation } from "@/components/pages/quote-form/QuoteAdminInformation";
+import { PaymentTerms, QuoteAdminInformation } from "@/components/pages/quote-form/QuoteAdminInformation";
 import { QuoteItems } from "@/components/pages/quote-form/QuoteItems";
 import { QuoteEmailDetails } from "@/components/pages/quote-form/QuoteEmailDetails";
 import { QuoteNumber } from "@/components/pages/quote-form/QuoteNumber";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 export default function QuoteFormContent() {
   const {
     selectedCustomers,
-    selectedEmail,
     emailSent,
     emailError,
     sending,
@@ -25,41 +24,42 @@ export default function QuoteFormContent() {
     setEmailSent,
     setEmailError,
     quoteId,
-    quoteItems
+    quoteItems,
+    paymentTerms,
+    emailBody,
+    subject,
+    ccEmails,
+    bccEmails,
+    pointOfContact,
   } = useQuoteForm();
 
-  // Calculate the total for all items
-  const calculateTotal = () => {
-    if (!quoteItems?.length) return 0;
-
-    return quoteItems.reduce((acc, item) => {
-      const quantity = item.quantity || 0;
-      const unitPrice = item.unitPrice || 0;
-      const discount = item.discount || 0;
-      const discountType = item.discountType || 'percentage';
-      
-      const basePrice = quantity * unitPrice;
-      const discountAmount = discountType === 'dollar' ? discount : (basePrice * (discount / 100));
-      
-      return acc + (basePrice - discountAmount);
-    }, 0);
-  };
-
   const handleSendQuote = async () => {
-    const targetEmail = selectedEmail || process.env.SENDGRID_TO_EMAIL || "ndunn@establishedtraffic.com";
+    const targetEmail = 'it@establishedtraffic.com';
     
     setSending(true);
     setEmailError(null);
     
     try {
-      const success = await sendQuoteEmail(targetEmail, {
-        quoteId,
-        customerName: selectedCustomers.join(", "),
-        projectName: "Sample Project",
-        totalAmount: calculateTotal(),
-        createdBy: "System User",
-        createdAt: format(new Date(), "PPP"),
-      });
+      const success = await sendQuoteEmail(
+        {
+          date: new Date(),
+          quoteNumber: quoteId,
+          customerName: pointOfContact?.name ?? '',
+          customers: selectedCustomers.map(customer => customer.name),
+          totalAmount: 0,
+          items: quoteItems,
+          createdBy: 'me',
+          createdAt: 'Today',
+          paymentTerms: paymentTerms as PaymentTerms,
+        },
+        {
+          pointOfContact: pointOfContact?.name ?? '',
+          cc: ccEmails,
+          bcc: bccEmails,
+          subject: subject,
+          body: emailBody
+        }
+      );
       
       if (success) {
         setEmailSent(true);
