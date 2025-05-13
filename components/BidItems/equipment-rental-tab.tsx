@@ -3,29 +3,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
+import { fetchReferenceData } from "@/lib/api-client";
+import { isEquipmentType } from "@/lib/is-rental-equipment";
+
+interface StaticPriceData {
+  usefulLife: number;
+  cost: number;
+}
+
+type EquipmentType = 'Truck Mounted Attenuator' | 'Message Board' | 'Arrow Board' | 'Speed Trailer'
 
 const EquipmentSummaryStep = () => {
   const { equipmentRental, dispatch } = useEstimate();
   const [isAddingEquipment, setIsAddingEquipment] = useState(equipmentRental.length === 0);
-  const [selectedType, setSelectedType] = useState("");
+  const [selectedType, setSelectedType] = useState<EquipmentType | 'custom'>('Truck Mounted Attenuator');
   const [customName, setCustomName] = useState("");
   const [configuringIndex, setConfiguringIndex] = useState<number | null>(null);
+  const [defaultPrices, setDefaultPrices] = useState<Record<EquipmentType, StaticPriceData>>();
+
+  useEffect(() => {
+    const setItemPrices = async () => {
+      const itemData = await fetchReferenceData('mpt equipment');
+
+      const tmaData = itemData.find(item => item.name === 'TMA');
+      const mBoardData = itemData.find(item => item.name === 'M.BOARD');
+      const aBoardData = itemData.find(item => item.name === 'A.BOARD');
+      const sTrailerData = itemData.find(item => item.name === 'S.TRAILER');
+
+      if (tmaData && mBoardData && aBoardData && sTrailerData) {
+        setDefaultPrices({
+          'Truck Mounted Attenuator': { cost: tmaData.price, usefulLife: tmaData.depreciation_rate_useful_life },
+          'Message Board': { cost: mBoardData.price, usefulLife: mBoardData.depreciation_rate_useful_life },
+          'Arrow Board': { cost: aBoardData.price, usefulLife: aBoardData.depreciation_rate_useful_life },
+          'Speed Trailer': { cost: sTrailerData.price, usefulLife: sTrailerData.depreciation_rate_useful_life }
+        })
+      }
+    }
+
+    setItemPrices();
+  }, [])
 
   const handleItemNameSubmit = () => {
     const itemName = selectedType === "custom" ? customName : selectedType;
-    
+
     if (itemName.trim()) {
       const newEquipment: EquipmentRentalItem = {
         name: itemName.trim(),
@@ -34,18 +66,18 @@ const EquipmentSummaryStep = () => {
         rentPrice: 0,
         reRentPrice: 0,
         reRentForCurrentJob: false,
-        totalCost: 0,
-        usefulLifeYrs: 0,
+        totalCost: (selectedType !== 'custom' && defaultPrices) ? defaultPrices[selectedType].cost : 0,
+        usefulLifeYrs: (selectedType !== 'custom' && defaultPrices) ? defaultPrices[selectedType].usefulLife : 0,
       };
-      
+
       dispatch({
         type: 'ADD_RENTAL_ITEM',
         payload: newEquipment,
       });
-      
+
       // Set the new item as configuring
       setConfiguringIndex(equipmentRental.length);
-      setSelectedType("");
+      setSelectedType('Truck Mounted Attenuator');
       setCustomName("");
       setIsAddingEquipment(false);
     }
@@ -62,7 +94,7 @@ const EquipmentSummaryStep = () => {
     });
   };
 
-  const handleEquipmentSave = (index: number) => {
+  const handleEquipmentSave = () => {
     setConfiguringIndex(null);
     setIsAddingEquipment(true);
   };
@@ -72,9 +104,9 @@ const EquipmentSummaryStep = () => {
       type: 'DELETE_RENTAL_ITEM',
       payload: { index },
     });
-    
+
     setConfiguringIndex(null);
-    
+
     if (equipmentRental.length === 1) {
       setIsAddingEquipment(true);
     }
@@ -108,10 +140,10 @@ const EquipmentSummaryStep = () => {
                       onChange={(e) =>
                         handleEquipmentUpdate(index, "name", e.target.value)
                       }
+                      disabled={isEquipmentType(item.name)}
                       className="w-[200px]"
                     />
                   </div>
-
                   <div className="flex flex-row gap-4 w-full">
                     <div className="flex-1">
                       <Label className="text-sm font-medium mb-2 block">Qty</Label>
@@ -189,7 +221,42 @@ const EquipmentSummaryStep = () => {
                         />
                       </div>
                     </div>
+
                   </div>
+                  {!isEquipmentType(item.name) && <div className="flex gap-x-2 w-fit">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Cost</Label>
+                      <Input
+                        type="number"
+                        value={item.totalCost || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            'totalCost',
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Useful Life in Years</Label>
+                      <Input
+                        type="number"
+                        value={item.usefulLifeYrs || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            'usefulLifeYrs',
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>}
 
                   {/* Action Buttons */}
                   <div className="flex justify-end space-x-3 pt-6">
@@ -199,7 +266,7 @@ const EquipmentSummaryStep = () => {
                     >
                       Cancel
                     </Button>
-                    <Button onClick={() => handleEquipmentSave(index)}>
+                    <Button onClick={() => handleEquipmentSave()}>
                       Save Equipment
                     </Button>
                   </div>
@@ -238,10 +305,10 @@ const EquipmentSummaryStep = () => {
         {isAddingEquipment && (
           <div className="w-full max-w-sm">
             <div className="flex gap-2 mb-2">
-              <Select 
-                value={selectedType} 
+              <Select
+                value={selectedType}
                 onValueChange={(value) => {
-                  setSelectedType(value);
+                  setSelectedType(value as EquipmentType | 'custom');
                   if (value !== "custom") {
                     setCustomName("");
                   }
@@ -258,14 +325,14 @@ const EquipmentSummaryStep = () => {
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
-              <Button 
+              <Button
                 onClick={handleItemNameSubmit}
                 disabled={!selectedType || (selectedType === "custom" && !customName.trim())}
               >
                 Add
               </Button>
             </div>
-            
+
             {selectedType === "custom" && (
               <Input
                 value={customName}
