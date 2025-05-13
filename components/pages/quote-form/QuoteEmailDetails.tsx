@@ -1,15 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MultiSelect } from "@/components/ui/multiselect";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TagsInput } from "@/components/ui/tags-input";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+
 export function QuoteEmailDetails() {
   const {
-    selectedEmail,
-    setSelectedEmail,
     ccEmails,
     setCcEmails,
     bccEmails,
@@ -18,22 +19,47 @@ export function QuoteEmailDetails() {
     setSubject,
     emailBody,
     setEmailBody,
+    selectedCustomers,
+    pointOfContact,
+    setPointOfContact,
     sending,
-    getContactsForSelectedCustomers
   } = useQuoteForm();
 
-  const availableContacts = getContactsForSelectedCustomers();
-  const contactOptions = availableContacts.map(contact => ({
-    value: contact.value,
-    label: contact.label
-  }));
+  // Create contact options from all selected customers
+  const getContactOptions = () => {
+    const options: { value: string; label: string; customer: string; name: string }[] = [];
+    
+    selectedCustomers.forEach(customer => {
+      customer.emails.forEach((email, index) => {
+        if (email) {
+          options.push({
+            value: email,
+            label: `${customer.names[index] || "Unknown"} (${email}) - ${customer.name}`,
+            customer: customer.name,
+            name: customer.names[index] || "Unknown"
+          });
+        }
+      });
+    });
+    
+    return options;
+  };
 
-  const handleSendTest = async () => {
-    // Handle test email sending
+  const contactOptions = getContactOptions();
+
+  const handleToChange = (value: string) => {
+    const selectedContact = contactOptions.find(option => option.value === value);
+    if (selectedContact) {
+      setPointOfContact({
+        email: selectedContact.value,
+        name: selectedContact.name
+      });
+    }
   };
 
   const handleAddContact = () => {
-    // Handle adding new contact
+    // TODO: Implement adding new contact modal/form
+    console.log("Add new contact");
   };
 
   return (
@@ -41,9 +67,6 @@ export function QuoteEmailDetails() {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Email Details</h2>
         <div className="flex gap-2">
-          <Button onClick={handleSendTest} disabled={sending} variant="outline">
-            {sending ? "Sending..." : "Send Test Email"}
-          </Button>
           <Button onClick={handleAddContact}>Add New Contact</Button>
         </div>
       </div>
@@ -51,31 +74,46 @@ export function QuoteEmailDetails() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>To</Label>
-          <MultiSelect
-            options={contactOptions}
-            selected={selectedEmail ? [selectedEmail] : []}
-            onChange={(selected) => setSelectedEmail(selected[0] || "")}
-            placeholder="Point of Contact"
-          />
+          <Select
+            value={pointOfContact?.email || ""}
+            onValueChange={handleToChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select point of contact" />
+            </SelectTrigger>
+            <SelectContent>
+              {contactOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
           <Label>CC</Label>
-          <MultiSelect
-            options={contactOptions}
-            selected={ccEmails}
+          <TagsInput
+            value={ccEmails}
             onChange={setCcEmails}
-            placeholder="Choose CC addresses"
+            placeholder="Add CC emails..."
+            options={contactOptions.map(opt => ({
+              value: opt.value,
+              label: opt.label
+            }))}
           />
         </div>
 
         <div className="space-y-2">
           <Label>BCC</Label>
-          <MultiSelect
-            options={contactOptions}
-            selected={bccEmails}
+          <TagsInput
+            value={bccEmails}
             onChange={setBccEmails}
-            placeholder="Choose BCC addresses"
+            placeholder="Add BCC emails..."
+            options={contactOptions.map(opt => ({
+              value: opt.value,
+              label: opt.label
+            }))}
           />
         </div>
 
@@ -91,7 +129,7 @@ export function QuoteEmailDetails() {
         <div className="space-y-2">
           <Label>From</Label>
           <Input 
-            value={process.env.SENDGRID_FROM_EMAIL || "it@establishedtraffic.com"}
+            value="it@establishedtraffic.com"
             disabled
           />
         </div>

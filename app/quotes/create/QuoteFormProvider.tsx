@@ -5,21 +5,31 @@ import { Customer } from "@/types/Customer";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { format } from "date-fns";
 import { useCustomers } from "@/hooks/use-customers";
+import { AdminData } from "@/types/TAdminData";
+
+interface PointOfContact {
+  name : string;
+  email: string;
+}
+
+export type QuoteStatus = 'Draft' | 'Not Sent' | 'Sent'
 
 interface QuoteFormState {
   // Customer-related state
-  selectedCustomers: string[];
-  setSelectedCustomers: (customers: string[]) => void;
+  selectedCustomers: Customer[];
+  setSelectedCustomers: (customers: Customer[] | ((prev : Customer[]) => Customer[])) => void;
+  pointOfContact: PointOfContact | undefined;
+  setPointOfContact: (poc : PointOfContact) => void;
   
   // Contact state
-  selectedEmail: string;
-  setSelectedEmail: (email: string) => void;
   ccEmails: string[];
   setCcEmails: (emails: string[]) => void;
   bccEmails: string[];
   setBccEmails: (emails: string[]) => void;
   
   // Quote form state
+  status: QuoteStatus
+  setStatus: (type: QuoteStatus) => void;
   quoteType: "new" | "estimate" | "job";
   setQuoteType: (type: "new" | "estimate" | "job") => void;
   paymentTerms: string;
@@ -28,6 +38,14 @@ interface QuoteFormState {
   setDigitalSignature: (value: boolean) => void;
   quoteDate: string;
   setQuoteDate: (date: string) => void;
+  
+  // Admin fields for estimates/jobs
+  county: string;
+  setCounty: (county: string) => void;
+  ecmsPoNumber: string;
+  setEcmsPoNumber: (number: string) => void;
+  stateRoute: string;
+  setStateRoute: (route: string) => void;
   
   // Email state
   subject: string;
@@ -54,16 +72,15 @@ interface QuoteFormState {
   setEmailSent: (value: boolean) => void;
   emailError: string | null;
   setEmailError: (error: string | null) => void;
+
+  // Quote Data
+  associatedContractNumber : string | undefined;
+  setAssociatedContractNumber : (contractNumber : string) => void;
+  adminData : AdminData | undefined;
+  setAdminData : (adminDAta : AdminData) => void;
   
   // Generated data
   quoteId: string;
-  
-  // Customer data
-  customers: Customer[];
-  isLoadingCustomers: boolean;
-  
-  // Helper functions
-  getContactsForSelectedCustomers: () => { value: string; label: string; customer: string }[];
 }
 
 const QuoteFormContext = createContext<QuoteFormState | undefined>(undefined);
@@ -79,19 +96,26 @@ export type AttachmentNames = "flagging-price-list" | "flagging-service-area" | 
 export type TermsNames = "standard-terms" | 'rental-agreements' | 'equipment-sale' | 'flagging-terms' | 'custom-terms'
 
 export default function QuoteFormProvider({ children }: { children: React.ReactNode }) {
-  const { customers, getCustomers, isLoading } = useCustomers();
   
   // State initialization
-  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [selectedEmail, setSelectedEmail] = useState("");
+  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>([]);
+  const [pointOfContact, setPointOfContact] = useState<PointOfContact>();
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>('');
+  const [status, setStatus] = useState<QuoteStatus>('Draft')
   
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
   const [paymentTerms, setPaymentTerms] = useState<string>("net30");
   const [digitalSignature, setDigitalSignature] = useState(false);
   const [quoteDate, setQuoteDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [adminData, setAdminData] = useState<AdminData>();
+  const [associatedContractNumber, setAssociatedContractNumber] = useState<string>();
+  
+  // Admin fields for estimates/jobs
+  const [county, setCounty] = useState<string>("");
+  const [ecmsPoNumber, setEcmsPoNumber] = useState<string>("");
+  const [stateRoute, setStateRoute] = useState<string>("");
   
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -118,35 +142,26 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   
   // Generate quote ID
   const quoteId = `Q-${Math.floor(100 + Math.random() * 900)}`;
-  
-  // Fetch customers on mount
-  useEffect(() => {
-    getCustomers();
-  }, []);
-  
+
   // Update payment terms when customers change
   useEffect(() => {
     if (selectedCustomers.length > 0) {
-      const firstCustomer = customers.find(c => c.name === selectedCustomers[0]);
-      if (firstCustomer && firstCustomer.paymentTerms) {
-        setPaymentTerms(firstCustomer.paymentTerms);
-      }
+        setPaymentTerms(selectedCustomers[0].paymentTerms);
     }
-  }, [selectedCustomers, customers]);
+  }, [selectedCustomers]);
   
   // Reset contact selections when customers change
   useEffect(() => {
-    setSelectedEmail("");
+    setPointOfContact(undefined)
     setCcEmails([]);
     setBccEmails([]);
   }, [selectedCustomers]);
   
   // Helper function to get contacts for selected customers
   const getContactsForSelectedCustomers = () => {
-    const selectedCustomerObjects = customers.filter(c => selectedCustomers.includes(c.name));
     const allContacts: { value: string; label: string; customer: string }[] = [];
     
-    selectedCustomerObjects.forEach(customer => {
+    selectedCustomers.forEach(customer => {
       customer.emails.forEach((email, index) => {
         allContacts.push({
           value: email,
@@ -162,8 +177,8 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const value: QuoteFormState = {
     selectedCustomers,
     setSelectedCustomers,
-    selectedEmail,
-    setSelectedEmail,
+    pointOfContact,
+    setPointOfContact,
     ccEmails,
     setCcEmails,
     bccEmails,
@@ -176,6 +191,12 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     setDigitalSignature,
     quoteDate,
     setQuoteDate,
+    county,
+    setCounty,
+    ecmsPoNumber,
+    setEcmsPoNumber,
+    stateRoute,
+    setStateRoute,
     subject,
     setSubject,
     emailBody,
@@ -195,9 +216,12 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     emailError,
     setEmailError,
     quoteId,
-    customers,
-    isLoadingCustomers: isLoading,
-    getContactsForSelectedCustomers
+    associatedContractNumber,
+    setAssociatedContractNumber,
+    adminData,
+    setAdminData,
+    status,
+    setStatus
   };
   
   return (

@@ -1,5 +1,9 @@
+import { createQuoteEmailHtml } from '@/app/quotes/create/ProposalHTML';
+import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation';
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
+import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
+import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
@@ -550,29 +554,78 @@ export async function importJobs(
 }
 
 /**
- * Send an email notification for a new quote
+ * Sends a quote email with optional attachments.
+ * @param recipientEmail Primary recipient email address
+ * @param quoteData Quote information
+ * @param options Additional email options like CC, BCC, attachments
+ * @returns Promise resolving to boolean indicating success
  */
 export async function sendQuoteEmail(
-  recipientEmail: string,
   quoteData: {
-    quoteId: string;
+    date: Date;
+    quoteNumber: string;
     customerName: string;
-    projectName: string;
+    customers: string[]
     totalAmount: number;
     createdBy: string;
     createdAt: string;
+    customTerms?: string;
+    items: QuoteItem[]
+    paymentTerms: PaymentTerms
+  },
+  options: {
+    pointOfContact:  string;
+    subject: string;
+    body: string;
+    cc: string[];
+    bcc: string[];
+    files?: File[];
+    standardDocs?: string[];
   }
 ): Promise<boolean> {
   try {
+    // Create FormData to handle files and other data
+    const formData = new FormData();
+    
+    // Add quote information
+    formData.append('to', options.pointOfContact);
+    formData.append('quoteNumber', quoteData.quoteNumber);
+    
+    // Add subject line
+    formData.append('subject', options.subject);
+    
+    // Generate HTML content for the email
+    const htmlContent = createQuoteEmailHtml(defaultAdminObject, quoteData.items, quoteData.customers, 
+      quoteData.quoteNumber, quoteData.date, quoteData.paymentTerms, );
+    formData.append('htmlContent', htmlContent);
+    
+    // Add token if needed for tracking
+    const trackingToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    formData.append('token', trackingToken);
+    
+    // Add CC and BCC recipients if provided
+    if (options?.cc && options.cc.length > 0) {
+      options.cc.forEach(email => formData.append('cc', email));
+    }
+    
+    if (options?.bcc && options.bcc.length > 0) {
+      options.bcc.forEach(email => formData.append('bcc', email));
+    }
+    
+    // Add standard documents if specified
+    if (options?.standardDocs && options.standardDocs.length > 0) {
+      formData.append('standardDocs', options.standardDocs.join(','));
+    }
+    
+    // Add files if provided
+    if (options?.files && options.files.length > 0) {
+      options.files.forEach(file => formData.append('files', file));
+    }
+    
+    // Send the request
     const response = await fetch('/api/quotes/send-email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        recipientEmail,
-        quoteData,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
