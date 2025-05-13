@@ -56,8 +56,8 @@ export const QuotePreviewButton = () => {
               <BidProposalReactPDF
                 adminData={defaultAdminObject}
                 items={quoteItems}
-                customers={selectedCustomers}
-                name={selectedCustomers[0] || 'Client'}
+                customers={selectedCustomers.map(c => c.name)}
+                name={selectedCustomers[0].name || 'Client'}
                 email=""
                 quoteDate={new Date(quoteDate)}
                 quoteNumber={quoteId}

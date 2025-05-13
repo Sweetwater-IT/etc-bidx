@@ -1,238 +1,267 @@
 "use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import React, { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
-import { safeNumber } from "@/lib/safe-number";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
 
-// Define rental items mapping (matching database names to our internal names)
-const rentalItemList = [
-  { name: "TMA", label: "TMA", dbName: "TMA" },
-  { name: "Arrow Board", label: "Arrow Board", dbName: "A.BOARD" },
-  { name: "Message Board", label: "Message Board", dbName: "M.BOARD" },
-  { name: "Speed Trailer", label: "Speed Trailer", dbName: "S.TRAILER" },
-  { name: "Custom", label: "Custom Item", dbName: "CUSTOM" }
-];
-
-const EquipmentRentalTab = () => {
+const EquipmentSummaryStep = () => {
   const { equipmentRental, dispatch } = useEstimate();
+  const [isAddingEquipment, setIsAddingEquipment] = useState(equipmentRental.length === 0);
+  const [newItemName, setNewItemName] = useState("");
+  const [configuringIndex, setConfiguringIndex] = useState<number | null>(null);
 
-  // Handle input changes
-  const handleInputChange = (
-    index: number,
-    field: string,
-    value: string | number | boolean
-  ) => {
+  const handleItemNameSubmit = () => {
+    if (newItemName.trim()) {
+      const newEquipment: EquipmentRentalItem = {
+        name: newItemName.trim(),
+        quantity: 0,
+        months: 0,
+        rentPrice: 0,
+        reRentPrice: 0,
+        reRentForCurrentJob: false,
+        totalCost: 0,
+        usefulLifeYrs: 0,
+      };
+      
+      dispatch({
+        type: 'ADD_RENTAL_ITEM',
+        payload: newEquipment,
+      });
+      
+      // Set the new item as configuring
+      setConfiguringIndex(equipmentRental.length);
+      setNewItemName("");
+      setIsAddingEquipment(false);
+    }
+  };
+
+  const handleEquipmentUpdate = (index: number, field: keyof EquipmentRentalItem, value: any) => {
     dispatch({
       type: 'UPDATE_RENTAL_ITEM',
       payload: {
         index,
-        key: field as keyof EquipmentRentalItem,
+        key: field,
         value,
       },
     });
   };
 
-  // Add a new rental item
-  const handleAddItem = () => {
-    const newItem = {
-      name: '',
-      quantity: 0,
-      months: 0,
-      rentPrice: 0,
-      reRentPrice: 0,
-      reRentForCurrentJob: false,
-      totalCost: 0,
-      usefulLifeYrs: 0,
-    };
-
-    dispatch({
-      type: 'ADD_RENTAL_ITEM',
-      payload: newItem,
-    });
+  const handleEquipmentSave = (index: number) => {
+    setConfiguringIndex(null);
+    setIsAddingEquipment(true);
   };
 
-  // Delete rental item
-  const handleRemoveItem = (index: number) => {
+  const handleEquipmentDelete = (index: number) => {
     dispatch({
       type: 'DELETE_RENTAL_ITEM',
       payload: { index },
     });
+    
+    setConfiguringIndex(null);
+    
+    if (equipmentRental.length === 1) {
+      setIsAddingEquipment(true);
+    }
   };
 
-  // Determine if an item is custom (not one of the standard items)
-  const isCustomItem = (name: string) => {
-    return !rentalItemList.slice(0, 4).some(item => item.name === name);
+  const handleEditEquipment = (index: number) => {
+    setConfiguringIndex(index);
+    setIsAddingEquipment(false);
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-base text-left font-semibold mb-4">
-        Equipment Rental
-      </h3>
-      {/* Rental Items */}
-      <div className="space-y-6">
-        {equipmentRental && equipmentRental.map((item, index) => (
-          <div key={`rental-item-${index}`} className="p-4 border rounded-md">
-            <div className="space-y-4">
-              {/* First Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor={`item-name-${index}`}>Item Name</Label>
-                  <Select
-                    value={item.name || ""}
-                    onValueChange={(value) => {
-                      handleInputChange(index, 'name', value);
-                      
-                      // Reset custom fields if switching from custom to standard
-                      if (value !== "Custom" && isCustomItem(item.name)) {
-                        handleInputChange(index, 'totalCost', 0);
-                        handleInputChange(index, 'usefulLifeYrs', 0);
+    <div>
+      <div className="relative">
+        {/* Equipment List */}
+        {equipmentRental.map((item, index) => {
+          const isConfiguring = configuringIndex === index;
+          return (
+            <div
+              key={`equipment-${index}`}
+              className={cn(
+                "rounded-lg border bg-card text-card-foreground shadow-sm mb-2",
+                isConfiguring ? "p-5" : "p-4"
+              )}
+            >
+              {isConfiguring ? (
+                <div className="space-y-4 mt-4">
+                  {/* Item Name */}
+                  <div className="w-full">
+                    <Label className="text-base font-semibold mb-2.5 block">
+                      Item Name
+                    </Label>
+                    <Input
+                      value={item.name}
+                      onChange={(e) =>
+                        handleEquipmentUpdate(index, "name", e.target.value)
                       }
-                    }}
-                  >
-                    <SelectTrigger id={`item-name-${index}`} className="w-full">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rentalItemList.map((option) => (
-                        <SelectItem key={option.name} value={option.name}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={`re-rent-${index}`}>Re-Rent for Current Job</Label>
-                    <Switch
-                      id={`re-rent-${index}`}
-                      checked={item.reRentForCurrentJob || false}
-                      onCheckedChange={(checked) => handleInputChange(index, 'reRentForCurrentJob', checked)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor={`quantity-${index}`}>Quantity</Label>
-                  <Input
-                    id={`quantity-${index}`}
-                    type="number"
-                    min={0}
-                    value={item.quantity || ""}
-                    onChange={(e) => handleInputChange(index, 'quantity', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor={`months-${index}`}>Months</Label>
-                  <Input
-                    id={`months-${index}`}
-                    type="number"
-                    min={0}
-                    value={item.months || ""}
-                    onChange={(e) => handleInputChange(index, 'months', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor={`rent-price-${index}`}>Rent Price ($)</Label>
-                  <Input
-                    id={`rent-price-${index}`}
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.rentPrice || ""}
-                    onChange={(e) => handleInputChange(index, 'rentPrice', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor={`re-rent-price-${index}`}>Re-Rent Cost ($)</Label>
-                  <Input
-                    id={`re-rent-price-${index}`}
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.reRentPrice || ""}
-                    onChange={(e) => handleInputChange(index, 'reRentPrice', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-              </div>
-
-              {/* Custom Fields (only show for Custom items or if not re-renting) */}
-              {(item.name === "Custom" || isCustomItem(item.name)) && !item.reRentForCurrentJob && (
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div className="space-y-2">
-                    <Label htmlFor={`total-cost-${index}`}>Total Cost ($)</Label>
-                    <Input
-                      id={`total-cost-${index}`}
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={safeNumber(item.totalCost) === 0 ? "" : item.totalCost}
-                      onChange={(e) => handleInputChange(index, 'totalCost', parseFloat(e.target.value) || 0)}
-                      disabled={item.reRentForCurrentJob}
+                      className="w-[200px]"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`useful-life-${index}`}>Useful Life (Years)</Label>
-                    <Input
-                      id={`useful-life-${index}`}
-                      type="number"
-                      min={0}
-                      value={safeNumber(item.usefulLifeYrs) === 0 ? "" : item.usefulLifeYrs}
-                      onChange={(e) => handleInputChange(index, 'usefulLifeYrs', parseFloat(e.target.value) || 0)}
-                      disabled={item.reRentForCurrentJob}
-                    />
+                  <div className="flex flex-row gap-4 w-full">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Qty</Label>
+                      <Input
+                        type="number"
+                        value={item.quantity || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            "quantity",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Months</Label>
+                      <Input
+                        type="number"
+                        value={item.months || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            "months",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Rent Price ($)</Label>
+                      <Input
+                        type="number"
+                        value={item.rentPrice || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            "rentPrice",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Re-Rent Cost ($)</Label>
+                      <Input
+                        type="number"
+                        value={item.reRentPrice || ""}
+                        onChange={(e) =>
+                          handleEquipmentUpdate(
+                            index,
+                            "reRentPrice",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        min={0}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium mb-2 block">Re-Rent</Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`reRent-${index}`}
+                          checked={item.reRentForCurrentJob}
+                          onCheckedChange={(checked) =>
+                            handleEquipmentUpdate(index, "reRentForCurrentJob", checked)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end space-x-3 pt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleEquipmentDelete(index)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={() => handleEquipmentSave(index)}>
+                      Save Equipment
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Qty: {item.quantity} • Months: {item.months} • Rent: ${item.rentPrice}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditEquipment(index)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEquipmentDelete(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               )}
+            </div>
+          );
+        })}
 
-              {/* Remove button */}
-              <div className="flex justify-end">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleRemoveItem(index)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" /> Remove Item
-                </Button>
-              </div>
+        {/* Add Equipment Input or Button */}
+        {isAddingEquipment && (
+          <div className="w-full max-w-sm mt-4">
+            <Label className="text-sm font-medium mb-2 block">
+              Item Name
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    handleItemNameSubmit();
+                  }
+                }}
+                placeholder="Enter item name"
+              />
+              <Button onClick={handleItemNameSubmit}>Add</Button>
             </div>
           </div>
-        ))}
+        )}
+
+        {!isAddingEquipment && equipmentRental.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => setIsAddingEquipment(true)}
+            className="w-full mt-4"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Another Equipment
+          </Button>
+        )}
       </div>
-
-      <Separator className="my-4" />
-
-      {/* Add New Item Button */}
-      <Button
-        onClick={handleAddItem}
-        className="mt-4 mr-auto"
-      >
-        <Plus className="mr-2 h-4 w-4" /> Add Rental Item
-      </Button>
     </div>
   );
 };
 
-export default EquipmentRentalTab;
+export default EquipmentSummaryStep;
