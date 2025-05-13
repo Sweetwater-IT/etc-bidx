@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +8,27 @@ import { cn } from "@/lib/utils";
 import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 const EquipmentSummaryStep = () => {
   const { equipmentRental, dispatch } = useEstimate();
   const [isAddingEquipment, setIsAddingEquipment] = useState(equipmentRental.length === 0);
-  const [newItemName, setNewItemName] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [customName, setCustomName] = useState("");
   const [configuringIndex, setConfiguringIndex] = useState<number | null>(null);
 
   const handleItemNameSubmit = () => {
-    if (newItemName.trim()) {
+    const itemName = selectedType === "custom" ? customName : selectedType;
+    
+    if (itemName.trim()) {
       const newEquipment: EquipmentRentalItem = {
-        name: newItemName.trim(),
+        name: itemName.trim(),
         quantity: 0,
         months: 0,
         rentPrice: 0,
@@ -36,7 +45,8 @@ const EquipmentSummaryStep = () => {
       
       // Set the new item as configuring
       setConfiguringIndex(equipmentRental.length);
-      setNewItemName("");
+      setSelectedType("");
+      setCustomName("");
       setIsAddingEquipment(false);
     }
   };
@@ -93,9 +103,6 @@ const EquipmentSummaryStep = () => {
                 <div className="space-y-4 mt-4">
                   {/* Item Name */}
                   <div className="w-full">
-                    <Label className="text-base font-semibold mb-2.5 block">
-                      Item Name
-                    </Label>
                     <Input
                       value={item.name}
                       onChange={(e) =>
@@ -229,23 +236,49 @@ const EquipmentSummaryStep = () => {
 
         {/* Add Equipment Input or Button */}
         {isAddingEquipment && (
-          <div className="w-full max-w-sm mt-4">
-            <Label className="text-sm font-medium mb-2 block">
-              Item Name
-            </Label>
-            <div className="flex gap-2">
+          <div className="w-full max-w-sm">
+            <div className="flex gap-2 mb-2">
+              <Select 
+                value={selectedType} 
+                onValueChange={(value) => {
+                  setSelectedType(value);
+                  if (value !== "custom") {
+                    setCustomName("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose equipment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Truck Mounted Attenuator">Truck Mounted Attenuator</SelectItem>
+                  <SelectItem value="Arrow Board">Arrow Board</SelectItem>
+                  <SelectItem value="Message Board">Message Board</SelectItem>
+                  <SelectItem value="Speed Trailer">Speed Trailer</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleItemNameSubmit}
+                disabled={!selectedType || (selectedType === "custom" && !customName.trim())}
+              >
+                Add
+              </Button>
+            </div>
+            
+            {selectedType === "custom" && (
               <Input
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
                 onKeyPress={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && customName.trim()) {
                     handleItemNameSubmit();
                   }
                 }}
-                placeholder="Enter item name"
+                placeholder="Enter custom item name"
+                className="mb-2"
               />
-              <Button onClick={handleItemNameSubmit}>Add</Button>
-            </div>
+            )}
           </div>
         )}
 
