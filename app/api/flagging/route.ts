@@ -3,12 +3,9 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        let data;
-        let error;
-
-        ({ data, error } = await supabase
+        const { data, error } = await supabase
             .from('flagging')
-            .select('*'));
+            .select('*');
 
         if (error) {
             console.error(error)
