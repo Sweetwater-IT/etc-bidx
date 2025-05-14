@@ -243,7 +243,7 @@ const FlaggingServicesTab = () => {
               Enter the standard lump sum for flagging services.
             </DialogDescription>
           </DialogHeader>
-          <StandardPricingModal onClose={close}/>
+          <StandardPricingModal onClose={() => setDialogOpen(false)}/>
         </DialogContent>
       </Dialog>
 

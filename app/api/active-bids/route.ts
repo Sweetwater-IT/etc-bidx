@@ -486,7 +486,7 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         quote_price: item.quotePrice,
         markup_percentage: item.markupPercentage,
-        status: 'PENDING'
+        status: 'pending'
       }));
 
       const { error: saleError } = await supabase

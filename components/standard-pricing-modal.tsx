@@ -166,8 +166,8 @@ const StandardPricingModal = ({ onClose }) => {
             <SelectValue placeholder="Select rate type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="rated">Rated</SelectItem>
-            <SelectItem value="nonRated">Non-Rated</SelectItem>
+            <SelectItem value="RATED">RATED</SelectItem>
+            <SelectItem value="NON-RATED">NON-RATED</SelectItem>
           </SelectContent>
         </Select>
       </div>
