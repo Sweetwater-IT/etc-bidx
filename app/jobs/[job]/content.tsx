@@ -232,10 +232,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const loadActiveBids = useCallback(async () => {
         try {
             startLoading();
-
+    
             const options: any = {
                 limit: activeBidsPageSize,
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
+                detailed: true
             };
             
             if (activeSegment !== "all") {
@@ -247,7 +248,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     options.division = activeSegment;
                 }
             }
-
+    
+            // Add detailed parameter if you want the full data
+            // options.detailed = true; // Uncomment this if you need full data
+    
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bids');
@@ -257,29 +261,61 @@ export function JobPageContent({ job }: JobPageContentProps) {
             
             console.log("Fetched active bids:", data);
             console.log("Pagination:", pagination);
-
-            const uiBids = data.map((bid: any) => ({
-                id: bid.id,
-                contractNumber: bid.contract_number,
-                contractor: bid.contractor || "Unknown",
-                subcontractor: bid.subcontractor || "",
-                owner: bid.owner || "Unknown",
-                county: bid.county || "Unknown",
-                branch: bid.branch || "Unknown",
-                estimator: bid.estimator || "Unknown",
-                status: bid.status || "Unknown",
-                division: bid.division || "",
-                lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : "",
-                startDate: bid.start_date ? format(new Date(bid.start_date), "yyyy-MM-dd") : "",
-                endDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : "",
-                projectDays: bid.project_days || 0,
-                totalHours: bid.total_hours || 0,
-                mptValue: bid.mpt_value || "$0",
-                permSignValue: bid.perm_sign_value || "$0",
-                rentalValue: bid.rental_value || "$0",
-                createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-            }));
-
+    
+            // Check if we're getting detailed data or flattened data
+            const isDetailed = data.length > 0 && 'admin_data' in data[0];
+    
+            const uiBids = data.map((bid: any) => {
+                if (isDetailed) {
+                    // Handle detailed format
+                    return {
+                        id: bid.id,
+                        contractNumber: bid.admin_data.contractNumber,
+                        contractor: bid.contractor_name || "",
+                        subcontractor: bid.subcontractor_name || "",
+                        owner: bid.admin_data.owner || "Unknown",
+                        county: bid.admin_data.county?.name || "Unknown", // Parse JSON if needed
+                        branch: bid.admin_data.county?.branch || "Unknown",
+                        estimator: bid.admin_data.estimator || "Unknown",
+                        status: bid.status || "Unknown",
+                        division: bid.admin_data.division || "",
+                        lettingDate: bid.admin_data.lettingDate ? format(new Date(bid.admin_data.lettingDate), "yyyy-MM-dd") : "",
+                        startDate: bid.admin_data.startDate ? format(new Date(bid.admin_data.startDate), "yyyy-MM-dd") : "",
+                        endDate: bid.admin_data.endDate ? format(new Date(bid.admin_data.endDate), "yyyy-MM-dd") : "",
+                        projectDays: bid.total_days || 0,
+                        totalHours: bid.mpt_rental?._summary?.hours || 0,
+                        mptValue: bid.mpt_rental?._summary?.revenue || 0,
+                        permSignValue: 0, // Not in the new structure
+                        rentalValue: bid.equipment_rental?.reduce((sum: number, item: any) => 
+                            sum + (item.revenue || 0), 0) || 0,
+                        createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                    };
+                } else {
+                    // Handle flattened format (existing code)
+                    return {
+                        id: bid.id,
+                        contractNumber: bid.contract_number,
+                        contractor: bid.contractor || "Unknown",
+                        subcontractor: bid.subcontractor || "",
+                        owner: bid.owner || "Unknown",
+                        county: bid.county || "Unknown",
+                        branch: bid.branch || "Unknown",
+                        estimator: bid.estimator || "Unknown",
+                        status: bid.status || "Unknown",
+                        division: bid.division || "",
+                        lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : "",
+                        startDate: bid.start_date ? format(new Date(bid.start_date), "yyyy-MM-dd") : "",
+                        endDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : "",
+                        projectDays: bid.project_days || 0,
+                        totalHours: bid.total_hours || 0,
+                        mptValue: bid.mpt_value || 0,
+                        permSignValue: bid.perm_sign_value || 0,
+                        rentalValue: bid.rental_value || 0,
+                        createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                    };
+                }
+            });
+    
             setActiveBids(uiBids);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);

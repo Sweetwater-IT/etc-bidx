@@ -7,8 +7,8 @@ import { calculateLaborCostSummary, getAllTotals, getEquipmentTotalsPerPhase, re
 import { Flagging } from '@/types/TFlagging';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { SaleItem } from '@/types/TSaleItem';
+import { EstimateCompleteView, EstimateGridView } from '@/types/estimate-view';
 
-// GET: Fetch all active bids with optional filtering
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -19,14 +19,20 @@ export async function GET(request: NextRequest) {
     const ascending = searchParams.get('ascending') === 'true';
     const division = searchParams.get('division');
     const counts = searchParams.get('counts');
+    const detailed = searchParams.get('detailed') === 'true';
     
     if (counts) {
       try {
+        // For counts, we need to explicitly type the response
         const { data: allBids, error: allBidsError } = await supabase
-          .from('bid_estimates')
-          .select('id, status, division');
+          .from('estimate_complete')
+          .select('id, status, archived, admin_data')
+          .then(result => ({
+            ...result,
+            data: result.data as Pick<EstimateCompleteView, 'id' | 'status' | 'archived' | 'admin_data'>[] | null
+          }));
         
-        if (allBidsError) {
+        if (allBidsError || !allBids) {
           return NextResponse.json(
             { error: 'Failed to fetch bid counts', details: allBidsError },
             { status: 500 }
@@ -35,15 +41,11 @@ export async function GET(request: NextRequest) {
         
         const countData = {
           all: allBids.length,
-          won: allBids.filter(bid => bid.status?.toLowerCase().includes('won') && !bid.status?.toLowerCase().includes('pending')).length,
-          pending: allBids.filter(bid => bid.status?.toLowerCase().includes('pending')).length,
-          lost: allBids.filter(bid => bid.status?.toLowerCase().includes('lost')).length,
-          draft: allBids.filter(bid => bid.status?.toLowerCase().includes('draft')).length,
-          'won-pending': allBids.filter(bid => 
-            bid.status?.toLowerCase().includes('won') && 
-            bid.status?.toLowerCase().includes('pending')
-          ).length,
-          archived: allBids.filter(bid => bid.status?.toLowerCase().includes('archived')).length
+          won: allBids.filter(bid => bid.status === 'WON').length,
+          pending: allBids.filter(bid => bid.status === 'PENDING').length,
+          lost: allBids.filter(bid => bid.status === 'LOST').length,
+          draft: allBids.filter(bid => bid.status === 'DRAFT').length,
+          archived: allBids.filter(bid => bid.archived === true).length
         };
         
         return NextResponse.json(countData);
@@ -59,97 +61,156 @@ export async function GET(request: NextRequest) {
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
-    // Base query for both count and data
-    const baseQuery = supabase.from('bid_estimates');
-    
-    // Count query to get total records
-    let countQuery = baseQuery.select('id', { count: 'exact', head: true });
-    
-    // Data query to get paginated results
-    let dataQuery = baseQuery
-      .select('*')
-      .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1);
+    if (detailed) {
+      // For detailed view, get everything
+      let query = supabase
+        .from('estimate_complete')
+        .select('*')
+        .order(orderBy, { ascending })
+        .range(offset, offset + limit - 1);
 
-    console.log('API received status filter:', status);
-    console.log('API received division filter:', division);
-
-    // Apply filters to both queries
-    if (status) {
-      if (status === 'won-pending') {
-        // Use case-insensitive matching for 'won-pending' status
-        const orCondition = 'status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
-        countQuery = countQuery.or(orCondition);
-        dataQuery = dataQuery.or(orCondition);
-      } else if (status === 'won') {
-        // Use case-insensitive matching for 'won' status
-        const orCondition = 'status.ilike.won,status.ilike.Won';
-        countQuery = countQuery.or(orCondition);
-        dataQuery = dataQuery.or(orCondition);
-      } else if (status === 'archived') {
-        countQuery = countQuery.ilike('status', '%archived%').is('deleted_at', null);
-        dataQuery = dataQuery.ilike('status', '%archived%').is('deleted_at', null);
-      } else if (status === 'won,won-pending') {
-        // Special case for getting both won and won-pending with all case variations
-        const orCondition = 'status.ilike.won,status.ilike.Won,status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
-        countQuery = countQuery.or(orCondition);
-        dataQuery = dataQuery.or(orCondition);
-      } else {
-        // Try case-insensitive filtering using ilike for text fields
-        console.log('Using case-insensitive filter for status:', status);
-        countQuery = countQuery.ilike('status', `%${status}%`);
-        dataQuery = dataQuery.ilike('status', `%${status}%`);
-      }
-    }
-
-    // Apply division filter if provided
-    if (division && division !== 'all') {
-      const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
-      
-      if (statusValues.includes(division.toLowerCase())) {
-        
-        if (division.toLowerCase() === 'won-pending') {
-          const orCondition = 'status.ilike.won-pending,status.ilike.Won-Pending,status.ilike.Won - Pending';
-          countQuery = countQuery.or(orCondition);
-          dataQuery = dataQuery.or(orCondition);
-        } else {
-          countQuery = countQuery.ilike('status', `%${division}%`);
-          dataQuery = dataQuery.ilike('status', `%${division}%`);
+      // Apply filters
+      if (status) {
+        const upperStatus = status.toUpperCase();
+        if (upperStatus === 'WON' || upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
+          query = query.eq('status', upperStatus);
+        } else if (upperStatus === 'ARCHIVED') {
+          query = query.eq('archived', true);
         }
-      } else {
-        countQuery = countQuery.eq('division', division);
-        dataQuery = dataQuery.eq('division', division);
       }
-    }
 
-    // Execute both queries in parallel
-    const [countResult, dataResult] = await Promise.all([
-      countQuery,
-      dataQuery
-    ]);
-
-    if (countResult.error || dataResult.error) {
-      const error = countResult.error || dataResult.error;
-      return NextResponse.json(
-        { success: false, message: 'Failed to fetch active bids', error: error?.message },
-        { status: 500 }
-      );
-    }
-
-    const totalCount = countResult.count || 0;
-    const pageCount = Math.ceil(totalCount / limit);
-
-    return NextResponse.json({
-      success: true, 
-      data: dataResult.data || [],
-      pagination: {
-        page,
-        pageSize: limit,
-        pageCount,
-        totalCount
+      if (division && division !== 'all') {
+        const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT'];
+        if (statusValues.includes(division.toUpperCase())) {
+          query = query.eq('status', division.toUpperCase());
+        } else {
+          query = query.eq('admin_data->>division', division);
+        }
       }
-    });
 
+      const { data, error } = await query.then(result => ({
+        ...result,
+        data: result.data as EstimateCompleteView[] | null
+      }));
+      
+      if (error || !data) {
+        return NextResponse.json(
+          { success: false, message: 'Failed to fetch active bids', error: error?.message },
+          { status: 500 }
+        );
+      }
+
+      // Get count for pagination
+      const { count } = await supabase
+        .from('estimate_complete')
+        .select('id', { count: 'exact', head: true });
+      
+      return NextResponse.json({
+        success: true, 
+        data,
+        pagination: {
+          page,
+          pageSize: limit,
+          pageCount: Math.ceil((count || 0) / limit),
+          totalCount: count || 0
+        }
+      });
+    } else {
+      // For grid view, select specific fields
+      const selectFields = `
+        id, status, total_revenue, total_cost, total_gross_profit, created_at, archived,
+        admin_data->>contractNumber as contract_number,
+        admin_data->>estimator as estimator,
+        admin_data->>division as division,
+        admin_data->>owner as owner,
+        admin_data->county->>name as county,
+        admin_data->county->>branch as branch,
+        admin_data->>lettingDate as letting_date,
+        project_manager, contractor_name, subcontractor_name,
+        total_phases, total_days, total_hours,
+        mpt_rental->_summary->>revenue as mpt_revenue,
+        mpt_rental->_summary->>grossProfit as mpt_gross_profit
+      `;
+
+      let query = supabase
+        .from('estimate_complete')
+        .select(selectFields)
+        .order(orderBy, { ascending })
+        .range(offset, offset + limit - 1);
+
+      // Apply filters
+      if (status) {
+        const upperStatus = status.toUpperCase();
+        if (upperStatus === 'WON' || upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
+          query = query.eq('status', upperStatus);
+        } else if (upperStatus === 'ARCHIVED') {
+          query = query.eq('archived', true);
+        }
+      }
+
+      if (division && division !== 'all') {
+        const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT'];
+        if (statusValues.includes(division.toUpperCase())) {
+          query = query.eq('status', division.toUpperCase());
+        } else {
+          query = query.eq('admin_data->>division', division);
+        }
+      }
+
+      const { data: rawData, error } = await query;
+      
+      if (error || !rawData) {
+        return NextResponse.json(
+          { success: false, message: 'Failed to fetch active bids', error: error?.message },
+          { status: 500 }
+        );
+      }
+
+      // Transform the data explicitly
+      const transformedData: EstimateGridView[] = rawData.map((row: any) => ({
+        id: row.id,
+        status: row.status,
+        total_revenue: row.total_revenue,
+        total_cost: row.total_cost,
+        total_gross_profit: row.total_gross_profit,
+        created_at: row.created_at,
+        archived: row.archived,
+        contract_number: row.contract_number,
+        estimator: row.estimator,
+        division: row.division,
+        owner: row.owner,
+        county: row.county,
+        branch: row.branch,
+        letting_date: row.letting_date,
+        project_manager: row.project_manager,
+        contractor: row.contractor_name,
+        subcontractor: row.subcontractor_name,
+        phases: row.total_phases,
+        project_days: row.total_days,
+        total_hours: row.total_hours,
+        mpt_value: parseFloat(row.mpt_revenue || '0'),
+        mpt_gross_profit: parseFloat(row.mpt_gross_profit || '0'),
+        mpt_gm_percent: row.mpt_revenue > 0 
+          ? ((parseFloat(row.mpt_gross_profit) / parseFloat(row.mpt_revenue)) * 100).toFixed(2) 
+          : 0
+      }));
+
+      // Get count for pagination
+      const { count } = await supabase
+        .from('estimate_complete')
+        .select('id', { count: 'exact', head: true });
+      
+      return NextResponse.json({
+        success: true, 
+        data: transformedData,
+        pagination: {
+          page,
+          pageSize: limit,
+          pageCount: Math.ceil((count || 0) / limit),
+          totalCount: count || 0
+        }
+      });
+    }
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
