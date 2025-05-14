@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS project_metadata (
     pm_phone VARCHAR(50),
     customer_contract_number VARCHAR(100),
     contractor_id INTEGER REFERENCES contractors(id),
+    subcontractor_id INTEGER REFERENCES subcontractors(id),
     
     -- Check constraint to ensure only one parent
     CONSTRAINT check_single_parent CHECK (
@@ -26,3 +27,4 @@ CREATE UNIQUE INDEX unique_project_metadata_entry ON project_metadata (
 CREATE INDEX idx_project_metadata_bid_estimate ON project_metadata (bid_estimate_id);
 CREATE INDEX idx_project_metadata_job ON project_metadata (job_id);
 CREATE INDEX idx_project_metadata_contractor ON project_metadata (contractor_id);
+CREATE INDEX IF NOT EXISTS idx_project_metadata_subcontractor ON project_metadata (subcontractor_id);

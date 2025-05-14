@@ -3,10 +3,13 @@ import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformatio
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
+import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
+import { Flagging } from '@/types/TFlagging';
+import { SaleItem } from '@/types/TSaleItem';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -202,9 +205,16 @@ export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
 }
 
 /**
- * Create a new active bid
+ * Create a new estimate
  */
-export async function createActiveBid(adminData: AdminData, mptRental: MPTRentalEstimating): Promise<BidEstimate> {
+export async function createActiveBid(
+  adminData: AdminData, 
+  mptRental: MPTRentalEstimating,
+  equipmentRental: EquipmentRentalItem[],
+  flagging: Flagging | null,
+  serviceWork: Flagging | null,
+  saleItems: SaleItem[]
+): Promise<{ id: number }> {
   const response = await fetch('/api/active-bids', {
     method: 'POST',
     headers: {
@@ -213,7 +223,11 @@ export async function createActiveBid(adminData: AdminData, mptRental: MPTRental
     body: JSON.stringify({
       data: {
         adminData,
-        mptRental
+        mptRental,
+        equipmentRental,
+        flagging,
+        serviceWork,
+        saleItems
       }
     }),
   });
@@ -226,7 +240,6 @@ export async function createActiveBid(adminData: AdminData, mptRental: MPTRental
   const result = await response.json();
   return result.data;
 }
-
 /**
  * Update an existing active bid
  */
@@ -258,7 +271,7 @@ export async function updateActiveBid(id: number, data: Partial<BidEstimateInser
  */
 export async function changeActiveBidStatus(
   id: number,
-  status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending'
+  status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT'
 ): Promise<BidEstimate> {
   return updateActiveBid(id, { status });
 }
