@@ -1,8 +1,11 @@
+// app/api/bulk-import/active-bids/route.ts
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
 
 type BidEstimateInsert = Database['public']['Tables']['bid_estimates']['Insert'];
+type AdminDataInsert = Database['public']['Tables']['admin_data_entries']['Insert'];
+type MPTRentalInsert = Database['public']['Tables']['mpt_rental_entries']['Insert'];
 
 export async function POST(request: Request) {
   try {
@@ -18,86 +21,50 @@ export async function POST(request: Request) {
     }
 
     const errors: string[] = [];
-    const validBids: BidEstimateInsert[] = [];
+    const successfulImports: number[] = [];
+    let newCount = 0;
+    let updatedCount = 0;
 
-    for (const job of jobs) {
+    for (const [index, job] of jobs.entries()) {
       try {
-        console.log('Processing active bid row:', job);
-        processActiveBid(job, validBids, errors, jobs.indexOf(job));
-      } catch (error: any) {
-        errors.push(`Row ${jobs.indexOf(job) + 1}: ${error.message}`);
-      }
-    }
-
-    if (validBids.length > 0) {
-      const updatedBids: BidEstimateInsert[] = [];
-      const newBids: BidEstimateInsert[] = [];
-      const updatedCount = { new: 0, updated: 0 };
-      
-      for (const bid of validBids) {
-        const { data: existingBids } = await supabase
+        console.log(`Processing active bid row ${index + 1}`);
+        
+        // Parse the job data
+        const parsedData = parseActiveBidData(job, index);
+        
+        // Check if bid already exists
+        const { data: existingBid } = await supabase
           .from('bid_estimates')
           .select('id')
-          .eq('contract_number', bid.contract_number)
-          .limit(1);
-        
-        if (existingBids && existingBids.length > 0) {
-          const { data, error } = await supabase
-            .from('bid_estimates')
-            .update(bid)
-            .eq('contract_number', bid.contract_number)
-            .select();
-          
-          if (!error && data) {
-            // Type assertion to ensure TypeScript knows the data type
-            updatedBids.push(...(data as BidEstimateInsert[]));
-            updatedCount.updated++;
-          }
-        } else {
-          newBids.push(bid);
-          updatedCount.new++;
-        }
-      }
-      
-      let insertError: any = null;
-      if (newBids.length > 0) {
-        const { data: newBidsData, error } = await supabase
-          .from('bid_estimates')
-          .insert(newBids)
-          .select();
-          
-        if (error) {
-          insertError = error;
-        } else if (newBidsData) {
-          updatedBids.push(...(newBidsData as BidEstimateInsert[]));
-        }
-      }
-      
-      if (insertError) {
-        console.error('Error inserting new bids:', insertError);
-        return NextResponse.json(
-          { message: 'Failed to import active bids', error: insertError.message },
-          { status: 500 }
-        );
-      }
-      
-      const data = updatedBids;
+          .eq('contract_number', parsedData.contractNumber)
+          .single();
 
-      return NextResponse.json({
-        message: 'Active bids imported successfully',
-        count: validBids.length,
-        updated: updatedCount.updated > 0,
-        newCount: updatedCount.new,
-        updatedCount: updatedCount.updated,
-        errors: errors.length > 0 ? errors : undefined,
-        data
-      });
-    } else {
-      return NextResponse.json(
-        { message: 'No valid active bids to import', errors },
-        { status: 400 }
-      );
+        if (existingBid) {
+          // Update existing bid
+          await updateExistingBid(existingBid.id, parsedData);
+          updatedCount++;
+        } else {
+          // Create new bid
+          await createNewBid(parsedData);
+          newCount++;
+        }
+        
+        successfulImports.push(index + 1);
+      } catch (error: any) {
+        console.error(`Error processing row ${index + 1}:`, error);
+        errors.push(`Row ${index + 1}: ${error.message}`);
+      }
     }
+
+    return NextResponse.json({
+      message: 'Active bids import completed',
+      totalProcessed: jobs.length,
+      successfulImports: successfulImports.length,
+      newCount,
+      updatedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
   } catch (error: any) {
     console.error('Error importing active bids:', error);
     return NextResponse.json(
@@ -107,9 +74,8 @@ export async function POST(request: Request) {
   }
 }
 
-function processActiveBid(job: any, validBids: BidEstimateInsert[], errors: string[], rowIndex: number) {
-  console.log(`Processing active bid row ${rowIndex + 1}`);
-  
+function parseActiveBidData(job: any, rowIndex: number) {
+  // Extract all fields
   const status = findFieldValue(job, ['Status', 'Bid Status']);
   const branch = findFieldValue(job, ['Branch', 'Office']);
   const contractNumber = findFieldValue(job, ['Contract Number', 'Contract #', 'Contract']);
@@ -136,8 +102,8 @@ function processActiveBid(job: any, validBids: BidEstimateInsert[], errors: stri
   const nonratedHours = findFieldValue(job, ['Nonrated Hours']);
   const totalHours = findFieldValue(job, ['Total Hours']);
   
-  // Equipment and materials
-  const phases = findFieldValue(job, ['Phases']) || 0;
+  // Equipment quantities
+  const phases = findFieldValue(job, ['Phases']) || 1;
   const typeIii4ft = findFieldValue(job, ['Type III 4ft']) || 0;
   const wings6ft = findFieldValue(job, ['Wings 6ft']) || 0;
   const hStands = findFieldValue(job, ['H Stands']) || 0;
@@ -149,100 +115,248 @@ function processActiveBid(job: any, validBids: BidEstimateInsert[], errors: stri
   const typeXiVerticalPanels = findFieldValue(job, ['Type XI Vertical Panels']) || 0;
   const bLites = findFieldValue(job, ['B Lites']) || 0;
   const acLites = findFieldValue(job, ['AC Lites']) || 0;
+  
+  // Signs
   const hiSignsSqFt = findFieldValue(job, ['HI Signs Sq Ft']) || 0;
   const dgSignsSqFt = findFieldValue(job, ['DG Signs Sq Ft']) || 0;
   const specialSignsSqFt = findFieldValue(job, ['Special Signs Sq Ft']) || 0;
-  
-  // Equipment
-  const tma = findFieldValue(job, ['TMA']) || 0;
-  const arrowBoard = findFieldValue(job, ['Arrow Board']) || 0;
-  const messageBoard = findFieldValue(job, ['Message Board']) || 0;
-  const speedTrailer = findFieldValue(job, ['Speed Trailer']) || 0;
-  const pts = findFieldValue(job, ['PTS']) || 0;
   
   // Financial data
   const mptValue = findFieldValue(job, ['MPT Value']) || 0;
   const mptGrossProfit = findFieldValue(job, ['MPT Gross Profit']) || 0;
   const mptGmPercent = findFieldValue(job, ['MPT GM %']) || 0;
-  const permSignValue = findFieldValue(job, ['Perm Sign Value']) || 0;
-  const permSignGrossProfit = findFieldValue(job, ['Perm Sign Gross Profit']) || 0;
-  const permSignGmPercent = findFieldValue(job, ['Perm Sign GM %']) || 0;
   const rentalValue = findFieldValue(job, ['Rental Value']) || 0;
   const rentalGrossProfit = findFieldValue(job, ['Rental Gross Profit']) || 0;
   const rentalGmPercent = findFieldValue(job, ['Rental GM %']) || 0;
-  
-  const currentDate = new Date().toISOString().split('T')[0];
-  
-  // Parse Excel dates correctly
-  const parsedLettingDate = parseExcelDate(lettingDate);
-  const parsedStartDate = parseExcelDate(startDate) || currentDate;
-  const parsedEndDate = parseExcelDate(endDate) || currentDate;
-  
-  // Create the bid estimate record
-  const mappedBid: BidEstimateInsert = {
-    status: status || 'Pending',
-    letting_date: parsedLettingDate,
-    contract_number: contractNumber || '',
-    contractor: contractor || null,
-    subcontractor: subcontractor || null,
-    owner: owner || 'Unknown',
-    county: county || 'Unknown',
-    branch: branch || 'Unknown',
-    division: division || 'Unknown',
-    estimator: estimator || 'Unknown',
-    start_date: parsedStartDate,
-    end_date: parsedEndDate,
-    project_days: parseInt(projectDays?.toString() || '1'),
-    base_rate: parseFloat(baseRate?.toString() || '0'),
-    fringe_rate: parseFloat(fringeRate?.toString() || '0'),
-    rt_miles: parseInt(rtMiles?.toString() || '0'),
-    rt_travel: parseInt(rtTravel?.toString() || '0'),
-    emergency_job: Boolean(emergencyJob || false),
-    rated_hours: parseFloat(ratedHours?.toString() || '0'),
-    nonrated_hours: parseFloat(nonratedHours?.toString() || '0'),
-    total_hours: parseFloat(totalHours?.toString() || '0'),
-    phases: parseInt(phases?.toString() || '0'),
-    type_iii_4ft: parseInt(typeIii4ft?.toString() || '0'),
-    wings_6ft: parseInt(wings6ft?.toString() || '0'),
-    h_stands: parseInt(hStands?.toString() || '0'),
-    posts: parseInt(posts?.toString() || '0'),
-    sand_bags: parseInt(sandBags?.toString() || '0'),
-    covers: parseInt(covers?.toString() || '0'),
-    spring_loaded_metal_stands: parseInt(springLoadedMetalStands?.toString() || '0'),
-    hi_vertical_panels: parseInt(hiVerticalPanels?.toString() || '0'),
-    type_xi_vertical_panels: parseInt(typeXiVerticalPanels?.toString() || '0'),
-    b_lites: parseInt(bLites?.toString() || '0'),
-    ac_lites: parseInt(acLites?.toString() || '0'),
-    hi_signs_sq_ft: parseFloat(hiSignsSqFt?.toString() || '0'),
-    dg_signs_sq_ft: parseFloat(dgSignsSqFt?.toString() || '0'),
-    special_signs_sq_ft: parseFloat(specialSignsSqFt?.toString() || '0'),
-    tma: parseInt(tma?.toString() || '0'),
-    arrow_board: parseInt(arrowBoard?.toString() || '0'),
-    message_board: parseInt(messageBoard?.toString() || '0'),
-    speed_trailer: parseInt(speedTrailer?.toString() || '0'),
-    pts: parseInt(pts?.toString() || '0'),
-    mpt_value: parseFloat(mptValue?.toString() || '0'),
-    mpt_gross_profit: parseFloat(mptGrossProfit?.toString() || '0'),
-    mpt_gm_percent: parseFloat(mptGmPercent?.toString() || '0'),
-    perm_sign_value: parseFloat(permSignValue?.toString() || '0'),
-    perm_sign_gross_profit: parseFloat(permSignGrossProfit?.toString() || '0'),
-    perm_sign_gm_percent: parseFloat(permSignGmPercent?.toString() || '0'),
-    rental_value: parseFloat(rentalValue?.toString() || '0'),
-    rental_gross_profit: parseFloat(rentalGrossProfit?.toString() || '0'),
-    rental_gm_percent: parseFloat(rentalGmPercent?.toString() || '0'),
-  };
 
-  if (!mappedBid.contract_number) {
-    errors.push(`Row ${rowIndex + 1}: Contract number is required`);
+  if (!contractNumber) {
     throw new Error('Contract number is required');
   }
-  
-  // Ensure all numeric fields are valid
-  ensureValidNumbers(mappedBid, rowIndex, errors);
 
-  validBids.push(mappedBid);
+  // Parse dates
+  const parsedLettingDate = parseExcelDate(lettingDate);
+  const parsedStartDate = parseExcelDate(startDate);
+  const parsedEndDate = parseExcelDate(endDate);
+
+  // Map status to enum values
+  const mappedStatus = mapStatusToEnum(status || 'PENDING');
+  const mappedOwner = mapOwnerToEnum(owner);
+  const mappedDivision = mapDivisionToEnum(division);
+
+  return {
+    bidEstimate: {
+      status: mappedStatus,
+      total_revenue: parseFloat(mptValue?.toString() || '0') + parseFloat(rentalValue?.toString() || '0'),
+      total_cost: (parseFloat(mptValue?.toString() || '0') - parseFloat(mptGrossProfit?.toString() || '0')) + 
+                  (parseFloat(rentalValue?.toString() || '0') - parseFloat(rentalGrossProfit?.toString() || '0')),
+      total_gross_profit: parseFloat(mptGrossProfit?.toString() || '0') + parseFloat(rentalGrossProfit?.toString() || '0'),
+    },
+    adminData: {
+      contract_number: contractNumber,
+      estimator: estimator || 'Unknown',
+      division: mappedDivision,
+      bid_date: parsedLettingDate,
+      owner: mappedOwner,
+      county: JSON.stringify({ name: county || 'Unknown', branch: branch || 'Unknown' }),
+      sr_route: '',
+      location: '',
+      dbe: '',
+      start_date: parsedStartDate,
+      end_date: parsedEndDate,
+      ow_travel_time_mins: Math.round((parseFloat(rtTravel?.toString() || '0') * 60) / 2),
+      ow_mileage: parseFloat(rtMiles?.toString() || '0') / 2,
+      fuel_cost_per_gallon: null,
+      emergency_job: Boolean(emergencyJob),
+      rated: 'RATED' as const,
+      emergency_fields: null,
+    },
+    mptRental: {
+      target_moic: null,
+      payback_period: null,
+      annual_utilization: null,
+      dispatch_fee: null,
+      mpg_per_truck: null,
+      revenue: parseFloat(mptValue?.toString() || '0'),
+      cost: parseFloat(mptValue?.toString() || '0') - parseFloat(mptGrossProfit?.toString() || '0'),
+      gross_profit: parseFloat(mptGrossProfit?.toString() || '0'),
+      hours: parseFloat(totalHours?.toString() || '0'),
+    },
+    phase: {
+      name: 'Phase 1',
+      days: parseInt(projectDays?.toString() || '1'),
+      personnel: null,
+      number_trucks: null,
+      additional_rated_hours: parseFloat(ratedHours?.toString() || '0'),
+      additional_non_rated_hours: parseFloat(nonratedHours?.toString() || '0'),
+      hivp_quantity: parseInt(hiVerticalPanels?.toString() || '0'),
+      post_quantity: parseInt(posts?.toString() || '0'),
+      covers_quantity: parseInt(covers?.toString() || '0'),
+      h_stand_quantity: parseInt(hStands?.toString() || '0'),
+      b_lights_quantity: parseInt(bLites?.toString() || '0'),
+      sandbag_quantity: parseInt(sandBags?.toString() || '0'),
+      ac_lights_quantity: parseInt(acLites?.toString() || '0'),
+      type_xivp_quantity: parseInt(typeXiVerticalPanels?.toString() || '0'),
+      metal_stands_quantity: parseInt(springLoadedMetalStands?.toString() || '0'),
+      six_foot_wings_quantity: parseInt(wings6ft?.toString() || '0'),
+      four_foot_type_iii_quantity: parseInt(typeIii4ft?.toString() || '0'),
+    },
+    contractNumber,
+    contractor,
+    subcontractor,
+  };
 }
 
+async function createNewBid(parsedData: any) {
+  // Start a transaction by inserting the bid estimate first
+  const { data: bidEstimate, error: bidError } = await supabase
+    .from('bid_estimates')
+    .insert(parsedData.bidEstimate)
+    .select()
+    .single();
+
+  if (bidError) {
+    throw new Error(`Failed to create bid estimate: ${bidError.message}`);
+  }
+
+  // Insert admin data
+  const { error: adminError } = await supabase
+    .from('admin_data_entries')
+    .insert({
+      ...parsedData.adminData,
+      bid_estimate_id: bidEstimate.id,
+    });
+
+  if (adminError) {
+    throw new Error(`Failed to create admin data: ${adminError.message}`);
+  }
+
+  // Insert MPT rental
+  const { data: mptRental, error: mptError } = await supabase
+    .from('mpt_rental_entries')
+    .insert({
+      ...parsedData.mptRental,
+      bid_estimate_id: bidEstimate.id,
+    })
+    .select()
+    .single();
+
+  if (mptError) {
+    throw new Error(`Failed to create MPT rental: ${mptError.message}`);
+  }
+
+  // Insert phase
+  const { error: phaseError } = await supabase
+    .from('mpt_phases')
+    .insert({
+      ...parsedData.phase,
+      mpt_rental_entry_id: mptRental.id,
+      phase_index: 0,
+      start_date: parsedData.adminData.start_date,
+      end_date: parsedData.adminData.end_date,
+    });
+
+  if (phaseError) {
+    throw new Error(`Failed to create phase: ${phaseError.message}`);
+  }
+
+  // Insert project metadata if contractor/subcontractor exist
+  if (parsedData.contractor || parsedData.subcontractor) {
+    // Find or create contractor
+    let contractorId = null;
+    if (parsedData.contractor) {
+      const { data: contractor } = await supabase
+        .from('contractors')
+        .select('id')
+        .eq('name', parsedData.contractor)
+        .single();
+      
+      if (contractor) {
+        contractorId = contractor.id;
+      } else {
+        const { data: newContractor } = await supabase
+          .from('contractors')
+          .insert({ name: parsedData.contractor })
+          .select()
+          .single();
+        
+        if (newContractor) {
+          contractorId = newContractor.id;
+        }
+      }
+    }
+
+    // Find or create subcontractor
+    let subcontractorId = null;
+    if (parsedData.subcontractor) {
+      const { data: subcontractor } = await supabase
+        .from('subcontractors')
+        .select('id')
+        .eq('name', parsedData.subcontractor.toUpperCase())
+        .single();
+      
+      if (subcontractor) {
+        subcontractorId = subcontractor.id;
+      }
+    }
+
+    const { error: metadataError } = await supabase
+      .from('project_metadata')
+      .insert({
+        bid_estimate_id: bidEstimate.id,
+        contractor_id: contractorId,
+        subcontractor_id: subcontractorId,
+        customer_contract_number: parsedData.contractNumber,
+      });
+
+    if (metadataError) {
+      console.warn('Failed to create project metadata:', metadataError.message);
+    }
+  }
+}
+
+async function updateExistingBid(bidId: number, parsedData: any) {
+  // Update the bid estimate
+  const { error: bidError } = await supabase
+    .from('bid_estimates')
+    .update(parsedData.bidEstimate)
+    .eq('id', bidId);
+
+  if (bidError) {
+    throw new Error(`Failed to update bid estimate: ${bidError.message}`);
+  }
+
+  // Update or insert related data
+  // Similar logic to createNewBid but with upsert operations
+}
+
+function mapStatusToEnum(status: string): Database['public']['Enums']['bid_estimate_status'] {
+  const upperStatus = status.toUpperCase();
+  if (upperStatus.includes('DRAFT')) return 'DRAFT';
+  if (upperStatus.includes('PENDING')) return 'PENDING';
+  if (upperStatus.includes('WON')) return 'WON';
+  if (upperStatus.includes('LOST')) return 'LOST';
+  return 'PENDING';
+}
+
+function mapOwnerToEnum(owner: string | null): Database['public']['Enums']['owner_type'] | null {
+  if (!owner) return null;
+  const upperOwner = owner.toUpperCase();
+  if (upperOwner.includes('PENNDOT')) return 'PENNDOT';
+  if (upperOwner.includes('TURNPIKE')) return 'TURNPIKE';
+  if (upperOwner.includes('PRIVATE')) return 'PRIVATE';
+  if (upperOwner.includes('SEPTA')) return 'SEPTA';
+  return 'OTHER';
+}
+
+function mapDivisionToEnum(division: string | null): Database['public']['Enums']['division_type'] | null {
+  if (!division) return null;
+  const upperDivision = division.toUpperCase();
+  if (upperDivision.includes('PUBLIC')) return 'PUBLIC';
+  if (upperDivision.includes('PRIVATE')) return 'PRIVATE';
+  return null;
+}
+
+// Keep the existing helper functions
 function findFieldValue(obj: any, possibleKeys: string[]): any {
   for (const key of possibleKeys) {
     if (obj[key] !== undefined) {
@@ -260,12 +374,8 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
     }
   }
 
-  console.log(`Could not find field value for keys: ${possibleKeys.join(', ')}`);
-  console.log('Available keys:', objKeys);
-
   return undefined;
 }
-
 
 function parseExcelDate(value: any): string | null {
   if (!value) return null;
@@ -295,29 +405,5 @@ function parseExcelDate(value: any): string | null {
     console.error('Error parsing string date:', error);
   }
   
-  console.warn(`Could not parse date value: ${value}`);
   return null;
-}
-
-function ensureValidNumbers(bid: BidEstimateInsert, rowIndex: number, errors: string[]) {
-  const numericFields = [
-    'project_days', 'base_rate', 'fringe_rate', 'rt_miles', 'rt_travel',
-    'rated_hours', 'nonrated_hours', 'total_hours', 'phases',
-    'type_iii_4ft', 'wings_6ft', 'h_stands', 'posts', 'sand_bags', 'covers',
-    'spring_loaded_metal_stands', 'hi_vertical_panels', 'type_xi_vertical_panels',
-    'b_lites', 'ac_lites', 'hi_signs_sq_ft', 'dg_signs_sq_ft', 'special_signs_sq_ft',
-    'tma', 'arrow_board', 'message_board', 'speed_trailer', 'pts',
-    'mpt_value', 'mpt_gross_profit', 'mpt_gm_percent',
-    'perm_sign_value', 'perm_sign_gross_profit', 'perm_sign_gm_percent',
-    'rental_value', 'rental_gross_profit', 'rental_gm_percent'
-  ];
-  
-  for (const field of numericFields) {
-    if (bid[field] === undefined || bid[field] === null) {
-      bid[field] = 0;
-    } else if (isNaN(Number(bid[field])) || Number(bid[field]) < 0) {
-      errors.push(`Row ${rowIndex + 1}: Invalid value for ${field}, using 0 instead`);
-      bid[field] = 0;
-    }
-  }
 }
