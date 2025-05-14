@@ -16,6 +16,7 @@ import { SheetingType } from '@/types/MPTEquipment';
 import { LaborCostSummary } from "@/types/ILaborCostSummary";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { useEstimate } from "@/contexts/EstimateContext";
+import DiscountChecks from "../pages/active-bid/steps/discount-checks";
 
 interface ViewBidSummarySheetProps {
   open: boolean;
@@ -29,7 +30,7 @@ export function ViewBidSummarySheet({
   open,
   onOpenChange,
 }: ViewBidSummarySheetProps) {
-  const { mptRental, adminData, flagging, serviceWork } = useEstimate();
+  const { mptRental, adminData, flagging, serviceWork, equipmentRental, saleItems } = useEstimate();
   const [mptRentalStats, setMptRentalStats] = React.useState<MPTEquipmentCost | null>(null);
   const [lightAndDrumRentalStats, setLightAndDrumRentalStats] = React.useState<MPTEquipmentCost | null>(null);
   const [totalSignCostStats, setTotalSignCostStats] = React.useState<Record<SheetingType, MPTEquipmentCost> | null>(null);
@@ -67,14 +68,14 @@ export function ViewBidSummarySheet({
 
   useEffect(() => {
     if (!mptRental) return;
-    const totals = getAllTotals(adminData, mptRental, [], flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, []);
+    const totals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
     setAllTotals({
       totalCost: totals.mptTotalCost,
       totalRevenue: totals.mptTotalRevenue,
       totalGrossProfit: totals.mptGrossProfit,
       grossProfitMargin: totals.totalGrossMargin
     });
-  }, [mptRental, adminData, flagging, serviceWork]);
+  }, [mptRental, adminData, flagging, serviceWork, saleItems, equipmentRental]);
 
   const mptData = useMemo(() => {
     if (!mptRentalStats) return [];
@@ -163,48 +164,7 @@ export function ViewBidSummarySheet({
 
         <div className="mt-4 space-y-8 px-5">
           {/* MPT Discounting */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">MPT Discounting</h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">Clear</Button>
-                <Button variant="default" size="sm">Swing</Button>
-                <Button variant="default" size="sm">Target</Button>
-                <Button variant="destructive" size="sm">Breakeven</Button>
-              </div>
-            </div>
-            <div className="rounded-lg border">
-              <div className="grid grid-cols-5 gap-4 p-4 border-b bg-muted/50">
-                <div className="font-medium">Item</div>
-                <div className="font-medium">Input Discount Rate</div>
-                <div className="font-medium">Swing</div>
-                <div className="font-medium">Target</div>
-                <div className="font-medium">Breakeven</div>
-              </div>
-              <div className="divide-y">
-                {[
-                  "4' Ft Type III",
-                  "6 Ft Wings",
-                  "H Stand",
-                  "Post",
-                  "Sandbag",
-                  "Covers",
-                  "Metal Stands",
-                  "HI",
-                  "DG",
-                  "Special"
-                ].map((item) => (
-                  <div key={item} className="grid grid-cols-5 gap-4 p-4">
-                    <div>{item}</div>
-                    <div>0</div>
-                    <div>100.00%</div>
-                    <div>100.00%</div>
-                    <div>100.00%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <DiscountChecks/>
 
           {/* Revenue and Profit Summary */}
           <div className="space-y-4">
