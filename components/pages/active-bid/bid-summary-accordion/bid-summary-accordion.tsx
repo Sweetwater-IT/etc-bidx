@@ -41,7 +41,6 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
   useEffect(() => {
     const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems)
 
-    //just doing mpt for now
     setBidSummary({
       revenue: allTotals.totalRevenue,
       cost: allTotals.totalCost,
