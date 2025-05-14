@@ -270,10 +270,7 @@ export async function POST(request: NextRequest) {
         division: adminData.division,
         bid_date: adminData.lettingDate ? new Date(adminData.lettingDate).toISOString() : null,
         owner: adminData.owner,
-        county: JSON.stringify({ 
-          name: adminData.county.name, 
-          branch: adminData.county.branch 
-        }),
+        county: adminData.county,
         sr_route: adminData.srRoute,
         location: adminData.location,
         dbe: adminData.dbe,
