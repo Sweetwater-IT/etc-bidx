@@ -102,7 +102,7 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
           handleDiscountRateChange(Number(((safeNumber(getFloorDiscountRate(row.item, true)) * 100 * 100) / 100).toFixed(2)), row.item);
           break;
         default:
-          0;
+          break;
       }
     });
   };
