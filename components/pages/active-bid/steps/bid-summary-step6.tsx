@@ -1,10 +1,10 @@
-import { FormData } from "@/types/IFormData";
 import { Button } from "@/components/ui/button";
 import { createActiveBid } from "@/lib/api-client";
 import { Database } from "@/types/database.types";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 const step = {
     id: "step-5",
@@ -22,7 +22,7 @@ const BidSummaryStep5 = ({
 }) => {
     const router = useRouter();
 
-    const {adminData, mptRental } = useEstimate();
+    const {adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
 
     const [toggleStates, setToggleStates] = useState({
         laborRate: false,
@@ -46,27 +46,9 @@ const BidSummaryStep5 = ({
         try {
           setIsSubmitting(true);
           setError(null);
-          
-          // Update required fields to match database schema
-          const requiredFields = [
-            'contractNumber', 'owner', 'county', 'branch',
-            'estimator', 'startDate', 'endDate', 'division',
-            'project_days', 'base_rate', 'fringe_rate',
-            'rt_miles', 'rt_travel', 'rated_hours',
-            'nonrated_hours', 'total_hours', 'phases'
-          ];
-          
-        //   const missingFields = requiredFields.filter(field => {
-        //     const value = formData[field as keyof FormData];
-        //     return value === undefined || value === null;
-        //   });
-
-        //   if (missingFields.length > 0) {
-        //     setError(`Missing required fields: ${missingFields.join(', ')}`);
-        //     setIsSubmitting(false);
-        //     return;
-        //   }
-          await createActiveBid(adminData, mptRental)
+        
+          await createActiveBid(adminData, mptRental, equipmentRental, 
+            flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
           
           // Redirect to active bids page
           router.push("/jobs/active-bids");

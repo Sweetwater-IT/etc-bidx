@@ -45,7 +45,7 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
       revenue: allTotals.totalRevenue,
       cost: allTotals.totalCost,
       grossProfit: allTotals.totalGrossProfit,
-      grossMargin: allTotals.mptGrossMargin
+      grossMargin: allTotals.totalGrossMargin
     })
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 

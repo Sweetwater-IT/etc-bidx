@@ -584,7 +584,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     }, [loadAvailableJobs, fetchJobCounts, startLoading, stopLoading]);
 
-    const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending') => {
+    const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => {
         try {
             startLoading();
             await changeActiveBidStatus(bid.id, status);
@@ -1096,7 +1096,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             // For active bids, the status passed from the DataTable component is already
                             // in the correct format ('Won', 'Pending', 'Lost', etc.) because we're showing those
                             // exact values in the dropdown menu
-                            const bidStatus = status as 'Won' | 'Pending' | 'Lost' | 'Draft' | 'Won - Pending';
+                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
                             handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
                         }
                     }}
