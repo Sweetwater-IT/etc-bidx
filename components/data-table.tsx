@@ -83,6 +83,12 @@ export interface DataTableProps<TData> {
 }
 
 function formatCellValue(value: any, key: string) {
+    // Handle null or undefined
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    // Handle status badges
     if (key === "status") {
         const variant = value.toLowerCase() === "urgent" ? "destructive" : value.toLowerCase() === "open" ? "default" : "secondary";
         return (
@@ -92,6 +98,7 @@ function formatCellValue(value: any, key: string) {
         );
     }
 
+    // Handle dates
     if (value instanceof Date) {
         return format(value, "MMM d, yyyy");
     }
@@ -102,7 +109,29 @@ function formatCellValue(value: any, key: string) {
             return value;
         }
     }
-    return value;
+
+    // Handle objects
+    if (typeof value === "object") {
+        // If it's an array, join the values
+        if (Array.isArray(value)) {
+            return value.map(v => formatCellValue(v, key)).join(", ");
+        }
+        // For other objects, return a string representation
+        return JSON.stringify(value);
+    }
+
+    // Handle numbers
+    if (typeof value === "number") {
+        return value.toString();
+    }
+
+    // Handle booleans
+    if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+    }
+
+    // Return string value for everything else
+    return String(value);
 }
 
 function isRowSelected<T extends Record<string, any>>(row: T, selectedItem: T): boolean {

@@ -202,20 +202,31 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.log("Fetched data:", data);
             console.log("Pagination:", pagination);
 
-            const uiJobs = data.map((job: any) => ({
-                id: job.id,
-                contractNumber: job.contract_number,
-                status: mapDbStatusToUiStatus(job.status),
-                requestor: job.requestor,
-                owner: job.owner,
-                lettingDate: job.letting_date ? format(new Date(job.letting_date), "yyyy-MM-dd") : null,
-                dueDate: job.due_date ? format(new Date(job.due_date), "yyyy-MM-dd") : null,
-                county: job.county,
-                branch: job.branch,
-                createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-                location: job.location,
-                platform: job.platform,
-            }));
+            const uiJobs = data.map((job: any) => {
+                const county = job.county?.name || '';
+                const branchCode = job.branch_code || '';
+                const branchMap: Record<string, string> = {
+                    '10': 'Hatfield',
+                    '20': 'Turbotville',
+                    '30': 'West'
+                };
+                const branch = branchMap[branchCode] || job.branch || '';
+
+                return {
+                    id: job.id,
+                    contractNumber: job.customer_contract_number || '',
+                    status: job.project_status || 'In Progress',
+                    requestor: job.admin_data?.requestor || '',
+                    owner: job.admin_data?.owner || '',
+                    lettingDate: job.admin_data?.lettingDate ? format(new Date(job.admin_data.lettingDate), "yyyy-MM-dd") : null,
+                    dueDate: job.admin_data?.dueDate ? format(new Date(job.admin_data.dueDate), "yyyy-MM-dd") : null,
+                    county: county,
+                    branch: branch,
+                    createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                    location: job.admin_data?.location || '',
+                    platform: job.admin_data?.platform || '',
+                };
+            });
 
             setAvailableJobs(uiJobs);
             setAvailableJobsPageCount(pagination.pageCount);
