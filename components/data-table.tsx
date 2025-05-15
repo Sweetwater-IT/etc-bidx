@@ -254,7 +254,7 @@ export function DataTable<TData>({
                                             <DropdownMenuContent side="right" sideOffset={2} className="w-36">
                                                 {segments
                                                     .filter(segment => {
-                                                        if (segment.value === 'all' || segment.value === 'archived') {
+                                                        if (segment.value === 'all' || segment.value === 'archived' || segment.value === 'won-pending') {
                                                             return false;
                                                         }
                                                         
@@ -283,11 +283,10 @@ export function DataTable<TData>({
                                                             else statusValue = segment.value;
                                                         } 
                                                         else if ('lettingDate' in row.original) {
-                                                            if (segment.value === 'won') statusValue = 'Won';
-                                                            else if (segment.value === 'pending') statusValue = 'Pending';
-                                                            else if (segment.value === 'lost') statusValue = 'Lost';
-                                                            else if (segment.value === 'draft') statusValue = 'Draft';
-                                                            else if (segment.value === 'won-pending') statusValue = 'Won - Pending';
+                                                            if (segment.value === 'won') statusValue = 'WON';
+                                                            else if (segment.value === 'pending') statusValue = 'PENDING';
+                                                            else if (segment.value === 'lost') statusValue = 'LOST';
+                                                            else if (segment.value === 'draft') statusValue = 'DRAFT';
                                                             else statusValue = segment.value;
                                                         }
                                                         else {
