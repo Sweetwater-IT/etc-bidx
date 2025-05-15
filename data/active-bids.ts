@@ -20,16 +20,6 @@ export type ActiveBid = {
   createdAt?: string
 }
 
-export const ACTIVE_BIDS_SEGMENTS = [
-  { label: "All", value: "all" },
-  { label: "Won", value: "won" },
-  { label: "Pending", value: "pending" },
-  { label: "Lost", value: "lost" },
-  { label: "Draft", value: "draft" },
-  { label: "Won - Pending", value: "won-pending" },
-  { label: "Archived", value: "archived" },
-]
-
 export const ACTIVE_BIDS_COLUMNS = [
   { key: "lettingDate", title: "Letting date" },
   { key: "contractNumber", title: "Contract #" },

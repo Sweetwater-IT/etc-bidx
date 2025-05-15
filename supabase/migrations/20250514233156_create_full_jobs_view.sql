@@ -1,78 +1,5 @@
-CREATE OR REPLACE VIEW jobs_complete AS
-WITH estimate_data AS (
-  -- Get all the estimate data using the existing view
-  SELECT * FROM estimate_complete
-)
-SELECT
-  -- Base job data
-  j.id,
-  j.billing_status,
-  j.project_status,
-  j.overdays,
-  j.notes,
-  j.bid_number,
-  j.certified_payroll,
-  j.created_at,
-  j.archived,
-  
-  -- Job number data
-  jn.job_number,
-  jn.branch_code,
-  jn.owner_type,
-  jn.year as job_year,
-  jn.sequential_number,
-  
-  -- Include the complete estimate data
-  e.id as estimate_id,
-  e.status as estimate_status,
-  e.total_revenue,
-  e.total_cost,
-  e.total_gross_profit,
-  e.created_at as estimate_created_at,
-  e.admin_data,
-  e.mpt_rental,
-  e.equipment_rental,
-  e.flagging,
-  e.service_work,
-  e.sale_items,
-  e.project_manager,
-  e.pm_email,
-  e.pm_phone,
-  e.customer_contract_number,
-  e.contractor_name,
-  e.subcontractor_name,
-  e.total_phases,
-  e.total_days,
-  e.total_hours,
-  
-  -- Combined summary for easy access
-  json_build_object(
-    'jobNumber', jn.job_number,
-    'contractNumber', e.admin_data->>'contractNumber',
-    'estimator', e.admin_data->>'estimator',
-    'owner', e.admin_data->>'owner',
-    'county', e.admin_data->'county',
-    'branch', jn.branch_code,
-    'startDate', e.admin_data->>'startDate',
-    'endDate', e.admin_data->>'endDate',
-    'projectDays', e.total_days,
-    'totalHours', e.total_hours,
-    'revenue', e.total_revenue,
-    'cost', e.total_cost,
-    'grossProfit', e.total_gross_profit,
-    'jobStatus', j.project_status,
-    'billingStatus', j.billing_status,
-    'certifiedPayroll', j.certified_payroll,
-    'overdays', j.overdays
-  ) as job_summary
-  
-FROM jobs j
-LEFT JOIN job_numbers jn ON j.job_number_id = jn.id
-LEFT JOIN estimate_data e ON j.estimate_id = e.id
-ORDER BY j.created_at DESC;
-
--- Create a simpler view for job lists/grids
-CREATE OR REPLACE VIEW jobs_list AS
+-- Then create it with the new structure including letting_date
+CREATE VIEW jobs_list AS
 SELECT
   j.id,
   j.billing_status,
@@ -87,6 +14,7 @@ SELECT
   jn.owner_type,
   e.contract_number,
   e.estimator,
+  e.letting_date,
   e.owner,
   e.county,
   e.branch,
@@ -112,6 +40,7 @@ LEFT JOIN (
     be.id,
     ad.contract_number,
     ad.estimator,
+    ad.bid_date as letting_date,
     ad.owner,
     ad.county::json->>'name' as county,
     ad.county::json->>'branch' as branch,

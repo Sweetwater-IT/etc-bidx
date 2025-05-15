@@ -9,7 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getJobCards } from "@/data/jobs-cards";
 import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
-import { ACTIVE_BIDS_COLUMNS, ACTIVE_BIDS_SEGMENTS, type ActiveBid } from "@/data/active-bids";
+import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "@/data/active-bids";
 import { type ActiveJob } from "@/data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
