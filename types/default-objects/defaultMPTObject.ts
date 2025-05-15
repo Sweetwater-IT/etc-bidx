@@ -36,6 +36,20 @@ export const defaultMPTObject: MPTRentalEstimating = {
     paybackPeriod: 0,
     targetMOIC: 0,
     annualUtilization: 0,
+    equipmentCosts: {
+        fourFootTypeIII: { cost: 0, price: 0 },
+        sixFootWings: { cost: 0, price: 0 },
+        hStand: { cost: 0, price: 0 },
+        post: { cost: 0, price: 0 },
+        sandbag: { cost: 0, price: 0 },
+        covers: { cost: 0, price: 0 },
+        metalStands: { cost: 0, price: 0 },
+        HIVP: { cost: 0, price: 0 },
+        TypeXIVP: { cost: 0, price: 0 },
+        BLights: { cost: 0, price: 0 },
+        ACLights: { cost: 0, price: 0 },
+        sharps: { cost: 0, price: 0 }
+    },
     staticEquipmentInfo: {
         fourFootTypeIII: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0 },
         sixFootWings: {price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},

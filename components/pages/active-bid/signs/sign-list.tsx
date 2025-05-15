@@ -33,7 +33,7 @@ const SignList = ({ currentPhase }: SignListProps) => {
   useEffect(() => {
     const currentSigns = getSafeSignsArray();
     setSigns(currentSigns);
-  }, [mptRental, currentPhase]);
+  }, [getSafeSignsArray, mptRental, currentPhase]);
   
   // Filter to primary signs only
   const primarySigns = signs.filter(
