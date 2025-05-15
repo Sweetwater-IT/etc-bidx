@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DataTable } from '@/components/data-table';
 import { formatDate } from '@/lib/formatUTCDate';
+import { useLoading } from '@/hooks/use-loading';
 
 type ContractData = {
     id: number;
@@ -34,7 +35,7 @@ const ContractManagementTable = () => {
 
     const router = useRouter();
     const [contracts, setContracts] = useState<ContractData[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { startLoading, stopLoading } = useLoading();
     const [currentSegment, setCurrentSegment] = useState("all");
     const [segmentCounts, setSegmentCounts] = useState<Record<string, number>>({
         all: 0,
@@ -45,7 +46,7 @@ const ContractManagementTable = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                setLoading(true);
+                startLoading();
 
                 // Fetch counts first
                 const countsResponse = await fetch('/api/jobs/active-jobs/contract-management?counts=true');
@@ -90,7 +91,7 @@ const ContractManagementTable = () => {
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
-                setLoading(false);
+                stopLoading();
             }
         };
 

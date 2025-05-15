@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { JobCompleteView } from '@/types/jobs-view';
+import { Database } from '@/types/database.types';
+import { County } from '@/types/TCounty';
 
 export async function GET(request: NextRequest) {
   try {
@@ -120,6 +123,152 @@ export async function GET(request: NextRequest) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
       { success: false, message: 'Unexpected error', error: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+interface ContractManagementData {
+  adminData: {
+    contractNumber: string;
+    estimator: string;
+    division: 'PUBLIC' | 'PRIVATE' | null;
+    lettingDate: Date | null;
+    owner: 'PENNDOT' | 'TURNPIKE' | 'PRIVATE' | 'OTHER' | 'SEPTA' | null;
+    county: County;
+    srRoute: string;
+    location: string;
+    dbe: string;
+    startDate: Date | null;
+    endDate: Date | null;
+    winterStart?: Date | undefined;
+    winterEnd?: Date | undefined;
+    owTravelTimeMins?: number;
+    owMileage?: number;
+    fuelCostPerGallon?: number;
+    emergencyJob: boolean;
+    rated: 'RATED' | 'NON-RATED';
+    emergencyFields: {
+      emergencyHIVerticalPanels?: number;
+      emergencyTypeXIVerticalPanels?: number;
+      emergencyBLites?: number;
+      emergencyACLites?: number;
+      emergencySharps?: number;
+    };
+  };
+  customer: {
+    name: string;
+    id?: string;
+  } | null;
+  customerContractNumber: string;
+  projectManager: string;
+  pmEmail: string;
+  pmPhone: string;
+  sender: {
+    name: string;
+    email: string;
+    role: string;
+  };
+  evDescription: string;
+  addedFiles: {
+    'W-9': boolean;
+    'EEO-SHARP Policy': boolean;
+    'Safety Program': boolean;
+    'Sexual Harassment Policy': boolean;
+    'Avenue of Appeals': boolean;
+  };
+  files: string[]; // File names/URLs
+  cpr: 'STATE' | 'FEDERAL' | 'N/A';
+  useShopRates: boolean;
+  laborRate: string;
+  fringeRate: string;
+  selectedContractor: string;
+  laborGroup: string;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const contractNumber = await request.json();
+
+    if (!contractNumber) {
+      return NextResponse.json(
+        { message: 'Contract number is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log(contractNumber)
+    // Fetch job data using the contract number
+    const { data: jobData, error: jobError } = await supabase
+      .from('jobs_complete')
+      .select('*')
+      .eq('admin_data->>contractNumber', contractNumber) // Use ->> for JSON text extraction
+      .single();
+
+    if (jobError || !jobData) {
+      return NextResponse.json(
+        { message: 'Job not found' },
+        { status: 404 }
+      );
+    }
+
+    const job = jobData as JobCompleteView;
+
+    // Map the data to the contract management format
+    const contractManagementData: ContractManagementData = {
+      adminData: {
+        contractNumber: job.admin_data.contractNumber,
+        estimator: job.admin_data.estimator,
+        division: null, // You'll need to map this based on your business rules
+        lettingDate: job.admin_data.lettingDate ? new Date(job.admin_data.lettingDate) : null,
+        owner: job.admin_data.owner,
+        county: job.admin_data.county as County,
+        srRoute: job.admin_data.srRoute || '',
+        location: job.admin_data.location || '',
+        dbe: job.admin_data.dbe?.toString() || '0',
+        startDate: job.admin_data.startDate ? new Date(job.admin_data.startDate) : null,
+        endDate: job.admin_data.endDate ? new Date(job.admin_data.endDate) : null,
+        winterStart: job.admin_data.winterStart ? new Date(job.admin_data.winterStart) : undefined,
+        winterEnd: job.admin_data.winterEnd ? new Date(job.admin_data.winterEnd) : undefined,
+        owTravelTimeMins: job.admin_data.owTravelTimeMins || 0,
+        owMileage: job.admin_data.owMileage || 0,
+        fuelCostPerGallon: job.admin_data.fuelCostPerGallon || 0,
+        emergencyJob: job.admin_data.emergencyJob || false,
+        rated: job.admin_data.rated || 'NON-RATED',
+        emergencyFields: job.admin_data.emergencyFields || {},
+      },
+      customer: job.contractor_name ? { name: job.contractor_name } : null,
+      customerContractNumber: job.customer_contract_number || '',
+      projectManager: job.project_manager || '',
+      pmEmail: job.pm_email || '',
+      pmPhone: job.pm_phone || '',
+      sender: {
+        name: '',
+        email: '',
+        role: '',
+      },
+      evDescription: '',
+      addedFiles: {
+        'W-9': false,
+        'EEO-SHARP Policy': false,
+        'Safety Program': false,
+        'Sexual Harassment Policy': false,
+        'Avenue of Appeals': false,
+      },
+      files: [],
+      cpr: job.certified_payroll,
+      useShopRates: false,
+      laborRate: '32.75', // Default values - you may want to fetch these from settings
+      fringeRate: '25.5',  // Default values - you may want to fetch these from settings
+      selectedContractor: job.contractor_name || '',
+      laborGroup: 'labor-group-3',
+    };
+
+    return NextResponse.json(contractManagementData);
+  } catch (error) {
+    console.error('Error fetching contract management data:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
