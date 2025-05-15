@@ -43,7 +43,7 @@ export async function GET(
 // PATCH: Update a specific active bid
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // Await params before accessing

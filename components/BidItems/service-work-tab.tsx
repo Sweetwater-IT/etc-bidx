@@ -1,16 +1,7 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -28,7 +19,7 @@ import {
   Keyboard, 
   Car
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { safeNumber } from "@/lib/safe-number";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
@@ -46,10 +37,20 @@ const ServiceWorkTab = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Calculate equipment cost
+  const getEquipCost = useCallback(() => {
+    if (!serviceWork) return 0;
+    
+    const arrowBoardsCost = Number(safeNumber(serviceWork?.arrowBoards.quantity) * serviceWork.arrowBoards.cost);
+    const messageBoardsCost = Number(safeNumber(serviceWork?.messageBoards.quantity) * serviceWork.messageBoards.cost);
+    const tmaCost = Number(safeNumber(serviceWork?.TMA.quantity) * serviceWork.TMA.cost);
+
+    return arrowBoardsCost + messageBoardsCost + tmaCost;
+  }, [serviceWork]);
+
   useEffect(() => {
     const ec = getEquipCost();
     setDisplayEquipCost(ec);
-  }, [serviceWork?.TMA, serviceWork?.messageBoards, serviceWork?.arrowBoards]);
+  }, [getEquipCost]);
 
   // Initialize service work if needed
   useEffect(() => {
@@ -102,7 +103,7 @@ const ServiceWorkTab = () => {
     };
     
     fetchFlaggingStaticData();
-  }, []);
+  }, [dispatch, serviceWork]);
 
   // Set selected markup rate
   useEffect(() => {
@@ -152,16 +153,7 @@ const ServiceWorkTab = () => {
     });
   };
 
-  // Calculate equipment cost
-  const getEquipCost = () => {
-    if (!serviceWork) return 0;
-    
-    const arrowBoardsCost = Number(safeNumber(serviceWork?.arrowBoards.quantity) * serviceWork.arrowBoards.cost);
-    const messageBoardsCost = Number(safeNumber(serviceWork?.messageBoards.quantity) * serviceWork.messageBoards.cost);
-    const tmaCost = Number(safeNumber(serviceWork?.TMA.quantity) * serviceWork.TMA.cost);
 
-    return arrowBoardsCost + messageBoardsCost + tmaCost;
-  };
 
   // Calculate markup values
   const calculateMarkupValues = (rate: number) => {

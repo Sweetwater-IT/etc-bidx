@@ -30,7 +30,7 @@ import {
   Keyboard, 
   Car
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { safeNumber } from "@/lib/safe-number";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
@@ -50,10 +50,20 @@ const FlaggingServicesTab = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Calculate equipment cost
+  const getEquipCost = useCallback(() => {
+    if (!flagging) return 0;
+    
+    const arrowBoardsCost = Number(safeNumber(flagging?.arrowBoards.quantity) * flagging.arrowBoards.cost);
+    const messageBoardsCost = Number(safeNumber(flagging?.messageBoards.quantity) * flagging.messageBoards.cost);
+    const tmaCost = Number(safeNumber(flagging?.TMA.quantity) * flagging.TMA.cost);
+
+    return arrowBoardsCost + messageBoardsCost + tmaCost;
+  }, [flagging]);
+
   useEffect(() => {
     const ec = getEquipCost();
     setDisplayEquipCost(ec);
-  }, [flagging?.TMA, flagging?.messageBoards, flagging?.arrowBoards]);
+  }, [getEquipCost]);
 
   // Initialize flagging services if needed
   useEffect(() => {
@@ -103,7 +113,7 @@ const FlaggingServicesTab = () => {
     };
     
     fetchFlaggingStaticData();
-  }, []);
+  }, [dispatch]);
 
   // Set selected markup rate
   useEffect(() => {
@@ -119,7 +129,7 @@ const FlaggingServicesTab = () => {
       return;
     }
     setFlaggingCostSummary(calculateFlaggingCostSummary(adminData, flagging, false));
-  }, [flagging, adminData]);
+  }, [flagging, adminData, adminData.county.market]);
 
   // Handle county rate change
   const handleCountyRateChange = (propertyName: string, value: number) => {
@@ -172,16 +182,7 @@ const FlaggingServicesTab = () => {
     });
   };
 
-  // Calculate equipment cost
-  const getEquipCost = () => {
-    if (!flagging) return 0;
-    
-    const arrowBoardsCost = Number(safeNumber(flagging?.arrowBoards.quantity) * flagging.arrowBoards.cost);
-    const messageBoardsCost = Number(safeNumber(flagging?.messageBoards.quantity) * flagging.messageBoards.cost);
-    const tmaCost = Number(safeNumber(flagging?.TMA.quantity) * flagging.TMA.cost);
 
-    return arrowBoardsCost + messageBoardsCost + tmaCost;
-  };
 
   // Calculate markup values
   const calculateMarkupValues = (rate: number) => {

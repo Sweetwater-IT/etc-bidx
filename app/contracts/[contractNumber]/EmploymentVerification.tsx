@@ -45,7 +45,7 @@ export const GenerateEmployeeVerificationForm = ({
                         src="/commonwealth-logo.jpg"
                     />
                     <Text style={styles.title}>Commonwealth of Pennsylvania</Text>
-                    <Text style={styles.title}>Public Works Employment Verification Form</Text>
+                    <Text>I certify that I don&apos;t have a social security number and I&apos;m in the process of applying for one</Text>
                     <Text style={styles.instructions}>
                         Complete and return the form to the contracting Public Body prior to the award of the contract.
                     </Text>
@@ -53,7 +53,7 @@ export const GenerateEmployeeVerificationForm = ({
 
                 <View style={styles.formSection}>
                     <View style={styles.formRow}>
-                        <Text style={styles.formLabel}>Company Legal Name:</Text>
+                        <Text>I certify that I don&apos;t have a social security number</Text>
                         <Text style={styles.formField}>Established Traffic Control, Inc.</Text>
                     </View>
                 </View>
@@ -132,8 +132,8 @@ export const GenerateEmployeeVerificationForm = ({
                 <View style={styles.paragraph}>
                     <Text>
                         As a contractor/subcontractor for the above referenced public works contract, I hereby affirm
-                        that as of today's date, {currentDate}, our company is in compliance with the
-                        Public Works Employment Verification Act ('the Act') through utilization of the federal E-Verify
+                        that as of today&apos;s date, {currentDate}, our company is in compliance with the
+                        Public Works Employment Verification Act (&apos;the Act&apos;) through utilization of the federal E-Verify
                         Program (EVP) operated by the United States Department of Homeland Security. To the best of
                         my/our knowledge, all employees hired are authorized to work in the United States.
                     </Text>

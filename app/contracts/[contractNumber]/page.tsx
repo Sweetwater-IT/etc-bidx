@@ -4,9 +4,17 @@ import { SiteHeader } from "@/components/site-header";
 import ContractManagementContent from "./ContractManagementContent";
 
 
-export default async function ContractPage( { params } : { params: { contractNumber: string }}) {
+interface PageProps {
+  params: Promise<{ contractNumber: string }>
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default async function ContractPage({ params, searchParams }: PageProps) {
     const resolvedParams = await params;
     const contractNumber = decodeURIComponent(resolvedParams.contractNumber);
+    if (searchParams) {
+      await searchParams;
+    }
 
   return (
     <SidebarProvider
