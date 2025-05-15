@@ -130,5 +130,6 @@ export type MPTRentalEstimating = {
   dispatchFee : number;
   mpgPerTruck : number;
   staticEquipmentInfo: Record<EquipmentType | SheetingType, StaticEquipmentInfo>;
+  equipmentCosts: Record<EquipmentType, { cost: number; price: number }>;
   phases: Phase[];
 };

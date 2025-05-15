@@ -6,11 +6,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { FormData } from "@/types/IFormData";
-import { ViewBidSummarySheet } from "@/components/sheets/view-bid-summary-sheet";
+import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
-import { AdminData } from "@/types/TAdminData";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
@@ -101,7 +99,7 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
         </AccordionItem>
       </Accordion>
 
-      <ViewBidSummarySheet
+      <BidSummaryDrawer
         open={isViewSummaryOpen}
         onOpenChange={setIsViewSummaryOpen}
       />

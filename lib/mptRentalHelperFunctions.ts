@@ -31,12 +31,16 @@ export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Reco
     sharps: { totalDaysRequired: 0, totalQuantity: 0 }
   };
 
+  if (!mptRental.phases) return equipmentTotals;
+
   mptRental.phases.forEach((phase) => {
+    if (!phase?.standardEquipment) return;
+
     // Get all entries for a given phase's standard equipment
     Object.entries(phase.standardEquipment).forEach(([key, value]) => {
       const equipmentType = key as EquipmentType;
 
-      if (equipmentTotals.hasOwnProperty(equipmentType)) {
+      if (equipmentTotals.hasOwnProperty(equipmentType) && value?.quantity && phase?.days) {
         // Add the quantity and days from the phase to the totals
         equipmentTotals[equipmentType].totalQuantity += value.quantity;
         equipmentTotals[equipmentType].totalDaysRequired += phase.days;
@@ -246,7 +250,20 @@ export function calculateTotalSignCostSummary(equipmentRental: MPTRentalEstimati
   return totalSignCostSummary;
 }
 
-export function calculateEquipmentCostSummary(equipmentRental: MPTRentalEstimating): MPTEquipmentCost {
+interface MPTEquipmentCostWithDetails extends MPTEquipmentCost {
+  details: {
+    equipmentBreakdown: Array<{
+      type: string;
+      quantity: number;
+      days: number;
+      cost: number;
+      revenue: number;
+    }>;
+    formula: string;
+  };
+}
+
+export function calculateEquipmentCostSummary(equipmentRental: MPTRentalEstimating): MPTEquipmentCostWithDetails {
   const weightedEquipmentTotals = getWeightedAverageDays(equipmentRental);
   const allEquipmentTotals = getEquipmentTotalsPerPhase(equipmentRental);
 
@@ -264,7 +281,25 @@ export function calculateEquipmentCostSummary(equipmentRental: MPTRentalEstimati
 
   const equipmentCostSummary = calculateCostMetrics(equipmentRental, combinedTotals);
 
-  return equipmentCostSummary;
+  const details = {
+    equipmentBreakdown: Object.entries(combinedTotals)
+      .filter(([type]) => equipmentRental.equipmentCosts?.[type as EquipmentType])
+      .map(([type, data]) => {
+        const equipmentCost = equipmentRental.equipmentCosts[type as EquipmentType];
+        const quantity = data.totalQuantity || 0;
+        const days = data.totalDaysRequired || 0;
+        return {
+          type,
+          quantity,
+          days,
+          cost: quantity * days * (equipmentCost?.cost || 0),
+          revenue: quantity * days * (equipmentCost?.price || 0)
+        };
+      }),
+    formula: 'For each equipment type: Revenue = Quantity × Days × Daily Rate\nCost = Quantity × Days × Cost Rate\nGross Profit = Revenue - Cost\nGross Margin = (Gross Profit ÷ Revenue) × 100%'
+  };
+
+  return { ...equipmentCostSummary, details };
 }
 
 // Function to calculate cost metrics
