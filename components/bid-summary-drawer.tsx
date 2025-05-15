@@ -388,17 +388,107 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                       ].map((row, index) => (
                         <TableRow key={index}>
                           <TableCell>{row.item}</TableCell>
-                          <TableCell>{row.revenue}</TableCell>
-                          <TableCell>{row.cost}</TableCell>
-                          <TableCell>{row.profit}</TableCell>
-                          <TableCell>{row.percentage}</TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                {row.revenue}
+                              </TooltipTrigger>
+                              <TooltipContent className="p-4 space-y-2">
+                                <p className="font-medium">Revenue = Quantity × Days Required × Daily Rate</p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>Quantity: {formatValue(mptRental?.phases[0]?.personnel)}</p>
+                                  <p>Days Required: {formatValue(mptRental?.phases[0]?.days)}</p>
+                                  <p>Daily Rate: ${formatValue(mptRentalStats?.revenue)}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                {row.cost}
+                              </TooltipTrigger>
+                              <TooltipContent className="p-4 space-y-2">
+                                <p className="font-medium">Cost = Quantity × Days Required × Daily Cost</p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>Quantity: {formatValue(mptRental?.phases[0]?.personnel)}</p>
+                                  <p>Days Required: {formatValue(mptRental?.phases[0]?.days)}</p>
+                                  <p>Daily Cost: ${formatValue(mptRentalStats?.depreciationCost)}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                {row.profit}
+                              </TooltipTrigger>
+                              <TooltipContent className="p-4 space-y-2">
+                                <p className="font-medium">Gross Profit = Revenue - Cost</p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>Revenue: ${formatValue(mptRentalStats?.revenue)}</p>
+                                  <p>Cost: ${formatValue(mptRentalStats?.depreciationCost)}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                {row.percentage}
+                              </TooltipTrigger>
+                              <TooltipContent className="p-4 space-y-2">
+                                <p className="font-medium">Gross Profit % = (Gross Profit ÷ Revenue) × 100</p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>Gross Profit: ${formatValue(mptRentalStats?.grossProfit)}</p>
+                                  <p>Revenue: ${formatValue(mptRentalStats?.revenue)}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-green-100">
                         <TableCell>MPT Total</TableCell>
-                        <TableCell>$0.00</TableCell>
-                        <TableCell>$0.00</TableCell>
-                        <TableCell>$0.00</TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help">
+                              $0.00
+                            </TooltipTrigger>
+                            <TooltipContent className="p-4 space-y-2">
+                              <p className="font-medium">Total Revenue</p>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <p>Sum of all revenue items</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help">
+                              $0.00
+                            </TooltipTrigger>
+                            <TooltipContent className="p-4 space-y-2">
+                              <p className="font-medium">Total Cost</p>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <p>Sum of all cost items</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help">
+                              $0.00
+                            </TooltipTrigger>
+                            <TooltipContent className="p-4 space-y-2">
+                              <p className="font-medium">Total Gross Profit</p>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <p>Sum of all profit items</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableCell>
                         <TableCell>0.00%</TableCell>
                       </TableRow>
                     </TableBody>
@@ -510,12 +600,36 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                         ].map((type) => (
                           <TableRow key={type}>
                             <TableCell className="py-1">{type}</TableCell>
-                            <TableCell className="py-1">0.00 sq. ft.</TableCell>
+                            <TableCell className="py-1">
+                              <Tooltip>
+                                <TooltipTrigger className="cursor-help">
+                                  0.00 sq. ft.
+                                </TooltipTrigger>
+                                <TooltipContent className="p-4 space-y-2">
+                                  <p className="font-medium">Area</p>
+                                  <div className="text-sm text-muted-foreground space-y-1">
+                                    <p>Area: 0.00 sq. ft.</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-green-100">
                           <TableCell>Total</TableCell>
-                          <TableCell>0.00 sq. ft.</TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                0.00 sq. ft.
+                              </TooltipTrigger>
+                              <TooltipContent className="p-4 space-y-2">
+                                <p className="font-medium">Total Area</p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>Total Area: 0.00 sq. ft.</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
