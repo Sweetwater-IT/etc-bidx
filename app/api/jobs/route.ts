@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     if (counts) {
       try {
         const { data: allJobs, error: allJobsError } = await supabase
-          .from('jobs')
-          .select('id, branch_code, status');
+          .from('jobs_complete')
+          .select('id, branch_code, project_status');
         
         if (allJobsError) {
           return NextResponse.json(
@@ -20,13 +20,13 @@ export async function GET(request: NextRequest) {
             { status: 500 }
           );
         }
-        
+
         const countData = {
           all: allJobs.length,
           west: allJobs.filter(job => job.branch_code === '30').length,
           turbotville: allJobs.filter(job => job.branch_code === '20').length,
           hatfield: allJobs.filter(job => job.branch_code === '10').length,
-          archived: allJobs.filter(job => job.status === 'Archived').length
+          archived: allJobs.filter(job => job.project_status === 'Archived').length
         };
         
         return NextResponse.json(countData);
@@ -46,30 +46,44 @@ export async function GET(request: NextRequest) {
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
     
-    // Base query for both count and data
-    const baseQuery = supabase.from('jobs');
-    
-    // Count query to get total records
-    let countQuery = baseQuery.select('id', { count: 'exact', head: true });
-    
-    // Data query to get paginated results
-    let dataQuery = baseQuery
-      .select('*, job_numbers!inner(*)')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    // Apply filters based on parameters
-    if (status) {
-      // Filter by status (e.g., 'Archived')
-      countQuery = countQuery.eq('status', status);
-      dataQuery = dataQuery.eq('status', status);
-    } else if (branch && branch !== 'all') {
+    // Build query
+    let query = supabase
+      .from('jobs_complete')
+      .select(`
+        id,
+        job_number,
+        branch_code,
+        owner_type,
+        created_at,
+        project_status,
+        billing_status,
+        admin_data,
+        contractor_name,
+        customer_contract_number,
+        project_manager,
+        pm_email,
+        pm_phone,
+        total_cost,
+        total_revenue,
+        total_gross_profit,
+        total_days,
+        total_hours,
+        total_phases,
+        overdays,
+        job_summary,
+        equipment_rental,
+        mpt_rental,
+        flagging,
+        service_work,
+        sale_items
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (branch && branch !== 'all') {
       if (branch === 'archived') {
-        // Legacy support for 'archived' in branch parameter
-        countQuery = countQuery.eq('status', 'Archived');
-        dataQuery = dataQuery.eq('status', 'Archived');
+        query = query.eq('project_status', 'Archived');
       } else {
-        // Filter by branch code
         const branchCodeMap: Record<string, string> = {
           'hatfield': '10',
           'turbotville': '20',
@@ -77,30 +91,29 @@ export async function GET(request: NextRequest) {
         };
         const branchCode = branchCodeMap[branch];
         if (branchCode) {
-          countQuery = countQuery.eq('branch_code', branchCode);
-          dataQuery = dataQuery.eq('branch_code', branchCode);
+          query = query.eq('branch_code', branchCode);
         }
       }
     }
-    
-    // Execute both queries in parallel
-    const [countResult, dataResult] = await Promise.all([
-      countQuery,
-      dataQuery
-    ]);
-    
-    if (countResult.error || dataResult.error) {
-      const error = countResult.error || dataResult.error;
+
+    if (status) {
+      query = query.eq('project_status', status);
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1);
+
+    // Execute query
+    const { data, count, error } = await query;
+
+    // Handle errors
+    if (error) {
       return NextResponse.json(
-        { error: 'Failed to fetch jobs', details: error },
+        { error: 'Failed to fetch jobs', details: error.message },
         { status: 500 }
       );
     }
-    
-    const jobs = dataResult.data || [];
-    const totalCount = countResult.count || 0;
-    const pageCount = Math.ceil(totalCount / limit);
-    
+
     // Fetch reference data from the database
     const { data: counties } = await supabase.from('counties').select('id, name');
     const { data: contractors } = await supabase.from('contractors').select('id, name');
@@ -121,79 +134,87 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Process all jobs    
-    const formattedJobs = jobs.map(job => {
-      const jobDetails = job.job_details || {};
-      
-      const branchNameMap: Record<string, string> = {
-        '10': 'Hatfield',
-        '20': 'Turbotville',
-        '30': 'West'
-      };
-      
-      // Extract contract number
-      const contractNumber = jobDetails.contractNumber || '';
-      
-      // Extract contractor information
-      const contractorId = jobDetails.customer || jobDetails.contractor || '';
-      const contractorName = contractorMap.get(contractorId) || contractorId;
-      
-      // Extract project status
-      const projectStatus = jobDetails.projectStatus || 'In Progress';
-      
-      // Extract billing status
-      const billingStatus = jobDetails.billingStatus || 'Current';
-      
-      // Extract location
-      const location = jobDetails.township 
-        ? `${jobDetails.township}${jobDetails.srRoute ? ` - ${jobDetails.srRoute}` : ''}` 
-        : jobDetails.location || '';
-      
-      // Extract county
-      const countyId = jobDetails.county || '';
-      const countyName = countyMap.get(countyId) || countyId;
-      
-      // Extract dates
-      const startDate = jobDetails.startDate || '';
-      const endDate = jobDetails.endDate || '';
-      
-      // Extract rates
-      const laborRate = parseFloat(jobDetails.laborRate) || 0;
-      const fringeRate = parseFloat(jobDetails.fringeRate) || 0;
-     
-      return {
-        id: job.id,
-        jobNumber: job.job_number,
-        contractNumber: contractNumber,
-        contractor: contractorName,
-        projectStatus: projectStatus,
-        billingStatus: billingStatus,
-        location: location,
-        county: countyName,
-        branch: branchNameMap[job.branch_code] || job.branch_code,
-        startDate: startDate,
-        endDate: endDate,
-        laborRate: laborRate,
-        fringeRate: fringeRate,
-        mpt: jobDetails.mpt || false,
-        rental: jobDetails.rental || false,
-        permSigns: jobDetails.permSigns || false,
-        flagging: jobDetails.flagging || false,
-        saleItems: jobDetails.saleItems || false,
-        overdays: parseInt(jobDetails.overdays) || 0,
-        createdAt: job.created_at
-      };
-    });
-    
-    return NextResponse.json({
-      data: formattedJobs,
-      pagination: {
-        page,
-        pageSize: limit,
-        pageCount,
-        totalCount
+    try {
+      // Process all jobs
+      interface Job {
+        id: any;
+        job_number: string;
+        branch_code: string;
+        owner_type: string;
+        created_at: string;
+        project_status: string;
+        billing_status: string;
+        admin_data: any;
+        contractor_name: string;
+        customer_contract_number: string;
+        project_manager: string;
+        pm_email: string;
+        pm_phone: string;
+        total_cost: number;
+        total_revenue: number;
+        total_gross_profit: number;
+        total_days: number;
+        total_hours: number;
+        total_phases: number;
+        overdays: number;
+        job_summary: string;
+        equipment_rental: boolean;
+        mpt_rental: boolean;
+        flagging: boolean;
+        service_work: boolean;
+        sale_items: boolean;
+        county?: { name: string; };
       }
-    });
+
+      const formattedJobs = data?.map((job: Job) => {
+        const branchNameMap: Record<string, string> = {
+          '10': 'Hatfield',
+          '20': 'Turbotville',
+          '30': 'West'
+        };
+        
+        // Convert to ActiveJob type exactly
+        return {
+          jobNumber: job.job_number || '',
+          bidNumber: job.admin_data?.bidNumber || '',
+          projectStatus: job.project_status || 'In Progress',
+          billingStatus: job.billing_status || 'Current',
+          contractNumber: job.customer_contract_number || '',
+          location: job.admin_data?.location || '',
+          county: job.county?.name || job.admin_data?.county?.name || '',
+          branch: job.admin_data?.county?.branch ? job.admin_data?.county?.branch : '',
+          contractor: job.contractor_name || '',
+          startDate: job.admin_data?.startDate || '',
+          endDate: job.admin_data?.endDate || '',
+          laborRate: job.admin_data?.laborRate || 0,
+          fringeRate: job.admin_data?.fringeRate || 0,
+          mpt: Boolean(job.mpt_rental),
+          rental: Boolean(job.equipment_rental),
+          permSigns: Boolean(job.admin_data?.permSigns),
+          flagging: Boolean(job.flagging),
+          saleItems: Boolean(job.sale_items),
+          overdays: job.overdays || 0,
+          createdAt: job.created_at || '',
+          status: job.project_status || 'In Progress',
+        };
+      }) || [];
+
+      return NextResponse.json({
+        data: formattedJobs,
+        pagination: {
+          page,
+          pageSize: limit,
+          pageCount: Math.ceil((count || 0) / limit),
+          totalCount: count || 0
+        }
+      });
+    } catch (error) {
+      console.error('Error processing jobs:', error);
+      return NextResponse.json(
+        { error: 'Failed to process jobs', details: String(error) },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Error in GET /api/jobs:', error);
     return NextResponse.json(
