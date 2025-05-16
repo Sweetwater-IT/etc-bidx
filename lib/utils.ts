@@ -20,3 +20,8 @@ export function formatDailyRate(value: number): string {
     maximumFractionDigits: 2
   }).format(value);
 }
+
+export const formatPotentialNullToCurrency = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || value === 0) return ''
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}

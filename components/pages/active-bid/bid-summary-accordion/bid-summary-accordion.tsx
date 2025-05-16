@@ -11,23 +11,35 @@ import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+import { WorksheetDialog } from "@/components/sheets/WorksheetDialog";
 
 interface BidSummaryAccordionProps {
   currentStep: number;
+  isViewSummaryOpen: boolean;
+  setIsViewSummaryOpen: (value: boolean) => void;
 }
 
-interface BidSummary{
+interface BidSummary {
   revenue: number;
   cost: number;
   grossProfit: number;
-  grossMargin:  number
+  grossMargin: number
 }
 
-const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
-  const [isViewSummaryOpen, setIsViewSummaryOpen] = useState(false);
+const DEFAULT_TOTALS = {
+  revenue: '',
+  grossProfit: '',
+  grossMargin: '',
+}
+
+const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryOpen }: BidSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
 
-  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems} = useEstimate();
+  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
+
+  const [openPdfDialog, setOpenPdfDialog] = useState(false)
+  const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators')
+
 
   const [bidSummary, setBidSummary] = useState<BidSummary>({
     revenue: 0,
@@ -59,7 +71,21 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
 
   return (
     <>
-      <Accordion type="multiple" value={value} onValueChange={setValue} className="w-full bg-card rounded-lg border shadow-sm">
+      <WorksheetDialog
+        open={openPdfDialog}
+        onOpenChange={setOpenPdfDialog}
+        selectedPdfType={selectedPdfType}
+        mptRental={mptRental}
+        equipmentRental={equipmentRental}
+        flagging={flagging}
+        adminData={adminData}
+        mptTotals={DEFAULT_TOTALS}
+        allTotals={DEFAULT_TOTALS}
+        rentalTotals={DEFAULT_TOTALS}
+        saleTotals={DEFAULT_TOTALS}
+        flaggingTotals={DEFAULT_TOTALS}
+      />
+      <Accordion type="multiple" value={value} onValueChange={setValue}  className="w-full bg-card rounded-lg border shadow-sm">
         <AccordionItem value="item-1" className="border-0">
           <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/50">
             <div className="flex items-center gap-2">
@@ -87,8 +113,8 @@ const BidSummaryAccordion = ({ currentStep }: BidSummaryAccordionProps) => {
                 </div>
               </div>
 
-              <Button 
-                className="w-full mt-2" 
+              <Button
+                className="w-full mt-2"
                 variant="outline"
                 onClick={() => setIsViewSummaryOpen(true)}
               >
