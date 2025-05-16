@@ -10,12 +10,16 @@ interface StepsProps {
   currentStep: number;
   setCurrentStep: Dispatch<SetStateAction<number>>;
   currentPhase: number
+  isViewSummaryOpen: boolean;
+  setIsViewSummaryOpen: (value : boolean) => void
 }
 
 const Steps = ({
   currentPhase,
   currentStep,
   setCurrentStep,
+  isViewSummaryOpen,
+  setIsViewSummaryOpen
 }: StepsProps) => {
   return (
     <div className="flex-1">
@@ -45,6 +49,8 @@ const Steps = ({
         <BidSummaryStep6
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
+          isViewSummaryOpen={isViewSummaryOpen}
+          setIsViewSummaryOpen={setIsViewSummaryOpen}
         />
       </div>
     </div>

@@ -20,12 +20,13 @@ interface StepsMainProps {
 const StepsMain = ({ initialData }: StepsMainProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [currentPhase, setCurrentPhase] = useState(0);
+  const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false)
 
   return (
     <EstimateProvider>
     <div className="flex gap-20 relative min-h-screen justify-between pr-12">
       <div className="flex-1 max-w-[44vw]">
-        <Steps currentStep={currentStep} setCurrentStep={setCurrentStep} currentPhase={currentPhase}/>
+        <Steps isViewSummaryOpen={isViewSummaryOpen} setIsViewSummaryOpen={setIsViewSummaryOpen} currentStep={currentStep} setCurrentStep={setCurrentStep} currentPhase={currentPhase}/>
       </div>
 
       {/* Preview Cards */}
@@ -35,7 +36,7 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
         <PhaseSummaryAccordion currentStep={currentStep} setCurrentPhase={setCurrentPhase} currentPhase={currentPhase} setCurrentStep={setCurrentStep}/>
         <SignSummaryAccordion currentStep={currentStep} currentPhase={currentPhase} />
         <TripAndLaborSummaryAccordion currentStep={currentStep} currentPhase={currentPhase}/>
-        <BidSummaryAccordion currentStep={currentStep} />
+        <BidSummaryAccordion currentStep={currentStep} setIsViewSummaryOpen={setIsViewSummaryOpen} isViewSummaryOpen={isViewSummaryOpen}/>
       </div>
     </div>
     </EstimateProvider>

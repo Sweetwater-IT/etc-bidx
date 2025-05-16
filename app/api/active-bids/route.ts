@@ -242,28 +242,59 @@ export async function POST(request: NextRequest) {
       saleItems || []
     );
 
-    // Begin transaction
-    const { data: bidEstimate, error: bidError } = await supabase
+    // Begin transaction - Check if bid exists for this contract
+    const { data: existingBid } = await supabase
       .from('bid_estimates')
-      .insert({
-        status: 'PENDING',
-        total_revenue: allTotals.totalRevenue,
-        total_cost: allTotals.totalCost,
-        total_gross_profit: allTotals.totalGrossProfit,
-      })
       .select('id')
+      .eq('contract_number', adminData.contractNumber)
       .single();
 
-    if (bidError) {
-      throw new Error(`Failed to create bid estimate: ${bidError.message}`);
+    let bidEstimateId: string;
+
+    if (existingBid) {
+      // Update existing bid
+      const { data: updatedBid, error: updateError } = await supabase
+        .from('bid_estimates')
+        .update({
+          status: 'PENDING',
+          total_revenue: allTotals.totalRevenue,
+          total_cost: allTotals.totalCost,
+          total_gross_profit: allTotals.totalGrossProfit,
+        })
+        .eq('id', existingBid.id)
+        .select('id')
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update bid estimate: ${updateError.message}`);
+      }
+      
+      bidEstimateId = updatedBid.id;
+    } else {
+      // Create new bid
+      const { data: newBid, error: bidError } = await supabase
+        .from('bid_estimates')
+        .insert({
+          contract_number: adminData.contractNumber, // Add this to track unique bids
+          status: 'PENDING',
+          total_revenue: allTotals.totalRevenue,
+          total_cost: allTotals.totalCost,
+          total_gross_profit: allTotals.totalGrossProfit,
+        })
+        .select('id')
+        .single();
+
+      if (bidError) {
+        throw new Error(`Failed to create bid estimate: ${bidError.message}`);
+      }
+      
+      bidEstimateId = newBid.id;
     }
 
-    const bidEstimateId = bidEstimate.id;
-
-    // Insert admin data
+    // Upsert admin data
     const { error: adminError } = await supabase
       .from('admin_data_entries')
-      .insert({
+      .upsert({
         bid_estimate_id: bidEstimateId,
         contract_number: adminData.contractNumber,
         estimator: adminData.estimator,
@@ -284,16 +315,18 @@ export async function POST(request: NextRequest) {
         emergency_job: adminData.emergencyJob,
         rated: adminData.rated,
         emergency_fields: adminData.emergencyFields
+      }, {
+        onConflict: 'bid_estimate_id' // Specify unique constraint
       });
 
     if (adminError) {
-      throw new Error(`Failed to create admin data: ${adminError.message}`);
+      throw new Error(`Failed to upsert admin data: ${adminError.message}`);
     }
 
-    // Insert MPT rental data
+    // Upsert MPT rental data
     const { data: mptRentalEntry, error: mptError } = await supabase
       .from('mpt_rental_entries')
-      .insert({
+      .upsert({
         bid_estimate_id: bidEstimateId,
         target_moic: mptRental.targetMOIC,
         payback_period: mptRental.paybackPeriod,
@@ -304,13 +337,21 @@ export async function POST(request: NextRequest) {
         cost: allTotals.mptTotalCost,
         gross_profit: allTotals.mptGrossProfit,
         hours: calculateLaborCostSummary(adminData, mptRental).ratedLaborHours + calculateLaborCostSummary(adminData, mptRental).nonRatedLaborHours
+      }, {
+        onConflict: 'bid_estimate_id'
       })
       .select('id')
       .single();
 
     if (mptError) {
-      throw new Error(`Failed to create MPT rental: ${mptError.message}`);
+      throw new Error(`Failed to upsert MPT rental: ${mptError.message}`);
     }
+
+    // Delete existing static equipment info before inserting new ones
+    await supabase
+      .from('mpt_static_equipment_info')
+      .delete()
+      .eq('mpt_rental_entry_id', mptRentalEntry.id);
 
     // Insert static equipment info
     const staticEquipmentInserts = Object.entries(mptRental.staticEquipmentInfo).map(([type, info]) => ({
@@ -329,6 +370,12 @@ export async function POST(request: NextRequest) {
     if (staticEquipError) {
       throw new Error(`Failed to create static equipment: ${staticEquipError.message}`);
     }
+
+    // Delete existing phases and related data before inserting new ones
+    await supabase
+      .from('mpt_phases')
+      .delete()
+      .eq('mpt_rental_entry_id', mptRentalEntry.id);
 
     // Insert phases
     for (let i = 0; i < mptRental.phases.length; i++) {
@@ -431,6 +478,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Delete existing equipment rental items before inserting new ones
+    await supabase
+      .from('equipment_rental_entries')
+      .delete()
+      .eq('bid_estimate_id', bidEstimateId);
+
     // Insert equipment rental items
     if (equipmentRental && equipmentRental.length > 0) {
       const rentalInserts = equipmentRental.map(item => ({
@@ -458,11 +511,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert flagging data
+    // Upsert flagging data
     if (flagging) {
       const { error: flaggingError } = await supabase
         .from('flagging_entries')
-        .insert({
+        .upsert({
           bid_estimate_id: bidEstimateId,
           standard_pricing: flagging.standardPricing,
           standard_lump_sum: flagging.standardLumpSum,
@@ -489,18 +542,20 @@ export async function POST(request: NextRequest) {
           cost: flagging.cost,
           gross_profit: flagging.grossProfit,
           hours: flagging.hours
+        }, {
+          onConflict: 'bid_estimate_id'
         });
 
       if (flaggingError) {
-        throw new Error(`Failed to create flagging: ${flaggingError.message}`);
+        throw new Error(`Failed to upsert flagging: ${flaggingError.message}`);
       }
     }
 
-    // Insert service work data
+    // Upsert service work data
     if (serviceWork) {
       const { error: serviceError } = await supabase
         .from('service_work_entries')
-        .insert({
+        .upsert({
           bid_estimate_id: bidEstimateId,
           standard_pricing: serviceWork.standardPricing,
           standard_lump_sum: serviceWork.standardLumpSum,
@@ -527,12 +582,20 @@ export async function POST(request: NextRequest) {
           cost: serviceWork.cost,
           gross_profit: serviceWork.grossProfit,
           hours: serviceWork.hours
+        }, {
+          onConflict: 'bid_estimate_id'
         });
 
       if (serviceError) {
-        throw new Error(`Failed to create service work: ${serviceError.message}`);
+        throw new Error(`Failed to upsert service work: ${serviceError.message}`);
       }
     }
+
+    // Delete existing sale items before inserting new ones
+    await supabase
+      .from('sale_items')
+      .delete()
+      .eq('bid_estimate_id', bidEstimateId);
 
     // Insert sale items
     if (saleItems && saleItems.length > 0) {
@@ -558,15 +621,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      data: { id: bidEstimateId } 
+      data: { id: bidEstimateId, isUpdate: !!existingBid } 
     });
 
   } catch (error) {
-    console.error('Error creating bid:', error);
+    console.error('Error upserting bid:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to create active bid', 
+        message: 'Failed to upsert active bid', 
         error: error instanceof Error ? error.message : String(error) 
       },
       { status: 500 }

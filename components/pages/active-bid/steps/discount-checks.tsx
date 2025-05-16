@@ -125,7 +125,6 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">MPT Discounting</h3>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleClearDiscountRates}>Clear</Button>
           <Button variant="default" size="sm" onClick={() => setDiscounts('swing')}>Swing</Button>
@@ -133,13 +132,14 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
           <Button variant="destructive" size="sm" onClick={() => setDiscounts('breakeven')}>Breakeven</Button>
         </div>
       </div>
-      <div className="rounded-lg border">
-        <div className="grid grid-cols-5 gap-4 p-4 border-b bg-muted/50">
-          <div className="font-medium">Item</div>
-          <div className="font-medium">Input Discount Rate</div>
-          <div className="font-medium">Swing</div>
-          <div className="font-medium">Target</div>
-          <div className="font-medium">Breakeven</div>
+      <div className="rounded-lg border p-4">
+      <h3 className="text-lg font-medium mb-4">MPT Discounting</h3>
+        <div className="grid items-baseline grid-cols-5 gap-4 border-b pb-2">
+          <div className="font-medium text-sm">Item</div>
+          <div className="font-medium text-sm">Rate</div>
+          <div className="font-medium text-sm">Swing</div>
+          <div className="font-medium text-sm">Target</div>
+          <div className="font-medium text-sm -ml-2">Breakeven</div>
         </div>
         <div className="divide-y">
           {rows.map((row) => {
@@ -151,7 +151,7 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
                 key={row.item} 
                 className={`grid grid-cols-5 gap-4 p-2 ${exceedsMax ? "bg-red-100" : ""}`}
               >
-                <div className="flex items-center">{label}</div>
+                <div className="flex items-center text-sm">{label}</div>
                 <div>
                   <Input
                     type="number"
@@ -161,13 +161,13 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
                     disabled={!editableDiscounts}
                   />
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center text-sm">
                   {`${row.swingDiscountRate.toFixed(2)}%`}
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center text-sm">
                   {`${row.floorDiscountRate.toFixed(2)}%`}
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center text-sm">
                   {row.maxDiscountRate === -1
                     ? '-'
                     : `${row.maxDiscountRate.toFixed(2)}%`}
