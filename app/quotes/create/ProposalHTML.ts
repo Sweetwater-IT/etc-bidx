@@ -1,4 +1,4 @@
-import { StandardTermsAndConditions } from "@/components/pages/quote-form/BidProposalReactPDF";
+import { TermsNames } from "./QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { AdminData } from "@/types/TAdminData";
 
@@ -12,7 +12,7 @@ export const createQuoteEmailHtml = (
     county: string = '',
     sr: string = '',
     ecms: string = '',
-    includedTaC: StandardTermsAndConditions[] = [],
+    includedTaC: TermsNames[] = [],
     customTerms: string = '',
     emailBody: string = '',
     token?: string
@@ -118,13 +118,13 @@ export const createQuoteEmailHtml = (
     }
   
     // Sale item notice and custom T&C HTML
-    const saleItemNoticeHtml = includedTaC.includes('Sale') 
-      ? `
-        <div style="background-color: #FFFF00; padding: 5px; text-align: center; margin-bottom: 20px">
-          <p style="font-size: 8px; color: red; margin: 0">SALE ITEM PAYMENT TERMS ARE NET 14</p>
-        </div>
-      ` 
-      : '';
+    // const saleItemNoticeHtml = includedTaC.includes('Sale') 
+    //   ? `
+    //     <div style="background-color: #FFFF00; padding: 5px; text-align: center; margin-bottom: 20px">
+    //       <p style="font-size: 8px; color: red; margin: 0">SALE ITEM PAYMENT TERMS ARE NET 14</p>
+    //     </div>
+    //   ` 
+    //   : '';
   
     const customTermsHtml = customTerms 
       ? `
@@ -282,7 +282,7 @@ export const createQuoteEmailHtml = (
           </div>
   
           <!-- Sale Item Notice -->
-          ${saleItemNoticeHtml}
+          ${'hi'}
   
           <!-- Custom Terms and Conditions -->
           ${customTermsHtml}
