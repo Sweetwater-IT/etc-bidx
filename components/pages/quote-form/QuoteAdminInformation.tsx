@@ -15,6 +15,14 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { useCustomers } from "@/hooks/use-customers";
 import { useEffect, useState } from "react";
 import { Customer } from "@/types/Customer";
+import { toast } from "sonner";
+import { AdminData } from "@/types/TAdminData";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { formatCurrency } from "@/lib/utils";
+import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
+import { Flagging } from "@/types/TFlagging";
+import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
+import { SaleItem } from "@/types/TSaleItem";
 
 const PAYMENT_TERMS = [
   { value: "COD", label: "COD" },
@@ -25,9 +33,10 @@ const PAYMENT_TERMS = [
 ];
 
 const BRANCHES = [
-  { value: "turbotville", label: "Turbotville" },
-  { value: "hatfield", label: "Hatfield" },
-  { value: "bedford", label: "Bedford" },
+  { value: 'All', label: 'All'},
+  { value: "Turbotville", label: "Turbotville" },
+  { value: "Hatfield", label: "Hatfield" },
+  { value: "Bedford", label: "Bedford" },
 ];
 
 interface Estimate {
@@ -62,10 +71,13 @@ export function QuoteAdminInformation() {
     setStateRoute,
     associatedContractNumber,
     setAssociatedContractNumber,
+    setQuoteItems,
+    adminData,
+    setAdminData
   } = useQuoteForm();
 
   const { customers, getCustomers, isLoading } = useCustomers();
-  const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [selectedBranch, setSelectedBranch] = useState<string>("All");
   const [allEstimates, setAllEstimates] = useState<Estimate[]>([]);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [isLoadingEstimatesJobs, setIsLoadingEstimatesJobs] = useState(false);
@@ -77,9 +89,14 @@ export function QuoteAdminInformation() {
   // Clear associated contract number when branch or quote type changes
   useEffect(() => {
     setAssociatedContractNumber('');
-  }, [selectedBranch, quoteType, setAssociatedContractNumber]);
+    setCounty('');
+    setEcmsPoNumber('');
+    setQuoteItems([]);
+    setStateRoute('');
+    setAdminData(undefined)
+  }, [selectedBranch, quoteType]);
 
-  // Fetch estimates and jobs
+  //initialize
   useEffect(() => {
     const fetchEstimatesAndJobs = async () => {
       try {
@@ -92,9 +109,11 @@ export function QuoteAdminInformation() {
           setAllJobs(data.jobs || []);
         } else {
           console.error('Failed to fetch estimates and jobs:', data.error);
+          toast.error(data.error)
         }
       } catch (error) {
         console.error('Error fetching estimates and jobs:', error);
+        toast.error(error as string)
       } finally {
         setIsLoadingEstimatesJobs(false);
       }
@@ -103,10 +122,9 @@ export function QuoteAdminInformation() {
     fetchEstimatesAndJobs();
   }, []);
 
-  // Fetch specific bid data when associatedContractNumber changes
-  // Fetch specific bid data when associatedContractNumber changes
+  //this gets all the details for a bid whenever you hit job number or estimate and select a contract
   useEffect(() => {
-    if (!associatedContractNumber || !quoteType || quoteType === 'new') return;
+    if (!associatedContractNumber || associatedContractNumber === '' || !quoteType || quoteType === 'new') return;
 
     const fetchBidData = async () => {
       try {
@@ -122,24 +140,132 @@ export function QuoteAdminInformation() {
         });
         
         const data = await response.json();
-        
         if (response.ok) {
-          // Populate form fields with bid data
-          setCounty(data.county || '');
-          setStateRoute(data.state_route || '');
-          setSelectedBranch(data.branch || '');
-          setEcmsPoNumber(data.ecms_po_number || '');
-          // Add more field updates as needed
+          const adminDataResponse : AdminData = data.data.admin_data
+          setCounty(adminDataResponse.county.name);
+          setStateRoute(adminDataResponse.srRoute);
+          setAdminData(adminDataResponse)
+          if(quoteType === 'estimate') {
+            setEcmsPoNumber(adminDataResponse.contractNumber);
+          }
+          const bidContractor = customers.find(customer => customer.name === data.data.contractor_name);
+          if(bidContractor){
+            setSelectedCustomers([bidContractor])
+          }
+
+          if(quoteType === 'job') return;
+
+          const quoteItemsFromEstimate : QuoteItem[] = []
+
+          if(data.data.mpt_rental._summary.revenue > 0){
+            const mptMob : QuoteItem = {
+              id: generateUniqueId(),
+              itemNumber: '0608-0001',
+              description: 'MPT Mobilization',
+              uom: 'EA',
+              quantity: 1,
+              notes: '',
+              unitPrice: data.data.mpt_rental._summary.revenue * 0.35,
+              discount: 0,
+              discountType: 'percentage',
+              associatedItems: []
+            }
+            const mpt : QuoteItem = {
+              id: generateUniqueId(),
+              itemNumber: '0901-0001',
+              description: 'MPT',
+              uom: 'EA',
+              quantity: 1,
+              notes: '',
+              unitPrice: data.data.mpt_rental._summary.revenue * 0.65,
+              discount: 0,
+              discountType: 'percentage',
+              associatedItems: []
+            }
+            quoteItemsFromEstimate.push(mptMob, mpt)
+          }
+
+          if((data.data.flagging as Flagging).revenue! > 0){
+            const flagging : QuoteItem = {
+              id: generateUniqueId(),
+              itemNumber: 'Flagging',
+              description: 'Flagging',
+              uom: 'DAY',
+              quantity: 1,
+              notes: '',
+              unitPrice: data.data.flagging.revenue,
+              discount: 0,
+              discountType: 'percentage',
+              associatedItems: []
+            }
+            quoteItemsFromEstimate.push(flagging)
+          }
+
+          if((data.data.service_work as Flagging).revenue! > 0){
+            const serviceWork : QuoteItem = {
+              id: generateUniqueId(),
+              itemNumber: 'Patterns',
+              description: 'Patterns',
+              uom: 'DAY',
+              quantity: 1,
+              notes: '',
+              unitPrice: data.data.service_work.revenue,
+              discount: 0,
+              discountType: 'percentage',
+              associatedItems: []
+            }
+            quoteItemsFromEstimate.push(serviceWork)
+          }
+
+          if((data.data.equipment_rental as EquipmentRentalItem[]).length > 0){
+            (data.data.equipment_rental as EquipmentRentalItem[]).forEach(ri => {
+              quoteItemsFromEstimate.push({
+                id: generateUniqueId(),
+                //TODO map equipment item numbers to names
+                itemNumber: '0901-0120',
+                description: ri.name,
+                uom: 'EA',
+                quantity: ri.quantity,
+                notes: '',
+                unitPrice: ri.revenue || 0,
+                discount: 0,
+                discountType: 'percentage',
+                associatedItems: []
+              })
+            });
+          }
+
+          if((data.data.sale_items as SaleItem[]).length > 0){
+            (data.data.sale_items as SaleItem[]).forEach(si => {
+              quoteItemsFromEstimate.push({
+                id: generateUniqueId(),
+                //TODO map equipment item numbers to names
+                itemNumber: si.itemNumber,
+                description: si.name,
+                uom: 'EA',
+                quantity: si.quantity,
+                notes: '',
+                unitPrice: si.quotePrice * (1 + (si.markupPercentage / 100)),
+                discount: 0,
+                discountType: 'percentage',
+                associatedItems: []
+              })
+            });
+          }
+
+          setQuoteItems(quoteItemsFromEstimate)
         } else {
           console.error('Failed to fetch bid details:', data.error);
+          toast.error('Failed to fetch bid details: ' + data.error)
         }
       } catch (error) {
         console.error('Error fetching bid details:', error);
+        toast.error(error as string)
       }
     };
 
     fetchBidData();
-  }, [associatedContractNumber, quoteType, setCounty, setStateRoute, setEcmsPoNumber]);
+  }, [associatedContractNumber, setCounty, setStateRoute, setEcmsPoNumber]);
 
   const handleCustomerSelection = (customerNames: string[] | undefined) => {
     if (!customerNames) {
@@ -201,12 +327,12 @@ export function QuoteAdminInformation() {
                 </SelectTrigger>
                 <SelectContent>
                   {quoteType === "estimate" 
-                    ? allEstimates.map((estimate, index) => (
+                    ? allEstimates.filter(estimate => selectedBranch === 'All' ? true : estimate.branch === selectedBranch).map((estimate, index) => (
                         <SelectItem key={index} value={estimate.contract_number}>
                           {estimate.contract_number}
                         </SelectItem>
                       ))
-                    : allJobs.map(job => (
+                    : allJobs.filter(job => selectedBranch === 'All' ? true : job.branch === selectedBranch).map(job => (
                         <SelectItem key={job.job_number} value={job.job_number}>
                           {job.job_number}
                         </SelectItem>

@@ -5,9 +5,9 @@ export async function GET() {
   try {
     // Fetch contract numbers and branches from bid_estimates table
     const { data: estimates, error: estimatesError } = await supabase
-      .from('bid_estimates')
-      .select('contract_number, branch')
-      .order('contract_number', { ascending: true });
+      .from('estimate_complete')
+      .select("admin_data")
+      .order('created_at', { ascending: true });
 
     if (estimatesError) {
       console.error('Error fetching estimates:', estimatesError);
@@ -16,9 +16,9 @@ export async function GET() {
 
     // Fetch job numbers from jobs table
     const { data: jobs, error: jobsError } = await supabase
-      .from('jobs')
-      .select('job_number')
-      .order('job_number', { ascending: true });
+      .from('jobs_complete')
+      .select('job_number, branch_code')
+      .order('created_at', { ascending: true });
 
     if (jobsError) {
       console.error('Error fetching jobs:', jobsError);
@@ -28,11 +28,16 @@ export async function GET() {
     // Add placeholder branch data for jobs since the table needs modification
     const jobsWithBranch = jobs?.map(job => ({
       job_number: job.job_number,
-      branch: 'turbotville' // Placeholder branch for jobs
+      branch: job.branch_code === '10' ? 'Hatfield' : job.branch_code === '20' ? 'Turbotville' : 'Bedford'
     })) || [];
 
+    const estimatesWithBranch = estimates?.map(estimate => ({
+      contract_number: estimate.admin_data.contractNumber,
+      branch: estimate.admin_data.county.branch
+    }))
+
     return NextResponse.json({
-      estimates: estimates || [],
+      estimates: estimatesWithBranch || [],
       jobs: jobsWithBranch
     });
   } catch (error) {

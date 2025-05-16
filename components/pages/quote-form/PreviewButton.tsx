@@ -11,11 +11,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PDFViewer } from '@react-pdf/renderer';
-import BidProposalReactPDF, { StandardTermsAndConditions } from './BidProposalReactPDF';
+import { BidProposalReactPDF } from './BidProposalReactPDF';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
+import { PaymentTerms } from './QuoteAdminInformation';
 
 export const QuotePreviewButton = () => {
   const {
+    adminData,
     selectedCustomers,
     quoteItems,
     quoteDate,
@@ -23,23 +25,12 @@ export const QuotePreviewButton = () => {
     paymentTerms,
     includeTerms,
     customTerms,
+    county,
+    stateRoute,
+    ecmsPoNumber
   } = useQuoteForm();
   
   const [isOpen, setIsOpen] = useState(false);
-
-  // Convert includeTerms object to array format expected by PDF component
-  const getIncludedTerms = () => {
-    const termsMap = {
-      'standard-terms': 'Standard',
-      'rental-agreements': 'Rental',
-      'equipment-sale': 'Sale',
-      'flagging-terms': 'Flagging',
-    };
-    
-    return Object.entries(includeTerms)
-      .filter(([key, value]) => value && key !== 'custom-terms')
-      .map(([key]) => termsMap[key as keyof typeof termsMap] || '') as StandardTermsAndConditions[];
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -54,19 +45,18 @@ export const QuotePreviewButton = () => {
           {isOpen && (
             <PDFViewer width="100%" height="800px" style={{border: 'none'}}>
               <BidProposalReactPDF
-                adminData={defaultAdminObject}
+                adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers.map(c => c.name)}
-                name={selectedCustomers[0].name || 'Client'}
-                email=""
+                // email=""
                 quoteDate={new Date(quoteDate)}
                 quoteNumber={quoteId}
-                paymentTerms={paymentTerms as any}
-                includedTaC={getIncludedTerms()}
-                customTerms={includeTerms['custom-terms'] ? customTerms : ''}
-                county=""
-                sr=""
-                ecms=""
+                paymentTerms={paymentTerms as PaymentTerms}
+                includedTerms={includeTerms}
+                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+                county={county}
+                sr={stateRoute}
+                ecms={ecmsPoNumber}
               />
             </PDFViewer>
           )}

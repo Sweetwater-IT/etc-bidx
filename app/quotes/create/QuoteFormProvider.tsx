@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
 import { Customer } from "@/types/Customer";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { format } from "date-fns";
-import { useCustomers } from "@/hooks/use-customers";
 import { AdminData } from "@/types/TAdminData";
+import { PaymentTerms } from "@/components/pages/quote-form/QuoteAdminInformation";
 
 interface PointOfContact {
   name : string;
@@ -32,8 +32,8 @@ interface QuoteFormState {
   setStatus: (type: QuoteStatus) => void;
   quoteType: "new" | "estimate" | "job";
   setQuoteType: (type: "new" | "estimate" | "job") => void;
-  paymentTerms: string;
-  setPaymentTerms: (terms: string) => void;
+  paymentTerms: PaymentTerms;
+  setPaymentTerms: (terms: PaymentTerms) => void;
   digitalSignature: boolean;
   setDigitalSignature: (value: boolean) => void;
   quoteDate: string;
@@ -77,7 +77,7 @@ interface QuoteFormState {
   associatedContractNumber : string | undefined;
   setAssociatedContractNumber : (contractNumber : string) => void;
   adminData : AdminData | undefined;
-  setAdminData : (adminDAta : AdminData) => void;
+  setAdminData : Dispatch<SetStateAction<AdminData | undefined>>;
   
   // Generated data
   quoteId: string;
@@ -106,10 +106,9 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [status, setStatus] = useState<QuoteStatus>('Draft')
   
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
-  const [paymentTerms, setPaymentTerms] = useState<string>("net30");
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>('NET30');
   const [digitalSignature, setDigitalSignature] = useState(false);
   const [quoteDate, setQuoteDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [adminData, setAdminData] = useState<AdminData>();
   const [associatedContractNumber, setAssociatedContractNumber] = useState<string>();
   
   // Admin fields for estimates/jobs
@@ -121,6 +120,7 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [emailBody, setEmailBody] = useState("");
   
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  const [adminData, setAdminData] = useState<AdminData | undefined>();
   
   const [includeFiles, setIncludeFiles] = useState<Record<AttachmentNames, boolean>>({
     "flagging-price-list" : false,
@@ -146,7 +146,7 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   // Update payment terms when customers change
   useEffect(() => {
     if (selectedCustomers.length > 0) {
-        setPaymentTerms(selectedCustomers[0].paymentTerms);
+        setPaymentTerms(selectedCustomers[0].paymentTerms as PaymentTerms);
     }
   }, [selectedCustomers]);
   
@@ -156,23 +156,6 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     setCcEmails([]);
     setBccEmails([]);
   }, [selectedCustomers]);
-  
-  // Helper function to get contacts for selected customers
-  const getContactsForSelectedCustomers = () => {
-    const allContacts: { value: string; label: string; customer: string }[] = [];
-    
-    selectedCustomers.forEach(customer => {
-      customer.emails.forEach((email, index) => {
-        allContacts.push({
-          value: email,
-          label: `${customer.names[index] || ""} (${email}) - ${customer.name}`,
-          customer: customer.name
-        });
-      });
-    });
-    
-    return allContacts;
-  };
   
   const value: QuoteFormState = {
     selectedCustomers,
@@ -218,10 +201,10 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     quoteId,
     associatedContractNumber,
     setAssociatedContractNumber,
-    adminData,
-    setAdminData,
     status,
-    setStatus
+    setStatus,
+    adminData,
+    setAdminData
   };
   
   return (
