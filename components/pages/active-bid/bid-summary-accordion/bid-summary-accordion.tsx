@@ -128,8 +128,6 @@ const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryO
       <BidSummaryDrawer
         open={isViewSummaryOpen}
         onOpenChange={setIsViewSummaryOpen}
-        setSelectedPdfType={setSelectedPdfType}
-        setOpenPdfDialog={setOpenPdfDialog}
       />
     </>
   );
