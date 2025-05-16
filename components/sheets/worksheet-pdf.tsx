@@ -190,7 +190,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
               <Text style={styles.columnHeaderText}>MPT EQUIPMENT</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.cell}>4' TYPE III =</Text>
+              <Text style={styles.cell}>{`4'`} TYPE III =</Text>
               <Text style={styles.quantityCell}>
                 {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}
               </Text>
@@ -203,7 +203,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
               </Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.cell}>V/P'S =</Text>
+              <Text style={styles.cell}>{`V/P'S`} =</Text>
               <Text style={styles.quantityCell}>
                 {mptRental && (safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity) + safeNumber(getEquipmentTotalsPerPhase(mptRental).sharps.totalQuantity)
                 + safeNumber(getEquipmentTotalsPerPhase(mptRental).TypeXIVP.totalQuantity))}
@@ -228,7 +228,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
               </Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.cell}>6' WINGS =</Text>
+              <Text style={styles.cell}>{`6'`} WINGS =</Text>
               <Text style={styles.quantityCell}>
                 {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}
               </Text>
@@ -542,7 +542,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             </View>
           </View>
           <Text style={styles.phaseSummaryCell}>Type 3</Text>
-          <Text style={styles.phaseSummaryCell}>6' Wings</Text>
+          <Text style={styles.phaseSummaryCell}>{`6'`} Wings</Text>
           <Text style={styles.phaseSummaryCell}>H Stand</Text>
           <Text style={styles.phaseSummaryCell}>Post</Text>
           <Text style={styles.phaseSummaryCell}>Sandbag</Text>
