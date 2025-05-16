@@ -15,6 +15,8 @@ import {
   CommandGroup,
   CommandItem
 } from "@/components/ui/command";
+import { exportSignListToExcel } from "@/lib/exportSignListToExcel";
+import Link from "next/link";
 
 const DEFAULT_TOTALS = {
   revenue: '',
@@ -109,7 +111,7 @@ const BidSummaryStep5 = ({
         {currentStep === 6 && (
           <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 {/* Worksheet Dropdown Button */}
                 <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                   <PopoverTrigger asChild>
@@ -144,6 +146,8 @@ const BidSummaryStep5 = ({
                     </Command>
                   </PopoverContent>
                 </Popover>
+                <Button onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
+                <Button><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
               </div>
 
               <div className="space-y-4">

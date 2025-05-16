@@ -37,10 +37,6 @@ const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryO
 
   const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
 
-  const [openPdfDialog, setOpenPdfDialog] = useState(false)
-  const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators')
-
-
   const [bidSummary, setBidSummary] = useState<BidSummary>({
     revenue: 0,
     cost: 0,
@@ -71,20 +67,6 @@ const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryO
 
   return (
     <>
-      <WorksheetDialog
-        open={openPdfDialog}
-        onOpenChange={setOpenPdfDialog}
-        selectedPdfType={selectedPdfType}
-        mptRental={mptRental}
-        equipmentRental={equipmentRental}
-        flagging={flagging}
-        adminData={adminData}
-        mptTotals={DEFAULT_TOTALS}
-        allTotals={DEFAULT_TOTALS}
-        rentalTotals={DEFAULT_TOTALS}
-        saleTotals={DEFAULT_TOTALS}
-        flaggingTotals={DEFAULT_TOTALS}
-      />
       <Accordion type="multiple" value={value} onValueChange={setValue}  className="w-full bg-card rounded-lg border shadow-sm">
         <AccordionItem value="item-1" className="border-0">
           <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/50">
