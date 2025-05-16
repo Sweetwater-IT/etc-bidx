@@ -9,54 +9,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Contract number and type are required' }, { status: 400 });
     }
 
-    if (type === 'estimate') {
+    const viewName = type === 'estimate' ? 'estimate_complete' : 'jobs_complete'
+    const filterClause = type === 'estimate' ? 'admin_data->>contractNumber' : 'job_number'
       // Fetch detailed bid information from bid_estimates
-      const { data: bidData, error: bidError } = await supabase
-        .from('bid_estimates')
-        .select('*')
-        .eq('contract_number', contractNumber)
-        .single();
+      const { data: data, error: bidError } = await supabase
+        .from(viewName)
+        .select('id, contractor_name, admin_data, mpt_rental, equipment_rental, sale_items, flagging, service_work')
+        .filter(filterClause, 'eq', contractNumber)
+        .single() // this expects one row so will throw an error rather than returning an empty data object, which is what we want
 
       if (bidError) {
         console.error('Error fetching bid details:', bidError);
         return NextResponse.json({ error: bidError.message }, { status: 500 });
       }
 
-      // TODO: Fetch bid items and other related data as needed
-
       return NextResponse.json({
-        county: bidData?.county || '',
-        branch: bidData?.branch || '',
-        ecms_po_number: bidData?.ecms_po_number || '',
-        // TODO: Add state_route when column is added to bid_estimates table
-        state_route: '',
-        // Add any other fields you need to populate in the form
-        ...bidData
+        data
       });
-    } else if (type === 'job') {
-      // Fetch job details
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('job_number', contractNumber)
-        .single();
-
-      if (jobError) {
-        console.error('Error fetching job details:', jobError);
-        return NextResponse.json({ error: jobError.message }, { status: 500 });
-      }
-
-      // Return placeholder data for now since jobs table needs modification
-      return NextResponse.json({
-        county: 'Bucks', // Placeholder
-        branch: 'Turbotville', // Placeholder
-        state_route: 'SR-101', // Placeholder
-        ecms_po_number: jobData?.po_number || '',
-        ...jobData
-      });
-    } else {
-      return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
-    }
   } catch (error) {
     console.error('Error in bid-details API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

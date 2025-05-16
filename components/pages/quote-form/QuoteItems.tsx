@@ -9,6 +9,7 @@ import { Trash2, Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
 import { useState } from "react";
+import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 
 enum UOM_TYPES {
   EA = 'EA',
@@ -20,16 +21,11 @@ enum UOM_TYPES {
   HR = 'HR'
 }
 
-// Generate unique ID using Math.random
-const generateId = () => {
-  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-};
-
 export function QuoteItems() {
   const { quoteItems, setQuoteItems } = useQuoteForm();
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [newQuoteItem, setNewQuoteItem] = useState<QuoteItem>({
-    id: generateId(),
+    id: generateUniqueId(),
     itemNumber: '',
     description: '',
     uom: '',
@@ -95,7 +91,7 @@ export function QuoteItems() {
 
       // Reset form
       setNewQuoteItem({
-        id: generateId(),
+        id: generateUniqueId(),
         itemNumber: '',
         description: '',
         uom: '',
@@ -122,7 +118,7 @@ export function QuoteItems() {
         item.id === parentItem.id ? {
           ...item,
           associatedItems: [...(item.associatedItems || []), {
-            id: generateId(),
+            id: generateUniqueId(),
             itemNumber: '',
             description: '',
             uom: '',
