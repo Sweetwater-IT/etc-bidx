@@ -1,14 +1,16 @@
 "use client"
 
-import { useCallback, memo, useState, useEffect, useRef } from "react"
+import { useCallback, memo, useState, useEffect } from "react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer"
-import { Button } from "@/components/ui/button"
-import { X, PlusCircle } from "lucide-react"
+import { X } from "lucide-react"
 import { Customer } from "@/types/Customer"
-import { CustomerDetails } from "@/components/customer-details"
-import { CustomerContacts } from "@/components/customer-contacts"
 import { CustomerForm } from "@/components/customer-form"
 import { CustomerContactForm } from "@/components/customer-contact-form"
+import { CustomerDetails } from "@/components/customer-details"
+import { Button } from "@/components/ui/button"
+import { PlusCircle } from "lucide-react"
+import { CustomerContacts } from "@/components/customer-contacts"
+import { CustomerProvider } from "@/contexts/customer-context"
 
 interface CustomerDrawerProps {
   open: boolean
@@ -25,61 +27,54 @@ export const CustomerDrawer = memo(function CustomerDrawer({
   isViewMode,
   onSuccess
 }: CustomerDrawerProps) {
-  
+  const [customerData, setCustomerData] = useState<Customer | null>(initialCustomer);
   const [activeTab, setActiveTab] = useState('contacts');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   
   useEffect(() => {
-    setCustomer(initialCustomer);
+    if (initialCustomer) {
+      console.log('CustomerDrawer: initialCustomer changed, updating local state');
+      setCustomerData(initialCustomer);
+    }
   }, [initialCustomer]);
   
-  // This effect will run when refreshKey changes, triggering a direct fetch of the customer data
-  // Use a ref to track the previous refreshKey to prevent unnecessary API calls
-  const prevRefreshKeyRef = useRef(refreshKey);
-  
-  useEffect(() => {
-    // Only refresh if we have a customer, the refreshKey has been updated, and it's different from the previous value
-    if (customer && refreshKey > 0 && refreshKey !== prevRefreshKeyRef.current) {
-      prevRefreshKeyRef.current = refreshKey;
-      
-      // Directly fetch the updated customer data from the API
-      const fetchUpdatedCustomer = async () => {
-        try {
-          const response = await fetch(`/api/customers/${customer.id}`);
-          if (response.ok) {
-            const updatedCustomer = await response.json();
-            // Update the local customer state with the fresh data
-            setCustomer(updatedCustomer);
-          }
-        } catch (error) {
-          console.error('Error fetching updated customer data:', error);
+  const refreshCustomerData = useCallback(async () => {
+    if (customerData?.id) {
+      try {
+        console.log(`Manually refreshing customer data for ID: ${customerData.id}`);
+        const response = await fetch(`/api/customers/${customerData.id}`);
+        if (response.ok) {
+          const updatedCustomer = await response.json();
+          setCustomerData(updatedCustomer);
+          onSuccess();
         }
-      };
-      
-      fetchUpdatedCustomer();
-      
-      // Also call onSuccess to refresh the parent's data, but only once per refreshKey change
-      onSuccess();
+      } catch (error) {
+        console.error('Error refreshing customer data:', error);
+      }
     }
-  }, [refreshKey, customer, onSuccess]);
+  }, [customerData?.id, onSuccess]);
+  
+  const handleContactSuccess = useCallback(() => {
+    setIsContactFormOpen(false);
+    refreshCustomerData();
+  }, [refreshCustomerData]);
   
   const handleContactDeleted = useCallback(() => {
-    setRefreshKey(prevKey => prevKey + 1);
-  }, []);
-  
-  const handleContactCreated = useCallback(() => {
-    setRefreshKey(prevKey => prevKey + 1);
-  }, []);
+    refreshCustomerData();
+  }, [refreshCustomerData]);
   
   const handleClose = useCallback(() => {
-    onOpenChange(false)
-  }, [onOpenChange])
+    onOpenChange(false);
+  }, [onOpenChange]);
+  
+  if (isViewMode && !customerData) {
+    return null;
+  }
   
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="customer-drawer-content">
+      <CustomerProvider initialCustomer={customerData}>
+        <DrawerContent className="customer-drawer-content">
         {/* Add custom CSS for the drawer width */}
         <style jsx global>{`
           .customer-drawer-content {
@@ -119,107 +114,97 @@ export const CustomerDrawer = memo(function CustomerDrawer({
           </DrawerHeader>
           
           <div className="flex-1 overflow-auto p-4">
-            {isViewMode && customer ? (
-              <>
-                <CustomerDetails customer={customer} />
+            {isViewMode && customerData ? (
+              <div className="space-y-6">
+                <CustomerDetails customer={customerData} />
                 
-                <div className="w-full mt-6">
-                  {/* Custom Tabs Implementation */}
-                  <div className="w-full">
-                    {/* Tab Headers */}
-                    <div className="flex w-full border-b border-gray-200">
-                      <button 
-                        onClick={() => setActiveTab('contacts')}
-                        className={`py-2 px-18 text-center font-medium ${activeTab === 'contacts' ? 'border-b-2 border-black' : ''}`}
-                      >
-                        Contacts
-                      </button>
-                      <button 
-                        onClick={() => setActiveTab('quotes')}
-                        className={`py-2 px-18 text-center font-medium ${activeTab === 'quotes' ? 'border-b-2 border-black' : ''}`}
-                      >
-                        Quotes
-                      </button>
-                    </div>
+                <div className="w-full">
+                  {/* Tab Headers */}
+                  <div className="flex w-full border-b border-gray-200">
+                    <button 
+                      onClick={() => setActiveTab('contacts')}
+                      className={`py-2 px-18 text-center font-medium ${activeTab === 'contacts' ? 'border-b-2 border-black' : ''}`}
+                    >
+                      Contacts
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('quotes')}
+                      className={`py-2 px-18 text-center font-medium ${activeTab === 'quotes' ? 'border-b-2 border-black' : ''}`}
+                    >
+                      Quotes
+                    </button>
+                  </div>
+                  
+                  {/* Tab Content */}
+                  <div className="mt-4">
+                    {/* Contacts Tab Content */}
+                    {activeTab === 'contacts' && (
+                      <div className="p-1">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-sm font-medium">Customer Contacts</h3>
+                          <Button 
+                            size="sm" 
+                            className="flex items-center gap-1"
+                            onClick={() => setIsContactFormOpen(true)}
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                            Create Contact
+                          </Button>
+                        </div>
+                        <CustomerContacts 
+                          customer={customerData} 
+                          onContactDeleted={handleContactDeleted}
+                        />
+                      </div>
+                    )}
                     
-                    {/* Tab Content */}
-                    <div className="mt-4">
-                      {/* Contacts Tab Content */}
-                      {activeTab === 'contacts' && (
-                        <div className="p-1">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-medium">Customer Contacts</h3>
-                            <Button 
-                              size="sm" 
-                              className="flex items-center gap-1"
-                              onClick={() => setIsContactFormOpen(true)}
-                            >
-                              <PlusCircle className="h-4 w-4" />
-                              Create Contact
-                            </Button>
-                          </div>
-                          <CustomerContacts 
-                            customer={customer} 
-                            onContactDeleted={handleContactDeleted} 
-                            key={refreshKey} 
-                          />
+                    {/* Quotes Tab Content */}
+                    {activeTab === 'quotes' && (
+                      <div className="p-1">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-sm font-medium">Customer Quotes</h3>
+                          <Button 
+                            size="sm" 
+                            className="flex items-center gap-1"
+                            onClick={() => {
+                              console.log('Create new quote for customer ID:', customerData?.id)
+                              // Implementation would redirect to quote creation page or open a modal
+                            }}
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                            Create Quote
+                          </Button>
                         </div>
-                      )}
-                      
-                      {/* Quotes Tab Content */}
-                      {activeTab === 'quotes' && (
-                        <div className="p-1">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-medium">Customer Quotes</h3>
-                            <Button 
-                              size="sm" 
-                              className="flex items-center gap-1"
-                              onClick={() => {
-                                console.log('Create new quote for customer ID:', customer.id)
-                                // Implementation would redirect to quote creation page or open a modal
-                              }}
-                            >
-                              <PlusCircle className="h-4 w-4" />
-                              Create Quote
-                            </Button>
-                          </div>
-                          <div className="space-y-4">
-                            <div className="text-center py-8 text-muted-foreground">
-                              No quotes found for this customer.
-                            </div>
+                        <div className="space-y-4">
+                          <div className="text-center py-8 text-muted-foreground">
+                            No quotes found for this customer.
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </>
-            ) : (
+              </div>
+            ) : !isViewMode ? (
               <CustomerForm 
                 onSuccess={onSuccess} 
                 onCancel={handleClose}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </DrawerContent>
-      {customer && isContactFormOpen && (
+      
+      {customerData && isContactFormOpen && (
         <CustomerContactForm
-          customerId={customer.id}
+          customerId={customerData.id}
           isOpen={isContactFormOpen}
           onClose={() => setIsContactFormOpen(false)}
-          onSuccess={handleContactCreated}
-          customer={{
-            name: customer.name,
-            displayName: customer.displayName,
-            address: customer.address,
-            city: customer.city,
-            state: customer.state,
-            zip: customer.zip,
-            paymentTerms: customer.paymentTerms
-          }}
+          onSuccess={handleContactSuccess}
+          customer={customerData}
         />
       )}
+      </CustomerProvider>
     </Drawer>
   )
 })

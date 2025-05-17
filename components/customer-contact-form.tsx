@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createCustomerContact, updateCustomerContact } from "@/lib/api-client"
 import { toast } from "sonner"
+import { useCustomer } from "@/contexts/customer-context"
 
 interface CustomerContactFormProps {
   customerId: number
@@ -83,57 +83,52 @@ export function CustomerContactForm({
     }))
   }
 
+  const { createContact, updateContact } = useCustomer()
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     
     if (!formData.name.trim()) {
-      toast.error("Contact name is required")
+      toast.error("Name is required")
       return
     }
     
     try {
       setIsSubmitting(true)
       
-      let result;
+      let success = false;
       
       if (isEditMode && contactToEdit) {
-        // Update existing contact
-        result = await updateCustomerContact(contactToEdit.id, {
+        success = await updateContact(contactToEdit.id, {
           name: formData.name,
           role: formData.role,
           email: formData.email,
           phone: formData.phone
         })
-        
-        toast.success("Contact updated successfully")
       } else {
-        // Create new contact
-        result = await createCustomerContact({
-          contractor_id: customerId,
+        success = await createContact({
           name: formData.name,
           role: formData.role,
           email: formData.email,
           phone: formData.phone
         })
-        
-        toast.success("Contact created successfully")
       }
       
-      // Add a small delay to ensure the database has been updated
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Reset form
-      setFormData({
-        name: "",
-        role: "",
-        email: "",
-        phone: ""
-      })
-      
-      // Close only the contact form dialog, but keep the drawer open
-      onClose()
-      // Notify parent to refresh the contacts list without closing the drawer
-      onSuccess()
+      if (success) {
+        setFormData({
+          name: "",
+          role: "",
+          email: "",
+          phone: ""
+        })
+        
+        onClose()
+        onSuccess()
+        toast.success(isEditMode ? 'Contact updated successfully' : 'Contact created successfully');
+      } else {
+        console.error('Contact operation failed but no error was thrown');
+        toast.error(isEditMode ? 'Failed to update contact' : 'Failed to create contact');
+      }
     } catch (error) {
       console.error(isEditMode ? "Error updating contact:" : "Error creating contact:", error)
       toast.error(isEditMode ? "Failed to update contact. Please try again." : "Failed to create contact. Please try again.")

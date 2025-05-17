@@ -8,10 +8,16 @@ interface CustomerDetailsProps {
 }
 
 export const CustomerDetails = memo(function CustomerDetails({ customer }: CustomerDetailsProps) {
+  console.log('CustomerDetails rendering with:', customer);
+  
+  if (!customer) {
+    return <div>No customer data available</div>;
+  }
+  
   return (
     <div className="mb-6 space-y-4">
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold">{customer.name}</h2>
+        <h2 className="text-2xl font-bold">{customer.name || 'Unnamed Customer'}</h2>
         {customer.displayName && (
           <p className="text-muted-foreground">{customer.displayName}</p>
         )}

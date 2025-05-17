@@ -559,10 +559,11 @@ try {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to delete customer contact');
+    throw new Error(errorData.error || `Failed to delete customer contact (${response.status})`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  return result;
 } catch (error) {
   console.error('Error deleting customer contact:', error);
   throw error;
@@ -592,10 +593,11 @@ try {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to create customer contact');
+    throw new Error(errorData.error || `Failed to create customer contact (${response.status})`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  return result;
 } catch (error) {
   console.error('Error creating customer contact:', error);
   throw error;
@@ -625,10 +627,12 @@ try {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to update customer contact');
+    console.error(`API error (${response.status}):`, errorData);
+    throw new Error(errorData.error || `Failed to update customer contact (${response.status})`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  return result;
 } catch (error) {
   console.error('Error updating customer contact:', error);
   throw error;

@@ -26,9 +26,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { deleteCustomerContact } from "@/lib/api-client"
 import { toast } from "sonner"
 import { CustomerContactForm } from "@/components/customer-contact-form"
+import { useCustomer } from "@/contexts/customer-context"
 
 interface CustomerContactsProps {
   customer: Customer
@@ -77,27 +77,28 @@ export const CustomerContacts = memo(function CustomerContacts({
     setIsDeleteDialogOpen(true)
   }
 
-  // Handle contact deletion
+  const { deleteContact } = useCustomer()
+
   const handleDelete = async () => {
     if (!contactToDelete) return
     
     try {
       setIsDeleting(true)
-      const result = await deleteCustomerContact(contactToDelete.id)
       
-      // Close the dialog first for better UX
+      const success = await deleteContact(contactToDelete.id, contactToDelete.name)
+      
       setIsDeleteDialogOpen(false)
       
-      // Show success message with toast
-      toast.success(`${contactToDelete.name} has been deleted successfully.`)
-      
-      // Notify parent component to refresh data
-      if (onContactDeleted) {
+      if (success && onContactDeleted) {
         onContactDeleted()
+      } else if (!success) {
+        console.error('Delete operation returned false but did not throw an error');
+        toast.error("Failed to delete contact. Please try again.")
       }
     } catch (error) {
       console.error('Error deleting contact:', error)
       toast.error("Failed to delete contact. Please try again.")
+      setIsDeleteDialogOpen(false)
     } finally {
       setIsDeleting(false)
       setContactToDelete(null)
