@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatPhoneNumber } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -35,6 +36,7 @@ interface CustomerContactFormProps {
     state?: string
     zip?: string
     paymentTerms?: string
+    url?: string
   }
 }
 
@@ -77,10 +79,19 @@ export function CustomerContactForm({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    
+    // Apply phone number formatting if the phone field is being updated
+    if (name === 'phone') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatPhoneNumber(value)
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   const { createContact, updateContact } = useCustomer()
@@ -168,6 +179,19 @@ export function CustomerContactForm({
                 <span>{customer.paymentTerms}</span>
               </div>
             )}
+            {customer.url && (
+              <div>
+                <span className="font-medium">Website: </span>
+                <a 
+                  href={customer.url.startsWith('http') ? customer.url : `https://${customer.url}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {customer.url}
+                </a>
+              </div>
+            )}
           </div>
         </div>
         
@@ -223,6 +247,7 @@ export function CustomerContactForm({
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                placeholder="(123) 456-7890"
                 className="col-span-3"
               />
             </div>
