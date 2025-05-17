@@ -13,6 +13,9 @@ import { QuotePreviewButton } from "@/components/pages/quote-form/PreviewButton"
 import { sendQuoteEmail } from "@/lib/api-client";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import ReactPDF from '@react-pdf/renderer';
+import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
+import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 
 export default function QuoteFormContent() {
   const {
@@ -31,49 +34,216 @@ export default function QuoteFormContent() {
     ccEmails,
     bccEmails,
     pointOfContact,
+    status,
+    includeTerms,
+    includeFiles,
+    customTerms,
+    adminData,
+    county,
+    stateRoute,
+    ecmsPoNumber,
+    notes,
+    additionalFiles,
+    uniqueToken,
+    setUniqueToken,
+    fromEmail,
+    quoteDate,
+    setStatus,
+    quoteType,
+    associatedContractNumber
   } = useQuoteForm();
 
   const handleSendQuote = async () => {
-    const targetEmail = 'it@establishedtraffic.com';
-    
+    if (!pointOfContact) {
+      toast.error("Please select a point of contact before sending the quote");
+      return;
+    }
+  
     setSending(true);
     setEmailError(null);
-    
+  
+    // Generate a unique token if not already set
+    if (!uniqueToken) {
+      const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      setUniqueToken(newToken);
+    }
+  
     try {
+      // Create recipients array with proper contact IDs
+      const recipients: {
+        email: string;
+        contactId: number | undefined;
+        point_of_contact?: boolean;
+        cc?: boolean;
+        bcc?: boolean;
+      }[] = [];
+  
+      // Add point of contact
+      if (pointOfContact) {
+        recipients.push({
+          email: pointOfContact.email,
+          contactId: getContactIdFromEmail(pointOfContact.email),
+          point_of_contact: true
+        });
+      }
+  
+      // Add CC recipients
+      ccEmails.forEach(email => {
+        recipients.push({
+          email,
+          contactId: getContactIdFromEmail(email),
+          cc: true
+        });
+      });
+  
+      // Add BCC recipients
+      bccEmails.forEach(email => {
+        recipients.push({
+          email,
+          contactId: getContactIdFromEmail(email),
+          bcc: true
+        });
+      });
+  
+      // Generate the PDF quote document
+      const pdfBlob = await ReactPDF.pdf(
+        <BidProposalReactPDF
+          adminData={adminData ?? defaultAdminObject}
+          items={quoteItems}
+          customers={selectedCustomers.map(c => c.name)}
+          quoteDate={new Date(quoteDate)}
+          quoteNumber={quoteId}
+          paymentTerms={paymentTerms as PaymentTerms}
+          includedTerms={includeTerms}
+          customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+          county={county}
+          sr={stateRoute}
+          ecms={ecmsPoNumber}
+        />
+      ).toBlob();
+  
+      // Create a File object from the blob for attachment
+      const pdfFile = new File([pdfBlob], `Quote-${quoteId}.pdf`, { type: 'application/pdf' });
+      
+      // Add the PDF to additional files
+      const allFiles = [pdfFile, ...(additionalFiles || [])];
+  
       const success = await sendQuoteEmail(
         {
-          date: new Date(),
+          adminData: adminData,
+          date: new Date(quoteDate), // Use the date from the form
           quoteNumber: quoteId,
-          customerName: pointOfContact?.name ?? '',
-          customers: selectedCustomers.map(customer => customer.name),
-          totalAmount: 0,
+          customerName: pointOfContact?.name || '',
+          customers: selectedCustomers,
+          totalAmount: calculateQuoteTotal(quoteItems),
           items: quoteItems,
-          createdBy: 'me',
-          createdAt: 'Today',
+          createdBy: 'User', // This should be the logged-in user
+          createdAt: new Date().toISOString(),
           paymentTerms: paymentTerms as PaymentTerms,
+          includedTerms: includeTerms,
+          ecmsPoNumber: ecmsPoNumber,
+          stateRoute: stateRoute,
+          county: county,
+          notes: notes,
+          status: status,
+          customTerms: customTerms,
+          attachmentFlags: includeFiles,
+          uniqueToken: uniqueToken || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+          quoteType,
+          associatedContract : associatedContractNumber ?? ''
         },
         {
-          pointOfContact: pointOfContact?.name ?? '',
+          pointOfContact: pointOfContact,
+          fromEmail: fromEmail || 'it@establishedtraffic.com',
+          recipients: recipients,
           cc: ccEmails,
           bcc: bccEmails,
           subject: subject,
-          body: emailBody
+          body: emailBody,
+          files: allFiles, // Include the PDF and any additional files
+          standardDocs: getStandardDocsFromFlags(includeFiles)
         }
       );
-      
+  
       if (success) {
         setEmailSent(true);
-        toast.success(`Email sent successfully to ${targetEmail}!`);
+        toast.success(`Quote sent successfully to ${pointOfContact.email}!`);
+        setStatus('Sent')
         setTimeout(() => setEmailSent(false), 5000);
       } else {
-        setEmailError("Failed to send email. Please try again.");
+        setEmailError("Failed to send email, but quote has been saved.");
+        toast.error("There was a problem sending the email, but your quote has been saved.");
       }
     } catch (error) {
       console.error("Error sending quote email:", error);
-      setEmailError("An error occurred while sending the email.");
+      setEmailError("An error occurred while sending the quote.");
     } finally {
       setSending(false);
     }
+  };
+
+  // Helper function to get contact ID from email
+  const getContactIdFromEmail = (email: string): number | undefined => {
+    // Look through all selected customers' contacts
+    for (const customer of selectedCustomers) {
+      // Check if customer has contactIds array and it matches the number of emails
+      if (customer.contactIds && customer.emails && customer.emails.length === customer.contactIds.length) {
+        // Find the index of the matching email
+        const emailIndex = customer.emails.findIndex(e => e === email);
+        if (emailIndex >= 0 && emailIndex < customer.contactIds.length) {
+          return customer.contactIds[emailIndex];
+        }
+      }
+    }
+    return undefined;
+  };
+
+  // Helper function to calculate the total quote amount
+  const calculateQuoteTotal = (items: any[]): number => {
+    if (!items?.length) return 0;
+
+    return items.reduce((total, item) => {
+      const discount = item.discount || 0;
+      const discountType = item.discountType || 'percentage';
+
+      // Calculate parent item value
+      const quantity = item.quantity || 0;
+      const unitPrice = item.unitPrice || 0;
+      const basePrice = quantity * unitPrice;
+
+      // Calculate discount amount based on type
+      const discountAmount = discountType === 'dollar'
+        ? discount
+        : (basePrice * (discount / 100));
+
+      // Calculate composite items total if they exist
+      const compositeTotal = item.associatedItems && item.associatedItems.length > 0
+        ? item.associatedItems.reduce((subSum, compositeItem) =>
+          subSum + ((compositeItem.quantity || 0) * (compositeItem.unitPrice || 0)), 0)
+        : 0;
+
+      // Apply discount to the combined total
+      return total + (basePrice + compositeTotal - discountAmount);
+    }, 0);
+  };
+
+  // Helper function to get standard docs from flags
+  const getStandardDocsFromFlags = (flags: Record<string, boolean>): string[] => {
+    const docs: string[] = [];
+
+    if (flags['flagging-price-list']) {
+      docs.push('Flagging Price List');
+    }
+
+    if (flags['flagging-service-area']) {
+      docs.push('Flagging Service Area');
+    }
+
+    if (flags['bedford-branch']) {
+      docs.push('Sell Sheet');
+    }
+
+    return docs;
   };
 
   return (
@@ -84,9 +254,9 @@ export default function QuoteFormContent() {
         </div>
         <div className="flex items-center gap-2">
           <QuotePreviewButton />
-          <Button 
-            onClick={handleSendQuote} 
-            disabled={sending}
+          <Button
+            onClick={handleSendQuote}
+            disabled={sending || !pointOfContact}
           >
             {sending ? "Sending..." : "Send Quote"}
           </Button>
