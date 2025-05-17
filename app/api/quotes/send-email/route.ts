@@ -321,7 +321,7 @@ export async function POST(req: NextRequest) {
         .from('files')
         .insert({
           quote_id: quoteId,
-          file_name: fileName
+          filename: fileName
         });
 
       if (fileError) {
