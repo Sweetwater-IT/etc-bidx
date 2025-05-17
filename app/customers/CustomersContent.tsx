@@ -72,8 +72,6 @@ const CustomersContent = () => {
   }, []);
 
   const handleDrawerSuccess = useCallback(() => {
-
-    setDrawerOpen(false);
     mutate();
   }, [mutate]);
 

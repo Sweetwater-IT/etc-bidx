@@ -19,8 +19,10 @@ const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }:
     
     let query = supabase
       .from('contractors')
-      .select('*, customer_contacts(*)', { count: 'exact' })
+      .select('*, customer_contacts!inner(*)', { count: 'exact' })
       .order('name', { ascending: true });
+      
+    query = query.not('customer_contacts.is_deleted', 'eq', true);
     
     if (paymentTerms !== 'all') {
       query = query.eq('payment_terms', paymentTerms);
@@ -73,11 +75,11 @@ export function useCustomersSWR(params: FetchCustomersParams = {}) {
     () => fetchCustomers({ page, pageSize, paymentTerms }), 
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000,
+      dedupingInterval: 0,
       errorRetryCount: 3,
-      revalidateIfStale: false,
-      revalidateOnReconnect: false,
-      shouldRetryOnError: false
+      revalidateIfStale: true,
+      revalidateOnReconnect: true,
+      shouldRetryOnError: true
     }
   );
   

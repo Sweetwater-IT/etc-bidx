@@ -25,3 +25,24 @@ export const formatPotentialNullToCurrency = (value: number | undefined | null):
   if (value === undefined || value === null || value === 0) return ''
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
+/**
+ * Formats a phone number string into (123) 456-7890 format
+ * @param phoneNumber The phone number to format
+ * @returns Formatted phone number string
+ */
+export function formatPhoneNumber(phoneNumber: string): string {
+  // Strip all non-numeric characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Format based on length
+  if (cleaned.length === 0) {
+    return '';
+  } else if (cleaned.length <= 3) {
+    return `(${cleaned}`;
+  } else if (cleaned.length <= 6) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+  } else {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+  }
+}
