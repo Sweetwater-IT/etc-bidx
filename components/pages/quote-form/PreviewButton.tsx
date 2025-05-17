@@ -48,7 +48,6 @@ export const QuotePreviewButton = () => {
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers.map(c => c.name)}
-                // email=""
                 quoteDate={new Date(quoteDate)}
                 quoteNumber={quoteId}
                 paymentTerms={paymentTerms as PaymentTerms}

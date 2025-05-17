@@ -1,4 +1,5 @@
 import { createQuoteEmailHtml } from '@/app/quotes/create/ProposalHTML';
+import { AttachmentNames, QuoteStatus, TermsNames } from '@/app/quotes/create/QuoteFormProvider';
 import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation';
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
@@ -208,7 +209,7 @@ export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
  * Create a new estimate
  */
 export async function createActiveBid(
-  adminData: AdminData, 
+  adminData: AdminData,
   mptRental: MPTRentalEstimating,
   equipmentRental: EquipmentRentalItem[],
   flagging: Flagging | null,
@@ -575,19 +576,40 @@ export async function importJobs(
  */
 export async function sendQuoteEmail(
   quoteData: {
+    adminData?: AdminData;
     date: Date;
     quoteNumber: string;
     customerName: string;
-    customers: string[]
+    customers: Customer[];
     totalAmount: number;
     createdBy: string;
     createdAt: string;
     customTerms?: string;
-    items: QuoteItem[]
-    paymentTerms: PaymentTerms
+    items: QuoteItem[];
+    paymentTerms: PaymentTerms;
+    includedTerms: Record<TermsNames, boolean>;
+    ecmsPoNumber?: string;
+    stateRoute?: string;
+    county?: string;
+    notes?: string;
+    status: QuoteStatus;
+    estimate_id?: number;
+    job_id?: number;
+    attachmentFlags: Record<AttachmentNames, boolean>;
+    uniqueToken: string;
+    quoteType: 'estimate' | 'job' | 'new'
+    associatedContract: string;
   },
   options: {
-    pointOfContact:  string;
+    pointOfContact: { name: string; email: string };
+    fromEmail: string;
+    recipients: Array<{
+      email: string;
+      contactId: number | undefined;
+      cc?: boolean;
+      bcc?: boolean;
+      point_of_contact?: boolean;
+    }>;
     subject: string;
     body: string;
     cc: string[];
@@ -599,42 +621,116 @@ export async function sendQuoteEmail(
   try {
     // Create FormData to handle files and other data
     const formData = new FormData();
-    
+
     // Add quote information
-    formData.append('to', options.pointOfContact);
+    formData.append('to', options.pointOfContact.email);
+    formData.append('pocName', options.pointOfContact.name);
+
+    // Point of contact contactId might be undefined for manually entered emails
+    const pocContactId = options.recipients.find(r => r.point_of_contact)?.contactId;
+    if (pocContactId !== undefined) {
+      formData.append('pocContactId', pocContactId.toString());
+    }
+
     formData.append('quoteNumber', quoteData.quoteNumber);
-    
-    // Add subject line
+    formData.append('status', quoteData.status);
+    formData.append('uniqueToken', quoteData.uniqueToken);
+
+    formData.append('quoteType', quoteData.quoteType);
+    formData.append('associatedContract', quoteData.associatedContract || '');
+
+    // Add admin information
+    if (quoteData.adminData) {
+      formData.append('adminData', JSON.stringify(quoteData.adminData));
+    }
+
+    // Add customer information
+    formData.append('customers', JSON.stringify(quoteData.customers.map(c => ({
+      id: c.id,
+      name: c.name,
+      email: c.emails[0] || '',
+      contactIds: c.contactIds || []
+    }))));
+
+    formData.append('fromEmail', options.fromEmail);
+
+    // Add subject line and email body
     formData.append('subject', options.subject);
-    
+    formData.append('emailBody', options.body);
+
+    // Add all recipients data for database storage, including those with undefined contactId
+    formData.append('recipients', JSON.stringify(options.recipients));
+
+    // Add terms and conditions flags
+    formData.append('includedTerms', JSON.stringify(quoteData.includedTerms));
+
+    // Add attachment flags
+    formData.append('attachmentFlags', JSON.stringify(quoteData.attachmentFlags));
+
+    // Add custom terms if present
+    if (quoteData.customTerms) {
+      formData.append('customTerms', quoteData.customTerms);
+    }
+
+    // Add notes if present
+    if (quoteData.notes) {
+      formData.append('notes', quoteData.notes);
+    }
+
+    // Add payment terms
+    formData.append('paymentTerms', quoteData.paymentTerms);
+
+    // Add ECMS PO number, state route, and county if present
+    if (quoteData.ecmsPoNumber) {
+      formData.append('ecmsPoNumber', quoteData.ecmsPoNumber);
+    }
+    if (quoteData.stateRoute) {
+      formData.append('stateRoute', quoteData.stateRoute);
+    }
+    if (quoteData.county) {
+      formData.append('county', quoteData.county);
+    }
+
+    // Add quote items
+    formData.append('quoteItems', JSON.stringify(quoteData.items));
+
     // Generate HTML content for the email
-    const htmlContent = createQuoteEmailHtml(defaultAdminObject, quoteData.items, quoteData.customers, 
-      quoteData.quoteNumber, quoteData.date, quoteData.paymentTerms, );
+    const htmlContent = createQuoteEmailHtml(
+      quoteData.adminData ?? defaultAdminObject,
+      quoteData.items,
+      quoteData.customers.map(c => c.name),
+      quoteData.quoteNumber,
+      quoteData.date,
+      quoteData.paymentTerms,
+      quoteData.county || "",
+      quoteData.stateRoute || "",
+      quoteData.ecmsPoNumber || "",
+      quoteData.includedTerms,
+      quoteData.customTerms || "",
+      options.body,
+      quoteData.uniqueToken
+    );
     formData.append('htmlContent', htmlContent);
-    
-    // Add token if needed for tracking
-    const trackingToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    formData.append('token', trackingToken);
-    
-    // Add CC and BCC recipients if provided
-    if (options?.cc && options.cc.length > 0) {
+
+    // Add CC and BCC recipients
+    if (options.cc && options.cc.length > 0) {
       options.cc.forEach(email => formData.append('cc', email));
     }
-    
-    if (options?.bcc && options.bcc.length > 0) {
+
+    if (options.bcc && options.bcc.length > 0) {
       options.bcc.forEach(email => formData.append('bcc', email));
     }
-    
-    // Add standard documents if specified
-    if (options?.standardDocs && options.standardDocs.length > 0) {
+
+    // Add standard documents
+    if (options.standardDocs && options.standardDocs.length > 0) {
       formData.append('standardDocs', options.standardDocs.join(','));
     }
-    
-    // Add files if provided
-    if (options?.files && options.files.length > 0) {
+
+    // Add additional files
+    if (options.files && options.files.length > 0) {
       options.files.forEach(file => formData.append('files', file));
     }
-    
+
     // Send the request
     const response = await fetch('/api/quotes/send-email', {
       method: 'POST',
@@ -647,7 +743,8 @@ export async function sendQuoteEmail(
       return false;
     }
 
-    return true;
+    const result = await response.json();
+    return result.success;
   } catch (error) {
     console.error('Error sending quote email:', error);
     return false;

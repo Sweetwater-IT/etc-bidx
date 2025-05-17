@@ -12,7 +12,7 @@ interface PointOfContact {
   email: string;
 }
 
-export type QuoteStatus = 'Draft' | 'Not Sent' | 'Sent'
+export type QuoteStatus = 'Not Sent' | 'Sent' | 'Accepted'
 
 interface QuoteFormState {
   // Customer-related state
@@ -78,9 +78,20 @@ interface QuoteFormState {
   setAssociatedContractNumber : (contractNumber : string) => void;
   adminData : AdminData | undefined;
   setAdminData : Dispatch<SetStateAction<AdminData | undefined>>;
+  notes: string;
+  setNotes: Dispatch<SetStateAction<string>>;
+  additionalFiles : File[]
+  setAdditionalFiles : Dispatch<SetStateAction<File[]>>
+
+  uniqueToken : string;
+  setUniqueToken : Dispatch<SetStateAction<string>>;
   
   // Generated data
   quoteId: string;
+  setQuoteId: Dispatch<SetStateAction<string>>
+
+  fromEmail: string;
+  setFromEmail: Dispatch<SetStateAction<string>>
 }
 
 const QuoteFormContext = createContext<QuoteFormState | undefined>(undefined);
@@ -103,14 +114,16 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>('');
-  const [status, setStatus] = useState<QuoteStatus>('Draft')
+  const [fromEmail, setFromEmail] = useState<string>('')
+  const [status, setStatus] = useState<QuoteStatus>('Not Sent')
   
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>('NET30');
   const [digitalSignature, setDigitalSignature] = useState(false);
   const [quoteDate, setQuoteDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [associatedContractNumber, setAssociatedContractNumber] = useState<string>();
-  
+
+
   // Admin fields for estimates/jobs
   const [county, setCounty] = useState<string>("");
   const [ecmsPoNumber, setEcmsPoNumber] = useState<string>("");
@@ -139,9 +152,11 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [sending, setSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
-  
-  // Generate quote ID
-  const quoteId = `Q-${Math.floor(100 + Math.random() * 900)}`;
+  const [quoteId, setQuoteId] = useState<string>('')
+
+  const [notes, setNotes] = useState<string>('')
+  const [additionalFiles, setAdditionalFiles] = useState<File[]>([])
+  const [uniqueToken, setUniqueToken] = useState<string>('')
 
   // Update payment terms when customers change
   useEffect(() => {
@@ -199,12 +214,21 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     emailError,
     setEmailError,
     quoteId,
+    setQuoteId,
     associatedContractNumber,
     setAssociatedContractNumber,
     status,
     setStatus,
     adminData,
-    setAdminData
+    setAdminData,
+    notes,
+    setNotes,
+    additionalFiles,
+    setAdditionalFiles,
+    uniqueToken,
+    setUniqueToken,
+    fromEmail,
+    setFromEmail
   };
   
   return (

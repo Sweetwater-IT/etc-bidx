@@ -9,11 +9,11 @@ export const createQuoteEmailHtml = (
     quoteNumber: string = '',
     quoteDate: Date = new Date(),
     paymentTerms: string,
-    county: string = '',
-    sr: string = '',
-    ecms: string = '',
-    includedTaC: TermsNames[] = [],
-    customTerms: string = '',
+    county: string,
+    sr: string,
+    ecms: string,
+    includedTaC: Record<TermsNames, boolean>,
+    customTerms: string,
     emailBody: string = '',
     token?: string
   ): string => {
@@ -76,7 +76,7 @@ export const createQuoteEmailHtml = (
     validThroughDate.setDate(validThroughDate.getDate() + 30);
   
     const totalDays = (adminData.startDate && adminData.endDate) 
-      ? Math.ceil((adminData.endDate.getTime() - adminData.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.ceil((new Date(adminData.endDate).getTime() - new Date(adminData.startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
     
     // Generate item rows HTML
@@ -118,13 +118,13 @@ export const createQuoteEmailHtml = (
     }
   
     // Sale item notice and custom T&C HTML
-    // const saleItemNoticeHtml = includedTaC.includes('Sale') 
-    //   ? `
-    //     <div style="background-color: #FFFF00; padding: 5px; text-align: center; margin-bottom: 20px">
-    //       <p style="font-size: 8px; color: red; margin: 0">SALE ITEM PAYMENT TERMS ARE NET 14</p>
-    //     </div>
-    //   ` 
-    //   : '';
+    const saleItemNoticeHtml = includedTaC["equipment-sale"]
+      ? `
+        <div style="background-color: #FFFF00; padding: 5px; text-align: center; margin-bottom: 20px">
+          <p style="font-size: 8px; color: red; margin: 0">SALE ITEM PAYMENT TERMS ARE NET 14</p>
+        </div>
+      ` 
+      : '';
   
     const customTermsHtml = customTerms 
       ? `
@@ -226,13 +226,13 @@ export const createQuoteEmailHtml = (
                   <tr>
                     <td style="padding: 4px; border: 1px solid black; font-size: 10px; font-weight: bold">Start Date:</td>
                     <td style="padding: 4px; border: 1px solid black; font-size: 10px">
-                      ${adminData.startDate ? adminData.startDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
+                      ${adminData.startDate ? new Date(adminData.startDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 4px; border: 1px solid black; font-size: 10px; font-weight: bold">End Date:</td>
                     <td style="padding: 4px; border: 1px solid black; font-size: 10px">
-                      ${adminData.endDate ? adminData.endDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
+                      ${adminData.endDate ? new Date(adminData.endDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
                     </td>
                   </tr>
                   <tr>
@@ -282,7 +282,7 @@ export const createQuoteEmailHtml = (
           </div>
   
           <!-- Sale Item Notice -->
-          ${'hi'}
+          ${saleItemNoticeHtml}
   
           <!-- Custom Terms and Conditions -->
           ${customTermsHtml}
@@ -290,7 +290,7 @@ export const createQuoteEmailHtml = (
           ${token ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 30px;">
             <tr>
               <td align="center" style="padding-bottom: 20px;">
-                <a href='${process.env.NEXT_PUBLIC_BASE_APP_URL}/quote-open-form?token=${token}' style="font-size: 10px; color: white; font-weight: bold; margin: 0; padding: 16px; border-radius: 12px; border: 1px solid #c94c03;
+                <a href='${process.env.NEXT_PUBLIC_BASE_APP_URL}/quotes/view/${token}' style="font-size: 10px; color: white; font-weight: bold; margin: 0; padding: 16px; border-radius: 12px; border: 1px solid #c94c03;
                 background-color: #c94c03;">
                   PLEASE USE THIS BUTTON TO ACCEPT THIS PROPOSAL. THANK YOU!
                 </a>
