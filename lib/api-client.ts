@@ -522,8 +522,9 @@ export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number
  * Delete multiple archived active bids (soft delete)
  */
 export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
-  const response = await fetch('/api/active-bids', {
-    method: 'DELETE',
+try {
+  const response = await fetch('/api/archived-active-bids/delete', {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -532,11 +533,40 @@ export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: 
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to delete archived active bids');
+    throw new Error(errorData.error || 'Failed to delete archived active bids');
   }
 
-  const result = await response.json();
-  return { count: result.count };
+  return await response.json();
+} catch (error) {
+  console.error('Error deleting archived active bids:', error);
+  throw error;
+}
+}
+
+/**
+ * Soft delete a customer contact by setting is_deleted flag to true
+ * @param contactId ID of the contact to delete
+ * @returns Promise resolving to the deleted contact data
+ */
+export async function deleteCustomerContact(contactId: number): Promise<any> {
+try {
+  const response = await fetch(`/api/customer-contacts/${contactId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete customer contact');
+  }
+
+  return await response.json();
+} catch (error) {
+  console.error('Error deleting customer contact:', error);
+  throw error;
+}
 }
 
 /**

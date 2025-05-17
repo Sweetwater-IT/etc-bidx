@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, memo, useState } from "react"
+import { useCallback, memo, useState, useEffect } from "react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { X, PlusCircle } from "lucide-react"
@@ -20,12 +20,23 @@ interface CustomerDrawerProps {
 export const CustomerDrawer = memo(function CustomerDrawer({
   open,
   onOpenChange,
-  customer,
+  customer: initialCustomer,
   isViewMode,
   onSuccess
 }: CustomerDrawerProps) {
   
   const [activeTab, setActiveTab] = useState('contacts');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
+  
+  useEffect(() => {
+    setCustomer(initialCustomer);
+  }, [initialCustomer]);
+  
+  const handleContactDeleted = useCallback(() => {
+    setRefreshKey(prevKey => prevKey + 1);
+    onSuccess();
+  }, [onSuccess]);
   
   const handleClose = useCallback(() => {
     onOpenChange(false)
@@ -115,7 +126,11 @@ export const CustomerDrawer = memo(function CustomerDrawer({
                               Create Contact
                             </Button>
                           </div>
-                          <CustomerContacts customer={customer} />
+                          <CustomerContacts 
+                            customer={customer} 
+                            onContactDeleted={handleContactDeleted} 
+                            key={refreshKey} 
+                          />
                         </div>
                       )}
                       

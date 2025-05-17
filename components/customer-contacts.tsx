@@ -16,24 +16,77 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { deleteCustomerContact } from "@/lib/api-client"
+import { toast } from "sonner"
 
 interface CustomerContactsProps {
   customer: Customer
+  onContactDeleted?: () => void
 }
 
-export const CustomerContacts = memo(function CustomerContacts({ customer }: CustomerContactsProps) {
-  // Placeholder functions for edit and delete actions
-  // These would be implemented with actual API calls in a real implementation
+export const CustomerContacts = memo(function CustomerContacts({ 
+  customer, 
+  onContactDeleted 
+}: CustomerContactsProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [contactToDelete, setContactToDelete] = useState<{
+    id: number
+    name: string
+    index: number
+  } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Placeholder function for edit action
   const handleEdit = (contactId: number) => {
     console.log(`Edit contact with ID: ${contactId}`)
     // Implementation would open a modal or form to edit the contact
   }
 
-  const handleDelete = (contactId: number) => {
-    console.log(`Delete contact with ID: ${contactId}`)
-    // Implementation would call an API to delete the contact and refresh the list
+  // Open delete confirmation dialog
+  const openDeleteDialog = (contactId: number, index: number) => {
+    setContactToDelete({
+      id: contactId,
+      name: customer.names[index] || 'Unnamed Contact',
+      index
+    })
+    setIsDeleteDialogOpen(true)
+  }
+
+  // Handle contact deletion
+  const handleDelete = async () => {
+    if (!contactToDelete) return
+    
+    try {
+      setIsDeleting(true)
+      const result = await deleteCustomerContact(contactToDelete.id)
+      
+      // Close the dialog first for better UX
+      setIsDeleteDialogOpen(false)
+      
+      // Show success message with toast
+      toast.success(`${contactToDelete.name} has been deleted successfully.`)
+      
+      // Notify parent component to refresh data
+      if (onContactDeleted) {
+        onContactDeleted()
+      }
+    } catch (error) {
+      console.error('Error deleting contact:', error)
+      toast.error("Failed to delete contact. Please try again.")
+    } finally {
+      setIsDeleting(false)
+      setContactToDelete(null)
+    }
   }
 
   if (!customer.contactIds || customer.contactIds.length === 0) {
@@ -45,71 +98,102 @@ export const CustomerContacts = memo(function CustomerContacts({ customer }: Cus
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Title</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead className="w-[80px]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {customer.contactIds.map((contactId, index) => (
-            <TableRow key={contactId}>
-              <TableCell className="font-medium">
-                {customer.names[index] || 'Unnamed Contact'}
-              </TableCell>
-              <TableCell>{customer.roles[index] || '-'}</TableCell>
-              <TableCell>
-                {customer.emails[index] ? (
-                  <a 
-                    href={`mailto:${customer.emails[index]}`} 
-                    className="text-blue-600 hover:underline"
-                  >
-                    {customer.emails[index]}
-                  </a>
-                ) : '-'}
-              </TableCell>
-              <TableCell>
-                {customer.phones[index] ? (
-                  <a 
-                    href={`tel:${customer.phones[index]}`} 
-                    className="text-blue-600 hover:underline"
-                  >
-                    {customer.phones[index]}
-                  </a>
-                ) : '-'}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(contactId)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleDelete(contactId)}
-                      className="text-red-600 focus:text-red-600"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {customer.contactIds.map((contactId, index) => (
+              <TableRow key={contactId}>
+                <TableCell className="font-medium">
+                  {customer.names[index] || 'Unnamed Contact'}
+                </TableCell>
+                <TableCell>{customer.roles[index] || '-'}</TableCell>
+                <TableCell>
+                  {customer.emails[index] ? (
+                    <a 
+                      href={`mailto:${customer.emails[index]}`} 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {customer.emails[index]}
+                    </a>
+                  ) : '-'}
+                </TableCell>
+                <TableCell>
+                  {customer.phones[index] ? (
+                    <a 
+                      href={`tel:${customer.phones[index]}`} 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {customer.phones[index]}
+                    </a>
+                  ) : '-'}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(contactId)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => openDeleteDialog(contactId, index)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Contact</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the contact <span className="font-medium">{contactToDelete?.name}</span>? 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 })
