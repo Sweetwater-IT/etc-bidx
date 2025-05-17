@@ -570,6 +570,72 @@ try {
 }
 
 /**
+ * Create a new customer contact
+ * @param data Contact data including contractor_id (customer ID), name, role, email, phone
+ * @returns Promise resolving to the created contact data
+ */
+export async function createCustomerContact(data: {
+  contractor_id: number;
+  name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> {
+try {
+  const response = await fetch('/api/customer-contacts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create customer contact');
+  }
+
+  return await response.json();
+} catch (error) {
+  console.error('Error creating customer contact:', error);
+  throw error;
+}
+}
+
+/**
+ * Update an existing customer contact
+ * @param contactId ID of the contact to update
+ * @param data Contact data to update including name, role, email, phone
+ * @returns Promise resolving to the updated contact data
+ */
+export async function updateCustomerContact(contactId: number, data: {
+  name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> {
+try {
+  const response = await fetch(`/api/customer-contacts/${contactId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to update customer contact');
+  }
+
+  return await response.json();
+} catch (error) {
+  console.error('Error updating customer contact:', error);
+  throw error;
+}
+}
+
+/**
  * Import jobs or bids from data
  */
 export async function importJobs(

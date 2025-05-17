@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { deleteCustomerContact } from "@/lib/api-client"
 import { toast } from "sonner"
+import { CustomerContactForm } from "@/components/customer-contact-form"
 
 interface CustomerContactsProps {
   customer: Customer
@@ -45,11 +46,25 @@ export const CustomerContacts = memo(function CustomerContacts({
     index: number
   } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false)
+  const [contactToEdit, setContactToEdit] = useState<{
+    id: number
+    name: string
+    role: string
+    email: string
+    phone: string
+  } | null>(null)
 
-  // Placeholder function for edit action
-  const handleEdit = (contactId: number) => {
-    console.log(`Edit contact with ID: ${contactId}`)
-    // Implementation would open a modal or form to edit the contact
+  const handleEdit = (contactId: number, index: number) => {
+    const contact = {
+      id: contactId,
+      name: customer.names[index] || '',
+      role: customer.roles[index] || '',
+      email: customer.emails[index] || '',
+      phone: customer.phones[index] || ''
+    }
+    setContactToEdit(contact)
+    setIsEditFormOpen(true)
   }
 
   // Open delete confirmation dialog
@@ -146,7 +161,7 @@ export const CustomerContacts = memo(function CustomerContacts({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(contactId)}>
+                      <DropdownMenuItem onClick={() => handleEdit(contactId, index)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
@@ -194,6 +209,28 @@ export const CustomerContacts = memo(function CustomerContacts({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Contact Form */}
+      {customer && (
+        <CustomerContactForm
+          customerId={customer.id}
+          isOpen={isEditFormOpen}
+          onClose={() => setIsEditFormOpen(false)}
+          onSuccess={() => {
+            if (onContactDeleted) onContactDeleted();
+          }}
+          contactToEdit={contactToEdit}
+          customer={{
+            name: customer.name,
+            displayName: customer.displayName,
+            address: customer.address,
+            city: customer.city,
+            state: customer.state,
+            zip: customer.zip,
+            paymentTerms: customer.paymentTerms
+          }}
+        />
+      )}
     </>
   )
 })

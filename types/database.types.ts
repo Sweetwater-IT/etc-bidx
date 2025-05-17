@@ -548,6 +548,7 @@ export type Database = {
           phone: string | null
           role: string | null
           updated: string | null
+          is_deleted: boolean
         }
         Insert: {
           contractor_id: number
@@ -557,6 +558,7 @@ export type Database = {
           name?: string | null
           phone?: string | null
           role?: string | null
+          is_deleted?: boolean
           updated?: string | null
         }
         Update: {
@@ -568,6 +570,7 @@ export type Database = {
           phone?: string | null
           role?: string | null
           updated?: string | null
+          is_deleted?: boolean
         }
         Relationships: [
           {

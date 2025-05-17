@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, memo, useState, useEffect } from "react"
+import { useCallback, memo, useState, useEffect, useRef } from "react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { X, PlusCircle } from "lucide-react"
@@ -8,6 +8,7 @@ import { Customer } from "@/types/Customer"
 import { CustomerDetails } from "@/components/customer-details"
 import { CustomerContacts } from "@/components/customer-contacts"
 import { CustomerForm } from "@/components/customer-form"
+import { CustomerContactForm } from "@/components/customer-contact-form"
 
 interface CustomerDrawerProps {
   open: boolean
@@ -28,15 +29,49 @@ export const CustomerDrawer = memo(function CustomerDrawer({
   const [activeTab, setActiveTab] = useState('contacts');
   const [refreshKey, setRefreshKey] = useState(0);
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   
   useEffect(() => {
     setCustomer(initialCustomer);
   }, [initialCustomer]);
   
+  // This effect will run when refreshKey changes, triggering a direct fetch of the customer data
+  // Use a ref to track the previous refreshKey to prevent unnecessary API calls
+  const prevRefreshKeyRef = useRef(refreshKey);
+  
+  useEffect(() => {
+    // Only refresh if we have a customer, the refreshKey has been updated, and it's different from the previous value
+    if (customer && refreshKey > 0 && refreshKey !== prevRefreshKeyRef.current) {
+      prevRefreshKeyRef.current = refreshKey;
+      
+      // Directly fetch the updated customer data from the API
+      const fetchUpdatedCustomer = async () => {
+        try {
+          const response = await fetch(`/api/customers/${customer.id}`);
+          if (response.ok) {
+            const updatedCustomer = await response.json();
+            // Update the local customer state with the fresh data
+            setCustomer(updatedCustomer);
+          }
+        } catch (error) {
+          console.error('Error fetching updated customer data:', error);
+        }
+      };
+      
+      fetchUpdatedCustomer();
+      
+      // Also call onSuccess to refresh the parent's data, but only once per refreshKey change
+      onSuccess();
+    }
+  }, [refreshKey, customer, onSuccess]);
+  
   const handleContactDeleted = useCallback(() => {
     setRefreshKey(prevKey => prevKey + 1);
-    onSuccess();
-  }, [onSuccess]);
+  }, []);
+  
+  const handleContactCreated = useCallback(() => {
+    setRefreshKey(prevKey => prevKey + 1);
+  }, []);
   
   const handleClose = useCallback(() => {
     onOpenChange(false)
@@ -117,10 +152,7 @@ export const CustomerDrawer = memo(function CustomerDrawer({
                             <Button 
                               size="sm" 
                               className="flex items-center gap-1"
-                              onClick={() => {
-                                console.log('Create new contact for customer ID:', customer.id)
-                                // Implementation would open a modal or form to create a new contact
-                              }}
+                              onClick={() => setIsContactFormOpen(true)}
                             >
                               <PlusCircle className="h-4 w-4" />
                               Create Contact
@@ -171,6 +203,23 @@ export const CustomerDrawer = memo(function CustomerDrawer({
           </div>
         </div>
       </DrawerContent>
+      {customer && isContactFormOpen && (
+        <CustomerContactForm
+          customerId={customer.id}
+          isOpen={isContactFormOpen}
+          onClose={() => setIsContactFormOpen(false)}
+          onSuccess={handleContactCreated}
+          customer={{
+            name: customer.name,
+            displayName: customer.displayName,
+            address: customer.address,
+            city: customer.city,
+            state: customer.state,
+            zip: customer.zip,
+            paymentTerms: customer.paymentTerms
+          }}
+        />
+      )}
     </Drawer>
   )
 })
