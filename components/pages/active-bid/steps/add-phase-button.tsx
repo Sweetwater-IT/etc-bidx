@@ -18,7 +18,14 @@ const AddPhaseButton = ({ setCurrentPhase, setCurrentStep} : Props) => {
     }
   
   return (
-    <Button style={{ marginLeft: 'auto', display: 'block', width: '50%'}} onClick={handlePhaseClick}>Add Phase</Button>
+    <Button 
+      className="z-0 relative" 
+      style={{ marginLeft: 'auto', display: 'block', width: '100%'}} 
+      onClick={handlePhaseClick}
+      title="Add a New Phase to the Bid"
+    >
+      Add Phase
+    </Button>
   )
 }
 

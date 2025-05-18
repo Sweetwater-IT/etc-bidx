@@ -7,7 +7,13 @@ export async function GET(request: NextRequest) {
     const orderBy = searchParams.get('orderBy') || 'name';
     const ascending = searchParams.get('ascending') === 'true';
     
-    const { data, error } = await supabase
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '25');
+    const offset = (page - 1) * limit;
+    
+    const filterDeleted = searchParams.get('filterDeleted') !== 'false';
+    
+    let query = supabase
       .from('contractors')
       .select(`
         id,
@@ -39,9 +45,16 @@ export async function GET(request: NextRequest) {
         to_be_printed,
         created,
         updated,
-        customer_contacts ( id, name, role, phone, email)
-      `)
-      .order(orderBy, { ascending });
+        customer_contacts:customer_contacts(id, name, role, phone, email)
+      `, { count: 'exact' })
+      .order(orderBy, { ascending })
+      .range(offset, offset + limit - 1);
+      
+    if (filterDeleted) {
+      query = query.eq('is_deleted', false);
+    }
+    
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Error fetching contractors:', error);
@@ -53,7 +66,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true,
-      data 
+      data,
+      count,
+      page,
+      limit,
+      totalPages: count ? Math.ceil(count / limit) : 0
     });
   } catch (error) {
     console.error('Unexpected error:', error);
