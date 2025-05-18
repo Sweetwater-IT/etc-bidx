@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { MPTRentalEstimating } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
-import { calculateLaborCostSummary, getAllTotals, getEquipmentTotalsPerPhase, returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
+import { calculateFlaggingCostSummary, calculateLaborCostSummary, calculateRentalSummary, getAllTotals, getEquipmentTotalsPerPhase, returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
 import { Flagging } from '@/types/TFlagging';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { SaleItem } from '@/types/TSaleItem';
@@ -486,7 +486,11 @@ export async function POST(request: NextRequest) {
 
     // Insert equipment rental items
     if (equipmentRental && equipmentRental.length > 0) {
-      const rentalInserts = equipmentRental.map(item => ({
+
+      const rentalSummary = calculateRentalSummary(equipmentRental)
+
+      const rentalInserts = equipmentRental.map(item => (
+        {
         bid_estimate_id: bidEstimateId,
         name: item.name,
         quantity: item.quantity,
@@ -496,10 +500,10 @@ export async function POST(request: NextRequest) {
         re_rent_for_current_job: item.reRentForCurrentJob,
         total_cost: item.totalCost,
         useful_life_yrs: item.usefulLifeYrs,
-        revenue: item.revenue,
-        gross_profit: item.grossProfit,
-        gross_profit_margin: item.grossProfitMargin,
-        cost: item.cost
+        revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
+        gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
+        gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
+        cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
       }));
 
       const { error: rentalError } = await supabase
@@ -513,6 +517,9 @@ export async function POST(request: NextRequest) {
 
     // Upsert flagging data
     if (flagging) {
+
+      const flaggingSummary = calculateFlaggingCostSummary(adminData, flagging, false)
+
       const { error: flaggingError } = await supabase
         .from('flagging_entries')
         .upsert({
@@ -538,10 +545,10 @@ export async function POST(request: NextRequest) {
           tma_cost: flagging.TMA.cost,
           tma_quantity: flagging.TMA.quantity,
           tma_include_in_lump_sum: flagging.TMA.includeInLumpSum,
-          revenue: flagging.revenue,
-          cost: flagging.cost,
-          gross_profit: flagging.grossProfit,
-          hours: flagging.hours
+          revenue: flaggingSummary.totalRevenue,
+          cost: flaggingSummary.totalFlaggingCost,
+          gross_profit: flaggingSummary.totalRevenue - flaggingSummary.totalFlaggingCost,
+          hours: flaggingSummary.totalHours
         }, {
           onConflict: 'bid_estimate_id'
         });
@@ -553,6 +560,9 @@ export async function POST(request: NextRequest) {
 
     // Upsert service work data
     if (serviceWork) {
+
+      const serviceWorkSummary = calculateFlaggingCostSummary(adminData, serviceWork, true)
+
       const { error: serviceError } = await supabase
         .from('service_work_entries')
         .upsert({
@@ -578,10 +588,10 @@ export async function POST(request: NextRequest) {
           tma_cost: serviceWork.TMA.cost,
           tma_quantity: serviceWork.TMA.quantity,
           tma_include_in_lump_sum: serviceWork.TMA.includeInLumpSum,
-          revenue: serviceWork.revenue,
-          cost: serviceWork.cost,
-          gross_profit: serviceWork.grossProfit,
-          hours: serviceWork.hours
+          revenue: serviceWorkSummary.totalRevenue,
+          cost: serviceWorkSummary.totalFlaggingCost,
+          gross_profit: serviceWorkSummary.totalRevenue - serviceWorkSummary.totalFlaggingCost,
+          hours: serviceWorkSummary.totalHours
         }, {
           onConflict: 'bid_estimate_id'
         });

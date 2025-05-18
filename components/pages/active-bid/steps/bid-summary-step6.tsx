@@ -66,7 +66,7 @@ const BidSummaryStep5 = ({
         flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       if(initialSubmission){
-        router.push('/active-bids')
+        router.push('/jobs/active-bids')
       }
       else{
         setInitialSubmission(true);
