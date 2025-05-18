@@ -67,6 +67,9 @@ const AdminInformationStep1 = ({
     winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
+  const [dieselDigits, setDieselDigits] = useState("000");
+  const formattedDiesel = (parseInt(dieselDigits, 10) / 100).toFixed(2);
+
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
@@ -278,6 +281,19 @@ const AdminInformationStep1 = ({
     setCurrentStep(2);
   };
 
+  function handleNextDigits(current: string, inputType: string, data: string): string {
+    let digits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      const candidate = current + data;
+      if (parseInt(candidate, 10) <= 99999) digits = candidate;
+    } else if (inputType === "deleteContentBackward") {
+      digits = current.slice(0, -1);
+    }
+
+    return digits.padStart(3, "0");
+  }
+
   return (
     <div>
       <div className="relative">
@@ -476,7 +492,7 @@ const AdminInformationStep1 = ({
                         )}
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="relative space-y-2">                     
                         <Input
                           id={field.name}
                           type={field.type}
@@ -508,7 +524,7 @@ const AdminInformationStep1 = ({
                                 : "" :
                             field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
                             field.name === "oneWayMileage" ? adminData.owMileage || "" :
-                            field.name === "dieselCost" ? adminData.fuelCostPerGallon || "" :
+                            field.name === "dieselCost" ? `$ ${formattedDiesel}` || "" :
                             field.name === "laborRate" ? adminData.county?.laborRate || "" :
                             field.name === "fringeRate" ? adminData.county?.fringeRate || "" :
                             field.name === "shopRate" ? adminData.county?.shopRate || "" :
@@ -516,12 +532,16 @@ const AdminInformationStep1 = ({
                           }
                           onChange={(e) => {
                             if (field.name === "dieselCost") {
-                              let digits = e.target.value.replace(/\D/g, "");
-                              if (digits.length < 3) digits = digits.padStart(3, "0");
-                              if (digits.length > 5) digits = digits.slice(-5);
-                              
-                              const formatted = (parseInt(digits, 10) / 100).toFixed(2);
-                              handleInputChange(field.name, formatted);
+                              const ev = e.nativeEvent as InputEvent;
+                              const { inputType } = ev;
+                              const data = (ev.data || "").replace(/\$/g, "");
+
+                              const nextDigits = handleNextDigits(dieselDigits, inputType, data);
+                              setDieselDigits(nextDigits);
+
+                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                              handleInputChange("dieselCost", formatted);
+
                             } else if (
                               field.name === "laborRate" ||
                               field.name === "fringeRate" ||
