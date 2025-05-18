@@ -8,21 +8,12 @@ import { Card } from "@/components/ui/card";
 import { useState, useEffect, useMemo } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { getTotalTripsPerPhase } from "@/lib/mptRentalHelperFunctions";
+import { safeNumber } from "@/lib/safe-number";
 
 interface TripAndLaborSummaryAccordionProps {
   currentStep: number;
   currentPhase: number;
 }
-
-// Helper function to safely convert values to numbers
-const safeNumber = (value: any): number => {
-  if (typeof value === "number" && !isNaN(value)) return value;
-  if (typeof value === "string") {
-    const parsed = parseFloat(value);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
-};
 
 const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
@@ -67,6 +58,13 @@ const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLabo
   
   // Memoize cost calculations
   const { mobilizationCost, fuelCost, truckAndFuelCost } = useMemo(() => {
+    if(mptRental.phases.length === 0){
+      return {
+        mobilizationCost: 0,
+        fuelCost: 0,
+        truckAndFuelCost: 0
+      }
+    }
     const mobilization = (currentPhaseData.numberTrucks || 0) * 
       getTotalTripsPerPhase(currentPhaseData) * 
       (mptRental?.dispatchFee || 0);
