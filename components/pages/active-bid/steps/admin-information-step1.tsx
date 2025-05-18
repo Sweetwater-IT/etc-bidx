@@ -35,7 +35,7 @@ const step: Step = {
     { name: "workType", label: "Work Type", type: "select", placeholder: "Choose", options: ['RATED', 'NON-RATED'] },
     { name: "oneWayTravelTime", label: "One Way Travel Time (Mins)*", type: "number", placeholder: "One Way Travel Time (Mins)" },
     { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
-    { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "number", placeholder: "Diesel Cost Per Gallon" },
+    { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "text", placeholder: "Diesel Cost Per Gallon" },
     { name: "laborRate", label: "Labor Rate*", type: "number", placeholder: "0", hasToggle: true },
     { name: "fringeRate", label: "Fringe Rate*", type: "number", placeholder: "0", hasToggle: true },
     { name: "shopRate", label: "Shop Rate*", type: "number", placeholder: "0", hasToggle: true },
@@ -480,6 +480,8 @@ const AdminInformationStep1 = ({
                         <Input
                           id={field.name}
                           type={field.type}
+                          inputMode="decimal"
+                          pattern="^\\d*(\\.\\d{0,2})?$"
                           placeholder={field.placeholder}
                           value={
                             field.name === "contractNumber" ? adminData.contractNumber || "" :
@@ -513,7 +515,18 @@ const AdminInformationStep1 = ({
                             ""
                           }
                           onChange={(e) => {
-                            if (field.name === "laborRate" || field.name === "fringeRate" || field.name === "shopRate") {
+                            if (field.name === "dieselCost") {
+                              let digits = e.target.value.replace(/\D/g, "");
+                              if (digits.length < 3) digits = digits.padStart(3, "0");
+                              if (digits.length > 5) digits = digits.slice(-5);
+                              
+                              const formatted = (parseInt(digits, 10) / 100).toFixed(2);
+                              handleInputChange(field.name, formatted);
+                            } else if (
+                              field.name === "laborRate" ||
+                              field.name === "fringeRate" ||
+                              field.name === "shopRate"
+                            ) {
                               handleRateChange(field.name, e.target.value);
                             } else {
                               handleInputChange(field.name, e.target.value);
