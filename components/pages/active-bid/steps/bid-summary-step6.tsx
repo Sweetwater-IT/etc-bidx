@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import { exportSignListToExcel } from "@/lib/exportSignListToExcel";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const DEFAULT_TOTALS = {
   revenue: '',
@@ -53,6 +54,7 @@ const BidSummaryStep5 = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialSubmission, setInitialSubmission] = useState<boolean>(false)
 
   const handleSubmit = async () => {
     try {
@@ -62,7 +64,13 @@ const BidSummaryStep5 = ({
 
       await createActiveBid(adminData, mptRental, equipmentRental,
         flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
-
+      toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
+      if(initialSubmission){
+        router.push('/active-bids')
+      }
+      else{
+        setInitialSubmission(true);
+      }
     } catch (error) {
       console.error("Error creating bid:", error);
       setError(error instanceof Error ? error.message : "An unknown error occurred");
@@ -115,7 +123,7 @@ const BidSummaryStep5 = ({
                 {/* Worksheet Dropdown Button */}
                 <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" disabled={!initialSubmission}>
                       View Worksheet
                     </Button>
                   </PopoverTrigger>
@@ -146,8 +154,8 @@ const BidSummaryStep5 = ({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <Button onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                <Button><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
+                <Button disabled={!initialSubmission} onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
+                <Button disabled={!initialSubmission}><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
               </div>
 
               <div className="space-y-4">
@@ -161,7 +169,7 @@ const BidSummaryStep5 = ({
                     Back
                   </Button>
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? "Creating..." : "Create"}
+                    {initialSubmission ? 'Done' : isSubmitting ? "Creating..." : "Create"}
                   </Button>
                 </div>
               </div>

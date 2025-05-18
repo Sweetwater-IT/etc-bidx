@@ -41,41 +41,9 @@ const PhaseInfoStep2 = ({
 }) => {
     const { mptRental, dispatch } = useEstimate();
 
-    // Get phase data safely
-    const getPhaseData = () => {
-        try {
-            if (!mptRental) return null;
-            if (!mptRental.phases) return null;
-            return mptRental.phases[currentPhase] || null;
-        } catch (error) {
-            console.error("Error accessing phase data:", error);
-            return null;
-        }
-    };
-
-    const phase = getPhaseData();
-
-    // Convert string dates to Date objects
-    const [startDate, setStartDate] = useState<Date | undefined>(
-        phase?.startDate ? new Date(phase.startDate) : undefined
-    );
-    const [endDate, setEndDate] = useState<Date | undefined>(
-        phase?.endDate ? new Date(phase.endDate) : undefined
-    );
-    const [phaseName, setPhaseName] = useState<string | undefined>(
-        phase?.name
-    );
-
     // Update phase dates in context
     const handleDateChange = (value: Date | undefined, name: 'startDate' | 'endDate') => {
         if (!value) return;
-
-        // Update local state
-        if (name === 'startDate') {
-            setStartDate(value);
-        } else {
-            setEndDate(value);
-        }
 
         // Update context
         dispatch({
@@ -83,13 +51,9 @@ const PhaseInfoStep2 = ({
             payload: { key: name, value, phase: currentPhase },
         });
 
-        // Calculate and update days if both dates are present
-        const otherDate = name === 'startDate' ? endDate : startDate;
-        if (otherDate) {
-            const days = calculateDays(
-                name === 'startDate' ? value : startDate as Date,
-                name === 'endDate' ? value : endDate as Date
-            );
+        if (mptRental.phases[currentPhase].startDate && mptRental.phases[currentPhase].endDate) {
+            const days = name === 'startDate' ? calculateDays(value, mptRental.phases[currentPhase].endDate) : 
+            calculateDays(mptRental.phases[currentPhase].startDate, value)
 
             dispatch({
                 type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
@@ -100,12 +64,9 @@ const PhaseInfoStep2 = ({
 
     // Update phase name in context
     const handlePhaseNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newName = e.target.value;
-        setPhaseName(newName);
-
         dispatch({
             type: 'UPDATE_PHASE_NAME',
-            payload: { value: newName, phase: currentPhase },
+            payload: { value: e.target.value, phase: currentPhase },
         });
     };
 
@@ -114,13 +75,11 @@ const PhaseInfoStep2 = ({
     };
 
     const setEndDateFromDays = (days: number) => {
-        if (!startDate) return;
+        if (!mptRental.phases[currentPhase].startDate) return;
 
+        const startDate = mptRental.phases[currentPhase].startDate
         // Calculate new end date
         const newEndDate = new Date(startDate.getTime() + (days * 24 * 60 * 60 * 1000));
-
-        // Update end date state
-        setEndDate(newEndDate);
 
         // Update context
         dispatch({
@@ -164,7 +123,7 @@ const PhaseInfoStep2 = ({
                 </button>
 
                 {/* Collapsible Content */}
-                {currentStep === 2 && (
+                {currentStep === 2 && mptRental.phases.length > 0 && (
                     <div className="mt-2 mb-6 ml-12">
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -175,14 +134,11 @@ const PhaseInfoStep2 = ({
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !startDate && "text-muted-foreground"
-                                                )}
+                                                className="w-full justify-start text-left font-normal"
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {startDate ? (
-                                                    format(startDate, "PPP")
+                                                {mptRental.phases[currentPhase].startDate ? (
+                                                    format(mptRental.phases[currentPhase].startDate, "PPP")
                                                 ) : (
                                                     <span>Select start date</span>
                                                 )}
@@ -191,7 +147,7 @@ const PhaseInfoStep2 = ({
                                         <PopoverContent className="w-auto p-0">
                                             <Calendar
                                                 mode="single"
-                                                selected={startDate}
+                                                selected={mptRental.phases[currentPhase].startDate ?? undefined}
                                                 onSelect={(date) => handleDateChange(date, 'startDate')}
                                                 initialFocus
                                             />
@@ -206,14 +162,11 @@ const PhaseInfoStep2 = ({
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !endDate && "text-muted-foreground"
-                                                )}
+                                                className="w-full justify-start text-left font-normal"
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {endDate ? (
-                                                    format(endDate, "PPP")
+                                                {mptRental.phases[currentPhase].endDate ? (
+                                                    format(mptRental.phases[currentPhase].endDate, "PPP")
                                                 ) : (
                                                     <span>Select end date</span>
                                                 )}
@@ -222,11 +175,11 @@ const PhaseInfoStep2 = ({
                                         <PopoverContent className="w-auto p-0">
                                             <Calendar
                                                 mode="single"
-                                                selected={endDate}
+                                                selected={mptRental.phases[currentPhase].endDate ?? undefined}
                                                 onSelect={(date) => handleDateChange(date, 'endDate')}
                                                 initialFocus
                                                 disabled={(date) =>
-                                                    startDate ? date < startDate : false
+                                                    mptRental.phases[currentPhase].startDate ? date < mptRental.phases[currentPhase].startDate : false
                                                 }
                                             />
                                         </PopoverContent>
@@ -237,14 +190,14 @@ const PhaseInfoStep2 = ({
                                     <Label htmlFor="phaseName">Phase Name (Optional)</Label>
                                     <Input
                                         id="phaseName"
-                                        value={phaseName}
+                                        value={mptRental.phases[currentPhase].name}
                                         onChange={handlePhaseNameChange}
                                         placeholder={`Phase ${currentPhase + 1}`}
                                     />
                                 </div>
                             </div>
 
-                            {startDate && (
+                            {mptRental.phases[currentPhase].startDate && (
                                 <div className="bg-muted p-4 rounded-md">
                                     <div className="flex flex-col gap-4">
                                         <div className="text-sm font-medium">
