@@ -5,6 +5,7 @@ import { EquipmentType, SheetingType } from '@/types/MPTEquipment'
 import { allEquipmentList, equipmentList } from '@/types/MPTEquipment'
 import { returnSignTotalsByPhase, returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const sheetingTypes = ['HI', 'DG', 'Special']
 
@@ -123,10 +124,26 @@ const EquipmentSummary = () => {
               data.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.displayName}</TableCell>
-                  <TableCell>{item.totalQuantity}</TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-help">
+                        {item.totalQuantity}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Total = Sum of {item.displayName} quantities across all phases</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                   {item.phaseQuantities && item.phaseQuantities.map((quantity, phaseIndex) => (
                     <TableCell key={phaseIndex}>
-                      {quantity}
+                      <Tooltip>
+                        <TooltipTrigger className="cursor-help">
+                          {quantity}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Quantity of {item.displayName} used in Phase {phaseIndex + 1}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                   ))}
                 </TableRow>
