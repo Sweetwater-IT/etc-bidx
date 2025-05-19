@@ -147,9 +147,24 @@ const AdminInformationStep1 = ({
     fetchData();
   }, []);
 
-  // When county changes
+//When county changes, update digits for rates
   useEffect(() => {
-    // If county selection changes, any necessary updates 
+    if (adminData.county) {
+      setDigits((prev) => ({
+        ...prev,
+        laborRate: Math.round((adminData.county.laborRate || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+
+        fringeRate: Math.round((adminData.county.fringeRate || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+
+        shopRate: Math.round((adminData.county.shopRate || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+      }));
+    }
   }, [adminData.county]);
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
@@ -260,8 +275,6 @@ const AdminInformationStep1 = ({
   };
 
   const handleRateChange = (field: string, value: string) => {
-    console.log("Rate Change", field, value);
-    
     const numValue = Number(value);
     if (field === "laborRate") {
       dispatch({
