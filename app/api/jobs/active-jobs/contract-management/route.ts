@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { JobCompleteView } from '@/types/jobs-view';
 import { Database } from '@/types/database.types';
 import { County } from '@/types/TCounty';
+import { Customer } from '@/types/Customer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -128,67 +129,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-interface ContractManagementData {
-  adminData: {
-    contractNumber: string;
-    estimator: string;
-    division: 'PUBLIC' | 'PRIVATE' | null;
-    lettingDate: Date | null;
-    owner: 'PENNDOT' | 'TURNPIKE' | 'PRIVATE' | 'OTHER' | 'SEPTA' | null;
-    county: County;
-    srRoute: string;
-    location: string;
-    dbe: string;
-    startDate: Date | null;
-    endDate: Date | null;
-    winterStart?: Date | undefined;
-    winterEnd?: Date | undefined;
-    owTravelTimeMins?: number;
-    owMileage?: number;
-    fuelCostPerGallon?: number;
-    emergencyJob: boolean;
-    rated: 'RATED' | 'NON-RATED';
-    emergencyFields: {
-      emergencyHIVerticalPanels?: number;
-      emergencyTypeXIVerticalPanels?: number;
-      emergencyBLites?: number;
-      emergencyACLites?: number;
-      emergencySharps?: number;
-    };
-  };
-  customer: {
-    name: string;
-    id?: string;
-  } | null;
-  customerContractNumber: string;
-  projectManager: string;
-  pmEmail: string;
-  pmPhone: string;
-  sender: {
-    name: string;
-    email: string;
-    role: string;
-  };
-  evDescription: string;
-  addedFiles: {
-    'W-9': boolean;
-    'EEO-SHARP Policy': boolean;
-    'Safety Program': boolean;
-    'Sexual Harassment Policy': boolean;
-    'Avenue of Appeals': boolean;
-  };
-  files: string[]; // File names/URLs
-  cpr: 'STATE' | 'FEDERAL' | 'N/A';
-  useShopRates: boolean;
-  laborRate: string;
-  fringeRate: string;
-  selectedContractor: string;
-  laborGroup: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const contractNumber = await request.json();
+    const reqBody = await request.json();
+    const contractNumber = reqBody.contractNumber;
 
     if (!contractNumber) {
       return NextResponse.json(
@@ -202,27 +146,48 @@ export async function POST(request: NextRequest) {
     const { data: jobData, error: jobError } = await supabase
       .from('jobs_complete')
       .select('*')
-      .eq('admin_data->>contractNumber', contractNumber) // Use ->> for JSON text extraction
+      .filter("admin_data->>contractNumber", 'eq', contractNumber)
       .single();
 
     if (jobError || !jobData) {
       return NextResponse.json(
-        { message: 'Job not found' },
+        { message: 'Job not found', error: jobError?.message },
         { status: 404 }
       );
     }
 
     const job = jobData as JobCompleteView;
 
-    // Map the data to the contract management format
-    const contractManagementData: ContractManagementData = {
+    // Get job_id for additional file lookups
+    const job_id = job.id;
+
+    // Check for additional files in the jobs table
+    const { data: jobFilesData, error: jobFilesError } = await supabase
+      .from('jobs')
+      .select(`
+        w9_added,
+        eea_sharp_added,
+        safety_program_added,
+        sexual_harrassment_added,
+        avenue_appeals_added,
+        labor_group
+      `)
+      .eq('id', job_id)
+      .single();
+
+    if (jobFilesError) {
+      console.error('Error fetching job files data:', jobFilesError);
+    }
+
+    // Prepare response object
+    return NextResponse.json({
       adminData: {
         contractNumber: job.admin_data.contractNumber,
         estimator: job.admin_data.estimator,
-        division: null, // You'll need to map this based on your business rules
+        division: job.admin_data.division || null,
         lettingDate: job.admin_data.lettingDate ? new Date(job.admin_data.lettingDate) : null,
-        owner: job.admin_data.owner,
-        county: job.admin_data.county as County,
+        owner: job.admin_data.owner || null,
+        county: job.admin_data.county || null,
         srRoute: job.admin_data.srRoute || '',
         location: job.admin_data.location || '',
         dbe: job.admin_data.dbe?.toString() || '0',
@@ -237,38 +202,24 @@ export async function POST(request: NextRequest) {
         rated: job.admin_data.rated || 'NON-RATED',
         emergencyFields: job.admin_data.emergencyFields || {},
       },
-      customer: job.contractor_name ? { name: job.contractor_name } : null,
+      job_id,
+      contractorName: job.contractor_name || '',
       customerContractNumber: job.customer_contract_number || '',
       projectManager: job.project_manager || '',
       pmEmail: job.pm_email || '',
       pmPhone: job.pm_phone || '',
-      sender: {
-        name: '',
-        email: '',
-        role: '',
-      },
-      evDescription: '',
-      addedFiles: {
-        'W-9': false,
-        'EEO-SHARP Policy': false,
-        'Safety Program': false,
-        'Sexual Harassment Policy': false,
-        'Avenue of Appeals': false,
-      },
-      files: [],
-      cpr: job.certified_payroll,
-      useShopRates: false,
-      laborRate: '32.75', // Default values - you may want to fetch these from settings
-      fringeRate: '25.5',  // Default values - you may want to fetch these from settings
-      selectedContractor: job.contractor_name || '',
-      laborGroup: 'labor-group-3',
-    };
-
-    return NextResponse.json(contractManagementData);
+      w9_added: jobFilesData?.w9_added || false,
+      eea_sharp_added: jobFilesData?.eea_sharp_added || false,
+      safety_program_added: jobFilesData?.safety_program_added || false,
+      sexual_harrassment_added: jobFilesData?.sexual_harrassment_added || false,
+      avenue_appeals_added: jobFilesData?.avenue_appeals_added || false,
+      certified_payroll: job.certified_payroll || 'STATE',
+      labor_group: jobFilesData?.labor_group || 'Labor Group 3',
+    });
   } catch (error) {
     console.error('Error fetching contract management data:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: 'Internal server error', error: String(error) },
       { status: 500 }
     );
   }

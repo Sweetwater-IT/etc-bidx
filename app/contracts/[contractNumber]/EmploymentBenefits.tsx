@@ -4,13 +4,15 @@ import { Page, Text, View, Document, Image } from '@react-pdf/renderer';
 import { styles } from './styles/benefitsStyles';
 import { safeNumber } from '@/lib/safe-number';
 import { AdminData } from '@/types/TAdminData';
+import { User } from '@/types/User';
 
 interface Props {
-    jobData: any
+    laborGroup : string;
+    sender : User
     adminData : AdminData
 }
 
-export const FringeBenefitsStatement = ({ jobData, adminData }: Props) => {
+export const FringeBenefitsStatement = ({ laborGroup, sender, adminData }: Props) => {
     return (
         <Document title="Fringe Benefits Statement">
             <Page size="A4" style={styles.page}>
@@ -100,7 +102,7 @@ export const FringeBenefitsStatement = ({ jobData, adminData }: Props) => {
 
                     <View style={styles.tableRow}>
                         <View style={[styles.tableColClassification, styles.tableCell]}>
-                            <Text>{jobData.laborGroup}</Text>
+                            <Text>{laborGroup}</Text>
                         </View>
                         <View style={[styles.tableColBaseRate, styles.tableCell]}>
                             <Text>${adminData.rated === 'RATED' ? adminData.county.laborRate : adminData.county.shopRate}</Text>
@@ -141,7 +143,7 @@ export const FringeBenefitsStatement = ({ jobData, adminData }: Props) => {
 
                     <View style={styles.tableRow}>
                         <View style={[styles.tableColClassification, styles.tableCell]}>
-                            <Text>{jobData.laborGroup}</Text>
+                            <Text>{laborGroup}</Text>
                         </View>
                         <View style={[styles.tableColBaseRate, styles.tableCell]}>
                             <Text>${adminData.rated === 'RATED' ? adminData.county.laborRate : adminData.county.shopRate}</Text>
@@ -158,7 +160,7 @@ export const FringeBenefitsStatement = ({ jobData, adminData }: Props) => {
                 {/* Contact Info */}
                 <View style={styles.contactInfo}>
                     <Text>
-                        If you have any questions, please feel free to contact me at {jobData.sender.email} or 215-997-8801.
+                        If you have any questions, please feel free to contact me at {sender.email} or 215-997-8801.
                     </Text>
                 </View>
 
@@ -166,9 +168,9 @@ export const FringeBenefitsStatement = ({ jobData, adminData }: Props) => {
 
                 {/* Signature */}
                 <View style={styles.signature}>
-                    <Text style={styles.signatureName}>{jobData.sender.name}</Text>
+                    <Text style={styles.signatureName}>{sender.name}</Text>
                     <Text style={styles.signatureTitle}>Established Traffic Control, Inc</Text>
-                    <Text style={styles.signatureTitle}>{jobData.sender.role}</Text>
+                    <Text style={styles.signatureTitle}>{sender.role}</Text>
                     <Text style={styles.signatureTitle}>Veteran Owned SDB</Text>
                 </View>
             </Page>
