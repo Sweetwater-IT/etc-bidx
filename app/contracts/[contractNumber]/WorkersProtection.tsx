@@ -44,8 +44,8 @@ export const WorkerProtectionCertification = ({ sender }: Props) => {
                         A. Pursuant to Executive Order 2021-06, <i>Worker Protection and Investment</i> (October 21, 2021), the
                         Commonwealth is responsible for ensuring that every worker in Pennsylvania has a safe and healthy work
                         environment and the protections afforded them through labor laws. To that end, contractors and grantees of
-                        the Commonwealth must certify that they are in compliance with Pennsylvania's Unemployment
-                        Compensation Law, Workers' Compensation Law, and all applicable Pennsylvania state labor and workforce
+                        the Commonwealth must certify that they are in compliance with {`Pennsylvania's`} Unemployment
+                        Compensation Law, {`Workers'`} Compensation Law, and all applicable Pennsylvania state labor and workforce
                         safety laws including, but not limited to:
                     </Text>
         
@@ -116,7 +116,7 @@ export const WorkerProtectionCertification = ({ sender }: Props) => {
                         I, the official named below, certify I am duly authorized to execute this certification on behalf of the
                         contractor/grantee identified below, and certify that the contractor/grantee identified below is compliant with
                         applicable Pennsylvania state labor and workplace safety laws, including, but not limited to, those listed in
-                        Paragraph A, above. I understand that I must report any change in the contractor/grantee's compliance status to
+                        Paragraph A, above. I understand that I must report any change in the {`contractor/grantee's`} compliance status to
                         the Purchasing Agency immediately. I further confirm and understand that this Certification is subject to the
                         provisions and penalties of 18 Pa. C.S. § 4904 (Unsworn falsification to authorities).
                     </Text>

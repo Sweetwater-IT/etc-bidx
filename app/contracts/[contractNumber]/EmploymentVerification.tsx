@@ -132,8 +132,8 @@ export const GenerateEmploymentVerificationForm = ({
                 <View style={styles.paragraph}>
                     <Text>
                         As a contractor/subcontractor for the above referenced public works contract, I hereby affirm
-                        that as of today's date, {currentDate}, our company is in compliance with the
-                        Public Works Employment Verification Act ('the Act') through utilization of the federal E-Verify
+                        that as of today{`'`}s date, {currentDate}, our company is in compliance with the
+                        Public Works Employment Verification Act {`('the Act')`} through utilization of the federal E-Verify
                         Program (EVP) operated by the United States Department of Homeland Security. To the best of
                         my/our knowledge, all employees hired are authorized to work in the United States.
                     </Text>
