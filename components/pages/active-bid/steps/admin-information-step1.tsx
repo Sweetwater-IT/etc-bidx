@@ -36,9 +36,9 @@ const step: Step = {
     { name: "oneWayTravelTime", label: "One Way Travel Time (Mins)*", type: "number", placeholder: "One Way Travel Time (Mins)" },
     { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
     { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "text", placeholder: "Diesel Cost Per Gallon" },
-    { name: "laborRate", label: "Labor Rate*", type: "number", placeholder: "0", hasToggle: true },
-    { name: "fringeRate", label: "Fringe Rate*", type: "number", placeholder: "0", hasToggle: true },
-    { name: "shopRate", label: "Shop Rate*", type: "number", placeholder: "0", hasToggle: true },
+    { name: "laborRate", label: "Labor Rate*", type: "text", placeholder: "0", hasToggle: true },
+    { name: "fringeRate", label: "Fringe Rate*", type: "text", placeholder: "0", hasToggle: true },
+    { name: "shopRate", label: "Shop Rate*", type: "text", placeholder: "0", hasToggle: true },
     { name: "winterShutdown", label: "Winter Shutdown", type: "toggle" },
   ],
 };
@@ -67,8 +67,16 @@ const AdminInformationStep1 = ({
     winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
-  const [dieselDigits, setDieselDigits] = useState("000");
-  const formattedDiesel = (parseInt(dieselDigits, 10) / 100).toFixed(2);
+  const [digits, setDigits] = useState({
+    laborRate: "000",
+    fringeRate: "000",
+    shopRate: "000",
+    dieselCost: "000",
+  });
+
+  function formatDecimal(value: string): string {
+    return (parseInt(value, 10) / 100).toFixed(2)
+  }
 
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
@@ -196,6 +204,7 @@ const AdminInformationStep1 = ({
         payload: { key: "owMileage", value: Number(value) } 
       });
     } else if (field === "dieselCost") {
+      console.log("Diesel Cost", value);
       dispatch({ 
         type: 'UPDATE_ADMIN_DATA', 
         payload: { key: "fuelCostPerGallon", value: Number(value) } 
@@ -251,6 +260,8 @@ const AdminInformationStep1 = ({
   };
 
   const handleRateChange = (field: string, value: string) => {
+    console.log("Rate Change", field, value);
+    
     const numValue = Number(value);
     if (field === "laborRate") {
       dispatch({
@@ -524,30 +535,33 @@ const AdminInformationStep1 = ({
                                 : "" :
                             field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
                             field.name === "oneWayMileage" ? adminData.owMileage || "" :
-                            field.name === "dieselCost" ? `$ ${formattedDiesel}` || "" :
-                            field.name === "laborRate" ? adminData.county?.laborRate || "" :
-                            field.name === "fringeRate" ? adminData.county?.fringeRate || "" :
-                            field.name === "shopRate" ? adminData.county?.shopRate || "" :
+                            field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
+                            field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
+                            field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
+                            field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
                             ""
                           }
                           onChange={(e) => {
-                            if (field.name === "dieselCost") {
-                              const ev = e.nativeEvent as InputEvent;
-                              const { inputType } = ev;
-                              const data = (ev.data || "").replace(/\$/g, "");
+                            const ev = e.nativeEvent as InputEvent;
+                            const { inputType } = ev;
+                            const data = (ev.data || "").replace(/\$/g, "");
 
-                              const nextDigits = handleNextDigits(dieselDigits, inputType, data);
-                              setDieselDigits(nextDigits);
-
-                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
-                              handleInputChange("dieselCost", formatted);
-
-                            } else if (
+                            if (
+                              field.name === "dieselCost" ||
                               field.name === "laborRate" ||
                               field.name === "fringeRate" ||
                               field.name === "shopRate"
                             ) {
-                              handleRateChange(field.name, e.target.value);
+                              const nextDigits = handleNextDigits(digits[field.name], inputType, data );
+                              setDigits((prev) => ({...prev, [field.name]: nextDigits,}));
+
+                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                              
+                              if (field.name === "dieselCost") {
+                                handleInputChange("dieselCost", formatted);
+                              } else {
+                                handleRateChange(field.name, formatted);
+                              }
                             } else {
                               handleInputChange(field.name, e.target.value);
                             }
