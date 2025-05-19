@@ -1,28 +1,21 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminData } from '@/types/TAdminData';
 
 interface PrevailingWagesSectionProps {
-    useShopRates: boolean;
-    laborRate: string;
-    fringeRate: string;
+    adminData: AdminData;
+    setAdminData: Dispatch<SetStateAction<AdminData>>
     cpr: 'STATE' | 'FEDERAL' | 'N/A';
-    onUseShopRatesChange: (value: boolean) => void;
-    onLaborRateChange: (value: string) => void;
-    onFringeRateChange: (value: string) => void;
     onCprChange: (value: 'STATE' | 'FEDERAL' | 'N/A') => void;
 }
 
 const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
-    useShopRates,
-    laborRate,
-    fringeRate,
+    adminData,
+    setAdminData,
     cpr,
-    onUseShopRatesChange,
-    onLaborRateChange,
-    onFringeRateChange,
     onCprChange
 }) => {
     return (
@@ -31,8 +24,8 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
             <div className="mb-6 flex items-center space-x-2">
                 <Switch
                     id="use-shop-rates"
-                    checked={useShopRates}
-                    onCheckedChange={onUseShopRatesChange}
+                    checked={adminData.rated === 'NON-RATED'}
+                    onCheckedChange={(checked) => setAdminData(prev => ({ ...prev, rated: checked ? 'NON-RATED' : 'RATED' }))}
                 />
                 <Label htmlFor="use-shop-rates">Use shop rates</Label>
             </div>
@@ -45,10 +38,10 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                             $
                         </div>
                         <Input
-                            type="number"
+                            type={adminData.rated === 'RATED' ? 'number' : 'text'}
                             className="rounded-l-none bg-muted/50"
-                            value={laborRate}
-                            onChange={(e) => onLaborRateChange(e.target.value)}
+                            value={adminData.rated === 'RATED' ? adminData.county.laborRate : 'SHOP'}
+                            onChange={(e) => setAdminData(prev => ({ ...prev, county: { ...prev.county, laborRate: Number(e.target.value) } }))}
                         />
                     </div>
                 </div>
@@ -60,10 +53,10 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                             $
                         </div>
                         <Input
-                            type="number"
+                            type={adminData.rated === 'RATED' ? 'number' : 'text'}
                             className="rounded-l-none bg-muted/50"
-                            value={fringeRate}
-                            onChange={(e) => onFringeRateChange(e.target.value)}
+                            value={adminData.rated === 'RATED' ? adminData.county.fringeRate : 'SHOP'}
+                            onChange={(e) => setAdminData(prev => ({ ...prev, county: { ...prev.county, fringeRate: Number(e.target.value) } }))}
                         />
                     </div>
                 </div>

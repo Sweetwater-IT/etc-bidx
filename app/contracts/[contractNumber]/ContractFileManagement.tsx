@@ -1,100 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { fetchReferenceData } from '@/lib/api-client';
+import { AdminData } from '@/types/TAdminData';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { County } from '@/types/TCounty';
+import { Customer } from '@/types/Customer';
+import ReactPDF from '@react-pdf/renderer'
+import FringeBenefitsStatement from './EmploymentBenefits';
 import { toast } from 'sonner';
-import { ContractManagementData } from '@/types/IContractManagementData';
-
-interface FormInputProps {
-    label: string;
-    value?: string;
-    placeholder?: string;
-    disabled?: boolean;
-    className?: string;
-    prefix?: string;
-    onChange?: (value: string) => void;
-}
-
-function FormInput({
-    label,
-    value,
-    placeholder,
-    disabled,
-    className,
-    prefix,
-    onChange
-}: FormInputProps) {
-    return (
-        <div className={className}>
-            <Label>{label}</Label>
-            <div className="mt-1 flex">
-                {prefix && (
-                    <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                        {prefix}
-                    </div>
-                )}
-                <Input
-                    value={value}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    className={cn("bg-muted/50", prefix && "rounded-l-none")}
-                    onChange={(e) => onChange?.(e.target.value)}
-                />
-            </div>
-        </div>
-    );
-}
-
-interface FormSelectProps {
-    label: string;
-    value?: string;
-    placeholder?: string;
-    options?: { value: string; label: string }[];
-    className?: string;
-    prefix?: string;
-    disabled?: boolean;
-    onChange?: (value: string) => void;
-}
-
-function FormSelect({
-    label,
-    value,
-    placeholder,
-    options,
-    className,
-    prefix,
-    disabled,
-    onChange
-}: FormSelectProps) {
-    return (
-        <div className={className}>
-            <Label>{label}</Label>
-            <div className="mt-1 flex">
-                {prefix && (
-                    <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                        {prefix}
-                    </div>
-                )}
-                <Select disabled={disabled} value={value} onValueChange={onChange}>
-                    <SelectTrigger className={cn("w-full bg-muted/50", prefix && "rounded-l-none")}>
-                        <SelectValue placeholder={placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {options?.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
-    );
-}
+import WorkerProtectionCertification from './WorkersProtection';
+import { GenerateEmploymentVerificationForm } from './EmploymentVerification';
 
 interface SenderInfo {
     name: string;
@@ -104,251 +26,624 @@ interface SenderInfo {
 
 interface ContractFileManagementProps {
     // Fringe Benefit Letter props
-    contractNumber: string;
-    srRoute: string;
-    selectedContractor: string;
-    county: string;
-    laborRate: string;
-    fringeRate: string;
+    adminData: AdminData;
+    setAdminData: Dispatch<SetStateAction<AdminData>>;
     sender: SenderInfo;
     laborGroup: string;
-    onContractorChange: (value: string) => void;
     onSenderChange: (sender: SenderInfo) => void;
     onLaborGroupChange: (value: string) => void;
     onFringeBenefitsPreview: () => void;
-    
+
     // Worker's Protection props
     onWorkersProtectionPreview: () => void;
-    
+
     // Employment Verification props
-    owner: string | null;
     evDescription: string;
     onEvDescriptionChange: (description: string) => void;
     onEmploymentVerificationPreview: () => void;
-    handleDataLoaded: (data: ContractManagementData) => void;
+    customer: Customer | null,
+    setCustomer: Dispatch<SetStateAction<Customer | null>>
+    allCustomers: Customer[]
+    jobId : number | undefined
+    setFiles : Dispatch<SetStateAction<File[]>>
 }
 
 const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
-    contractNumber,
-    srRoute,
-    selectedContractor,
-    county,
-    laborRate,
-    fringeRate,
+    jobId,
+    adminData,
+    setAdminData,
     sender,
     laborGroup,
-    onContractorChange,
     onSenderChange,
     onLaborGroupChange,
     onFringeBenefitsPreview,
     onWorkersProtectionPreview,
-    owner,
     evDescription,
     onEvDescriptionChange,
+    customer,
+    setCustomer,
     onEmploymentVerificationPreview,
-    handleDataLoaded
+    allCustomers,
+    setFiles
 }) => {
-    const signerOptions = [
-        { value: 'garret', label: 'Garret Brunton' },
-        // Add more signer options as needed
-    ];
+    // State for dropdown options
+    const [counties, setCounties] = useState<County[]>([]);
+    const [users, setUsers] = useState<{ id: number; name: string; email: string; role: string }[]>([]);
+    const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
+    const [customLaborSelected, setCustomLaborSelected] = useState<boolean>(false);
 
+    const [saving, setSaving] = useState<boolean>(false);
+
+    // State for popover open states
+    const [openStates, setOpenStates] = useState({
+        county: false,
+        countyEv: false, // For Employment Verification county dropdown
+        sender: false,
+        senderWp: false, // For Worker's Protection sender dropdown
+        senderEv: false, // For Employment Verification sender dropdown
+        owner: false,
+        contractor: false, // For contractor dropdown
+    });
+
+    // Fetch reference data and customers
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const jobResponse = await fetch('/api/jobs/active-jobs/contract-management', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(contractNumber)
-                });
+                // Fetch counties
+                const countiesData = await fetchReferenceData("counties");
+                setCounties(countiesData)
 
-                if (!jobResponse.ok) {
-                    const errorData = await jobResponse.json();
-                    toast.error(errorData.message || 'Failed to fetch contract data');
-                    return;
-                }
+                const ownersData = await fetchReferenceData("owners");
+                setOwners(ownersData);
 
-                const response = await jobResponse.json();
-                handleDataLoaded(response);
+                // Fetch users
+                const usersData = await fetchReferenceData("users");
+                console.log(usersData)
+                setUsers(usersData.map((user: any) => ({
+                    id: user.id,
+                    name: user.name,
+                    email: user.email || 'gbrunton@establishedtraffic.com',
+                    role: user.role || 'Chief Operating Officer'
+                })));
             } catch (error) {
-                console.error('Error fetching contract data:', error);
-                toast.error('Failed to load contract data');
+                console.error("Error fetching reference data:", error);
             }
         };
 
-        if (contractNumber) {
-            fetchData();
+        fetchData();
+    }, []);
+
+    const handleCountyChange = (countyId: string, fieldName: 'county' | 'countyEv' = 'county') => {
+        const selectedCounty = counties.find(c => c.id.toString() === countyId);
+        if (selectedCounty) {
+            setAdminData(prev => ({
+                ...prev,
+                county: {
+                    ...selectedCounty
+                }
+            }));
+            setOpenStates(prev => ({ ...prev, [fieldName]: false }));
         }
-    }, [contractNumber, handleDataLoaded]);
+    };
+
+    const handleSenderChange = (senderName: string, fieldName: 'sender' | 'senderWp' | 'senderEv' = 'sender') => {
+        const selectedUser = users.find(u => u.name === senderName);
+        if (selectedUser) {
+            onSenderChange({
+                name: selectedUser.name,
+                email: selectedUser.email,
+                role: selectedUser.role
+            });
+        }
+        setOpenStates(prev => ({ ...prev, [fieldName]: false }));
+    };
+
+    const handleOwnerChange = (owner) => {
+        setAdminData(prev => ({
+            ...prev,
+            owner: owner as 'PRIVATE' | 'TURNPIKE' | 'SEPTA' | 'OTHER' | 'PENNDOT'
+        }));
+        setOpenStates(prev => ({ ...prev, owner: false }));
+    };
+
+    const handleDocSave = async (type : 'fringe-benefits' | 'employment-verification' | 'workers-protection') => {
+        if(!jobId){
+            toast.error('Job id is not set yet, plase wait');
+            return;
+        }
+        setSaving(true)
+        let blob : Blob;
+        let filename : string;
+        if (type === 'fringe-benefits'){
+            blob = await ReactPDF.pdf(<FringeBenefitsStatement laborGroup={laborGroup} sender={sender} adminData={adminData} />).toBlob();
+            filename = 'Fringe Benefits Letter'
+        } if(type === 'workers-protection'){
+            blob = await ReactPDF.pdf(<WorkerProtectionCertification sender={sender} />).toBlob()
+            filename = "Worker's Protection Form"
+        } else {
+            blob = await ReactPDF.pdf(<GenerateEmploymentVerificationForm user={sender} description={evDescription} adminData={adminData} />).toBlob();
+            filename = 'Employment Verification Form'
+        }
+
+        const file = new File([blob], filename, {type: 'application/pdf'})
+
+        const formData = new FormData();
+        formData.append('file', file)
+        formData.append('jobId', jobId.toString())
+
+        const fileResponse = await fetch('/api/files/contract-management', {
+            method: 'POST',
+            body: formData
+        })
+
+        if(!fileResponse.ok){
+            const fileError = await fileResponse.json();
+            toast.error("Couldn't save files: " + fileError.message)
+        }
+        else {
+            toast.success('Successfully saved files')
+        }
+
+        setFiles(prevState => [...prevState, file])
+
+        setSaving(false)
+    }
 
     return (
         <div className="space-y-6">
             {/* Fringe Benefit Letter */}
             <div className="rounded-lg border bg-card p-6">
-                <h3 className="text-lg font-semibold">Fringe Benefit Letter</h3>
-                <div className="mt-4 space-y-4">
+                <h3 className="text-lg font-semibold mb-4">Fringe Benefit Letter</h3>
+                <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <FormInput
-                            label="Contract Number"
-                            value={contractNumber}
-                            disabled
-                            prefix="#"
-                        />
-                        <FormInput
-                            label="SR Route"
-                            value={srRoute}
-                            disabled
-                            prefix="/"
-                        />
-                        <FormInput
-                            label="Contractor"
-                            value={selectedContractor}
-                            disabled
-                        />
+                        <div className="space-y-2">
+                            <Label>Contract Number</Label>
+                            <div className="mt-1 flex">
+                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
+                                    #
+                                </div>
+                                <Input
+                                    value={adminData.contractNumber}
+                                    disabled
+                                    className="bg-muted/50 rounded-l-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>SR Route</Label>
+                            <div className="mt-1 flex">
+                                <Input
+                                    value={adminData.srRoute}
+                                    onChange={(e) => setAdminData(prevState => ({...prevState, srRoute: e.target.value}))}
+                                    className="bg-muted/50 rounded-l-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Contractor</Label>
+                            <Popover
+                                open={openStates.contractor}
+                                onOpenChange={(open) => setOpenStates(prev => ({ ...prev, contractor: open }))}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openStates.contractor}
+                                        className="w-full justify-between bg-muted/50"
+                                    >
+                                        {customer ? customer.name : "Select contractor..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search contractor..." />
+                                        <CommandEmpty>No contractor found.</CommandEmpty>
+                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                            {allCustomers.map((c) => (
+                                                <CommandItem
+                                                    key={c.id}
+                                                    value={c.name}
+                                                    onSelect={() => setCustomer(c)}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            (customer && customer.name === c.name) ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {c.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <FormInput
-                            label="County"
-                            value={county}
-                            disabled
-                        />
-                        <FormInput
-                            label="Labor Rate"
-                            value={laborRate}
-                            prefix="$"
-                            disabled
-                        />
-                        <FormInput
-                            label="Fringe Rate"
-                            value={fringeRate}
-                            prefix="$"
-                            disabled
-                        />
+                        <div className="space-y-2">
+                            <Label>County</Label>
+                            <Popover
+                                open={openStates.countyEv}
+                                onOpenChange={(open) => setOpenStates(prev => ({ ...prev, countyEv: open }))}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openStates.countyEv}
+                                        className="w-full justify-between bg-muted/50"
+                                    >
+                                        {adminData.county?.name || "Select county..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search county..." />
+                                        <CommandEmpty>No county found.</CommandEmpty>
+                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                            {counties.map((county) => (
+                                                <CommandItem
+                                                    key={county.id}
+                                                    value={county.name}
+                                                    onSelect={() => handleCountyChange(county.id.toString(), 'countyEv')}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            adminData.county?.name === county.name ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {county.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Labor Rate</Label>
+                            <div className="mt-1 flex">
+                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
+                                    $
+                                </div>
+                                <Input
+                                    value={adminData.county?.laborRate || ''}
+                                    onChange={(e) => setAdminData(prev => ({
+                                        ...prev,
+                                        county: {
+                                            ...prev.county,
+                                            laborRate: Number(e.target.value)
+                                        }
+                                    }))}
+                                    className="bg-muted/50 rounded-l-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Fringe Rate</Label>
+                            <div className="mt-1 flex">
+                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
+                                    $
+                                </div>
+                                <Input
+                                    value={adminData.county?.fringeRate || ''}
+                                    onChange={(e) => setAdminData(prev => ({
+                                        ...prev,
+                                        county: {
+                                            ...prev.county,
+                                            fringeRate: Number(e.target.value)
+                                        }
+                                    }))}
+                                    className="bg-muted/50 rounded-l-none"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <FormSelect
-                        label="Sender"
-                        placeholder="Select sender"
-                        options={signerOptions}
-                        value={sender.name}
-                        onChange={(value) => {
-                            // In a real app, you'd look up the full sender info
-                            onSenderChange({
-                                name: value,
-                                email: `${value}@company.com`,
-                                role: 'Manager'
-                            });
-                        }}
-                    />
+                    <div className="space-y-2">
+                        <Label>Sender</Label>
+                        <Popover
+                            open={openStates.sender}
+                            onOpenChange={(open) => setOpenStates(prev => ({ ...prev, sender: open }))}
+                        >
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openStates.sender}
+                                    className="w-full justify-between bg-muted/50"
+                                >
+                                    {sender.name || "Select sender..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Search sender..." />
+                                    <CommandEmpty>No sender found.</CommandEmpty>
+                                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                        {users.map((user) => (
+                                            <CommandItem
+                                                key={user.id}
+                                                value={user.name}
+                                                onSelect={() => handleSenderChange(user.name)}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        sender.name === user.name ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {user.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
 
                     <div className="space-y-2">
                         <Label>Labor Group</Label>
                         <RadioGroup
                             value={laborGroup}
-                            onValueChange={onLaborGroupChange}
+                            onValueChange={(value) => {
+                                onLaborGroupChange(value);
+                                setCustomLaborSelected(value !== "Labor Group 1" && value !== "Labor Group 3");
+                            }}
                             className="flex gap-4"
                         >
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="labor-group-1" id="labor-group-1" />
-                                <Label htmlFor="labor-group-1">Labor Group 1</Label>
+                                <RadioGroupItem value="Labor Group 1" id="Labor Group 1" />
+                                <Label htmlFor="Labor Group 1">Labor Group 1</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="labor-group-3" id="labor-group-3" />
-                                <Label htmlFor="labor-group-3">Labor Group 3</Label>
+                                <RadioGroupItem value="Labor Group 3" id="Labor Group 3" />
+                                <Label htmlFor="Labor Group 3">Labor Group 3</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="custom" id="custom" />
+                                <RadioGroupItem checked={customLaborSelected} value="custom" id="custom" />
                                 <Label htmlFor="custom">Custom Labor Group</Label>
                             </div>
                         </RadioGroup>
                     </div>
+                    {customLaborSelected && (
+                        <div className="space-y-2">
+                            <Label>Custom Labor Group</Label>
+                            <Input
+                                value={laborGroup === "custom" ? "" : laborGroup}
+                                onChange={(e) => onLaborGroupChange(e.target.value)}
+                                className="bg-muted/50"
+                            />
+                        </div>
+                    )}
 
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={onFringeBenefitsPreview}>
                             Preview
                         </Button>
-                        <Button>Generate Document</Button>
+                        <Button 
+                        disabled={saving}
+                        onClick={() => handleDocSave('fringe-benefits')}>Generate Document</Button>
                     </div>
                 </div>
             </div>
 
             {/* Worker's Protection Form */}
             <div className="rounded-lg border bg-card p-6">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold mb-4">
                     Worker&apos;s Protection Form
                 </h3>
-                <div className="mt-4 space-y-4">
-                    <FormSelect
-                        label="Signer"
-                        placeholder="Select signer"
-                        options={signerOptions}
-                        value={sender.name}
-                        onChange={(value) => {
-                            // In a real app, you'd look up the full signer info
-                            onSenderChange({
-                                name: value,
-                                email: `${value}@company.com`,
-                                role: 'Manager'
-                            });
-                        }}
-                    />
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Signer</Label>
+                        <Popover
+                            open={openStates.senderWp}
+                            onOpenChange={(open) => setOpenStates(prev => ({ ...prev, senderWp: open }))}
+                        >
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openStates.senderWp}
+                                    className="w-full justify-between bg-muted/50"
+                                >
+                                    {sender.name || "Select signer..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Search signer..." />
+                                    <CommandEmpty>No signer found.</CommandEmpty>
+                                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                        {users.map((user) => (
+                                            <CommandItem
+                                                key={user.id}
+                                                value={user.name}
+                                                onSelect={() => handleSenderChange(user.name, 'senderWp')}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        sender.name === user.name ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {user.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={onWorkersProtectionPreview}>
                             Preview
                         </Button>
-                        <Button>Generate Document</Button>
+                        <Button
+                        disabled={saving}
+                        onClick={() => handleDocSave('workers-protection')}>Generate Document</Button>
                     </div>
                 </div>
             </div>
 
             {/* Employment Verification */}
             <div className="rounded-lg border bg-card p-6">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold mb-4">
                     Employment Verification
                 </h3>
-                <div className="mt-4 space-y-4">
+                <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <FormInput
-                            label="Contract Number"
-                            value={contractNumber}
-                            disabled
-                        />
-                        <FormInput
-                            label="County"
-                            value={county}
-                            disabled
-                        />
+                        <div className="space-y-2">
+                            <Label>Contract Number</Label>
+                            <Input
+                                value={adminData.contractNumber}
+                                disabled
+                                className="bg-muted/50"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>County</Label>
+                            <Popover
+                                open={openStates.county}
+                                onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openStates.county}
+                                        className="w-full justify-between bg-muted/50"
+                                    >
+                                        {adminData.county?.name || "Select county..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search county..." />
+                                        <CommandEmpty>No county found.</CommandEmpty>
+                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                            {counties.map((county) => (
+                                                <CommandItem
+                                                    key={county.id}
+                                                    value={county.name}
+                                                    onSelect={() => handleCountyChange(county.id.toString())}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            adminData.county?.name === county.name ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {county.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <FormSelect
-                            label="Signer"
-                            placeholder="Select signer"
-                            options={signerOptions}
-                            value={sender.name}
-                            onChange={(value) => {
-                                // In a real app, you'd look up the full signer info
-                                onSenderChange({
-                                    name: value,
-                                    email: `${value}@company.com`,
-                                    role: 'Manager'
-                                });
-                            }}
-                        />
-                        <FormInput
-                            label="Owner"
-                            value={owner || ''}
-                            disabled
-                        />
+                        <div className="space-y-2">
+                            <Label>Signer</Label>
+                            <Popover
+                                open={openStates.senderEv}
+                                onOpenChange={(open) => setOpenStates(prev => ({ ...prev, senderEv: open }))}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openStates.senderEv}
+                                        className="w-full justify-between bg-muted/50"
+                                    >
+                                        {sender.name || "Select signer..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search signer..." />
+                                        <CommandEmpty>No signer found.</CommandEmpty>
+                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                            {users.map((user) => (
+                                                <CommandItem
+                                                    key={user.id}
+                                                    value={user.name}
+                                                    onSelect={() => handleSenderChange(user.name, 'senderEv')}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            sender.name === user.name ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {user.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Owner</Label>
+                            <Popover
+                                open={openStates.owner}
+                                onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openStates.owner}
+                                        className="w-full justify-between bg-muted/50"
+                                    >
+                                        {adminData.owner || "Select owner..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search owner..." />
+                                        <CommandEmpty>No owner found.</CommandEmpty>
+                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                                            {owners.map((owner) => (
+                                                <CommandItem
+                                                    key={owner.id}
+                                                    value={owner.name}
+                                                    onSelect={() => handleOwnerChange(owner.name)}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            adminData.owner === owner.name ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {owner.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
                         <Label>Description</Label>
                         <Textarea
-                            className="h-24"
+                            className="h-24 bg-muted/50"
                             value={evDescription}
                             onChange={(e) => onEvDescriptionChange(e.target.value)}
                         />
@@ -358,7 +653,9 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                         <Button variant="outline" onClick={onEmploymentVerificationPreview}>
                             Preview
                         </Button>
-                        <Button>Generate Document</Button>
+                        <Button 
+                        disabled={saving}
+                        onClick={() => handleDocSave('employment-verification')}>Generate Document</Button>
                     </div>
                 </div>
             </div>

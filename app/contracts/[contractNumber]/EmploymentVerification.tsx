@@ -3,18 +3,18 @@ import React from 'react';
 import { Page, Text, View, Document, Image, StyleSheet } from '@react-pdf/renderer';
 import { styles } from './styles/employeeVerification';
 import { AdminData } from '@/types/TAdminData';
-// import { User } from '@/types/User';
+import { User } from '@/types/User';
 
 interface Props {
     adminData : AdminData
-    // user : User
+    user : User
     description : string
 }
 
-export const GenerateEmployeeVerificationForm = ({
+export const GenerateEmploymentVerificationForm = ({
     adminData,
     description,
-    // user
+    user
 } : Props) => {
     const currentDate = new Date().toLocaleString('en-US', {
         timeZone: 'America/New_York',
@@ -45,7 +45,7 @@ export const GenerateEmployeeVerificationForm = ({
                         src="/commonwealth-logo.jpg"
                     />
                     <Text style={styles.title}>Commonwealth of Pennsylvania</Text>
-                    <Text>I certify that I don&apos;t have a social security number and I&apos;m in the process of applying for one</Text>
+                    <Text style={styles.title}>Public Works Employment Verification Form</Text>
                     <Text style={styles.instructions}>
                         Complete and return the form to the contracting Public Body prior to the award of the contract.
                     </Text>
@@ -53,7 +53,7 @@ export const GenerateEmployeeVerificationForm = ({
 
                 <View style={styles.formSection}>
                     <View style={styles.formRow}>
-                        <Text>I certify that I don&apos;t have a social security number</Text>
+                        <Text style={styles.formLabel}>Company Legal Name:</Text>
                         <Text style={styles.formField}>Established Traffic Control, Inc.</Text>
                     </View>
                 </View>
@@ -132,8 +132,8 @@ export const GenerateEmployeeVerificationForm = ({
                 <View style={styles.paragraph}>
                     <Text>
                         As a contractor/subcontractor for the above referenced public works contract, I hereby affirm
-                        that as of today&apos;s date, {currentDate}, our company is in compliance with the
-                        Public Works Employment Verification Act (&apos;the Act&apos;) through utilization of the federal E-Verify
+                        that as of today{`'`}s date, {currentDate}, our company is in compliance with the
+                        Public Works Employment Verification Act {`('the Act')`} through utilization of the federal E-Verify
                         Program (EVP) operated by the United States Department of Homeland Security. To the best of
                         my/our knowledge, all employees hired are authorized to work in the United States.
                     </Text>
@@ -151,7 +151,7 @@ export const GenerateEmployeeVerificationForm = ({
 
                 <View style={styles.paragraph}>
                     <Text>
-                        {/* I, {user.name}, authorized representative of the */}
+                        I, {user.name}, authorized representative of the
                         company above, attest that the information contained in this verification form is true and
                         correct and understand that the submission of false or misleading information in connection
                         with the above verification shall be subject to sanctions provided by law.
@@ -162,10 +162,10 @@ export const GenerateEmployeeVerificationForm = ({
                     <View style={styles.signatureRow}>
                         <View style={styles.signatureField}>
                             <View style={{ marginTop: 6 }}>
-                                {/* <Text style={styles.signatureName}>{user.name}</Text> */}
+                                <Text style={styles.signatureName}>{user.name}</Text>
                             </View>
                             <View>
-                                {/* <Text style={styles.digitalSignature}>Digitally signed by {user.name}</Text> */}
+                                <Text style={styles.digitalSignature}>Digitally signed by {user.name}</Text>
                                 <Text style={styles.digitalSignature}>Date: {timestamp}</Text>
                             </View>
                         </View>
@@ -183,7 +183,7 @@ export const GenerateEmployeeVerificationForm = ({
 
                 <View style={[styles.formRow, { marginTop: 10 }]}>
                     <Text style={styles.formLabel}>Printed Name:</Text>
-                    {/* <Text style={styles.formField}>{user.name}</Text> */}
+                    <Text style={styles.formField}>{user.name}</Text>
                 </View>
 
                 <View style={[styles.formRow, { marginTop: 5 }]}>
@@ -193,7 +193,7 @@ export const GenerateEmployeeVerificationForm = ({
                     </Text>
                     <Text style={{ width: '10%', textAlign: 'right', marginRight: 5, fontFamily: 'Times-Bold', fontWeight: 'bold' }}>Email:</Text>
                     <Text style={{ width: '30%', borderBottomWidth: 1, borderBottomColor: '#000', paddingBottom: 2 }}>
-                        {/* {user.email} */}
+                        {user.email}
                     </Text>
                 </View>
             </Page>

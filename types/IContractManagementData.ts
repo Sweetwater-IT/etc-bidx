@@ -23,10 +23,6 @@ export interface ContractManagementData {
         'Avenue of Appeals': boolean;
     };
     files: File[];
-    cpr: 'STATE' | 'FEDERAL' | 'N/A';
-    useShopRates: boolean;
-    laborRate: string;
-    fringeRate: string;
-    selectedContractor: string;
+    certified_payroll: 'STATE' | 'FEDERAL' | 'N/A';
     laborGroup: string;
 }
