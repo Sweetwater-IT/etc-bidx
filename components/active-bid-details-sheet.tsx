@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { EyeIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { HashIcon, CalendarIcon, UserIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon } from "lucide-react";
 import { type ActiveBid } from "@/data/active-bids";
 import { type JobPageData } from "@/app/jobs/[job]/content";
 import { format } from "date-fns";
@@ -43,7 +41,6 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
   useEffect(() => {
     if (bid) {
-      console.log(bid);
       try {
         setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ? 
           new Date(bid.lettingDate) : undefined);
@@ -85,6 +82,12 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     onOpenChange(false);
   };
 
+  // Helper function to format display values
+  const formatValue = (value: string | number | null | undefined): string => {
+    if (value === null || value === undefined || value === '') return '';
+    return String(value);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
@@ -96,244 +99,147 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
         </SheetHeader>
         
         <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div className="space-y-2 w-full">
-                <Label>Letting Date</Label>
-                <div className="relative">
-                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={lettingDate ? format(lettingDate, 'MM/dd/yyyy') : ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                    tabIndex={-1}
-                  />
+          <div className="flex-1 overflow-y-auto p-6 pt-2">
+            <div className="space-y-5">
+              {/* Letting Date */}
+              <div className="space-y-1 w-full">
+                <Label className="text-gray-500 text-sm">Letting Date</Label>
+                <div className="text-gray-900 font-medium">
+                  {lettingDate ? format(lettingDate, 'MM/dd/yyyy') : ''}
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
-                <Label>Contract Number</Label>
-                <div className="relative">
-                  <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={bid?.contractNumber || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                  />
+              {/* Contract Number */}
+              <div className="space-y-1 w-full">
+                <Label className="text-gray-500 text-sm">Contract Number</Label>
+                <div className="text-gray-900 font-medium">
+                  {formatValue(bid?.contractNumber)}
                 </div>
               </div>
 
+              {/* Contractor & Subcontractor */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>Contractor</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.contractor || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Contractor</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.contractor)}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Subcontractor</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.subcontractor || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Subcontractor</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.subcontractor)}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
-                <Label>Owner</Label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={bid?.owner || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                  />
+              {/* Owner */}
+              <div className="space-y-1 w-full">
+                <Label className="text-gray-500 text-sm">Owner</Label>
+                <div className="text-gray-900 font-medium">
+                  {formatValue(bid?.owner)}
                 </div>
               </div>
 
+              {/* County & Branch */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>County</Label>
-                  <div className="relative">
-                    <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.county || ''} 
-                      className="pl-9" 
-                      readOnly
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">County</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.county)}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Branch</Label>
-                  <div className="relative">
-                    <BuildingIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.branch || ''} 
-                      className="pl-9" 
-                      readOnly
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Branch</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.branch)}
                   </div>
                 </div>
               </div>
 
+              {/* Estimator & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>Estimator</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.estimator || ''} 
-                      className="pl-9" 
-                      readOnly
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Estimator</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.estimator)}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Status</Label>
-                  <div className="relative">
-                    <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.status || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Status</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.status)}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
-                <Label>Division</Label>
-                <div className="relative">
-                  <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={bid?.division || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                  />
+              {/* Division */}
+              <div className="space-y-1 w-full">
+                <Label className="text-gray-500 text-sm">Division</Label>
+                <div className="text-gray-900 font-medium">
+                  {formatValue(bid?.division)}
                 </div>
               </div>
 
+              {/* Start Date & End Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>Start Date</Label>
-                  <div className="relative">
-                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={startDate ? format(startDate, 'MM/dd/yyyy') : ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Start Date</Label>
+                  <div className="text-gray-900 font-medium">
+                    {startDate ? format(startDate, 'MM/dd/yyyy') : ''}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>End Date</Label>
-                  <div className="relative">
-                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={endDate ? format(endDate, 'MM/dd/yyyy') : ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">End Date</Label>
+                  <div className="text-gray-900 font-medium">
+                    {endDate ? format(endDate, 'MM/dd/yyyy') : ''}
                   </div>
                 </div>
               </div>
 
+              {/* Project Days & Total Hours */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>Project Days</Label>
-                  <div className="relative">
-                    <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.projectDays || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Project Days</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.projectDays)}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Total Hours</Label>
-                  <div className="relative">
-                    <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.totalHours || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Total Hours</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.totalHours)}
                   </div>
                 </div>
               </div>
 
+              {/* MPT Value & Perm Sign Value */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 w-full">
-                  <Label>MPT Value</Label>
-                  <div className="relative">
-                    <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.mptValue || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">MPT Value</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.mptValue)}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Perm Sign Value</Label>
-                  <div className="relative">
-                    <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={bid?.permSignValue || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-gray-500 text-sm">Perm Sign Value</Label>
+                  <div className="text-gray-900 font-medium">
+                    {formatValue(bid?.permSignValue)}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
-                <Label>Rental Value</Label>
-                <div className="relative">
-                  <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={bid?.rentalValue || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                    tabIndex={-1}
-                  />
+              {/* Rental Value */}
+              <div className="space-y-1 w-full">
+                <Label className="text-gray-500 text-sm">Rental Value</Label>
+                <div className="text-gray-900 font-medium">
+                  {formatValue(bid?.rentalValue)}
                 </div>
               </div>
             </div>
