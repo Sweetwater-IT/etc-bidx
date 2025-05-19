@@ -177,7 +177,7 @@ export function useFileUpload({
       }
     } catch (error) {
       console.error('Upload error:', error)
-      setErrors([{ name: 'upload', message: error || 'Failed to upload files' }])
+      setErrors([{ name: 'upload', message: error as string || 'Failed to upload files' }])
     } finally {
       setLoading(false)
     }
