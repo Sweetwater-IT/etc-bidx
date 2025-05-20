@@ -149,6 +149,15 @@ function formatCellValue(value: any, key: string) {
             </Badge>
         );
     }
+    
+    if (key === "contractor" || key === "subcontractor") {
+        if (!value) return '';
+        return (
+            <Badge variant="outline" className="font-medium bg-background hover:bg-background">
+                {value}
+            </Badge>
+        );
+    }
 
     // Handle dates
     if (value instanceof Date) {
