@@ -33,7 +33,7 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
-  const [openItem, setOpenItem] = React.useState<string | null>(null)
+  const [openItem, setOpenItem] = React.useState<string | null>('Bid / Job List')
 
   React.useEffect(() => {
     items.forEach((item) => {
