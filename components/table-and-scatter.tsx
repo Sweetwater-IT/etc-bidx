@@ -42,20 +42,13 @@ export function TableAndScatter({ data }) {
     status: formatCurrency(owner.revenue),
     value: owner.total_bids.toString(),
     growth: owner.won_bids.toString(),
-    isPositive: owner.won_bids > 0,
-    // Calculate win rate for later use in scatter plot
-    winRate: owner.total_bids > 0 ? (owner.won_bids / owner.total_bids) * 100 : 0,
-    revenue: owner.revenue
+    isPositive: owner.won_bids > 0
   }));
-
-  // Prepare scatter plot data - use same data but format it for the scatter chart
-  const scatterData = tableData.map(item => ({
-    name: item.id,
-    x: item.winRate, // win rate as x-axis
-    y: item.revenue, // revenue as y-axis
-    z: parseInt(item.value) // size based on total bids
-  }));
-
+  
+  // Log data for debugging
+  console.log("Owner revenue data:", data.owner_revenue);
+  console.log("MPT bids data:", data.mpt_bids);
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 lg:px-6">
       <Card>
@@ -102,17 +95,8 @@ export function TableAndScatter({ data }) {
         </CardContent>
       </Card>
       <div className="col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Customer Performance</CardTitle>
-            <CardDescription>Win rate vs. Revenue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[350px]">
-              <ChartScatter data={scatterData} />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pass the MPT bids data directly to the ChartScatter component */}
+        <ChartScatter data={data.mpt_bids || []} />
       </div>
     </div>
   );
