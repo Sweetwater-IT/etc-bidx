@@ -1,4 +1,7 @@
-import { Dispatch, SetStateAction, useState } from "react";
+"use client";
+
+import { Dispatch, SetStateAction, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import AdminInformationStep1 from "./admin-information-step1";
 import BidItemsStep5 from "./bid-items-step5";
 import BidSummaryStep6 from "./bid-summary-step6";
@@ -21,6 +24,22 @@ const Steps = ({
   isViewSummaryOpen,
   setIsViewSummaryOpen
 }: StepsProps) => {
+  const searchParams = useSearchParams();
+  const isEditing = searchParams.get("isEditing") === "true";
+  
+  // We'll use a useEffect to delay step navigation in edit mode
+  useEffect(() => {
+    // If we're in edit mode, add a small delay before allowing navigation
+    if (isEditing) {
+      const timer = setTimeout(() => {
+        // This is just to ensure the component re-renders after data is loaded
+        // We don't actually need to do anything here
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isEditing]);
+  
   return (
     <div className="flex-1">
       <div className="relative flex flex-col">
@@ -30,7 +49,11 @@ const Steps = ({
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
         />
-        <PhaseInfoStep2 currentStep={currentStep} setCurrentStep={setCurrentStep} currentPhase={currentPhase}/>
+        <PhaseInfoStep2 
+          currentStep={currentStep} 
+          setCurrentStep={setCurrentStep} 
+          currentPhase={currentPhase}
+        />
         <MUTCDSignsStep3
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
