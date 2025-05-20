@@ -168,140 +168,142 @@ async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidM
         // 3. Calculate win/loss ratio
         const winLossRatio = totalBids ? ((wonJobs || 0) / totalBids) * 100 : 0;
 
-        // 4. Calculate total revenue from all won_bid_items
+        //get all items
         const { data: wonBidItems, error: wonBidItemsError } = await supabase
             .from('won_bid_items')
-            .select(`
-                contract_value,
-                quantity,
-                job:jobs(
-                    id,
-                    estimate:bid_estimates(
-                        id,
-                        status
-                    )
-                )
-            `)
-            .eq('job.estimate.status', 'WON');
+            .select('contract_value, quantity');
 
         if (wonBidItemsError) throw wonBidItemsError;
 
-        // Calculate total revenue from won bid items (contract_value * quantity)
+        // Simply sum contract_value * quantity for all items
         const totalRevenue = wonBidItems?.reduce((sum, item) => {
-            const quantity = item.quantity || 1;
-            return sum + ((item.contract_value || 0) * quantity);
+            // Ensure values are treated as numbers
+            const contractValue = Number(item.contract_value) || 0;
+            const quantity = Number(item.quantity) || 1;
+            return sum + (contractValue * quantity);
         }, 0) || 0;
 
         // 5. Calculate MPT specific revenue and gross margin
         // 5a. Get all won_bid_items with MPT grouping
-        const { data: mptBidItems, error: mptBidItemsError } = await supabase
-            .from('won_bid_items')
+        const { data: wonEstimates, error: wonEstimatesError } = await supabase
+            .from('bid_estimates')
             .select(`
-                id,
-                contract_value,
-                quantity,
-                job_id,
-                bid_item:bid_item_numbers(
-                    id,
-                    grouping
-                ),
-                job:jobs(
-                    id,
-                    estimate_id,
-                    estimate:bid_estimates(
-                        id,
-                        status
-                    )
-                )
-            `)
-            .eq('job.estimate.status', 'WON');
+            id,
+            status
+        `)
+            .eq('status', 'WON');
 
-        if (mptBidItemsError) throw mptBidItemsError;
+        if (wonEstimatesError) throw wonEstimatesError;
+        if (!wonEstimates || wonEstimates.length === 0) {
+            return {
+                total_bids: totalBids || 0,
+                win_loss_ratio: winLossRatio,
+                total_revenue: totalRevenue,
+                mpt_gross_margin: 0,
+                total_won_jobs: wonJobs || 0
+            };
+        }
 
-        // Filter for MPT items only and calculate total MPT revenue
-        const mptItems = mptBidItems?.filter(item => 
-            item.bid_item && 
-            item.bid_item.length > 0 && 
-            item.bid_item[0].grouping === 'MPT'
-        ) || [];
+        // Get the estimate IDs
+        const estimateIds = wonEstimates.map(est => est.id);
 
-        const mptRevenue = mptItems.reduce((sum, item) => {
-            const quantity = item.quantity || 1;
-            return sum + ((item.contract_value || 0) * quantity);
-        }, 0);
-
-        // 5b. Get cost information from MPT rental entries
-        const jobIds = mptItems.map(item => item.job_id).filter(Boolean);
-        const estimateIds = mptItems
-            .map(item => item.job[0].estimate_id)
-            .filter(Boolean);
-
-        // Get cost data from mpt_rental_entries
+        // Get cost data from mpt_rental_entries for these estimates
         const { data: mptRentalEntries, error: mptRentalError } = await supabase
             .from('mpt_rental_entries')
             .select(`
-                id,
-                cost,
-                revenue,
-                bid_estimate_id
-            `)
+            id,
+            cost,
+            bid_estimate_id
+        `)
             .in('bid_estimate_id', estimateIds);
 
         if (mptRentalError) throw mptRentalError;
 
-        // Calculate total MPT cost and gross margin
-        const mptCost = mptRentalEntries?.reduce((sum, entry) => {
-            return sum + (entry.cost || 0);
-        }, 0) || 0;
+        // Create a map of estimate ID to cost
+        const estimateToCost = new Map();
+        mptRentalEntries?.forEach(entry => {
+            if (entry.bid_estimate_id && entry.cost) {
+                estimateToCost.set(entry.bid_estimate_id, Number(entry.cost) || 0);
+            }
+        });
 
-        // Calculate MPT gross margin
-        const mptGrossMargin = mptRevenue > 0 ? ((mptRevenue - mptCost) / mptRevenue) * 100 : 0;
+        // Get jobs for these estimates
+        const { data: jobsData, error: jobsError } = await supabase
+            .from('jobs')
+            .select(`
+            id,
+            estimate_id,
+            won_bid_items(
+                id,
+                contract_value,
+                quantity,
+                bid_item_id
+            )
+        `)
+            .in('estimate_id', estimateIds);
 
-        // If there's no MPT cost data from rental entries, use an alternative approach
-        if (mptCost === 0 && mptRevenue > 0) {
-            // Get won estimates that have MPT items
-            const { data: mptEstimates, error: mptEstimatesError } = await supabase
-                .from('bid_estimates')
-                .select(`
-                    id,
-                    total_cost,
-                    total_revenue,
-                    total_gross_profit
-                `)
-                .in('id', estimateIds)
-                .eq('status', 'WON');
+        if (jobsError) throw jobsError;
 
-            if (mptEstimatesError) throw mptEstimatesError;
+        // Get all bid item IDs to check which ones are MPT
+        const bidItemIds = new Set();
+        jobsData?.forEach(job => {
+            job.won_bid_items?.forEach(item => {
+                if (item.bid_item_id) {
+                    bidItemIds.add(item.bid_item_id);
+                }
+            });
+        });
 
-            // Calculate an approximate cost based on the estimates' cost-to-revenue ratio
-            let calculatedMptCost = 0;
-            let totalEstimateRevenue = 0;
-            let totalEstimateCost = 0;
+        // Get bid item groupings
+        const { data: bidItems, error: bidItemsError } = await supabase
+            .from('bid_item_numbers')
+            .select(`
+            id,
+            grouping
+        `)
+            .in('id', Array.from(bidItemIds));
 
-            mptEstimates?.forEach(estimate => {
-                if (estimate.total_revenue && estimate.total_cost) {
-                    totalEstimateRevenue += estimate.total_revenue;
-                    totalEstimateCost += estimate.total_cost;
+        if (bidItemsError) throw bidItemsError;
+
+        // Create a map of bid item ID to grouping
+        const bidItemToGrouping = new Map();
+        bidItems?.forEach(item => {
+            bidItemToGrouping.set(item.id, item.grouping);
+        });
+
+        // Calculate MPT revenue by estimate and the total cost
+        let totalMptRevenue = 0;
+        let totalMptCost = 0;
+
+        jobsData?.forEach(job => {
+            if (!job.estimate_id) return;
+
+            // Get the cost for this estimate
+            const cost = estimateToCost.get(job.estimate_id) || 0;
+
+            // Calculate MPT revenue for this job
+            let mptRevenue = 0;
+
+            job.won_bid_items?.forEach(item => {
+                // Check if this is an MPT item
+                if (bidItemToGrouping.get(item.bid_item_id) === 'MPT') {
+                    const contractValue = Number(item.contract_value) || 0;
+                    const quantity = Number(item.quantity) || 1;
+                    mptRevenue += contractValue * quantity;
                 }
             });
 
-            // If we have valid estimate data, calculate the cost ratio and apply to MPT revenue
-            if (totalEstimateRevenue > 0) {
-                const avgCostRatio = totalEstimateCost / totalEstimateRevenue;
-                calculatedMptCost = mptRevenue * avgCostRatio;
-                
-                // Recalculate gross margin with the calculated cost
-                const calculatedGrossMargin = ((mptRevenue - calculatedMptCost) / mptRevenue) * 100;
-                
-                return {
-                    total_bids: totalBids || 0,
-                    win_loss_ratio: winLossRatio,
-                    total_revenue: totalRevenue,
-                    mpt_gross_margin: calculatedGrossMargin,
-                    total_won_jobs: wonJobs || 0
-                };
+            // If this job has MPT revenue, add the proportional cost
+            if (mptRevenue > 0) {
+                totalMptRevenue += mptRevenue;
+                totalMptCost += cost;
             }
-        }
+        });
+
+        // Calculate the MPT gross margin
+        const mptGrossMargin = totalMptRevenue > 0
+            ? ((totalMptRevenue - totalMptCost) / totalMptRevenue) * 100
+            : 0;
 
         // Return the calculated metrics
         return {
@@ -326,22 +328,17 @@ async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidM
 // These would be implemented similarly to getBidMetrics above
 async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Promise<BranchWinLossMetrics[]> {
     try {
-        // Create date filter condition if needed
-        const dateFilter = startDate && endDate
-            ? `and bid_date between '${startDate}'::date and '${endDate}'::date`
-            : '';
-
-        // Fallback query to get branch-specific metrics from county JSONB data
+        // Get bid estimates with admin data
         const { data: rawData, error: rawError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            county
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    county
+                )
+            `)
             .not('status', 'eq', 'DRAFT');
 
         if (rawError) throw rawError;
@@ -361,35 +358,38 @@ async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Pr
 
         // Count estimates by branch and status
         rawData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length) return;
-
-            // Extract branch from the county JSONB data
-            // The county field is JSONB, so we need to parse it
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.county) return;
-
-            // Access the branch property from the JSONB county object
-            const countyData = adminData.county;
+            // Check if admin_data exists (it's an object, not an array)
+            if (!estimate.admin_data) return;
+            
+            // Access the county data directly from the object
+            //these seems to be a type mismatch here in supabase with what the query returns vs what the types expect
+            //hence the any type
+            const countyData = (estimate.admin_data as any).county;
+            if (!countyData) return;
+            
+            // Parse branch from county data
             let branch = '';
-
+            
             if (typeof countyData === 'string') {
                 try {
-                    // If it's a string, try to parse it as JSON
+                    // Try to parse if it's a JSON string
                     const parsed = JSON.parse(countyData);
                     branch = parsed.branch;
                 } catch (e) {
-                    // If parsing fails, skip this record
+                    // Not valid JSON, might be just a string value
                     return;
                 }
             } else if (typeof countyData === 'object') {
-                // If it's already an object, access the branch property directly
+                // If it's already an object, try to access branch property
                 branch = countyData.branch;
             }
-
+            
+            // Skip if branch is not in our tracked branches
             if (!branch || !branchCounts[branch]) return;
-
+            
+            // Increment the appropriate counters
             branchCounts[branch].total++;
-
+            
             if (estimate.status === 'WON') {
                 branchCounts[branch].won++;
             } else if (estimate.status === 'LOST') {
@@ -408,26 +408,26 @@ async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Pr
             total_count: counts.total,
             win_ratio: counts.total ? (counts.won / counts.total) * 100 : 0
         }));
-
     } catch (err) {
         console.error('Error in getBranchWinLossMetrics:', err);
         return [];
     }
 }
+
 async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Promise<BranchJobTypeMetrics[]> {
     try {
         // Get won bid estimates with admin data to determine branch and division
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            county,
-            division
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    county,
+                    division
+                )
+            `)
             .eq('status', 'WON');
 
         if (estimatesError) throw estimatesError;
@@ -445,15 +445,16 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
 
         // Count job types by branch and division
         estimatesData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length) return;
-
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.county) return;
-
-            // Extract branch from the county JSONB data
-            const countyData = adminData.county;
+            // Check if admin_data exists (it's an object, not an array)
+            if (!estimate.admin_data) return;
+            
+            // Access county data directly
+            const countyData = (estimate.admin_data as any).county;
+            if (!countyData) return;
+            
+            // Parse branch from county data
             let branch = '';
-
+            
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -464,11 +465,13 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
             } else if (typeof countyData === 'object') {
                 branch = countyData.branch;
             }
-
+            
             if (!branch || !branchJobTypes[branch]) return;
-
-            // Increment the appropriate counter based on division
-            const division = adminData.division;
+            
+            // Get division directly from admin_data
+            const division = (estimate.admin_data as any).division;
+            
+            // Increment the appropriate counter
             if (division === 'PUBLIC') {
                 branchJobTypes[branch].public_jobs++;
             } else if (division === 'PRIVATE') {
@@ -486,7 +489,6 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
                 public_ratio: total ? (counts.public_jobs / total) * 100 : 0
             };
         });
-
     } catch (err) {
         console.error('Error in getBranchJobTypeMetrics:', err);
         return [];
@@ -499,23 +501,23 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            county
-          ),
-          jobs(
-            id,
-            won_bid_items(
-              contract_value,
-              quantity,
-              bid_item:bid_item_numbers(
-                grouping
-              )
-            )
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    county
+                ),
+                jobs(
+                    id,
+                    won_bid_items(
+                        contract_value,
+                        quantity,
+                        bid_item:bid_item_numbers(
+                            grouping
+                        )
+                    )
+                )
+            `)
             .eq('status', 'WON');
 
         if (estimatesError) throw estimatesError;
@@ -540,16 +542,16 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
 
         // Calculate revenue by branch and bid item type
         estimatesData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length) return;
-
-            // Extract branch from the county JSONB data
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.county) return;
-
-            // Access the branch property from the JSONB county object
-            const countyData = adminData.county;
+            // Check if admin_data exists (it's an object, not an array)
+            if (!estimate.admin_data) return;
+            
+            // Access county data directly
+            const countyData = (estimate.admin_data as any).county;
+            if (!countyData) return;
+            
+            // Parse branch from county data
             let branch = '';
-
+            
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -565,13 +567,21 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
 
             // Process jobs and won_bid_items
             if (!estimate.jobs || !estimate.jobs.length) return;
-
+            
             estimate.jobs.forEach(job => {
                 if (!job.won_bid_items || !job.won_bid_items.length) return;
 
                 job.won_bid_items.forEach(item => {
-                    const revenue = (item.contract_value || 0) * (item.quantity || 1);
-                    const grouping = item.bid_item[0].grouping;
+                    // Convert values to numbers to ensure proper calculation
+                    const contractValue = Number(item.contract_value) || 0;
+                    const quantity = Number(item.quantity) || 1;
+                    const revenue = contractValue * quantity;
+                    
+                    // Make sure bid_item exists and has grouping
+                    // It's now directly accessible as item.bid_item.grouping instead of item.bid_item[0].grouping
+                    if (!item.bid_item || !item.bid_item.grouping) return;
+                    
+                    const grouping = item.bid_item.grouping;
 
                     if (grouping === 'MPT') {
                         branchRevenue[branch].mpt_revenue += revenue;
@@ -610,26 +620,26 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          total_cost,
-          total_revenue,
-          total_gross_profit,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            county
-          ),
-          jobs(
-            id,
-            won_bid_items(
-              contract_value,
-              quantity,
-              bid_item:bid_item_numbers(
-                grouping
-              )
-            )
-          )
-        `)
+                id,
+                status,
+                total_cost,
+                total_revenue,
+                total_gross_profit,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    county
+                ),
+                jobs(
+                    id,
+                    won_bid_items(
+                        contract_value,
+                        quantity,
+                        bid_item:bid_item_numbers(
+                            grouping
+                        )
+                    )
+                )
+            `)
             .eq('status', 'WON');
 
         if (estimatesError) throw estimatesError;
@@ -656,16 +666,16 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
 
         // Calculate gross profit by branch and bid item type
         estimatesData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length) return;
-
-            // Extract branch from the county JSONB data
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.county) return;
-
-            // Access the branch property from the JSONB county object
-            const countyData = adminData.county;
+            // Check if admin_data exists (it's an object, not an array)
+            if (!estimate.admin_data) return;
+            
+            // Access county data directly
+            const countyData = (estimate.admin_data as any).county;
+            if (!countyData) return;
+            
+            // Parse branch from county data
             let branch = '';
-
+            
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -695,9 +705,17 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
                 if (!job.won_bid_items || !job.won_bid_items.length) return;
 
                 job.won_bid_items.forEach(item => {
-                    const revenue = (item.contract_value || 0) * (item.quantity || 1);
+                    // Convert values to numbers for calculation
+                    const contractValue = Number(item.contract_value) || 0;
+                    const quantity = Number(item.quantity) || 1;
+                    const revenue = contractValue * quantity;
                     const grossProfit = revenue * (1 - costRatio);
-                    const grouping = item.bid_item[0].grouping;
+                    
+                    // Make sure bid_item exists and has grouping
+                    // Accessing directly as item.bid_item.grouping
+                    if (!item.bid_item || !item.bid_item.grouping) return;
+                    
+                    const grouping = item.bid_item.grouping;
 
                     if (grouping === 'MPT') {
                         branchGrossProfit[branch].mpt_gross_profit += grossProfit;
@@ -746,13 +764,13 @@ async function getProjectStarts(startDate?: string, endDate?: string): Promise<P
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            start_date
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    start_date
+                )
+            `)
             .eq('status', 'WON');
 
         if (estimatesError) throw estimatesError;
@@ -762,13 +780,15 @@ async function getProjectStarts(startDate?: string, endDate?: string): Promise<P
 
         // Process each estimate to extract start date
         estimatesData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length) return;
-
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.start_date) return;
+            // Check if admin_data exists (it's an object, not an array)
+            if (!estimate.admin_data) return;
+            
+            // Access start_date directly
+            const startDateStr = (estimate.admin_data as any).start_date;
+            if (!startDateStr) return;
 
             // Format the start date to year-month format (YYYY-MM)
-            const startDate = new Date(adminData.start_date);
+            const startDate = new Date(startDateStr);
             if (isNaN(startDate.getTime())) return; // Skip invalid dates
 
             const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
@@ -803,17 +823,17 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
         const { data: mptData, error: mptError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            start_date
-          ),
-          mpt_entries:mpt_rental_entries(
-            bid_estimate_id,
-            hours
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    start_date
+                ),
+                mpt_entries:mpt_rental_entries(
+                    bid_estimate_id,
+                    hours
+                )
+            `)
             .eq('status', 'WON');
 
         if (mptError) throw mptError;
@@ -823,13 +843,15 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
 
         // Process each estimate to extract MPT hours and organize by month
         mptData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length || !estimate.mpt_entries || !estimate.mpt_entries.length) return;
+            // Check if admin_data and mpt_entries exist
+            if (!estimate.admin_data || !estimate.mpt_entries || !estimate.mpt_entries.length) return;
 
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.start_date) return;
+            // Access start_date directly
+            const startDateStr = (estimate.admin_data as any).start_date;
+            if (!startDateStr) return;
 
             // Format the start date to year-month format (YYYY-MM)
-            const startDate = new Date(adminData.start_date);
+            const startDate = new Date(startDateStr);
             if (isNaN(startDate.getTime())) return; // Skip invalid dates
 
             const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
@@ -845,23 +867,23 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
         const { data: signData, error: signError } = await supabase
             .from('bid_estimates')
             .select(`
-          id,
-          status,
-          admin_data:admin_data_entries(
-            bid_estimate_id,
-            start_date
-          ),
-          jobs(
-            id,
-            won_bid_items(
-              contract_value,
-              quantity,
-              bid_item:bid_item_numbers(
-                grouping
-              )
-            )
-          )
-        `)
+                id,
+                status,
+                admin_data:admin_data_entries(
+                    bid_estimate_id,
+                    start_date
+                ),
+                jobs(
+                    id,
+                    won_bid_items(
+                        contract_value,
+                        quantity,
+                        bid_item:bid_item_numbers(
+                            grouping
+                        )
+                    )
+                )
+            `)
             .eq('status', 'WON');
 
         if (signError) throw signError;
@@ -871,13 +893,15 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
 
         // Process each estimate to extract permanent sign hours and organize by month
         signData?.forEach(estimate => {
-            if (!estimate.admin_data || !estimate.admin_data.length || !estimate.jobs || !estimate.jobs.length) return;
+            // Check if admin_data and jobs exist
+            if (!estimate.admin_data || !estimate.jobs || !estimate.jobs.length) return;
 
-            const adminData = estimate.admin_data[0];
-            if (!adminData || !adminData.start_date) return;
+            // Access start_date directly
+            const startDateStr = (estimate.admin_data as any).start_date;
+            if (!startDateStr) return;
 
             // Format the start date to year-month format (YYYY-MM)
-            const startDate = new Date(adminData.start_date);
+            const startDate = new Date(startDateStr);
             if (isNaN(startDate.getTime())) return; // Skip invalid dates
 
             const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
@@ -889,7 +913,10 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
                 if (!job.won_bid_items || !job.won_bid_items.length) return;
 
                 job.won_bid_items.forEach(item => {
-                    if (item.bid_item[0].grouping === 'PERMANENT_SIGNS' || item.bid_item[0].grouping === 'Perm. Signs') {
+                    // Access grouping directly from bid_item object
+                    if (!item.bid_item || !item.bid_item.grouping) return;
+                    
+                    if (item.bid_item.grouping === 'PERMANENT_SIGNS' || item.bid_item.grouping === 'Perm. Signs') {
                         hasPermanentSigns = true;
                     }
                 });
@@ -928,196 +955,174 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
 
 async function getCustomerRevenue(startDate?: string, endDate?: string): Promise<CustomerRevenue[]> {
     try {
-      // Get jobs with won bid items, project metadata, and contractor info
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select(`
-          id,
-          estimate:bid_estimates!inner(
-            id,
-            status
-          ),
-          project_data:project_metadata(
-            job_id,
-            contractor_id,
-            contractor:contractors(
-              id,
-              name
-            )
-          ),
-          won_bid_items(
-            contract_value,
-            quantity
-          )
-        `)
-        .eq('estimate.status', 'WON');
-      
-      if (jobsError) throw jobsError;
-      
-      // Track revenue and job counts by contractor
-      const contractorMetrics: Record<string, {
-        revenue: number;
-        total_bids: number;
-        won_bids: number;
-        name: string;
-      }> = {};
-      
-      // Process each job
-      jobsData?.forEach(job => {
-        // Skip jobs without project data or contractor info
-        if (!job.project_data || !job.project_data.length) return;
-        const projectData = job.project_data[0];
-        if (!projectData || !projectData.contractor || !projectData.contractor.length) return;
-        
-        const contractor = projectData.contractor[0];
-        if (!contractor || !contractor.name) return;
-        
-        const contractorId = String(contractor.id);
-        const contractorName = contractor.name;
-        
-        // Initialize contractor metrics if not present
-        if (!contractorMetrics[contractorId]) {
-          contractorMetrics[contractorId] = {
-            revenue: 0,
-            total_bids: 0,
-            won_bids: 1, // This is a won job by definition
-            name: contractorName
-          };
-        } else {
-          contractorMetrics[contractorId].won_bids++;
-        }
-        
-        // Calculate revenue from won bid items
-        if (job.won_bid_items && job.won_bid_items.length > 0) {
-          const jobRevenue = job.won_bid_items.reduce((sum, item) => {
-            return sum + (item.contract_value || 0) * (item.quantity || 1);
-          }, 0);
-          
-          contractorMetrics[contractorId].revenue += jobRevenue;
-        }
-        
-        // Increment total bids
-        contractorMetrics[contractorId].total_bids++;
-      });
-      
-      // Convert to array and sort by revenue (descending)
-      const result = Object.values(contractorMetrics)
-        .map(metrics => ({
-          customer: metrics.name,
-          revenue: metrics.revenue,
-          total_bids: metrics.total_bids,
-          won_bids: metrics.won_bids
-        }))
-        .sort((a, b) => b.revenue - a.revenue);
-      
-      // Return top 5 contractors by revenue
-      return result.slice(0, 5);
-      
-    } catch (err) {
-      console.error('Error in getCustomerRevenue:', err);
-      return [];
-    }
-  }
-
-  async function getMPTBids(startDate?: string, endDate?: string): Promise<MPTBid[]> {
-    try {
-      // Get MPT rental entries with related job and contractor data
-      const { data: mptData, error: mptError } = await supabase
-        .from('mpt_rental_entries')
-        .select(`
-          id,
-          revenue,
-          gross_profit,
-          bid_estimate_id,
-          job_id,
-          bid_estimate:bid_estimates(
-            id,
-            status,
-            contract_number
-          ),
-          job:jobs(
-            id,
-            project_metadata(
-              contractor_id,
-              contractors(
+        // Get jobs with won bid items, project metadata, and contractor info
+        const { data: jobsData, error: jobsError } = await supabase
+            .from('jobs')
+            .select(`
                 id,
-                name
-              )
-            ),
-            admin_data_entries(
-              start_date,
-              contract_number
-            )
-          )
-        `)
-        .gt('revenue', 0); // Only include entries with revenue > 0
-      
-      if (mptError) throw mptError;
-      
-      // Process and transform the data
-      const result: MPTBid[] = [];
-      
-      mptData?.forEach(entry => {
-        if (!entry.bid_estimate || !entry.job) return;
-        
-        // Calculate gross profit margin
-        const revenue = entry.revenue || 0;
-        const grossProfit = entry.gross_profit || 0;
-        const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-        
-        // Get contract number (either from bid_estimate or admin_data_entries)
-        let contractNumber = '';
-        if (entry.bid_estimate.length > 0 && entry.bid_estimate[0].contract_number) {
-          contractNumber = entry.bid_estimate[0].contract_number;
-        } else if (entry.job.length > 0 && entry.job[0].admin_data_entries && entry.job[0].admin_data_entries.length > 0) {
-          contractNumber = entry.job[0].admin_data_entries[0].contract_number || '';
-        }
-        
-        // Get start date
-        let startDate = '';
-        if (entry.job.length > 0 && entry.job[0].admin_data_entries && entry.job[0].admin_data_entries.length > 0) {
-          startDate = entry.job[0].admin_data_entries[0].start_date || '';
-        }
-        
-        // Get contractor
-        let contractor = 'Unknown';
-        if (entry.job.length > 0 && entry.job[0].project_metadata && entry.job[0].project_metadata.length > 0) {
-          const projectData = entry.job[0].project_metadata[0];
-          if (projectData.contractors && projectData.contractors.length > 0) {
-            contractor = projectData.contractors[0].name || 'Unknown';
-          }
-        }
-        
-        // Get status
-        let status: 'won' | 'lost' | 'pending' = 'pending';
-        if (entry.bid_estimate.length > 0) {
-          const bidStatus = entry.bid_estimate[0].status;
-          if (bidStatus === 'WON') status = 'won';
-          else if (bidStatus === 'LOST') status = 'lost';
-          else if (bidStatus === 'PENDING') status = 'pending';
-        }
-        
-        result.push({
-          bid_value: revenue,
-          gross_profit_margin: grossProfitMargin,
-          contract_number: contractNumber,
-          contractor: contractor,
-          start_date: startDate,
-          status: status
-        });
-      });
-      
-      // Sort by bid value (descending)
-      result.sort((a, b) => b.bid_value - a.bid_value);
-      
-      return result;
-      
-    } catch (err) {
-      console.error('Error in getMPTBids:', err);
-      return [];
-    }
-  }
+                estimate:bid_estimates!inner(
+                    id,
+                    status
+                ),
+                project_data:project_metadata(
+                    job_id,
+                    contractor_id,
+                    contractor:contractors(
+                        id,
+                        name
+                    )
+                ),
+                won_bid_items(
+                    contract_value,
+                    quantity
+                )
+            `)
+            .eq('estimate.status', 'WON');
 
+        if (jobsError) throw jobsError;
+
+        // Track revenue and job counts by contractor
+        const contractorMetrics: Record<string, {
+            revenue: number;
+            total_bids: number;
+            won_bids: number;
+            name: string;
+        }> = {};
+
+
+        // Process each job
+        jobsData?.forEach(job => {
+            // Skip jobs without project data
+            if (!job.project_data) return;
+            
+            // Handle project_data as a single object rather than an array
+            const projectData = job.project_data;
+            
+            // Check if contractor info exists
+            if (!(projectData as any)[0].contractor) return;
+            
+            // Handle contractor as a single object rather than an array
+            const contractor = (projectData as any)[0].contractor;
+            if (!contractor || !contractor.name) return;
+
+            const contractorId = String(contractor.id);
+            const contractorName = contractor.name;
+
+            // Initialize contractor metrics if not present
+            if (!contractorMetrics[contractorId]) {
+                contractorMetrics[contractorId] = {
+                    revenue: 0,
+                    total_bids: 0,
+                    won_bids: 1, // This is a won job by definition
+                    name: contractorName
+                };
+            } else {
+                contractorMetrics[contractorId].won_bids++;
+            }
+
+            // Calculate revenue from won bid items
+            if (job.won_bid_items && job.won_bid_items.length > 0) {
+                const jobRevenue = job.won_bid_items.reduce((sum, item) => {
+                    // Ensure we're using numbers
+                    const contractValue = Number(item.contract_value) || 0;
+                    const quantity = Number(item.quantity) || 1;
+                    return sum + (contractValue * quantity);
+                }, 0);
+
+                contractorMetrics[contractorId].revenue += jobRevenue;
+            }
+
+            // Increment total bids
+            contractorMetrics[contractorId].total_bids++;
+        });
+
+        // Convert to array and sort by revenue (descending)
+        const result = Object.values(contractorMetrics)
+            .map(metrics => ({
+                customer: metrics.name,
+                revenue: metrics.revenue,
+                total_bids: metrics.total_bids,
+                won_bids: metrics.won_bids
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
+
+        // Return top 5 contractors by revenue
+        return result.slice(0, 5);
+
+    } catch (err) {
+        console.error('Error in getCustomerRevenue:', err);
+        return [];
+    }
+}
+
+async function getMPTBids(startDate?: string, endDate?: string): Promise<MPTBid[]> {
+    try {
+        // Get MPT rental entries with bid_estimate data
+        const { data: mptData, error: mptError } = await supabase
+            .from('mpt_rental_entries')
+            .select(`
+                id,
+                revenue,
+                gross_profit,
+                bid_estimate_id,
+                bid_estimate:bid_estimates(
+                    id,
+                    status,
+                    contract_number
+                )
+            `)
+            .gt('revenue', 0); // Only include entries with revenue > 0
+
+        if (mptError) throw mptError;
+        console.log("Total MPT entries found:", mptData?.length || 0);
+
+        // Process and transform the data
+        const result: MPTBid[] = [];
+
+        mptData?.forEach(entry => {
+            // Skip entries without estimate data
+            if (!entry.bid_estimate) return;
+            
+            // Calculate gross profit margin
+            const revenue = Number(entry.revenue) || 0;
+            const grossProfit = Number(entry.gross_profit) || 0;
+            const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+            
+            // Get contract number from bid_estimate
+            const contractNumber = (entry.bid_estimate as any).contract_number || '';
+            
+            // Get status from bid_estimate
+            let status: 'won' | 'lost' | 'pending' = 'pending';
+            const bidStatus = (entry.bid_estimate as any).status;
+            if (bidStatus === 'WON') status = 'won';
+            else if (bidStatus === 'LOST') status = 'lost';
+            else if (bidStatus === 'PENDING') status = 'pending';
+            
+            // For now, use generic contractor info since we don't have it from the job
+            const contractor = "Unknown Client";
+            const startDate = "";
+            
+            result.push({
+                bid_value: revenue,
+                gross_profit_margin: grossProfitMargin,
+                contract_number: contractNumber,
+                contractor: contractor,
+                start_date: startDate,
+                status: status
+            });
+        });
+        
+        // Sort by bid value (descending)
+        result.sort((a, b) => b.bid_value - a.bid_value);
+        
+        console.log("Processed MPT bids:", result.length);
+        return result;
+        
+    } catch (err) {
+        console.error('Error in getMPTBids:', err);
+        return [];
+    }
+}
 
 // RPC function to implement in Supabase (optional)
 /*
