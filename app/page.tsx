@@ -16,15 +16,17 @@ export const metadata: Metadata = {
     description: "View your company's performance metrics and key indicators",
 };
 
-// In Next.js 15, page props have been updated
-export default async function DashboardPage({
-    searchParams
-}: {
-    searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+//next 15 async props
+type Props = {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  };
+
+export default async function DashboardPage({ searchParams } : Props) {
+
+    const awaitedParams = await searchParams;
     // Extract date parameters for filtering
-    const startDate = typeof searchParams?.startDate === 'string' ? searchParams.startDate : undefined;
-    const endDate = typeof searchParams?.endDate === 'string' ? searchParams.endDate : undefined;
+    const startDate = typeof awaitedParams?.startDate === 'string' ? awaitedParams.startDate : undefined;
+    const endDate = typeof awaitedParams?.endDate === 'string' ? awaitedParams.endDate : undefined;
 
     // Fetch the estimate data with optional date filtering
     const estimateData = await getEstimateData(startDate, endDate);
