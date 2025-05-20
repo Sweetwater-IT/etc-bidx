@@ -837,8 +837,18 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   return nonRatedHours
 }
 export function getTotalTripsPerPhase(phase: Phase): number {
-  const relevantEquipmentTotals = phase.standardEquipment.fourFootTypeIII.quantity + phase.standardEquipment.hStand.quantity + phase.standardEquipment.post.quantity
-  return (safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2
+  // Check if phase or standardEquipment is undefined
+  if (!phase || !phase.standardEquipment) {
+    return 0;
+  }
+
+  // Safely access equipment quantities with null checks
+  const fourFootQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+  const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
+  const postQuantity = phase.standardEquipment.post?.quantity || 0;
+  
+  const relevantEquipmentTotals = fourFootQuantity + hStandQuantity + postQuantity;
+  return (safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2;
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {

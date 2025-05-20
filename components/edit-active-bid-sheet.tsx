@@ -141,7 +141,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
                 <div className="relative">
                   <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
-                    value={formData.contractNumber as any} 
+                    value={typeof formData.contractNumber === 'string' ? formData.contractNumber : formData.contractNumber?.main || ''} 
                     onChange={(e) => handleInputChange('contractNumber', e.target.value)}
                     className="pl-9" 
                   />
@@ -192,7 +192,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
                   <div className="relative">
                     <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      value={formData.county as any} 
+                      value={typeof formData.county === 'string' ? formData.county : formData.county?.main || ''} 
                       onChange={(e) => handleInputChange('county', e.target.value)}
                       className="pl-9" 
                     />
