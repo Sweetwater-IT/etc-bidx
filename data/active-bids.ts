@@ -30,7 +30,7 @@ export const ACTIVE_BIDS_COLUMNS = [
   { key: "owner", title: "Owner" },
   { key: "county", title: "County" },
   { key: "status", title: "Status" },
-  { key: "total", title: "Total" },
+  { key: "total", title: "Total", className: "text-right" },
 ]
 
 export const activeBidsData: ActiveBid[] = [

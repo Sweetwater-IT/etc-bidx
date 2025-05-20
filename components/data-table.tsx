@@ -93,7 +93,7 @@ function formatCellValue(value: any, key: string) {
         if (value.main && value.secondary) {
             return (
                 <div className="flex flex-col">
-                    <span>{value.main}</span>
+                    <span className={key === "contractNumber" ? "uppercase" : ""}>{value.main}</span>
                     <span className="text-xs text-red-500">{value.secondary}</span>
                 </div>
             );
@@ -228,9 +228,11 @@ export function DataTable<TData>({
             ...legacyColumns.map((column) => ({
                 id: column.key,
                 accessorKey: column.key,
-                header: column.title,
+                header: () => {
+                    return <div className={column.className}>{column.title}</div>;
+                },
                 cell: (info) => {
-                    return formatCellValue(info.getValue(), column.key);
+                    return <div className={column.className}>{formatCellValue(info.getValue(), column.key)}</div>;
                 },
             })),
             {
@@ -529,7 +531,10 @@ export function DataTable<TData>({
                                                 <TableHead
                                                     key={header.id}
                                                     style={isActions ? { position: "sticky", right: 0 } : undefined}
-                                                    className={isActions ? "z-[100] bg-muted/95 shadow-[-12px_0_16px_-6px_rgba(0,0,0,0.15)]" : undefined}
+                                                    className={cn(
+                                                        isActions ? "z-[100] bg-muted/95 shadow-[-12px_0_16px_-6px_rgba(0,0,0,0.15)]" : "",
+                                                        header.column.id === "total" ? "text-right" : ""
+                                                    )}
                                                 >
                                                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                                                 </TableHead>
@@ -574,7 +579,8 @@ export function DataTable<TData>({
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : ""
+                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : "",
+                                                            cell.column.id === "total" ? "text-right" : ""
                                                         )}
                                                         onClick={(e) => {
                                                             if (isActions) {

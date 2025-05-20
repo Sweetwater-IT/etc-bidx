@@ -126,7 +126,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Contract Number */}
               <div className="space-y-1 w-full">
                 <Label className="text-sm text-muted-foreground">Contract Number</Label>
-                <div className="font-medium">
+                <div className="font-medium uppercase">
                   {formatValue(bid?.originalContractNumber)}
                 </div>
               </div>
