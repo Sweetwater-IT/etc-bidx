@@ -17,8 +17,19 @@ const defaultBidState: EstimateContextType = {
 
 const EstimateContext = createContext<EstimateContextType>(defaultBidState);
 
-export const EstimateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(estimateReducer, defaultBidState);
+export const EstimateProvider: React.FC<{ children: React.ReactNode, initialData?: any }> = ({ children, initialData }) => {
+  // Use initialData if provided, otherwise use default state
+  const initialState = initialData ? {
+    ...defaultBidState,
+    adminData: initialData.adminData || defaultBidState.adminData,
+    mptRental: initialData.mptRental || defaultBidState.mptRental,
+    equipmentRental: initialData.equipmentRental || defaultBidState.equipmentRental,
+    flagging: initialData.flagging || defaultBidState.flagging,
+    saleItems: initialData.saleItems || defaultBidState.saleItems,
+    serviceWork: initialData.serviceWork || defaultBidState.serviceWork
+  } : defaultBidState;
+  
+  const [state, dispatch] = useReducer(estimateReducer, initialState);
 
   const contextValue = useMemo<EstimateContextType>(() => ({
     ...state,

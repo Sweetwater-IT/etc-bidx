@@ -61,8 +61,8 @@ export async function fetchBids(options?: {
 /**
  * Fetch a specific bid by ID
  */
-export async function fetchBidById(id: number): Promise<AvailableJob> {
-  const response = await fetch(`/api/bids/${id}`);
+export async function fetchBidById(id: number): Promise<any> {
+  const response = await fetch(`/api/active-bids/${id}`);
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -216,6 +216,13 @@ export async function createActiveBid(
   serviceWork: Flagging | null,
   saleItems: SaleItem[]
 ): Promise<{ id: number }> {
+  // Ensure division and owner fields have valid values
+  const processedAdminData = {
+    ...adminData,
+    division: adminData.division || 'PUBLIC', // Set default value if empty
+    owner: adminData.owner || 'PENNDOT' // Set default value if empty
+  };
+  
   const response = await fetch('/api/active-bids', {
     method: 'POST',
     headers: {
@@ -223,7 +230,7 @@ export async function createActiveBid(
     },
     body: JSON.stringify({
       data: {
-        adminData,
+        adminData: processedAdminData,
         mptRental,
         equipmentRental,
         flagging,
@@ -244,8 +251,18 @@ export async function createActiveBid(
 /**
  * Update an existing active bid
  */
-export async function updateActiveBid(id: number, data: Partial<BidEstimateInsert>): Promise<BidEstimate> {
+export async function updateActiveBid(id: number, data: any): Promise<BidEstimate> {
   try {
+    // If the data contains adminData, ensure division and owner fields have valid values
+    if (data.adminData && typeof data.adminData === 'object') {
+      if (data.adminData.division === '') {
+        data.adminData.division = 'PUBLIC'; // Set default value if empty
+      }
+      if (data.adminData.owner === '') {
+        data.adminData.owner = 'PENNDOT'; // Set default value if empty
+      }
+    }
+    
     const response = await fetch(`/api/active-bids/${id}`, {
       method: 'PATCH',
       headers: {

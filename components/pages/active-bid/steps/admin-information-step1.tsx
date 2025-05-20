@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,7 +59,7 @@ const AdminInformationStep1 = ({
     dispatch({type: 'ADD_MPT_RENTAL'})
     dispatch({ type: 'ADD_FLAGGING' });
     dispatch({ type: 'ADD_SERVICE_WORK' })
-  }, [])
+  }, [dispatch])
   
   // State for toggle buttons
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
@@ -116,7 +118,6 @@ const AdminInformationStep1 = ({
         // Fetch counties
         setIsLoading((prev) => ({ ...prev, counties: true }));
         const countiesData = await fetchReferenceData("counties");
-        console.log(countiesData)
         setCounties(countiesData);
         setIsLoading((prev) => ({ ...prev, counties: false }));
 
@@ -131,6 +132,29 @@ const AdminInformationStep1 = ({
         const ownersData = await fetchReferenceData("owners");
         setOwners(ownersData);
         setIsLoading((prev) => ({ ...prev, owners: false }));
+
+        // If we have prefilled data, set the open states to show the selected values
+        if (adminData) {
+          // Check if we have prefilled values and update open states
+          if (adminData.county && adminData.county.name) {
+            setOpenStates(prev => ({ ...prev, county: false }));
+          }
+          if (adminData.estimator) {
+            setOpenStates(prev => ({ ...prev, estimator: false }));
+          }
+          if (adminData.owner) {
+            setOpenStates(prev => ({ ...prev, owner: false }));
+          }
+
+          // Set toggle states based on prefilled data
+          setToggleStates(prev => ({
+            ...prev,
+            laborRate: !!adminData.county?.laborRate,
+            fringeRate: !!adminData.county?.fringeRate,
+            shopRate: !!adminData.county?.shopRate,
+            winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
+          }));
+        }
       } catch (error) {
         console.error("Error fetching reference data:", error);
         // Reset loading states
@@ -145,7 +169,7 @@ const AdminInformationStep1 = ({
     };
 
     fetchData();
-  }, []);
+  }, [adminData]);
 
 //When county changes, update digits for rates
   useEffect(() => {
@@ -355,38 +379,29 @@ const AdminInformationStep1 = ({
                     >
                       {field.label}
                     </Label>
-                    {field.name === "county" || field.name === "estimator" || field.name === "owner" ? (
-                      <Popover
-                        open={openStates[field.name]}
-                        onOpenChange={(open) => setOpenStates(prev => ({...prev, [field.name]: open}))}
-                      >
+                    {field.name === "county" ? (
+                      <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>                        
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={openStates[field.name]}
+                            aria-expanded={openStates.county}
                             className="w-full justify-between"
                           >
-                            {field.name === "county" ? 
-                              (adminData.county && adminData.county.name ? adminData.county.name : "Select county...") :
-                             field.name === "estimator" ? 
-                              (adminData.estimator || "Select estimator...") :
-                             field.name === "owner" ? 
-                              (adminData.owner || "Select owner...") :
-                              "Select..."}
+                            {adminData.county?.name || "Select county..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                        <PopoverContent className="w-full p-0">
                           <Command>
-                            <CommandInput placeholder={`Search ${field.name}...`} />
-                            <CommandEmpty>No {field.name} found.</CommandEmpty>
-                            <CommandGroup className="max-h-[200px] overflow-y-auto">
-                              {field.name === "county" && counties.map((county) => (
+                            <CommandInput placeholder="Search county..." />
+                            <CommandEmpty>No county found.</CommandEmpty>
+                            <CommandGroup>
+                              {counties.map((county) => (
                                 <CommandItem
                                   key={county.id}
                                   value={county.name}
-                                  onSelect={() => handleCountyChange(county.id.toString())}
+                                  onSelect={() => handleCountyChange(county.name)}
                                 >
                                   <Check
                                     className={cn(
@@ -397,7 +412,29 @@ const AdminInformationStep1 = ({
                                   {county.name}
                                 </CommandItem>
                               ))}
-                              {field.name === "estimator" && estimators.map((estimator) => (
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    ) : field.name === "estimator" ? (
+                      <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>                        
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openStates.estimator}
+                            className="w-full justify-between"
+                          >
+                            {adminData.estimator || "Select estimator..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Search estimator..." />
+                            <CommandEmpty>No estimator found.</CommandEmpty>
+                            <CommandGroup>
+                              {estimators.map((estimator) => (
                                 <CommandItem
                                   key={estimator.id}
                                   value={estimator.name}
@@ -412,7 +449,29 @@ const AdminInformationStep1 = ({
                                   {estimator.name}
                                 </CommandItem>
                               ))}
-                              {field.name === "owner" && owners.map((owner) => (
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    ) : field.name === "owner" ? (
+                      <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>                        
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openStates.owner}
+                            className="w-full justify-between"
+                          >
+                            {adminData.owner || "Select owner..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Search owner..." />
+                            <CommandEmpty>No owner found.</CommandEmpty>
+                            <CommandGroup>
+                              {owners.map((owner) => (
                                 <CommandItem
                                   key={owner.id}
                                   value={owner.name}
@@ -433,22 +492,27 @@ const AdminInformationStep1 = ({
                       </Popover>
                     ) : field.name === "division" || field.name === "workType" ? (
                       <RadioGroup
-                        value={
-                          field.name === "division" ? adminData.division || "" :
-                          field.name === "workType" ? (adminData.rated === "RATED" ? "RATED" : "NON-RATED") : ""
+                        value={field.name === "division" ? adminData.division || 'PUBLIC' : adminData.rated}
+                        onValueChange={(value) =>
+                          field.name === "division"
+                            ? dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'division', value } })
+                            : dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'rated', value } })
                         }
-                        onValueChange={(value) => handleInputChange(field.name, value)}
                         className="flex flex-col space-y-1"
                       >
-                        {field.options &&
-                          field.options.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <RadioGroupItem value={option} id={`${field.name}-${option}`} />
-                              <Label htmlFor={`${field.name}-${option}`}>{option}</Label>
-                            </div>
-                          ))}
+                        {field.options?.map((option) => (
+                          <div key={option.value} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option.value} id={`${field.name}-${option.value}`} />
+                            <Label
+                              htmlFor={`${field.name}-${option.value}`}
+                              className="text-sm font-normal"
+                            >
+                              {option.label}
+                            </Label>
+                          </div>
+                        ))}
                       </RadioGroup>
-                    ) : field.type === "toggle" ? (
+                    ) : field.name === "winterShutdown" ? (
                       <div>
                         <div className="flex items-center space-x-2">
                           <Switch

@@ -1,7 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { createActiveBid } from "@/lib/api-client";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState, useEffect, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { WorksheetDialog } from "@/components/sheets/WorksheetDialog";
@@ -44,6 +46,17 @@ const BidSummaryStep5 = ({
   setIsViewSummaryOpen: (value: boolean) => void;
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Use state for client-side only values
+  const [isClientReady, setIsClientReady] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Initialize client-side only state after first render
+  useEffect(() => {
+    setIsEditing(searchParams.get('isEditing') === 'true');
+    setIsClientReady(true);
+  }, [searchParams]);
 
   const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
   
@@ -54,9 +67,10 @@ const BidSummaryStep5 = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [initialSubmission, setInitialSubmission] = useState<boolean>(false)
-
-  const handleSubmit = async () => {
+  const [initialSubmission, setInitialSubmission] = useState<boolean>(false);
+  
+  // Define handleSubmit function with useCallback to prevent unnecessary re-renders
+  const handleSubmit = useCallback(async () => {
     try {
       setIsViewSummaryOpen(true);
       setIsSubmitting(true);
@@ -77,7 +91,37 @@ const BidSummaryStep5 = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, initialSubmission, router, setIsViewSummaryOpen]);
+  
+  // Check if we're editing an existing bid and enable buttons without auto-submission
+  useEffect(() => {
+    const isEditing = searchParams.get('isEditing') === 'true';
+    if (isEditing) {
+      // If we're editing, set initialSubmission to true to enable all buttons
+      setInitialSubmission(true);
+      
+      // In edit mode, just enable the buttons but don't open the summary drawer
+      // No need to set setIsViewSummaryOpen(true) here
+    }
+  }, [searchParams, isClientReady, isSubmitting, setIsViewSummaryOpen]);
+
+  // If client isn't ready yet, render a minimal version to avoid hydration errors
+  if (!isClientReady) {
+    return (
+      <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
+        <div className="space-y-8">
+          <div className="flex justify-between">
+            <Button variant="outline" disabled>
+              Back
+            </Button>
+            <Button disabled>
+              Loading...
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -169,7 +213,12 @@ const BidSummaryStep5 = ({
                     Back
                   </Button>
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
-                    {initialSubmission ? 'Done' : isSubmitting ? "Creating..." : "Create"}
+                    {initialSubmission 
+                      ? (isEditing ? 'Update' : 'Done') 
+                      : isSubmitting 
+                        ? (isEditing ? "Updating..." : "Creating...") 
+                        : (isEditing ? "Update" : "Create")
+                    }
                   </Button>
                 </div>
               </div>
