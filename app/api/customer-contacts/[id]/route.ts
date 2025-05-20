@@ -6,7 +6,8 @@ export async function PATCH(
   { params }: any
 ) {
   try {
-    const contactId = params.id;
+    const resolvedParams = await params;
+    const contactId = resolvedParams.id;
     
     if (!contactId) {
       return NextResponse.json(
@@ -49,11 +50,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: any
 ) {
   try {
-    const contactId = params.id;
+    const resolvedParams = await params;
+    const contactId = resolvedParams.id;
     
     if (!contactId) {
       return NextResponse.json(

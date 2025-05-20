@@ -6,7 +6,8 @@ export async function GET(
   { params }: any
 ) {
   try {
-    const customerId = params.id;
+    const resolvedParams = await params;
+    const customerId = resolvedParams.id;
     
     if (!customerId) {
       return NextResponse.json(
