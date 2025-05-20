@@ -88,6 +88,35 @@ function formatCellValue(value: any, key: string) {
         return '';
     }
 
+    // Handle special formatting for contractNumber and county fields
+    if ((key === "contractNumber" || key === "county") && typeof value === "object" && value !== null) {
+        if (value.main && value.secondary) {
+            return (
+                <div className="flex flex-col">
+                    <span>{value.main}</span>
+                    <span className="text-xs text-red-500">{value.secondary}</span>
+                </div>
+            );
+        }
+    }
+
+    // Format currency for total column and mptValue
+    if (key === "total" || key === "mptValue") {
+        // Handle if value is already formatted with $ (string)
+        if (typeof value === "string" && value.startsWith("$")) {
+            return value;
+        }
+        
+        // Convert to number if it's a string without $ sign
+        const numValue = typeof value === "string" ? parseFloat(value) : value;
+        
+        // Format as currency if it's a valid number
+        if (!isNaN(numValue)) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numValue);
+        }
+        return value;
+    }
+
     // Handle status badges
     if (key === "status") {
         const variant = value.toLowerCase() === "urgent" ? "destructive" : value.toLowerCase() === "open" ? "default" : "secondary";

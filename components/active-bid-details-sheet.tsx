@@ -83,9 +83,23 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
   };
 
   // Helper function to format display values
-  const formatValue = (value: string | number | null | undefined): string => {
+  const formatValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return '';
+    
+    // Handle objects with main and secondary properties
+    if (typeof value === 'object' && value !== null) {
+      if ('main' in value) {
+        return String(value.main);
+      }
+    }
+    
     return String(value);
+  };
+
+  const formatCurrency = (value: string | number | null | undefined): string => {
+    if (value === null || value === undefined || value === '') return '';
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numValue);
   };
 
   return (
@@ -93,7 +107,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <div className="flex items-center gap-2">
-            <SheetTitle>Bid Details {bid?.contractNumber ? `- ${bid.contractNumber}` : ''}</SheetTitle>
+            <SheetTitle>Bid Details {bid?.originalContractNumber ? `- ${bid.originalContractNumber}` : ''}</SheetTitle>
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
           </div>
         </SheetHeader>
@@ -113,7 +127,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               <div className="space-y-1 w-full">
                 <Label className="text-gray-500 text-sm">Contract Number</Label>
                 <div className="text-gray-900 font-medium">
-                  {formatValue(bid?.contractNumber)}
+                  {formatValue(bid?.originalContractNumber)}
                 </div>
               </div>
 
@@ -223,14 +237,14 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                 <div className="space-y-1 w-full">
                   <Label className="text-gray-500 text-sm">MPT Value</Label>
                   <div className="text-gray-900 font-medium">
-                    {formatValue(bid?.mptValue)}
+                    {formatCurrency(bid?.mptValue)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
                   <Label className="text-gray-500 text-sm">Perm Sign Value</Label>
                   <div className="text-gray-900 font-medium">
-                    {formatValue(bid?.permSignValue)}
+                    {formatCurrency(bid?.permSignValue)}
                   </div>
                 </div>
               </div>
@@ -239,7 +253,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               <div className="space-y-1 w-full">
                 <Label className="text-gray-500 text-sm">Rental Value</Label>
                 <div className="text-gray-900 font-medium">
-                  {formatValue(bid?.rentalValue)}
+                  {formatCurrency(bid?.rentalValue)}
                 </div>
               </div>
             </div>

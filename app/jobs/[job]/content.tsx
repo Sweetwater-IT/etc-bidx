@@ -279,15 +279,28 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const uiBids = data.map((bid: any) => {
                 if (isDetailed) {
                     // Handle detailed format
+                    const mptValue = bid.mpt_rental?._summary?.revenue || 0;
+                    const branch = bid.admin_data.county?.branch || "Unknown";
+                    const estimator = bid.admin_data.estimator || "Unknown";
+                    const county = bid.admin_data.county?.name || "Unknown";
+                    const contractNum = bid.admin_data.contractNumber;
+                    
                     return {
                         id: bid.id,
-                        contractNumber: bid.admin_data.contractNumber,
+                        contractNumber: {
+                            main: contractNum,
+                            secondary: estimator
+                        },
+                        originalContractNumber: contractNum, // Add original field for details drawer
                         contractor: bid.contractor_name || "",
                         subcontractor: bid.subcontractor_name || "",
                         owner: bid.admin_data.owner || "Unknown",
-                        county: bid.admin_data.county?.name || "Unknown", // Parse JSON if needed
-                        branch: bid.admin_data.county?.branch || "Unknown",
-                        estimator: bid.admin_data.estimator || "Unknown",
+                        county: {
+                            main: county,
+                            secondary: branch
+                        },
+                        branch: branch, // Add original field for details drawer
+                        estimator: estimator, // Add original field for details drawer
                         status: bid.status || "Unknown",
                         division: bid.admin_data.division || "",
                         lettingDate: bid.admin_data.lettingDate ? format(new Date(bid.admin_data.lettingDate), "yyyy-MM-dd") : "",
@@ -295,23 +308,37 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         endDate: bid.admin_data.endDate ? format(new Date(bid.admin_data.endDate), "yyyy-MM-dd") : "",
                         projectDays: bid.total_days || 0,
                         totalHours: bid.mpt_rental?._summary?.hours || 0,
-                        mptValue: bid.mpt_rental?._summary?.revenue || 0,
+                        mptValue: mptValue,
                         permSignValue: 0, // Not in the new structure
                         rentalValue: bid.equipment_rental?.reduce((sum: number, item: any) => 
                             sum + (item.revenue || 0), 0) || 0,
                         createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                        total: mptValue, // Add total field that maps to mptValue
                     };
                 } else {
                     // Handle flattened format (existing code)
+                    const mptValue = bid.mpt_value || 0;
+                    const branch = bid.branch || "Unknown";
+                    const estimator = bid.estimator || "Unknown";
+                    const county = bid.county || "Unknown";
+                    const contractNum = bid.contract_number;
+                    
                     return {
                         id: bid.id,
-                        contractNumber: bid.contract_number,
+                        contractNumber: {
+                            main: contractNum,
+                            secondary: estimator
+                        },
+                        originalContractNumber: contractNum, // Add original field for details drawer
                         contractor: bid.contractor || "Unknown",
                         subcontractor: bid.subcontractor || "",
                         owner: bid.owner || "Unknown",
-                        county: bid.county || "Unknown",
-                        branch: bid.branch || "Unknown",
-                        estimator: bid.estimator || "Unknown",
+                        county: {
+                            main: county,
+                            secondary: branch
+                        },
+                        branch: branch, // Add original field for details drawer
+                        estimator: estimator, // Add original field for details drawer
                         status: bid.status || "Unknown",
                         division: bid.division || "",
                         lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : "",
@@ -319,10 +346,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         endDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : "",
                         projectDays: bid.project_days || 0,
                         totalHours: bid.total_hours || 0,
-                        mptValue: bid.mpt_value || 0,
+                        mptValue: mptValue,
                         permSignValue: bid.perm_sign_value || 0,
                         rentalValue: bid.rental_value || 0,
                         createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                        total: mptValue, // Add total field that maps to mptValue
                     };
                 }
             });

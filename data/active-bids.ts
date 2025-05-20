@@ -1,11 +1,12 @@
 export type ActiveBid = {
   id: number;
   lettingDate: string;
-  contractNumber: string;
+  contractNumber: string | { main: string; secondary: string };
+  originalContractNumber?: string; // Added for details drawer
   contractor: string;
   subcontractor: string;
   owner: string;
-  county: string;
+  county: string | { main: string; secondary: string };
   branch: string;
   estimator: string;
   status: string;
@@ -14,11 +15,11 @@ export type ActiveBid = {
   endDate: string;
   projectDays: number;
   totalHours: number;
-  mptValue: string;
-  permSignValue: string;
-  rentalValue: string;
+  mptValue: string | number;
+  permSignValue: string | number;
+  rentalValue: string | number;
   createdAt: string;
-  total?: string; // Add total field
+  total?: string | number; // Add total field
 }
 
 export const ACTIVE_BIDS_COLUMNS = [
@@ -28,8 +29,6 @@ export const ACTIVE_BIDS_COLUMNS = [
   { key: "subcontractor", title: "Subcontractor" },
   { key: "owner", title: "Owner" },
   { key: "county", title: "County" },
-  { key: "branch", title: "Branch" },
-  { key: "estimator", title: "Estimator" },
   { key: "status", title: "Status" },
   { key: "total", title: "Total" },
 ]
