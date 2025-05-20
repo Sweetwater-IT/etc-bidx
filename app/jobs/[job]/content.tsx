@@ -215,7 +215,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 return {
                     id: job.id,
                     contractNumber: job.customer_contract_number || '',
-                    status: job.project_status || 'In Progress',
+                    status: job.status || 'In Progress',
                     requestor: job.admin_data?.requestor || '',
                     owner: job.admin_data?.owner || '',
                     lettingDate: job.admin_data?.lettingDate ? format(new Date(job.admin_data.lettingDate), "yyyy-MM-dd") : null,

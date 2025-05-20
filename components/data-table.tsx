@@ -47,6 +47,28 @@ export type LegacyColumn = {
     className?: string;
 };
 
+const handleStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "open": 
+            return "default";
+        case "pending":
+            return "warning";
+        case "urgent":
+        case "no bid":
+        case "lost":
+            return "destructive";
+        case "bid":
+        case "won":
+            return "successful";
+        case "won-pending":
+            return "purple";
+        case "unset":
+        case "draft":
+        default:
+            return "secondary";
+    }
+}
+
 export interface DataTableProps<TData> {
     columns: LegacyColumn[] | readonly LegacyColumn[];
     data: TData[];
@@ -119,7 +141,8 @@ function formatCellValue(value: any, key: string) {
 
     // Handle status badges
     if (key === "status") {
-        const variant = value.toLowerCase() === "urgent" ? "destructive" : value.toLowerCase() === "open" ? "default" : "secondary";
+        const variant = handleStatusVariant(value)
+
         return (
             <Badge variant={variant} className="font-medium">
                 {value}
