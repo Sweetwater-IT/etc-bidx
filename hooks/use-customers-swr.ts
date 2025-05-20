@@ -21,7 +21,7 @@ const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }:
       .from('contractors')
       .select('*, customer_contacts(*)', { count: 'exact' })
       .order('name', { ascending: true });
-    
+      
     if (paymentTerms !== 'all') {
       query = query.eq('payment_terms', paymentTerms);
     }
@@ -32,26 +32,32 @@ const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }:
       throw new Error(response.error.message);
     }
     
-    const customers: Customer[] = (response.data as any[]).map(customer => ({
-      id: customer.id,
-      name: customer.name,
-      displayName: customer.display_name,
-      emails: customer.customer_contacts.map((contact: any) => contact.email),
-      phones: customer.customer_contacts.map((contact: any) => contact.phone),
-      names: customer.customer_contacts.map((contact: any) => contact.name),
-      roles: customer.customer_contacts.map((contact: any) => contact.role),
-      contactIds: customer.customer_contacts.map((contact: any) => contact.id),
-      address: customer.address,
-      url: customer.web,
-      created: customer.created,
-      updated: customer.updated,
-      city: customer.city,
-      state: customer.state,
-      zip: customer.zip,
-      customerNumber: customer.customer_number,
-      mainPhone: customer.main_phone,
-      paymentTerms: customer.payment_terms
-    }));
+    const customers: Customer[] = (response.data as any[]).map(customer => {
+      const validContacts = customer.customer_contacts 
+        ? customer.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+        : [];
+        
+      return {
+        id: customer.id,
+        name: customer.name,
+        displayName: customer.display_name,
+        emails: validContacts.map((contact: any) => contact?.email || ''),
+        phones: validContacts.map((contact: any) => contact?.phone || ''),
+        names: validContacts.map((contact: any) => contact?.name || ''),
+        roles: validContacts.map((contact: any) => contact?.role || ''),
+        contactIds: validContacts.map((contact: any) => contact?.id || 0),
+        address: customer.address || '',
+        url: customer.web || '',
+        created: customer.created || '',
+        updated: customer.updated || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        zip: customer.zip || '',
+        customerNumber: customer.customer_number || 0,
+        mainPhone: customer.main_phone || '',
+        paymentTerms: customer.payment_terms || ''
+      };
+    });
     
     return {
       customers,
@@ -73,11 +79,11 @@ export function useCustomersSWR(params: FetchCustomersParams = {}) {
     () => fetchCustomers({ page, pageSize, paymentTerms }), 
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000,
+      dedupingInterval: 0,
       errorRetryCount: 3,
-      revalidateIfStale: false,
-      revalidateOnReconnect: false,
-      shouldRetryOnError: false
+      revalidateIfStale: true,
+      revalidateOnReconnect: true,
+      shouldRetryOnError: true
     }
   );
   

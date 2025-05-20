@@ -1,27 +1,28 @@
 export type ActiveBid = {
-  id: number
-  lettingDate: string
-  contractNumber: string
-  contractor: string
-  subcontractor: string
-  owner: string
-  county: string
-  branch: string
-  estimator: string
-  status: string
-  division: string
-  startDate: string
-  endDate: string
-  projectDays: number
-  totalHours: number
-  mptValue: string
-  permSignValue: string
-  rentalValue: string
-  createdAt?: string
+  id: number;
+  lettingDate: string;
+  contractNumber: string;
+  contractor: string;
+  subcontractor: string;
+  owner: string;
+  county: string;
+  branch: string;
+  estimator: string;
+  status: string;
+  division: string;
+  startDate: string;
+  endDate: string;
+  projectDays: number;
+  totalHours: number;
+  mptValue: string;
+  permSignValue: string;
+  rentalValue: string;
+  createdAt: string;
+  total?: string; // Add total field
 }
 
 export const ACTIVE_BIDS_COLUMNS = [
-  { key: "lettingDate", title: "Letting date" },
+  { key: "lettingDate", title: "Letting Date" },
   { key: "contractNumber", title: "Contract #" },
   { key: "contractor", title: "Contractor" },
   { key: "subcontractor", title: "Subcontractor" },
@@ -30,14 +31,7 @@ export const ACTIVE_BIDS_COLUMNS = [
   { key: "branch", title: "Branch" },
   { key: "estimator", title: "Estimator" },
   { key: "status", title: "Status" },
-  { key: "division", title: "Division" },
-  { key: "startDate", title: "Start Date" },
-  { key: "endDate", title: "End Date" },
-  { key: "projectDays", title: "Project Days" },
-  { key: "totalHours", title: "Total Hours" },
-  { key: "mptValue", title: "MPT Value" },
-  { key: "permSignValue", title: "Perm Sign Value" },
-  { key: "rentalValue", title: "Rental Value" },
+  { key: "total", title: "Total" },
 ]
 
 export const activeBidsData: ActiveBid[] = [
@@ -61,6 +55,7 @@ export const activeBidsData: ActiveBid[] = [
     permSignValue: "$25,000",
     rentalValue: "$10,000",
     createdAt: "2024-01-01",
+    total: "$85,000", // Add total value
   },
   {
     id: 2,
@@ -82,5 +77,6 @@ export const activeBidsData: ActiveBid[] = [
     permSignValue: "$35,000",
     rentalValue: "$15,000",
     createdAt: "2024-01-05",
+    total: "$125,000", // Add total value
   },
 ] 

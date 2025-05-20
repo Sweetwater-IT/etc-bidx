@@ -1,6 +1,7 @@
 import { useEstimate } from '@/contexts/EstimateContext'
 import { calculateLaborCostSummary } from '@/lib/mptRentalHelperFunctions'
 import React, { useEffect, useState } from 'react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const SidebarLaborSummary = () => {
 
@@ -49,7 +50,27 @@ const SidebarLaborSummary = () => {
         className={`grid grid-cols-2 border-t border-gray-300 py-2 ${index === laborSummary.length - 1 ? 'bg-green-50' : ''}`}
       >
         <div className="px-3 py-1 text-sm">{row.item}</div>
-        <div className="px-3 py-1 text-sm">{row.total.toFixed(2)} hrs</div>
+        <div className="px-3 py-1 text-sm">
+          <Tooltip>
+            <TooltipTrigger className="cursor-help">
+              {row.total.toFixed(2)} hrs
+            </TooltipTrigger>
+            <TooltipContent>
+              {row.item === 'Rated Labor Hours' && (
+                <p>Rated Labor Hours = (Number of Personnel × Project Days × Hours Per Day)</p>
+              )}
+              {row.item === 'Shop Labor Hours' && (
+                <p>Shop Labor Hours = (Non-Rated Hours Per Phase × Number of Phases)</p>
+              )}
+              {row.item === 'Permanent Sign Hours' && (
+                <p>Permanent Sign Hours = Sum of labor hours for permanent sign installation</p>
+              )}
+              {row.item === 'Total' && (
+                <p>Total Hours = (Rated Labor Hours + Shop Labor Hours + Permanent Sign Hours)</p>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     ))}
   </div>

@@ -72,8 +72,6 @@ const CustomersContent = () => {
   }, []);
 
   const handleDrawerSuccess = useCallback(() => {
-
-    setDrawerOpen(false);
     mutate();
   }, [mutate]);
 
@@ -126,8 +124,8 @@ const CustomersContent = () => {
     }
   }, [drawerOpen, handleKeyDown]);
 
-  // Calculate total pages for DataTable
-  const pageCount = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  // Calculate total pages for DataTable based on current page size
+  const pageCount = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="flex flex-col items-center justify-between">

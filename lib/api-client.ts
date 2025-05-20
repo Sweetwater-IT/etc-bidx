@@ -522,8 +522,9 @@ export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number
  * Delete multiple archived active bids (soft delete)
  */
 export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
-  const response = await fetch('/api/active-bids', {
-    method: 'DELETE',
+try {
+  const response = await fetch('/api/archived-active-bids/delete', {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -532,11 +533,110 @@ export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: 
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to delete archived active bids');
+    throw new Error(errorData.error || 'Failed to delete archived active bids');
+  }
+
+  return await response.json();
+} catch (error) {
+  console.error('Error deleting archived active bids:', error);
+  throw error;
+}
+}
+
+/**
+ * Soft delete a customer contact by setting is_deleted flag to true
+ * @param contactId ID of the contact to delete
+ * @returns Promise resolving to the deleted contact data
+ */
+export async function deleteCustomerContact(contactId: number): Promise<any> {
+try {
+  const response = await fetch(`/api/customer-contacts/${contactId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to delete customer contact (${response.status})`);
   }
 
   const result = await response.json();
-  return { count: result.count };
+  return result;
+} catch (error) {
+  console.error('Error deleting customer contact:', error);
+  throw error;
+}
+}
+
+/**
+ * Create a new customer contact
+ * @param data Contact data including contractor_id (customer ID), name, role, email, phone
+ * @returns Promise resolving to the created contact data
+ */
+export async function createCustomerContact(data: {
+  contractor_id: number;
+  name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> {
+try {
+  const response = await fetch('/api/customer-contacts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to create customer contact (${response.status})`);
+  }
+
+  const result = await response.json();
+  return result;
+} catch (error) {
+  console.error('Error creating customer contact:', error);
+  throw error;
+}
+}
+
+/**
+ * Update an existing customer contact
+ * @param contactId ID of the contact to update
+ * @param data Contact data to update including name, role, email, phone
+ * @returns Promise resolving to the updated contact data
+ */
+export async function updateCustomerContact(contactId: number, data: {
+  name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> {
+try {
+  const response = await fetch(`/api/customer-contacts/${contactId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error(`API error (${response.status}):`, errorData);
+    throw new Error(errorData.error || `Failed to update customer contact (${response.status})`);
+  }
+
+  const result = await response.json();
+  return result;
+} catch (error) {
+  console.error('Error updating customer contact:', error);
+  throw error;
+}
 }
 
 /**
