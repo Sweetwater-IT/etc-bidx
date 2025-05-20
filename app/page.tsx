@@ -9,17 +9,17 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RotateCcw } from "lucide-react";
 import { getEstimateData } from "@/lib/getEstimateData";
+import { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
     title: "Dashboard",
     description: "View your company's performance metrics and key indicators",
 };
 
+// In Next.js 15, page props have been updated
 export default async function DashboardPage({
-    params,
-    searchParams,
+    searchParams
 }: {
-    params: { slug: string };
     searchParams?: { [key: string]: string | string[] | undefined };
 }) {
     // Extract date parameters for filtering
@@ -53,19 +53,19 @@ export default async function DashboardPage({
         },
         {
             title: "Win/Loss Ratio",
-            value:  estimateData ? `${estimateData.bid_metrics.win_loss_ratio.toFixed(1)}%`: '0.0',
+            value: estimateData ? `${estimateData.bid_metrics.win_loss_ratio.toFixed(1)}%`: '0.0',
         },
         {
             title: "Won Jobs",
-            value:  estimateData ? estimateData.bid_metrics.total_won_jobs.toLocaleString(): '0',
+            value: estimateData ? estimateData.bid_metrics.total_won_jobs.toLocaleString(): '0',
         },
         {
             title: "Total Revenue",
-            value:  estimateData ? `$${estimateData.bid_metrics.total_revenue.toLocaleString()}` : 0.00,
+            value: estimateData ? `$${estimateData.bid_metrics.total_revenue.toLocaleString()}` : '$0',
         },
         {
             title: "Avg. MPT Gross Margin",
-            value:  estimateData ? `${estimateData.bid_metrics.mpt_gross_margin.toFixed(1)}%` : 0.0,
+            value: estimateData ? `${estimateData.bid_metrics.mpt_gross_margin.toFixed(1)}%` : '0.0%',
         },
     ];
 
@@ -109,7 +109,11 @@ export default async function DashboardPage({
                             </div>
 
                             {/* Pass the estimate data to our visualization components */}
-                            <ChartPieRow data={estimateData ? estimateData: undefined} />
+                            <ChartPieRow 
+                                data={estimateData ? estimateData: undefined} 
+                                startDate={startDate} 
+                                endDate={endDate}
+                            />
                             <ChartBarRow data={estimateData} />
                             <TableAndScatter data={estimateData} />
                         </div>
