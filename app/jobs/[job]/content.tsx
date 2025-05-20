@@ -1197,6 +1197,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     bid={selectedBid}
                     onEdit={handleEdit}
                     onNavigate={handleBidNavigation}
+                    onRefresh={loadActiveBids}
                 />
                 <EditActiveBidSheet
                     open={editSheetOpen}

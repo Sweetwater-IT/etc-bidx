@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
-import { EyeIcon } from "lucide-react";
+import { EyeIcon, PencilIcon, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { type ActiveBid } from "@/data/active-bids";
 import { type JobPageData } from "@/app/jobs/[job]/content";
 import { format } from "date-fns";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { createClient } from "@supabase/supabase-js";
+import { Customer } from "@/types/Customer";
+import { updateBid } from "@/lib/api-client";
+import { toast } from "sonner";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -15,13 +22,76 @@ interface ActiveBidDetailsSheetProps {
   bid?: ActiveBid;
   onEdit?: (item: JobPageData) => void;
   onNavigate?: (direction: 'up' | 'down') => void;
+  onRefresh?: () => void; // Callback to refresh the data table
 }
 
-export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavigate }: ActiveBidDetailsSheetProps) {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const SUBCONTRACTOR_OPTIONS = [
+  "ETC",
+  "Atlas",
+  "RoadSafe",
+  "Rae-Lynn",
+  "Unknown",
+  "Other"
+];
+
+export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavigate, onRefresh }: ActiveBidDetailsSheetProps) {
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingContractor, setEditingContractor] = useState(false);
+  const [editingSubcontractor, setEditingSubcontractor] = useState(false);
+  const [selectedContractor, setSelectedContractor] = useState<string>('');
+  const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>('');
+  const [originalContractor, setOriginalContractor] = useState<string>('');
+  const [originalSubcontractor, setOriginalSubcontractor] = useState<string>('');
+  const [hasChanges, setHasChanges] = useState(false);
   
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('contractors')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedCustomers: Customer[] = data.map((customer: any) => ({
+        id: customer.id,
+        name: customer.name,
+        displayName: customer.display_name || customer.name,
+        emails: [],
+        phones: [],
+        names: [],
+        roles: [],
+        contactIds: [],
+        address: customer.address || '',
+        url: customer.web || '',
+        created: customer.created || '',
+        updated: customer.updated || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        zip: customer.zip || '',
+        customerNumber: customer.customer_number || 0,
+        mainPhone: customer.main_phone || '',
+        paymentTerms: customer.payment_terms || ''
+      }));
+
+      setCustomers(formattedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     
@@ -38,9 +108,22 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onNavigate]);
+  
+  useEffect(() => {
+    if (open) {
+      fetchCustomers();
+    }
+  }, [open, fetchCustomers]);
 
   useEffect(() => {
     if (bid) {
+      const contractorValue = formatValue(bid.contractor);
+      const subcontractorValue = formatValue(bid.subcontractor);
+      
+      setSelectedContractor(contractorValue);
+      setSelectedSubcontractor(subcontractorValue);
+      setOriginalContractor(contractorValue);
+      setOriginalSubcontractor(subcontractorValue);
       try {
         setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ? 
           new Date(bid.lettingDate) : undefined);
@@ -71,10 +154,143 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     }
   }, [bid]);
 
+
+
   const handleEdit = () => {
-    if (bid && onEdit) {
+    if (hasChanges) {
+      // Save changes
+      saveChanges();
+    } else if (bid && onEdit) {
+      // Open the full edit form
       onOpenChange(false);
       onEdit(bid);
+    }
+  };
+
+  const handleContractorSelect = (value: string) => {
+    setSelectedContractor(value);
+    setHasChanges(value !== originalContractor);
+    setEditingContractor(false);
+  };
+
+  const handleSubcontractorSelect = (value: string) => {
+    setSelectedSubcontractor(value);
+    setHasChanges(value !== originalSubcontractor);
+    setEditingSubcontractor(false);
+  };
+  
+  const saveChanges = async () => {
+    if (!bid?.id || !hasChanges) return;
+    
+    setSaving(true);
+    try {
+      // Save contractor changes if any
+      if (selectedContractor !== originalContractor) {
+        // Find contractor ID from name
+        const { data: contractorData, error: contractorError } = await supabase
+          .from('contractors')
+          .select('id')
+          .eq('name', selectedContractor)
+          .single();
+        
+        if (contractorError) {
+          throw new Error(`Contractor not found: ${contractorError.message}`);
+        }
+        
+        // Check if project_metadata exists for this bid
+        const { data: metadataData, error: metadataError } = await supabase
+          .from('project_metadata')
+          .select('id')
+          .eq('bid_estimate_id', bid.id);
+        
+        if (metadataError) {
+          throw new Error(`Error checking metadata: ${metadataError.message}`);
+        }
+        
+        if (metadataData && metadataData.length > 0) {
+          // Update existing metadata
+          await supabase
+            .from('project_metadata')
+            .update({ contractor_id: contractorData.id })
+            .eq('bid_estimate_id', bid.id);
+        } else {
+          // Create new metadata
+          await supabase
+            .from('project_metadata')
+            .insert({ bid_estimate_id: bid.id, contractor_id: contractorData.id });
+        }
+        
+        setOriginalContractor(selectedContractor);
+      }
+      
+      // Save subcontractor changes if any
+      if (selectedSubcontractor !== originalSubcontractor) {
+        // Find subcontractor ID from name or create a new one
+        let subcontractorId;
+        
+        const { data: existingSubcontractor, error: subError } = await supabase
+          .from('subcontractors')
+          .select('id')
+          .eq('name', selectedSubcontractor)
+          .single();
+        
+        if (subError) {
+          // Create new subcontractor
+          const { data: newSubcontractor, error: createError } = await supabase
+            .from('subcontractors')
+            .insert({ name: selectedSubcontractor })
+            .select('id')
+            .single();
+          
+          if (createError) {
+            throw new Error(`Error creating subcontractor: ${createError.message}`);
+          }
+          
+          subcontractorId = newSubcontractor.id;
+        } else {
+          subcontractorId = existingSubcontractor.id;
+        }
+        
+        // Check if project_metadata exists for this bid
+        const { data: metadataData, error: metadataError } = await supabase
+          .from('project_metadata')
+          .select('id')
+          .eq('bid_estimate_id', bid.id);
+        
+        if (metadataError) {
+          throw new Error(`Error checking metadata: ${metadataError.message}`);
+        }
+        
+        if (metadataData && metadataData.length > 0) {
+          // Update existing metadata
+          await supabase
+            .from('project_metadata')
+            .update({ subcontractor_id: subcontractorId })
+            .eq('bid_estimate_id', bid.id);
+        } else {
+          // Create new metadata
+          await supabase
+            .from('project_metadata')
+            .insert({ bid_estimate_id: bid.id, subcontractor_id: subcontractorId });
+        }
+        
+        setOriginalSubcontractor(selectedSubcontractor);
+      }
+      
+      toast.success("Changes saved successfully");
+      setHasChanges(false);
+      
+      // Refresh the data table before closing the drawer
+      if (onRefresh) {
+        onRefresh();
+      }
+      
+      onOpenChange(false); // Close the drawer after saving
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -134,17 +350,115 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Contractor & Subcontractor */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-sm text-muted-foreground">Contractor</Label>
-                  <div className="font-medium">
-                    {formatValue(bid?.contractor)}
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">Contractor</Label>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5 rounded-full focus:outline-none" 
+                      onClick={() => setEditingContractor(!editingContractor)}
+                      tabIndex={-1}
+                    >
+                      <PencilIcon className="h-3 w-3" />
+                    </Button>
                   </div>
+                  {editingContractor ? (
+                    <Popover open={true} onOpenChange={setEditingContractor}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {selectedContractor || "Select contractor..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search contractor..." />
+                          <CommandEmpty>No contractor found.</CommandEmpty>
+                          <CommandGroup>
+                            {customers.map((customer) => (
+                              <CommandItem
+                                key={customer.id}
+                                value={customer.name}
+                                onSelect={handleContractorSelect}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedContractor === customer.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {customer.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div className="font-medium">
+                      {selectedContractor}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-sm text-muted-foreground">Subcontractor</Label>
-                  <div className="font-medium">
-                    {formatValue(bid?.subcontractor)}
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">Subcontractor</Label>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5 rounded-full focus:outline-none" 
+                      onClick={() => setEditingSubcontractor(!editingSubcontractor)}
+                      tabIndex={-1}
+                    >
+                      <PencilIcon className="h-3 w-3" />
+                    </Button>
                   </div>
+                  {editingSubcontractor ? (
+                    <Popover open={true} onOpenChange={setEditingSubcontractor}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {selectedSubcontractor || "Select subcontractor..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search subcontractor..." />
+                          <CommandEmpty>No subcontractor found.</CommandEmpty>
+                          <CommandGroup>
+                            {SUBCONTRACTOR_OPTIONS.map((option) => (
+                              <CommandItem
+                                key={option}
+                                value={option}
+                                onSelect={handleSubcontractorSelect}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedSubcontractor === option ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {option}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div className="font-medium">
+                      {selectedSubcontractor}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -264,8 +578,12 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleEdit}>
-                Edit
+              <Button 
+                onClick={handleEdit}
+                disabled={saving}
+              >
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {hasChanges ? (originalContractor || originalSubcontractor ? "Update" : "Save") : "Edit"}
               </Button>
             </div>
           </SheetFooter>
