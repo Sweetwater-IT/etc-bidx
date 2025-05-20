@@ -75,84 +75,48 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
-                    <Label>Job Number</Label>
-                    <div className="relative">
-                      <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.jobNumber || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Job Number</Label>
+                    <div className="font-medium">
+                      {job.jobNumber || ''}
                     </div>
                   </div>
 
-                  <div className="space-y-2 w-full">
-                    <Label>Bid Number</Label>
-                    <div className="relative">
-                      <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.bidNumber || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Bid Number</Label>
+                    <div className="font-medium">
+                      {job.bidNumber || ''}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
-                    <Label>Project Status</Label>
-                    <div className="relative">
-                      <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.projectStatus || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Project Status</Label>
+                    <div className="font-medium">
+                      {job.projectStatus || ''}
                     </div>
                   </div>
 
-                  <div className="space-y-2 w-full">
-                    <Label>Billing Status</Label>
-                    <div className="relative">
-                      <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.billingStatus || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Billing Status</Label>
+                    <div className="font-medium">
+                      {job.billingStatus || ''}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Contract Number</Label>
-                  <div className="relative">
-                    <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={job.contractNumber || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-sm text-muted-foreground">Contract Number</Label>
+                  <div className="font-medium">
+                    {job.contractNumber || ''}
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Location</Label>
-                  <div className="relative">
-                    <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={job.location || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-sm text-muted-foreground">Location</Label>
+                  <div className="font-medium">
+                    {job.location || ''}
                   </div>
                 </div>
 
@@ -184,99 +148,57 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                   </div>
                 </div>
 
-                <div className="space-y-2 w-full">
-                  <Label>Contractor</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={job.contractor || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                      readOnly
-                      disabled
-                    />
+                <div className="space-y-1 w-full">
+                  <Label className="text-sm text-muted-foreground">Contractor</Label>
+                  <div className="font-medium">
+                    {job.contractor || ''}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
-                    <Label>Start Date</Label>
-                    <div className="relative">
-                      <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={startDate ? startDate.toLocaleDateString() : ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Start Date</Label>
+                    <div className="font-medium">
+                      {startDate ? startDate.toLocaleDateString() : ''}
                     </div>
                   </div>
 
-                  <div className="space-y-2 w-full">
-                    <Label>End Date</Label>
-                    <div className="relative">
-                      <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={endDate ? endDate.toLocaleDateString() : ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">End Date</Label>
+                    <div className="font-medium">
+                      {endDate ? endDate.toLocaleDateString() : ''}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
-                    <Label>Labor Rate</Label>
-                    <div className="relative">
-                      <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.laborRate || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                        tabIndex={-1}
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Labor Rate</Label>
+                    <div className="font-medium">
+                      {job.laborRate || ''}
                     </div>
                   </div>
 
-                  <div className="space-y-2 w-full">
-                    <Label>Fringe Rate</Label>
-                    <div className="relative">
-                      <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.fringeRate || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                        readOnly
-                        disabled
-                        tabIndex={-1}
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Fringe Rate</Label>
+                    <div className="font-medium">
+                      {job.fringeRate || ''}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
-                    <Label>MPT</Label>
-                    <div className="relative">
-                      <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Checkbox 
-                        checked={job?.mpt === true}
-                        disabled
-                        className="ml-9" 
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">MPT</Label>
+                    <div className="font-medium">
+                      {job?.mpt === true ? 'Yes' : 'No'}
                     </div>
                   </div>
 
-                  <div className="space-y-2 w-full">
-                    <Label>Rental</Label>
-                    <div className="relative">
-                      <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Checkbox 
-                        checked={job?.rental === true}
-                        disabled
-                        className="ml-9" 
-                      />
+                  <div className="space-y-1 w-full">
+                    <Label className="text-sm text-muted-foreground">Rental</Label>
+                    <div className="font-medium">
+                      {job?.rental === true ? 'Yes' : 'No'}
                     </div>
                   </div>
                 </div>

@@ -117,16 +117,16 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             <div className="space-y-5">
               {/* Letting Date */}
               <div className="space-y-1 w-full">
-                <Label className="text-gray-500 text-sm">Letting Date</Label>
-                <div className="text-gray-900 font-medium">
+                <Label className="text-sm text-muted-foreground">Letting Date</Label>
+                <div className="font-medium">
                   {lettingDate ? format(lettingDate, 'MM/dd/yyyy') : ''}
                 </div>
               </div>
 
               {/* Contract Number */}
               <div className="space-y-1 w-full">
-                <Label className="text-gray-500 text-sm">Contract Number</Label>
-                <div className="text-gray-900 font-medium">
+                <Label className="text-sm text-muted-foreground">Contract Number</Label>
+                <div className="font-medium">
                   {formatValue(bid?.originalContractNumber)}
                 </div>
               </div>
@@ -134,15 +134,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Contractor & Subcontractor */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Contractor</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Contractor</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.contractor)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Subcontractor</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Subcontractor</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.subcontractor)}
                   </div>
                 </div>
@@ -150,8 +150,8 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
               {/* Owner */}
               <div className="space-y-1 w-full">
-                <Label className="text-gray-500 text-sm">Owner</Label>
-                <div className="text-gray-900 font-medium">
+                <Label className="text-sm text-muted-foreground">Owner</Label>
+                <div className="font-medium">
                   {formatValue(bid?.owner)}
                 </div>
               </div>
@@ -159,15 +159,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* County & Branch */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">County</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">County</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.county)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Branch</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Branch</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.branch)}
                   </div>
                 </div>
@@ -176,15 +176,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Estimator & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Estimator</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Estimator</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.estimator)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Status</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.status)}
                   </div>
                 </div>
@@ -192,8 +192,8 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
               {/* Division */}
               <div className="space-y-1 w-full">
-                <Label className="text-gray-500 text-sm">Division</Label>
-                <div className="text-gray-900 font-medium">
+                <Label className="text-sm text-muted-foreground">Division</Label>
+                <div className="font-medium">
                   {formatValue(bid?.division)}
                 </div>
               </div>
@@ -201,15 +201,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Start Date & End Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Start Date</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Start Date</Label>
+                  <div className="font-medium">
                     {startDate ? format(startDate, 'MM/dd/yyyy') : ''}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">End Date</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">End Date</Label>
+                  <div className="font-medium">
                     {endDate ? format(endDate, 'MM/dd/yyyy') : ''}
                   </div>
                 </div>
@@ -218,15 +218,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* Project Days & Total Hours */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Project Days</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Project Days</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.projectDays)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Total Hours</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Total Hours</Label>
+                  <div className="font-medium">
                     {formatValue(bid?.totalHours)}
                   </div>
                 </div>
@@ -235,15 +235,15 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               {/* MPT Value & Perm Sign Value */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">MPT Value</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">MPT Value</Label>
+                  <div className="font-medium">
                     {formatCurrency(bid?.mptValue)}
                   </div>
                 </div>
 
                 <div className="space-y-1 w-full">
-                  <Label className="text-gray-500 text-sm">Perm Sign Value</Label>
-                  <div className="text-gray-900 font-medium">
+                  <Label className="text-sm text-muted-foreground">Perm Sign Value</Label>
+                  <div className="font-medium">
                     {formatCurrency(bid?.permSignValue)}
                   </div>
                 </div>
@@ -251,8 +251,8 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
               {/* Rental Value */}
               <div className="space-y-1 w-full">
-                <Label className="text-gray-500 text-sm">Rental Value</Label>
-                <div className="text-gray-900 font-medium">
+                <Label className="text-sm text-muted-foreground">Rental Value</Label>
+                <div className="font-medium">
                   {formatCurrency(bid?.rentalValue)}
                 </div>
               </div>
