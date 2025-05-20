@@ -149,11 +149,6 @@ export async function getEstimateData(startDate?: string, endDate?: string): Pro
 // Get the top 6 card metrics
 async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidMetrics> {
     try {
-        // Create date filter condition for admin_data_entries
-        const dateFilter = startDate && endDate
-            ? `and ad.bid_date between '${startDate}'::date and '${endDate}'::date`
-            : '';
-
         // 1. Total bids (excluding drafts)
         const { count: totalBids, error: totalBidsError } = await supabase
             .from('bid_estimates')
@@ -173,100 +168,147 @@ async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidM
         // 3. Calculate win/loss ratio
         const winLossRatio = totalBids ? ((wonJobs || 0) / totalBids) * 100 : 0;
 
-        // 4. Get total revenue from won bid items
-        // This query aggregates all contract values from won_bid_items associated with jobs with won estimates
-        const { data: revenueData, error: revenueError } = await supabase.rpc('calculate_total_revenue', {
-            start_date: startDate,
-            end_date: endDate
-        });
+        // 4. Calculate total revenue from all won_bid_items
+        const { data: wonBidItems, error: wonBidItemsError } = await supabase
+            .from('won_bid_items')
+            .select(`
+                contract_value,
+                quantity,
+                job:jobs(
+                    id,
+                    estimate:bid_estimates(
+                        id,
+                        status
+                    )
+                )
+            `)
+            .eq('job.estimate.status', 'WON');
 
-        if (revenueError) {
-            console.error('Error getting revenue, using fallback query:', revenueError);
+        if (wonBidItemsError) throw wonBidItemsError;
 
-            // Fallback raw SQL query if the RPC doesn't exist yet
-            const { data: fallbackRevenueData, error: fallbackError } = await supabase
-                .from('won_bid_items')
-                .select(`
-          contract_value,
-          job:jobs(
-            estimate:bid_estimates(status),
-            job_id:id
-          )
-        `)
-                .eq('job.estimate.status', 'WON');
+        // Calculate total revenue from won bid items (contract_value * quantity)
+        const totalRevenue = wonBidItems?.reduce((sum, item) => {
+            const quantity = item.quantity || 1;
+            return sum + ((item.contract_value || 0) * quantity);
+        }, 0) || 0;
 
-            if (fallbackError) throw fallbackError;
+        // 5. Calculate MPT specific revenue and gross margin
+        // 5a. Get all won_bid_items with MPT grouping
+        const { data: mptBidItems, error: mptBidItemsError } = await supabase
+            .from('won_bid_items')
+            .select(`
+                id,
+                contract_value,
+                quantity,
+                job_id,
+                bid_item:bid_item_numbers(
+                    id,
+                    grouping
+                ),
+                job:jobs(
+                    id,
+                    estimate_id,
+                    estimate:bid_estimates(
+                        id,
+                        status
+                    )
+                )
+            `)
+            .eq('job.estimate.status', 'WON');
 
-            // Calculate total revenue from the fallback data
-            const totalRevenue = fallbackRevenueData?.reduce((sum, item) => {
-                return sum + (item.contract_value || 0);
-            }, 0) || 0;
+        if (mptBidItemsError) throw mptBidItemsError;
 
-            // 5. Calculate MPT gross margin
-            // For this, we'll need to get both revenue and cost data for MPT items
-            const { data: mptData, error: mptError } = await supabase
+        // Filter for MPT items only and calculate total MPT revenue
+        const mptItems = mptBidItems?.filter(item => 
+            item.bid_item && 
+            item.bid_item.length > 0 && 
+            item.bid_item[0].grouping === 'MPT'
+        ) || [];
+
+        const mptRevenue = mptItems.reduce((sum, item) => {
+            const quantity = item.quantity || 1;
+            return sum + ((item.contract_value || 0) * quantity);
+        }, 0);
+
+        // 5b. Get cost information from MPT rental entries
+        const jobIds = mptItems.map(item => item.job_id).filter(Boolean);
+        const estimateIds = mptItems
+            .map(item => item.job[0].estimate_id)
+            .filter(Boolean);
+
+        // Get cost data from mpt_rental_entries
+        const { data: mptRentalEntries, error: mptRentalError } = await supabase
+            .from('mpt_rental_entries')
+            .select(`
+                id,
+                cost,
+                revenue,
+                bid_estimate_id
+            `)
+            .in('bid_estimate_id', estimateIds);
+
+        if (mptRentalError) throw mptRentalError;
+
+        // Calculate total MPT cost and gross margin
+        const mptCost = mptRentalEntries?.reduce((sum, entry) => {
+            return sum + (entry.cost || 0);
+        }, 0) || 0;
+
+        // Calculate MPT gross margin
+        const mptGrossMargin = mptRevenue > 0 ? ((mptRevenue - mptCost) / mptRevenue) * 100 : 0;
+
+        // If there's no MPT cost data from rental entries, use an alternative approach
+        if (mptCost === 0 && mptRevenue > 0) {
+            // Get won estimates that have MPT items
+            const { data: mptEstimates, error: mptEstimatesError } = await supabase
                 .from('bid_estimates')
                 .select(`
-          id,
-          total_cost,
-          total_gross_profit,
-          jobs(
-            id,
-            won_bid_items(
-              contract_value,
-              bid_item:bid_item_numbers(
-                grouping
-              )
-            )
-          )
-        `)
-                .eq('status', 'WON')
-                .contains('jobs.won_bid_items.bid_item.grouping', 'MPT');
+                    id,
+                    total_cost,
+                    total_revenue,
+                    total_gross_profit
+                `)
+                .in('id', estimateIds)
+                .eq('status', 'WON');
 
-            if (mptError) throw mptError;
+            if (mptEstimatesError) throw mptEstimatesError;
 
-            // Calculate MPT gross margin
-            let mptRevenue = 0;
-            let mptCost = 0;
+            // Calculate an approximate cost based on the estimates' cost-to-revenue ratio
+            let calculatedMptCost = 0;
+            let totalEstimateRevenue = 0;
+            let totalEstimateCost = 0;
 
-            mptData?.forEach(estimate => {
-                if (!estimate.jobs || !estimate.jobs.length) return;
-
-                estimate.jobs.forEach(job => {
-                    if (!job.won_bid_items || !job.won_bid_items.length) return;
-
-                    job.won_bid_items.forEach(item => {
-                        if (item.bid_item[0].grouping === 'MPT') {
-                            mptRevenue += (item.contract_value || 0);
-
-                            // Calculate proportional cost using the estimate's total cost/revenue ratio
-                            if (estimate.total_cost && estimate.total_gross_profit) {
-                                const totalEstimateRevenue = estimate.total_cost + estimate.total_gross_profit;
-                                const costRatio = estimate.total_cost / totalEstimateRevenue;
-                                mptCost += (item.contract_value || 0) * costRatio;
-                            }
-                        }
-                    });
-                });
+            mptEstimates?.forEach(estimate => {
+                if (estimate.total_revenue && estimate.total_cost) {
+                    totalEstimateRevenue += estimate.total_revenue;
+                    totalEstimateCost += estimate.total_cost;
+                }
             });
 
-            const mptGrossMargin = mptRevenue ? ((mptRevenue - mptCost) / mptRevenue) * 100 : 0;
-
-            return {
-                total_bids: totalBids || 0,
-                win_loss_ratio: winLossRatio,
-                total_revenue: totalRevenue,
-                mpt_gross_margin: mptGrossMargin,
-                total_won_jobs: wonJobs || 0
-            };
+            // If we have valid estimate data, calculate the cost ratio and apply to MPT revenue
+            if (totalEstimateRevenue > 0) {
+                const avgCostRatio = totalEstimateCost / totalEstimateRevenue;
+                calculatedMptCost = mptRevenue * avgCostRatio;
+                
+                // Recalculate gross margin with the calculated cost
+                const calculatedGrossMargin = ((mptRevenue - calculatedMptCost) / mptRevenue) * 100;
+                
+                return {
+                    total_bids: totalBids || 0,
+                    win_loss_ratio: winLossRatio,
+                    total_revenue: totalRevenue,
+                    mpt_gross_margin: calculatedGrossMargin,
+                    total_won_jobs: wonJobs || 0
+                };
+            }
         }
 
-        // If the RPC exists and returned data, use it
+        // Return the calculated metrics
         return {
             total_bids: totalBids || 0,
             win_loss_ratio: winLossRatio,
-            total_revenue: revenueData?.total_revenue || 0,
-            mpt_gross_margin: revenueData?.mpt_gross_margin || 0,
+            total_revenue: totalRevenue,
+            mpt_gross_margin: mptGrossMargin,
             total_won_jobs: wonJobs || 0
         };
     } catch (err) {
