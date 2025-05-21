@@ -115,6 +115,11 @@ export const data = {
       url: "/contracts",
       icon: IconUsers,
     },
+    {
+      title: "Sign Order",
+      url: "/sign-order",
+      icon: IconUsers,
+    }
   ] as NavItem[],
   navClouds: [
     {
