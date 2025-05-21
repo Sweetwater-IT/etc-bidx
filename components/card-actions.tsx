@@ -16,9 +16,11 @@ interface CardActionsProps {
   hideCalendar?: boolean
   goUpActions?: boolean
   importType?: 'available-jobs' | 'active-bids'
+  hideImportExport? : boolean
 }
 
-export function CardActions({ onCreateClick, onImportSuccess, createButtonLabel = "Create Open Bid", hideCalendar = false, goUpActions = false, importType = 'available-jobs' }: CardActionsProps) {
+export function CardActions({ onCreateClick, onImportSuccess, createButtonLabel = "Create Open Bid", hideCalendar = false, goUpActions = false, importType = 'available-jobs',
+hideImportExport }: CardActionsProps) {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
     to: new Date(2024, 1, 30),
@@ -54,7 +56,7 @@ export function CardActions({ onCreateClick, onImportSuccess, createButtonLabel 
             </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+      {!hideImportExport && <><Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
           <IconUpload className="h-4 w-4 mr-2" />
           Import
         </Button>
@@ -67,7 +69,7 @@ export function CardActions({ onCreateClick, onImportSuccess, createButtonLabel 
         <Button variant="outline" size="sm">
           <IconDownload className="h-4 w-4 mr-2" />
           Export
-        </Button>
+        </Button></>}
         <Button size="sm" onClick={onCreateClick}>
           <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
           {createButtonLabel}

@@ -12,21 +12,22 @@ import { Button } from "@/components/ui/button";
 import { useLoading } from "@/hooks/use-loading";
 
 const QUOTES_COLUMNS = [
-  { key: "contract_number", title: "Contract #" },
-  { key: "status", title: "Status" },
-  { key: "date_sent", title: "Date Sent" },
-  { key: "customer_name", title: "Customer" },
-  { key: "point_of_contact", title: "Contact" },
-  { key: "total_signs", title: "Signs" },
-  { key: "county", title: "County" },
-  { key: "created_at", title: "Created" },
-  { key: "has_attachments", title: "Attachments" }
+  { key: "requestor", title: "Requestor" },
+  { key: "customer", title: "Customer" },
+  { key: "order_date", title: "Order date" },
+  { key: "need_date", title: "Need date" },
+  { key: "job_type", title: "Job type" },
+  { key: "sale", title: "Sale" },
+  { key: "rental", title: "Rental" },
+  { key: "job_number", title: "Job number" },
 ];
 
 const SEGMENTS = [
   { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Sent", value: "sent" },
+  { label: "Not started", value: "not-started" },
+  { label: "In process", value: "in-process" },
+  { label: "On order", value: "on-order" },
+  { label: "Complete", value: "complete" },
 ];
 
 export default function QuotesPage() {
@@ -138,10 +139,11 @@ export default function QuotesPage() {
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="flex items-center justify-between px-0 -mb-3">
                 <CardActions
-                  createButtonLabel="Create Quote"
-                  onCreateClick={() => router.push('/quotes/create')}
+                  createButtonLabel="Create Sign Order"
+                  onCreateClick={() => router.push('/sign-order/create')}
                   hideCalendar
                   goUpActions
+                  hideImportExport
                 />
               </div>
 
