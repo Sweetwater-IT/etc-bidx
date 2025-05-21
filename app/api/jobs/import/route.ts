@@ -60,7 +60,6 @@ export async function POST(request: Request) {
           }
         } else {
           newJobs.push(job);
-          newJobs.push(job);
           updatedCount.new++;
         }
       }
@@ -182,7 +181,6 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   
   let parsedDueDate = parseExcelDate(dueDate);
   let parsedLettingDate = parseExcelDate(lettingDate);
-  const parsedEntryDate = parseExcelDate(entryDate);
   
   if (parsedLettingDate && !parsedDueDate) {
     const lettingDateTime = new Date(parsedLettingDate);
@@ -199,19 +197,17 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   }
   
   else if (parsedDueDate && parsedLettingDate) {
+    
     const dueDateTime = new Date(parsedDueDate).getTime();
     const lettingDateTime = new Date(parsedLettingDate).getTime();
     
-    const expectedDueDate = new Date(parsedLettingDate);
-    expectedDueDate.setDate(expectedDueDate.getDate() - 2);
-    const expectedDueDateStr = expectedDueDate.toISOString().split('T')[0];
-    
-    if (parsedDueDate !== expectedDueDateStr) {
-      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is not 2 days before letting date (${parsedLettingDate}). Adjusting due date.`);
-      errors.push(`Row ${rowIndex + 1}: Due date adjusted to be 2 days before letting date.`);
-      parsedDueDate = expectedDueDateStr;
+    if (dueDateTime > lettingDateTime) {
+      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is after letting date (${parsedLettingDate}). This is invalid.`);
+      errors.push(`Row ${rowIndex + 1}: Due date is after letting date. This may cause issues.`);
     }
   }
+  
+  const parsedEntryDate = parseExcelDate(entryDate);
   
   const mappedJob: AvailableJobInsert = {
     contract_number: contractNumber || '',

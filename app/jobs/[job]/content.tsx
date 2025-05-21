@@ -271,6 +271,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 
                 const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
                 
+                const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+                
                 return {
                     id: job.id,
                     contractNumber: contractNumberValue,
@@ -281,6 +283,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     dueDate: dueDateFormatted,
                     county: countyValue,
                     branch: branchValue,
+                    dbe: dbeValue,
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
                     location: locationValue,
                     platform: platformValue,

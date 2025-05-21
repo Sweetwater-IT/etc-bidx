@@ -138,6 +138,19 @@ function formatCellValue(value: any, key: string) {
         }
         return value;
     }
+    
+    if (key === "dbe" || key === "dbePercentage") {
+        if (typeof value === "string" && value.endsWith("%")) {
+            return value;
+        }
+        
+        const numValue = typeof value === "string" ? parseFloat(value) : value;
+        
+        if (!isNaN(numValue)) {
+            return `${numValue % 1 === 0 ? numValue.toFixed(0) : numValue}%`;
+        }
+        return value;
+    }
 
     // Handle status badges
     if (key === "status") {
