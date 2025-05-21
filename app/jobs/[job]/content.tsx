@@ -295,7 +295,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         secondary: branchValue
                     },
                     countyValue: countyValue,
-                    branch: branchValue
+                    branch: branchValue,
                     dbe: dbeValue,
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
                     location: locationValue,
