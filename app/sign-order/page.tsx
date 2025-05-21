@@ -8,7 +8,6 @@ import { CardActions } from "@/components/card-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
-import { Button } from "@/components/ui/button";
 import { useLoading } from "@/hooks/use-loading";
 
 const QUOTES_COLUMNS = [
@@ -36,9 +35,10 @@ export default function QuotesPage() {
   const [activeSegment, setActiveSegment] = useState("all");
   const [quoteCounts, setQuoteCounts] = useState({
     all: 0,
-    not_sent: 0,
-    sent: 0,
-    accepted: 0
+    not_started: 0,
+    in_process: 0,
+    on_order: 0,
+    complete: 0
   });
   
   // Pagination state
@@ -60,11 +60,11 @@ export default function QuotesPage() {
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-      params.append("orderBy", "quote_created_at");
+      params.append("orderBy", "order_date");
       params.append("ascending", "false");
-      params.append('detailed', "true");
+      params.append("detailed", "true");
 
-      const response = await fetch(`/api/quotes?${params.toString()}`);
+      const response = await fetch(`/api/sign-orders?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
@@ -86,7 +86,16 @@ export default function QuotesPage() {
     try {
       const response = await fetch('/api/quotes?counts=true');
       const data = await response.json();
-      setQuoteCounts(data);
+      
+      if (data) {
+        setQuoteCounts({
+          all: data.all || 0,
+          not_started: data.not_started || 0,
+          in_process: data.in_process || 0,
+          on_order: data.on_order || 0,
+          complete: data.complete || 0
+        });
+      }
     } catch (error) {
       console.error("Error fetching quote counts:", error);
     }

@@ -12,15 +12,17 @@ interface PrimarySignItemProps {
     primarySign: PrimarySign;
     secondarySigns: SecondarySign[];
     currentPhase: number;
+    defaultConfiguring? : boolean
 }
 
 const PrimarySignItem = ({
     primarySign,
     secondarySigns,
     currentPhase,
+    defaultConfiguring = false
 }: PrimarySignItemProps) => {
     const { dispatch, mptRental } = useEstimate();
-    const [isConfiguring, setIsConfiguring] = useState(false);
+    const [isConfiguring, setIsConfiguring] = useState(defaultConfiguring);
 
     const handleEditSign = () => {
         setIsConfiguring(true);
