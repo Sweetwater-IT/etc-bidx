@@ -401,7 +401,7 @@ const AdminInformationStep1 = ({
                                 <CommandItem
                                   key={county.id}
                                   value={county.name}
-                                  onSelect={() => handleCountyChange(county.name)}
+                                  onSelect={() => handleCountyChange(county.id.toString())}
                                 >
                                   <Check
                                     className={cn(
@@ -501,13 +501,13 @@ const AdminInformationStep1 = ({
                         className="flex flex-col space-y-1"
                       >
                         {field.options?.map((option) => (
-                          <div key={option.value} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option.value} id={`${field.name}-${option.value}`} />
+                          <div key={option} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`${field.name}-${option.value}`} />
                             <Label
-                              htmlFor={`${field.name}-${option.value}`}
+                              htmlFor={`${field.name}-${option}`}
                               className="text-sm font-normal"
                             >
-                              {option.label}
+                              {option}
                             </Label>
                           </div>
                         ))}
