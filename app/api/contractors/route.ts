@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     
     // const filterDeleted = searchParams.get('filterDeleted') !== 'false';
     
-    let query = supabase
+    const query = supabase
       .from('contractors')
       .select(`
         id,
