@@ -123,9 +123,20 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
 
   const objKeys = Object.keys(obj);
   for (const possibleKey of possibleKeys) {
-    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_-]/g, '');
+    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
     for (const objKey of objKeys) {
-      if (objKey.toLowerCase().replace(/[\s_-]/g, '') === lowerPossibleKey) {
+      const normalizedObjKey = objKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+      if (normalizedObjKey === lowerPossibleKey) {
+        return obj[objKey];
+      }
+    }
+  }
+
+  for (const possibleKey of possibleKeys) {
+    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+    for (const objKey of objKeys) {
+      const normalizedObjKey = objKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+      if (normalizedObjKey.includes(lowerPossibleKey) || lowerPossibleKey.includes(normalizedObjKey)) {
         return obj[objKey];
       }
     }
@@ -142,14 +153,22 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   
   const status = findFieldValue(job, ['Status', 'Bid Status']);
   const branch = findFieldValue(job, ['Branch', 'Office']);
-  const contractNumber = findFieldValue(job, ['Contract Number', 'Contract #', 'Contract']);
-  const county = findFieldValue(job, ['County']);
+  
+  const contractNumber = findFieldValue(job, [
+    'Project',
+    'Contract Number', 'Contract #', 'Contract', 'ContractNumber', 'Contract_Number',
+    'Contract No', 'Contract No.', 'ContractNo', 'Job Number', 'Job #', 'JobNumber', 'Project Number', 'ProjectNumber'
+  ]);
+  
+  const county = findFieldValue(job, ['County', 'Count']);
+  
   const dueDate = findFieldValue(job, ['Due Date', 'Bid Due Date', 'Due']);
-  const lettingDate = findFieldValue(job, ['Letting Date', 'Letting']);
+  
+  const lettingDate = findFieldValue(job, ['Let Date', 'Letting Date', 'Letting']);
   const entryDate = findFieldValue(job, ['Entry Date', 'Date Added', 'Created Date']);
   const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);
   const owner = findFieldValue(job, ['Owner', 'Client', 'Agency']);
-  const platform = findFieldValue(job, ['Platform', 'Bid Platform', 'Source']);
+  const platform = 'ECMS';
   const requestor = findFieldValue(job, ['Requestor', 'Estimator', 'Contact']);
   const mpt = findFieldValue(job, ['MPT', 'Maintenance and Protection of Traffic']);
   const flagging = findFieldValue(job, ['Flagging', 'Traffic Control']);
@@ -165,19 +184,33 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   let parsedLettingDate = parseExcelDate(lettingDate);
   const parsedEntryDate = parseExcelDate(entryDate);
   
-  if (parsedDueDate && parsedLettingDate) {
+  if (parsedLettingDate && !parsedDueDate) {
+    const lettingDateTime = new Date(parsedLettingDate);
+    const dueDatetime = new Date(lettingDateTime);
+    dueDatetime.setDate(lettingDateTime.getDate() - 2);
+    parsedDueDate = dueDatetime.toISOString().split('T')[0];
+  }
+  
+  else if (parsedDueDate && !parsedLettingDate) {
+    const dueDatetime = new Date(parsedDueDate);
+    const lettingDateTime = new Date(dueDatetime);
+    lettingDateTime.setDate(dueDatetime.getDate() + 2);
+    parsedLettingDate = lettingDateTime.toISOString().split('T')[0];
+  }
+  
+  else if (parsedDueDate && parsedLettingDate) {
     const dueDateTime = new Date(parsedDueDate).getTime();
     const lettingDateTime = new Date(parsedLettingDate).getTime();
     
-    if (dueDateTime > lettingDateTime) {
-      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is after letting date (${parsedLettingDate}). Setting due date equal to letting date.`);
-      errors.push(`Row ${rowIndex + 1}: Due date is after letting date. Adjusted due date to match letting date.`);
-      parsedDueDate = parsedLettingDate;
+    const expectedDueDate = new Date(parsedLettingDate);
+    expectedDueDate.setDate(expectedDueDate.getDate() - 2);
+    const expectedDueDateStr = expectedDueDate.toISOString().split('T')[0];
+    
+    if (parsedDueDate !== expectedDueDateStr) {
+      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is not 2 days before letting date (${parsedLettingDate}). Adjusting due date.`);
+      errors.push(`Row ${rowIndex + 1}: Due date adjusted to be 2 days before letting date.`);
+      parsedDueDate = expectedDueDateStr;
     }
-  } else if (parsedDueDate && !parsedLettingDate) {
-    parsedLettingDate = parsedDueDate;
-  } else if (!parsedDueDate && parsedLettingDate) {
-    parsedDueDate = parsedLettingDate;
   }
   
   const mappedJob: AvailableJobInsert = {
@@ -202,7 +235,17 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   };
 
   if (!mappedJob.contract_number) {
-    throw new Error('Contract number is required');
+    if (mappedJob.owner && mappedJob.owner !== 'Unknown') {
+      const ownerPrefix = mappedJob.owner.substring(0, 3).toUpperCase();
+      const fallbackNumber = `TEMP-${ownerPrefix}-${new Date().getFullYear()}-${rowIndex + 1}`;
+      mappedJob.contract_number = fallbackNumber;
+      errors.push(`Row ${rowIndex + 1}: Contract number missing, created temporary number: ${fallbackNumber}`);
+    } else {
+      const timestamp = new Date().getTime();
+      const fallbackNumber = `TEMP-${timestamp}-${rowIndex + 1}`;
+      mappedJob.contract_number = fallbackNumber;
+      errors.push(`Row ${rowIndex + 1}: Contract number missing, created temporary number: ${fallbackNumber}`);
+    }
   }
   
   if (!mappedJob.requestor) {
