@@ -89,6 +89,7 @@ export interface DynamicSignInfo {
   isCustom : boolean;
   designation: string;
   description: string;
+  substrate?: 'plastic' | 'aluminum'
 }
 export interface PrimarySign extends DynamicSignInfo {
 	associatedStructure: AssociatedSignStructures;

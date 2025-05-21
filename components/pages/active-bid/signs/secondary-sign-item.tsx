@@ -10,12 +10,14 @@ interface SecondarySignItemProps {
   secondarySign: SecondarySign;
   primarySign: PrimarySign;
   currentPhase: number;
+  showSubstrate?: boolean
 }
 
 const SecondarySignItem = ({ 
   secondarySign, 
   primarySign,
   currentPhase,
+  showSubstrate = false
 }: SecondarySignItemProps) => {
   const { dispatch } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -39,6 +41,7 @@ const SecondarySignItem = ({
           primarySign={primarySign}
           currentPhase={currentPhase}
           setIsConfiguring={setIsConfiguring}
+          showSubstrate={showSubstrate}
         />
       ) : (
         <div className="flex justify-between items-center">

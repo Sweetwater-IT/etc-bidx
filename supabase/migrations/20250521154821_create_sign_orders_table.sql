@@ -13,3 +13,6 @@ CREATE TABLE IF NOT EXISTS sign_orders (
 );
 
 ALTER TABLE sign_orders ADD Column status VARCHAR(55);
+ALTER TABLE sign_orders drop column job_type;
+ALTER TABLE sign_orders ADD COLUMN start_date VARCHAR(55);
+ALTER TABLE sign_orders ADD COLUMN end_date VARCHAR(55);

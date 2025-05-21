@@ -15,7 +15,6 @@ const QUOTES_COLUMNS = [
   { key: "customer", title: "Customer" },
   { key: "order_date", title: "Order date" },
   { key: "need_date", title: "Need date" },
-  { key: "job_type", title: "Job type" },
   { key: "sale", title: "Sale" },
   { key: "rental", title: "Rental" },
   { key: "job_number", title: "Job number" },
@@ -82,24 +81,24 @@ export default function QuotesPage() {
   };
 
   // Fetch quote counts
-  const fetchQuoteCounts = async () => {
-    try {
-      const response = await fetch('/api/quotes?counts=true');
-      const data = await response.json();
+  // const fetchQuoteCounts = async () => {
+  //   try {
+  //     const response = await fetch('/api/quotes?counts=true');
+  //     const data = await response.json();
       
-      if (data) {
-        setQuoteCounts({
-          all: data.all || 0,
-          not_started: data.not_started || 0,
-          in_process: data.in_process || 0,
-          on_order: data.on_order || 0,
-          complete: data.complete || 0
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching quote counts:", error);
-    }
-  };
+  //     if (data) {
+  //       setQuoteCounts({
+  //         all: data.all || 0,
+  //         not_started: data.not_started || 0,
+  //         in_process: data.in_process || 0,
+  //         on_order: data.on_order || 0,
+  //         complete: data.complete || 0
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching quote counts:", error);
+  //   }
+  // };
 
   // Handle segment change
   const handleSegmentChange = (value: string) => {
@@ -123,7 +122,6 @@ export default function QuotesPage() {
 
   // Initial data fetch
   useEffect(() => {
-    fetchQuoteCounts();
     fetchQuotes();
   }, []);
 
