@@ -8,9 +8,10 @@ import { Plus } from "lucide-react";
 
 interface SignListProps {
   currentPhase: number;
+  defaultConfiguring? : boolean
 }
 
-const SignList = ({ currentPhase }: SignListProps) => {
+const SignList = ({ currentPhase, defaultConfiguring = false }: SignListProps) => {
   const { mptRental } = useEstimate();
   const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>([]);
 
@@ -56,6 +57,7 @@ const SignList = ({ currentPhase }: SignListProps) => {
           primarySign={sign}
           secondarySigns={getSecondarySignsForPrimary(sign.id)}
           currentPhase={currentPhase}
+          defaultConfiguring={defaultConfiguring}
         />
       ))}
     </div>

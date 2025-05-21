@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { sortSignsBySecondary } from "@/lib/sortSignsBySecondary";
 
 interface SignSummaryAccordionProps {
   currentStep: number;
@@ -22,7 +23,7 @@ const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordio
     mptRental.phases && 
     mptRental.phases.length > 0 && 
     mptRental.phases[currentPhase].signs 
-      ? mptRental.phases[currentPhase].signs 
+      ? sortSignsBySecondary(mptRental.phases[currentPhase].signs)
       : [];
 
   useEffect(() => {
@@ -59,7 +60,7 @@ const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordio
                 </div>
               ) : (
                 signs.map((sign) => (
-                  <div key={sign.id} className="space-y-1">
+                  <div key={sign.id} className={`space-y-1 ${Object.hasOwn(sign, 'primarySignId') ? 'ml-4' : ''}`}>
                     <div className="font-medium">
                       {sign.designation} 
                       {sign.description && ` - ${sign.description}`}
