@@ -711,6 +711,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         console.log('Marking job as bid job:', job);
 
+        // Pass the job ID and source as query parameters
+        // The API will fetch the complete job data using this ID
         const queryParams = new URLSearchParams({
             jobId: job.id.toString(),
             source: 'available-jobs'

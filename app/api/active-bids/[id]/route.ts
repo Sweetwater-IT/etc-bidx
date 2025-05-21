@@ -17,11 +17,26 @@ export async function GET(
       );
     }
     
-    const { data, error } = await supabase
+    // First try to fetch from bid_estimates (for existing bids)
+    let { data, error } = await supabase
       .from('bid_estimates')
       .select('*')
       .eq('id', id)
       .single();
+    
+    // If not found in bid_estimates, try to fetch from available_jobs (for new bids from jobs)
+    if (error && error.code === 'PGRST116') {
+      const { data: jobData, error: jobError } = await supabase
+        .from('available_jobs')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (!jobError) {
+        data = jobData;
+        error = null;
+      }
+    }
     
     if (error) {
       return NextResponse.json(
