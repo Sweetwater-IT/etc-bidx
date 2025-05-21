@@ -36,16 +36,18 @@ interface SecondarySignFormProps {
   primarySign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
+  showSubstrate?: boolean
 }
 
-const SecondarySignForm = ({ 
-  sign, 
+const SecondarySignForm = ({
+  sign,
   primarySign,
-  currentPhase, 
+  currentPhase,
   setIsConfiguring,
+  showSubstrate
 }: SecondarySignFormProps) => {
   const { dispatch } = useEstimate();
-  const [localSign, setLocalSign] = useState<SecondarySign>({...sign});
+  const [localSign, setLocalSign] = useState<SecondarySign>({ ...sign });
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
   const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -150,7 +152,7 @@ const SecondarySignForm = ({
     // Get default dimension from the selected designation
     const defaultDimension =
       selectedDesignation.dimensions &&
-      selectedDesignation.dimensions.length > 0
+        selectedDesignation.dimensions.length > 0
         ? selectedDesignation.dimensions[0]
         : { width: 0, height: 0 };
 
@@ -171,7 +173,7 @@ const SecondarySignForm = ({
       ...localSign,
       quantity: primarySign.quantity
     };
-    
+
     // Update each field of the secondary sign using UPDATE_MPT_SIGN
     Object.entries(signToSave).forEach(([key, value]) => {
       if (key !== 'id' && key !== 'primarySignId') {
@@ -186,7 +188,7 @@ const SecondarySignForm = ({
         });
       }
     });
-    
+
     setIsConfiguring(false);
   };
 
@@ -228,107 +230,124 @@ const SecondarySignForm = ({
       </div>
 
       <div className="flex items-center gap-2">
-        <Switch 
+        <Switch
           id="custom-sign-secondary"
           checked={isCustom}
           onCheckedChange={(checked) => {
             setIsCustom(checked);
             handleSignUpdate("isCustom", checked);
-          }} 
+          }}
         />
         <Label htmlFor="custom-sign-secondary">Custom Sign</Label>
       </div>
 
-      <div className="w-full">
-        <Label className="text-base font-semibold mb-2.5 block">
-          Designation
-        </Label>
-        {isCustom ? (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                Designation Code
-              </Label>
-              <Input
-                value={localSign.designation || ""}
-                onChange={(e) => 
-                  handleSignUpdate("designation", e.target.value)
-                }
-                placeholder="Enter custom designation"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                Description
-              </Label>
-              <Input
-                value={localSign.description || ""}
-                onChange={(e) => 
-                  handleSignUpdate("description", e.target.value)
-                }
-                placeholder="Enter description"
-              />
-            </div>
-          </div>
-        ) : (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full sm:w-[300px] justify-between"
-              >
-                <span className="truncate">
-                  {localSign.designation || "Select designation..."}
-                </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-              <Command>
-                <CommandInput
-                  placeholder="Search designation..."
-                  onValueChange={filterDesignations}
+      <div className="w-full flex">
+        <div className="w-1/2">
+          <Label className="text-base font-semibold mb-2.5 block">
+            Designation
+          </Label>
+          {isCustom ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Designation Code
+                </Label>
+                <Input
+                  value={localSign.designation || ""}
+                  onChange={(e) =>
+                    handleSignUpdate("designation", e.target.value)
+                  }
+                  placeholder="Enter custom designation"
                 />
-                <CommandEmpty>
-                  No designation found.
-                </CommandEmpty>
-                <CommandList>
-                  <CommandGroup>
-                    {filteredDesignations.map((item) => (
-                      <CommandItem
-                        key={item.designation}
-                        value={item.designation}
-                        onSelect={() => handleDesignationSelect(item.designation)}
-                      >
-                        <div className="flex items-center w-full">
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              localSign.designation === item.designation
-                                ? "opacity-100"
-                                : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {item.designation}
-                            </span>
-                            {item.description && (
-                              <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                {item.description}
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Description
+                </Label>
+                <Input
+                  value={localSign.description || ""}
+                  onChange={(e) =>
+                    handleSignUpdate("description", e.target.value)
+                  }
+                  placeholder="Enter description"
+                />
+              </div>
+            </div>
+          ) : (
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full sm:w-[300px] justify-between"
+                >
+                  <span className="truncate">
+                    {localSign.designation || "Select designation..."}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search designation..."
+                    onValueChange={filterDesignations}
+                  />
+                  <CommandEmpty>
+                    No designation found.
+                  </CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      {filteredDesignations.map((item) => (
+                        <CommandItem
+                          key={item.designation}
+                          value={item.designation}
+                          onSelect={() => handleDesignationSelect(item.designation)}
+                        >
+                          <div className="flex items-center w-full">
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                localSign.designation === item.designation
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {item.designation}
                               </span>
-                            )}
+                              {item.description && (
+                                <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                  {item.description}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+        {showSubstrate && <div className="w-1/2">
+          <Label className="text-base font-semibold mb-2.5 block">
+            Substrate
+          </Label>
+          <Select value={sign.substrate}
+            onValueChange={(value) => dispatch({ type: 'UPDATE_MPT_SIGN', payload: { signId: sign.id, key: 'substrate', phase: currentPhase, value } })}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Select substrate" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='aluminum'>Aluminum</SelectItem>
+              <SelectItem value='plastic'>Plastic</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>}
       </div>
 
       <div className="flex items-center gap-4">
@@ -342,7 +361,7 @@ const SecondarySignForm = ({
                 type="number"
                 value={localSign.width || ""}
                 onChange={(e) => handleSignUpdate(
-                  "width", 
+                  "width",
                   parseFloat(e.target.value) || 0
                 )}
                 min={0}
@@ -357,7 +376,7 @@ const SecondarySignForm = ({
                 type="number"
                 value={localSign.height || ""}
                 onChange={(e) => handleSignUpdate(
-                  "height", 
+                  "height",
                   parseFloat(e.target.value) || 0
                 )}
                 min={0}

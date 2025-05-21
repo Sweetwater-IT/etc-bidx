@@ -27,6 +27,7 @@ export function SignOrderList() {
                 covers: 0,
                 isCustom: false,
                 description: '',
+                substrate: 'aluminum'
             }
         }})
     }

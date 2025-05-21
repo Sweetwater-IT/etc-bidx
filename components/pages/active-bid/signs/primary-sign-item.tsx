@@ -39,7 +39,8 @@ const PrimarySignItem = ({
             quantity: primarySign.quantity, // Only inherit quantity
             sheeting: "HI", // Default sheeting
             isCustom: false,
-            description: ""
+            description: "",
+            substrate: 'aluminum'
         };
 
         // Add the new secondary sign to the context
@@ -122,6 +123,7 @@ const PrimarySignItem = ({
                     sign={primarySign}
                     currentPhase={currentPhase}
                     setIsConfiguring={setIsConfiguring}
+                    showSubstrate={defaultConfiguring}
                 />
             ) : (
                 <div className="flex justify-between items-center">
@@ -168,6 +170,7 @@ const PrimarySignItem = ({
                     secondarySign={secondarySign}
                     primarySign={primarySign}
                     currentPhase={currentPhase}
+                    showSubstrate={defaultConfiguring}
                 />
             ))}
         </div>

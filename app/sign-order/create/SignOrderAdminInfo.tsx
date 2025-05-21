@@ -1,7 +1,7 @@
-// SignOrderAdminInfo.jsx - Modified to lift state up
+// SignOrderAdminInfo.jsx - Modified to lift state up and improved command input
 "use client";
 
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,19 +15,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomers } from "@/hooks/use-customers";
 import { Customer } from "@/types/Customer";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Check, ChevronsUpDown, Briefcase } from "lucide-react";
+import { 
+    Command, 
+    CommandEmpty, 
+    CommandGroup, 
+    CommandInput, 
+    CommandItem,
+    CommandList
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { fetchReferenceData } from "@/lib/api-client";
-
-const JOB_TYPES = [
-    { value: "job_type_1", label: "Job Type 1" },
-    { value: "job_type_2", label: "Job Type 2" },
-    { value: "job_type_3", label: "Job Type 3" },
-];
+import { SignOrderAdminInformation } from "./SignOrderContent";
+import { AutoComplete } from "@/components/ui/autocomplete";
 
 const BRANCHES = [
     { value: "All", label: "All" },
@@ -41,11 +44,10 @@ interface Job {
     branch: string;
 }
 
-// Adding props to receive values and setter functions from parent
-export function SignOrderAdminInfo({ 
+export function SignOrderAdminInfo({
     adminInfo,
     setAdminInfo
-}) {
+}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>> }) {
     const { customers, getCustomers, isLoading } = useCustomers();
 
     // State for local UI management
@@ -53,7 +55,9 @@ export function SignOrderAdminInfo({
     const [openCustomer, setOpenCustomer] = useState<boolean>(false);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allJobs, setAllJobs] = useState<Job[]>([]);
+    const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState<boolean>(false);
+    const [jobSearchInput, setJobSearchInput] = useState<string>("");
 
     // Fetch customers on component mount
     useEffect(() => {
@@ -81,7 +85,9 @@ export function SignOrderAdminInfo({
             const data = await response.json();
 
             if (response.ok) {
-                setAllJobs(data.jobs.filter(job => !!job.job_number) || []);
+                const jobs = data.jobs.filter(job => !!job.job_number) || [];
+                setAllJobs(jobs);
+                setFilteredJobs(jobs);
             } else {
                 console.error('Failed to fetch jobs:', data.error);
                 toast.error(data.error);
@@ -94,16 +100,40 @@ export function SignOrderAdminInfo({
         }
     };
 
-    // Handle branch change - reset job number
+    // Handle branch change - reset job number and filter jobs
     useEffect(() => {
-        if (adminInfo.selectedBranch !== adminInfo.prevBranch) {
-            setAdminInfo({
-                ...adminInfo,
-                jobNumber: '',
-                prevBranch: adminInfo.selectedBranch
-            });
+        setAdminInfo(prev => ({
+            ...prev,
+            jobNumber: '',
+        }));
+        
+        // Filter jobs based on selected branch
+        if (adminInfo.selectedBranch === 'All') {
+            setFilteredJobs(allJobs);
+        } else {
+            setFilteredJobs(allJobs.filter(job => job.branch === adminInfo.selectedBranch));
         }
-    }, [adminInfo.selectedBranch]);
+        
+        setJobSearchInput("");
+    }, [adminInfo.selectedBranch, allJobs]);
+
+    // Handle job search input change
+    const handleJobNumberChange = (value: string) => {
+        // Update the admin info with whatever the user types
+        setAdminInfo(prev => ({ 
+            ...prev, 
+            jobNumber: value 
+        }));
+        
+        // Additionally filter the dropdown options for selection
+        const filtered = allJobs.filter(job => 
+            job.job_number.toLowerCase().includes(value.toLowerCase()) && 
+            (adminInfo.selectedBranch === 'All' || job.branch === adminInfo.selectedBranch)
+        );
+        
+        setFilteredJobs(filtered);
+    };
+
 
     return (
         <div className="rounded-lg border p-6">
@@ -209,54 +239,29 @@ export function SignOrderAdminInfo({
                     </Popover>
                 </div>
 
-                {/* Date Pickers */}
-                <div className="space-y-2">
-                    <Label>Order Date</Label>
-                    <Input
-                        type="date"
-                        value={adminInfo.orderDate}
-                        onChange={(e) => setAdminInfo({
-                            ...adminInfo,
-                            orderDate: e.target.value
-                        })}
-                        className="bg-muted/50"
-                    />
-                </div>
-
                 <div className="space-y-2">
                     <Label>Need Date</Label>
                     <Input
                         type="date"
-                        value={adminInfo.needDate}
+                        value={adminInfo.needDate.toISOString().split('T')[0]}
                         onChange={(e) => setAdminInfo({
                             ...adminInfo,
-                            needDate: e.target.value
+                            needDate: new Date(e.target.value)
                         })}
                         className="bg-muted/50"
                     />
                 </div>
-
-                {/* Job Type Selector */}
                 <div className="space-y-2">
-                    <Label>Job Type</Label>
-                    <Select 
-                        value={adminInfo.jobType} 
-                        onValueChange={(value) => setAdminInfo({
+                    <Label>Order Date</Label>
+                    <Input
+                        type="date"
+                        value={adminInfo.orderDate.toISOString().split('T')[0]}
+                        onChange={(e) => setAdminInfo({
                             ...adminInfo,
-                            jobType: value
+                            orderDate: new Date(e.target.value)
                         })}
-                    >
-                        <SelectTrigger className="bg-muted/50">
-                            <SelectValue placeholder="Select job type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {JOB_TYPES.map(type => (
-                                <SelectItem key={type.value} value={type.value}>
-                                    {type.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        className="bg-muted/50"
+                    />
                 </div>
 
                 {/* Sale/Rental Checkboxes */}
@@ -266,11 +271,11 @@ export function SignOrderAdminInfo({
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 id="sale-checkbox"
-                                checked={adminInfo.sale}
-                                onCheckedChange={(checked) => {
+                                checked={adminInfo.orderType === 'sale'}
+                                onCheckedChange={() => {
                                     setAdminInfo({
                                         ...adminInfo,
-                                        sale: checked === true
+                                        orderType: 'sale'
                                     });
                                 }}
                             />
@@ -279,11 +284,11 @@ export function SignOrderAdminInfo({
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 id="rental-checkbox"
-                                checked={adminInfo.rental}
-                                onCheckedChange={(checked) => {
+                                checked={adminInfo.orderType === 'rental'}
+                                onCheckedChange={() => {
                                     setAdminInfo({
                                         ...adminInfo,
-                                        rental: checked === true
+                                        orderType: 'rental'
                                     });
                                 }}
                             />
@@ -292,11 +297,39 @@ export function SignOrderAdminInfo({
                     </div>
                 </div>
 
+                {adminInfo.orderType === 'rental' && <>
+                    <div className="space-y-2">
+                        <Label>Start Date</Label>
+                        <Input
+                            type="date"
+                            value={adminInfo.startDate ? adminInfo.startDate.toISOString().split('T')[0] :
+                                new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setAdminInfo({
+                                ...adminInfo,
+                                startDate: new Date(e.target.value)
+                            })}
+                            className="bg-muted/50"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>End Date</Label>
+                        <Input
+                            type="date"
+                            value={adminInfo.endDate ? adminInfo.endDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setAdminInfo({
+                                ...adminInfo,
+                                endDate: new Date(e.target.value)
+                            })}
+                            className="bg-muted/50"
+                        />
+                    </div>
+                </>}
+
                 {/* Branch Selector for Job Number */}
                 <div className="space-y-2">
                     <Label>Branch</Label>
-                    <Select 
-                        value={adminInfo.selectedBranch} 
+                    <Select
+                        value={adminInfo.selectedBranch}
                         onValueChange={(value) => setAdminInfo({
                             ...adminInfo,
                             selectedBranch: value
@@ -315,31 +348,17 @@ export function SignOrderAdminInfo({
                     </Select>
                 </div>
 
-                {/* Job Number Selector */}
-                <div className="space-y-2">
+                {/* Job Number Selector - Updated to match example */}
+                <div className="space-y-2 md:col-span-2 relative">
                     <Label>Job Number</Label>
-                    <Select
-                        value={adminInfo.jobNumber}
-                        onValueChange={(value) => setAdminInfo({
-                            ...adminInfo,
-                            jobNumber: value
-                        })}
+                    <AutoComplete
+                        value={{label: adminInfo.jobNumber, value: adminInfo.jobNumber}}
+                        options={filteredJobs.map(fj => ({label: fj.job_number, value: fj.job_number}))}
+                        emptyMessage="No job numbers found"
                         disabled={isLoadingJobs}
-                    >
-                        <SelectTrigger className="bg-muted/50">
-                            <SelectValue placeholder="Select job number" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {allJobs
-                                .filter(job => adminInfo.selectedBranch === 'All' ? true : job.branch === adminInfo.selectedBranch)
-                                .map(job => (
-                                    <SelectItem key={job.job_number} value={job.job_number}>
-                                        {job.job_number}
-                                    </SelectItem>
-                                ))
-                            }
-                        </SelectContent>
-                    </Select>
+                        onValueChange={handleJobNumberChange}
+                        placeholder="Search or enter job number..."
+                    />
                 </div>
             </div>
         </div>
