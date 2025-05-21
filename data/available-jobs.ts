@@ -9,6 +9,7 @@ export interface AvailableJob {
   county: string
   branch: string
   createdAt: string
+  dbe?: number | null
 }
 
 export const availableJobsData: AvailableJob[] = [
@@ -46,6 +47,6 @@ export const availableJobsColumns = [
   { key: "lettingDate", title: "Letting Date" },
   { key: "dueDate", title: "Due Date" },
   { key: "county", title: "County" },
-  { key: "branch", title: "Branch" },
+  { key: "dbe", title: "DBE" },
   { key: "createdAt", title: "Created At" },
 ] as const 

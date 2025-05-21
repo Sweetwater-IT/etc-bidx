@@ -60,7 +60,6 @@ export async function POST(request: Request) {
           }
         } else {
           newJobs.push(job);
-          newJobs.push(job);
           updatedCount.new++;
         }
       }
@@ -123,9 +122,20 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
 
   const objKeys = Object.keys(obj);
   for (const possibleKey of possibleKeys) {
-    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_-]/g, '');
+    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
     for (const objKey of objKeys) {
-      if (objKey.toLowerCase().replace(/[\s_-]/g, '') === lowerPossibleKey) {
+      const normalizedObjKey = objKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+      if (normalizedObjKey === lowerPossibleKey) {
+        return obj[objKey];
+      }
+    }
+  }
+
+  for (const possibleKey of possibleKeys) {
+    const lowerPossibleKey = possibleKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+    for (const objKey of objKeys) {
+      const normalizedObjKey = objKey.toLowerCase().replace(/[\s_\-#\.\(\)]/g, '');
+      if (normalizedObjKey.includes(lowerPossibleKey) || lowerPossibleKey.includes(normalizedObjKey)) {
         return obj[objKey];
       }
     }
@@ -137,19 +147,41 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
   return undefined;
 }
 
+function isEffectivelyUnknown(value: any): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') {
+    const normalized = value.toLowerCase().trim();
+    return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+  }
+  return false;
+}
+
+function cleanValue(value: any): any {
+  if (isEffectivelyUnknown(value)) return null;
+  return value;
+}
+
 function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: string[], rowIndex: number) {
   console.log(`Processing available job row ${rowIndex + 1}`);
   
   const status = findFieldValue(job, ['Status', 'Bid Status']);
   const branch = findFieldValue(job, ['Branch', 'Office']);
-  const contractNumber = findFieldValue(job, ['Contract Number', 'Contract #', 'Contract']);
-  const county = findFieldValue(job, ['County']);
+  
+  const contractNumber = findFieldValue(job, [
+    'Project',
+    'Contract Number', 'Contract #', 'Contract', 'ContractNumber', 'Contract_Number',
+    'Contract No', 'Contract No.', 'ContractNo', 'Job Number', 'Job #', 'JobNumber', 'Project Number', 'ProjectNumber'
+  ]);
+  
+  const county = findFieldValue(job, ['County', 'Count']);
+  
   const dueDate = findFieldValue(job, ['Due Date', 'Bid Due Date', 'Due']);
-  const lettingDate = findFieldValue(job, ['Letting Date', 'Letting']);
+  
+  const lettingDate = findFieldValue(job, ['Let Date', 'Letting Date', 'Letting']);
   const entryDate = findFieldValue(job, ['Entry Date', 'Date Added', 'Created Date']);
   const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);
   const owner = findFieldValue(job, ['Owner', 'Client', 'Agency']);
-  const platform = findFieldValue(job, ['Platform', 'Bid Platform', 'Source']);
+  const platform = 'ECMS';
   const requestor = findFieldValue(job, ['Requestor', 'Estimator', 'Contact']);
   const mpt = findFieldValue(job, ['MPT', 'Maintenance and Protection of Traffic']);
   const flagging = findFieldValue(job, ['Flagging', 'Traffic Control']);
@@ -163,34 +195,45 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   
   let parsedDueDate = parseExcelDate(dueDate);
   let parsedLettingDate = parseExcelDate(lettingDate);
-  const parsedEntryDate = parseExcelDate(entryDate);
   
-  if (parsedDueDate && parsedLettingDate) {
+  if (parsedLettingDate && !parsedDueDate) {
+    const lettingDateTime = new Date(parsedLettingDate);
+    const dueDatetime = new Date(lettingDateTime);
+    dueDatetime.setDate(lettingDateTime.getDate() - 2);
+    parsedDueDate = dueDatetime.toISOString().split('T')[0];
+  }
+  
+  else if (parsedDueDate && !parsedLettingDate) {
+    const dueDatetime = new Date(parsedDueDate);
+    const lettingDateTime = new Date(dueDatetime);
+    lettingDateTime.setDate(dueDatetime.getDate() + 2);
+    parsedLettingDate = lettingDateTime.toISOString().split('T')[0];
+  }
+  
+  else if (parsedDueDate && parsedLettingDate) {
+    
     const dueDateTime = new Date(parsedDueDate).getTime();
     const lettingDateTime = new Date(parsedLettingDate).getTime();
     
     if (dueDateTime > lettingDateTime) {
-      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is after letting date (${parsedLettingDate}). Setting due date equal to letting date.`);
-      errors.push(`Row ${rowIndex + 1}: Due date is after letting date. Adjusted due date to match letting date.`);
-      parsedDueDate = parsedLettingDate;
+      console.warn(`Row ${rowIndex + 1}: Due date (${parsedDueDate}) is after letting date (${parsedLettingDate}). This is invalid.`);
+      errors.push(`Row ${rowIndex + 1}: Due date is after letting date. This may cause issues.`);
     }
-  } else if (parsedDueDate && !parsedLettingDate) {
-    parsedLettingDate = parsedDueDate;
-  } else if (!parsedDueDate && parsedLettingDate) {
-    parsedDueDate = parsedLettingDate;
   }
+  
+  const parsedEntryDate = parseExcelDate(entryDate);
   
   const mappedJob: AvailableJobInsert = {
     contract_number: contractNumber || '',
     status: mapStatus(status || 'Unset'),
-    requestor: requestor || 'Unknown',
-    owner: owner || 'Unknown',
+    requestor: cleanValue(requestor),
+    owner: cleanValue(owner),
     letting_date: parsedLettingDate || currentDate, // Default to current date
     due_date: parsedDueDate || currentDate, // Default to current date
-    county: county || 'Unknown',
-    branch: branch || 'Unknown',
-    location: location || 'Unknown',
-    platform: platform || 'Unknown',
+    county: cleanValue(county),
+    branch: cleanValue(branch),
+    location: cleanValue(location),
+    platform: cleanValue(platform),
     entry_date: parsedEntryDate || new Date().toISOString(),
     mpt: Boolean(mpt || false),
     flagging: Boolean(flagging || false),
@@ -202,7 +245,17 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   };
 
   if (!mappedJob.contract_number) {
-    throw new Error('Contract number is required');
+    if (mappedJob.owner) {
+      const ownerPrefix = mappedJob.owner.substring(0, 3).toUpperCase();
+      const fallbackNumber = `TEMP-${ownerPrefix}-${new Date().getFullYear()}-${rowIndex + 1}`;
+      mappedJob.contract_number = fallbackNumber;
+      errors.push(`Row ${rowIndex + 1}: Contract number missing, created temporary number: ${fallbackNumber}`);
+    } else {
+      const timestamp = new Date().getTime();
+      const fallbackNumber = `TEMP-${timestamp}-${rowIndex + 1}`;
+      mappedJob.contract_number = fallbackNumber;
+      errors.push(`Row ${rowIndex + 1}: Contract number missing, created temporary number: ${fallbackNumber}`);
+    }
   }
   
   if (!mappedJob.requestor) {

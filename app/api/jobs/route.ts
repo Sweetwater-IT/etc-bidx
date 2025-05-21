@@ -174,23 +174,59 @@ export async function GET(request: NextRequest) {
         };
         
         // Convert to ActiveJob type exactly
+        let adminData = job.admin_data;
+        if (typeof adminData === 'string') {
+          try {
+            adminData = JSON.parse(adminData);
+          } catch (e) {
+            console.error('Error parsing admin_data:', e);
+            adminData = {};
+          }
+        }
+        
+        let countyName = '';
+        if (job.county && typeof job.county === 'object' && job.county.name) {
+          countyName = job.county.name;
+        } else if (adminData && adminData.county) {
+          if (typeof adminData.county === 'string') {
+            countyName = adminData.county;
+          } else if (typeof adminData.county === 'object' && adminData.county.name) {
+            countyName = adminData.county.name;
+          }
+        }
+        
+        let branchName = '';
+        if (job.branch_code) {
+          branchName = branchNameMap[job.branch_code] || '';
+        } else if (adminData && adminData.county && adminData.county.branch) {
+          branchName = adminData.county.branch;
+        }
+        
+        let contractNum = '';
+        if (job.customer_contract_number) {
+          contractNum = job.customer_contract_number;
+        } else if (adminData && adminData.contractNumber) {
+          contractNum = adminData.contractNumber;
+        }
+        
         return {
+          id: job.id,
           jobNumber: job.job_number || '',
-          bidNumber: job.admin_data?.bidNumber || '',
+          bidNumber: adminData?.bidNumber || '',
           projectStatus: job.project_status || 'In Progress',
           billingStatus: job.billing_status || 'Current',
-          contractNumber: job.customer_contract_number || '',
-          location: job.admin_data?.location || '',
-          county: job.county?.name || job.admin_data?.county?.name || '',
-          branch: job.admin_data?.county?.branch ? job.admin_data?.county?.branch : '',
+          contractNumber: contractNum,
+          location: adminData?.location || '',
+          county: countyName,
+          branch: branchName,
           contractor: job.contractor_name || '',
-          startDate: job.admin_data?.startDate || '',
-          endDate: job.admin_data?.endDate || '',
-          laborRate: job.admin_data?.laborRate || 0,
-          fringeRate: job.admin_data?.fringeRate || 0,
+          startDate: adminData?.startDate || '',
+          endDate: adminData?.endDate || '',
+          laborRate: adminData?.laborRate || 0,
+          fringeRate: adminData?.fringeRate || 0,
           mpt: Boolean(job.mpt_rental),
           rental: Boolean(job.equipment_rental),
-          permSigns: Boolean(job.admin_data?.permSigns),
+          permSigns: Boolean(adminData?.permSigns),
           flagging: Boolean(job.flagging),
           saleItems: Boolean(job.sale_items),
           overdays: job.overdays || 0,

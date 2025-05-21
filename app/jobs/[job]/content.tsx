@@ -201,30 +201,103 @@ export function JobPageContent({ job }: JobPageContentProps) {
             
             console.log("Fetched data:", data);
             console.log("Pagination:", pagination);
-
+            
             const uiJobs = data.map((job: any) => {
-                const county = job.county?.name || '';
+                const isEffectivelyUnknown = (value: any): boolean => {
+                    if (value === undefined || value === null) return true;
+                    if (typeof value === 'string') {
+                        const normalized = value.toLowerCase().trim();
+                        return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                    }
+                    return false;
+                };
+
+                let countyValue = '';
+                if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+                    countyValue = job.county;
+                } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+                    countyValue = job.county.name;
+                } else if (job.admin_data?.county) {
+                    if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+                        countyValue = job.admin_data.county;
+                    } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+                        countyValue = job.admin_data.county.name;
+                    }
+                }
+                
                 const branchCode = job.branch_code || '';
                 const branchMap: Record<string, string> = {
                     '10': 'Hatfield',
                     '20': 'Turbotville',
                     '30': 'West'
                 };
-                const branch = branchMap[branchCode] || job.branch || '';
-
+                let branchValue = '';
+                if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+                    branchValue = job.branch;
+                } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+                    branchValue = branchMap[branchCode];
+                } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+                    branchValue = job.admin_data.branch;
+                }
+                
+                let lettingDateFormatted: string | null = null;
+                if (job.letting_date) {
+                    try {
+                        lettingDateFormatted = format(new Date(job.letting_date), "yyyy-MM-dd");
+                    } catch (e) {
+                        console.error('Error formatting letting date:', e);
+                    }
+                } else if (job.admin_data?.lettingDate) {
+                    try {
+                        lettingDateFormatted = format(new Date(job.admin_data.lettingDate), "yyyy-MM-dd");
+                    } catch (e) {
+                        console.error('Error formatting admin data letting date:', e);
+                    }
+                }
+                
+                let dueDateFormatted: string | null = null;
+                if (job.due_date) {
+                    try {
+                        dueDateFormatted = format(new Date(job.due_date), "yyyy-MM-dd");
+                    } catch (e) {
+                        console.error('Error formatting due date:', e);
+                    }
+                } else if (job.admin_data?.dueDate) {
+                    try {
+                        dueDateFormatted = format(new Date(job.admin_data.dueDate), "yyyy-MM-dd");
+                    } catch (e) {
+                        console.error('Error formatting admin data due date:', e);
+                    }
+                }
+                
+                const locationValue = job.location || job.admin_data?.location || '';
+                
+                const platformValue = job.platform || job.admin_data?.platform || '';
+                
+                const requestorValue = job.requestor || job.admin_data?.requestor || '';
+                
+                const ownerValue = job.owner || job.admin_data?.owner || '';
+                
+                const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
+                
+                const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+                
                 return {
                     id: job.id,
-                    contractNumber: job.customer_contract_number || '',
-                    status: job.status || 'In Progress',
-                    requestor: job.admin_data?.requestor || '',
-                    owner: job.admin_data?.owner || '',
-                    lettingDate: job.admin_data?.lettingDate ? format(new Date(job.admin_data.lettingDate), "yyyy-MM-dd") : null,
-                    dueDate: job.admin_data?.dueDate ? format(new Date(job.admin_data.dueDate), "yyyy-MM-dd") : null,
-                    county: county,
-                    branch: branch,
+                    contractNumber: contractNumberValue,
+                    status: job.status || 'Unset',
+                    requestor: requestorValue,
+                    owner: ownerValue,
+                    lettingDate: lettingDateFormatted,
+                    dueDate: dueDateFormatted,
+                    county: {
+                        main: countyValue,
+                        secondary: branchValue
+                    },
+                    dbe: dbeValue,
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-                    location: job.admin_data?.location || '',
-                    platform: job.admin_data?.platform || '',
+                    location: locationValue,
+                    platform: platformValue,
                 };
             });
 
