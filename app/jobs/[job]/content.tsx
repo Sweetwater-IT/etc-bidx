@@ -203,15 +203,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.log("Pagination:", pagination);
             
             const uiJobs = data.map((job: any) => {
+                const isEffectivelyUnknown = (value: any): boolean => {
+                    if (value === undefined || value === null) return true;
+                    if (typeof value === 'string') {
+                        const normalized = value.toLowerCase().trim();
+                        return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                    }
+                    return false;
+                };
+
                 let countyValue = '';
-                if (typeof job.county === 'string') {
+                if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
                     countyValue = job.county;
-                } else if (job.county?.name) {
+                } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
                     countyValue = job.county.name;
                 } else if (job.admin_data?.county) {
-                    if (typeof job.admin_data.county === 'string') {
+                    if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
                         countyValue = job.admin_data.county;
-                    } else if (job.admin_data.county?.name) {
+                    } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
                         countyValue = job.admin_data.county.name;
                     }
                 }
@@ -223,11 +232,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     '30': 'West'
                 };
                 let branchValue = '';
-                if (typeof job.branch === 'string') {
+                if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
                     branchValue = job.branch;
-                } else if (branchMap[branchCode]) {
+                } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
                     branchValue = branchMap[branchCode];
-                } else if (job.admin_data?.branch) {
+                } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
                     branchValue = job.admin_data.branch;
                 }
                 
@@ -281,8 +290,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     owner: ownerValue,
                     lettingDate: lettingDateFormatted,
                     dueDate: dueDateFormatted,
-                    county: countyValue,
-                    branch: branchValue,
+                    county: {
+                        main: countyValue,
+                        secondary: branchValue
+                    },
                     dbe: dbeValue,
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
                     location: locationValue,

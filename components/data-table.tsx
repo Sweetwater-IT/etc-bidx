@@ -105,18 +105,20 @@ export interface DataTableProps<TData> {
 }
 
 function formatCellValue(value: any, key: string) {
-    // Handle null or undefined
-    if (value === null || value === undefined) {
-        return '';
+    if (value === undefined || value === null || 
+        (typeof value === 'string' && value.toLowerCase() === "unknown")) {
+        return "-";
     }
 
     // Handle special formatting for contractNumber and county fields
     if ((key === "contractNumber" || key === "county") && typeof value === "object" && value !== null) {
-        if (value.main && value.secondary) {
+        if (value.main) {
             return (
                 <div className="flex flex-col">
                     <span className={key === "contractNumber" ? "uppercase" : ""}>{value.main}</span>
-                    <span className="text-xs text-red-500">{value.secondary}</span>
+                    {value.secondary && (
+                        <span className="text-xs text-red-500">{value.secondary}</span>
+                    )}
                 </div>
             );
         }

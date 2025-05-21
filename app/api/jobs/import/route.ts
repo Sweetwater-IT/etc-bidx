@@ -147,6 +147,20 @@ function findFieldValue(obj: any, possibleKeys: string[]): any {
   return undefined;
 }
 
+function isEffectivelyUnknown(value: any): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') {
+    const normalized = value.toLowerCase().trim();
+    return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+  }
+  return false;
+}
+
+function cleanValue(value: any): any {
+  if (isEffectivelyUnknown(value)) return null;
+  return value;
+}
+
 function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: string[], rowIndex: number) {
   console.log(`Processing available job row ${rowIndex + 1}`);
   
@@ -212,14 +226,14 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   const mappedJob: AvailableJobInsert = {
     contract_number: contractNumber || '',
     status: mapStatus(status || 'Unset'),
-    requestor: requestor || 'Unknown',
-    owner: owner || 'Unknown',
+    requestor: cleanValue(requestor),
+    owner: cleanValue(owner),
     letting_date: parsedLettingDate || currentDate, // Default to current date
     due_date: parsedDueDate || currentDate, // Default to current date
-    county: county || 'Unknown',
-    branch: branch || 'Unknown',
-    location: location || 'Unknown',
-    platform: platform || 'Unknown',
+    county: cleanValue(county),
+    branch: cleanValue(branch),
+    location: cleanValue(location),
+    platform: cleanValue(platform),
     entry_date: parsedEntryDate || new Date().toISOString(),
     mpt: Boolean(mpt || false),
     flagging: Boolean(flagging || false),
@@ -231,7 +245,7 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   };
 
   if (!mappedJob.contract_number) {
-    if (mappedJob.owner && mappedJob.owner !== 'Unknown') {
+    if (mappedJob.owner) {
       const ownerPrefix = mappedJob.owner.substring(0, 3).toUpperCase();
       const fallbackNumber = `TEMP-${ownerPrefix}-${new Date().getFullYear()}-${rowIndex + 1}`;
       mappedJob.contract_number = fallbackNumber;

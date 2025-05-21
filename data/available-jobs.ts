@@ -47,7 +47,6 @@ export const availableJobsColumns = [
   { key: "lettingDate", title: "Letting Date" },
   { key: "dueDate", title: "Due Date" },
   { key: "county", title: "County" },
-  { key: "branch", title: "Branch" },
   { key: "dbe", title: "DBE" },
   { key: "createdAt", title: "Created At" },
 ] as const 
