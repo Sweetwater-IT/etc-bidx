@@ -629,12 +629,29 @@ export function DataTable<TData>({
                                         >
                                             {row.getVisibleCells().map((cell) => {
                                                 const isActions = cell.column.id === "actions";
+                                                const cellValue = cell.getValue();
+                                                const isNumeric = typeof cellValue === "number" || (typeof cellValue === "string" && cellValue.includes("$"));
+
+                                                const formatNumericValue = (val: string | number): string => {
+                                                    if (typeof val === "string" && val.includes("$")) {
+                                                        const num = parseFloat(val.replace("$", ""));
+                                                        return `$${num.toFixed(2)}`;
+                                                        
+                                                    } else if(typeof val === "number") {
+                                                        return val.toFixed(2);
+                                                    }
+
+                                                    return val
+                                                };
+
+
                                                 return (
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
                                                             isActions && stickyLastColumn ? "sticky right-0 bg-background" : "",
-                                                            cell.column.id === "total" ? "text-right" : ""
+                                                            cell.column.id === "total" ? "text-right" : "",
+                                                            isNumeric ? "text-right pr-30 max-w-[150px]" : ""
                                                         )}
                                                         onClick={(e) => {
                                                             if (isActions) {
@@ -642,7 +659,10 @@ export function DataTable<TData>({
                                                             }
                                                         }}
                                                     >
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        {isNumeric && cellValue
+                                                            ? formatNumericValue(cellValue)
+                                                            : flexRender(cell.column.columnDef.cell, cell.getContext())
+                                                            }
                                                     </TableCell>
                                                 );
                                             })}

@@ -46,16 +46,23 @@ export function EditFlagRateSheet({ open, onOpenChange, onSuccess, rate }: EditF
     general_liability: toDigits(rate.general_liability),
   })
 
+
   useEffect(() => {
     if (open) {
+      const parseRateValue = (value: number | string) => {
+        const num =
+          typeof value === "string" ? Number(value.replace(/\$/g, "")) : value;
+        return toDigits(num);
+      };
+
       setDigits({
-        fuel_economy_mpg: toDigits(rate.fuel_economy_mpg),
-        truck_dispatch_fee: toDigits(rate.truck_dispatch_fee),
-        worker_comp: toDigits(rate.worker_comp),
-        general_liability: toDigits(rate.general_liability),
-      })
+        fuel_economy_mpg: parseRateValue(rate.fuel_economy_mpg),
+        truck_dispatch_fee: parseRateValue(rate.truck_dispatch_fee),
+        worker_comp: parseRateValue(rate.worker_comp),
+        general_liability: parseRateValue(rate.general_liability),
+      });
     }
-  }, [open, rate])
+  }, [open, rate]);
 
   const handle = (k: keyof Digits, e: InputEvent) =>
     setDigits(p => ({ ...p, [k]: next(p[k], e.inputType, (e.data || "").replace(/\$/g, "")) }))

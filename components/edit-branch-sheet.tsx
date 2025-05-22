@@ -29,45 +29,6 @@ const useDigits = (initial: number) => {
   return { digits, setDigits, next }
 }
 
-export function CreateBranchSheet({ open, onOpenChange, onSuccess }: SheetProps) {
-  const [form, setForm] = useState({ name: "", address: "" })
-  const { digits, setDigits, next } = useDigits(0)
-
-  const submit = async () => {
-    const rate = parseFloat(formatDecimal(digits))
-    const { name, address } = form
-    if (!name || !address || isNaN(rate)) {
-      toast.error("Please fill all required fields.")
-      return
-    }
-    try {
-      const res = await fetch("/api/branches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address, shop_rate: rate }),
-      })
-      if (!res.ok) throw await res.json()
-      toast.success("Record created successfully!")
-      onOpenChange(false)
-      onSuccess?.()
-    } catch {
-      toast.error("Error creating record.")
-    }
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[500px] overflow-y-auto p-0">
-        <div className="p-6 pb-0">
-          <SheetTitle className="text-xl font-medium">New Record</SheetTitle>
-          <SheetDescription className="text-sm text-gray-500 mt-1">Provide the information below to create a new record.</SheetDescription>
-        </div>
-        <BranchForm form={form} setForm={setForm} digits={digits} setDigits={setDigits} next={next} onSubmit={submit} onCancel={() => onOpenChange(false)} />
-      </SheetContent>
-    </Sheet>
-  )
-}
-
 interface EditProps extends SheetProps {
   branch: { id: number; name: string; address: string; shop_rate: number }
 }
@@ -80,7 +41,7 @@ export function EditBranchSheet({ open, onOpenChange, onSuccess, branch }: EditP
 
   useEffect(() => {
     setForm({ name: branch.name, address: branch.address })
-    setDigits(parseDigits(branch.shop_rate))
+    setDigits(parseDigits(parseFloat(String(branch.shop_rate).replace(/\$/g, ""))))
   }, [branch, setDigits])
 
   const submit = async () => {

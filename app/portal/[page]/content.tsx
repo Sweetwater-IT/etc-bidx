@@ -81,7 +81,7 @@ export function PortalPageContent({ page: Page }) {
     ];
 
       const FLAGGING_COLUMNS: Column[] = [
-        { key: "fuel_economy_mpg", title: "Fuel economy mpg" },
+        { key: "fuel_economy_mpg", title: "Fuel Economy (mpg)" },
         { key: "truck_dispatch_fee", title: "Truck Dispatch fee" },
         { key: "worker_comp", title: "Worker Company" },
         { key: "general_liability", title: "General Liability" }
@@ -182,7 +182,16 @@ export function PortalPageContent({ page: Page }) {
             }
 
             const result = await response.json();
-            const { pagination, data } = result;
+            const { pagination } = result;
+
+            const data = result.data.map(item => {
+                return Object.fromEntries(
+                    Object.entries(item).map(([key, value]) => [
+                        key,
+                        key === "shop_rate" ?  `$${value}` : value
+                    ])
+                );
+            });
 
             setBranches(data);
             setBranchesPageCount(pagination.pageCount);
@@ -226,7 +235,17 @@ export function PortalPageContent({ page: Page }) {
             }
 
             const result = await response.json();
-            const { pagination, data } = result;
+            const { pagination } = result;
+
+
+            const data = result.data.map(item => {
+                return Object.fromEntries(
+                    Object.entries(item).map(([key, value]) => [
+                        key,
+                        key === "id" ? value : `$${value}`
+                    ])
+                );
+            });
 
             setFlagRates(data);
             setFlagRatesPageCount(pagination.pageCount);
