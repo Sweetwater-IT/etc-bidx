@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '25');
     const offset = (page - 1) * limit;
     
-    // const filterDeleted = searchParams.get('filterDeleted') !== 'false';
+    const filterDeleted = searchParams.get('filterDeleted') !== 'false';
     
-    const query = supabase
+    let query = supabase
       .from('contractors')
       .select(`
         id,
@@ -50,9 +50,9 @@ export async function GET(request: NextRequest) {
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
       
-    // if (filterDeleted) {
-    //   query = query.eq('is_deleted', false);
-    // }
+    if (filterDeleted) {
+      query = query.eq('is_deleted', false);
+    }
     
     const { data, error, count } = await query;
 

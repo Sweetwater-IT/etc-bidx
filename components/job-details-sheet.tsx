@@ -22,11 +22,17 @@ interface JobDetailsSheetProps {
     owner: string
     lettingDate: string | null
     dueDate: string | null
-    county: string
+    county: any
+    countyValue?: string
     branch: string
     createdAt: string
     location: string
     platform: string
+    mpt?: boolean
+    flagging?: boolean
+    perm_signs?: boolean
+    equipment_rental?: boolean
+    other?: boolean
   }
   onEdit?: (job: {
     id: number
@@ -97,146 +103,101 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
         
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-6 p-6">
+            {/* Contract Number and Requestor */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 w-full">
-                <Label>Contract Number</Label>
-                <div className="relative">
-                  <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={job?.contractNumber || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                  />
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Contract Number</Label>
+                <div className="text-sm text-muted-foreground uppercase">
+                  {job?.contractNumber || '-'}
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
-                <Label>Status</Label>
-                <div className="relative">
-                  <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    value={job?.status || ''} 
-                    className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                    readOnly
-                    disabled
-                  />
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Requestor</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.requestor || '-'}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <Label>Requestor</Label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.requestor || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            {/* Owner and Platform */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Owner</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.owner || '-'}
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Platform</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.platform || '-'}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <Label>Owner</Label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.owner || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            {/* Letting Date and Due Date */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Letting Date</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.lettingDate ? format(new Date(job.lettingDate), 'MM/dd/yyyy') : '-'}
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Due Date</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.dueDate ? format(new Date(job.dueDate), 'MM/dd/yyyy') : '-'}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <Label>County</Label>
-              <div className="relative">
-                <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.county || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            {/* County and Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">County</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.countyValue || '-'}
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">Location</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.location || '-'}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <Label>Branch</Label>
-              <div className="relative">
-                <GlobeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.branch || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            {/* Status */}
+            <div className="space-y-1 w-full">
+              <Label className="font-medium">Status</Label>
+              <div className="text-sm text-muted-foreground">
+                {job?.status || '-'}
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <Label>Location</Label>
-              <div className="relative">
-                <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.location || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            {/* Branch */}
+            <div className="space-y-1 w-full">
+              <Label className="font-medium">Branch</Label>
+              <div className="text-sm text-muted-foreground">
+                {job?.branch || '-'}
               </div>
             </div>
-
-            <div className="space-y-2 w-full">
-              <Label>Platform</Label>
-              <div className="relative">
-                <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  value={job?.platform || ''} 
-                  className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
-                  readOnly
-                  disabled
-                />
+            
+            {/* Services Required */}
+            <div className="space-y-1 w-full">
+              <Label className="font-medium">Services Required</Label>
+              <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                {job?.mpt && <span className="px-2 py-0.5 bg-gray-100 rounded-md">MPT</span>}
+                {job?.flagging && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Flagging</span>}
+                {job?.perm_signs && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Perm Signs</span>}
+                {job?.equipment_rental && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
+                {job?.other && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Other</span>}
+                {!job?.mpt && !job?.flagging && !job?.perm_signs && !job?.equipment_rental && !job?.other && '-'}
               </div>
-            </div>
-
-            <div className="space-y-2 w-full">
-              <Label>Letting Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between text-left font-normal"
-                    disabled
-                  >
-                    <span>
-                      {lettingDate ? format(lettingDate, "PPP") : "Not set"}
-                    </span>
-                    <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
-                  </Button>
-                </PopoverTrigger>
-              </Popover>
-            </div>
-
-            <div className="space-y-2 w-full">
-              <Label>Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between text-left font-normal"
-                    disabled
-                  >
-                    <span>
-                      {dueDate ? format(dueDate, "PPP") : "Not set"}
-                    </span>
-                    <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
-                  </Button>
-                </PopoverTrigger>
-              </Popover>
             </div>
           </div>
         </div>

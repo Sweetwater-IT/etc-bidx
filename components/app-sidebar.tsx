@@ -97,8 +97,30 @@ export const data = {
     },
     {
       title: "Admin Portal",
-      url: "",
+      url: "/portal",
       icon: IconUsers,
+      items: [
+        {
+          title: "Branches",
+          url: "/portal/branches",
+        },
+        {
+          title: "Counties",
+          url: "/portal/counties",
+        },
+        {
+          title: "Bid items",
+          url: "/portal/bid-items",
+        },
+        {
+          title: "Users",
+          url: "/portal/users",
+        },
+        {
+          title: "Payback calculations",
+          url: "/portal/payback-calculations",
+        },
+      ]
     },
     {
       title: "Customers",
