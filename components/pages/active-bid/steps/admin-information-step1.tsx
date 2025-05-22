@@ -149,9 +149,6 @@ const AdminInformationStep1 = ({
           // Set toggle states based on prefilled data
           setToggleStates(prev => ({
             ...prev,
-            laborRate: !!adminData.county?.laborRate,
-            fringeRate: !!adminData.county?.fringeRate,
-            shopRate: !!adminData.county?.shopRate,
             winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
           }));
         }
@@ -170,6 +167,16 @@ const AdminInformationStep1 = ({
 
     fetchData();
   }, [adminData]);
+
+  useEffect(() => {
+    if(adminData.rated === 'NON-RATED'){
+      setToggleStates(prev => ({
+        ...prev,
+        laborRate: true,
+        fringeRate: true
+      }))
+    }
+  }, [adminData.rated])
 
 //When county changes, update digits for rates
   useEffect(() => {

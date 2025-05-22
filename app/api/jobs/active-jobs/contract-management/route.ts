@@ -12,28 +12,21 @@ export async function GET(request: NextRequest) {
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
-    const status = searchParams.get('status'); // won, pending, or all
-    
+    const status = searchParams.get('status'); // won, won-pending, or all
+
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
     // Base query from the jobs_list view which already has the flattened data
     let query = supabase
-      .from('jobs_list')
+      .from('jobs_complete')
       .select(`
         id,
         job_number,
-        contract_number,
-        contractor,
-        letting_date,
-        county,
-        branch,
-        estimator,
+        contractor_name,
+        admin_data,
         created_at,
         project_status,
-        start_date,
-        end_date,
-        project_days,
         total_hours,
         total_revenue
       `, { count: 'exact' })
@@ -42,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter based on job_number prefix
     if (status && status !== 'all') {
-      if (status === 'pending') {
+      if (status === 'won-pending') {
         // Jobs with job_number starting with 'P-' are pending
         query = query.like('job_number', 'P-%');
       } else if (status === 'won') {
@@ -61,29 +54,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
+
     // Transform the data for the frontend
-    const transformedData = (data || []).map(job => ({
-      id: job.id,
-      job_number: job.job_number,
-      letting_date: job.letting_date, 
-      contract_number: job.contract_number || '',
-      contractor: job.contractor || '',
-      status: job.job_number?.startsWith('P-') ? 'Pending' : 'Won',
-      county: job.county || '',
-      branch: job.branch || '',
-      estimator: job.estimator || '',
-      created_at: job.created_at,
-      project_status: job.project_status,
-      project_days: job.project_days,
-      total_hours: job.total_hours,
-      total_revenue: job.total_revenue
-    }));
+    const transformedData = (data || []).filter(job => !!job.admin_data).map(job => (
+      {
+        id: job.id,
+        job_number: job.job_number,
+        letting_date: job.admin_data.lettingDate ? job.admin_data.lettingDate : '',
+        contract_number: job.admin_data.contractNumber || '',
+        contractor: job.contractor_name || '',
+        status: job.job_number?.startsWith('P-') ? 'Won - Pending' : 'Won',
+        county: job.admin_data.county.name || '',
+        branch: job.admin_data.county.branch || '',
+        estimator: job.admin_data.estimator || '',
+        created_at: job.created_at,
+        project_status: job.project_status,
+        total_hours: job.total_hours,
+        total_revenue: job.total_revenue
+      }));
 
     // Get counts for different statuses
     let countData = {
       all: 0,
       won: 0,
-      pending: 0
+      wonPending: 0
     };
 
     if (searchParams.get('counts') === 'true') {
@@ -100,7 +94,7 @@ export async function GET(request: NextRequest) {
 
       countData = {
         all: totalCount || 0,
-        pending: pendingCount || 0,
+        wonPending: pendingCount || 0,
         won: (totalCount || 0) - (pendingCount || 0)
       };
     }
