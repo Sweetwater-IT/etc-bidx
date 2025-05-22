@@ -40,7 +40,7 @@ const ContractManagementTable = () => {
     const [segmentCounts, setSegmentCounts] = useState<Record<string, number>>({
         all: 0,
         won: 0,
-        pending: 0,
+        'won-pending': 0,
     });
 
     useEffect(() => {
@@ -56,7 +56,7 @@ const ContractManagementTable = () => {
                     setSegmentCounts({
                         all: countsData.counts.all,
                         won: countsData.counts.won,
-                        pending: countsData.counts.pending
+                        'won-pending': countsData.counts.wonPending
                     });
                 }
 
@@ -64,8 +64,8 @@ const ContractManagementTable = () => {
                 let statusParam = '';
                 if (currentSegment === 'won') {
                     statusParam = '&status=won';
-                } else if (currentSegment === 'pending') {
-                    statusParam = '&status=pending';
+                } else if (currentSegment === 'won-pending') {
+                    statusParam = '&status=won-pending';
                 }
 
                 const response = await fetch(`/api/jobs/active-jobs/contract-management?page=1&limit=100${statusParam}`);
@@ -85,7 +85,6 @@ const ContractManagementTable = () => {
                         source: 'job' as const,
                         job_number: job.job_number
                     }));
-
                     setContracts(displayData);
                 }
             } catch (error) {
@@ -113,7 +112,7 @@ const ContractManagementTable = () => {
             segments={[
                 { label: `All (${segmentCounts.all})`, value: "all" },
                 { label: `Won (${segmentCounts.won})`, value: "won" },
-                { label: `Won - Pending (${segmentCounts.pending})`, value: "pending" },
+                { label: `Won - Pending (${segmentCounts['won-pending']})`, value: "won-pending" },
             ]}
             segmentValue={currentSegment}
             onSegmentChange={handleSegmentChange}

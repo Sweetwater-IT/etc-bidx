@@ -46,7 +46,6 @@ export type LegacyColumn = {
     title: string;
     className?: string;
 };
-
 const handleStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case "open": 
@@ -59,9 +58,8 @@ const handleStatusVariant = (status: string) => {
             return "destructive";
         case "bid":
         case "won":
+        case "won - pending":
             return "successful";
-        case "won-pending":
-            return "purple";
         case "unset":
         case "draft":
         default:
