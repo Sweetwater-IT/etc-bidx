@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HashIcon, LayersIcon, UserIcon, CalendarIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon, EyeIcon } from "lucide-react";
+import { HashIcon, LayersIcon, UserIcon, CalendarIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon, EyeIcon, PencilIcon } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
+import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { SelectContent } from "@radix-ui/react-select";
+import { toast } from "sonner";
 
 interface ActiveJobDetailsSheetProps {
   open: boolean;
@@ -15,15 +18,29 @@ interface ActiveJobDetailsSheetProps {
   job?: ActiveJob;
   onEdit?: (job: ActiveJob) => void;
   onNavigate?: (direction: 'up' | 'down') => void;
+  loadActiveJobs: () => void;
 }
 
-export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: ActiveJobDetailsSheetProps) {
+type Statuses = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE'
+
+export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate, loadActiveJobs }: ActiveJobDetailsSheetProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  
+
+  const [localProjectStatus, setLocalProjectStatus] = useState<Statuses>()
+  const [localBillingStatus, setLocalBillingStatus] = useState<Statuses>()
+
+  useEffect(() => {
+    setLocalProjectStatus(job?.projectStatus ? job.projectStatus as Statuses : 'NOT_STARTED');
+    setLocalBillingStatus(job?.billingStatus ? job.billingStatus as Statuses : 'NOT_STARTED')
+  }, [job?.projectStatus, job?.billingStatus])
+
+  const [editingProjectStatus, setEditingProjectStatus] = useState<boolean>(false)
+  const [editingBillingStatus, setEditingBillingStatus] = useState<boolean>(false)
+
   useEffect(() => {
     if (!open) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' && onNavigate) {
         e.preventDefault();
@@ -33,7 +50,7 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
         onNavigate('up');
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onNavigate]);
@@ -60,6 +77,24 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
     onOpenChange(false)
   }
 
+  const handleStatusChange = async (newStatus: Statuses, type: 'project_status' | 'billing_status', jobNumber: string) => {
+    const response = await fetch('/api/jobs', {
+      method: 'PATCH',
+      body: JSON.stringify({ newStatus, type, jobNumber }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json()
+      toast.error('Status not correctly updated: ' + err.message)
+    }
+    else {
+      toast.success(`${type === 'billing_status' ? 'Billing status' : 'Project status'} correctly updated.`)
+      type === 'project_status' ? setEditingProjectStatus(false) : setEditingBillingStatus(false) 
+      type === 'project_status' ? setLocalProjectStatus(newStatus) : setLocalBillingStatus(newStatus)
+      loadActiveJobs();
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
@@ -69,7 +104,7 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
           </div>
         </SheetHeader>
-        
+
         {job && (
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-6">
@@ -91,18 +126,62 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1 w-full">
-                    <Label className="text-sm text-muted-foreground">Project Status</Label>
-                    <div className="font-medium">
-                      {job.projectStatus || ''}
+                  <div className="w-full space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-muted-foreground">Project Status</Label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 rounded-full focus:outline-none"
+                        onClick={() => setEditingProjectStatus(!editingProjectStatus)}
+                        tabIndex={-1}
+                      >
+                        <PencilIcon className="h-3 w-3" />
+                      </Button>
                     </div>
+                    {editingProjectStatus ?
+                      <Select value={localProjectStatus} onValueChange={(value) => handleStatusChange(value as Statuses, 'project_status', job.jobNumber)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white w-full">
+                          <SelectItem value="NOT_STARTED">NOT STARTED</SelectItem>
+                          <SelectItem value='IN_PROGRESS'>IN PROGRESS</SelectItem>
+                          <SelectItem value='COMPLETE'>COMPLETE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      : <div className="font-medium">
+                        {localProjectStatus || ''}
+                      </div>}
                   </div>
 
-                  <div className="space-y-1 w-full">
-                    <Label className="text-sm text-muted-foreground">Billing Status</Label>
-                    <div className="font-medium">
-                      {job.billingStatus || ''}
+                  <div className="w-full space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-muted-foreground">Billing Status</Label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 rounded-full focus:outline-none"
+                        onClick={() => setEditingBillingStatus(!editingBillingStatus)}
+                        tabIndex={-1}
+                      >
+                        <PencilIcon className="h-3 w-3" />
+                      </Button>
                     </div>
+                    {editingBillingStatus ?
+                      <Select value={localBillingStatus} onValueChange={(value) => handleStatusChange(value as Statuses, 'billing_status', job.jobNumber)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white w-full">
+                          <SelectItem value="NOT_STARTED">NOT STARTED</SelectItem>
+                          <SelectItem value='IN_PROGRESS'>IN PROGRESS</SelectItem>
+                          <SelectItem value='COMPLETE'>COMPLETE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      : <div className="font-medium">
+                        {localBillingStatus || ''}
+                      </div>}
                   </div>
                 </div>
 
@@ -125,9 +204,9 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                     <Label>County</Label>
                     <div className="relative">
                       <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.county || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
+                      <Input
+                        value={job.county || ''}
+                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
                         readOnly
                         disabled
                       />
@@ -138,9 +217,9 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                     <Label>Branch</Label>
                     <div className="relative">
                       <BuildingIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={job.branch || ''} 
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
+                      <Input
+                        value={job.branch || ''}
+                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
                         readOnly
                         disabled
                       />
@@ -208,10 +287,10 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                     <Label>Perm. Signs</Label>
                     <div className="relative">
                       <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Checkbox 
+                      <Checkbox
                         checked={job?.permSigns === true}
                         disabled
-                        className="ml-9" 
+                        className="ml-9"
                       />
                     </div>
                   </div>
@@ -220,10 +299,10 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                     <Label>Flagging</Label>
                     <div className="relative">
                       <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Checkbox 
+                      <Checkbox
                         checked={job?.flagging === true}
                         disabled
-                        className="ml-9" 
+                        className="ml-9"
                       />
                     </div>
                   </div>
@@ -233,10 +312,10 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                   <Label>Sale Items</Label>
                   <div className="relative">
                     <DollarSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      readOnly 
-                      value={job?.saleItems ? String(job.saleItems) : ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
+                    <Input
+                      readOnly
+                      value={job?.saleItems ? String(job.saleItems) : ''}
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
                       disabled
                       tabIndex={-1}
                     />
@@ -247,9 +326,9 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                   <Label>Overdays</Label>
                   <div className="relative">
                     <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={job.overdays || ''} 
-                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200" 
+                    <Input
+                      value={job.overdays || ''}
+                      className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
                       readOnly
                       disabled
                       tabIndex={-1}
