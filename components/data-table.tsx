@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { flexRender, getCoreRowModel, useReactTable, ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Segments } from "@/components/ui/segments";
@@ -41,6 +41,11 @@ export type LegacyColumn = {
     sortable?: boolean;
 };
 
+// Extended column type to include additional properties used in the table
+type ExtendedColumn<TData> = ColumnDef<TData, any> & {
+    className?: string;
+};
+
 const handleStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case "open": 
@@ -62,7 +67,7 @@ const handleStatusVariant = (status: string) => {
     }
 }
 
-export interface DataTableProps<TData> {
+export interface DataTableProps<TData extends object> {
     columns: LegacyColumn[] | readonly LegacyColumn[];
     data: TData[];
     segments?: {
@@ -205,19 +210,19 @@ function formatCellValue(value: any, key: string) {
     return value;
 }
 
-function isRowSelected<T extends Record<string, any>>(row: T, selectedItem: T): boolean {
+function isRowSelected<T extends object>(row: T, selectedItem: T | undefined): boolean {
     if (!selectedItem) return false;
     
     // Check if the row has an id property
-    if ('id' in row && 'id' in selectedItem) {
-        return row.id === selectedItem.id;
+    if ('id' in row && selectedItem && 'id' in selectedItem) {
+        return (row as any).id === (selectedItem as any).id;
     }
     
     // If there's no id, compare the entire object
     return JSON.stringify(row) === JSON.stringify(selectedItem);
 }
 
-export function DataTable<TData>({
+export function DataTable<TData extends object>({
     columns: legacyColumns, 
     data, 
     segments, 
@@ -257,12 +262,12 @@ export function DataTable<TData>({
     onReset
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
-        const cols = legacyColumns.map(col => ({
+        const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
             id: col.key,
             accessorKey: col.key,
             header: col.title,
-            cell: ({ row }: { row: any }) => {
-                const value = row.original[col.key];
+            cell: ({ row }: any) => {
+                const value = row.getValue(col.key);
                 return formatCellValue(value, col.key);
             },
             className: col.className,
@@ -500,7 +505,7 @@ export function DataTable<TData>({
         }
 
         return cols;
-    }, [legacyColumns, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, onArchiveSelected, onDeleteSelected, stickyLastColumn]);
+    }, [legacyColumns, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, onArchiveSelected, onDeleteSelected, stickyLastColumn, segmentValue, segments]);
 
     // State for filter visibility
     const [showFilters, setShowFilters] = useState(false);
@@ -606,7 +611,8 @@ export function DataTable<TData>({
                                                 <TableHead 
                                                     key={header.id}
                                                     className={cn(
-                                                        header.column.columnDef.className,
+                                                        // Use type assertion to handle the className property
+                                                        (header.column.columnDef as any).className,
                                                         isActions && stickyLastColumn ? 'sticky right-0 bg-muted' : ''
                                                     )}
                                                 >
@@ -640,7 +646,7 @@ export function DataTable<TData>({
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            cell.column.columnDef.className,
+                                                            (cell.column.columnDef as any).className,
                                                             isActions && stickyLastColumn ? 'sticky right-0 bg-white dark:bg-background' : ''
                                                         )}
                                                     >
@@ -705,8 +711,8 @@ export function DataTable<TData>({
                                 <Button
                                     variant="outline"
                                     className="hidden h-8 w-8 p-0 lg:flex"
-                                    onClick={() => onPageChange(0)}
-                                    disabled={pageIndex === 0}
+                                    onClick={() => onPageChange && onPageChange(0)}
+                                    disabled={pageIndex === 0 || !onPageChange}
                                 >
                                     <span className="sr-only">Go to first page</span>
                                     <ChevronsLeft className="h-4 w-4" />
@@ -714,8 +720,8 @@ export function DataTable<TData>({
                                 <Button
                                     variant="outline"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => onPageChange(pageIndex - 1)}
-                                    disabled={pageIndex === 0}
+                                    onClick={() => onPageChange && onPageChange(pageIndex - 1)}
+                                    disabled={pageIndex === 0 || !onPageChange}
                                 >
                                     <span className="sr-only">Go to previous page</span>
                                     <ChevronLeft className="h-4 w-4" />
@@ -726,8 +732,8 @@ export function DataTable<TData>({
                                 <Button
                                     variant="outline"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => onPageChange(pageIndex + 1)}
-                                    disabled={pageIndex === pageCount - 1}
+                                    onClick={() => onPageChange && onPageChange(pageIndex + 1)}
+                                    disabled={pageIndex === pageCount - 1 || !onPageChange}
                                 >
                                     <span className="sr-only">Go to next page</span>
                                     <ChevronRight className="h-4 w-4" />
@@ -735,8 +741,8 @@ export function DataTable<TData>({
                                 <Button
                                     variant="outline"
                                     className="hidden h-8 w-8 p-0 lg:flex"
-                                    onClick={() => onPageChange((pageCount || 1) - 1)}
-                                    disabled={pageIndex === (pageCount || 1) - 1}
+                                    onClick={() => onPageChange && onPageChange((pageCount || 1) - 1)}
+                                    disabled={pageIndex === (pageCount || 1) - 1 || !onPageChange}
                                 >
                                     <span className="sr-only">Go to last page</span>
                                     <ChevronsRight className="h-4 w-4" />

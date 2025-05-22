@@ -31,6 +31,8 @@ import {
   ArrowDownUp, 
   Filter, 
   X,
+  Check,
+  ChevronsUpDown,
   CalendarDays,
   SlidersHorizontal,
   FileText,
@@ -40,7 +42,13 @@ import {
   ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AutoComplete, Option } from "@/components/ui/autocomplete";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 
 export type SortOption = {
   label: string;
@@ -365,94 +373,230 @@ export function FilterDropdowns({
     <div className={cn("flex flex-wrap justify-end gap-2 mb-4", className)}>
       {/* Branch Filter */}
       <div className="w-40 sm:w-44">
-        <Select 
-          value={branch || "all"} 
-          onValueChange={(value) => {
-            console.log('Branch selected:', value);
-            setBranch(value);
-          }}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All Branches" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Branches</SelectItem>
-            {branchOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              role="combobox" 
+              className="w-full justify-between h-9">
+              {branch ? branchOptions.find(opt => opt.value === branch)?.label || "All Branches" : "All Branches"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <Command>
+              <CommandInput placeholder="Search branches..." />
+              <CommandEmpty>No branch found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                <CommandItem
+                  key="all"
+                  value="all"
+                  onSelect={() => {
+                    setBranch("all");
+                    console.log('Branch selected: all');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      branch === "all" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  All Branches
+                </CommandItem>
+                {branchOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => {
+                      setBranch(option.value);
+                      console.log('Branch selected:', option.value);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        branch === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       
       {/* Owner Filter */}
       <div className="w-40 sm:w-44">
-        <Select 
-          value={owner || "all"} 
-          onValueChange={(value) => {
-            console.log('Owner selected:', value);
-            setOwner(value);
-          }}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All Owners" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Owners</SelectItem>
-            {ownerOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              role="combobox" 
+              className="w-full justify-between h-9">
+              {owner ? ownerOptions.find(opt => opt.value === owner)?.label || "All Owners" : "All Owners"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <Command>
+              <CommandInput placeholder="Search owners..." />
+              <CommandEmpty>No owner found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                <CommandItem
+                  key="all"
+                  value="all"
+                  onSelect={() => {
+                    setOwner("all");
+                    console.log('Owner selected: all');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      owner === "all" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  All Owners
+                </CommandItem>
+                {ownerOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => {
+                      setOwner(option.value);
+                      console.log('Owner selected:', option.value);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        owner === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       
       {/* County Filter */}
       <div className="w-40 sm:w-44">
-        <Select 
-          value={county || "all"} 
-          onValueChange={(value) => {
-            console.log('County selected:', value);
-            setCounty(value);
-          }}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All Counties" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Counties</SelectItem>
-            {countyOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              role="combobox" 
+              className="w-full justify-between h-9">
+              {county ? countyOptions.find(opt => opt.value === county)?.label || "All Counties" : "All Counties"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <Command>
+              <CommandInput placeholder="Search counties..." />
+              <CommandEmpty>No county found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                <CommandItem
+                  key="all"
+                  value="all"
+                  onSelect={() => {
+                    setCounty("all");
+                    console.log('County selected: all');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      county === "all" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  All Counties
+                </CommandItem>
+                {countyOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => {
+                      setCounty(option.value);
+                      console.log('County selected:', option.value);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        county === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       
       {/* Estimator Filter */}
       <div className="w-40 sm:w-44">
-        <Select 
-          value={estimator || "all"} 
-          onValueChange={(value) => {
-            console.log('Estimator selected:', value);
-            setEstimator(value);
-          }}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All Estimators" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Estimators</SelectItem>
-            {estimatorOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              role="combobox" 
+              className="w-full justify-between h-9">
+              {estimator ? estimatorOptions.find(opt => opt.value === estimator)?.label || "All Estimators" : "All Estimators"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <Command>
+              <CommandInput placeholder="Search estimators..." />
+              <CommandEmpty>No estimator found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                <CommandItem
+                  key="all"
+                  value="all"
+                  onSelect={() => {
+                    setEstimator("all");
+                    console.log('Estimator selected: all');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      estimator === "all" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  All Estimators
+                </CommandItem>
+                {estimatorOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => {
+                      setEstimator(option.value);
+                      console.log('Estimator selected:', option.value);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        estimator === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       
       {/* Date Field Filter */}
