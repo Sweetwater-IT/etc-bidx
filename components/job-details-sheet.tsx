@@ -33,6 +33,7 @@ interface JobDetailsSheetProps {
     perm_signs?: boolean
     equipment_rental?: boolean
     other?: boolean
+    noBidReason?: string
   }
   onEdit?: (job: {
     id: number
@@ -47,6 +48,7 @@ interface JobDetailsSheetProps {
     createdAt: string
     location: string
     platform: string
+    noBidReason?: string
   }) => void
 }
 

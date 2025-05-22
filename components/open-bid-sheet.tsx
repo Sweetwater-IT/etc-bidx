@@ -51,6 +51,7 @@ interface OpenBidSheetProps {
     createdAt: string
     location: string
     platform: string
+    noBidReason?: string
   }
 }
 
@@ -66,13 +67,17 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [platform, setPlatform] = useState('ecms')
   const [status, setStatus] = useState<'Bid' | 'No Bid' | 'Unset'>('Unset')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
-  const [users, setUsers] = useState<{id: string, name: string}[]>([])
-  const [owners, setOwners] = useState<{id: string, name: string}[]>([])
+
+  const [users, setUsers] = useState<{ id: string, name: string }[]>([])
+  const [owners, setOwners] = useState<{ id: string, name: string }[]>([])
   const [counties, setCounties] = useState<County[]>([])
-  const [branches, setBranches] = useState<{id: string, name: string}[]>([])
+  const [branches, setBranches] = useState<{ id: string, name: string }[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
+  const [noBidReason, setNoBidReason] = useState<string>();
+  const [customReasonSelected, setCustomReasonSelected] = useState<boolean>(false);
+  const [customText, setCustomText] = useState<string>('');
+
   // State for popover open states
   const [openStates, setOpenStates] = useState({
     requestor: false,
@@ -88,11 +93,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
           fetchReferenceData('owners'),
           fetchReferenceData('counties')
         ])
-        
+
         setUsers(usersData)
         setOwners(ownersData)
         setCounties(countiesData)
-        
+
         const branchNames = countiesData.map(county => county.branch)
         const uniqueBranchNames = Array.from(new Set(branchNames))
         const branchesData = uniqueBranchNames
@@ -101,20 +106,20 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
             id: branchName.toLowerCase().replace(/\s+/g, '-'),
             name: branchName
           }))
-        
+
         setBranches(branchesData)
-        
+
         if (!job && usersData.length && ownersData.length && countiesData.length) {
           console.log(usersData[0]?.id)
           console.log(ownersData[0]?.id)
           console.log(countiesData[0]?.id)
           setRequestor(usersData[0]?.id)
           setOwner(ownersData[0]?.id)
-          
+
           // Set county and automatically set branch based on county
           const initialCountyId = countiesData[0]?.id.toString()
           setCounty(initialCountyId)
-          
+
           // Get branch from county
           const selectedCounty = countiesData.find(c => c.id.toString() === initialCountyId)
           if (selectedCounty?.branch) {
@@ -129,13 +134,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         setIsLoading(false)
       }
     }
-    
+
     if (open) {
       loadReferenceData()
     }
   }, [open, job])
 
-  // Reset form when job changes
   useEffect(() => {
     if (job) {
       // Populate form with job data
@@ -149,6 +153,28 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus(job.status as 'Bid' | 'No Bid' | 'Unset')
       setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined)
       setDueDate(job.dueDate ? new Date(job.dueDate) : undefined)
+      
+      // Handle noBidReason
+      if (job.noBidReason) {
+        const predefinedReasons = ['No MPT', 'Outside of service area', 'Project cancelled', 'Outside of scope'];
+        
+        if (predefinedReasons.includes(job.noBidReason)) {
+          // It's a predefined reason
+          setNoBidReason(job.noBidReason);
+          setCustomReasonSelected(false);
+          setCustomText('');
+        } else {
+          // It's a custom reason
+          setNoBidReason('Custom');
+          setCustomReasonSelected(true);
+          setCustomText(job.noBidReason);
+        }
+      } else {
+        // No reason set
+        setNoBidReason(undefined);
+        setCustomReasonSelected(false);
+        setCustomText('');
+      }
     } else {
       // Form will be reset with default values from the reference data
       setContractNumber('')
@@ -157,9 +183,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
+      setNoBidReason(undefined)
+      setCustomReasonSelected(false)
+      setCustomText('')
     }
-  }, [job, open]) // Add open to dependencies to reset when sheet opens/closes
-  
+  }, [job, open]) 
+
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setContractNumber('')
@@ -172,14 +201,17 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
+      setNoBidReason(undefined) // Add this
+      setCustomReasonSelected(false) // Add this  
+      setCustomText('') // Add this
     }
     onOpenChange(open)
   }
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Form submitted')
-    
+
     const requiredFields = [
       { field: contractNumber, name: 'Contract number' },
       { field: requestor, name: 'Requestor' },
@@ -189,7 +221,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       { field: location, name: 'Location' },
       { field: platform, name: 'Platform' }
     ]
-    
+
     for (const { field, name } of requiredFields) {
       if (!field) {
         console.log(`Missing field: ${name}`)
@@ -197,15 +229,15 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         return
       }
     }
-    
+
     try {
       setIsSubmitting(true)
-      
+
       const today = new Date().toISOString().split('T')[0]
-      
+
       const formattedLettingDate = lettingDate ? format(lettingDate, 'yyyy-MM-dd') : today
       const formattedDueDate = dueDate ? format(dueDate, 'yyyy-MM-dd') : today
-      
+
       const bidData = {
         contract_number: contractNumber,
         requestor,
@@ -222,9 +254,10 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         flagging: false,
         perm_signs: false,
         equipment_rental: false,
-        other: false
+        other: false,
+        no_bid_reason: noBidReason === 'Custom' ? customText : noBidReason
       }
-      
+
       try {
         if (job) {
           // Update existing bid
@@ -241,9 +274,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         console.error('API error:', error)
         throw error
       }
-      
+
       onOpenChange(false)
-      
+
       if (onSuccess) {
         onSuccess()
       }
@@ -255,13 +288,24 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
     }
   }
 
+  const handleNoBidReasonChange = (value : string) => {
+    if(value === 'Custom'){
+      setCustomReasonSelected(true);
+    }
+    if(value === 'No MPT' || value === 'Outside of service area' || value === 'Project cancelled' || value === 'Outside of scope'){
+      setCustomReasonSelected(false);
+    }
+
+    setNoBidReason(value);
+  }
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{job ? 'Edit Open Bid' : 'Create a new Open Bid'}</SheetTitle>
         </SheetHeader>
-        
+
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-6 p-6">
@@ -270,9 +314,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   <Label>Contract Number <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Contract Number" 
-                      className="pl-9" 
+                    <Input
+                      placeholder="Contract Number"
+                      className="pl-9"
                       value={contractNumber}
                       onChange={(e) => setContractNumber(e.target.value)}
                       required
@@ -284,7 +328,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   <Label>Requestor <span className="text-red-500">*</span></Label>
                   <Popover
                     open={openStates.requestor}
-                    onOpenChange={(open) => setOpenStates(prev => ({...prev, requestor: open}))}
+                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, requestor: open }))}
                   >
                     <PopoverTrigger asChild>
                       <Button
@@ -312,7 +356,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                 value={user.name}
                                 onSelect={() => {
                                   setRequestor(user.id);
-                                  setOpenStates(prev => ({...prev, requestor: false}));
+                                  setOpenStates(prev => ({ ...prev, requestor: false }));
                                 }}
                               >
                                 <Check
@@ -337,7 +381,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   <Label>Owner</Label>
                   <Popover
                     open={openStates.owner}
-                    onOpenChange={(open) => setOpenStates(prev => ({...prev, owner: open}))}
+                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}
                   >
                     <PopoverTrigger asChild>
                       <Button
@@ -363,7 +407,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                 value={ownerItem.name}
                                 onSelect={() => {
                                   setOwner(ownerItem.id);
-                                  setOpenStates(prev => ({...prev, owner: false}));
+                                  setOpenStates(prev => ({ ...prev, owner: false }));
                                 }}
                               >
                                 <Check
@@ -506,9 +550,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   <Label>Location</Label>
                   <div className="relative">
                     <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Location" 
-                      className="pl-9" 
+                    <Input
+                      placeholder="Location"
+                      className="pl-9"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                     />
@@ -530,7 +574,24 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   </SelectContent>
                 </Select>
               </div>
-
+              {status === 'No Bid' && <Select value={noBidReason} onValueChange={handleNoBidReasonChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder='Choose' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="No MPT">No MPT</SelectItem>
+                  <SelectItem value='Outside of service area'>Outside of service area</SelectItem>
+                  <SelectItem value='Project cancelled'>Project cancelled</SelectItem>
+                  <SelectItem value='Outside of scope'>Outside of scope</SelectItem>
+                  <SelectItem value='Custom'>Custom</SelectItem>
+                </SelectContent>
+              </Select>}
+              {customReasonSelected && <Input
+                type="text"
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder="Enter custom reason"
+              />}
               <div className="space-y-2 w-full">
                 <Label>Services Required <span className="text-red-500">*</span></Label>
                 <p className="text-sm text-muted-foreground">Select all that apply</p>
@@ -551,9 +612,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
               <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
-              <Button 
-                className="flex-1" 
-                type="submit" 
+              <Button
+                className="flex-1"
+                type="submit"
                 disabled={isSubmitting}
                 onClick={(e) => {
                   console.log('Submit button clicked')
