@@ -7,13 +7,13 @@ export async function GET(request: NextRequest) {
     const branch = url.searchParams.get('branch');
     const status = url.searchParams.get('status');
     const counts = url.searchParams.get('counts');
-    
+
     if (counts) {
       try {
         const { data: allJobs, error: allJobsError } = await supabase
           .from('jobs_complete')
           .select('id, branch_code, project_status');
-        
+
         if (allJobsError) {
           return NextResponse.json(
             { error: 'Failed to fetch job counts', details: allJobsError },
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
           hatfield: allJobs.filter(job => job.branch_code === '10').length,
           archived: allJobs.filter(job => job.project_status === 'Archived').length
         };
-        
+
         return NextResponse.json(countData);
       } catch (error) {
         console.error('Error fetching job counts:', error);
@@ -38,14 +38,14 @@ export async function GET(request: NextRequest) {
         );
       }
     }
-    
+
     // Get pagination parameters
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 25;
     const page = url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : 1;
-    
+
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
-    
+
     // Build query
     let query = supabase
       .from('jobs_complete')
@@ -117,23 +117,23 @@ export async function GET(request: NextRequest) {
     // Fetch reference data from the database
     const { data: counties } = await supabase.from('counties').select('id, name');
     const { data: contractors } = await supabase.from('contractors').select('id, name');
-    
+
     // Create maps for looking up names by ID
     const countyMap = new Map();
     const contractorMap = new Map();
-    
+
     if (counties) {
       counties.forEach(county => {
         countyMap.set(county.id.toString(), county.name);
       });
     }
-    
+
     if (contractors) {
       contractors.forEach(contractor => {
         contractorMap.set(contractor.id.toString(), contractor.name);
       });
     }
-    
+
     try {
       // Process all jobs
       interface Job {
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
           '20': 'Turbotville',
           '30': 'West'
         };
-        
+
         // Convert to ActiveJob type exactly
         let adminData = job.admin_data;
         if (typeof adminData === 'string') {
@@ -255,6 +255,53 @@ export async function GET(request: NextRequest) {
     console.error('Error in GET /api/jobs:', error);
     return NextResponse.json(
       { error: 'Unexpected error fetching jobs' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { newStatus, type, jobNumber } = await request.json();
+
+    const { data: jobNumberData, error: jobNumberError } = await supabase
+      .from('job_numbers')
+      .select('id')
+      .eq('job_number', jobNumber)
+      .single();
+
+    if (jobNumberError || !jobNumberData) {
+      console.error('Job number lookup error:', jobNumberError);
+      return NextResponse.json(
+        { message: 'Job number not found' },
+        { status: 404 }
+      );
+    }
+
+    // Now update the job status using the job_number_id
+    const { data, error } = await supabase
+      .from('jobs')
+      .update({ [type]: newStatus })
+      .eq('job_number_id', jobNumberData.id);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { message: 'Failed to update job status', error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'Job status updated successfully', data },
+      { status: 200 }
+    );
+
+
+  } catch (error) {
+    console.error('PATCH request error:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

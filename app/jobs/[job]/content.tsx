@@ -1440,6 +1440,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         job={selectedActiveJob || undefined}
                                         onEdit={handleActiveJobEdit}
                                         onNavigate={handleActiveJobNavigation}
+                                        loadActiveJobs={loadActiveJobs}
                                     />
                                     <EditActiveJobSheet
                                         open={editActiveJobSheetOpen}
