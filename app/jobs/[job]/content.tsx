@@ -1212,15 +1212,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
         const handleEdit = (item: JobPageData) => {
             if ('lettingDate' in item) { // Check if it's an ActiveBid
                 const bid = item as ActiveBid;
-                // Navigate to the active-bid page with step 6 open and pass the bid ID
-                // Also include isEditing=true to indicate we're editing an existing bid
-                // Set openSummary=true to ensure the summary view is shown
-                // Add autoSubmit=true to trigger automatic form submission
-                if (bid.id) {
-                    window.location.href = `/active-bid?jobId=${bid.id}&initialStep=6&isEditing=true&openSummary=true&autoSubmit=true`;
+                if (bid.contractNumber) {
+                    const params = new URLSearchParams({
+                        initialStep: '6',
+                        openSummary: 'true',
+                        contractNumber: typeof bid.contractNumber === 'string' ? bid.contractNumber : bid.contractNumber.main
+                    }) 
+                    window.location.href = `/active-bid?${params.toString()}`;
                 } else {
-                    console.error('Cannot edit bid: Missing bid ID');
-                    toast.error('Cannot edit this bid. Missing bid ID.');
+                    console.error('Cannot edit bid: Missing contract number');
+                    toast.error('Cannot edit this bid. Missing contract number');
                 }
             }
         };

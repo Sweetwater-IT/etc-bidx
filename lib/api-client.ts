@@ -4,6 +4,7 @@ import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformatio
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
+import { EstimateCompleteView } from '@/types/estimate-view';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating } from '@/types/MPTEquipment';
@@ -193,12 +194,12 @@ export async function fetchActiveBids(options?: {
 /**
  * Fetch a specific active bid by ID
  */
-export async function fetchActiveBidById(id: number): Promise<BidEstimate> {
-  const response = await fetch(`/api/active-bids/${id}`);
+export async function fetchActiveBidByContractNumber(contractNumber: string): Promise<EstimateCompleteView> {
+  const response = await fetch(`/api/active-bids/${contractNumber}`);
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || `Failed to fetch active bid with ID ${id}`);
+    throw new Error(errorData.message || `Failed to fetch active bid with ID ${contractNumber}`);
   }
 
   const result = await response.json();

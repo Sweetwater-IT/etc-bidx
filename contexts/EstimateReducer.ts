@@ -3,7 +3,8 @@ import { EstimateAction } from "@/types/TEstimateAction";
 import { defaultMPTObject, defaultPhaseObject } from "@/types/default-objects/defaultMPTObject";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { Phase } from "@/types/MPTEquipment";
+import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
+import { AdminData } from "@/types/TAdminData";
 
 // Define the reducer's context type
 export interface EstimateContextType extends Estimate {
@@ -448,7 +449,7 @@ export const estimateReducer = (
 			if (!state.equipmentRental) return state;
 			else return {
 				...state,
-				equipmentRental: state.equipmentRental.filter((item, index) => index !== action.payload.index )
+				equipmentRental: state.equipmentRental.filter((item, index) => index !== action.payload.index)
 			}
 
 		// case "ADD_PERMANENT_SIGNS":
@@ -616,6 +617,62 @@ export const estimateReducer = (
 				equipmentRental: [],
 				// permanentSigns: defaultPermanentSignsObject, 
 			};
+
+		case "COPY_ADMIN_DATA":
+			//transform strings from db into date objects for frontend
+			const transformedAdminData : AdminData = {
+				...action.payload,
+				startDate: action.payload.startDate ? new Date(action.payload.startDate) : null,
+				endDate: action.payload.endDate ? new Date(action.payload.endDate) : null,
+				lettingDate: action.payload.lettingDate ? new Date(action.payload.lettingDate) : null,
+				winterStart: action.payload.winterStart ? new Date(action.payload.winterStart) : undefined,
+				winterEnd: action.payload.winterEnd ? new Date(action.payload.winterEnd) : undefined
+			}
+
+			return {
+				...state,
+				adminData: transformedAdminData
+			};
+		
+		case "COPY_MPT_RENTAL":
+			const transformedMPTData : MPTRentalEstimating = {
+				...action.payload,
+				phases: action.payload.phases.map(p => ({
+					...p,
+					startDate: p.startDate ? new Date(p.startDate) : null,
+					endDate: p.endDate ? new Date(p.endDate) : null,
+					signs: []
+				}))
+			}
+
+			return {
+				...state,
+				mptRental: transformedMPTData
+			};
+		
+		case 'COPY_EQUIPMENT_RENTAL':
+			return {
+				...state,
+				equipmentRental: action.payload
+			};
+		
+		case 'COPY_FLAGGING':
+			return {
+				...state,
+				flagging: action.payload
+			};
+
+		case 'COPY_SERVICE_WORK':
+			return {
+				...state,
+				flagging: action.payload
+			};
+
+		case 'COPY_SALE_ITEMS':
+			return {
+				...state,
+				saleItems: action.payload
+			}
 
 		default:
 			return state;

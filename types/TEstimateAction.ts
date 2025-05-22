@@ -168,4 +168,10 @@ export type EstimateAction =
 	}
 	| { type: "DELETE_SALE_ITEM"; payload: string }
 	| { type: "RESET_SALE_ITEMS" }
-	| { type: "RESET_STATE" };
+	| { type: "RESET_STATE" }
+	| { type: 'COPY_ADMIN_DATA', payload: AdminData}
+	| { type: 'COPY_MPT_RENTAL', payload: MPTRentalEstimating}
+	| { type: 'COPY_EQUIPMENT_RENTAL', payload : EquipmentRentalItem[]}
+	| { type: 'COPY_FLAGGING', payload: Flagging}
+	| { type: 'COPY_SERVICE_WORK', payload: Flagging}
+	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[]}

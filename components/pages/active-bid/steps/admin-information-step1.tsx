@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Step } from "@/types/IStep";
 import {
+  fetchActiveBidByContractNumber,
   fetchBidById,
   fetchReferenceData,
 } from "@/lib/api-client";
@@ -21,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSearchParams } from "next/navigation";
 import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 
 const step: Step = {
@@ -62,6 +64,7 @@ const AdminInformationStep1 = ({
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams.get('jobId');
+  const contractNumberFromParams = searchParams.get('contractNumber')
 
   const { startLoading, stopLoading } = useLoading();
 
@@ -183,7 +186,7 @@ const AdminInformationStep1 = ({
           dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'dbe', value: data.dbe_percentage ? Number(data.dbe_percentage) : 0 }});
           dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'lettingDate', value: new Date(data.letting_date)}});
           dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'location', value: data.location}});
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'srRoute', value: data.stateRoute}});
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'srRoute', value: data.state_route}});
           const associatedCounty = counties.find(c => c.id === parseInt(data.county))
           if(associatedCounty){
             handleCountyChange(data.county)
@@ -195,6 +198,18 @@ const AdminInformationStep1 = ({
         } catch(err) {
           toast.error("Couldn't populate bid with data from available job " + availableJobId + ' ' + err)
         }
+      }
+      if(contractNumberFromParams){
+        const data = await fetchActiveBidByContractNumber(contractNumberFromParams);
+        //estimate-view is not completley accurate yet, but eventually we could pass the whole down
+        //to one reducer functio nand update all the state at once
+        dispatch({type: 'COPY_ADMIN_DATA', payload: data.admin_data as any});
+        dispatch({type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any});
+        dispatch({type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any});
+        dispatch({type: 'COPY_FLAGGING', payload: data.flagging as any});
+        dispatch({type: 'COPY_SERVICE_WORK', payload: data.service_work as any});
+        dispatch({type: 'COPY_SALE_ITEMS', payload: data.sale_items as any})
+        console.log(data);
       }
       stopLoading();
     };

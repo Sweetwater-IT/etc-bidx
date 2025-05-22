@@ -8,20 +8,11 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const id = parseInt(resolvedParams.id);
-    
-    if (isNaN(id)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid ID format' },
-        { status: 400 }
-      );
-    }
-    
     // First try to fetch from bid_estimates (for existing bids)
     let { data, error } = await supabase
-      .from('bid_estimates')
+      .from('estimate_complete')
       .select('*')
-      .eq('id', id)
+      .filter("admin_data->>contractNumber", 'eq', decodeURIComponent(resolvedParams.id))
       .single();
     
     // If not found in bid_estimates, try to fetch from available_jobs (for new bids from jobs)
@@ -29,7 +20,7 @@ export async function GET(
       const { data: jobData, error: jobError } = await supabase
         .from('available_jobs')
         .select('*')
-        .eq('id', id)
+        .eq('id', resolvedParams.id)
         .single();
       
       if (!jobError) {
