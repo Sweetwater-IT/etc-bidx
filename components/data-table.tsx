@@ -103,18 +103,20 @@ export interface DataTableProps<TData> {
 }
 
 function formatCellValue(value: any, key: string) {
-    // Handle null or undefined
-    if (value === null || value === undefined) {
-        return '';
+    if (value === undefined || value === null || 
+        (typeof value === 'string' && value.toLowerCase() === "unknown")) {
+        return "-";
     }
 
     // Handle special formatting for contractNumber and county fields
     if ((key === "contractNumber" || key === "county") && typeof value === "object" && value !== null) {
-        if (value.main && value.secondary) {
+        if (value.main) {
             return (
                 <div className="flex flex-col">
                     <span className={key === "contractNumber" ? "uppercase" : ""}>{value.main}</span>
-                    <span className="text-xs text-red-500">{value.secondary}</span>
+                    {value.secondary && (
+                        <span className="text-xs text-red-500">{value.secondary}</span>
+                    )}
                 </div>
             );
         }
@@ -136,6 +138,19 @@ function formatCellValue(value: any, key: string) {
         }
         return value;
     }
+    
+    if (key === "dbe" || key === "dbePercentage") {
+        if (typeof value === "string" && value.endsWith("%")) {
+            return value;
+        }
+        
+        const numValue = typeof value === "string" ? parseFloat(value) : value;
+        
+        if (!isNaN(numValue)) {
+            return `${numValue % 1 === 0 ? numValue.toFixed(0) : numValue}%`;
+        }
+        return value;
+    }
 
     // Handle status badges
     if (key === "status") {
@@ -143,6 +158,15 @@ function formatCellValue(value: any, key: string) {
 
         return (
             <Badge variant={variant} className="font-medium">
+                {value}
+            </Badge>
+        );
+    }
+    
+    if (key === "contractor" || key === "subcontractor") {
+        if (!value) return '';
+        return (
+            <Badge variant="outline" className="font-medium bg-background hover:bg-background">
                 {value}
             </Badge>
         );
@@ -285,6 +309,15 @@ export function DataTable<TData>({
                                 console.log('Archive clicked for row:', row.original);
                                 try {
                                     onArchiveSelected([row.original as TData]);
+                                    console.log('onArchiveSelected called successfully');
+                                } catch (error) {
+                                    console.error('Error calling onArchiveSelected:', error);
+                                }
+                            }
+
+                            if (onArchive) {
+                                try {
+                                    onArchive(row.original as TData);
                                     console.log('onArchiveSelected called successfully');
                                 } catch (error) {
                                     console.error('Error calling onArchiveSelected:', error);

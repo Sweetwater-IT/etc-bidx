@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { fetchBidById } from "@/lib/api-client";
+import { fetchBidById, fetchReferenceData } from "@/lib/api-client";
 import { MoveLeft } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -70,51 +70,198 @@ function ActiveBidContent() {
         setIsLoading(true);
         // No need to set isProcessing here as it's already set in the useEffect above
         
-        const job = await fetchBidById(parseInt(jobId));
+        // Fetch the job data and all reference data in parallel
+        const [job, countiesData, ownersData, usersData] = await Promise.all([
+          fetchBidById(parseInt(jobId)),
+          fetchReferenceData('counties'),
+          fetchReferenceData('owners'),
+          fetchReferenceData('users')
+        ]);
+        
         console.log('Fetched job data:', job);
+        console.log('Fetched counties data:', countiesData);
+        console.log('Fetched owners data:', ownersData);
+        console.log('Fetched users data:', usersData);
+        
+        // Determine if the data is from available_jobs or bid_estimates
+        const isFromAvailableJobs = job.hasOwnProperty('contract_number') === false && job.hasOwnProperty('contractor');
+        
+        // Extract all relevant fields from the job data with simpler approach
+        const contractNumber = isFromAvailableJobs ? job.contractNumber : job.contract_number;
+        const ownerName = isFromAvailableJobs ? job.owner : job.owner;
+        const countyName = isFromAvailableJobs ? job.county?.main || job.countyValue : job.county;
+        const branch = isFromAvailableJobs ? job.county?.secondary || job.branch : job.branch;
+        
+        // Handle date fields - for available_jobs, use letting_date, due_date, and entry_date
+        const lettingDate = job.letting_date || job.lettingDate;
+        
+        // For start date, use entry_date if available (for available_jobs) or start_date (for bid_estimates)
+        // If neither is available, use the current date
+        const startDate = job.entry_date || job.start_date || new Date().toISOString().split('T')[0];
+        
+        // For end date, use due_date if available (for available_jobs) or end_date (for bid_estimates)
+        const endDate = job.due_date || job.dueDate || job.end_date;
+        
+        const location = job.location;
+        const division = job.platform || job.division;
+        const dbe = job.dbe_percentage || job.dbe;
+        const requestor = job.requestor || job.estimator;
+        
+        console.log('Extracted fields:', {
+          contractNumber, ownerName, countyName, branch, lettingDate, 
+          startDate, endDate, location, division, dbe, requestor
+        });
+        
+        // Check if we have IDs in the response for county, owner, and requestor
+        const countyId = job.county ? parseInt(job.county) : null;
+        const ownerId = job.owner ? parseInt(job.owner) : null;
+        const requestorId = job.requestor ? parseInt(job.requestor) : null;
+        
+        console.log('Extracted IDs:', { countyId, ownerId, requestorId });
+        
+        // Define types for our reference data objects
+        type County = {
+          id: number;
+          name: string;
+          district?: number;
+          branch?: string;
+          laborRate?: number;
+          fringeRate?: number;
+          shopRate?: number;
+          flaggingRate?: number;
+          flaggingBaseRate?: number;
+          flaggingFringeRate?: number;
+          ratedTargetGM?: number;
+          nonRatedTargetGM?: number;
+          insurance?: number;
+          fuel?: number;
+          market?: string;
+        };
+        
+        type Owner = {
+          id: number;
+          name: string;
+        };
+        
+        type User = {
+          id: number;
+          name: string;
+        };
+        
+        // Find the matching county object by ID first, then by name
+        let matchingCounty: County | null = null;
+        if (countyId && !isNaN(countyId)) {
+          const foundCounty = countiesData.find(c => c.id === countyId);
+          if (foundCounty) matchingCounty = foundCounty as County;
+          console.log('Found county by ID:', matchingCounty);
+        }
+        
+        // If not found by ID, try by name or branch
+        if (!matchingCounty) {
+          const foundCounty = countiesData.find(c => 
+            c.name.toLowerCase() === (countyName || '').toLowerCase() || 
+            (c.branch && c.branch.toLowerCase() === (branch || '').toLowerCase())
+          );
+          if (foundCounty) matchingCounty = foundCounty as County;
+          console.log('Found county by name/branch:', matchingCounty);
+        }
+        
+        // Find the matching owner object by ID first, then by name
+        let matchingOwner: Owner | null = null;
+        if (ownerId && !isNaN(ownerId)) {
+          const foundOwner = ownersData.find(o => o.id === ownerId);
+          if (foundOwner) matchingOwner = foundOwner as Owner;
+          console.log('Found owner by ID:', matchingOwner);
+        }
+        
+        // If not found by ID, try by name
+        if (!matchingOwner) {
+          const foundOwner = ownersData.find(o => 
+            o.name.toLowerCase() === (ownerName || '').toLowerCase()
+          );
+          if (foundOwner) matchingOwner = foundOwner as Owner;
+          console.log('Found owner by name:', matchingOwner);
+        }
+        
+        // Find the matching estimator (user) by ID first, then by name
+        let matchingEstimator: User | null = null;
+        if (requestorId && !isNaN(requestorId)) {
+          const foundUser = usersData.find(u => u.id === requestorId);
+          if (foundUser) matchingEstimator = foundUser as User;
+          console.log('Found estimator by ID:', matchingEstimator);
+        }
+        
+        // If not found by ID, try by name
+        if (!matchingEstimator && requestor) {
+          const foundUser = usersData.find(u => 
+            u.name.toLowerCase() === (requestor || '').toLowerCase()
+          );
+          if (foundUser) matchingEstimator = foundUser as User;
+          console.log('Found estimator by name:', matchingEstimator);
+        }
+        
+        console.log('Found matching estimator:', matchingEstimator);
         
         // Process date fields properly
-        const formattedLettingDate = formatDateForInput(job.letting_date) || '';
+        const formattedLettingDate = formatDateForInput(lettingDate) || '';
         
         // Log the raw data to help with debugging
         console.log('Raw job data for prefilling:', job);
         
-        // Create a more comprehensive mapped data object with all available fields from the job
-        // Ensure we include the ID values for dropdown fields to properly prefill them
+        // Create a simplified mapped data object for the form
         const mappedData = {
           adminData: {
-            contractNumber: job.contract_number || '',
-            // For dropdown fields, ensure we have both ID and name values
-            estimator: job.requestor_id || job.requestor || '',
-            estimatorName: job.requestor || '',
-            estimatorId: job.requestor_id || '',
-            owner: job.owner_id || job.owner || '',
-            ownerName: job.owner || '',
-            ownerId: job.owner_id || '',
-            county: {
-              id: job.county_id || 0,
-              name: job.county || '',
-              district: job.district || 0,
-              branch: job.branch || '',
-              laborRate: job.labor_rate || 0,
-              fringeRate: job.fringe_rate || 0,
-              shopRate: job.shop_rate || 0,
-              flaggingRate: job.flagging_rate || 0,
-              flaggingBaseRate: job.flagging_base_rate || 0,
-              flaggingFringeRate: job.flagging_fringe_rate || 0,
-              ratedTargetGM: job.rated_target_gm || 0,
-              nonRatedTargetGM: job.non_rated_target_gm || 0,
-              insurance: job.insurance || 0,
-              fuel: job.fuel || 0,
-              market: job.market || 'CORE'
-            },
-            srRoute: job.sr_route || '',
-            location: job.location || '',
-            division: job.platform || '',
+            // Basic fields
+            contractNumber: contractNumber || '',
+            division: division || '',
+            location: location || '',
+            dbe: dbe ? dbe.toString() : '',
             lettingDate: formattedLettingDate || '',
-            startDate: job.start_date ? formatDateForInput(job.start_date) : '',
-            endDate: job.due_date ? formatDateForInput(job.due_date) : '',
-            dbe: job.dbe_percentage ? job.dbe_percentage.toString() : '',
+            startDate: startDate ? formatDateForInput(startDate) : '',
+            endDate: endDate ? formatDateForInput(endDate) : '',
+            
+            // Estimator field - use name for dropdown selection
+            estimator: matchingEstimator ? matchingEstimator.name : requestor || '',
+            
+            // Owner field - use name for dropdown selection
+            owner: matchingOwner ? matchingOwner.name : ownerName || '',
+            
+            // County field - use the matching county object or create a fallback
+            county: matchingCounty ? {
+              id: matchingCounty.id,
+              name: matchingCounty.name,
+              district: matchingCounty.district || 0,
+              branch: matchingCounty.branch || '',
+              laborRate: matchingCounty.laborRate || 0,
+              fringeRate: matchingCounty.fringeRate || 0,
+              shopRate: matchingCounty.shopRate || 0,
+              flaggingRate: matchingCounty.flaggingRate || 0,
+              flaggingBaseRate: matchingCounty.flaggingBaseRate || 0,
+              flaggingFringeRate: matchingCounty.flaggingFringeRate || 0,
+              ratedTargetGM: matchingCounty.ratedTargetGM || 0,
+              nonRatedTargetGM: matchingCounty.nonRatedTargetGM || 0,
+              insurance: matchingCounty.insurance || 0,
+              fuel: matchingCounty.fuel || 0,
+              market: matchingCounty.market || 'CORE'
+            } : countyId ? {
+              // If we have a county ID but no matching county, create a minimal object
+              id: countyId,
+              name: countyName || 'Unknown County',
+              branch: branch || '',
+              district: 0,
+              laborRate: 0,
+              fringeRate: 0,
+              shopRate: 0,
+              flaggingRate: 0,
+              flaggingBaseRate: 0,
+              flaggingFringeRate: 0,
+              ratedTargetGM: 0,
+              nonRatedTargetGM: 0,
+              insurance: 0,
+              fuel: 0,
+              market: 'CORE'
+            } : null,
+            srRoute: job.sr_route || '',
             owTravelTimeMins: job.ow_travel_time_mins || 0,
             owMileage: job.ow_mileage || 0,
             fuelCostPerGallon: job.fuel_cost_per_gallon || 0,
@@ -173,13 +320,18 @@ function ActiveBidContent() {
         };
         
         console.log('Mapped form data:', mappedData);
+        // Store the job data with the properly mapped county
         setJobData(mappedData);
         
-        // If we're editing, we need to mark the form as ready
+        // Log the final mapped data for debugging
+        console.log('Final mapped data with county:', mappedData);
+        
+        // Mark as ready and not loading
+        setIsLoading(false);
+        setIsReady(true);
         if (isEditing) {
           // Small delay to ensure the form is fully loaded before showing it
           setTimeout(() => {
-            setIsReady(true);
             setIsProcessing(false);
           }, 500);
         }
