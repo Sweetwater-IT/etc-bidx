@@ -117,6 +117,10 @@ export const data = {
           url: "/portal/users",
         },
         {
+          title: "Flagging Rates",
+          url: "/portal/flagging-rates"
+        },
+        {
           title: "Payback calculations",
           url: "/portal/payback-calculations",
         },
