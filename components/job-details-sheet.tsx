@@ -33,6 +33,9 @@ interface JobDetailsSheetProps {
     perm_signs?: boolean
     equipment_rental?: boolean
     other?: boolean
+    noBidReason?: string
+    stateRoute?: string
+    dbe?: string
   }
   onEdit?: (job: {
     id: number
@@ -47,6 +50,9 @@ interface JobDetailsSheetProps {
     createdAt: string
     location: string
     platform: string
+    noBidReason?: string
+    stateRoute?: string
+    dbe?: string
   }) => void
 }
 
@@ -167,6 +173,22 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <Label className="font-medium">Location</Label>
                 <div className="text-sm text-muted-foreground">
                   {job?.location || '-'}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">DBE %</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.dbe || '-'}
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-medium">State Route</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.stateRoute || '-'}
                 </div>
               </div>
             </div>

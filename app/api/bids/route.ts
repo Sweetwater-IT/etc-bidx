@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const requiredFields = [
       'branch', 'contract_number', 'county', 'due_date', 
       'letting_date', 'entry_date', 'location', 'owner', 
-      'platform', 'requestor'
+      'platform', 'requestor', 'dbe_percentage', 'state_route'
     ];
     
     const missingFields = requiredFields.filter(field => !body[field]);
@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
     // Set default values if not provided
     const newBid: AvailableJob = {
       ...body,
+      dbe_percentage: parseInt(body.dbe_percentage),
       status: body.status || 'Unset',
       mpt: body.mpt ?? false,
       flagging: body.flagging ?? false,
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
       .select();
     
     if (error) {
+      console.error(error)
       return NextResponse.json(
         { success: false, message: 'Failed to create bid', error: error.message },
         { status: 500 }

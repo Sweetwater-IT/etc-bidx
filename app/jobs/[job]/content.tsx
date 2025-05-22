@@ -21,7 +21,7 @@ import { CreateJobSheet } from "@/components/create-job-sheet";
 import { CreateActiveBidSheet } from "@/components/create-active-bid-sheet";
 import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "@/lib/api-client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, milliseconds } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
 import { JobDetailsSheet } from "@/components/job-details-sheet"
 import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
@@ -45,6 +45,8 @@ type AvailableJob = {
     createdAt: string;
     location: string;
     platform: string;
+    noBidReason?: string;
+    stateRoute?:string;
 };
 
 // Map between UI status and database status
@@ -53,13 +55,6 @@ const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | 
     if (uiStatus === "no-bid") return "No Bid";
     if (uiStatus === "unset") return "Unset";
     return undefined;
-};
-
-const mapDbStatusToUiStatus = (dbStatus: string): "Bid" | "No Bid" | "Unset" => {
-    if (dbStatus === "Bid") return "Bid";
-    if (dbStatus === "No Bid") return "No Bid";
-    if (dbStatus === "Unset") return "Unset";
-    return "Unset"; // Default fallback
 };
 
 interface JobPageContentProps {
@@ -281,6 +276,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
                 
                 const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+
+                const noBidReason = job.no_bid_reason || null;
+
+                const stateRoute = job.state_route || null;
                 
                 return {
                     id: job.id,
@@ -300,6 +299,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
                     location: locationValue,
                     platform: platformValue,
+                    noBidReason,
+                    stateRoute
                 };
             });
 
