@@ -89,8 +89,13 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
     }
     else {
       toast.success(`${type === 'billing_status' ? 'Billing status' : 'Project status'} correctly updated.`)
-      type === 'project_status' ? setEditingProjectStatus(false) : setEditingBillingStatus(false) 
-      type === 'project_status' ? setLocalProjectStatus(newStatus) : setLocalBillingStatus(newStatus)
+      if(type === 'project_status'){
+        setEditingProjectStatus(false)
+        setLocalProjectStatus(newStatus)
+      } else{
+        setEditingBillingStatus(false)
+        setLocalBillingStatus(newStatus) 
+      }
       loadActiveJobs();
     }
   }
