@@ -42,66 +42,29 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   );
 };
 
-interface StepsMainProps {
-  initialData?: Partial<FormData> | null;
-}
-
-const StepsMain = ({ initialData }: StepsMainProps) => {
+const StepsMain = () => {
   const searchParams = useSearchParams();
   const initialStepParam = searchParams.get("initialStep");
-  const isEditing = searchParams.get("isEditing") === "true";
   
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
-  const [currentStep, setCurrentStep] = useState(
-    initialStepParam ? parseInt(initialStepParam) : (isEditing ? 6 : 1)
-  );
+  const [currentStep, setCurrentStep] = useState(initialStepParam ? parseInt(initialStepParam) : 6);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);
   
-  // Track if form data is fully loaded to enable step navigation
-  const [isFormDataLoaded, setIsFormDataLoaded] = useState(false);
-  
-  // Create a wrapped setCurrentStep function that handles edit mode logic
-  const handleStepChange = (step: number) => {
-    // In edit mode, only allow navigation when form data is loaded
-    if (!isEditing || (isEditing && isFormDataLoaded)) {
-      setCurrentStep(step);
-    }
-  };
-  
-  // Set the view summary open if initialStep is 6 AND openSummary is true
-  // In edit mode, go to step 6 but don't automatically open the summary drawer
   useEffect(() => {
-    // In edit mode, go to step 6 but don't open summary view automatically
-    if (isEditing) {
-      setCurrentStep(6);
-      // Don't set setIsViewSummaryOpen(true) here to prevent drawer from opening
-    } else {
       // For non-edit mode, check if we should open summary
       const openSummary = searchParams.get("openSummary") === "true";
       if (initialStepParam === "6" && openSummary) {
         setIsViewSummaryOpen(true);
       }
-    }
-  }, [initialStepParam, searchParams, isEditing]);
+  }, [initialStepParam, searchParams]);
   
-  // Mark form data as loaded when initialData is available
-  useEffect(() => {
-    if (initialData) {
-      // Small delay to ensure context is fully initialized
-      const timer = setTimeout(() => {
-        setIsFormDataLoaded(true);
-      }, 1000); // Increased delay to ensure data is fully loaded
-      
-      return () => clearTimeout(timer);
-    }
-  }, [initialData]);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true)
 
   return (
-    <EstimateProvider initialData={initialData}>
+    <EstimateProvider>
     <div className={`relative min-h-screen ${isFullscreen ? 'px-6' : 'flex gap-20 justify-between pr-12'}`} style={{ transition: 'all 0.3s ease-in-out' }}>
       {!isFullscreen && (
         <div className="absolute top-0 right-0 z-50">

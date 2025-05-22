@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Step } from "@/types/IStep";
 import {
+  fetchActiveBidByContractNumber,
+  fetchBidById,
   fetchReferenceData,
 } from "@/lib/api-client";
 import React, { useEffect, useState } from "react";
@@ -17,6 +19,11 @@ import { Switch } from "@/components/ui/switch";
 import { County } from "@/types/TCounty";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useSearchParams } from "next/navigation";
+import { useLoading } from "@/hooks/use-loading";
+import { toast } from "sonner";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+
 
 const step: Step = {
   id: "step-1",
@@ -54,6 +61,12 @@ const AdminInformationStep1 = ({
 }) => {
 
   const { adminData, dispatch } = useEstimate();
+
+  const searchParams = useSearchParams();
+  const availableJobId = searchParams.get('jobId');
+  const contractNumberFromParams = searchParams.get('contractNumber')
+
+  const { startLoading, stopLoading } = useLoading();
 
   useEffect(() => {
     dispatch({type: 'ADD_MPT_RENTAL'})
@@ -114,6 +127,7 @@ const AdminInformationStep1 = ({
   // Fetch reference data for dropdowns
   useEffect(() => {
     const fetchData = async () => {
+      startLoading();
       try {
         // Fetch counties
         setIsLoading((prev) => ({ ...prev, counties: true }));
@@ -163,10 +177,45 @@ const AdminInformationStep1 = ({
           owners: false,
         });
       }
+
+      if(availableJobId){
+        try {
+          const data = await fetchBidById(parseInt(availableJobId));
+
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'contractNumber', value: data.contract_number}});
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'dbe', value: data.dbe_percentage ? Number(data.dbe_percentage) : 0 }});
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'lettingDate', value: new Date(data.letting_date)}});
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'location', value: data.location}});
+          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'srRoute', value: data.state_route}});
+          const associatedCounty = counties.find(c => c.id === parseInt(data.county))
+          if(associatedCounty){
+            handleCountyChange(data.county)
+          }
+          const associatedOwner = owners.find(o => o.id === data.owner);
+          if(associatedOwner){
+            dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'owner', value: associatedOwner.name}});
+          }
+        } catch(err) {
+          toast.error("Couldn't populate bid with data from available job " + availableJobId + ' ' + err)
+        }
+      }
+      if(contractNumberFromParams){
+        const data = await fetchActiveBidByContractNumber(contractNumberFromParams);
+        //estimate-view is not completley accurate yet, but eventually we could pass the whole down
+        //to one reducer functio nand update all the state at once
+        dispatch({type: 'COPY_ADMIN_DATA', payload: data.admin_data as any});
+        dispatch({type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any});
+        dispatch({type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any});
+        dispatch({type: 'COPY_FLAGGING', payload: data.flagging as any});
+        dispatch({type: 'COPY_SERVICE_WORK', payload: data.service_work as any});
+        dispatch({type: 'COPY_SALE_ITEMS', payload: data.sale_items as any})
+        console.log(data);
+      }
+      stopLoading();
     };
 
     fetchData();
-  }, [adminData]);
+  }, []);
 
   useEffect(() => {
     if(adminData.rated === 'NON-RATED'){
