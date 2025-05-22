@@ -46,6 +46,7 @@ type AvailableJob = {
     location: string;
     platform: string;
     noBidReason?: string;
+    stateRoute?:string;
 };
 
 // Map between UI status and database status
@@ -277,6 +278,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
 
                 const noBidReason = job.no_bid_reason || null;
+
+                const stateRoute = job.state_route || null;
                 
                 return {
                     id: job.id,
@@ -296,7 +299,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
                     location: locationValue,
                     platform: platformValue,
-                    noBidReason
+                    noBidReason,
+                    stateRoute
                 };
             });
 

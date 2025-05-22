@@ -1,0 +1,1 @@
+alter table available_jobs add column state_route text;

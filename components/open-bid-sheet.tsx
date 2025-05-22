@@ -17,6 +17,9 @@ import {
   Check,
   ChevronsUpDown,
   Search,
+  PercentIcon,
+  RouteIcon,
+  TruckIcon,
 } from "lucide-react"
 import {
   Command,
@@ -52,6 +55,8 @@ interface OpenBidSheetProps {
     location: string
     platform: string
     noBidReason?: string
+    dbe?: number
+    stateRoute?: string
   }
 }
 
@@ -67,6 +72,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [platform, setPlatform] = useState('ecms')
   const [status, setStatus] = useState<'Bid' | 'No Bid' | 'Unset'>('Unset')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dbe, setDbe] = useState('')
+  const [stateRoute, setStateRoute] = useState('')
 
   const [users, setUsers] = useState<{ id: string, name: string }[]>([])
   const [owners, setOwners] = useState<{ id: string, name: string }[]>([])
@@ -153,6 +160,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus(job.status as 'Bid' | 'No Bid' | 'Unset')
       setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined)
       setDueDate(job.dueDate ? new Date(job.dueDate) : undefined)
+      setDbe(job.dbe ? job.dbe.toString() : '')
+      setStateRoute(job.stateRoute || '')
       
       // Handle noBidReason
       if (job.noBidReason) {
@@ -183,6 +192,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
+      setDbe('')
+      setStateRoute('')
       setNoBidReason(undefined)
       setCustomReasonSelected(false)
       setCustomText('')
@@ -201,9 +212,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
-      setNoBidReason(undefined) // Add this
-      setCustomReasonSelected(false) // Add this  
-      setCustomText('') // Add this
+      setDbe('')
+      setStateRoute('')
+      setNoBidReason(undefined)
+      setCustomReasonSelected(false)
+      setCustomText('')
     }
     onOpenChange(open)
   }
@@ -214,6 +227,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
     const requiredFields = [
       { field: contractNumber, name: 'Contract number' },
+      { field: dbe, name : 'DBE %'},
+      { field: stateRoute, name: 'State Route'},
       { field: requestor, name: 'Requestor' },
       { field: owner, name: 'Owner' },
       { field: county, name: 'County' },
@@ -250,6 +265,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         letting_date: formattedLettingDate,
         due_date: formattedDueDate,
         entry_date: today,
+        dbe_percentage: parseInt(dbe) || 0,
+        state_route: stateRoute,
         mpt: false,
         flagging: false,
         perm_signs: false,
@@ -319,6 +336,37 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                       className="pl-9"
                       value={contractNumber}
                       onChange={(e) => setContractNumber(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 w-full">
+                  <Label>DBE % <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <PercentIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="0"
+                      className="pl-9"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={dbe}
+                      onChange={(e) => setDbe(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 w-full">
+                  <Label>State Route <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <TruckIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="State Route"
+                      className="pl-9"
+                      value={stateRoute}
+                      onChange={(e) => setStateRoute(e.target.value)}
                       required
                     />
                   </div>
@@ -428,8 +476,6 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   </Popover>
                 </div>
 
-                {/* Branch is automatically set based on county */}
-
                 <div className="space-y-2 w-full">
                   <Label>Platform</Label>
                   <Select value={platform} onValueChange={setPlatform}>
@@ -439,6 +485,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ecms">ECMS</SelectItem>
+                      <SelectItem value="Pennbid">Pennbid</SelectItem>
+                      <SelectItem value="Turnpike">Turnpike</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -560,7 +608,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
+              {!!job && <div className="space-y-2 w-full">
                 <Label>Status <span className="text-red-500">*</span></Label>
                 <Select value={status} onValueChange={(value) => setStatus(value as 'Bid' | 'No Bid' | 'Unset')}>
                   <SelectTrigger className="w-full pl-9 relative">
@@ -573,7 +621,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     <SelectItem value="Unset">Unset</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div>}
               {status === 'No Bid' && <Select value={noBidReason} onValueChange={handleNoBidReasonChange}>
                 <SelectTrigger>
                   <SelectValue placeholder='Choose' />
