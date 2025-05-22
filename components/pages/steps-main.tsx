@@ -42,11 +42,7 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   );
 };
 
-interface StepsMainProps {
-  initialData?: Partial<FormData> | null;
-}
-
-const StepsMain = ({ initialData }: StepsMainProps) => {
+const StepsMain = () => {
   const searchParams = useSearchParams();
   const initialStepParam = searchParams.get("initialStep");
   const isEditing = searchParams.get("isEditing") === "true";
@@ -86,22 +82,11 @@ const StepsMain = ({ initialData }: StepsMainProps) => {
     }
   }, [initialStepParam, searchParams, isEditing]);
   
-  // Mark form data as loaded when initialData is available
-  useEffect(() => {
-    if (initialData) {
-      // Small delay to ensure context is fully initialized
-      const timer = setTimeout(() => {
-        setIsFormDataLoaded(true);
-      }, 1000); // Increased delay to ensure data is fully loaded
-      
-      return () => clearTimeout(timer);
-    }
-  }, [initialData]);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true)
 
   return (
-    <EstimateProvider initialData={initialData}>
+    <EstimateProvider>
     <div className={`relative min-h-screen ${isFullscreen ? 'px-6' : 'flex gap-20 justify-between pr-12'}`} style={{ transition: 'all 0.3s ease-in-out' }}>
       {!isFullscreen && (
         <div className="absolute top-0 right-0 z-50">
