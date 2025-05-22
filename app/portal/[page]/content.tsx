@@ -1,8 +1,7 @@
 "use client";
 
-import { AppSidebar, data } from "@/components/app-sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 import { CardActions } from "@/components/card-actions"
-import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTable } from "@/components/data-table";
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -10,6 +9,8 @@ import { useLoading } from "@/hooks/use-loading";
 import { useCallback, useState, useRef, useEffect } from "react"
 import { toast } from "sonner";
 import { CreateBranchSheet } from '@/components/create-branch-sheet';
+import { CreateFlagRateSheet } from '@/components/create-flag-rate-sheet';
+import { EditFlagRateSheet } from "@/components/edit-flag-rate-sheet";
 import { EditBranchSheet } from "@/components/edit-branch-sheet";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 
@@ -20,7 +21,15 @@ type Branch = {
     shop_rate: number;
 }
 
-type Page = "branches" | "counties" | "bid-items" | "users" | "payback-calculations"
+type FlagRate = {
+    id: number;
+    fuel_economy_mpg: number;
+    truck_dispatch_fee: number;
+    worker_comp: number;
+    general_liability: number;
+}
+
+type Page = "branches" | "counties" | "bid-items" | "users" | "fragging-rates" |  "payback-calculations"
 
 interface Column {
   key: string,
@@ -39,16 +48,30 @@ export function PortalPageContent({ page: Page }) {
 
     const [showCreateBranchDialog, setShowCreateBranchDialog] = useState(false);
     const [showEditBranchDialog, setShowEditBranchDialog] = useState(false);
-    const [showBranchDetailsDialog, setShowBranchDetailsDialog] = useState(false);
     const [openConfirmArchiveDialog,  setShowConfirmArchiveDialog] = useState(false);
     const [selectedBranch, setSelectedBranch] = useState<Branch | undefined>(undefined);
     const [selectedBranchesToArchive, setSelectedBranchesToArchive] = useState<Branch[]>([]);
     const branchesTableRef = useRef<{ resetRowSelection: () => void }>(null);
 
+    // FRAGGING RATES
+    const [flagRates, setFlagRates] = useState<FlagRate[]>([]);
+    const [flagRatesPageCount, setFlagRatesPageCount] = useState(0);
+    const [flagRatesPageIndex, setFlagRatesPageIndex] = useState(0);
+    const [flagRatesPageSize, setFlagRatesPageSize] = useState(25);
+    const [flagRatesTotalCount, setFlagRatesTotalCount] = useState(0);
+
+    const [showCreateFlagRateDialog, setShowCreateFlagRateDialog] = useState(false);
+    const [showEditFlagRateDialog, setShowEditFlagRateDialog] = useState(false);
+    const [openConfirmArchiveFlagRateDialog, setShowConfirmArchiveFlagRateDialog] = useState(false);
+    const [selectedFlagRate, setSelectedFlagRate] = useState<FlagRate | undefined>(undefined);
+    const [selectedFlagRatesToArchive, setSelectedFlagRatesToArchive] = useState<FlagRate[]>([]);
+    const flagRatesTableRef = useRef<{ resetRowSelection: () => void }>(null);
+
     const isBranches = Page === "branches"
     const isCounties = Page === "counties"
     const isBidItems = Page === "bid-items"
     const isUsers = Page === "users"
+    const isFlaggingRates = Page === "flagging-rates"
     const isPaybackCalculations = Page === "payback-calculations"
 
     const BRANCHES_COLUMNS: Column[] = [
@@ -57,19 +80,32 @@ export function PortalPageContent({ page: Page }) {
         { key: "shop_rate", title: "Shop Rate" },
     ];
 
+      const FLAGGING_COLUMNS: Column[] = [
+        { key: "fuel_economy_mpg", title: "Fuel economy mpg" },
+        { key: "truck_dispatch_fee", title: "Truck Dispatch fee" },
+        { key: "worker_comp", title: "Worker Company" },
+        { key: "general_liability", title: "General Liability" }
+    ];
+
+
+    // CLICK HANDLERS
     const handleCreateClick = useCallback(() => {
         if (isBranches) {
             setShowCreateBranchDialog(true);
-        } 
-    }, [isBranches]);
+        } else if (isFlaggingRates) {
+            setShowCreateFlagRateDialog(true)
+        }
+    }, [isBranches, isFlaggingRates]);
 
     const handleEditClick = useCallback((selected: any) => {
         if (isBranches) {
             setSelectedBranch(selected)
             setShowEditBranchDialog(true)
-        } 
-    }, [isBranches]);
-
+        } else if (isFlaggingRates) {
+            setSelectedFlagRate(selected)
+            setShowEditFlagRateDialog(true)
+        }
+    }, [isBranches, isFlaggingRates]);
 
     const handleArchieveClick = useCallback((selected: any) => {
         if (isBranches) {
@@ -78,6 +114,8 @@ export function PortalPageContent({ page: Page }) {
         } 
     }, [isBranches]);
 
+
+    // ACTION HANDLERS
     const handleArchiveBranches = async (branch: Branch) => {
         try {
             const res = await fetch(`/api/branches/${branch.id}`, { method: 'DELETE' })
@@ -91,17 +129,48 @@ export function PortalPageContent({ page: Page }) {
         } 
     }
 
+    const handleArchiveFlagRates = async (fRate: FlagRate) => {
+        try {
+            const res = await fetch(`/api/flagging/${fRate.id}`, { method: 'DELETE' })
+            if (!res.ok) throw await res.json()
+
+            loadFlagRates()
+            toast.success('Flagging rate archived')
+
+        } catch (err: any) {
+            toast.error(err?.message || 'Error archiving rate')
+        } 
+    }
+
+
+
     const initiateArchiveBranch = (selectedBranches: Branch[]) => {
         setSelectedBranchesToArchive(selectedBranches);
         setShowConfirmArchiveDialog(true);
     }
 
+    const initiateArchiveFlagRate = (selectedFlagRates: FlagRate[]) => {
+        setSelectedFlagRatesToArchive(selectedFlagRates);
+        setShowConfirmArchiveFlagRateDialog(true);
+    }
+
+
+    // LOADERS
     const loadBranches = useCallback(async () => {
         try {
             console.log("Loading branches...");
             startLoading();
 
-            const response = await fetch("/api/branches", {
+            const options: any = {
+                limit: branchesPageSize,
+                page: branchesPageIndex + 1
+            };
+
+            const params = new URLSearchParams();
+            params.append("page", options.page);
+            params.append("limit", options.limit);
+
+            const response = await fetch(`/api/branches?${params}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -112,14 +181,8 @@ export function PortalPageContent({ page: Page }) {
                 throw new Error("Failed to fetch branches");
             }
 
-            const options: any = {
-                limit: branchesPageSize,
-                page: branchesPageIndex
-            };
-
             const result = await response.json();
             const { pagination, data } = result;
-
 
             setBranches(data);
             setBranchesPageCount(pagination.pageCount);
@@ -135,19 +198,66 @@ export function PortalPageContent({ page: Page }) {
 
     }, [])
 
+    
+    const loadFlagRates = useCallback(async () => {
+        try {
+            console.log("Loading flagging rates...");
+            startLoading();
+
+            const options: any = {
+                limit: branchesPageSize,
+                page: branchesPageIndex + 1
+            };
+
+            const params = new URLSearchParams();
+            params.append("pagination", "true");
+            params.append("page", options.page);
+            params.append("limit", options.limit);
+
+            const response = await fetch(`/api/flagging?${params}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch branches");
+            }
+
+            const result = await response.json();
+            const { pagination, data } = result;
+
+            setFlagRates(data);
+            setFlagRatesPageCount(pagination.pageCount);
+            setFlagRatesTotalCount(pagination.totalCount);
+
+        } catch (error) {
+            console.error("Error loading branches: ", error);
+            toast.error("Failed to load branches, please try again!");
+            
+        } finally {
+            stopLoading();
+        }
+
+    }, [])
+
 
     useEffect(() => {
         if (isBranches) {
             loadBranches();
+        } else if (isFlaggingRates) {
+            loadFlagRates()
         }
     }
-    , [loadBranches, isBranches]);
+    , [loadBranches, isBranches, isFlaggingRates, loadFlagRates]);
 
     const createButtonLabel: string =
         isBranches ? "Create Branch" :
         isCounties ? "Create County" :
         isBidItems ? "Create Bid Item" :
         isUsers ? "Create User" :
+        isFlaggingRates ? "Create Rate" : 
         "Create Payback Calculation";
 
     const data = branches
@@ -184,6 +294,7 @@ export function PortalPageContent({ page: Page }) {
                             </div>
 
                             { isBranches && (
+                                <>
                                 <DataTable<Branch>
                                     data={data as Branch[]}
                                     columns={BRANCHES_COLUMNS}
@@ -191,7 +302,7 @@ export function PortalPageContent({ page: Page }) {
                                     onArchiveSelected={initiateArchiveBranch}
                                     tableRef={branchesTableRef}
                                     selectedItem={
-                                        showBranchDetailsDialog && selectedBranch
+                                       selectedBranch
                                             ? selectedBranch
                                             : undefined
                                     }
@@ -204,17 +315,65 @@ export function PortalPageContent({ page: Page }) {
                                     pageCount={branchesPageCount}
                                     pageIndex={branchesPageIndex}
                                     pageSize={branchesPageSize}
-                                    onPageChange={setBranchesPageSize}
+                                    onPageChange={setBranchesPageIndex}
                                     onPageSizeChange={setBranchesPageSize}
                                     totalCount={branchesTotalCount}
                                 />
+
+                                <CreateBranchSheet
+                                    open={showCreateBranchDialog}
+                                    onOpenChange={setShowCreateBranchDialog}
+                                    onSuccess={loadBranches}
+                                />
+                                </>
                             ) }
 
-                            <CreateBranchSheet
-                                open={showCreateBranchDialog}
-                                onOpenChange={setShowCreateBranchDialog}
-                                onSuccess={loadBranches}
+
+                            { isFlaggingRates && (
+                                <>
+                                <DataTable<FlagRate>
+                                    data={flagRates as FlagRate[]}
+                                    columns={FLAGGING_COLUMNS}
+                                    stickyLastColumn
+                                    onArchiveSelected={initiateArchiveFlagRate}
+                                    tableRef={flagRatesTableRef}
+                                    selectedItem={
+                                        selectedFlagRate ? selectedFlagRate : undefined
+                                    }
+                                    onEdit={(item) => {
+                                        handleEditClick(item as FlagRate);
+                                    }}
+                                    onArchive={(item) => {
+                                        handleArchiveFlagRates(item);
+                                    }}
+                                    pageCount={flagRatesPageCount}
+                                    pageIndex={flagRatesPageIndex}
+                                    pageSize={flagRatesPageSize}
+                                    onPageChange={setFlagRatesPageIndex}
+                                    onPageSizeChange={setFlagRatesPageSize}
+                                    totalCount={flagRatesTotalCount}
                                 />
+                                <CreateFlagRateSheet
+                                    open={showCreateFlagRateDialog}
+                                    onOpenChange={setShowCreateFlagRateDialog}
+                                    onSuccess={() => {
+                                        loadFlagRates()
+                                    }}
+                                />
+                                
+                                {selectedFlagRate && (
+                                    <EditFlagRateSheet
+                                    open={showEditFlagRateDialog}
+                                    onOpenChange={setShowEditFlagRateDialog}
+                                    onSuccess={() => {
+                                        loadFlagRates()
+                                    }}
+                                    rate={selectedFlagRate}
+                                />
+                                )}
+                                </>
+
+                            ) }
 
 
                             { selectedBranch && (
