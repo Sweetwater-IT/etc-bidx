@@ -2,23 +2,18 @@
 "use client";
 
 import * as React from "react";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { flexRender, getCoreRowModel, useReactTable, ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Segments } from "@/components/ui/segments";
 import { Button } from "@/components/ui/button";
+import { TableControls, FilterDropdowns, FilterOption, SortOption } from "@/components/table-controls";
 import { 
     ChevronLeft, 
     ChevronRight, 
     ChevronsLeft, 
     ChevronsRight, 
-    MoreHorizontal,
-    Archive,
-    Edit,
-    Eye,
-    Trash,
-    Filter,
-    ArrowUpDown
+    MoreHorizontal
 } from "lucide-react";
 import { IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +22,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -39,13 +32,20 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 export type LegacyColumn = {
     key: string;
     title: string;
     className?: string;
+    sortable?: boolean;
 };
+
+// Extended column type to include additional properties used in the table
+type ExtendedColumn<TData> = ColumnDef<TData, any> & {
+    className?: string;
+};
+
 const handleStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case "open": 
@@ -67,7 +67,7 @@ const handleStatusVariant = (status: string) => {
     }
 }
 
-export interface DataTableProps<TData> {
+export interface DataTableProps<TData extends object> {
     columns: LegacyColumn[] | readonly LegacyColumn[];
     data: TData[];
     segments?: {
@@ -92,14 +92,23 @@ export interface DataTableProps<TData> {
     onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
     onUpdateStatus?: (item: TData, status: string) => void;
     selectedItem?: TData;
-    
-    // Pagination props
     pageCount?: number;
     pageIndex?: number;
     pageSize?: number;
     onPageChange?: (page: number) => void;
-    onPageSizeChange?: (size: number) => void;
+    onPageSizeChange?: (pageSize: number) => void;
     totalCount?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    onSortChange?: (column: string, direction: 'asc' | 'desc') => void;
+    filterOptions?: FilterOption[];
+    branchOptions?: { label: string; value: string }[];
+    ownerOptions?: { label: string; value: string }[];
+    countyOptions?: { label: string; value: string }[];
+    estimatorOptions?: { label: string; value: string }[];
+    activeFilters?: Record<string, any>;
+    onFilterChange?: (filters: Record<string, any>) => void;
+    onReset?: () => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -188,60 +197,47 @@ function formatCellValue(value: any, key: string) {
     if (typeof value === "object") {
         // If it's an array, join the values
         if (Array.isArray(value)) {
-            return value.map(v => formatCellValue(v, key)).join(", ");
+            return value.join(", ");
         }
-        // For other objects, return a string representation
+        // If it's null, return empty string
+        if (value === null) {
+            return "";
+        }
+        // Otherwise, stringify the object
         return JSON.stringify(value);
     }
 
-    // Handle numbers
-    if (typeof value === "number") {
-        return value.toString();
-    }
-
-    // Handle booleans
-    if (typeof value === "boolean") {
-        return value ? "Yes" : "No";
-    }
-
-    // Return string value for everything else
-    return String(value);
+    return value;
 }
 
-function isRowSelected<T extends Record<string, any>>(row: T, selectedItem: T): boolean {
-    if (!row || !selectedItem) return false;
+function isRowSelected<T extends object>(row: T, selectedItem: T | undefined): boolean {
+    if (!selectedItem) return false;
     
-    if ('contractNumber' in row && 'contractNumber' in selectedItem) {
-        return row.contractNumber === selectedItem.contractNumber;
+    // Check if the row has an id property
+    if ('id' in row && selectedItem && 'id' in selectedItem) {
+        return (row as any).id === (selectedItem as any).id;
     }
     
-    if ('jobNumber' in row && 'jobNumber' in selectedItem) {
-        return row.jobNumber === selectedItem.jobNumber;
-    }
-    
-    if ('id' in row && 'id' in selectedItem) {
-        return row.id === selectedItem.id;
-    }
-    
-    return false;
+    // If there's no id, compare the entire object
+    return JSON.stringify(row) === JSON.stringify(selectedItem);
 }
 
-export function DataTable<TData>({
-    columns: legacyColumns,
-    data,
-    segments,
-    segmentValue,
+export function DataTable<TData extends object>({
+    columns: legacyColumns, 
+    data, 
+    segments, 
+    segmentValue, 
     segmentCounts,
-    addButtonLabel,
-    onAddClick,
-    onSegmentChange,
-    stickyLastColumn = false,
-    onArchiveSelected,
-    onDeleteSelected,
-    tableRef,
-    onRowClick,
-    onViewDetails,
-    onEdit,
+    addButtonLabel, 
+    onAddClick, 
+    onSegmentChange, 
+    stickyLastColumn = false, 
+    onArchiveSelected, 
+    onDeleteSelected, 
+    tableRef, 
+    onRowClick, 
+    onViewDetails, 
+    onEdit, 
     onArchive,
     onMarkAsBidJob,
     onUpdateStatus,
@@ -251,37 +247,37 @@ export function DataTable<TData>({
     pageSize = 25,
     onPageChange,
     onPageSizeChange,
-    totalCount
+    totalCount,
+    sortBy,
+    sortOrder,
+    onSortChange,
+    // Filter props
+    filterOptions,
+    branchOptions,
+    ownerOptions,
+    countyOptions,
+    estimatorOptions,
+    activeFilters,
+    onFilterChange,
+    onReset
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
-        return [
-            {
-                id: "select",
-                header: ({ table }) => (
-                    <Checkbox
-                        checked={table.getIsAllPageRowsSelected()}
-                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                        aria-label="Select all"
-                    />
-                ),
-                cell: ({ row }) => (
-                    <Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} aria-label="Select row" />
-                ),
-                enableSorting: false,
-                enableHiding: false,
+        const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
+            id: col.key,
+            accessorKey: col.key,
+            header: col.title,
+            cell: ({ row }: any) => {
+                const value = row.getValue(col.key);
+                return formatCellValue(value, col.key);
             },
-            ...legacyColumns.map((column) => ({
-                id: column.key,
-                accessorKey: column.key,
-                header: () => {
-                    return <div className={column.className}>{column.title}</div>;
-                },
-                cell: (info) => {
-                    return <div className={column.className}>{formatCellValue(info.getValue(), column.key)}</div>;
-                },
-            })),
-            {
+            className: col.className,
+        }));
+
+        // Add actions column if any action handlers are provided
+        if (onViewDetails || onEdit || onArchive || onMarkAsBidJob || onUpdateStatus) {
+            cols.push({
                 id: "actions",
+                accessorKey: "actions",
                 header: () => <div className="text-center">Actions</div>,
                 cell: ({ row }) => {
                     const handleDelete = useCallback(
@@ -473,31 +469,59 @@ export function DataTable<TData>({
                         </div>
                     );
                 },
-            }
-        ];
-    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit, onMarkAsBidJob, onUpdateStatus, segments]);
+                className: stickyLastColumn ? 'sticky right-0 bg-white dark:bg-background' : '',
+            });
+        }
 
+        // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
+        if (onArchiveSelected || onDeleteSelected) {
+            cols.unshift({
+                id: "select",
+                header: ({ table }: any) => (
+                    <Checkbox
+                        checked={
+                            table.getIsAllPageRowsSelected() ||
+                            (table.getIsSomePageRowsSelected() && "indeterminate")
+                        }
+                        onCheckedChange={(value) => {
+                            table.toggleAllPageRowsSelected(!!value);
+                        }}
+                        aria-label="Select all"
+                    />
+                ),
+                cell: ({ row }: any) => (
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => {
+                            row.toggleSelected(!!value);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select row"
+                    />
+                ),
+                enableSorting: false,
+                enableHiding: false,
+            });
+        }
+
+        return cols;
+    }, [legacyColumns, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, onArchiveSelected, onDeleteSelected, stickyLastColumn, segmentValue, segments]);
+
+    // State for filter visibility
+    const [showFilters, setShowFilters] = useState(false);
+    
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,
-        pageCount: pageCount || Math.ceil(data.length / (pageSize || 25)),
+        manualSorting: true,
+        enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
         state: {
             pagination: {
-                pageIndex: pageIndex || 0,
-                pageSize: pageSize || 25,
+                pageIndex,
+                pageSize,
             },
-        },
-        onPaginationChange: updater => {
-            if (typeof updater === 'function') {
-                const newPagination = updater({
-                    pageIndex: pageIndex || 0,
-                    pageSize: pageSize || 25,
-                });
-                onPageChange?.(newPagination.pageIndex);
-                onPageSizeChange?.(newPagination.pageSize);
-            }
         },
     });
     
@@ -510,66 +534,68 @@ export function DataTable<TData>({
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center px-6 mb-3">
-                {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} counts={segmentCounts} />}
+            {/* Top Controls Section */}
+            <div className="px-6 mb-3">
+                {/* Segments Row - Always visible */}
+                <div className="flex justify-between items-center mb-3">
+                    <div>
+                        {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} counts={segmentCounts} />}
+                    </div>
 
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                        <Filter className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {/* Sort and Filter Controls */}
+                        {onSortChange && (
+                            <TableControls
+                                onSortChange={onSortChange}
+                                onFilterChange={onFilterChange}
+                                onReset={onReset}
+                                sortOptions={legacyColumns
+                                    .filter(col => col.sortable)
+                                    .map(col => ({
+                                        label: col.title,
+                                        value: col.key
+                                    }))}
+                                activeSort={sortBy && sortOrder ? { field: sortBy, direction: sortOrder } : undefined}
+                                activeFilters={activeFilters}
+                                showFilters={showFilters}
+                                setShowFilters={setShowFilters}
+                            />
+                        )}
 
-                    <Button variant="outline" size="icon">
-                        <ArrowUpDown className="h-4 w-4" />
-                    </Button>
+                        {/* Table Actions Menu */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-9 gap-1">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => alert("Export to CSV")}>Export to CSV</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => alert("Print")}>Print</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
+                        {addButtonLabel && (
+                            <Button size="sm" onClick={onAddClick}>
+                                <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
+                                {addButtonLabel}
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="z-[200]">
-                            {table.getSelectedRowModel().rows.length > 0 && (
-                                <>
-                                    {segmentValue === 'archived' && onDeleteSelected && (
-                                        <DropdownMenuItem 
-                                            className="text-destructive"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                event.preventDefault();
-                                                console.log('Bulk delete clicked for rows:', table.getSelectedRowModel().rows.map(row => row.original));
-                                                onDeleteSelected(table.getSelectedRowModel().rows.map(row => row.original));
-                                            }}
-                                        >
-                                            Delete Selected
-                                        </DropdownMenuItem>
-                                    )}
-                                    
-                                    {segmentValue !== 'archived' && onArchiveSelected && (
-                                        <DropdownMenuItem
-                                            className="text-destructive"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                event.preventDefault();
-                                                console.log('Bulk archive clicked for rows:', table.getSelectedRowModel().rows.map(row => row.original));
-                                                onArchiveSelected(table.getSelectedRowModel().rows.map(row => row.original));
-                                            }}
-                                        >
-                                            Archive Selected
-                                        </DropdownMenuItem>
-                                    )}
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {addButtonLabel && (
-                        <Button size="sm" onClick={onAddClick}>
-                            <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
-                            {addButtonLabel}
-                        </Button>
-                    )}
+                        )}
+                    </div>
                 </div>
+                
+                {/* Filter Dropdowns - Below Segments Row */}
+                {onFilterChange && (
+                    <FilterDropdowns
+                        showFilters={showFilters}
+                        branchOptions={branchOptions || []}
+                        ownerOptions={ownerOptions || []}
+                        countyOptions={countyOptions || []}
+                        estimatorOptions={estimatorOptions || []}
+                        onFilterChange={onFilterChange}
+                        activeFilters={activeFilters}
+                    />
+                )}
             </div>
 
             <div className="px-6">
@@ -582,15 +608,20 @@ export function DataTable<TData>({
                                         {headerGroup.headers.map((header) => {
                                             const isActions = header.column.id === "actions";
                                             return (
-                                                <TableHead
+                                                <TableHead 
                                                     key={header.id}
-                                                    style={isActions ? { position: "sticky", right: 0 } : undefined}
                                                     className={cn(
-                                                        isActions ? "z-[100] bg-muted/95 shadow-[-12px_0_16px_-6px_rgba(0,0,0,0.15)]" : "",
-                                                        header.column.id === "total" ? "text-right" : ""
+                                                        // Use type assertion to handle the className property
+                                                        (header.column.columnDef as any).className,
+                                                        isActions && stickyLastColumn ? 'sticky right-0 bg-muted' : ''
                                                     )}
                                                 >
-                                                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                                    {header.isPlaceholder
+                                                        ? null
+                                                        : flexRender(
+                                                            header.column.columnDef.header,
+                                                            header.getContext()
+                                                        )}
                                                 </TableHead>
                                             );
                                         })}
@@ -602,30 +633,12 @@ export function DataTable<TData>({
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow
                                             key={row.id}
-                                            data-state={row.getIsSelected() && "selected"}
+                                            data-state={isRowSelected(row.original, selectedItem) ? "selected" : ""}
                                             className={cn(
-                                                "cursor-pointer hover:bg-muted/50",
-                                                row.getIsSelected() && "bg-muted",
-                                                selectedItem && isRowSelected(row.original as Record<string, any>, selectedItem as Record<string, any>) && "bg-blue-100 border-l-4 border-blue-500"
+                                                "cursor-pointer",
+                                                isRowSelected(row.original, selectedItem) && "bg-muted/50"
                                             )}
-                                            onClick={(e) => {
-                                                //don't open sidebar for checkbox for each row
-                                                const target = e.target as HTMLElement;
-                                                
-                                                if (target.dataset.slot === 'checkbox') {
-                                                    return;
-                                                }
-                                                
-                                                const checkbox = target.closest('[data-slot="checkbox"]');
-                                                if (checkbox) {
-                                                    return;
-                                                }
-                                                
-                                                if (onViewDetails) {
-                                                    onViewDetails(row.original as TData);
-                                                }
-                                            }}
-                                            
+                                            onClick={() => onRowClick && onRowClick(row.original)}
                                         >
                                             {row.getVisibleCells().map((cell) => {
                                                 const isActions = cell.column.id === "actions";
@@ -633,16 +646,14 @@ export function DataTable<TData>({
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            isActions && stickyLastColumn ? "sticky right-0 bg-background" : "",
-                                                            cell.column.id === "total" ? "text-right" : ""
+                                                            (cell.column.columnDef as any).className,
+                                                            isActions && stickyLastColumn ? 'sticky right-0 bg-white dark:bg-background' : ''
                                                         )}
-                                                        onClick={(e) => {
-                                                            if (isActions) {
-                                                                e.stopPropagation()
-                                                            }
-                                                        }}
                                                     >
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext()
+                                                        )}
                                                     </TableCell>
                                                 );
                                             })}
@@ -650,7 +661,10 @@ export function DataTable<TData>({
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        <TableCell
+                                            colSpan={columns.length}
+                                            className="h-24 text-center"
+                                        >
                                             No results.
                                         </TableCell>
                                     </TableRow>
@@ -660,74 +674,80 @@ export function DataTable<TData>({
                     </div>
                 </div>
             </div>
-            
-            {/* Pagination */}
-            {onPageChange && (
-                <div className="flex items-center justify-between px-6 py-4 border-t">
-                    <div className="flex-1 text-sm text-muted-foreground">
-                        {totalCount !== undefined && (
-                            <p>Showing {pageIndex * pageSize + 1} to {Math.min((pageIndex + 1) * pageSize, totalCount)} of {totalCount} entries</p>
-                        )}
-                    </div>
-                    <div className="flex items-center space-x-6 lg:space-x-8">
-                        <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
-                            <Select
-                                value={pageSize.toString()}
-                                onValueChange={(value) => onPageSizeChange?.(Number(value))}
-                            >
-                                <SelectTrigger className="h-8 w-[70px]">
-                                    <SelectValue placeholder={pageSize.toString()} />
-                                </SelectTrigger>
-                                <SelectContent side="top">
-                                    {[25, 50].map((size) => (
-                                        <SelectItem key={size} value={size.toString()}>
-                                            {size}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+            {/* Pagination Controls */}
+            {pageCount && pageCount > 1 && (
+                <div className="px-6">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-muted-foreground">
+                            {totalCount !== undefined && (
+                                <div>
+                                    Showing {pageIndex * pageSize + 1} to {Math.min((pageIndex + 1) * pageSize, totalCount)} of {totalCount} entries
+                                </div>
+                            )}
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => onPageChange(0)}
-                                disabled={pageIndex === 0}
-                            >
-                                <span className="sr-only">Go to first page</span>
-                                <ChevronsLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                onClick={() => onPageChange(pageIndex - 1)}
-                                disabled={pageIndex === 0}
-                            >
-                                <span className="sr-only">Go to previous page</span>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <div className="flex items-center justify-center text-sm font-medium">
-                                Page {pageIndex + 1} of {pageCount || 1}
+                        <div className="flex items-center space-x-6 lg:space-x-8">
+                            <div className="flex items-center space-x-2">
+                                <p className="text-sm font-medium">Rows per page</p>
+                                <Select
+                                    value={`${pageSize}`}
+                                    onValueChange={(value) => {
+                                        onPageSizeChange?.(Number(value));
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={pageSize} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[10, 25, 50, 100].map((size) => (
+                                            <SelectItem key={size} value={`${size}`}>
+                                                {size}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Button
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                onClick={() => onPageChange(pageIndex + 1)}
-                                disabled={pageIndex === (pageCount || 1) - 1}
-                            >
-                                <span className="sr-only">Go to next page</span>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => onPageChange((pageCount || 1) - 1)}
-                                disabled={pageIndex === (pageCount || 1) - 1}
-                            >
-                                <span className="sr-only">Go to last page</span>
-                                <ChevronsRight className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    className="hidden h-8 w-8 p-0 lg:flex"
+                                    onClick={() => onPageChange && onPageChange(0)}
+                                    disabled={pageIndex === 0 || !onPageChange}
+                                >
+                                    <span className="sr-only">Go to first page</span>
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => onPageChange && onPageChange(pageIndex - 1)}
+                                    disabled={pageIndex === 0 || !onPageChange}
+                                >
+                                    <span className="sr-only">Go to previous page</span>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <div className="flex items-center justify-center text-sm font-medium">
+                                    Page {pageIndex + 1} of {pageCount}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => onPageChange && onPageChange(pageIndex + 1)}
+                                    disabled={pageIndex === pageCount - 1 || !onPageChange}
+                                >
+                                    <span className="sr-only">Go to next page</span>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="hidden h-8 w-8 p-0 lg:flex"
+                                    onClick={() => onPageChange && onPageChange((pageCount || 1) - 1)}
+                                    disabled={pageIndex === (pageCount || 1) - 1 || !onPageChange}
+                                >
+                                    <span className="sr-only">Go to last page</span>
+                                    <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

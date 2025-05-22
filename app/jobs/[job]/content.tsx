@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getJobCards } from "@/data/jobs-cards";
 import { type JobType } from "@/data/jobs-data";
 import { availableJobsColumns } from "@/data/available-jobs";
+import { FilterOption } from "@/components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "@/data/active-bids";
 import { type ActiveJob } from "@/data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
@@ -90,7 +91,119 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [showArchiveJobsDialog, setShowArchiveJobsDialog] = useState(false);
     //opens the confirmation to delete the open bids
     const [showDeleteJobsDialog, setShowDeleteJobsDialog] = useState(false);
+    // Sorting state for available jobs
+    const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    // Filtering state for available jobs
+    const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
     
+    // Reference data for dropdowns and filters
+    const [referenceData, setReferenceData] = useState<{
+        counties: { id: number; name: string }[];
+        owners: { id: number; name: string }[];
+        branches: { id: number; name: string; code: string }[];
+        estimators: { id: number; name: string }[];
+    }>({
+        counties: [],
+        owners: [],
+        branches: [],
+        estimators: []
+    });
+    
+    // Define filter options for the Available Jobs table
+    const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
+    
+    // Fetch reference data for filters
+    useEffect(() => {
+        const fetchReferenceData = async () => {
+            try {
+                // Fetch counties
+                const countiesResponse = await fetch('/api/reference-data?type=counties');
+                const countiesData = await countiesResponse.json();
+                
+                // Fetch owners
+                const ownersResponse = await fetch('/api/reference-data?type=owners');
+                const ownersData = await ownersResponse.json();
+                
+                // Fetch branches
+                const branchesResponse = await fetch('/api/reference-data?type=branches');
+                const branchesData = await branchesResponse.json();
+                
+                // Fetch estimators
+                const estimatorsResponse = await fetch('/api/reference-data?type=estimators');
+                const estimatorsData = await estimatorsResponse.json();
+                
+                setReferenceData({
+                    counties: countiesData.data || [],
+                    owners: ownersData.data || [],
+                    branches: branchesData.data || [],
+                    estimators: estimatorsData.data || []
+                });
+            } catch (error) {
+                console.error('Error fetching reference data:', error);
+            }
+        };
+        
+        fetchReferenceData();
+    }, []);
+    
+    // Initialize filter options when reference data is loaded
+    useEffect(() => {
+        if (referenceData.counties.length > 0 || referenceData.owners.length > 0) {
+            const options: FilterOption[] = [
+                {
+                    label: 'County',
+                    field: 'county',
+                    options: referenceData.counties.map(county => ({
+                        label: county.name,
+                        value: county.name
+                    }))
+                },
+                {
+                    label: 'Owner',
+                    field: 'owner',
+                    options: referenceData.owners.map(owner => ({
+                        label: owner.name,
+                        value: owner.name
+                    }))
+                },
+                {
+                    label: 'Status',
+                    field: 'status',
+                    options: [
+                        { label: 'Bid', value: 'Bid' },
+                        { label: 'No Bid', value: 'No Bid' },
+                        { label: 'Unset', value: 'Unset' }
+                    ]
+                }
+            ];
+            setFilterOptions(options);
+        }
+    }, [referenceData]);
+    
+    // Branch options for filter dialog
+    const branchOptions = referenceData.branches.map(branch => ({
+        label: branch.name || '',
+        value: branch.name || ''
+    }));
+    
+    // Owner options for filter dialog
+    const ownerOptions = referenceData.owners.map(owner => ({
+        label: owner.name,
+        value: owner.name
+    }));
+    
+    // County options for filter dialog (searchable)
+    const countyOptions = referenceData.counties.map(county => ({
+        label: county.name,
+        value: county.name
+    }));
+    
+    // Estimator options for filter dialog
+    const estimatorOptions = referenceData.estimators.map(estimator => ({
+        label: estimator.name || '',
+        value: estimator.id.toString()
+    }));
     //THESE ARE ESTIMATES
     const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
     const [activeBidsPageIndex, setActiveBidsPageIndex] = useState(0);
@@ -176,6 +289,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 limit: availableJobsPageSize,
                 page: availableJobsPageIndex + 1, // API uses 1-based indexing
             };
+            
+            // Add sorting parameters if available
+            if (sortBy) {
+                options.sortBy = sortBy;
+                options.sortOrder = sortOrder;
+                console.log(`Adding sort: ${sortBy} ${sortOrder}`);
+            }
+            
+            // Add filter parameters if any are active
+            if (Object.keys(activeFilters).length > 0) {
+                options.filters = JSON.stringify(activeFilters);
+                console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
+            }
             
             if (activeSegment === "archived") {
                 options.status = "archived";
@@ -313,7 +439,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
 
     // Load active bids data
     const loadActiveBids = useCallback(async () => {
@@ -1086,6 +1212,35 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setJobDetailsSheetOpen(true)
     }
     
+    // Handler for sorting changes in the available jobs table
+    const handleSortChange = (column: string, direction: 'asc' | 'desc') => {
+        console.log(`Sorting by ${column} ${direction}`);
+        setSortBy(column);
+        setSortOrder(direction);
+        // Reset to first page when sorting changes
+        setAvailableJobsPageIndex(0);
+    };
+    
+    // Handler for filter changes in the available jobs table
+    const handleFilterChange = (filters: Record<string, string[]>) => {
+        console.log('Applying filters:', filters);
+        setActiveFilters(filters);
+        // Reset to first page when filters change
+        setAvailableJobsPageIndex(0);
+    };
+    
+    // Handler for resetting all filters and sorts
+    const handleResetControls = () => {
+        console.log('Resetting all filters and sorts');
+        // Clear filters
+        setActiveFilters({});
+        // Clear sorting
+        setSortBy(undefined);
+        setSortOrder('asc');
+        // Reset to first page
+        setAvailableJobsPageIndex(0);
+    };
+
     const handleJobNavigation = (direction: 'up' | 'down') => {
         if (!selectedJob || !availableJobs.length) return
         
@@ -1373,6 +1528,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onPageChange={setAvailableJobsPageIndex}
                                     onPageSizeChange={setAvailableJobsPageSize}
                                     totalCount={availableJobsTotalCount}
+                                    // Sorting props
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    onSortChange={handleSortChange}
+                                    // Filtering props
+                                    filterOptions={filterOptions}
+                                    branchOptions={branchOptions}
+                                    ownerOptions={ownerOptions}
+                                    countyOptions={countyOptions}
+                                    estimatorOptions={estimatorOptions}
+                                    activeFilters={activeFilters}
+                                    onFilterChange={handleFilterChange}
+                                    onReset={handleResetControls}
                                 />
                             ) : isActiveBids ? (
                                 <ActiveBidsTable bids={data as ActiveBid[]} />
