@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Segments } from "@/components/ui/segments";
 import { Button } from "@/components/ui/button";
+import { TableControls, FilterOption, SortOption } from "@/components/table-controls";
 import { 
     ChevronLeft, 
     ChevronRight, 
@@ -18,7 +19,8 @@ import {
     Eye,
     Trash,
     Filter,
-    ArrowUpDown
+    ArrowUpDown,
+    SlidersHorizontal
 } from "lucide-react";
 import { IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +47,7 @@ export type LegacyColumn = {
     key: string;
     title: string;
     className?: string;
+    sortable?: boolean;
 };
 const handleStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -92,14 +95,23 @@ export interface DataTableProps<TData> {
     onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
     onUpdateStatus?: (item: TData, status: string) => void;
     selectedItem?: TData;
-    
-    // Pagination props
     pageCount?: number;
     pageIndex?: number;
     pageSize?: number;
     onPageChange?: (page: number) => void;
-    onPageSizeChange?: (size: number) => void;
+    onPageSizeChange?: (pageSize: number) => void;
     totalCount?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    onSortChange?: (column: string, direction: 'asc' | 'desc') => void;
+    filterOptions?: FilterOption[];
+    branchOptions?: { label: string; value: string }[];
+    ownerOptions?: { label: string; value: string }[];
+    countyOptions?: { label: string; value: string }[];
+    estimatorOptions?: { label: string; value: string }[];
+    activeFilters?: Record<string, any>;
+    onFilterChange?: (filters: Record<string, any>) => void;
+    onReset?: () => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -227,21 +239,21 @@ function isRowSelected<T extends Record<string, any>>(row: T, selectedItem: T): 
 }
 
 export function DataTable<TData>({
-    columns: legacyColumns,
-    data,
-    segments,
-    segmentValue,
+    columns: legacyColumns, 
+    data, 
+    segments, 
+    segmentValue, 
     segmentCounts,
-    addButtonLabel,
-    onAddClick,
-    onSegmentChange,
-    stickyLastColumn = false,
-    onArchiveSelected,
-    onDeleteSelected,
-    tableRef,
-    onRowClick,
-    onViewDetails,
-    onEdit,
+    addButtonLabel, 
+    onAddClick, 
+    onSegmentChange, 
+    stickyLastColumn = false, 
+    onArchiveSelected, 
+    onDeleteSelected, 
+    tableRef, 
+    onRowClick, 
+    onViewDetails, 
+    onEdit, 
     onArchive,
     onMarkAsBidJob,
     onUpdateStatus,
@@ -251,7 +263,19 @@ export function DataTable<TData>({
     pageSize = 25,
     onPageChange,
     onPageSizeChange,
-    totalCount
+    totalCount,
+    sortBy,
+    sortOrder,
+    onSortChange,
+    // Filter props
+    filterOptions,
+    branchOptions,
+    ownerOptions,
+    countyOptions,
+    estimatorOptions,
+    activeFilters,
+    onFilterChange,
+    onReset
 }: DataTableProps<TData>) {
     const columns = React.useMemo(() => {
         return [
@@ -274,6 +298,30 @@ export function DataTable<TData>({
                 id: column.key,
                 accessorKey: column.key,
                 header: () => {
+                    if (column.sortable) {
+                        return (
+                            <div 
+                                className={cn("flex items-center cursor-pointer", column.className)}
+                                onClick={() => {
+                                    if (onSortChange) {
+                                        const newDirection = sortBy === column.key && sortOrder === 'asc' ? 'desc' : 'asc';
+                                        onSortChange(column.key, newDirection);
+                                    }
+                                }}
+                            >
+                                {column.title}
+                                <ArrowUpDown className={cn(
+                                    "ml-2 h-4 w-4", 
+                                    sortBy === column.key ? "opacity-100" : "opacity-40"
+                                )} />
+                                {sortBy === column.key && (
+                                    <span className="ml-1 text-xs">
+                                        {sortOrder === 'asc' ? '↑' : '↓'}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    }
                     return <div className={column.className}>{column.title}</div>;
                 },
                 cell: (info) => {
@@ -475,7 +523,7 @@ export function DataTable<TData>({
                 },
             }
         ];
-    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit, onMarkAsBidJob, onUpdateStatus, segments]);
+    }, [legacyColumns, stickyLastColumn, onArchiveSelected, onDeleteSelected, segmentValue, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, segments, sortBy, sortOrder, onSortChange]);
 
     const table = useReactTable({
         data,
@@ -514,13 +562,27 @@ export function DataTable<TData>({
                 {segments && <Segments segments={segments} value={segmentValue} onChange={onSegmentChange} counts={segmentCounts} />}
 
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                        <Filter className="h-4 w-4" />
-                    </Button>
-
-                    <Button variant="outline" size="icon">
-                        <ArrowUpDown className="h-4 w-4" />
-                    </Button>
+                    {/* Table Controls for Sort and Filter */}
+                    {onSortChange && (
+                        <TableControls
+                            onSortChange={onSortChange}
+                            onFilterChange={onFilterChange}
+                            onReset={onReset}
+                            sortOptions={legacyColumns
+                                .filter(col => col.sortable)
+                                .map(col => ({
+                                    label: col.title,
+                                    value: col.key
+                                }))}
+                            filterOptions={filterOptions || []}
+                            branchOptions={branchOptions || []}
+                            ownerOptions={ownerOptions || []}
+                            countyOptions={countyOptions || []}
+                            estimatorOptions={estimatorOptions || []}
+                            activeSort={sortBy && sortOrder ? { field: sortBy, direction: sortOrder } : undefined}
+                            activeFilters={activeFilters}
+                        />
+                    )}
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

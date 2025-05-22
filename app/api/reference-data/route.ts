@@ -68,6 +68,22 @@ export async function GET(request: NextRequest) {
           .select('id, name'))
         break;
         
+      case 'branches':
+        // Fetch branches
+        ({ data, error } = await supabase
+          .from('branches')
+          .select('id, name')
+          .order('name'))
+        break;
+        
+      case 'estimators':
+        // Fetch all users as potential estimators since there's no specific 'estimator' role
+        ({ data, error } = await supabase
+          .from('users')
+          .select('id, name')
+          .order('name'))
+        break;
+        
       case 'contractors':
         ({ data, error } = await supabase
           .from('contractors')
