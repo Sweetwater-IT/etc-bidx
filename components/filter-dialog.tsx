@@ -130,52 +130,26 @@ export function FilterDialog({
         
         <div className="grid gap-6 py-4">
           {/* Branch Selection */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="text-lg font-medium">Branch</h3>
-            <RadioGroup
-              value={branch}
-              onValueChange={setBranch}
-              className="flex flex-wrap gap-2"
-            >
+            <RadioGroup value={branch} onValueChange={setBranch}>
               {branchOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value={option.value}
-                    id={`branch-${option.value}`}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={`branch-${option.value}`}
-                    className="flex cursor-pointer rounded-md border border-muted bg-popover px-3 py-2 text-sm font-medium ring-offset-background peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground"
-                  >
-                    {option.label}
-                  </Label>
+                <div key={option.value} className="flex items-center space-x-2 py-1">
+                  <RadioGroupItem value={option.value} id={`branch-${option.value}`} />
+                  <Label htmlFor={`branch-${option.value}`}>{option.label}</Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
 
           {/* Owner Selection */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="text-lg font-medium">Owner</h3>
-            <RadioGroup
-              value={owner}
-              onValueChange={setOwner}
-              className="flex flex-wrap gap-2"
-            >
+            <RadioGroup value={owner} onValueChange={setOwner}>
               {ownerOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value={option.value}
-                    id={`owner-${option.value}`}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={`owner-${option.value}`}
-                    className="flex cursor-pointer rounded-md border border-muted bg-popover px-3 py-2 text-sm font-medium ring-offset-background peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground"
-                  >
-                    {option.label}
-                  </Label>
+                <div key={option.value} className="flex items-center space-x-2 py-1">
+                  <RadioGroupItem value={option.value} id={`owner-${option.value}`} />
+                  <Label htmlFor={`owner-${option.value}`}>{option.label}</Label>
                 </div>
               ))}
             </RadioGroup>

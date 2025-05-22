@@ -1,31 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
-  DropdownMenuGroup,
+  DropdownMenuGroup, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { 
   ArrowDownAZ, 
   ArrowUpAZ, 
   ArrowDownUp, 
-  CalendarDays, 
   Filter, 
+  X,
+  CalendarDays,
   SlidersHorizontal,
   FileText,
   Building,
   User,
   MapPin,
-  X
+  ChevronDown
 } from "lucide-react";
-import { FilterDialog } from "@/components/filter-dialog";
 import { cn } from "@/lib/utils";
+import { AutoComplete, Option } from "@/components/ui/autocomplete";
 
 export type SortOption = {
   label: string;
@@ -59,17 +74,86 @@ export function TableControls({
   onFilterChange,
   onReset,
   sortOptions,
-  filterOptions = [],
-  branchOptions = [],
-  ownerOptions = [],
-  countyOptions = [],
-  estimatorOptions = [],
   activeSort,
   activeFilters = {},
-  className
-}: TableControlsProps) {
-  // State for filter dialog
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  className,
+  showFilters,
+  setShowFilters
+}: Omit<TableControlsProps, 'filterOptions' | 'branchOptions' | 'ownerOptions' | 'countyOptions' | 'estimatorOptions'> & {
+  showFilters: boolean;
+  setShowFilters: (show: boolean) => void;
+}) {
+  
+  // State for filter values
+  const [branch, setBranch] = useState<string>("");
+  const [owner, setOwner] = useState<string>("");
+  const [county, setCounty] = useState<string>("");
+  const [estimator, setEstimator] = useState<string>("");
+  const [dateField, setDateField] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  
+  // Initialize filter values from activeFilters
+  useEffect(() => {
+    if (activeFilters.branch && activeFilters.branch.length > 0) {
+      setBranch(activeFilters.branch[0]);
+    }
+    if (activeFilters.owner && activeFilters.owner.length > 0) {
+      setOwner(activeFilters.owner[0]);
+    }
+    if (activeFilters.county && activeFilters.county.length > 0) {
+      setCounty(activeFilters.county[0]);
+    }
+    if (activeFilters.estimator && activeFilters.estimator.length > 0) {
+      setEstimator(activeFilters.estimator[0]);
+    }
+    if (activeFilters.dateField && activeFilters.dateField.length > 0) {
+      setDateField(activeFilters.dateField[0]);
+    }
+    if (activeFilters.dateFrom && activeFilters.dateFrom.length > 0) {
+      setDateFrom(new Date(activeFilters.dateFrom[0]));
+    }
+    if (activeFilters.dateTo && activeFilters.dateTo.length > 0) {
+      setDateTo(new Date(activeFilters.dateTo[0]));
+    }
+  }, [activeFilters]);
+  
+  // Apply filters function
+  const applyFilters = () => {
+    const filters: Record<string, string[]> = {};
+    
+    // Only add filters for values that aren't the 'all' placeholder
+    if (branch && branch !== 'all') filters.branch = [branch];
+    if (owner && owner !== 'all') filters.owner = [owner];
+    if (county && county !== 'all') filters.county = [county];
+    if (estimator && estimator !== 'all') filters.estimator = [estimator];
+    
+    // Only add date filters if a date field is selected and it's not 'none'
+    if (dateField && dateField !== 'none' && (dateFrom || dateTo)) {
+      filters.dateField = [dateField];
+      if (dateFrom) filters.dateFrom = [dateFrom.toISOString()];
+      if (dateTo) filters.dateTo = [dateTo.toISOString()];
+    }
+    
+    if (onFilterChange) {
+      onFilterChange(filters);
+    }
+  };
+  
+  // Reset filters function
+  const resetFilters = () => {
+    setBranch("");
+    setOwner("");
+    setCounty("");
+    setEstimator("");
+    setDateField("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    
+    if (onReset) {
+      onReset();
+    }
+  };
   
   const getIconForField = (field: string) => {
     switch (field) {
@@ -95,101 +179,368 @@ export function TableControls({
   const hasActiveControls = hasActiveFilters || hasActiveSort;
   
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      {/* Reset Button - Only shown when filters or sorts are active */}
-      {hasActiveControls && onReset && (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-9 gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-          onClick={onReset}
-        >
-          <X className="h-4 w-4" />
-          <span>Reset</span>
-        </Button>
-      )}
-      
-      {/* Sort Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-1">
-            <ArrowDownUp className="h-4 w-4" />
-            <span>Sort</span>
-            {activeSort && (
+    <div className={cn("flex flex-col w-full", className)}>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          {/* Reset Button - Only shown when filters or sorts are active */}
+          {hasActiveControls && onReset && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-9 gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={resetFilters}
+            >
+              <X className="h-4 w-4" />
+              <span>Reset</span>
+            </Button>
+          )}
+          
+          {/* Sort Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1">
+                <ArrowDownUp className="h-4 w-4" />
+                <span>Sort</span>
+                {activeSort && (
+                  <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                    1
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    className="flex justify-between"
+                    onClick={() => onSortChange(
+                      option.value, 
+                      activeSort?.field === option.value && activeSort?.direction === 'asc' 
+                        ? 'desc' 
+                        : 'asc'
+                    )}
+                  >
+                    <span className="flex items-center">
+                      {option.icon || getIconForField(option.value)}
+                      {option.label}
+                    </span>
+                    {activeSort?.field === option.value && (
+                      activeSort.direction === 'asc' 
+                        ? <ArrowUpAZ className="h-4 w-4 ml-2" /> 
+                        : <ArrowDownAZ className="h-4 w-4 ml-2" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Filter Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filter</span>
+            {hasActiveFilters && (
               <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                1
+                {Object.keys(activeFilters).length}
               </span>
             )}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            {sortOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                className="flex justify-between"
-                onClick={() => onSortChange(
-                  option.value, 
-                  activeSort?.field === option.value && activeSort?.direction === 'asc' 
-                    ? 'desc' 
-                    : 'asc'
-                )}
-              >
-                <span className="flex items-center">
-                  {option.icon || getIconForField(option.value)}
-                  {option.label}
-                </span>
-                {activeSort?.field === option.value && (
-                  activeSort.direction === 'asc' 
-                    ? <ArrowUpAZ className="h-4 w-4 ml-2" /> 
-                    : <ArrowDownAZ className="h-4 w-4 ml-2" />
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {/* Filter Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9 gap-1"
-        onClick={() => setFilterDialogOpen(true)}
-      >
-        <Filter className="h-4 w-4" />
-        <span>Filter</span>
-        {hasActiveFilters && (
-          <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-            {Object.keys(activeFilters).length}
-          </span>
-        )}
-      </Button>
+// Separate component for filter dropdowns
+export function FilterDropdowns({
+  showFilters,
+  branchOptions = [],
+  ownerOptions = [],
+  countyOptions = [],
+  estimatorOptions = [],
+  onFilterChange,
+  activeFilters = {},
+  className
+}: {
+  showFilters: boolean;
+  branchOptions?: { label: string; value: string }[];
+  ownerOptions?: { label: string; value: string }[];
+  countyOptions?: { label: string; value: string }[];
+  estimatorOptions?: { label: string; value: string }[];
+  onFilterChange?: (filters: Record<string, any>) => void;
+  activeFilters?: Record<string, any>;
+  className?: string;
+}) {
+  // State for filter values
+  const [branch, setBranch] = useState<string>(activeFilters.branch || "");
+  const [owner, setOwner] = useState<string>(activeFilters.owner || "");
+  const [county, setCounty] = useState<string>(activeFilters.county || "");
+  const [estimator, setEstimator] = useState<string>(activeFilters.estimator || "");
+  const [dateField, setDateField] = useState<string>(activeFilters.dateField || "");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(
+    activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : undefined
+  );
+  const [dateTo, setDateTo] = useState<Date | undefined>(
+    activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined
+  );
+  
+  // Update filter states when activeFilters change
+  useEffect(() => {
+    setBranch(activeFilters.branch || "");
+    setOwner(activeFilters.owner || "");
+    setCounty(activeFilters.county || "");
+    setEstimator(activeFilters.estimator || "");
+    setDateField(activeFilters.dateField || "");
+    setDateFrom(activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : undefined);
+    setDateTo(activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined);
+  }, [activeFilters]);
+  
+  // Log filter values for debugging
+  useEffect(() => {
+    console.log('Current filter values:', { branch, owner, county, estimator, dateField, dateFrom, dateTo });
+    console.log('Current activeFilters:', activeFilters);
+  }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, activeFilters]);
+
+  // Apply filters function
+  const applyFilters = useCallback(() => {
+    if (!onFilterChange) return;
+    
+    // Start with a copy of the current activeFilters to preserve any filters not managed by this component
+    const filters: Record<string, any> = { ...activeFilters };
+    
+    // Update or remove branch filter
+    if (branch && branch !== "all") {
+      filters.branch = branch;
+    } else {
+      delete filters.branch;
+    }
+    
+    // Update or remove owner filter
+    if (owner && owner !== "all") {
+      filters.owner = owner;
+    } else {
+      delete filters.owner;
+    }
+    
+    // Update or remove county filter
+    if (county && county !== "all") {
+      filters.county = county;
+    } else {
+      delete filters.county;
+    }
+    
+    // Update or remove estimator filter
+    if (estimator && estimator !== "all") {
+      filters.estimator = estimator;
+    } else {
+      delete filters.estimator;
+    }
+    
+    // Update or remove date filters
+    if (dateField && dateField !== "none") {
+      filters.dateField = dateField;
+      if (dateFrom) filters.dateFrom = dateFrom;
+      if (dateTo) filters.dateTo = dateTo;
+    } else {
+      delete filters.dateField;
+      delete filters.dateFrom;
+      delete filters.dateTo;
+    }
+    
+    // Apply the combined filters
+    onFilterChange(filters);
+  }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, onFilterChange, activeFilters]);
+  
+  if (!showFilters) return null;
+  
+  return (
+    <div className={cn("flex flex-wrap justify-end gap-2 mb-4", className)}>
+      {/* Branch Filter */}
+      <div className="w-40 sm:w-44">
+        <Select 
+          value={branch || "all"} 
+          onValueChange={(value) => {
+            console.log('Branch selected:', value);
+            setBranch(value);
+          }}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="All Branches" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Branches</SelectItem>
+            {branchOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       
-      {/* Filter Dialog */}
-      <FilterDialog 
-        open={filterDialogOpen} 
-        onOpenChange={setFilterDialogOpen}
-        branchOptions={branchOptions}
-        ownerOptions={ownerOptions}
-        countyOptions={countyOptions}
-        estimatorOptions={estimatorOptions}
-        onApplyFilters={(filters) => {
-          if (onFilterChange) {
-            onFilterChange(filters);
-          }
-          setFilterDialogOpen(false);
-        }}
-        onResetFilters={() => {
-          if (onReset) {
-            onReset();
-          }
-          setFilterDialogOpen(false);
-        }}
-        initialFilters={activeFilters}
-      />
+      {/* Owner Filter */}
+      <div className="w-40 sm:w-44">
+        <Select 
+          value={owner || "all"} 
+          onValueChange={(value) => {
+            console.log('Owner selected:', value);
+            setOwner(value);
+          }}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="All Owners" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Owners</SelectItem>
+            {ownerOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* County Filter */}
+      <div className="w-40 sm:w-44">
+        <Select 
+          value={county || "all"} 
+          onValueChange={(value) => {
+            console.log('County selected:', value);
+            setCounty(value);
+          }}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="All Counties" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Counties</SelectItem>
+            {countyOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* Estimator Filter */}
+      <div className="w-40 sm:w-44">
+        <Select 
+          value={estimator || "all"} 
+          onValueChange={(value) => {
+            console.log('Estimator selected:', value);
+            setEstimator(value);
+          }}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="All Estimators" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Estimators</SelectItem>
+            {estimatorOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* Date Field Filter */}
+      <div className="w-40 sm:w-44">
+        <Select value={dateField || "none"} onValueChange={setDateField}>
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="No Date Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No Date Filter</SelectItem>
+            <SelectItem value="lettingDate">Letting Date</SelectItem>
+            <SelectItem value="dueDate">Due Date</SelectItem>
+            <SelectItem value="createdAt">Created At</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* Date Range Filters - Only shown if a date field is selected */}
+      {dateField && dateField !== 'none' && (
+        <>
+          {/* From Date */}
+          <div className="w-40 sm:w-44">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-9 w-full justify-start text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "PPP") : <span>From Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          {/* To Date */}
+          <div className="w-40 sm:w-44">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-9 w-full justify-start text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "PPP") : <span>To Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </>
+      )}
+      
+      {/* Apply Filters Button */}
+      <div className="w-40 sm:w-44">
+        <Button 
+          variant="default" 
+          className="h-9 w-full"
+          onClick={() => {
+            console.log('Apply Filters clicked');
+            console.log('Applying filters:', { branch, owner, county, estimator, dateField, dateFrom, dateTo });
+            applyFilters();
+          }}
+        >
+          Apply Filters
+        </Button>
+      </div>
     </div>
   );
 }

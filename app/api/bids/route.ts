@@ -55,46 +55,59 @@ export async function GET(request: NextRequest) {
         console.log('Parsed filters:', filters);
         
         // Apply each filter
-        Object.entries(filters).forEach(([field, values]) => {
-          if (Array.isArray(values) && values.length > 0) {
-            console.log(`Processing filter: ${field} with values:`, values);
-            
-            let dbField = field;
-            switch (field) {
-              case 'county':
-                dbField = 'county';
-                break;
-              case 'owner':
-                dbField = 'owner';
-                break;
-              case 'branch':
-                dbField = 'branch';
-                console.log(`Branch filter with values: ${values}`);
-                break;
-              case 'estimator':
-                dbField = 'estimator';
-                break;
-              case 'status':
-                dbField = 'status';
-                break;
-              case 'dateField':
-              case 'dateFrom':
-              case 'dateTo':
-                // Handle date filters separately
-                console.log(`Date filter: ${field}`);
-                return; // Skip the standard filter application
-            }
-            
-            // Apply the filter
-            if (field === 'estimator' && values.length > 0) {
-              // For estimator, we need to match against the estimator field which might store the name
-              // but we're filtering by ID, so we need to join with the users table
-              // This is a simplification - in a real app, you'd need to handle this properly
-              console.log('Estimator filter not fully implemented yet');
+        Object.entries(filters).forEach(([field, value]) => {
+          console.log(`Processing filter: ${field} with value:`, value);
+          
+          // Skip empty values
+          if (value === undefined || value === null || value === '') {
+            console.log(`Skipping empty value for ${field}`);
+            return;
+          }
+          
+          let dbField = field;
+          switch (field) {
+            case 'county':
+              dbField = 'county';
+              break;
+            case 'owner':
+              dbField = 'owner';
+              break;
+            case 'branch':
+              dbField = 'branch';
+              console.log(`Branch filter with value: ${value}`);
+              break;
+            case 'estimator':
+              dbField = 'estimator';
+              break;
+            case 'status':
+              dbField = 'status';
+              break;
+            case 'dateField':
+            case 'dateFrom':
+            case 'dateTo':
+              // Handle date filters separately
+              console.log(`Date filter: ${field}`);
+              return; // Skip the standard filter application
+          }
+          
+          // Apply the filter
+          if (field === 'estimator') {
+            // For estimator, we need to match against the estimator field which might store the name
+            // but we're filtering by ID, so we need to join with the users table
+            // This is a simplification - in a real app, you'd need to handle this properly
+            console.log('Estimator filter not fully implemented yet');
+          } else {
+            // Handle both array and single value cases
+            if (Array.isArray(value)) {
+              if (value.length > 0) {
+                console.log(`Applying array filter: ${dbField} IN ${JSON.stringify(value)}`);
+                dataQuery = dataQuery.in(dbField, value as string[]);
+                countQuery = countQuery.in(dbField, value as string[]);
+              }
             } else {
-              console.log(`Applying filter: ${dbField} IN ${JSON.stringify(values)}`);
-              dataQuery = dataQuery.in(dbField, values as string[]);
-              countQuery = countQuery.in(dbField, values as string[]);
+              console.log(`Applying single value filter: ${dbField} = ${value}`);
+              dataQuery = dataQuery.eq(dbField, value);
+              countQuery = countQuery.eq(dbField, value);
             }
           }
         });
