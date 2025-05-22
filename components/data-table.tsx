@@ -316,6 +316,15 @@ export function DataTable<TData>({
                                     console.error('Error calling onArchiveSelected:', error);
                                 }
                             }
+
+                            if (onArchive) {
+                                try {
+                                    onArchive(row.original as TData);
+                                    console.log('onArchiveSelected called successfully');
+                                } catch (error) {
+                                    console.error('Error calling onArchiveSelected:', error);
+                                }
+                            }
                         },
                         [row.original]
                     );
