@@ -33,17 +33,43 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    const { data: archiveColumns, error: columnsError } = await supabase
+      .from('archived_available_jobs')
+      .select('*')
+      .limit(1);
+      
+    if (columnsError) {
+      console.error('Error fetching archive table columns:', columnsError);
+      return NextResponse.json(
+        { success: false, message: 'Failed to determine archive table schema', error: columnsError.message },
+        { status: 500 }
+      );
+    }
+    
+    const archiveColumnNames = archiveColumns && archiveColumns.length > 0 
+      ? Object.keys(archiveColumns[0]) 
+      : [];
+          
     // Insert into archived_available_jobs
     const { error: insertError } = await supabase
       .from('archived_available_jobs')
       .insert(jobsToArchive.map(job => {
         const { id, ...jobWithoutId } = job;
         
-        return {
-          ...jobWithoutId,
-          original_id: id,
-          archived_at: new Date().toISOString()
-        };
+        const filteredJob: Record<string, any> = {};
+        
+        filteredJob.original_id = id;
+        filteredJob.archived_at = new Date().toISOString();
+        
+        Object.keys(jobWithoutId).forEach(key => {
+          if (archiveColumnNames.includes(key)) {
+            filteredJob[key] = jobWithoutId[key];
+          } else {
+            console.log(`Skipping field not in archive table schema: ${key}`);
+          }
+        });
+        
+        return filteredJob;
       }));
     
     if (insertError) {

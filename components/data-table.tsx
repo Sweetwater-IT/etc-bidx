@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import { flexRender, getCoreRowModel, useReactTable, ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Segments } from "@/components/ui/segments";
@@ -18,12 +19,20 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     Select,
     SelectContent,
@@ -281,16 +290,31 @@ export function DataTable<TData extends object>({
                 header: () => <div className="text-center">Actions</div>,
                 cell: ({ row }) => {
                     const handleDelete = useCallback(
-                        (e: React.MouseEvent) => {
+                        async (e: React.MouseEvent) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            if (onDeleteSelected) {
+                            
+                            if (segmentValue === 'archived') {
+                                setItemsToDelete([row.original as TData]);
+                                setDeleteDialogOpen(true);
+                            } 
+                            else if (onDeleteSelected) {
                                 console.log('Delete clicked for row:', row.original);
                                 try {
-                                    onDeleteSelected([row.original as TData]);
+                                    await onDeleteSelected([row.original as TData]);
                                     console.log('onDeleteSelected called successfully');
+                                    toast.success('Item deleted successfully');
+                                    
+                                    // Force a refresh of the current segment data and counts
+                                    if (onSegmentChange && segmentValue) {
+                                        setTimeout(() => {
+                                            console.log('Refreshing segment data after deletion via onDeleteSelected');
+                                            onSegmentChange(segmentValue);
+                                        }, 100);
+                                    }
                                 } catch (error) {
                                     console.error('Error calling onDeleteSelected:', error);
+                                    toast.error('An error occurred while deleting the item.');
                                 }
                             }
                         },
@@ -298,26 +322,34 @@ export function DataTable<TData extends object>({
                     );
 
                     const handleArchive = useCallback(
-                        (e: React.MouseEvent) => {
+                        async (e: React.MouseEvent) => {
                             e.stopPropagation();
                             e.preventDefault();
+                            let archiveSuccessful = false;
+                            
                             if (onArchiveSelected) {
                                 console.log('Archive clicked for row:', row.original);
                                 try {
-                                    onArchiveSelected([row.original as TData]);
+                                    await onArchiveSelected([row.original as TData]);
                                     console.log('onArchiveSelected called successfully');
+                                    archiveSuccessful = true;
                                 } catch (error) {
                                     console.error('Error calling onArchiveSelected:', error);
                                 }
                             }
 
-                            if (onArchive) {
+                            if (onArchive && !archiveSuccessful) {
                                 try {
-                                    onArchive(row.original as TData);
-                                    console.log('onArchiveSelected called successfully');
+                                    await onArchive(row.original as TData);
+                                    console.log('onArchive called successfully');
+                                    archiveSuccessful = true;
                                 } catch (error) {
-                                    console.error('Error calling onArchiveSelected:', error);
+                                    console.error('Error calling onArchive:', error);
                                 }
+                            }
+                            
+                            if (archiveSuccessful && onSegmentChange && segmentValue) {
+                                onSegmentChange(segmentValue);
                             }
                         },
                         [row.original]
@@ -505,10 +537,13 @@ export function DataTable<TData extends object>({
         }
 
         return cols;
-    }, [legacyColumns, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, onArchiveSelected, onDeleteSelected, stickyLastColumn, segmentValue, segments]);
+    }, [legacyColumns, onViewDetails, onEdit, onArchive, onMarkAsBidJob, onUpdateStatus, onArchiveSelected, onDeleteSelected, stickyLastColumn, segmentValue, segments, onSegmentChange]);
 
     // State for filter visibility
     const [showFilters, setShowFilters] = useState(false);
+    
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemsToDelete, setItemsToDelete] = useState<TData[]>([]);
     
     const table = useReactTable({
         data,
@@ -532,6 +567,45 @@ export function DataTable<TData extends object>({
         }
     }), [table]);
 
+    const handleDelete = async () => {
+        if (itemsToDelete.length === 0) return;
+        
+        const selectedIds = itemsToDelete.map(item => (item as any).id);
+        
+        try {
+            const response = await fetch('/api/bids/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: selectedIds }),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                toast.success(`Successfully deleted ${itemsToDelete.length} item${itemsToDelete.length > 1 ? 's' : ''}`);
+                
+                table.toggleAllRowsSelected(false);
+                
+                if (onSegmentChange && segmentValue === 'archived') { 
+                    window.location.href = window.location.pathname + '?segment=archived';
+                } else if (onSegmentChange) {
+                    onSegmentChange(segmentValue || '');
+                }
+            } else {
+                console.error('Failed to delete items:', result.message);
+                toast.error(`Failed to delete: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error deleting items:', error);
+            toast.error('An error occurred while deleting items.');
+        } finally {
+            setDeleteDialogOpen(false);
+            setItemsToDelete([]);
+        }
+    };
+    
     return (
         <div className="space-y-4">
             {/* Top Controls Section */}
@@ -562,7 +636,7 @@ export function DataTable<TData extends object>({
                             />
                         )}
 
-                        {/* Table Actions Menu */}
+                        {/* Table Actions Menu - without Archive/Delete */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="h-9 gap-1">
@@ -576,8 +650,8 @@ export function DataTable<TData extends object>({
                         </DropdownMenu>
 
                         {addButtonLabel && (
-                            <Button size="sm" onClick={onAddClick}>
-                                <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
+                            <Button onClick={onAddClick} size="sm" className="h-9 gap-1">
+                                <IconPlus className="h-4 w-4" />
                                 {addButtonLabel}
                             </Button>
                         )}
@@ -595,6 +669,44 @@ export function DataTable<TData extends object>({
                         onFilterChange={onFilterChange}
                         activeFilters={activeFilters}
                     />
+                )}
+                
+                {table.getSelectedRowModel().rows.length >= 2 && (
+                    <div className="flex justify-end mt-3">
+                        {segmentValue === 'archived' ? (
+                            <Button 
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                    const selectedRows = table.getSelectedRowModel().rows.map(row => row.original as TData);
+                                    setItemsToDelete(selectedRows);
+                                    setDeleteDialogOpen(true);
+                                }}
+                            >
+                                Delete ({table.getSelectedRowModel().rows.length})
+                            </Button>
+                        ) : (
+                            onArchiveSelected && (
+                                <Button 
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive border-destructive hover:bg-destructive/10"
+                                    onClick={async () => {
+                                        const selectedRows = table.getSelectedRowModel().rows.map(row => row.original as TData);
+                                        await onArchiveSelected(selectedRows);
+                                        
+                                        table.toggleAllRowsSelected(false);
+                                        
+                                        if (onSegmentChange && segmentValue) {
+                                            onSegmentChange(segmentValue);
+                                        }
+                                    }}
+                                >
+                                    Archive ({table.getSelectedRowModel().rows.length})
+                                </Button>
+                            )
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -752,6 +864,26 @@ export function DataTable<TData extends object>({
                     </div>
                 </div>
             )}
+            
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete {itemsToDelete.length} item{itemsToDelete.length !== 1 ? 's' : ''}? 
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex justify-between">
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
