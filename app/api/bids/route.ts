@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const ascending = sortOrder === 'asc';
     
     // Calculate offset for pagination

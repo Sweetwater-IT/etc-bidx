@@ -335,7 +335,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                       placeholder="Contract Number"
                       className="pl-9"
                       value={contractNumber}
-                      onChange={(e) => setContractNumber(e.target.value)}
+                      onChange={(e) => setContractNumber(e.target.value.toUpperCase())}
                       required
                     />
                   </div>
@@ -366,7 +366,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                       placeholder="State Route"
                       className="pl-9"
                       value={stateRoute}
-                      onChange={(e) => setStateRoute(e.target.value)}
+                      onChange={(e) => setStateRoute(e.target.value.toUpperCase())}
                       required
                     />
                   </div>
@@ -454,7 +454,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                 key={ownerItem.id}
                                 value={ownerItem.name}
                                 onSelect={() => {
-                                  setOwner(ownerItem.id);
+                                  setOwner(ownerItem.name);
                                   setOpenStates(prev => ({ ...prev, owner: false }));
                                 }}
                               >
@@ -539,7 +539,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
                 <div className="space-y-2 w-full">
                   <Label>County <span className="text-red-500">*</span></Label>
-                  <Popover>
+                  <Popover modal={true}>
                     <PopoverTrigger asChild disabled={isLoading}>
                       <Button
                         variant="outline"
@@ -566,12 +566,10 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                   key={countyItem.id}
                                   value={countyItem.name}
                                   onSelect={() => {
-                                    const countyId = countyItem.id.toString();
-                                    setCounty(countyId);
+                                    setCounty(countyItem.name);
                                     // Auto-set branch based on county
                                     if (countyItem.branch) {
-                                      const branchId = countyItem.branch.toLowerCase().replace(/\s+/g, '-');
-                                      setBranch(branchId);
+                                      setBranch(countyItem.branch);
                                     }
                                   }}
                                 >
@@ -602,7 +600,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                       placeholder="Location"
                       className="pl-9"
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      onChange={(e) => setLocation(e.target.value.toUpperCase())}
                     />
                   </div>
                 </div>
@@ -637,7 +635,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
               {customReasonSelected && <Input
                 type="text"
                 value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
+                onChange={(e) => setCustomText(e.target.value.toUpperCase())}
                 placeholder="Enter custom reason"
               />}
               <div className="space-y-2 w-full">
