@@ -489,10 +489,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     
                     return {
                         id: bid.id,
-                        contractNumber: {
-                            main: contractNum,
-                            secondary: estimator
-                        },
+                        contractNumber: contractNum,
                         originalContractNumber: contractNum, // Add original field for details drawer
                         contractor: bid.contractor_name || "",
                         subcontractor: bid.subcontractor_name || "",
@@ -527,10 +524,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     
                     return {
                         id: bid.id,
-                        contractNumber: {
-                            main: contractNum,
-                            secondary: estimator
-                        },
+                        contractNumber: contractNum,
                         originalContractNumber: contractNum, // Add original field for details drawer
                         contractor: bid.contractor || "Unknown",
                         subcontractor: bid.subcontractor || "",
