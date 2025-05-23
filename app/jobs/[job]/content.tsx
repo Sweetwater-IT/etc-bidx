@@ -1287,6 +1287,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             ];
 
     const handleCreateClick = () => {
+        console.log('available jobs clicked')
         if (isAvailableJobs) {
             setOpenBidSheetOpen(true);
         } else if (isActiveBids) {
@@ -1498,6 +1499,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}
                                     onViewDetails={handleViewDetails}
+                                    onRowClick={handleViewDetails}
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
                                     onMarkAsBidJob={handleMarkAsBidJob}
