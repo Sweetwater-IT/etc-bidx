@@ -8,7 +8,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { getJobCards } from "@/data/jobs-cards";
 import { type JobType } from "@/data/jobs-data";
-import { availableJobsColumns } from "@/data/available-jobs";
+import { availableJobsColumns, AvailableJobServices } from "@/data/available-jobs";
 import { FilterOption } from "@/components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "@/data/active-bids";
 import { type ActiveJob } from "@/data/active-jobs";
@@ -391,6 +391,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                 const stateRoute = job.state_route || null;
 
+                const services: Record<AvailableJobServices, boolean> = {
+                    'MPT': job.mpt || false,
+                    'Flagging': job.flagging || false,
+                    'Equipment Rental': job.equipment_rental || false,
+                    'Perm Signs': job.perm_signs || false,
+                    'Other': job.other || false
+                }
+
                 return {
                     id: job.id,
                     contractNumber: contractNumberValue,
@@ -410,7 +418,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
-                    stateRoute
+                    stateRoute,
+                    services
                 };
             });
 

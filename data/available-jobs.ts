@@ -13,12 +13,12 @@ export type AvailableJob = {
   dbe? :string;
   noBidReason?: string;
   stateRoute?: string;
-  mpt: boolean;
-  flagging: boolean;
-  perm_signs: boolean;
-  equipment_rental: boolean;
-  other: boolean;
+  services: Record<AvailableJobServices, boolean>
 };
+
+export type AvailableJobServices = 'MPT' | 'Flagging' | 'Perm Signs' | 'Equipment Rental' | 'Other'
+
+export const AVAILABLE_JOB_SERVICES = ["MPT", "Flagging", "Perm Signs", "Equipment Rental", "Other"]
 
 export type AvailableJobStatus = 'Bid' | 'No Bid' | 'Unset' | "Archived"
 
