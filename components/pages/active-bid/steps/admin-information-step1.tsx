@@ -69,11 +69,11 @@ const AdminInformationStep1 = ({
   const { startLoading, stopLoading } = useLoading();
 
   useEffect(() => {
-    dispatch({type: 'ADD_MPT_RENTAL'})
+    dispatch({ type: 'ADD_MPT_RENTAL' })
     dispatch({ type: 'ADD_FLAGGING' });
     dispatch({ type: 'ADD_SERVICE_WORK' })
   }, [dispatch])
-  
+
   // State for toggle buttons
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
     laborRate: false,
@@ -128,10 +128,13 @@ const AdminInformationStep1 = ({
   useEffect(() => {
     const fetchData = async () => {
       startLoading();
+
+      let countiesData: County[] = [];
+      let ownersData: { id: string, name: string }[] = [];
       try {
         // Fetch counties
         setIsLoading((prev) => ({ ...prev, counties: true }));
-        const countiesData = await fetchReferenceData("counties");
+        countiesData = await fetchReferenceData("counties");
         setCounties(countiesData);
         setIsLoading((prev) => ({ ...prev, counties: false }));
 
@@ -143,7 +146,7 @@ const AdminInformationStep1 = ({
 
         // Fetch owners
         setIsLoading((prev) => ({ ...prev, owners: true }));
-        const ownersData = await fetchReferenceData("owners");
+        ownersData = await fetchReferenceData("owners");
         setOwners(ownersData);
         setIsLoading((prev) => ({ ...prev, owners: false }));
 
@@ -178,37 +181,37 @@ const AdminInformationStep1 = ({
         });
       }
 
-      if(availableJobId){
+      if (availableJobId) {
         try {
           const data = await fetchBidById(parseInt(availableJobId));
 
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'contractNumber', value: data.contract_number}});
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'dbe', value: data.dbe_percentage ? Number(data.dbe_percentage) : 0 }});
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'lettingDate', value: new Date(data.letting_date)}});
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'location', value: data.location}});
-          dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'srRoute', value: data.state_route}});
-          const associatedCounty = counties.find(c => c.id === parseInt(data.county))
-          if(associatedCounty){
-            handleCountyChange(data.county)
+          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'contractNumber', value: data.contract_number } });
+          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'dbe', value: data.dbe_percentage ? Number(data.dbe_percentage) : 0 } });
+          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'lettingDate', value: new Date(data.letting_date) } });
+          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'location', value: data.location } });
+          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'srRoute', value: data.state_route } });
+          const associatedCounty = countiesData.find(c => c.name === data.county)
+          if (associatedCounty) {
+            dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'county', value: associatedCounty } })
           }
-          const associatedOwner = owners.find(o => o.id === data.owner);
-          if(associatedOwner){
-            dispatch({type: 'UPDATE_ADMIN_DATA', payload: { key : 'owner', value: associatedOwner.name}});
+          const associatedOwner = ownersData.find(o => o.name === data.owner);
+          if (associatedOwner) {
+            dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'owner', value: associatedOwner.name } });
           }
-        } catch(err) {
+        } catch (err) {
           toast.error("Couldn't populate bid with data from available job " + availableJobId + ' ' + err)
         }
       }
-      if(contractNumberFromParams){
+      if (contractNumberFromParams) {
         const data = await fetchActiveBidByContractNumber(contractNumberFromParams);
         //estimate-view is not completley accurate yet, but eventually we could pass the whole down
         //to one reducer functio nand update all the state at once
-        dispatch({type: 'COPY_ADMIN_DATA', payload: data.admin_data as any});
-        dispatch({type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any});
-        dispatch({type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any});
-        dispatch({type: 'COPY_FLAGGING', payload: data.flagging as any});
-        dispatch({type: 'COPY_SERVICE_WORK', payload: data.service_work as any});
-        dispatch({type: 'COPY_SALE_ITEMS', payload: data.sale_items as any})
+        dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });
+        dispatch({ type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any });
+        dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any });
+        dispatch({ type: 'COPY_FLAGGING', payload: data.flagging as any });
+        dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
+        dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any })
         console.log(data);
       }
       stopLoading();
@@ -218,7 +221,7 @@ const AdminInformationStep1 = ({
   }, []);
 
   useEffect(() => {
-    if(adminData.rated === 'NON-RATED'){
+    if (adminData.rated === 'NON-RATED') {
       setToggleStates(prev => ({
         ...prev,
         laborRate: true,
@@ -227,7 +230,7 @@ const AdminInformationStep1 = ({
     }
   }, [adminData.rated])
 
-//When county changes, update digits for rates
+  //When county changes, update digits for rates
   useEffect(() => {
     if (adminData.county) {
       setDigits((prev) => ({
@@ -249,60 +252,60 @@ const AdminInformationStep1 = ({
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
     // Map the field names to the appropriate adminData structure
-    if (field === "contractNumber" || 
-        field === "estimator" || 
-        field === "owner" || 
-        field === "srRoute") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: field, value } 
+    if (field === "contractNumber" ||
+      field === "estimator" ||
+      field === "owner" ||
+      field === "srRoute") {
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: field, value }
       });
     } else if (field === "dbePercentage") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "dbe", value } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "dbe", value }
       });
     } else if (field === "township") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "location", value } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "location", value }
       });
     } else if (field === "division") {
       const divisionValue = (value === "PUBLIC" || value === "PRIVATE") ? value : null;
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "division", value: divisionValue } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "division", value: divisionValue }
       });
     } else if (field === "workType") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "rated", value } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "rated", value }
       });
     } else if (field === "lettingDate") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "lettingDate", value: value ? new Date(value as string) : null } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "lettingDate", value: value ? new Date(value as string) : null }
       });
     } else if (field === "startDate" || field === "endDate") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: field, value: value ? new Date(value as string) : null } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: field, value: value ? new Date(value as string) : null }
       });
     } else if (field === "oneWayTravelTime") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "owTravelTimeMins", value: Number(value) } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "owTravelTimeMins", value: Number(value) }
       });
     } else if (field === "oneWayMileage") {
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "owMileage", value: Number(value) } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "owMileage", value: Number(value) }
       });
     } else if (field === "dieselCost") {
       console.log("Diesel Cost", value);
-      dispatch({ 
-        type: 'UPDATE_ADMIN_DATA', 
-        payload: { key: "fuelCostPerGallon", value: Number(value) } 
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: "fuelCostPerGallon", value: Number(value) }
       });
     }
   };
@@ -436,7 +439,7 @@ const AdminInformationStep1 = ({
                       {field.label}
                     </Label>
                     {field.name === "county" ? (
-                      <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>                        
+                      <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -448,7 +451,10 @@ const AdminInformationStep1 = ({
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
+                        <PopoverContent
+                          className="w-full p-0"
+                          avoidCollisions={false} // Prevents auto-repositioning
+                        >
                           <Command>
                             <CommandInput placeholder="Search county..." />
                             <CommandEmpty>No county found.</CommandEmpty>
@@ -473,7 +479,7 @@ const AdminInformationStep1 = ({
                         </PopoverContent>
                       </Popover>
                     ) : field.name === "estimator" ? (
-                      <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>                        
+                      <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -510,7 +516,7 @@ const AdminInformationStep1 = ({
                         </PopoverContent>
                       </Popover>
                     ) : field.name === "owner" ? (
-                      <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>                        
+                      <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -585,7 +591,7 @@ const AdminInformationStep1 = ({
                             {field.label}
                           </Label>
                         </div>
-                        
+
                         {toggleStates.winterShutdown && (
                           <div className="mt-4 grid grid-cols-2 gap-4">
                             <div>
@@ -593,17 +599,17 @@ const AdminInformationStep1 = ({
                               <Input
                                 id="winterStart"
                                 type="date"
-                                value={adminData.winterStart 
-                                  ? (typeof adminData.winterStart === 'string' 
-                                    ? adminData.winterStart 
+                                value={adminData.winterStart
+                                  ? (typeof adminData.winterStart === 'string'
+                                    ? adminData.winterStart
                                     : adminData.winterStart.toISOString().split('T')[0])
                                   : ""}
                                 onChange={(e) => {
                                   dispatch({
                                     type: 'UPDATE_ADMIN_DATA',
-                                    payload: { 
-                                      key: 'winterStart', 
-                                      value: e.target.value ? new Date(e.target.value) : null 
+                                    payload: {
+                                      key: 'winterStart',
+                                      value: e.target.value ? new Date(e.target.value) : null
                                     }
                                   });
                                 }}
@@ -615,17 +621,17 @@ const AdminInformationStep1 = ({
                               <Input
                                 id="winterEnd"
                                 type="date"
-                                value={adminData.winterEnd 
-                                  ? (typeof adminData.winterEnd === 'string' 
-                                    ? adminData.winterEnd 
+                                value={adminData.winterEnd
+                                  ? (typeof adminData.winterEnd === 'string'
+                                    ? adminData.winterEnd
                                     : adminData.winterEnd.toISOString().split('T')[0])
                                   : ""}
                                 onChange={(e) => {
                                   dispatch({
                                     type: 'UPDATE_ADMIN_DATA',
-                                    payload: { 
-                                      key: 'winterEnd', 
-                                      value: e.target.value ? new Date(e.target.value) : null 
+                                    payload: {
+                                      key: 'winterEnd',
+                                      value: e.target.value ? new Date(e.target.value) : null
                                     }
                                   });
                                 }}
@@ -636,7 +642,7 @@ const AdminInformationStep1 = ({
                         )}
                       </div>
                     ) : (
-                      <div className="relative space-y-2">                     
+                      <div className="relative space-y-2">
                         <Input
                           id={field.name}
                           type={field.type}
@@ -645,34 +651,34 @@ const AdminInformationStep1 = ({
                           placeholder={field.placeholder}
                           value={
                             field.name === "contractNumber" ? adminData.contractNumber || "" :
-                            field.name === "township" ? adminData.location || "" :
-                            field.name === "srRoute" ? adminData.srRoute || "" :
-                            field.name === "dbePercentage" ? adminData.dbe || "" :
-                            field.name === "lettingDate" ? 
-                              adminData.lettingDate ? 
-                                (typeof adminData.lettingDate === 'string' ? 
-                                  adminData.lettingDate : 
-                                  adminData.lettingDate.toISOString().split('T')[0]) 
-                                : "" :
-                            field.name === "startDate" ? 
-                              adminData.startDate ? 
-                                (typeof adminData.startDate === 'string' ? 
-                                  adminData.startDate : 
-                                  adminData.startDate.toISOString().split('T')[0]) 
-                                : "" :
-                            field.name === "endDate" ? 
-                              adminData.endDate ? 
-                                (typeof adminData.endDate === 'string' ? 
-                                  adminData.endDate : 
-                                  adminData.endDate.toISOString().split('T')[0]) 
-                                : "" :
-                            field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
-                            field.name === "oneWayMileage" ? adminData.owMileage || "" :
-                            field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
-                            field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
-                            field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
-                            field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
-                            ""
+                              field.name === "township" ? adminData.location || "" :
+                                field.name === "srRoute" ? adminData.srRoute || "" :
+                                  field.name === "dbePercentage" ? adminData.dbe || "" :
+                                    field.name === "lettingDate" ?
+                                      adminData.lettingDate ?
+                                        (typeof adminData.lettingDate === 'string' ?
+                                          adminData.lettingDate :
+                                          adminData.lettingDate.toISOString().split('T')[0])
+                                        : "" :
+                                      field.name === "startDate" ?
+                                        adminData.startDate ?
+                                          (typeof adminData.startDate === 'string' ?
+                                            adminData.startDate :
+                                            adminData.startDate.toISOString().split('T')[0])
+                                          : "" :
+                                        field.name === "endDate" ?
+                                          adminData.endDate ?
+                                            (typeof adminData.endDate === 'string' ?
+                                              adminData.endDate :
+                                              adminData.endDate.toISOString().split('T')[0])
+                                            : "" :
+                                          field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
+                                            field.name === "oneWayMileage" ? adminData.owMileage || "" :
+                                              field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
+                                                field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
+                                                  field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
+                                                    field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
+                                                      ""
                           }
                           onChange={(e) => {
                             const ev = e.nativeEvent as InputEvent;
@@ -685,11 +691,11 @@ const AdminInformationStep1 = ({
                               field.name === "fringeRate" ||
                               field.name === "shopRate"
                             ) {
-                              const nextDigits = handleNextDigits(digits[field.name], inputType, data );
-                              setDigits((prev) => ({...prev, [field.name]: nextDigits,}));
+                              const nextDigits = handleNextDigits(digits[field.name], inputType, data);
+                              setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
 
                               const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
-                              
+
                               if (field.name === "dieselCost") {
                                 handleInputChange("dieselCost", formatted);
                               } else {
