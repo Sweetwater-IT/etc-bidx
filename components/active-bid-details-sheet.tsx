@@ -15,6 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Customer } from "@/types/Customer";
 import { updateBid } from "@/lib/api-client";
 import { toast } from "sonner";
+import { Separator } from "./ui/separator";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -323,9 +324,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <div className="flex items-center gap-2">
-            <SheetTitle>Bid Details {bid?.originalContractNumber ? `- ${bid.originalContractNumber}` : ''}</SheetTitle>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+            <SheetTitle>Active bid{bid?.originalContractNumber ? `: ${bid.originalContractNumber}` : ''}</SheetTitle>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View bid summary <EyeIcon className="h-3 w-3" /></span>
           </div>
+          <Separator/>
         </SheetHeader>
         
         <div className="flex flex-col h-full">
