@@ -1,16 +1,26 @@
-export interface AvailableJob {
-  id: number
-  contractNumber: string
-  status: "Open" | "Urgent" | "Closed"
-  requestor: string
-  owner: string
-  lettingDate: string | null
-  dueDate: string | null
-  county: string
-  branch: string
-  createdAt: string
-  dbe?: number | null
-}
+export type AvailableJob = {
+  id: number;
+  contractNumber: string;
+  status: AvailableJobStatus
+  requestor: string;
+  owner: string;
+  lettingDate: string | null;
+  dueDate: string | null;
+  county: {main: string, secondary: string};
+  createdAt: string;
+  location: string;
+  platform: string;
+  dbe? :string;
+  noBidReason?: string;
+  stateRoute?: string;
+  mpt: boolean;
+  flagging: boolean;
+  perm_signs: boolean;
+  equipment_rental: boolean;
+  other: boolean;
+};
+
+export type AvailableJobStatus = 'Bid' | 'No Bid' | 'Unset' | "Archived"
 
 export const availableJobsColumns = [
   { key: "contractNumber", title: "Contract Number", sortable: true },

@@ -10,50 +10,13 @@ import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon, Ey
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useState, useEffect } from "react"
+import { AvailableJob } from "@/data/available-jobs"
 
 interface JobDetailsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  job?: {
-    id: number
-    contractNumber: string
-    status: string
-    requestor: string
-    owner: string
-    lettingDate: string | null
-    dueDate: string | null
-    county: any
-    countyValue?: string
-    branch: string
-    createdAt: string
-    location: string
-    platform: string
-    mpt?: boolean
-    flagging?: boolean
-    perm_signs?: boolean
-    equipment_rental?: boolean
-    other?: boolean
-    noBidReason?: string
-    stateRoute?: string
-    dbe?: string
-  }
-  onEdit?: (job: {
-    id: number
-    contractNumber: string
-    status: string
-    requestor: string
-    owner: string
-    lettingDate: string | null
-    dueDate: string | null
-    county: string
-    branch: string
-    createdAt: string
-    location: string
-    platform: string
-    noBidReason?: string
-    stateRoute?: string
-    dbe?: string
-  }) => void
+  job?: AvailableJob
+  onEdit?: (job: AvailableJob) => void
 }
 
 export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: JobDetailsSheetProps & {
@@ -165,7 +128,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
               <div className="space-y-1 w-full">
                 <Label className="font-medium">County</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.countyValue || '-'}
+                  {job?.county.main || '-'}
                 </div>
               </div>
 
@@ -205,7 +168,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
             <div className="space-y-1 w-full">
               <Label className="font-medium">Branch</Label>
               <div className="text-sm text-muted-foreground">
-                {job?.branch || '-'}
+                {job?.county.secondary || '-'}
               </div>
             </div>
             

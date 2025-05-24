@@ -36,28 +36,13 @@ import { useState, useEffect } from "react"
 import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client"
 import { toast } from "sonner"
 import { County } from "@/types/TCounty"
+import { AvailableJob } from "@/data/available-jobs"
 
 interface OpenBidSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
-  job?: {
-    id: number
-    contractNumber: string
-    status: string
-    requestor: string
-    owner: string
-    lettingDate: string | null
-    dueDate: string | null
-    county: string
-    branch: string
-    createdAt: string
-    location: string
-    platform: string
-    noBidReason?: string
-    dbe?: number
-    stateRoute?: string
-  }
+  job?: AvailableJob
 }
 
 export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidSheetProps) {
@@ -117,23 +102,18 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         setBranches(branchesData)
 
         if (!job && usersData.length && ownersData.length && countiesData.length) {
-          console.log(usersData[0]?.id)
-          console.log(ownersData[0]?.id)
-          console.log(countiesData[0]?.id)
-          setRequestor(usersData[0]?.id)
-          setOwner(ownersData[0]?.id)
-
-          // Set county and automatically set branch based on county
-          const initialCountyId = countiesData[0]?.id.toString()
-          setCounty(initialCountyId)
-
+          setRequestor(usersData[0].name);
+          setOwner(ownersData[0].name);    
+          setCounty(countiesData[0].name);
+        
           // Get branch from county
-          const selectedCounty = countiesData.find(c => c.id.toString() === initialCountyId)
+          const selectedCounty = countiesData.find(c => c.id.toString() === countiesData[0].id.toString())
           if (selectedCounty?.branch) {
             const branchId = selectedCounty.branch.toLowerCase().replace(/\s+/g, '-')
             setBranch(branchId)
           }
         }
+        
       } catch (error) {
         console.error('Error loading reference data:', error)
         toast.error('Failed to load form data. Please try again.')
@@ -149,12 +129,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
   useEffect(() => {
     if (job) {
-      // Populate form with job data
       setContractNumber(job.contractNumber)
       setRequestor(job.requestor)
       setOwner(job.owner)
-      setCounty(job.county)
-      setBranch(job.branch)
+      setCounty(job.county.main) 
+      setBranch(job.county.secondary) 
       setLocation(job.location)
       setPlatform(job.platform)
       setStatus(job.status as 'Bid' | 'No Bid' | 'Unset')
@@ -323,7 +302,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
           <SheetTitle>{job ? 'Edit Open Bid' : 'Create a new Open Bid'}</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-6 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -387,7 +366,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         disabled={isLoading}
                       >
                         <span>
-                          {requestor ? users.find(u => u.id === requestor)?.name || "Select requestor..." : "Select requestor..."}
+                          {requestor ? requestor : "Select requestor..."}
                         </span>
                         <ChevronsUpDown className="h-4 w-4 opacity-50" />
                       </Button>
@@ -403,7 +382,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                 key={user.id}
                                 value={user.name}
                                 onSelect={() => {
-                                  setRequestor(user.id);
+                                  setRequestor(user.name);
                                   setOpenStates(prev => ({ ...prev, requestor: false }));
                                 }}
                               >
@@ -438,7 +417,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         disabled={isLoading}
                       >
                         <span>
-                          {owner ? owners.find(o => o.id === owner)?.name || "Select owner..." : "Select owner..."}
+                          {owner ? owner : "Select owner..."}
                         </span>
                         <ChevronsUpDown className="h-4 w-4 opacity-50" />
                       </Button>
@@ -454,6 +433,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                                 key={ownerItem.id}
                                 value={ownerItem.name}
                                 onSelect={() => {
+                                  console.log(ownerItem.name)
                                   setOwner(ownerItem.name);
                                   setOpenStates(prev => ({ ...prev, owner: false }));
                                 }}
@@ -475,6 +455,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     </PopoverContent>
                   </Popover>
                 </div>
+                
 
                 <div className="space-y-2 w-full">
                   <Label>Platform</Label>
@@ -547,9 +528,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         className="w-full justify-between text-left font-normal"
                       >
                         <span>
-                          {county && counties.find(c => c.id.toString() === county)
-                            ? counties.find(c => c.id.toString() === county)?.name
-                            : "Select county..."}
+                          {county ? county : "Select county..."}
                         </span>
                         <ChevronsUpDown className="h-4 w-4 opacity-50" />
                       </Button>
