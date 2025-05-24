@@ -176,12 +176,12 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
             <div className="space-y-1 w-full">
               <Label className="font-medium">Services Required</Label>
               <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                {job?.mpt && <span className="px-2 py-0.5 bg-gray-100 rounded-md">MPT</span>}
-                {job?.flagging && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Flagging</span>}
-                {job?.perm_signs && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Perm Signs</span>}
-                {job?.equipment_rental && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
-                {job?.other && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Other</span>}
-                {!job?.mpt && !job?.flagging && !job?.perm_signs && !job?.equipment_rental && !job?.other && '-'}
+                {job?.services["MPT"] && <span className="px-2 py-0.5 bg-gray-100 rounded-md">MPT</span>}
+                {job?.services["Flagging"] && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Flagging</span>}
+                {job?.services["Perm Signs"] && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Perm Signs</span>}
+                {job?.services["Equipment Rental"] && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
+                {job?.services["Other"] && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Other</span>}
+                {!job?.services && '-'}
               </div>
             </div>
           </div>

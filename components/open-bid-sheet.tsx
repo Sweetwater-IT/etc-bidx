@@ -36,7 +36,7 @@ import { useState, useEffect } from "react"
 import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client"
 import { toast } from "sonner"
 import { County } from "@/types/TCounty"
-import { AvailableJob } from "@/data/available-jobs"
+import { AVAILABLE_JOB_SERVICES, AvailableJob, AvailableJobServices } from "@/data/available-jobs"
 
 interface OpenBidSheetProps {
   open: boolean
@@ -59,6 +59,13 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dbe, setDbe] = useState('')
   const [stateRoute, setStateRoute] = useState('')
+  const [selectedServices, setSelectedServices] = useState<Record<AvailableJobServices, boolean>>({
+    MPT: false,
+    Flagging: false,
+    "Perm Signs": false,
+    'Equipment Rental': false,
+    'Other' : false
+  })
 
   const [users, setUsers] = useState<{ id: string, name: string }[]>([])
   const [owners, setOwners] = useState<{ id: string, name: string }[]>([])
@@ -141,6 +148,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setDueDate(job.dueDate ? new Date(job.dueDate) : undefined)
       setDbe(job.dbe ? job.dbe.toString() : '')
       setStateRoute(job.stateRoute || '')
+      setSelectedServices(job.services)
       
       // Handle noBidReason
       if (job.noBidReason) {
@@ -176,6 +184,13 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setNoBidReason(undefined)
       setCustomReasonSelected(false)
       setCustomText('')
+      setSelectedServices({
+        'MPT': false,
+        'Flagging': false,
+        'Equipment Rental': false,
+        'Perm Signs': false,
+        'Other': false
+      })
     }
   }, [job, open]) 
 
@@ -246,11 +261,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         entry_date: today,
         dbe_percentage: parseInt(dbe) || 0,
         state_route: stateRoute,
-        mpt: false,
-        flagging: false,
-        perm_signs: false,
-        equipment_rental: false,
-        other: false,
+        mpt: selectedServices.MPT,
+        flagging: selectedServices.Flagging,
+        perm_signs: selectedServices["Perm Signs"],
+        equipment_rental: selectedServices["Equipment Rental"],
+        other: selectedServices.Other,
         no_bid_reason: noBidReason === 'Custom' ? customText : noBidReason
       }
 
@@ -621,9 +636,15 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <Label>Services Required <span className="text-red-500">*</span></Label>
                 <p className="text-sm text-muted-foreground">Select all that apply</p>
                 <div className="flex flex-wrap gap-4">
-                  {["MPT", "Flagging", "Perm Signs", "Equipment Rental", "Other"].map((service) => (
+                  {AVAILABLE_JOB_SERVICES.map((service) => (
                     <div key={service} className="flex items-center space-x-2">
-                      <Checkbox id={service} />
+                      <Checkbox id={service}
+                        onCheckedChange={(checked) => setSelectedServices(prev => ({
+                          ...prev, 
+                          [service]: checked
+                        }))}
+                        checked={selectedServices[service]}  
+                      />
                       <Label htmlFor={service}>{service}</Label>
                     </div>
                   ))}
