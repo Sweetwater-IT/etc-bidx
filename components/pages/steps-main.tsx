@@ -48,7 +48,7 @@ const StepsMain = () => {
   
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
-  const [currentStep, setCurrentStep] = useState(initialStepParam ? parseInt(initialStepParam) : 6);
+  const [currentStep, setCurrentStep] = useState(initialStepParam ? parseInt(initialStepParam) : 1);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);
   

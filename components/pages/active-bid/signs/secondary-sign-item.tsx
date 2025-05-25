@@ -20,7 +20,7 @@ const SecondarySignItem = ({
   showSubstrate = false
 }: SecondarySignItemProps) => {
   const { dispatch } = useEstimate();
-  const [isConfiguring, setIsConfiguring] = useState(false);
+  const [isConfiguring, setIsConfiguring] = useState(true);
 
   const handleEditSign = () => {
     setIsConfiguring(true);

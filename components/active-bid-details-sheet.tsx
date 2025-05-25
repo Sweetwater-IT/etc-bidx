@@ -365,12 +365,12 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                     </Button>
                   </div>
                   {editingContractor ? (
-                    <Popover open={true} onOpenChange={setEditingContractor}>
+                    <Popover open={true} modal={true} onOpenChange={setEditingContractor}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          className="w-full justify-between"
+                          className="w-fit justify-between"
                         >
                           {selectedContractor || "Select contractor..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -380,7 +380,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                         <Command>
                           <CommandInput placeholder="Search contractor..." />
                           <CommandEmpty>No contractor found.</CommandEmpty>
-                          <CommandGroup>
+                          <CommandGroup className="overflow-y-auto max-h-80">
                             {customers.map((customer) => (
                               <CommandItem
                                 key={customer.id}
@@ -575,7 +575,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             </div>
           </div>
 
-          <SheetFooter className="p-6 pt-0">
+          <SheetFooter className="fixed bottom-0 right-0">
             <div className="flex justify-end gap-4">
               <Button variant="outline" onClick={handleCancel}>
                 Cancel

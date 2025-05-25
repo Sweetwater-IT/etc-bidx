@@ -21,7 +21,6 @@ import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "@/lib/api-client";
 import { toast } from "sonner";
-import { format, formatISO, milliseconds } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
 import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
 import { EditActiveJobSheet } from "@/components/edit-active-job-sheet"
@@ -385,7 +384,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at ? formatISO(job.created_at) : '',
+                    createdAt: job.created_at ? job.created_at : '',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
@@ -453,7 +452,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-            console.log(data)
+
 
             const transformedData = data.map(e => ({
                 id: e.id,
@@ -470,16 +469,17 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 estimator: e.admin_data.estimator || 'Unknown',
                 status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
                 division: e.admin_data.division,
-                lettingDate: e.admin_data.lettingDate ? format(new Date(e.admin_data.lettingDate), "yyyy-MM-dd") : "",
-                startDate: e.admin_data.startDate ? format(new Date(e.admin_data.startDate), "yyyy-MM-dd") : "",
-                endDate: e.admin_data.endDate ? format(new Date(e.admin_data.endDate), "yyyy-MM-dd") : "",
-                projectDays: e.total_days || 0,
+                lettingDate: e.admin_data.lettingDate ? e.admin_data.lettingDate : "",
+                startDate: e.admin_data.startDate ? e.admin_data.startDate : "",
+                endDate: e.admin_data.endDate ? e.admin_data.endDate : "",
+                projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ? 
+                Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
                 totalHours: e.mpt_rental?._summary?.hours || 0,
                 mptValue: e.mpt_rental._summary.revenue || 0,
                 permSignValue: 0, // Not in the new structure
                 rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
                     sum + (item.revenue || 0), 0) || 0,
-                createdAt: e.created_at ? format(new Date(e.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                createdAt: e.created_at ? e.created_at : "",
                 total: e.mpt_rental._summary.revenue || 0
             }))
 
@@ -530,7 +530,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractor: job.contractor,
                 startDate: job.startDate,
                 endDate: job.endDate,
-                createdAt: job.createdAt ? format(new Date(job.createdAt), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                createdAt: job.createdAt ? job.createdAt : "",
             }));
 
             setActiveJobs(uiJobs);
@@ -1462,6 +1462,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     tableRef={activeJobsTableRef}
                                     selectedItem={activeJobDetailsSheetOpen && selectedActiveJob ? selectedActiveJob : undefined}
                                     onViewDetails={(item) => {
+                                        if ('jobNumber' in item) {
+                                            handleActiveJobViewDetails(item as ActiveJob);
+                                        }
+                                    }}
+                                    onRowClick={(item) => {
                                         if ('jobNumber' in item) {
                                             handleActiveJobViewDetails(item as ActiveJob);
                                         }
