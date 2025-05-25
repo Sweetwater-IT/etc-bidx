@@ -73,50 +73,48 @@ const SaleItemsRevenueAndProfit = () => {
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 
   return (
-    <div className="bg-white rounded-lg border p-4 md:row-span-1">
-      <h3 className="text-lg font-medium mb-4">Sale Items</h3>
-      
+    <div className="bg-white rounded-lg border p-4 md:row-span-1">      
       {/* Header */}
       <div className="grid grid-cols-5 mb-2">
-        <div className="px-3 py-2 font-medium">Sale Items</div>
-        <div className="px-3 py-2 font-medium">Revenue</div>
-        <div className="px-3 py-2 font-medium">Cost</div>
-        <div className="px-3 py-2 font-medium">Gross Profit</div>
-        <div className="px-3 py-2 font-medium">Gross Profit %</div>
+        <div className="font-medium">Sale Items</div>
+        <div className="font-medium">Revenue</div>
+        <div className="font-medium">Cost</div>
+        <div className="font-medium">Gross Profit</div>
+        <div className="font-medium">Gross Profit %</div>
       </div>
 
       {saleItems && saleItems.length > 0 ? (
         <>
           {/* Sale Items Row */}
-          <div className="grid grid-cols-5 border-t border-gray-300 py-2">
-            <div className="px-3 py-1 text-sm">Sale Items</div>
-            <div className="px-3 py-1 text-sm">
+          <div className="grid grid-cols-5 border-t py-1 border-gray-300">
+            <div className="text-sm">Sale Items</div>
+            <div className="text-sm">
               ${saleTotals?.totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm">
+            <div className="text-sm">
               ${saleTotals?.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm">
+            <div className="text-sm">
               ${saleTotals?.grossProfit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm">
+            <div className="text-sm">
               {(safeNumber(saleTotals?.grossMargin || 0) * 100).toFixed(2)}%
             </div>
           </div>
           
           {/* Sale Items Total */}
-          <div className="grid grid-cols-5 border-t border-gray-300 py-2 bg-green-50">
-            <div className="px-3 py-1 text-sm font-medium">Total</div>
-            <div className="px-3 py-1 text-sm font-medium">
+          <div className="grid grid-cols-5 border-t border-gray-300 py-1 bg-green-50">
+            <div className="text-sm font-medium">Total</div>
+            <div className="text-sm font-medium">
               ${saleTotals?.totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               ${saleTotals?.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               ${saleTotals?.grossProfit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               {(safeNumber(saleTotals?.grossMargin || 0) * 100).toFixed(2)}%
             </div>
           </div>
@@ -141,24 +139,24 @@ const SaleItemsRevenueAndProfit = () => {
       ) : (
         <>
           <div className="flex flex-col">
-            <p className="text-center py-6 text-gray-500 italic">
+            <p className="text-center py-2 text-gray-500 italic">
               No sale items available
             </p>
           </div>
           
           {/* ALL TOTALS in orange (even when no sale items) */}
-          <div className="grid grid-cols-5 border-t border-gray-300 py-2 mt-4" style={{ backgroundColor: '#ed7d31' }}>
-            <div className="px-3 py-1 text-sm font-medium">BID TOTAL</div>
-            <div className="px-3 py-1 text-sm font-medium">
+          <div className="grid grid-cols-5 border-t border-gray-300 mt-2" style={{ backgroundColor: '#ed7d31' }}>
+            <div className="text-sm font-medium">BID TOTAL</div>
+            <div className="text-sm font-medium">
               ${allTotals?.totalRevenue?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               ${allTotals?.totalCost?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               ${allTotals?.totalGrossProfit?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
-            <div className="px-3 py-1 text-sm font-medium">
+            <div className="text-sm font-medium">
               {(safeNumber(allTotals?.totalGrossMargin || 0) * 100).toFixed(2)}%
             </div>
           </div>

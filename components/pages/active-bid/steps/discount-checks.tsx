@@ -123,8 +123,10 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 flex-1">
+      <div className="rounded-lg border p-4">
+      <div className="flex items-center mb-4 justify-between">
+      <h3 className="text-lg font-medium mb-2">MPT Discounting</h3>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleClearDiscountRates}>Clear</Button>
           <Button variant="default" size="sm" onClick={() => setDiscounts('swing')}>Swing</Button>
@@ -132,9 +134,7 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
           <Button variant="destructive" size="sm" onClick={() => setDiscounts('breakeven')}>Breakeven</Button>
         </div>
       </div>
-      <div className="rounded-lg border p-4">
-      <h3 className="text-lg font-medium mb-4">MPT Discounting</h3>
-        <div className="grid items-baseline grid-cols-5 gap-4 border-b pb-2">
+        <div className="grid items-baseline grid-cols-5 gap-2 border-b pb-2">
           <div className="font-medium text-sm">Item</div>
           <div className="font-medium text-sm">Rate</div>
           <div className="font-medium text-sm">Swing</div>
@@ -149,7 +149,7 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
             return (
               <div 
                 key={row.item} 
-                className={`grid grid-cols-5 gap-4 p-2 ${exceedsMax ? "bg-red-100" : ""}`}
+                className={`grid grid-cols-5 gap-2 ${exceedsMax ? "bg-red-100" : ""}`}
               >
                 <div className="flex items-center text-sm">{label}</div>
                 <div>

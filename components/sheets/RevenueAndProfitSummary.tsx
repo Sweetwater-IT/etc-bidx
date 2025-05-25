@@ -156,13 +156,8 @@ const RevenueAndProfitSummary = () => {
   }
 
   return (
-    <Card className="mt-12">
-      <CardHeader>
-        <div className="flex">
-          <CardTitle className="text-lg font-semibold text-left">Revenue and Profit Summary</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div className='border rounded-md p-2 mb-2'>
+        <h3 className="text-lg font-medium mb-4 ml-2">Revenue and Profit Summary</h3>
         {/* Grid Header */}
         <div className="grid grid-cols-5 mb-2">
           <div className="px-3 pb-2 font-medium">
@@ -178,7 +173,7 @@ const RevenueAndProfitSummary = () => {
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="px-3 pb-2 font-medium">
+          <div className="pb-2 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Cost</span>
@@ -188,17 +183,17 @@ const RevenueAndProfitSummary = () => {
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="px-3 pb-2 font-medium">
+          <div className="pb-2 font-medium">
             <Tooltip>
               <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">Gross Profit</span>
+                <span className="border-b border-dotted border-gray-400 text-left cursor-help">Gross Profit</span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Gross Profit = (Revenue - Cost)</p>
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="px-3 pb-2 font-medium">
+          <div className="pb-2 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Gross Margin</span>
@@ -216,8 +211,8 @@ const RevenueAndProfitSummary = () => {
             key={index} 
             className={`grid grid-cols-5 border-t border-gray-200 ${index === data.length - 1 ? 'bg-green-50' : ''}`}
           >
-            <div className="px-3 py-3 text-sm">{row.mptRevenueAndGP}</div>
-            <div className="px-3 py-3 text-sm">
+            <div className="px-3 py-1 text-sm">{row.mptRevenueAndGP}</div>
+            <div className="px-3 py-1 text-sm">
               <Tooltip>
                 <TooltipTrigger className="cursor-help">
                   {formatCurrency(row.revenue)}
@@ -233,7 +228,7 @@ const RevenueAndProfitSummary = () => {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <div className="px-3 py-3 text-sm">
+            <div className="py-1 text-sm">
               <Tooltip>
                 <TooltipTrigger className="cursor-help">
                   {formatCurrency(row.cost)}
@@ -249,7 +244,7 @@ const RevenueAndProfitSummary = () => {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <div className="px-3 py-3 text-sm">
+            <div className="py-1 text-sm">
               <Tooltip>
                 <TooltipTrigger className="cursor-help">
                   {formatCurrency(row.grossProfit ?? 0)}
@@ -259,7 +254,7 @@ const RevenueAndProfitSummary = () => {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <div className="px-3 py-3 text-sm">
+            <div className="py-1 text-sm">
               <Tooltip>
                 <TooltipTrigger className="cursor-help">
                   {formatPercentage(row.grossMargin)}
@@ -271,13 +266,7 @@ const RevenueAndProfitSummary = () => {
             </div>
           </div>
         ))}
-        
-        {/* You can add other related components here similar to the Mantine version */}
-        {/* <RentalRevenueAndProfit />
-        <FlaggingRevenueAndProfit />
-        <PermSignsRevenueAndGP /> */}
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 
