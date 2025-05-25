@@ -53,22 +53,24 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
     shopRate: "",
   })
   
+  // Digits state for rate masking (similar to admin component)
+  const [digits, setDigits] = useState({
+    laborRate: "000",
+    fringeRate: "000",
+    shopRate: "000",
+  })
+  
   // Dropdown data
   const [counties, setCounties] = useState<County[]>([])
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([])
   const [owners, setOwners] = useState<{ id: string; name: string }[]>([])
   const [contractors, setContractors] = useState<{ id: number; name: string }[]>([])
+  const [branch, setBranch] = useState<string>('')
   
   const [countyRates, setCountyRates] = useState({
     laborRate: "",
     fringeRate: "",
     shopRate: ""
-  })
-  
-  const [customValues, setCustomValues] = useState({
-    laborRate: false,
-    fringeRate: false,
-    shopRate: false
   })
   
   const [useCustomValues, setUseCustomValues] = useState({
@@ -86,6 +88,25 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
   })
   
   const [openCounty, setOpenCounty] = useState(false)
+
+  // Format decimal function (from admin component)
+  function formatDecimal(value: string): string {
+    return (parseInt(value, 10) / 100).toFixed(2)
+  }
+
+  // Handle next digits function (from admin component)
+  function handleNextDigits(current: string, inputType: string, data: string): string {
+    let digits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      const candidate = current + data;
+      if (parseInt(candidate, 10) <= 99999) digits = candidate;
+    } else if (inputType === "deleteContentBackward") {
+      digits = current.slice(0, -1);
+    }
+
+    return digits.padStart(3, "0");
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -137,18 +158,20 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
   const handleCountyChange = (countyId: string) => {
     const selectedCounty = counties.find(c => c.id.toString() === countyId)
     if (selectedCounty) {
+      // Update digits state with county rates
+      const newDigits = {
+        laborRate: Math.round((selectedCounty.laborRate || 0) * 100).toString().padStart(3, "0"),
+        fringeRate: Math.round((selectedCounty.fringeRate || 0) * 100).toString().padStart(3, "0"),
+        shopRate: Math.round((selectedCounty.shopRate || 0) * 100).toString().padStart(3, "0")
+      };
+      setDigits(newDigits);
+      
       const newCountyRates = {
         laborRate: selectedCounty.laborRate.toString(),
         fringeRate: selectedCounty.fringeRate.toString(),
         shopRate: selectedCounty.shopRate.toString()
       };
       setCountyRates(newCountyRates);
-      
-      setCustomValues({
-        laborRate: false,
-        fringeRate: false,
-        shopRate: false
-      });
       
       setUseCustomValues({
         laborRate: false,
@@ -164,6 +187,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
         shopRate: newCountyRates.shopRate
       };
       
+      setBranch(selectedCounty.branch)
       setFormData(updatedFormData);
       setOpenCounty(false);
     }
@@ -184,7 +208,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
       
       const requestData = {
         ...formData,
-        customSequentialNumber: customSequentialNumber
+        county: {name : getCountyName(), branch }
       };
       
       const response = await fetch('/api/jobs', {
@@ -256,7 +280,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter contract number" 
                   className="h-10 border-gray-200"
                   value={formData.contractNumber}
-                  onChange={(e) => handleInputChange("contractNumber", e.target.value)}
+                  onChange={(e) => handleInputChange("contractNumber", e.target.value.toUpperCase())}
                 />
               </div>
             </div>
@@ -278,7 +302,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                       <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : estimators.length > 0 ? (
                       estimators.map((est) => (
-                        <SelectItem key={est.id} value={est.id.toString()}>
+                        <SelectItem key={est.id} value={est.name}>
                           {est.name}
                         </SelectItem>
                       ))
@@ -302,7 +326,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                       <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : owners.length > 0 ? (
                       owners.map((own) => (
-                        <SelectItem key={own.id} value={own.id}>
+                        <SelectItem key={own.id} value={own.name}>
                           {own.name}
                         </SelectItem>
                       ))
@@ -372,7 +396,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter township" 
                   className="h-10 border-gray-200"
                   value={formData.township}
-                  onChange={(e) => handleInputChange("township", e.target.value)}
+                  onChange={(e) => handleInputChange("township", e.target.value.toUpperCase())}
                 />
               </div>
             </div>
@@ -457,7 +481,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                   placeholder="Enter SR route" 
                   className="h-10 border-gray-200"
                   value={formData.srRoute}
-                  onChange={(e) => handleInputChange("srRoute", e.target.value)}
+                  onChange={(e) => handleInputChange("srRoute", e.target.value.toUpperCase())}
                 />
               </div>
               <div>
@@ -479,18 +503,21 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                 <Label htmlFor="labor-rate" className="text-sm font-medium mb-1.5">Labor Rate*</Label>
                 <Input 
                   id="labor-rate" 
+                  inputMode="decimal"
+                  pattern="^\\d*(\\.\\d{0,2})?$"
                   placeholder="Enter labor rate" 
                   className="h-10 border-gray-200"
-                  value={formData.laborRate}
+                  value={`$ ${formatDecimal(digits.laborRate)}`}
                   onChange={(e) => {
-                    const newValue = e.target.value;
-                    handleInputChange("laborRate", newValue);
-                    
-                    if (newValue !== countyRates.laborRate) {
-                      setCustomValues(prev => ({ ...prev, laborRate: true }));
-                    } else {
-                      setCustomValues(prev => ({ ...prev, laborRate: false }));
-                    }
+                    const ev = e.nativeEvent as InputEvent;
+                    const { inputType } = ev;
+                    const data = (ev.data || "").replace(/\$/g, "");
+
+                    const nextDigits = handleNextDigits(digits.laborRate, inputType, data);
+                    setDigits((prev) => ({ ...prev, laborRate: nextDigits }));
+
+                    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                    handleInputChange("laborRate", formatted);
                   }}
                 />
                 <div className="flex items-center mt-1">
@@ -502,7 +529,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                     onChange={(e) => handleUseCustomValueChange('laborRate', e.target.checked)}
                   />
                   <label htmlFor="use-labor-rate" className="ml-2 text-xs text-gray-600">
-                    Use this value
+                    Use this rate?
                   </label>
                 </div>
               </div>
@@ -510,18 +537,21 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                 <Label htmlFor="fringe-rate" className="text-sm font-medium mb-1.5">Fringe Rate*</Label>
                 <Input 
                   id="fringe-rate" 
+                  inputMode="decimal"
+                  pattern="^\\d*(\\.\\d{0,2})?$"
                   placeholder="Enter fringe rate" 
                   className="h-10 border-gray-200"
-                  value={formData.fringeRate}
+                  value={`$ ${formatDecimal(digits.fringeRate)}`}
                   onChange={(e) => {
-                    const newValue = e.target.value;
-                    handleInputChange("fringeRate", newValue);
-                    
-                    if (newValue !== countyRates.fringeRate) {
-                      setCustomValues(prev => ({ ...prev, fringeRate: true }));
-                    } else {
-                      setCustomValues(prev => ({ ...prev, fringeRate: false }));
-                    }
+                    const ev = e.nativeEvent as InputEvent;
+                    const { inputType } = ev;
+                    const data = (ev.data || "").replace(/\$/g, "");
+
+                    const nextDigits = handleNextDigits(digits.fringeRate, inputType, data);
+                    setDigits((prev) => ({ ...prev, fringeRate: nextDigits }));
+
+                    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                    handleInputChange("fringeRate", formatted);
                   }}
                 />
                 <div className="flex items-center mt-1">
@@ -533,7 +563,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                     onChange={(e) => handleUseCustomValueChange('fringeRate', e.target.checked)}
                   />
                   <label htmlFor="use-fringe-rate" className="ml-2 text-xs text-gray-600">
-                    Use this value
+                    Use this rate?
                   </label>
                 </div>
               </div>
@@ -541,18 +571,21 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                 <Label htmlFor="shop-rate" className="text-sm font-medium mb-1.5">Shop Rate*</Label>
                 <Input 
                   id="shop-rate" 
+                  inputMode="decimal"
+                  pattern="^\\d*(\\.\\d{0,2})?$"
                   placeholder="Enter shop rate" 
                   className="h-10 border-gray-200"
-                  value={formData.shopRate}
+                  value={`$ ${formatDecimal(digits.shopRate)}`}
                   onChange={(e) => {
-                    const newValue = e.target.value;
-                    handleInputChange("shopRate", newValue);
-                    
-                    if (newValue !== countyRates.shopRate) {
-                      setCustomValues(prev => ({ ...prev, shopRate: true }));
-                    } else {
-                      setCustomValues(prev => ({ ...prev, shopRate: false }));
-                    }
+                    const ev = e.nativeEvent as InputEvent;
+                    const { inputType } = ev;
+                    const data = (ev.data || "").replace(/\$/g, "");
+
+                    const nextDigits = handleNextDigits(digits.shopRate, inputType, data);
+                    setDigits((prev) => ({ ...prev, shopRate: nextDigits }));
+
+                    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                    handleInputChange("shopRate", formatted);
                   }}
                 />
                 <div className="flex items-center mt-1">
@@ -564,7 +597,7 @@ export function CreateJobSheet({ open, onOpenChange, customSequentialNumber, onS
                     onChange={(e) => handleUseCustomValueChange('shopRate', e.target.checked)}
                   />
                   <label htmlFor="use-shop-rate" className="ml-2 text-xs text-gray-600">
-                    Use this value
+                    Use this rate?
                   </label>
                 </div>
               </div>

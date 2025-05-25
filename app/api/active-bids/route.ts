@@ -21,16 +21,40 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get('counts');
     const detailed = searchParams.get('detailed') === 'true';
     
+    // Helper function to get job data and determine won-pending status
+    const getJobsDataForBids = async (bidIds: number[]) => {
+      if (bidIds.length === 0) return [];
+      
+      const { data: jobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select(`
+          estimate_id,
+          job_numbers!jobs_job_number_id_fkey(job_number)
+        `)
+        .in('estimate_id', bidIds);
+        
+      if (jobsError || !jobs) return [];
+      return jobs;
+    };
+
+    // Helper function to determine actual status including won-pending
+    const getActualStatus = (bid: any, jobsData: any[]) => {
+      if (bid.status === 'WON') {
+        const hasWonPendingJob = jobsData.some(job => 
+          job.estimate_id === bid.id && 
+          job.job_numbers?.job_number?.startsWith('P-')
+        );
+        return hasWonPendingJob ? 'won-pending' : 'won';
+      }
+      return bid.status?.toLowerCase();
+    };
+    
     if (counts) {
       try {
-        // For counts, we need to explicitly type the response
+        // Get all bids
         const { data: allBids, error: allBidsError } = await supabase
           .from('estimate_complete')
-          .select('id, status, archived, admin_data')
-          .then(result => ({
-            ...result,
-            data: result.data as Pick<EstimateCompleteView, 'id' | 'status' | 'archived' | 'admin_data'>[] | null
-          }));
+          .select('id, status, archived, admin_data');
         
         if (allBidsError || !allBids) {
           return NextResponse.json(
@@ -38,10 +62,15 @@ export async function GET(request: NextRequest) {
             { status: 500 }
           );
         }
+
+        // Get job data for won bids
+        const wonBidIds = allBids.filter(bid => bid.status === 'WON').map(bid => bid.id);
+        const jobsData = await getJobsDataForBids(wonBidIds);
         
         const countData = {
           all: allBids.length,
-          won: allBids.filter(bid => bid.status === 'WON').length,
+          won: allBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won').length,
+          'won-pending': allBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won-pending').length,
           pending: allBids.filter(bid => bid.status === 'PENDING').length,
           lost: allBids.filter(bid => bid.status === 'LOST').length,
           draft: allBids.filter(bid => bid.status === 'DRAFT').length,
@@ -61,63 +90,10 @@ export async function GET(request: NextRequest) {
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
-    if (detailed) {
-      // For detailed view, get everything
-      let query = supabase
-        .from('estimate_complete')
-        .select('*')
-        .order(orderBy, { ascending })
-        .range(offset, offset + limit - 1);
-
-      // Apply filters
-      if (status) {
-        const upperStatus = status.toUpperCase();
-        if (upperStatus === 'WON' || upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
-          query = query.eq('status', upperStatus);
-        } else if (upperStatus === 'ARCHIVED') {
-          query = query.eq('archived', true);
-        }
-      }
-
-      if (division && division !== 'all') {
-        const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT'];
-        if (statusValues.includes(division.toUpperCase())) {
-          query = query.eq('status', division.toUpperCase());
-        } else {
-          query = query.eq('admin_data->>division', division);
-        }
-      }
-
-      const { data, error } = await query.then(result => ({
-        ...result,
-        data: result.data as EstimateCompleteView[] | null
-      }));
-      
-      if (error || !data) {
-        return NextResponse.json(
-          { success: false, message: 'Failed to fetch active bids', error: error?.message },
-          { status: 500 }
-        );
-      }
-
-      // Get count for pagination
-      const { count } = await supabase
-        .from('estimate_complete')
-        .select('id', { count: 'exact', head: true });
-      
-      return NextResponse.json({
-        success: true, 
-        data,
-        pagination: {
-          page,
-          pageSize: limit,
-          pageCount: Math.ceil((count || 0) / limit),
-          totalCount: count || 0
-        }
-      });
-    } else {
-      // For grid view, select specific fields
-      const selectFields = `
+    // Build base query
+    let query = supabase
+      .from('estimate_complete')
+      .select(detailed ? '*' : `
         id, status, total_revenue, total_cost, total_gross_profit, created_at, archived,
         admin_data->>contractNumber as contract_number,
         admin_data->>estimator as estimator,
@@ -130,87 +106,112 @@ export async function GET(request: NextRequest) {
         total_phases, total_days, total_hours,
         mpt_rental->_summary->>revenue as mpt_revenue,
         mpt_rental->_summary->>grossProfit as mpt_gross_profit
-      `;
+      `)
+      .order(orderBy, { ascending })
+      .range(offset, offset + limit - 1);
 
-      let query = supabase
-        .from('estimate_complete')
-        .select(selectFields)
-        .order(orderBy, { ascending })
-        .range(offset, offset + limit - 1);
-
-      // Apply filters
-      if (status) {
-        const upperStatus = status.toUpperCase();
-        if (upperStatus === 'WON' || upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
-          query = query.eq('status', upperStatus);
-        } else if (upperStatus === 'ARCHIVED') {
-          query = query.eq('archived', true);
-        }
+    // Apply basic status filters (we'll refine won/won-pending after getting job data)
+    if (status) {
+      const upperStatus = status.toUpperCase();
+      if (upperStatus === 'WON' || upperStatus === 'WON-PENDING') {
+        query = query.eq('status', 'WON');
+      } else if (upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
+        query = query.eq('status', upperStatus);
+      } else if (upperStatus === 'ARCHIVED') {
+        query = query.eq('archived', true);
       }
-
-      if (division && division !== 'all') {
-        const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT'];
-        if (statusValues.includes(division.toUpperCase())) {
-          query = query.eq('status', division.toUpperCase());
-        } else {
-          query = query.eq('admin_data->>division', division);
-        }
-      }
-
-      const { data: rawData, error } = await query;
-      
-      if (error || !rawData) {
-        return NextResponse.json(
-          { success: false, message: 'Failed to fetch active bids', error: error?.message },
-          { status: 500 }
-        );
-      }
-
-      // Transform the data explicitly
-      const transformedData: EstimateGridView[] = rawData.map((row: any) => ({
-        id: row.id,
-        status: row.status,
-        total_revenue: row.total_revenue,
-        total_cost: row.total_cost,
-        total_gross_profit: row.total_gross_profit,
-        created_at: row.created_at,
-        archived: row.archived,
-        contract_number: row.contract_number,
-        estimator: row.estimator,
-        division: row.division,
-        owner: row.owner,
-        county: row.county,
-        branch: row.branch,
-        letting_date: row.letting_date,
-        project_manager: row.project_manager,
-        contractor: row.contractor_name,
-        subcontractor: row.subcontractor_name,
-        phases: row.total_phases,
-        project_days: row.total_days,
-        total_hours: row.total_hours,
-        mpt_value: parseFloat(row.mpt_revenue || '0'),
-        mpt_gross_profit: parseFloat(row.mpt_gross_profit || '0'),
-        mpt_gm_percent: row.mpt_revenue > 0 
-          ? ((parseFloat(row.mpt_gross_profit) / parseFloat(row.mpt_revenue)) * 100).toFixed(2) 
-          : 0
-      }));
-
-      // Get count for pagination
-      const { count } = await supabase
-        .from('estimate_complete')
-        .select('id', { count: 'exact', head: true });
-      
-      return NextResponse.json({
-        success: true, 
-        data: transformedData,
-        pagination: {
-          page,
-          pageSize: limit,
-          pageCount: Math.ceil((count || 0) / limit),
-          totalCount: count || 0
-        }
-      });
     }
+
+    if (division && division !== 'all') {
+      const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT', 'WON-PENDING'];
+      if (statusValues.includes(division.toUpperCase())) {
+        if (division.toUpperCase() === 'WON' || division.toUpperCase() === 'WON-PENDING') {
+          query = query.eq('status', 'WON');
+        } else {
+          query = query.eq('status', division.toUpperCase());
+        }
+      } else {
+        query = query.eq('admin_data->>division', division);
+      }
+    }
+
+    const { data, error } = await query;
+    
+    if (error || !data) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch active bids', error: error?.message },
+        { status: 500 }
+      );
+    }
+
+    // Get job data for won bids to determine won-pending status
+    const wonBidIds = data.filter(bid => (bid as any).status === 'WON').map(bid => (bid as any).id);
+    const jobsData = await getJobsDataForBids(wonBidIds);
+
+    // Transform and filter data
+    let transformedData = data.map((bid: any) => {
+      const actualStatus = getActualStatus(bid, jobsData);
+      
+      if (detailed) {
+        // Return full detailed data with corrected status
+        return {
+          ...bid,
+          status: actualStatus
+        };
+      } else {
+        // Return flattened data for grid view
+        return {
+          id: bid.id,
+          status: actualStatus,
+          total_revenue: bid.total_revenue,
+          total_cost: bid.total_cost,
+          total_gross_profit: bid.total_gross_profit,
+          created_at: bid.created_at,
+          archived: bid.archived,
+          contract_number: bid.contract_number,
+          estimator: bid.estimator,
+          division: bid.division,
+          owner: bid.owner,
+          county: bid.county,
+          branch: bid.branch,
+          letting_date: bid.letting_date,
+          project_manager: bid.project_manager,
+          contractor: bid.contractor_name,
+          subcontractor: bid.subcontractor_name,
+          phases: bid.total_phases,
+          project_days: bid.total_days,
+          total_hours: bid.total_hours,
+          mpt_value: parseFloat(bid.mpt_revenue || '0'),
+          mpt_gross_profit: parseFloat(bid.mpt_gross_profit || '0'),
+          mpt_gm_percent: bid.mpt_revenue > 0 
+            ? ((parseFloat(bid.mpt_gross_profit) / parseFloat(bid.mpt_revenue)) * 100).toFixed(2) 
+            : 0
+        };
+      }
+    });
+
+    // Apply final status filtering after determining actual status
+    if (status) {
+      const targetStatus = status.toLowerCase();
+      transformedData = transformedData.filter(bid => bid.status === targetStatus);
+    }
+    if (division && ['won', 'won-pending'].includes(division.toLowerCase())) {
+      const targetStatus = division.toLowerCase();
+      transformedData = transformedData.filter(bid => bid.status === targetStatus);
+    }
+
+    const totalCount = transformedData.length;
+    
+    return NextResponse.json({
+      success: true, 
+      data: transformedData,
+      pagination: {
+        page,
+        pageSize: limit,
+        pageCount: Math.ceil(totalCount / limit),
+        totalCount
+      }
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -219,7 +220,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

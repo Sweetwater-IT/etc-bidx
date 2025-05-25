@@ -54,15 +54,44 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get all job IDs that don't have contractor names for batch lookup
+    const jobsWithoutContractors = data?.filter(job => !job.contractor_name).map(job => job.id) || [];
+    
+    // Batch lookup contractor names for jobs missing them
+    const contractorLookups = new Map();
+    if (jobsWithoutContractors.length > 0) {
+      const { data: projectMetadata, error: metadataError } = await supabase
+        .from('project_metadata')
+        .select(`
+          job_id,
+          contractors(name)
+        `)
+        .in('job_id', jobsWithoutContractors);
+
+      if (!metadataError && projectMetadata) {
+        projectMetadata.forEach(item => {
+          if (item.contractors && (item.contractors as any).name) {
+            contractorLookups.set(item.job_id, (item.contractors as any).name);
+          }
+        });
+      }
+    }
 
     // Transform the data for the frontend
-    const transformedData = (data || []).filter(job => !!job.admin_data).map(job => (
-      {
+    const transformedData = (data || []).filter(job => !!job.admin_data).map(job => {
+      // Handle contractor name lookup
+      let contractorName = job.contractor_name || '';
+      if (!contractorName) {
+        // Check if we found a contractor name in the lookup
+        contractorName = contractorLookups.get(job.id) || '';
+      }
+
+      return {
         id: job.id,
         job_number: job.job_number,
         letting_date: job.admin_data.lettingDate ? job.admin_data.lettingDate : '',
         contract_number: job.admin_data.contractNumber || '',
-        contractor: job.contractor_name || '',
+        contractor: contractorName,
         status: job.job_number?.startsWith('P-') ? 'Won - Pending' : 'Won',
         county: job.admin_data.county.name || '',
         branch: job.admin_data.county.branch || '',
@@ -71,7 +100,8 @@ export async function GET(request: NextRequest) {
         project_status: job.project_status,
         total_hours: job.total_hours,
         total_revenue: job.total_revenue
-      }));
+      };
+    });
 
     // Get counts for different statuses
     let countData = {

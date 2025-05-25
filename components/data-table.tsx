@@ -184,7 +184,7 @@ function formatCellValue(value: any, key: string) {
     if (key === "contractor" || key === "subcontractor") {
         if (!value) return '';
         return (
-            <Badge variant="outline" className="font-medium bg-background hover:bg-background">
+            value === '-' ? '-' : <Badge variant="outline" className="font-medium bg-background hover:bg-background">
                 {value}
             </Badge>
         );
