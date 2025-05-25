@@ -166,6 +166,29 @@ export async function GET(request: NextRequest) {
         county?: { name: string; };
       }
 
+      // Get all job IDs that don't have contractor names for batch lookup
+      const jobsWithoutContractors = data?.filter(job => !job.contractor_name).map(job => job.id) || [];
+      
+      // Batch lookup contractor names for jobs missing them
+      const contractorLookups = new Map();
+      if (jobsWithoutContractors.length > 0) {
+        const { data: projectMetadata, error: metadataError } = await supabase
+          .from('project_metadata')
+          .select(`
+            job_id,
+            contractors(name)
+          `)
+          .in('job_id', jobsWithoutContractors);
+
+        if (!metadataError && projectMetadata) {
+          projectMetadata.forEach(item => {
+            if (item.contractors && (item.contractors as any).name) {
+              contractorLookups.set(item.job_id, (item.contractors as any).name);
+            }
+          });
+        }
+      }
+
       const formattedJobs = data?.map((job: Job) => {
         const branchNameMap: Record<string, string> = {
           '10': 'Hatfield',
@@ -204,9 +227,16 @@ export async function GET(request: NextRequest) {
         
         let contractNum = '';
         if (job.customer_contract_number) {
-          contractNum = job.customer_contract_number;
+          contractNum = adminData.contractNumber;
         } else if (adminData && adminData.contractNumber) {
           contractNum = adminData.contractNumber;
+        }
+
+        // Handle contractor name lookup
+        let contractorName = job.contractor_name || '';
+        if (!contractorName) {
+          // Check if we found a contractor name in the lookup
+          contractorName = contractorLookups.get(job.id) || '';
         }
         
         return {
@@ -219,7 +249,7 @@ export async function GET(request: NextRequest) {
           location: adminData?.location || '',
           county: countyName,
           branch: branchName,
-          contractor: job.contractor_name || '',
+          contractor: contractorName,
           startDate: adminData?.startDate || '',
           endDate: adminData?.endDate || '',
           laborRate: adminData?.laborRate || 0,
@@ -302,6 +332,179 @@ export async function PATCH(request: NextRequest) {
     console.error('PATCH request error:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+//this creates a job manually
+export async function POST(req: NextRequest) {
+  try {
+    const requestData = await req.json();
+    console.log('Request data:', requestData);
+
+    // Validate required fields
+    const requiredFields = ['customer', 'contractNumber', 'estimator', 'owner', 'county', 'township', 'division'];
+    for (const field of requiredFields) {
+      if (!requestData[field]) {
+        return NextResponse.json(
+          { error: `Missing required field: ${field}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Helper function to generate P- job number
+    function generatePendingJobNumber(): string {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = 'P-';
+      for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    // Generate unique P- job number
+    let jobNumber: string;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isUnique && attempts < maxAttempts) {
+      jobNumber = generatePendingJobNumber();
+      
+      // Check if job number already exists
+      const { data: existingJobNumber } = await supabase
+        .from('job_numbers')
+        .select('id')
+        .eq('job_number', jobNumber)
+        .single();
+
+      if (!existingJobNumber) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    if (!isUnique) {
+      return NextResponse.json(
+        { error: 'Failed to generate unique job number after multiple attempts' },
+        { status: 500 }
+      );
+    }
+
+    // Step 1: Insert job number and get ID
+    const { data: jobNumberData, error: jobNumberError } = await supabase
+      .from('job_numbers')
+      .insert({ job_number: jobNumber! })
+      .select('id')
+      .single();
+
+    if (jobNumberError || !jobNumberData) {
+      console.error('Error inserting job number:', jobNumberError);
+      return NextResponse.json(
+        { error: 'Failed to create job number' },
+        { status: 500 }
+      );
+    }
+
+    // Step 2: Insert into jobs table
+    const { data: jobData, error: jobError } = await supabase
+      .from('jobs')
+      .insert({
+        job_number_id: jobNumberData.id,
+      })
+      .select('id')
+      .single();
+
+    if (jobError || !jobData) {
+      console.error('Error inserting job:', jobError);
+      return NextResponse.json(
+        { error: 'Failed to create job' },
+        { status: 500 }
+      );
+    }
+
+    // Step 7: Insert admin_data
+    const adminDataEntry = {
+      job_id: jobData.id,
+      contract_number: requestData.contractNumber,
+      estimator: requestData.estimator,
+      owner: requestData.owner,
+      county: requestData.county,
+      location: requestData.township,
+      division: requestData.division as 'PRIVATE' | 'PUBLIC',
+      bid_date: requestData.lettingDate ? new Date(requestData.lettingDate).toISOString() : null,
+      start_date: requestData.startDate ? new Date(requestData.startDate).toISOString() : null,
+      end_date: requestData.endDate ? new Date(requestData.endDate).toISOString() : null,
+      sr_route: requestData.srRoute,
+      dbe: requestData.dbePercentage,
+      rated: requestData.workType as 'RATED' | 'NON-RATED' | null,
+      fuel_cost_per_gallon: null,
+      ow_travel_time_mins: null,
+      ow_mileage: null,
+      emergency_job: false,
+      emergency_fields: {},
+      winter_start: null,
+      winter_end: null
+    };
+
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin_data_entries')
+      .insert(adminDataEntry)
+      .select('id')
+      .single();
+
+    if (adminError || !adminData) {
+      console.error('Error inserting admin data:', adminError);
+      return NextResponse.json(
+        { error: 'Failed to create admin data' },
+        { status: 500 }
+      );
+    }
+
+    console.log('Created admin data with ID:', adminData.id);
+
+    // Step 8: Insert project metadata
+    const projectMetadataEntry = {
+      job_id: jobData.id,
+      contractor_id: parseInt(requestData.customer),
+      customer_contract_number: null,
+      project_manager: null,
+      pm_email: null,
+      pm_phone: null,
+      subcontractor_id: 1,
+      bid_estimate_id: null
+    };
+
+    const { data: projectMetadata, error: projectMetadataError } = await supabase
+      .from('project_metadata')
+      .insert(projectMetadataEntry)
+      .select('id')
+      .single();
+
+    if (projectMetadataError || !projectMetadata) {
+      console.error('Error inserting project metadata:', projectMetadataError);
+      return NextResponse.json(
+        { error: 'Failed to create project metadata' },
+        { status: 500 }
+      );
+    }
+
+    console.log('Created project metadata with ID:', projectMetadata.id);
+
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      job_number: jobNumber!,
+      job_id: jobData.id,
+      message: 'Job created successfully'
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Error in POST /api/jobs:', error);
+    return NextResponse.json(
+      { error: 'Unexpected error creating job', details: String(error) },
       { status: 500 }
     );
   }

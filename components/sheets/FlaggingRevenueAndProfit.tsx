@@ -48,32 +48,31 @@ const FlaggingRevenueAndProfit = () => {
 
     return (
         <div className="bg-white rounded-lg border p-4 md:row-span-1">
-            <h3 className="text-lg font-medium mb-4">Flagging</h3>
             {/* Header */}
             <div className="grid grid-cols-5 mb-2">
-                <div className="px-3 py-2 font-medium"></div>
-                <div className="px-3 py-2 font-medium">Revenue</div>
-                <div className="px-3 py-2 font-medium">Cost</div>
-                <div className="px-3 py-2 font-medium">Gross Profit</div>
-                <div className="px-3 py-2 font-medium">Gross Margin</div>
+                <div className="font-medium">Flagging</div>
+                <div className="font-medium">Revenue</div>
+                <div className="font-medium">Cost</div>
+                <div className="font-medium">Gross Profit</div>
+                <div className="font-medium">Gross Margin</div>
             </div>
 
             {/* Flagging Row */}
-            <div className="grid grid-cols-5 border-t border-gray-300 py-2">
-                <div className="px-3 py-2 text-sm">Flagging</div>
-                <div className="px-3 py-2 text-sm">{rows?.revenue || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{rows?.cost || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{rows?.grossProfit || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{rows?.grossProfitPercent || "0.00%"}</div>
+            <div className="grid grid-cols-5 border-t border-gray-300 py-1">
+                <div className="text-sm">Flagging</div>
+                <div className="text-sm">{rows?.revenue || "$0.00"}</div>
+                <div className="text-sm">{rows?.cost || "$0.00"}</div>
+                <div className="text-sm">{rows?.grossProfit || "$0.00"}</div>
+                <div className="text-sm">{rows?.grossProfitPercent || "0.00%"}</div>
             </div>
 
             {/* Patterns Row */}
-            <div className="grid grid-cols-5 border-t border-gray-300 py-2">
-                <div className="px-3 py-2 text-sm">Patterns</div>
-                <div className="px-3 py-2 text-sm">{serviceWorkRows?.revenue || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{serviceWorkRows?.cost || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{serviceWorkRows?.grossProfit || "$0.00"}</div>
-                <div className="px-3 py-2 text-sm">{serviceWorkRows?.grossProfitPercent || "0.00%"}</div>
+            <div className="grid grid-cols-5 border-t border-gray-300 py-1">
+                <div className="text-sm">Patterns</div>
+                <div className="text-sm">{serviceWorkRows?.revenue || "$0.00"}</div>
+                <div className="text-sm">{serviceWorkRows?.cost || "$0.00"}</div>
+                <div className="text-sm">{serviceWorkRows?.grossProfit || "$0.00"}</div>
+                <div className="text-sm">{serviceWorkRows?.grossProfitPercent || "0.00%"}</div>
             </div>
         </div>
     )

@@ -14,14 +14,14 @@ const SignSquareFootageTotals = () => {
      returnSignTotalsSquareFootage(mptRental).Special.totalSquareFootage) : 0
   
   return (
-    <div className="mt-8">
+    <div className="border rounded-md p-4">
       <div className="grid grid-cols-2 mb-2">
-        <div className="px-3 py-2 font-medium">Square Footage by Sign Type</div>
-        <div className="px-3 py-2 font-medium">Area</div>
+        <div className="px-3 font-medium">Square Footage by Sign Type</div>
+        <div className="px-3 font-medium">Area</div>
       </div>
       
       {/* High Intensity */}
-      <div className="grid grid-cols-2 border-t border-gray-300 py-2">
+      <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">High Intensity</div>
         <div className="px-3 py-1 text-sm">
           <Tooltip>
@@ -36,7 +36,7 @@ const SignSquareFootageTotals = () => {
       </div>
       
       {/* Diamond Grade */}
-      <div className="grid grid-cols-2 border-t border-gray-300 py-2">
+      <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">Diamond Grade</div>
         <div className="px-3 py-1 text-sm">
           <Tooltip>
@@ -51,7 +51,7 @@ const SignSquareFootageTotals = () => {
       </div>
       
       {/* Special */}
-      <div className="grid grid-cols-2 border-t border-gray-300 py-2">
+      <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">Special</div>
         <div className="px-3 py-1 text-sm">
           <Tooltip>
@@ -66,7 +66,7 @@ const SignSquareFootageTotals = () => {
       </div>
       
       {/* Total */}
-      <div className="grid grid-cols-2 border-t border-gray-300 py-2 bg-green-50">
+      <div className="grid grid-cols-2 border-t border-gray-300 bg-green-50">
         <div className="px-3 py-1 text-sm">Total</div>
         <div className="px-3 py-1 text-sm">
           <Tooltip>

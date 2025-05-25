@@ -44,14 +44,13 @@ const RentalRevenueAndProfit = () => {
 
     return (
         <div className="bg-white rounded-lg border p-4 md:row-span-1">
-            <h3 className="text-lg font-medium mb-4">Rental</h3>
             {/* Header */}
             <div className="grid grid-cols-5 mb-2">
-                <div className="px-3 py-2 font-medium"></div>
-                <div className="px-3 py-2 font-medium">Revenue</div>
-                <div className="px-3 py-2 font-medium">Cost</div>
-                <div className="px-3 py-2 font-medium">Gross Profit</div>
-                <div className="px-3 py-2 font-medium">Gross Margin</div>
+                <div className="font-medium">Rental</div>
+                <div className="font-medium">Revenue</div>
+                <div className="font-medium">Cost</div>
+                <div className="font-medium">Gross Profit</div>
+                <div className="font-medium">Gross Margin</div>
             </div>
 
             {/* Rows */}
@@ -59,17 +58,17 @@ const RentalRevenueAndProfit = () => {
                 rows.map((row, index) => (
                     <div
                         key={index}
-                        className={`grid grid-cols-5 border-t border-gray-300 py-2 ${index === rows.length - 1 ? 'bg-green-50' : ''}`}
+                        className={`grid grid-cols-5 border-t border-gray-300 py-1 ${index === rows.length - 1 ? 'bg-green-50' : ''}`}
                     >
-                        <div className="px-3 py-2 text-sm">{row.rental}</div>
-                        <div className="px-3 py-2 text-sm">{row.revenue}</div>
-                        <div className="px-3 py-2 text-sm">{row.cost}</div>
-                        <div className="px-3 py-2 text-sm">{row.grossProfit}</div>
-                        <div className="px-3 py-2 text-sm">{row.grossProfitPercent}</div>
+                        <div className="text-sm">{row.rental}</div>
+                        <div className="text-sm">{row.revenue}</div>
+                        <div className="text-sm">{row.cost}</div>
+                        <div className="text-sm">{row.grossProfit}</div>
+                        <div className="text-sm">{row.grossProfitPercent}</div>
                     </div>
                 ))
             ) : (
-                <div className="grid grid-cols-5 border-t border-gray-300 py-4">
+                <div className="grid grid-cols-5 border-t border-gray-300 py-2">
                     <div className="px-3 col-span-5 text-center text-gray-500 italic">No rental equipment added</div>
                 </div>
             )}

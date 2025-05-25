@@ -74,29 +74,31 @@ export async function POST(req: NextRequest) {
     
     const contractorId = contractorData?.id;
     
-    // Insert into project_metadata
+    // Upsert into project_metadata (insert if doesn't exist, update if exists)
     const { error: metadataError } = await supabase
       .from('project_metadata')
-      .insert({
+      .upsert({
+        job_id: jobId,
         contractor_id: contractorId,
         pm_email: jobData.project_email,
         pm_phone: jobData.project_phone,
         customer_contract_number: jobData.customer_contract_number,
-        job_id: jobId,
+      }, {
+        onConflict: 'job_id'
       });
     
     if (metadataError) {
-      console.error('Error inserting project metadata:', metadataError);
+      console.error('Error upserting project metadata:', metadataError);
       return NextResponse.json(
-        { error: 'Failed to create project metadata', details: metadataError.message },
+        { error: 'Failed to create or update project metadata', details: metadataError.message },
         { status: 500 }
       );
     }
     
-    // Insert into admin_data_entries
+    // Upsert into admin_data_entries (insert if doesn't exist, update if exists)
     const { error: adminError } = await supabase
       .from('admin_data_entries')
-      .insert({
+      .upsert({
         job_id: jobId,
         contract_number: jobData.contractNumber,
         estimator: jobData.adminData.estimator,
@@ -117,12 +119,14 @@ export async function POST(req: NextRequest) {
         emergency_job: jobData.adminData.emergencyJob,
         rated: jobData.adminData.rated,
         emergency_fields: jobData.adminData.emergencyFields
+      }, {
+        onConflict: 'job_id'
       });
     
     if (adminError) {
-      console.error('Error inserting admin data:', adminError);
+      console.error('Error upserting admin data:', adminError);
       return NextResponse.json(
-        { error: 'Failed to create admin data', details: adminError.message },
+        { error: 'Failed to create or update admin data', details: adminError.message },
         { status: 500 }
       );
     }
@@ -183,28 +187,83 @@ export async function POST(req: NextRequest) {
         }
       }
     
-    // Update job number based on county/branch, owner type, year, and sequential number
+    // Generate proper job number based on county and division
+    // Determine branch code from county
     let branchCode = '20'; // Default to Turbotville
-    if (jobData.adminData.county === 'Bedford') {
-      branchCode = '30';
-    } else if (jobData.adminData.county === 'Hatfield') {
-      branchCode = '10';
+    if (jobData.adminData.county && typeof jobData.adminData.county === 'object') {
+      const countyName = jobData.adminData.county.name || '';
+      if (countyName.toLowerCase().includes('bedford')) {
+        branchCode = '30'; // West
+      } else if (countyName.toLowerCase().includes('hatfield')) {
+        branchCode = '10'; // Hatfield
+      }
     }
     
-    const ownerType = jobData.adminData.division === 'public' ? '22' : '11';
-    const year = '2025';
-    const sequentialNumber = '150'; // High number as requested
+    // Determine owner type from division
+    const ownerTypeMap: Record<string, string> = {
+      'PUBLIC': '22',
+      'PRIVATE': '21'
+    };
+    const ownerTypeCode = ownerTypeMap[jobData.adminData.division?.toUpperCase()] || '22';
     
-    const newJobNumber = `${branchCode}-${ownerType}-${year}${sequentialNumber}`;
+    const currentYear = new Date().getFullYear();
     
-    // Update job_numbers table with the new job number
+    // Get all job numbers that contain the current year to find the highest sequential number
+    const { data: existingJobNumbers, error: sequentialError } = await supabase
+      .from('job_numbers')
+      .select('job_number')
+      .like('job_number', `%-${currentYear}%`)
+      .not('job_number', 'like', 'P-%'); // Exclude pending job numbers
+    
+    if (sequentialError) {
+      console.error('Error finding existing job numbers:', sequentialError);
+      return NextResponse.json(
+        { error: 'Failed to generate job number', details: sequentialError.message },
+        { status: 500 }
+      );
+    }
+    
+    // Calculate the next sequential number by parsing existing job numbers
+    let nextSequentialNumber = 1;
+    if (existingJobNumbers && existingJobNumbers.length > 0) {
+      const sequentialNumbers: number[] = [];
+      
+      existingJobNumbers.forEach(jobNumberRecord => {
+        if (jobNumberRecord.job_number) {
+          const parts = jobNumberRecord.job_number.split('-');
+          if (parts.length === 3) {
+            const yearAndSequential = parts[2]; // e.g., "2025121"
+            const yearString = currentYear.toString(); // "2025"
+            
+            if (yearAndSequential.startsWith(yearString)) {
+              const sequentialPart = yearAndSequential.slice(yearString.length); // "121"
+              const sequentialNum = parseInt(sequentialPart, 10);
+              
+              if (!isNaN(sequentialNum)) {
+                sequentialNumbers.push(sequentialNum);
+              }
+            }
+          }
+        }
+      });
+      
+      if (sequentialNumbers.length > 0) {
+        const maxSequential = Math.max(...sequentialNumbers);
+        nextSequentialNumber = maxSequential + 1;
+      }
+    }
+    
+    // Generate the new job number
+    const newJobNumber = `${branchCode}-${ownerTypeCode}-${currentYear}${nextSequentialNumber.toString().padStart(3, '0')}`;
+    
+    // Update the job_numbers table with the proper job number details
     const { error: jobNumberError } = await supabase
       .from('job_numbers')
       .update({
         branch_code: branchCode,
-        owner_type: ownerType,
-        year: 2025,
-        sequential_number: 150,
+        owner_type: ownerTypeCode,
+        year: currentYear,
+        sequential_number: nextSequentialNumber,
         job_number: newJobNumber,
         is_assigned: true
       })
@@ -217,27 +276,15 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-    
-    // Update jobs table with the new job number
-    const { error: finalJobUpdateError } = await supabase
-      .from('jobs')
-      .update({
-        // job_number: newJobNumber
-      })
-      .eq('id', jobId);
-    
-    if (finalJobUpdateError) {
-      console.error('Error updating job with new job number:', finalJobUpdateError);
-      return NextResponse.json(
-        { error: 'Failed to update job with new job number', details: finalJobUpdateError.message },
-        { status: 500 }
-      );
-    }
 
     return NextResponse.json({
       success: true,
       jobId: jobId,
-      jobNumber: newJobNumber
+      jobNumber: newJobNumber,
+      branchCode: branchCode,
+      ownerType: ownerTypeCode,
+      year: currentYear,
+      sequentialNumber: nextSequentialNumber
     });
   } catch (error) {
     console.error('Error creating job:', error);

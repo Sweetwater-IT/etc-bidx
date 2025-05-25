@@ -31,6 +31,7 @@ import { EditJobNumberDialog } from "@/components/edit-job-number-dialog";
 import { PencilIcon } from "lucide-react";
 import { AvailableJob } from "@/data/available-jobs";
 import { JobDetailsSheet } from "@/components/job-details-sheet";
+import BidItemsStep5 from "@/components/pages/active-bid/steps/bid-items-step5";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -437,20 +438,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
     // Load active bids data
     const handleJobNavigation = (direction: 'up' | 'down') => {
         if (!selectedJob || !availableJobs.length) return
-        
-        const currentIndex = availableJobs.findIndex(job => 
+
+        const currentIndex = availableJobs.findIndex(job =>
             job.contractNumber === selectedJob.contractNumber
         )
-        
+
         if (currentIndex === -1) return
-        
+
         let nextIndex
         if (direction === 'down') {
             nextIndex = (currentIndex + 1) % availableJobs.length
         } else {
             nextIndex = (currentIndex - 1 + availableJobs.length) % availableJobs.length
         }
-        
+
         setSelectedJob(availableJobs[nextIndex])
     }
 
@@ -475,9 +476,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 }
             }
 
-            // Add detailed parameter if you want the full data
-            // options.detailed = true; // Uncomment this if you need full data
-
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bids');
@@ -485,86 +483,37 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-            console.log("Fetched active bids:", data);
-            console.log("Pagination:", pagination);
+            console.log(data)
 
-            // Check if we're getting detailed data or flattened data
-            const isDetailed = data.length > 0 && 'admin_data' in data[0];
+            const transformedData = data.map(e => ({
+                id: e.id,
+                contractNumber: e.admin_data.contractNumber,
+                originalContractNumber: e.admin_data.contractNumber,
+                contractor: e.contractor_name || '-',
+                subcontractor: e.subcontractor_name || '-',
+                owner: e.admin_data.owner || 'Unknown',
+                county: {
+                    main: e.admin_data.county.name,
+                    secondary: e.admin_data.county.branch
+                },
+                branch: e.admin_data.county.branch,
+                estimator: e.admin_data.estimator || 'Unknown',
+                status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
+                division: e.admin_data.division,
+                lettingDate: e.admin_data.lettingDate ? format(new Date(e.admin_data.lettingDate), "yyyy-MM-dd") : "",
+                startDate: e.admin_data.startDate ? format(new Date(e.admin_data.startDate), "yyyy-MM-dd") : "",
+                endDate: e.admin_data.endDate ? format(new Date(e.admin_data.endDate), "yyyy-MM-dd") : "",
+                projectDays: e.total_days || 0,
+                totalHours: e.mpt_rental?._summary?.hours || 0,
+                mptValue: e.mpt_rental._summary.revenue || 0,
+                permSignValue: 0, // Not in the new structure
+                rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
+                    sum + (item.revenue || 0), 0) || 0,
+                createdAt: e.created_at ? format(new Date(e.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                total: e.mpt_rental._summary.revenue || 0
+            }))
 
-            const uiBids = data.map((bid: any) => {
-                if (isDetailed) {
-                    // Handle detailed format
-                    const mptValue = bid.mpt_rental?._summary?.revenue || 0;
-                    const branch = bid.admin_data.county?.branch || "Unknown";
-                    const estimator = bid.admin_data.estimator || "Unknown";
-                    const county = bid.admin_data.county?.name || "Unknown";
-                    const contractNum = bid.admin_data.contractNumber;
-
-                    return {
-                        id: bid.id,
-                        contractNumber: contractNum,
-                        originalContractNumber: contractNum, // Add original field for details drawer
-                        contractor: bid.contractor_name || "",
-                        subcontractor: bid.subcontractor_name || "",
-                        owner: bid.admin_data.owner || "Unknown",
-                        county: {
-                            main: county,
-                            secondary: branch
-                        },
-                        branch: branch, // Add original field for details drawer
-                        estimator: estimator, // Add original field for details drawer
-                        status: bid.status || "Unknown",
-                        division: bid.admin_data.division || "",
-                        lettingDate: bid.admin_data.lettingDate ? format(new Date(bid.admin_data.lettingDate), "yyyy-MM-dd") : "",
-                        startDate: bid.admin_data.startDate ? format(new Date(bid.admin_data.startDate), "yyyy-MM-dd") : "",
-                        endDate: bid.admin_data.endDate ? format(new Date(bid.admin_data.endDate), "yyyy-MM-dd") : "",
-                        projectDays: bid.total_days || 0,
-                        totalHours: bid.mpt_rental?._summary?.hours || 0,
-                        mptValue: mptValue,
-                        permSignValue: 0, // Not in the new structure
-                        rentalValue: bid.equipment_rental?.reduce((sum: number, item: any) =>
-                            sum + (item.revenue || 0), 0) || 0,
-                        createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-                        total: mptValue, // Add total field that maps to mptValue
-                    };
-                } else {
-                    // Handle flattened format (existing code)
-                    const mptValue = bid.mpt_value || 0;
-                    const branch = bid.branch || "Unknown";
-                    const estimator = bid.estimator || "Unknown";
-                    const county = bid.county || "Unknown";
-                    const contractNum = bid.contract_number;
-
-                    return {
-                        id: bid.id,
-                        contractNumber: contractNum,
-                        originalContractNumber: contractNum, // Add original field for details drawer
-                        contractor: bid.contractor || "Unknown",
-                        subcontractor: bid.subcontractor || "",
-                        owner: bid.owner || "Unknown",
-                        county: {
-                            main: county,
-                            secondary: branch
-                        },
-                        branch: branch, // Add original field for details drawer
-                        estimator: estimator, // Add original field for details drawer
-                        status: bid.status || "Unknown",
-                        division: bid.division || "",
-                        lettingDate: bid.letting_date ? format(new Date(bid.letting_date), "yyyy-MM-dd") : "",
-                        startDate: bid.start_date ? format(new Date(bid.start_date), "yyyy-MM-dd") : "",
-                        endDate: bid.end_date ? format(new Date(bid.end_date), "yyyy-MM-dd") : "",
-                        projectDays: bid.project_days || 0,
-                        totalHours: bid.total_hours || 0,
-                        mptValue: mptValue,
-                        permSignValue: bid.perm_sign_value || 0,
-                        rentalValue: bid.rental_value || 0,
-                        createdAt: bid.created_at ? format(new Date(bid.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
-                        total: mptValue, // Add total field that maps to mptValue
-                    };
-                }
-            });
-
-            setActiveBids(uiBids);
+            setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);
         } catch (error) {
@@ -831,6 +780,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "contractor", title: "Contractor" },
         { key: "startDate", title: "Start Date" },
         { key: "endDate", title: "End Date" },
+        { key: 'createdAt', title: 'Created At'}
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
@@ -1574,13 +1524,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 onOpenChange={setIsEditingAvailableJob}
                                 onSuccess={loadAvailableJobs}
                                 job={selectedJob || undefined}
-                            /> :  <JobDetailsSheet
-                            open={openBidSheetOpen}
-                            onOpenChange={setOpenBidSheetOpen}
-                            job={selectedJob || undefined}
-                            onEdit={handleEdit}
-                            onNavigate={handleJobNavigation}
-                        /> }
+                            /> : <JobDetailsSheet
+                                open={openBidSheetOpen}
+                                onOpenChange={setOpenBidSheetOpen}
+                                job={selectedJob || undefined}
+                                onEdit={handleEdit}
+                                onNavigate={handleJobNavigation}
+                            />}
 
                             {isActiveJobs && (
                                 <>

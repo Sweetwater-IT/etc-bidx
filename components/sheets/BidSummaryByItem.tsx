@@ -91,16 +91,16 @@ const BidSummaryByItem = () => {
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 
   return (
-    <div className="bg-white rounded-lg border p-4 md:row-span-1 mt-12">
+    <div className="bg-white rounded-lg border p-4 md:row-span-1 flex-[.66]">
       <h3 className="text-lg font-medium mb-4 text-left">Bid Summary</h3>
       
       {/* Bid Item Summary */}
       <div className="mb-8">
         <div className="grid grid-cols-3 mb-2">
-          <div className="px-3 py-2 font-medium">
+          <div className="px-3 font-medium">
             <span className="border-b border-dotted border-gray-400 cursor-help">Bid Item</span>
           </div>
-          <div className="px-3 py-2 font-medium">
+          <div className="px-3 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Total</span>
@@ -110,7 +110,7 @@ const BidSummaryByItem = () => {
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="px-3 py-2 font-medium">
+          <div className="px-3 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Percentage</span>
@@ -125,7 +125,7 @@ const BidSummaryByItem = () => {
         {bidSummary.map((row, index) => (
           <div 
             key={index} 
-            className={`grid grid-cols-3 border-t border-gray-300 py-2 ${index === bidSummary.length - 1 ? 'bg-green-50' : ''}`}
+            className={`grid grid-cols-3 border-t border-gray-300 ${index === bidSummary.length - 1 ? 'bg-green-50' : ''}`}
           >
             <div className="px-3 py-1 text-sm">{row.item}</div>
             <div className="px-3 py-1 text-sm">
@@ -164,7 +164,7 @@ const BidSummaryByItem = () => {
       {/* Discount Summary */}
       <div className="mt-8">
         <div className="grid grid-cols-2 mb-2">
-          <div className="px-3 py-2 font-medium">
+          <div className="px-3 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">DISCOUNT</span>
@@ -174,7 +174,7 @@ const BidSummaryByItem = () => {
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="px-3 py-2 font-medium">
+          <div className="px-3 font-medium">
             <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Rate</span>
@@ -189,7 +189,7 @@ const BidSummaryByItem = () => {
         {discountSummary.map((row, index) => (
           <div 
             key={index} 
-            className={`grid grid-cols-2 border-t border-gray-300 py-2 ${index === discountSummary.length - 1 ? 'bg-green-50' : ''}`}
+            className={`grid grid-cols-2 border-t border-gray-300 ${index === discountSummary.length - 1 ? 'bg-green-50' : ''}`}
           >
             <div className="px-3 py-1 text-sm">{row.item}</div>
             <div className="px-3 py-1 text-sm">
