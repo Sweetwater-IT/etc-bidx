@@ -24,10 +24,10 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
 }) {
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-  
+
   useEffect(() => {
     if (!open) return
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' && onNavigate) {
         e.preventDefault()
@@ -37,7 +37,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
         onNavigate('up')
       }
     }
-    
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, onNavigate])
@@ -69,7 +69,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
           </div>
         </SheetHeader>
-        
+
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-6 p-6">
             {/* Contract Number and Requestor */}
@@ -157,13 +157,21 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
             </div>
 
             {/* Status */}
-            <div className="space-y-1 w-full">
-              <Label className="font-medium">Status</Label>
-              <div className="text-sm text-muted-foreground">
-                {job?.status || '-'}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`space-y-1 ${job?.status === 'No Bid' ? 'w-1/2' : 'w-full'}`}>
+                <Label className="font-medium">Status</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.status || '-'}
+                </div>
               </div>
-            </div>
 
+              {job?.status === 'No Bid' && <div className="space-y-1 w-full">
+                <Label className="font-medium">No Bid Reason</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.noBidReason || '-'}
+                </div>
+              </div>}
+            </div>
             {/* Branch */}
             <div className="space-y-1 w-full">
               <Label className="font-medium">Branch</Label>
@@ -171,7 +179,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 {job?.county.secondary || '-'}
               </div>
             </div>
-            
+
             {/* Services Required */}
             <div className="space-y-1 w-full">
               <Label className="font-medium">Services Required</Label>
