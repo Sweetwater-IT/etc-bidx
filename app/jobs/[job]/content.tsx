@@ -21,7 +21,7 @@ import { CardActions } from "@/components/card-actions";
 import { CreateJobSheet } from "@/components/create-job-sheet";
 import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "@/lib/api-client";
 import { toast } from "sonner";
-import { format, milliseconds } from "date-fns";
+import { format, formatISO, milliseconds } from "date-fns";
 import { useLoading } from "@/hooks/use-loading";
 import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
 import { EditActiveJobSheet } from "@/components/edit-active-job-sheet"
@@ -339,41 +339,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 };
                 let branchValue = '';
                 if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
-                    branchValue = job.branch;
+                    branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
                 } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
-                    branchValue = branchMap[branchCode];
+                    branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
                 } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
-                    branchValue = job.admin_data.branch;
-                }
-
-                let lettingDateFormatted: string | null = null;
-                if (job.letting_date) {
-                    try {
-                        lettingDateFormatted = format(new Date(job.letting_date), "yyyy-MM-dd");
-                    } catch (e) {
-                        console.error('Error formatting letting date:', e);
-                    }
-                } else if (job.admin_data?.lettingDate) {
-                    try {
-                        lettingDateFormatted = format(new Date(job.admin_data.lettingDate), "yyyy-MM-dd");
-                    } catch (e) {
-                        console.error('Error formatting admin data letting date:', e);
-                    }
-                }
-
-                let dueDateFormatted: string | null = null;
-                if (job.due_date) {
-                    try {
-                        dueDateFormatted = format(new Date(job.due_date), "yyyy-MM-dd");
-                    } catch (e) {
-                        console.error('Error formatting due date:', e);
-                    }
-                } else if (job.admin_data?.dueDate) {
-                    try {
-                        dueDateFormatted = format(new Date(job.admin_data.dueDate), "yyyy-MM-dd");
-                    } catch (e) {
-                        console.error('Error formatting admin data due date:', e);
-                    }
+                    branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
                 }
 
                 const locationValue = job.location || job.admin_data?.location || '';
@@ -406,8 +376,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     status: job.status || 'Unset',
                     requestor: requestorValue,
                     owner: ownerValue,
-                    lettingDate: lettingDateFormatted,
-                    dueDate: dueDateFormatted,
+                    lettingDate: job.letting_date ? job.letting_date : '',
+                    dueDate: job.due_date ? job.due_date : '',
                     county: {
                         main: countyValue,
                         secondary: branchValue
@@ -415,7 +385,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd'T'HH:mm:ss'Z'") : "",
+                    createdAt: job.created_at ? formatISO(job.created_at) : '',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,

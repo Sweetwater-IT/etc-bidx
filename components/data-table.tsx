@@ -190,13 +190,23 @@ function formatCellValue(value: any, key: string) {
         );
     }
 
-    // Handle dates
     if (value instanceof Date) {
         return format(value, "MMM d, yyyy");
     }
     if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
         try {
-            return format(new Date(value), "MMM d, yyyy");
+            const dateStr = value.split('T')[0]; // Gets "2025-05-26"
+            const [year, month, day] = dateStr.split('-');
+            const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+            
+            // Use native JavaScript methods to format in UTC
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthName = monthNames[utcDate.getUTCMonth()];
+            const dayNum = utcDate.getUTCDate();
+            const yearNum = utcDate.getUTCFullYear();
+            
+            return `${monthName} ${dayNum}, ${yearNum}`;
         } catch {
             return value;
         }
