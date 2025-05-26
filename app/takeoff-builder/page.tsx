@@ -317,7 +317,7 @@ export default function SignOrderPage() {
               <div className="flex items-center justify-between px-0 -mb-3">
                 <CardActions
                   createButtonLabel="Create Sign Order"
-                  onCreateClick={() => router.push('/sign-order/create')}
+                  onCreateClick={() => router.push('/takeoff-builder/create')}
                   hideCalendar
                   goUpActions
                   hideImportExport
