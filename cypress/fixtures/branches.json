@@ -1,0 +1,25 @@
+{
+"success": true,
+"data": [
+{
+"id": 1,
+"name": "West"
+},
+{
+"id": 2,
+"name": "Turbotville"
+},
+{
+"id": 3,
+"name": "East"
+},
+{
+"id": 4,
+"name": "North"
+},
+{
+"id": 5,
+"name": "South"
+}
+]
+}

@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "jobNumber": "525TEST-1",
+      "contractNumber": "C123456",
+      "county": "Washington",
+      "status": "Bid",
+      "owner": "TURNPIKE",
+      "requestor": "IT"
+    },
+    {
+      "id": 2,
+      "jobNumber": "FEAWEA",
+      "contractNumber": "C789012",
+      "county": "Bucks",
+      "status": "Bid",
+      "owner": "PENNDOT",
+      "requestor": "Garret Brunton"
+    }
+  ]
+}

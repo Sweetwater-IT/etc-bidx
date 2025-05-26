@@ -1,0 +1,25 @@
+{
+"success": true,
+"data": [
+{
+"id": 1,
+"name": "Philadelphia"
+},
+{
+"id": 2,
+"name": "Allegheny"
+},
+{
+"id": 3,
+"name": "Lehigh"
+},
+{
+"id": 4,
+"name": "Montgomery"
+},
+{
+"id": 5,
+"name": "Bucks"
+}
+]
+}
