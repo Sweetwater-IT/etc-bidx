@@ -203,6 +203,23 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching job files data:', jobFilesError);
     }
 
+    let finalContractorName = job.contractor_name
+
+    if (!job.contractor_name) {
+      const { data: projectMetadata, error: metadataError } = await supabase
+        .from('project_metadata')
+        .select(`
+          job_id,
+          contractors(name)
+        `)
+        .eq('job_id', job_id);
+
+      if (!metadataError && projectMetadata) {
+        //weird supabase type error where it recognizes contractors as an arry
+        finalContractorName = (projectMetadata[0].contractors as any).name
+      }
+    }
+
     // Prepare response object
     return NextResponse.json({
       adminData: {
@@ -227,7 +244,7 @@ export async function POST(request: NextRequest) {
         emergencyFields: job.admin_data.emergencyFields || {},
       },
       job_id,
-      contractorName: job.contractor_name || '',
+      contractorName: finalContractorName || '',
       customerContractNumber: job.customer_contract_number || '',
       projectManager: job.project_manager || '',
       pmEmail: job.pm_email || '',
