@@ -57,7 +57,7 @@ const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryO
 
 
   useEffect(() => {
-    if (currentStep === 4 || currentStep === 5) {
+    if (currentStep === 4 || currentStep === 5 || currentStep === 6) {
       setValue(["item-1"]);
     } else {
       setValue([]);

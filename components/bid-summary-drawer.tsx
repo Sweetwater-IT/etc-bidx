@@ -62,8 +62,8 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
             </div>
           </DrawerHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-6 -mt-35">
-            <div className="flex flex-wrap space-x-2 scale-y-80">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            <div className="flex flex-wrap space-x-2">
               {/* Main content area */}
               <div className="flex flex-col space-y-2 flex-2 min-w-0">
                 {/* Top row - Discount Checks and Bid Summary */}

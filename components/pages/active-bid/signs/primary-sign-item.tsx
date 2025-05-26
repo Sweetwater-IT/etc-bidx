@@ -22,7 +22,7 @@ const PrimarySignItem = ({
     defaultConfiguring = false
 }: PrimarySignItemProps) => {
     const { dispatch, mptRental } = useEstimate();
-    const [isConfiguring, setIsConfiguring] = useState(defaultConfiguring);
+    const [isConfiguring, setIsConfiguring] = useState(true);
 
     const handleEditSign = () => {
         setIsConfiguring(true);
