@@ -5,7 +5,8 @@ const config = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['jest-extended/all', '<rootDir>/__tests__/api/utils/setup.js'],
   transform: {
-    '^.+\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.config.js' }]
+    // Use Next.js babel preset
+    '^.+\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }]
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1'

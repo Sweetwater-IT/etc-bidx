@@ -1,19 +1,33 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
   // Disable strict mode for production to avoid double rendering issues with PDF generation
   reactStrictMode: process.env.NODE_ENV === 'development',
-  experimental: {
-    // Enable SWC transpilation
-    swcPlugins: [],
+  
+  // Path aliases are already configured in tsconfig.json
+  // Next.js automatically reads them from there
+  
+  // Configure SWC (Next.js built-in compiler) to handle JSX and TypeScript
+  // This replaces the need for @babel/preset-react and @babel/preset-typescript
+  compiler: {
+    // Enable React features
+    reactRemoveProperties: process.env.NODE_ENV === 'production',
+    emotion: false, // Set to true if you're using emotion
   },
+  
+  // Handle transpilation of PDF libraries
+  transpilePackages: [
+    '@react-pdf/renderer',
+    '@react-pdf/render',
+    '@react-pdf/types',
+    '@react-pdf/layout',
+    '@react-pdf/textkit',
+    '@react-pdf/pdfkit',
+    '@react-pdf/stylesheet',
+    '@react-pdf/font',
+  ],
+  
+  // Webpack configuration for handling PDF libraries and other special cases
   webpack: (config, { isServer }) => {
-    // This is to ensure path aliases work correctly
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Define your path aliases here
-    };
-
     // Handle @react-pdf packages
     if (!isServer) {
       // Don't resolve 'fs' module on the client to prevent this error on build --> Error: Can't resolve 'fs'
@@ -25,7 +39,7 @@ const nextConfig = {
         canvas: false,
         process: false,
       };
-
+      
       // Exclude PDF libraries from client-side bundle
       config.externals = [
         ...(config.externals || []),
