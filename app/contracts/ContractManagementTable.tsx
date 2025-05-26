@@ -2,9 +2,9 @@
 import React from 'react'
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DataTable } from '@/components/data-table';
-import { formatDate } from '@/lib/formatUTCDate';
-import { useLoading } from '@/hooks/use-loading';
+import { DataTable } from '../../components/data-table';
+import { formatDate } from '../../lib/formatUTCDate';
+import { useLoading } from '../../hooks/use-loading';
 
 type ContractData = {
     id: number;

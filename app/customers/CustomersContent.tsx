@@ -1,11 +1,11 @@
 'use client'
 import { useCallback, useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { CardActions } from '@/components/card-actions'
-import { DataTable } from '@/components/data-table'
-import { CustomerDrawer } from '@/components/customer-drawer'
-import { Customer } from '@/types/Customer'
-import { useCustomersSWR } from '@/hooks/use-customers-swr'
+import { CardActions } from '../../components/card-actions'
+import { DataTable } from '../../components/data-table'
+import { CustomerDrawer } from '../../components/customer-drawer'
+import { Customer } from '../../types/Customer'
+import { useCustomersSWR } from '../../hooks/use-customers-swr'
 
 interface Column {
   key: keyof Customer,

@@ -1,14 +1,14 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { jobsData, type JobData } from "@/data/jobs-data";
-import { SectionCards } from "@/components/section-cards";
-import { CardActions } from "@/components/card-actions";
+import { AppSidebar } from "../../../components/app-sidebar";
+import { DataTable } from "../../../components/data-table";
+import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
+import { SiteHeader } from "../../../components/site-header";
+import { jobsData, type JobData } from "../../../data/jobs-data";
+import { SectionCards } from "../../../components/section-cards";
+import { CardActions } from "../../../components/card-actions";
 import { useState } from "react";
-import { CreateJobSheet } from "@/components/create-job-sheet";
+import { CreateJobSheet } from "../../../components/create-job-sheet";
 
 const JOB_LIST_SEGMENTS = [
   { label: "All", value: "all" },

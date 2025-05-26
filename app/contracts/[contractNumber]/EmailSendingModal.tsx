@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { TagsInput } from '@/components/ui/tags-input';
-import { Customer } from '@/types/Customer';
-import { User } from '@/types/User';
+import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
+import { Button } from '../../../components/ui/button';
+import { TagsInput } from '../../../components/ui/tags-input';
+import { Customer } from '../../../types/Customer';
+import { User } from '../../../types/User';
 import { toast } from 'sonner';
 
 interface EmailSendingModalProps {

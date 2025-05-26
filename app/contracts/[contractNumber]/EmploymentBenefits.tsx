@@ -2,9 +2,9 @@
 import React from 'react';
 import { Page, Text, View, Document, Image } from '@react-pdf/renderer';
 import { styles } from './styles/benefitsStyles';
-import { safeNumber } from '@/lib/safe-number';
-import { AdminData } from '@/types/TAdminData';
-import { User } from '@/types/User';
+import { safeNumber } from '../../../lib/safe-number';
+import { AdminData } from '../../../types/TAdminData';
+import { User } from '../../../types/User';
 
 interface Props {
     laborGroup : string;

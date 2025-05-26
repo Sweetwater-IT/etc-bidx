@@ -1,14 +1,14 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '../../../components/ui/dialog';
+import { Button } from '../../../components/ui/button';
 import { PDFViewer } from '@react-pdf/renderer';
 import FringeBenefitsStatement from './EmploymentBenefits';
 import WorkerProtectionCertification from './WorkersProtection';
 import { GenerateEmploymentVerificationForm } from './EmploymentVerification';
-import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
-import { AdminData } from '@/types/TAdminData';
-import { Customer } from '@/types/Customer';
+import { defaultAdminObject } from '../../../types/default-objects/defaultAdminData';
+import { AdminData } from '../../../types/TAdminData';
+import { Customer } from '../../../types/Customer';
 import { toast } from 'sonner';
 // Import child components
 import CustomerInformationSection from './CustomerInformationSection';
@@ -19,10 +19,10 @@ import AdditionalFilesSection from './ContractAdditionalFiles';
 import FileManagerSection from './FileManagerSection';
 import AdminInformationSection from './ContractAdminInfo';
 import { DialogTitle } from '@radix-ui/react-dialog';
-import { User } from '@/types/User';
-import { useCustomers } from '@/hooks/use-customers';
-import { useLoading } from '@/hooks/use-loading';
-import { TagsInput } from '@/components/ui/tags-input';
+import { User } from '../../../types/User';
+import { useCustomers } from '../../../hooks/use-customers';
+import { useLoading } from '../../../hooks/use-loading';
+import { TagsInput } from '../../../components/ui/tags-input';
 import EmailSendingModal from './EmailSendingModal';
 import CreateJobModal from './CreateJobModal';
 

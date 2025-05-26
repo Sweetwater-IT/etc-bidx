@@ -54,7 +54,7 @@ const BidSummaryStep5 = ({
 
   // Initialize client-side only state after first render
   useEffect(() => {
-    setIsEditing(searchParams.get('isEditing') === 'true');
+    setIsEditing(searchParams?.get('isEditing') === 'true');
     setIsClientReady(true);
   }, [searchParams]);
 
@@ -95,7 +95,7 @@ const BidSummaryStep5 = ({
   
   // Check if we're editing an existing bid and enable buttons without auto-submission
   useEffect(() => {
-    const isEditing = searchParams.get('isEditing') === 'true';
+    const isEditing = searchParams?.get('isEditing') === 'true';
     if (isEditing) {
       // If we're editing, set initialSubmission to true to enable all buttons
       setInitialSubmission(true);
