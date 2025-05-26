@@ -1,9 +1,9 @@
 /** @type {import('jest').Config} */
 const config = {
   displayName: 'API Tests',
-  testMatch: ['**/tests/api/**/*.test.js'],
+  testMatch: ['**/__tests__/api/**/*.test.js'],
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['jest-extended/all', '<rootDir>/tests/api/utils/setup.js'],
+  setupFilesAfterEnv: ['jest-extended/all', '<rootDir>/__tests__/api/utils/setup.js'],
   transform: {
     '^.+\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.config.js' }]
   },
