@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "PENNDOT"
+    },
+    {
+      "id": 2,
+      "name": "TURNPIKE"
+    },
+    {
+      "id": 3,
+      "name": "PRIVATE"
+    },
+    {
+      "id": 4,
+      "name": "SEPTA"
+    },
+    {
+      "id": 5,
+      "name": "OTHER"
+    }
+  ]
+}

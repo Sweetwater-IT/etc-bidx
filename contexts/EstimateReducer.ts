@@ -5,6 +5,7 @@ import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
+import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
 
 // Define the reducer's context type
 export interface EstimateContextType extends Estimate {
@@ -452,77 +453,151 @@ export const estimateReducer = (
 				equipmentRental: state.equipmentRental.filter((item, index) => index !== action.payload.index)
 			}
 
-		// case "ADD_PERMANENT_SIGNS":
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: defaultPermanentSignsObject,
-		// 	};
+		case "ADD_PERMANENT_SIGNS":
+			return {
+				...state,
+				permanentSigns: defaultPermanentSignsObject,
+			};
 
-		// case "UPDATE_PERMANENT_SIGNS_INPUTS":
-		// 	if (!state.permanentSigns) return state;
+		case "UPDATE_PERMANENT_SIGNS_INPUTS":
+			if (!state.permanentSigns) return state;
 
-		// 	const { key: permSignsKey, value: permSignsValue } = action.payload
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[permSignsKey]: permSignsValue
-		// 		}
-		// 	}
+			const { key: permSignsKey, value: permSignsValue } = action.payload
+			return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					[permSignsKey]: permSignsValue
+				}
+			}
 
-		// case "UPDATE_STATIC_PERMANENT_SIGNS":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { key: permSignsStatic, value: permSignsStaticValue } = action.payload;
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[permSignsStatic]: permSignsStaticValue
-		// 		},
-		// 	};
+		case "UPDATE_STATIC_PERMANENT_SIGNS":
+			if (!state.permanentSigns) return state;
+			const { key: permSignsStatic, value: permSignsStaticValue } = action.payload;
+			return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					[permSignsStatic]: permSignsStaticValue
+				},
+			};
 
-		// case "UPDATE_PERMANENT_SIGNS_NAME":
-		// 	if (!state.permanentSigns) return state;
-		// 	const {pmsType : pmsNameUpdate, value: newName} = action.payload;
+		case "UPDATE_PERMANENT_SIGNS_NAME":
+			if (!state.permanentSigns) return state;
+			const { pmsType: pmsNameUpdate, value: newName } = action.payload;
 
-		// 	const foundPmsName = state.permanentSigns[pmsNameUpdate]
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[pmsNameUpdate]: {
-		// 				...foundPmsName,
-		// 				name: newName
-		// 			}
-		// 		}
-		// 	}
+			const foundPmsName = state.permanentSigns[pmsNameUpdate]
+			return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					[pmsNameUpdate]: {
+						...foundPmsName,
+						name: newName
+					}
+				}
+			}
 
-		// case "UPDATE_PERMANENT_SIGNS_EQUIPMENT":
-		// 	if (!state.permanentSigns) return state;
-		// 	//e.g. pmsTypeB, 'flatSheetAlumSigns', quantity, 12
-		// 	const { pmsType, pmsEquipType, key: permSignKey, value: permSignValue } = action.payload;
+		case "UPDATE_PERMANENT_SIGNS_EQUIPMENT":
+			if (!state.permanentSigns) return state;
+			//e.g. pmsTypeB, 'flatSheetAlumSigns', quantity, 12
+			const { pmsType, pmsEquipType, key: permSignKey, value: permSignValue } = action.payload;
 
-		// 	const foundPms = state.permanentSigns[pmsType] as Record<string, any>;
-		// 	const foundEquip = foundPms[pmsEquipType as string];
-		// 	// Make a deep copy of the state to safely modify
-		// 	return {
-		// 		//everything about the state but permanent signs
-		// 		...state,
-		// 		permanentSigns: {
-		// 			//everything about the permanent signs but the particular post type
-		// 			...state.permanentSigns,
-		// 			[pmsType]: {
-		// 				//everything about the particular post type except for the individual equipment piece
-		// 				...foundPms,
-		// 				[pmsEquipType]: {
-		// 					//everyting about the individual equipment piece except the quantity
-		// 					...foundEquip,
-		// 					[permSignKey]: permSignValue
-		// 				}
-		// 			}
-		// 		}
-		// 	}
+			const foundPms = state.permanentSigns[pmsType] as Record<string, any>;
+			const foundEquip = foundPms[pmsEquipType as string];
+			// Make a deep copy of the state to safely modify
+			return {
+				//everything about the state but permanent signs
+				...state,
+				permanentSigns: {
+					//everything about the permanent signs but the particular post type
+					...state.permanentSigns,
+					[pmsType]: {
+						//everything about the particular post type except for the individual equipment piece
+						...foundPms,
+						[pmsEquipType]: {
+							//everyting about the individual equipment piece except the quantity
+							...foundEquip,
+							[permSignKey]: permSignValue
+						}
+					}
+				}
+			}
 
+		case "ADD_PERMANENT_SIGNS_ITEM":
+			if (!state.permanentSigns) return state;
+			const { key: keyToBeAdded } = action.payload
+			let defaultObjectToBeAdded: any;
+			switch (keyToBeAdded) {
+				case 'pmsTypeB':
+					defaultObjectToBeAdded = defaultPMSTypeB;
+					break;
+				case 'pmsTypeF':
+					defaultObjectToBeAdded = defaultPMSTypeF;
+					break;
+				case 'resetTypeB':
+					defaultObjectToBeAdded = {
+						...defaultPMSRemoveB,
+						name: '0941-0001',
+						// permSignBolts
+					}
+					break;
+				case 'resetTypeF': 
+					defaultObjectToBeAdded = {
+						...defaultPMSRemoveF,
+						name: '0945-0001',
+						// permSignBolts
+					}
+					break;
+				case 'removeTypeB': 
+					defaultObjectToBeAdded = defaultPMSRemoveB;
+					break;
+				case 'removeTypeF':
+					defaultObjectToBeAdded = defaultPMSRemoveF;
+					break;
+				default: 
+					defaultObjectToBeAdded = undefined;
+				}
+			if(!defaultObjectToBeAdded) return state;
+			else return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					[keyToBeAdded]: defaultObjectToBeAdded
+				}
+			}
+			case "UPDATE_PERMANENT_SIGNS_ITEM":
+				if (!state.permanentSigns) return state;
+				const { key: itemKey, field, value: fieldValue } = action.payload;
+				
+				const currentItem = state.permanentSigns[itemKey];
+				if (!currentItem) return state;
+				
+				return {
+					...state,
+					permanentSigns: {
+						...state.permanentSigns,
+						[itemKey]: {
+							...currentItem,
+							[field]: fieldValue
+						}
+					}
+				};
+			
+			case "DELETE_PERMANENT_SIGNS_ITEM":
+				if (!state.permanentSigns) return state;
+				const { key: deleteKey } = action.payload;
+				
+				const { [deleteKey]: deletedItem, ...remainingItems } = state.permanentSigns;
+				
+				return {
+					...state,
+					permanentSigns: {
+						...remainingItems
+					}
+				};
+
+		//COMING BACK TO THIS BECAUSE WILL LIKELY HAVE TO CHANGE HOW CUTSOM ITEMS ARE ADDED TO PERM SIGNS
 		// case "ADD_CUSTOM_PMS_ITEM":
 		// 	if (!state.permanentSigns) return state;
 		// 	const { pmsType: customPmsType, item } = action.payload;
@@ -551,7 +626,7 @@ export const estimateReducer = (
 		// 			...state.permanentSigns,
 		// 			[updatePmsType]: {
 		// 				...state.permanentSigns[updatePmsType],
-		// 				customItems: state.permanentSigns[updatePmsType].customItems.map(
+		// 				customItems: state.permanentSigns[updatePmsType]?.customItems.map(
 		// 					(item, index) => index === itemIndex
 		// 						? { ...item, [itemKey]: itemValue }
 		// 						: item
@@ -620,7 +695,7 @@ export const estimateReducer = (
 
 		case "COPY_ADMIN_DATA":
 			//transform strings from db into date objects for frontend
-			const transformedAdminData : AdminData = {
+			const transformedAdminData: AdminData = {
 				...action.payload,
 				startDate: action.payload.startDate ? new Date(action.payload.startDate) : null,
 				endDate: action.payload.endDate ? new Date(action.payload.endDate) : null,
@@ -633,9 +708,9 @@ export const estimateReducer = (
 				...state,
 				adminData: transformedAdminData
 			};
-		
+
 		case "COPY_MPT_RENTAL":
-			const transformedMPTData : MPTRentalEstimating = {
+			const transformedMPTData: MPTRentalEstimating = {
 				...action.payload,
 				phases: action.payload.phases.map(p => ({
 					...p,
@@ -649,13 +724,13 @@ export const estimateReducer = (
 				...state,
 				mptRental: transformedMPTData
 			};
-		
+
 		case 'COPY_EQUIPMENT_RENTAL':
 			return {
 				...state,
 				equipmentRental: action.payload
 			};
-		
+
 		case 'COPY_FLAGGING':
 			return {
 				...state,

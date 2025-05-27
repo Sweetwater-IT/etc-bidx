@@ -1,12 +1,12 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { jobsData, type JobData } from "@/data/jobs-data";
-import { CardActions } from "@/components/card-actions";
-import { CreateJobSheet } from "@/components/create-job-sheet";
+import { AppSidebar } from "../../../components/app-sidebar";
+import { DataTable } from "../../../components/data-table";
+import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
+import { SiteHeader } from "../../../components/site-header";
+import { jobsData, type JobData } from "../../../data/jobs-data";
+import { CardActions } from "../../../components/card-actions";
+import { CreateJobSheet } from "../../../components/create-job-sheet";
 import { useState } from "react";
 
 const COLUMNS = [

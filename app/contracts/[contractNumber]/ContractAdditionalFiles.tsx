@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Button } from '../../../components/ui/button';
+import { Checkbox } from '../../../components/ui/checkbox';
+import { Label } from '../../../components/ui/label';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 

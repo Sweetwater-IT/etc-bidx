@@ -63,8 +63,8 @@ const AdminInformationStep1 = ({
   const { adminData, dispatch } = useEstimate();
 
   const searchParams = useSearchParams();
-  const availableJobId = searchParams.get('jobId');
-  const contractNumberFromParams = searchParams.get('contractNumber')
+  const availableJobId = searchParams?.get('jobId');
+  const contractNumberFromParams = searchParams?.get('contractNumber')
 
   const { startLoading, stopLoading } = useLoading();
 
@@ -72,6 +72,7 @@ const AdminInformationStep1 = ({
     dispatch({ type: 'ADD_MPT_RENTAL' })
     dispatch({ type: 'ADD_FLAGGING' });
     dispatch({ type: 'ADD_SERVICE_WORK' })
+    dispatch({ type: 'ADD_PERMANENT_SIGNS' })
   }, [dispatch])
 
   // State for toggle buttons

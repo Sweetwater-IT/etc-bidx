@@ -25,7 +25,7 @@ const Steps = ({
   setIsViewSummaryOpen
 }: StepsProps) => {
   const searchParams = useSearchParams();
-  const isEditing = searchParams.get("isEditing") === "true";
+  const isEditing = searchParams?.get("isEditing") === "true";
   
   // We'll use a useEffect to delay step navigation in edit mode
   useEffect(() => {

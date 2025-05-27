@@ -1,36 +1,36 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { SectionCards } from "@/components/section-cards";
-import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { getJobCards } from "@/data/jobs-cards";
-import { type JobType } from "@/data/jobs-data";
-import { availableJobsColumns, AvailableJobServices } from "@/data/available-jobs";
-import { FilterOption } from "@/components/table-controls";
-import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "@/data/active-bids";
-import { type ActiveJob } from "@/data/active-jobs";
+import { AppSidebar } from "../../../components/app-sidebar";
+import { SectionCards } from "../../../components/section-cards";
+import { Button } from "../../../components/ui/button";
+import { DataTable } from "../../../components/data-table";
+import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
+import { SiteHeader } from "../../../components/site-header";
+import { getJobCards } from "../../../data/jobs-cards";
+import { type JobType } from "../../../data/jobs-data";
+import { availableJobsColumns, AvailableJobServices } from "../../../data/available-jobs";
+import { FilterOption } from "../../../components/table-controls";
+import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
+import { type ActiveJob } from "../../../data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
-import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
-import { OpenBidSheet } from "@/components/open-bid-sheet";
-import { CardActions } from "@/components/card-actions";
-import { CreateJobSheet } from "@/components/create-job-sheet";
-import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "@/lib/api-client";
+import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
+import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
+import { OpenBidSheet } from "../../../components/open-bid-sheet";
+import { CardActions } from "../../../components/card-actions";
+import { CreateJobSheet } from "../../../components/create-job-sheet";
+import { fetchBids, fetchActiveBids, archiveJobs, archiveActiveJobs, archiveActiveBids, deleteArchivedJobs, deleteArchivedActiveBids, changeBidStatus, changeActiveBidStatus, deleteArchivedActiveJobs } from "../../../lib/api-client";
 import { toast } from "sonner";
-import { useLoading } from "@/hooks/use-loading";
-import { ActiveJobDetailsSheet } from "@/components/active-job-details-sheet"
-import { EditActiveJobSheet } from "@/components/edit-active-job-sheet"
-import { ActiveBidDetailsSheet } from "@/components/active-bid-details-sheet"
-import { EditActiveBidSheet } from "@/components/edit-active-bid-sheet"
-import { EditJobNumberDialog } from "@/components/edit-job-number-dialog";
+import { useLoading } from "../../../hooks/use-loading";
+import { ActiveJobDetailsSheet } from "../../../components/active-job-details-sheet"
+import { EditActiveJobSheet } from "../../../components/edit-active-job-sheet"
+import { ActiveBidDetailsSheet } from "../../../components/active-bid-details-sheet"
+import { EditActiveBidSheet } from "../../../components/edit-active-bid-sheet"
+import { EditJobNumberDialog } from "../../../components/edit-job-number-dialog";
 import { PencilIcon } from "lucide-react";
-import { AvailableJob } from "@/data/available-jobs";
-import { JobDetailsSheet } from "@/components/job-details-sheet";
-import BidItemsStep5 from "@/components/pages/active-bid/steps/bid-items-step5";
+import { AvailableJob } from "../../../data/available-jobs";
+import { JobDetailsSheet } from "../../../components/job-details-sheet";
+import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {

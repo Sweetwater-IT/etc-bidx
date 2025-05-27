@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Switch } from '../../../components/ui/switch';
 import { 
   Table, 
   TableBody, 
@@ -13,17 +13,17 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
-import { AdminData } from '@/types/TAdminData';
-import { Customer } from '@/types/Customer';
-import { User } from '@/types/User';
+} from '../../../components/ui/table';
+import { AdminData } from '../../../types/TAdminData';
+import { Customer } from '../../../types/Customer';
+import { User } from '../../../types/User';
 import { toast } from 'sonner';
 import { 
   Trash2Icon, 
   Plus,
   Loader2
 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
 // Define item structure
 interface JobItem {

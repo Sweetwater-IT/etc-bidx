@@ -1,9 +1,9 @@
 import React, { Dispatch, SetStateAction } from 'react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AdminData } from '@/types/TAdminData';
+import { Switch } from '../../../components/ui/switch';
+import { Label } from '../../../components/ui/label';
+import { Input } from '../../../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { AdminData } from '../../../types/TAdminData';
 
 interface PrevailingWagesSectionProps {
     adminData: AdminData;

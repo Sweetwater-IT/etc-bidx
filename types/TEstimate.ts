@@ -1,7 +1,7 @@
 import { AdminData } from "./TAdminData";
 import { Flagging } from "./TFlagging";
 import { MPTRentalEstimating } from "./MPTEquipment";
-// import { PermanentSigns } from "./PermanentSigns";
+import { PermanentSigns } from "./TPermanentSigns";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { SaleItem } from "./TSaleItem";
 
@@ -10,7 +10,7 @@ export type Estimate = {
     mptRental : MPTRentalEstimating
     flagging? : Flagging
     equipmentRental : EquipmentRentalItem[]
-    // permanentSigns? : PermanentSigns
+    permanentSigns? : PermanentSigns
     serviceWork? : Flagging
     saleItems : SaleItem[],
     totalRevenue? : number;

@@ -1,6 +1,6 @@
 'use client'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { buttonVariants } from '../../components/ui/button'
+import { cn } from '../../lib/utils'
 import { MoveLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -9,8 +9,8 @@ import React from 'react'
 const ActiveBidHeader = () => {
 
   const params = useSearchParams();
-  const source = params.get('source') === 'active-bids' ? 'Active Bids' : 'Available Jobs' 
-  const contractNumber = params.get('contract-number')
+  const source = params?.get('source') === 'active-bids' ? 'Active Bids' : 'Available Jobs' 
+  const contractNumber = params?.get('contract-number')
 
   return (
     <div>
