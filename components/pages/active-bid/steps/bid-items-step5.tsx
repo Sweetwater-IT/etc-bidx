@@ -26,6 +26,7 @@ import EquipmentRentalTab from "@/components/BidItems/equipment-rental-tab";
 import SaleItemsStep from "./sale-items-step";
 import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
 import ServiceWorkTab from "@/components/BidItems/service-work-tab";
+import PermanentSignsSummaryStep from "@/components/BidItems/permanent-signs-tab";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -865,7 +866,7 @@ const BidItemsStep5 = ({
               {/* Permanent Signs Tab */}
               <TabsContent value="permanent" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  Permanent Signs will be implemented here
+                  <PermanentSignsSummaryStep/>
                 </div>
               </TabsContent>
 

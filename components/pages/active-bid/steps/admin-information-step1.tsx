@@ -72,6 +72,7 @@ const AdminInformationStep1 = ({
     dispatch({ type: 'ADD_MPT_RENTAL' })
     dispatch({ type: 'ADD_FLAGGING' });
     dispatch({ type: 'ADD_SERVICE_WORK' })
+    dispatch({ type: 'ADD_PERMANENT_SIGNS' })
   }, [dispatch])
 
   // State for toggle buttons
