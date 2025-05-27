@@ -200,7 +200,7 @@ const StepsMain = () => {
           </div>
 
           {/* Preview Cards */}
-          <div className="w-80 space-y-4 sticky top-10 h-fit">
+          <div className="w-80 space-y-4 top-10 h-fit">
             <AddPhaseButton setCurrentPhase={setCurrentPhase} setCurrentStep={setCurrentStep}/>
             <AdminInformationAccordion currentStep={currentStep} />
             <PhaseSummaryAccordion currentStep={currentStep} setCurrentPhase={setCurrentPhase} currentPhase={currentPhase} setCurrentStep={setCurrentStep}/>

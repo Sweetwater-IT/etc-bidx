@@ -9,6 +9,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { getTotalTripsPerPhase } from "@/lib/mptRentalHelperFunctions";
 import { safeNumber } from "@/lib/safe-number";
+import { Pencil, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TripAndLaborSummaryAccordionProps {
   currentStep: number;
@@ -17,7 +19,9 @@ interface TripAndLaborSummaryAccordionProps {
 
 const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
-  const { mptRental, adminData } = useEstimate();
+  const { mptRental, adminData, dispatch } = useEstimate();
+  const [editingPersonnel, setEditingPersonnel] = useState(false);
+  const [tempPersonnel, setTempPersonnel] = useState<string>("");
 
   useEffect(() => {
     if (currentStep === 4) {
@@ -101,9 +105,50 @@ const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLabo
                 <span className="text-muted-foreground">Number of Days:</span>
                 <span>{safeNumber(getPhaseValue("days"))}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Number of Personnel:</span>
-                <span>{safeNumber(getPhaseValue("personnel"))}</span>
+                {editingPersonnel ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      className="w-20 h-8 rounded border px-2"
+                      value={tempPersonnel}
+                      onChange={e => setTempPersonnel(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        const value = parseInt(tempPersonnel, 10);
+                        if (!isNaN(value)) {
+                          dispatch({
+                            type: "UPDATE_MPT_PHASE_TRIP_AND_LABOR",
+                            payload: { phase: currentPhase, key: "personnel", value }
+                          });
+                        }
+                        setEditingPersonnel(false);
+                      }}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span>{safeNumber(getPhaseValue("personnel"))}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setTempPersonnel(String(getPhaseValue("personnel")));
+                        setEditingPersonnel(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Number of Trucks:</span>

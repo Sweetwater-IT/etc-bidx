@@ -153,57 +153,57 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
         </Button>
       ) : (
         <>
-          <Label className="text-sm font-medium mb-2 block">
-            Designation {isLoading && "(Loading...)"}
-          </Label>
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
+      <Label className="text-sm font-medium mb-2 block">
+        Designation {isLoading && "(Loading...)"}
+      </Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
                 onClick={() => setOpen((prev) => !prev)}
-              >
-                Select Designation
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput
-                  placeholder="Search designation..."
-                  onValueChange={filterDesignations}
-                />
-                <CommandList>
-                  <CommandEmpty>No designation found.</CommandEmpty>
-                  <CommandGroup>
-                    {isLoading ? (
-                      <div className="py-6 text-center text-sm">Loading...</div>
-                    ) : (
-                      filteredDesignations.map((item) => (
-                        <CommandItem
-                          key={item.designation}
-                          value={item.designation}
-                          onSelect={() => handleDesignationSelect(item.designation)}
-                        >
-                          <div className="flex items-center">
-                            <Check className="mr-2 h-4 w-4 opacity-0" />
-                            <span className="font-medium">{item.designation}</span>
-                            {item.description && (
-                              <span className="ml-2 text-muted-foreground text-xs">
-                                - {item.description}
-                              </span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))
-                    )}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          >
+            Select Designation
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0">
+          <Command>
+            <CommandInput
+              placeholder="Search designation..."
+              onValueChange={filterDesignations}
+            />
+            <CommandList>
+              <CommandEmpty>No designation found.</CommandEmpty>
+              <CommandGroup>
+                {isLoading ? (
+                  <div className="py-6 text-center text-sm">Loading...</div>
+                ) : (
+                  filteredDesignations.map((item) => (
+                    <CommandItem
+                      key={item.designation}
+                      value={item.designation}
+                      onSelect={() => handleDesignationSelect(item.designation)}
+                    >
+                      <div className="flex items-center">
+                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                        <span className="font-medium">{item.designation}</span>
+                        {item.description && (
+                          <span className="ml-2 text-muted-foreground text-xs">
+                            - {item.description}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))
+                )}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
         </>
       )}
     </div>
