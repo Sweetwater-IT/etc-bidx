@@ -12,6 +12,7 @@ import { User } from "@/types/User";
 import { Customer } from "@/types/Customer";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { Textarea } from "@/components/ui/textarea";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -25,8 +26,8 @@ export interface SignOrderAdminInformation {
     jobNumber: string
     isSubmitting: boolean
     contractNumber: string
-    startDate? : Date
-    endDate? : Date
+    startDate?: Date
+    endDate?: Date
 }
 
 export default function SignFormContent() {
@@ -45,6 +46,8 @@ export default function SignFormContent() {
         contractNumber: ''
     });
     const [localFiles, setLocalFiles] = useState<File[]>([]);
+    const [localNotes, setLocalNotes] = useState<string>();
+    const [savedNotes, setSavedNotes] = useState<string>();
 
     // Initialize MPT rental data
     useEffect(() => {
@@ -192,6 +195,22 @@ export default function SignFormContent() {
                         </Dropzone>
                     </div>
                     <SignSummaryAccordion currentPhase={0} currentStep={3} />
+                    <div className="rounded-lg border p-4">
+                    <h2 className="mb-2 text-lg font-semibold">Notes</h2>
+                    <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">
+                            {savedNotes ? savedNotes : 'No notes saved for this takeoff'}
+                        </div>
+                        <Textarea
+                            placeholder="Add notes here..."
+                            value={localNotes}
+                            onChange={(e) => setLocalNotes(e.target.value)}
+                        />
+                        <Button className="w-full" onClick={() => setSavedNotes(prevState => prevState + ' ' + localNotes)}>
+                            Save Notes
+                        </Button>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
