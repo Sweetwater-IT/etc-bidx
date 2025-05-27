@@ -142,7 +142,7 @@ export const data = {
       icon: IconUsers,
     },
     {
-      title: "Sign Order",
+      title: "Takeoff Builder",
       url: "/takeoff-builder",
       icon: IconUsers,
     }

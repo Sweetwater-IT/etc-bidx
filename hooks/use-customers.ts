@@ -23,7 +23,7 @@ export const useCustomers = create<CustomersState>((set, get) => ({
     error: null,
     pagination: {
         page: 1,
-        limit: 25,
+        limit: 600,
         totalCount: 0,
         totalPages: 0
     },
