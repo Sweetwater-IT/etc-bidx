@@ -41,15 +41,15 @@ const nextConfig = {
       };
       
       // Exclude PDF libraries from client-side bundle
-      config.externals = [
-        ...(config.externals || []),
-        {
-          '@react-pdf/renderer': 'commonjs @react-pdf/renderer',
-          '@react-pdf/font': 'commonjs @react-pdf/font',
-          '@react-pdf/layout': 'commonjs @react-pdf/layout',
-          '@react-pdf/pdfkit': 'commonjs @react-pdf/pdfkit',
-        },
-      ];
+      // config.externals = [
+      //   ...(config.externals || []),
+      //   {
+      //     '@react-pdf/renderer': 'commonjs @react-pdf/renderer',
+      //     '@react-pdf/font': 'commonjs @react-pdf/font',
+      //     '@react-pdf/layout': 'commonjs @react-pdf/layout',
+      //     '@react-pdf/pdfkit': 'commonjs @react-pdf/pdfkit',
+      //   },
+      // ];
     }
 
     return config;
