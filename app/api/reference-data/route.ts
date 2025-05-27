@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         // Fetch users for estimator dropdown
         ({ data, error } = await supabase
           .from('users')
-          .select('id, name, email, role')
+          .select('id, name, email, role, branches(name)')
           .order('name'));
         break;
 

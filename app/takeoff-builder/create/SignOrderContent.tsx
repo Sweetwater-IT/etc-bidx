@@ -13,15 +13,18 @@ import { Customer } from "@/types/Customer";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 
+export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
+
 export interface SignOrderAdminInformation {
     requestor: User | null
     customer: Customer | null
     orderDate: Date
     needDate: Date
-    orderType: 'sale' | 'rental'
+    orderType: OrderTypes[]
     selectedBranch: string
     jobNumber: string
     isSubmitting: boolean
+    contractNumber: string
     startDate? : Date
     endDate? : Date
 }
@@ -35,10 +38,11 @@ export default function SignFormContent() {
         customer: null,
         orderDate: new Date(),
         needDate: new Date(),
-        orderType: 'sale',
+        orderType: [],
         selectedBranch: "All",
         jobNumber: "",
-        isSubmitting: false
+        isSubmitting: false,
+        contractNumber: ''
     });
     const [localFiles, setLocalFiles] = useState<File[]>([]);
 
@@ -155,17 +159,15 @@ export default function SignFormContent() {
         <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-between border-b px-6 py-3">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-semibold">Sign Order</h1>
+                    <h1 className="text-2xl font-semibold">Sign Order Form</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    {/**This should be a save and submit */}
                     <Button
                         onClick={handleSave}
                         disabled={adminInfo.isSubmitting}
                     >
-                        {adminInfo.isSubmitting ? "Saving..." : "Save Order"}
-                    </Button>
-                    <Button>
-                        Send Order
+                        {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
                     </Button>
                     <Button variant="outline" onClick={() => exportSignListToExcel('', mptRental)}>Export</Button>
                 </div>
