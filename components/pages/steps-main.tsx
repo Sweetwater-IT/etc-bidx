@@ -31,10 +31,11 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
         .fullscreen-step-wrapper .flex.justify-between button {
           display: none !important;
         }
-        
+
         /* Exception for form input buttons that shouldn't be hidden */
         .fullscreen-step-wrapper .flex.items-center button,
-        .fullscreen-step-wrapper button[type="button"][aria-haspopup="listbox"] {
+        .fullscreen-step-wrapper
+          button[type="button"][aria-haspopup="listbox"] {
           display: inline-flex !important;
         }
       `}</style>
@@ -45,172 +46,283 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
 const StepsMain = () => {
   const searchParams = useSearchParams();
   const initialStepParam = searchParams?.get("initialStep");
-  
+
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
-  const [currentStep, setCurrentStep] = useState(initialStepParam ? parseInt(initialStepParam) : 1);
+  const [currentStep, setCurrentStep] = useState(
+    initialStepParam ? parseInt(initialStepParam) : 1
+  );
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);
-  
+
   useEffect(() => {
-      // For non-edit mode, check if we should open summary
-      const openSummary = searchParams?.get("openSummary") === "true";
-      if (initialStepParam === "6" && openSummary) {
-        setIsViewSummaryOpen(true);
-      }
+    // For non-edit mode, check if we should open summary
+    const openSummary = searchParams?.get("openSummary") === "true";
+    if (initialStepParam === "6" && openSummary) {
+      setIsViewSummaryOpen(true);
+    }
   }, [initialStepParam, searchParams]);
-  
+
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true)
+  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
 
   return (
     <EstimateProvider>
-    <div className={`relative min-h-screen ${isFullscreen ? 'px-6' : 'flex gap-20 justify-between pr-12'}`} style={{ transition: 'all 0.3s ease-in-out' }}>
-      {!isFullscreen && (
-        <div className="absolute top-0 right-0 z-50">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className="h-10 w-10 bg-white/50 backdrop-blur-sm"
-              >
-                <Expand className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Enter Fullscreen Mode - Show All Sections</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      )}
+      <div
+        className={`relative min-h-screen ${
+          isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
+        }`}
+        style={{ transition: "all 0.3s ease-in-out" }}
+      >
+        {!isFullscreen && (
+          <div className="absolute top-0 right-0 z-50">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="h-10 w-10 bg-white/50 backdrop-blur-sm"
+                >
+                  <Expand className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter Fullscreen Mode - Show All Sections</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
-      {isFullscreen ? (
-        <div className="w-full flex">
-          <div className={`${isSidebarVisible ? 'w-3/4 pr-6' : 'w-full'} transition-all duration-300`}>
-            <div className="mb-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Bid Form</h2>
-              <div className="flex items-center gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="w-48"> {/* Reduced width for better proportions */}
-                      <AddPhaseButton setCurrentPhase={setCurrentPhase} setCurrentStep={setCurrentStep}/>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add a New Phase to the Bid</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div className="flex items-center gap-2">
+        {isFullscreen ? (
+          <div className="w-full flex">
+            <div
+              className={`${
+                isSidebarVisible ? "w-3/4 pr-6" : "w-full"
+              } transition-all duration-300`}
+            >
+              <div className="mb-4 flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Bid Form</h2>
+                <div className="flex items-center gap-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-                        className={`backdrop-blur-sm ${isSidebarVisible ? 'bg-slate-200/80 border-slate-300' : 'bg-white/50'}`}
-                      >
-                        {isSidebarVisible ? <PanelLeftClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
-                      </Button>
+                      <div className="w-48">
+                        {" "}
+                        {/* Reduced width for better proportions */}
+                        <AddPhaseButton
+                          setCurrentPhase={setCurrentPhase}
+                          setCurrentStep={setCurrentStep}
+                        />
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isSidebarVisible ? "Hide Summary Sidebar" : "Show Summary Sidebar"}</p>
+                      <p>Add a New Phase to the Bid</p>
                     </TooltipContent>
                   </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setIsFullscreen(!isFullscreen)}
-                        className="bg-white/50 backdrop-blur-sm"
-                      >
-                        <Minimize className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Exit Fullscreen Mode - Return to Step View</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+                          className={`backdrop-blur-sm ${
+                            isSidebarVisible
+                              ? "bg-slate-200/80 border-slate-300"
+                              : "bg-white/50"
+                          }`}
+                        >
+                          {isSidebarVisible ? (
+                            <PanelLeftClose className="h-4 w-4" />
+                          ) : (
+                            <PanelRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {isSidebarVisible
+                            ? "Hide Summary Sidebar"
+                            : "Show Summary Sidebar"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsFullscreen(!isFullscreen)}
+                          className="bg-white/50 backdrop-blur-sm"
+                        >
+                          <Minimize className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Exit Fullscreen Mode - Return to Step View</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="space-y-10">
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">Admin Information</h3>
-              {renderStepWithoutNavigation(
-                <AdminInformationStep1 currentStep={1} setCurrentStep={setCurrentStep} />
-              )}
-            </section>
-            
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">Phase Information</h3>
-              {renderStepWithoutNavigation(
-                <PhaseInfoStep2 currentStep={2} setCurrentStep={setCurrentStep} currentPhase={currentPhase} />
-              )}
-            </section>
-            
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">MUTCD Signs</h3>
-              {renderStepWithoutNavigation(
-                <MUTCDSignsStep3 currentStep={3} setCurrentStep={setCurrentStep} currentPhase={currentPhase} />
-              )}
-            </section>
-            
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">Trip and Labor</h3>
-              {renderStepWithoutNavigation(
-                <TripAndLaborStep4 currentStep={4} setCurrentStep={setCurrentStep} currentPhase={currentPhase} />
-              )}
-            </section>
-            
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">Bid Items</h3>
-              {renderStepWithoutNavigation(
-                <BidItemsStep5 currentStep={5} setCurrentStep={setCurrentStep} currentPhase={currentPhase} />
-              )}
-            </section>
-            
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">Bid Summary</h3>
-              {renderStepWithoutNavigation(
-                <BidSummaryStep6 currentStep={6} setCurrentStep={setCurrentStep} isViewSummaryOpen={isViewSummaryOpen} setIsViewSummaryOpen={setIsViewSummaryOpen} />
-              )}
-            </section>
-            </div>
-          </div>
-          
-          {/* Sidebar */}
-          {isSidebarVisible && (
-            <div className="w-1/4 space-y-4 sticky top-10 h-fit transition-all duration-300 pl-4 border-l">
-              <AdminInformationAccordion currentStep={currentStep} />
-              <PhaseSummaryAccordion currentStep={currentStep} setCurrentPhase={setCurrentPhase} currentPhase={currentPhase} setCurrentStep={setCurrentStep}/>
-              <SignSummaryAccordion currentStep={currentStep} currentPhase={currentPhase} />
-              <TripAndLaborSummaryAccordion currentStep={currentStep} currentPhase={currentPhase}/>
-              <BidSummaryAccordion currentStep={currentStep} setIsViewSummaryOpen={setIsViewSummaryOpen} isViewSummaryOpen={isViewSummaryOpen}/>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="flex-1 max-w-[44vw]">
-            <Steps isViewSummaryOpen={isViewSummaryOpen} setIsViewSummaryOpen={setIsViewSummaryOpen} currentStep={currentStep} setCurrentStep={setCurrentStep} currentPhase={currentPhase}/>
-          </div>
+              <div className="space-y-10">
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    Admin Information
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <AdminInformationStep1
+                      currentStep={1}
+                      setCurrentStep={setCurrentStep}
+                    />
+                  )}
+                </section>
 
-          {/* Preview Cards */}
-          <div className="w-80 space-y-4 top-10 h-fit">
-            <AddPhaseButton setCurrentPhase={setCurrentPhase} setCurrentStep={setCurrentStep}/>
-            <AdminInformationAccordion currentStep={currentStep} />
-            <PhaseSummaryAccordion currentStep={currentStep} setCurrentPhase={setCurrentPhase} currentPhase={currentPhase} setCurrentStep={setCurrentStep}/>
-            <SignSummaryAccordion currentStep={currentStep} currentPhase={currentPhase} />
-            <TripAndLaborSummaryAccordion currentStep={currentStep} currentPhase={currentPhase}/>
-            <BidSummaryAccordion currentStep={currentStep} setIsViewSummaryOpen={setIsViewSummaryOpen} isViewSummaryOpen={isViewSummaryOpen}/>
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    Phase Information
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <PhaseInfoStep2
+                      currentStep={2}
+                      setCurrentStep={setCurrentStep}
+                      currentPhase={currentPhase}
+                    />
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    MUTCD Signs
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <MUTCDSignsStep3
+                      currentStep={3}
+                      setCurrentStep={setCurrentStep}
+                      currentPhase={currentPhase}
+                    />
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    Trip and Labor
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <TripAndLaborStep4
+                      currentStep={4}
+                      setCurrentStep={setCurrentStep}
+                      currentPhase={currentPhase}
+                    />
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    Bid Items
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <BidItemsStep5
+                      currentStep={5}
+                      setCurrentStep={setCurrentStep}
+                      currentPhase={currentPhase}
+                    />
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                    Bid Summary
+                  </h3>
+                  {renderStepWithoutNavigation(
+                    <BidSummaryStep6
+                      currentStep={6}
+                      setCurrentStep={setCurrentStep}
+                      isViewSummaryOpen={isViewSummaryOpen}
+                      setIsViewSummaryOpen={setIsViewSummaryOpen}
+                    />
+                  )}
+                </section>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            {isSidebarVisible && (
+              <div className="w-1/4 space-y-4 sticky top-10 h-fit transition-all duration-300 pl-4 border-l">
+                <AdminInformationAccordion currentStep={currentStep} />
+                <PhaseSummaryAccordion
+                  currentStep={currentStep}
+                  setCurrentPhase={setCurrentPhase}
+                  currentPhase={currentPhase}
+                  setCurrentStep={setCurrentStep}
+                />
+                <SignSummaryAccordion
+                  currentStep={currentStep}
+                  currentPhase={currentPhase}
+                />
+                <TripAndLaborSummaryAccordion
+                  currentStep={currentStep}
+                  currentPhase={currentPhase}
+                />
+                <BidSummaryAccordion
+                  currentStep={currentStep}
+                  setIsViewSummaryOpen={setIsViewSummaryOpen}
+                  isViewSummaryOpen={isViewSummaryOpen}
+                />
+              </div>
+            )}
           </div>
-        </>
-      )}
-    </div>
+        ) : (
+          <>
+            <div className="flex-1 max-w-[44vw]">
+              <Steps
+                isViewSummaryOpen={isViewSummaryOpen}
+                setIsViewSummaryOpen={setIsViewSummaryOpen}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                currentPhase={currentPhase}
+              />
+            </div>
+
+            {/* Preview Cards */}
+            <div
+              className="summary-section w-80 space-y-4"
+              style={{
+                position: "sticky",
+                top: "2.5rem",
+                maxHeight: "calc(100vh - 2.5rem)",
+                overflowY: "auto",
+              }}
+            >
+              <AddPhaseButton
+                setCurrentPhase={setCurrentPhase}
+                setCurrentStep={setCurrentStep}
+              />
+              <AdminInformationAccordion currentStep={currentStep} />
+              <PhaseSummaryAccordion
+                currentStep={currentStep}
+                setCurrentPhase={setCurrentPhase}
+                currentPhase={currentPhase}
+                setCurrentStep={setCurrentStep}
+              />
+              <SignSummaryAccordion
+                currentStep={currentStep}
+                currentPhase={currentPhase}
+              />
+              <TripAndLaborSummaryAccordion
+                currentStep={currentStep}
+                currentPhase={currentPhase}
+              />
+              <BidSummaryAccordion
+                currentStep={currentStep}
+                setIsViewSummaryOpen={setIsViewSummaryOpen}
+                isViewSummaryOpen={isViewSummaryOpen}
+              />
+            </div>
+          </>
+        )}
+      </div>
     </EstimateProvider>
   );
 };
