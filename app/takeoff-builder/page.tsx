@@ -316,7 +316,7 @@ export default function SignOrderPage() {
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="flex items-center justify-between px-0 -mb-3">
                 <CardActions
-                  createButtonLabel="Create Sign Order"
+                  createButtonLabel="Create Takeoff"
                   onCreateClick={() => router.push('/takeoff-builder/create')}
                   hideCalendar
                   goUpActions
@@ -349,7 +349,6 @@ export default function SignOrderPage() {
                 filterOptions={filterOptions}
                 activeFilters={activeFilters}
                 onFilterChange={handleFilterChange}
-                onReset={handleResetControls}
                 onArchiveSelected={() => {}}
               />
             </div>
