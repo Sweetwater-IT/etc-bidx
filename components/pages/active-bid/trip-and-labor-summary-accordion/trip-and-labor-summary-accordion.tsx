@@ -135,7 +135,7 @@ const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLabo
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span>{safeNumber(getPhaseValue("personnel"))}</span>
+                <span>{safeNumber(getPhaseValue("personnel"))}</span>
                     <Button
                       size="sm"
                       variant="ghost"
