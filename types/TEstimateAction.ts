@@ -5,7 +5,7 @@ import { SaleItem } from "./TSaleItem";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
 import { County } from "./TCounty";
-// import { CustomPMSItem, PermanentSigns, PMSEquipment, PMSResetB, PMSResetF, PMSTypeB, PMSTypeF } from "./PermanentSigns";
+import { CustomPMSItem, PMSEquipment, PMSResetB, PMSResetF, PMSTypeB, PMSTypeF } from "./TPermanentSigns";
 
 interface AddMPTItemNotSignPayload {
 	phaseNumber: number;
@@ -19,7 +19,9 @@ type MPTSignUpdatePayload =
 	| { phase: number; signId: string; key: 'designation' | 'associatedStructure' | 'bLights' | 'covers' | 'description' | 'isCustom'; value: any }  // Primary-only properties
 	| { phase: number; signId: string; key: 'primarySignId'; value: string };
 
-// export type PMSEquipmentKey = keyof PMSTypeB | keyof PMSTypeF | keyof PMSResetB | keyof PMSResetF;
+export type PMSEquipmentKey = keyof PMSTypeB | keyof PMSTypeF | keyof PMSResetB | keyof PMSResetF;
+
+export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF'
 
 
 export type EstimateAction =
@@ -30,6 +32,7 @@ export type EstimateAction =
 			value: any;
 		};
 	}
+	/**MPT */
 	| { type: "ADD_MPT_RENTAL" }
 	| { type: "ADD_MPT_PHASE" }
 	| {
@@ -62,6 +65,7 @@ export type EstimateAction =
 		};
 	}
 	| { type: "ADD_MPT_ITEM_NOT_SIGN"; payload: AddMPTItemNotSignPayload }
+	/**CHANNELIZER AND LIGHT AND DRUM RENTAL */
 	| {
 		type: "ADD_LIGHT_AND_DRUM_CUSTOM_ITEM";
 		payload: { phaseNumber: number; item: CustomLightAndDrumItem };
@@ -75,6 +79,7 @@ export type EstimateAction =
 			value: any;
 		};
 	}
+	/***MPT SIGNS */
 	| {
 		type: "ADD_MPT_SIGN";
 		payload: { phaseNumber: number; sign: PrimarySign | SecondarySign };
@@ -93,10 +98,12 @@ export type EstimateAction =
 	}
 	| { type: "UPDATE_MPT_SIGN"; payload: MPTSignUpdatePayload }
 	| { type: "DELETE_MPT_SIGN"; payload: string }
+	/***FLAGGING + SERVICE WORK */
 	| { type: "ADD_FLAGGING" }
 	| { type: "UPDATE_FLAGGING"; payload: { key: keyof Flagging; value: any } }
 	| { type: 'ADD_SERVICE_WORK' }
 	| { type: 'UPDATE_SERVICE_WORK'; payload: { key: keyof Flagging; value: any } }
+	/**RENTAL EQUIPMENT */
 	| { type: "ADD_RENTAL_ITEM"; payload: EquipmentRentalItem }
 	| {
 		type: "UPDATE_RENTAL_ITEM";
@@ -104,63 +111,84 @@ export type EstimateAction =
 	}
 	| {
 		type: 'DELETE_RENTAL_ITEM',
-		payload: {index: number}
+		payload: { index: number }
 	}
-    //comment out permanent sign related dispatches for now
-	// | { type: "ADD_PERMANENT_SIGNS" }
-	// | {
-	// 	type: "UPDATE_STATIC_PERMANENT_SIGNS";
-	// 	payload: {
-	// 		key: 'typeBRemovalRatePerManHour' | 'installedPostManHours';
-	// 		value: number;
-	// 	};
-	// }
-	// | {
-	// 	type: 'UPDATE_PERMANENT_SIGNS_INPUTS';
-	// 	payload: {
-	// 		key: 'separateMobilization' | 'trucks' | 'personnel' | 'OWtrips',
-	// 		value: boolean | number
-	// 	}
-	// }
-	// | {
-	// 	type: 'UPDATE_PERMANENT_SIGNS_NAME',
-	// 	payload: {
-	// 		pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
-	// 		value: string
-	// 	}
-	// }
-	// | {
-	//   type: 'UPDATE_PERMANENT_SIGNS_EQUIPMENT',
-	//   payload: {
-	// 	pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF', //the perm signs number
-	// 	pmsEquipType: PMSEquipmentKey,// the actual equipment piece (should exclude labor and fuel and custom items )
-	// 	key: keyof PMSEquipment,//name cost quantity markup
-	// 	value: number 
-	//   }
-	// }
-	// | { 
-	// 	type: 'ADD_CUSTOM_PMS_ITEM',
-	// 	payload: {
-	// 	  pmsType: 'pmsTypeB' | 'pmsTypeF'  |'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
-	// 	  item: CustomPMSItem
-	// 	}
-	//   }
-	//   | {
-	// 	type: 'UPDATE_CUSTOM_PMS_ITEM',
-	// 	payload: {
-	// 	  pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
-	// 	  itemIndex: number,
-	// 	  key: keyof CustomPMSItem,
-	// 	  value: string | number
-	// 	}
-	//   }
-	//   | {
-	// 	type: 'DELETE_CUSTOM_PMS_ITEM',
-	// 	payload: {
-	// 	  pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
-	// 	  itemIndex: number
-	// 	}
-	//   }
+	/****PERMANENT SIGNS */
+	| { type: "ADD_PERMANENT_SIGNS" }
+	| {
+		type: 'ADD_PERMANENT_SIGNS_ITEM';
+		payload: {
+			key: PMSItemKeys
+		}
+	}
+	| {
+		type: "UPDATE_STATIC_PERMANENT_SIGNS";
+		payload: {
+			key: 'typeBRemovalRatePerManHour' | 'installedPostManHours';
+			value: number;
+		};
+	}
+	| {
+		type: 'UPDATE_PERMANENT_SIGNS_INPUTS';
+		payload: {
+			key: 'separateMobilization' | 'trucks' | 'personnel' | 'OWtrips',
+			value: boolean | number
+		}
+	}
+	| {
+		type: 'UPDATE_PERMANENT_SIGNS_NAME',
+		payload: {
+			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
+			value: string
+		}
+	}
+	| {
+		type: 'UPDATE_PERMANENT_SIGNS_EQUIPMENT',
+		payload: {
+			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF', //the perm signs number
+			pmsEquipType: PMSEquipmentKey,// the actual equipment piece (should exclude labor and fuel and custom items )
+			key: keyof PMSEquipment,//name cost quantity markup
+			value: number
+		}
+	}
+	| {
+		type: 'UPDATE_PERMANENT_SIGNS_ITEM';
+		payload: {
+			key: PMSItemKeys;
+			field: string;
+			value: any;
+		}
+	}
+	| {
+		type: 'DELETE_PERMANENT_SIGNS_ITEM';
+		payload: {
+			key: PMSItemKeys;
+		}
+	}
+	| {
+		type: 'ADD_CUSTOM_PMS_ITEM',
+		payload: {
+			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
+			item: CustomPMSItem
+		}
+	}
+	| {
+		type: 'UPDATE_CUSTOM_PMS_ITEM',
+		payload: {
+			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
+			itemIndex: number,
+			key: keyof CustomPMSItem,
+			value: string | number
+		}
+	}
+	| {
+		type: 'DELETE_CUSTOM_PMS_ITEM',
+		payload: {
+			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
+			itemIndex: number
+		}
+	}
+	/****SALE ITEMS */
 	| { type: "ADD_SALE_ITEM"; payload: SaleItem }
 	| {
 		type: "UPDATE_SALE_ITEM";
@@ -168,10 +196,12 @@ export type EstimateAction =
 	}
 	| { type: "DELETE_SALE_ITEM"; payload: string }
 	| { type: "RESET_SALE_ITEMS" }
+	/**GENERAL RESET */
 	| { type: "RESET_STATE" }
-	| { type: 'COPY_ADMIN_DATA', payload: AdminData}
-	| { type: 'COPY_MPT_RENTAL', payload: MPTRentalEstimating}
-	| { type: 'COPY_EQUIPMENT_RENTAL', payload : EquipmentRentalItem[]}
-	| { type: 'COPY_FLAGGING', payload: Flagging}
-	| { type: 'COPY_SERVICE_WORK', payload: Flagging}
-	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[]}
+	/**FOR COPYING FROM DATABASE, PROBABLY NEEDS TO BE REFACTORED */
+	| { type: 'COPY_ADMIN_DATA', payload: AdminData }
+	| { type: 'COPY_MPT_RENTAL', payload: MPTRentalEstimating }
+	| { type: 'COPY_EQUIPMENT_RENTAL', payload: EquipmentRentalItem[] }
+	| { type: 'COPY_FLAGGING', payload: Flagging }
+	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
+	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
