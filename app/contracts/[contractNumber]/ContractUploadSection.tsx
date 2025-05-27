@@ -1,6 +1,6 @@
 import React, { Dispatch, SetStateAction, useEffect } from 'react';
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone';
-import { useFileUpload } from '@/hooks/use-file-upload';
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '../../../components/ui/dropzone';
+import { useFileUpload } from '../../../hooks/use-file-upload';
 
 interface Props {
     setFiles: Dispatch<SetStateAction<File[]>>;

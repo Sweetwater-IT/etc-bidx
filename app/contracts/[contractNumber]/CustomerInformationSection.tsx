@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Customer } from '@/types/Customer';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Customer } from '../../../types/Customer';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../../../components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useCustomers } from '@/hooks/use-customers';
+import { cn } from '../../../lib/utils';
+import { useCustomers } from '../../../hooks/use-customers';
 
 interface FormInputProps {
     label: string;

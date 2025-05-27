@@ -44,7 +44,7 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
 
 const StepsMain = () => {
   const searchParams = useSearchParams();
-  const initialStepParam = searchParams.get("initialStep");
+  const initialStepParam = searchParams?.get("initialStep");
   
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
@@ -54,7 +54,7 @@ const StepsMain = () => {
   
   useEffect(() => {
       // For non-edit mode, check if we should open summary
-      const openSummary = searchParams.get("openSummary") === "true";
+      const openSummary = searchParams?.get("openSummary") === "true";
       if (initialStepParam === "6" && openSummary) {
         setIsViewSummaryOpen(true);
       }

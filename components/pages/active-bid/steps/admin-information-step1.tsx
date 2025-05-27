@@ -63,8 +63,8 @@ const AdminInformationStep1 = ({
   const { adminData, dispatch } = useEstimate();
 
   const searchParams = useSearchParams();
-  const availableJobId = searchParams.get('jobId');
-  const contractNumberFromParams = searchParams.get('contractNumber')
+  const availableJobId = searchParams?.get('jobId');
+  const contractNumberFromParams = searchParams?.get('contractNumber')
 
   const { startLoading, stopLoading } = useLoading();
 
