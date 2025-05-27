@@ -100,34 +100,3 @@ export function NavMain({
     </SidebarGroup>
   )
 }
-
-export const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: IconDashboard,
-    },
-    {
-      title: "Bid / Job List",
-      url: "/jobs",
-      icon: IconListDetails,
-      items: [
-        {
-          title: "Available Jobs",
-          url: "/jobs/available",
-        },
-        {
-          title: "Active Bids",
-          url: "/jobs/active-bids",
-        },
-        {
-          title: "Active Jobs",
-          url: "/jobs/active-jobs",
-        }
-      ]
-    },
-    // ... rest of the navigation items
-  ],
-  // ... rest of the data
-}
