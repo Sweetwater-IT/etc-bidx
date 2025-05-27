@@ -231,7 +231,7 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
     letting_date: parsedLettingDate || currentDate, // Default to current date
     due_date: parsedDueDate || currentDate, // Default to current date
     county: cleanValue(county),
-    branch: cleanValue(branch),
+    branch: cleanValue(branch) || 'Main Office', // Default to 'Main Office' if branch is null
     location: cleanValue(location),
     platform: cleanValue(platform),
     entry_date: parsedEntryDate || new Date().toISOString(),
