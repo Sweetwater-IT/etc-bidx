@@ -323,13 +323,13 @@ export function SignOrderAdminInfo({
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={openCustomer}
-                                    className="w-full justify-between bg-muted/50"
+                                    className="max-w-50 truncate justify-between bg-muted/50"
                                 >
-                                    {adminInfo.customer ? adminInfo.customer.displayName : "Select contractor..."}
+                                    <span className="truncate">{adminInfo.customer ? adminInfo.customer.displayName : "Select contractor..."}</span>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                            <PopoverContent className="p-0">
                                 <Command>
                                     <CommandInput placeholder="Search contractor..." />
                                     <CommandEmpty>No contractor found.</CommandEmpty>
@@ -393,7 +393,7 @@ export function SignOrderAdminInfo({
                                 ...adminInfo,
                                 orderDate: new Date(e.target.value)
                             })}
-                            className="bg-muted/50 w-3/4"
+                            className="bg-muted/50"
                             disabled
                         />
                     </div>
