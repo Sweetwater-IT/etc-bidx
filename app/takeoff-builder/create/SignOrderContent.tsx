@@ -13,6 +13,7 @@ import { Customer } from "@/types/Customer";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { Textarea } from "@/components/ui/textarea";
+import SignOrderSummary from "./SignOrderSummary";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -194,7 +195,7 @@ export default function SignFormContent() {
                             <DropzoneEmptyState />
                         </Dropzone>
                     </div>
-                    <SignSummaryAccordion currentPhase={0} currentStep={3} />
+                    <SignOrderSummary currentPhase={0}/>
                     <div className="rounded-lg border p-4">
                     <h2 className="mb-2 text-lg font-semibold">Notes</h2>
                     <div className="space-y-2">
@@ -206,7 +207,7 @@ export default function SignFormContent() {
                             value={localNotes}
                             onChange={(e) => setLocalNotes(e.target.value)}
                         />
-                        <Button className="w-full" onClick={() => setSavedNotes(prevState => prevState + ' ' + localNotes)}>
+                        <Button className="w-full" onClick={() => setSavedNotes(prevState => prevState ? prevState + ' ' + localNotes : localNotes)}>
                             Save Notes
                         </Button>
                     </div>

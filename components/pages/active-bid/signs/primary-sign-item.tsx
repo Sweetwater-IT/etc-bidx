@@ -17,14 +17,14 @@ interface PrimarySignItemProps {
   primarySign: PrimarySign;
   secondarySigns: SecondarySign[];
   currentPhase: number;
-  defaultConfiguring?: boolean;
+  isTakeoff?: boolean;
 }
 
 const PrimarySignItem = ({
   primarySign,
   secondarySigns,
   currentPhase,
-  defaultConfiguring = false,
+  isTakeoff = false,
 }: PrimarySignItemProps) => {
   const { dispatch, mptRental } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(true);
@@ -128,7 +128,7 @@ const PrimarySignItem = ({
           sign={primarySign}
           currentPhase={currentPhase}
           setIsConfiguring={setIsConfiguring}
-          showSubstrate={defaultConfiguring}
+          isTakeoff={isTakeoff}
         />
       ) : (
         <div className="flex justify-between items-center">
@@ -236,7 +236,7 @@ const PrimarySignItem = ({
           secondarySign={secondarySign}
           primarySign={primarySign}
           currentPhase={currentPhase}
-          showSubstrate={defaultConfiguring}
+          isTakeoff={isTakeoff}
         />
       ))}
     </div>

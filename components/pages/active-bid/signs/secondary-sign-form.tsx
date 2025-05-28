@@ -36,7 +36,7 @@ interface SecondarySignFormProps {
   primarySign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
-  showSubstrate?: boolean
+  isTakeoff?: boolean
 }
 
 const SecondarySignForm = ({
@@ -44,7 +44,7 @@ const SecondarySignForm = ({
   primarySign,
   currentPhase,
   setIsConfiguring,
-  showSubstrate
+  isTakeoff
 }: SecondarySignFormProps) => {
   const { dispatch } = useEstimate();
   const [localSign, setLocalSign] = useState<SecondarySign>({ ...sign });
@@ -288,7 +288,7 @@ const SecondarySignForm = ({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search designation..."
                     onValueChange={filterDesignations}
@@ -333,7 +333,7 @@ const SecondarySignForm = ({
             </Popover>
           )}
         </div>
-        {showSubstrate && <div className="w-1/2">
+        {isTakeoff && <div className="w-1/2">
           <Label className="text-base font-semibold mb-2.5 block">
             Substrate
           </Label>
@@ -344,6 +344,7 @@ const SecondarySignForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='aluminum'>Aluminum</SelectItem>
+              <SelectItem value='aluminum-composite'>Aluminum Composite</SelectItem>
               <SelectItem value='plastic'>Plastic</SelectItem>
             </SelectContent>
           </Select>
