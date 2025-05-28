@@ -11,6 +11,7 @@ export async function GET() {
         sign_designations (designation, description, sheeting),
         sign_dimensions (width, height)
       `)
+      .order('sign_designations(designation)')
 
     if (error) {
       console.error(error)

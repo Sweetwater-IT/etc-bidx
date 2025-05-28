@@ -30,11 +30,12 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { processSignData } from "./process-sign-data";
-
+import { Checkbox } from "@/components/ui/checkbox";
 // Type definitions for processed sign data
 interface SignDesignation {
   designation: string;
@@ -52,14 +53,14 @@ interface PrimarySignFormProps {
   sign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
-  showSubstrate? : boolean
+  isTakeoff?: boolean
 }
 
 const PrimarySignForm = ({
   sign,
   currentPhase,
   setIsConfiguring,
-  showSubstrate
+  isTakeoff
 }: PrimarySignFormProps) => {
   const { dispatch } = useEstimate();
   const [localSign, setLocalSign] = useState<PrimarySign>({ ...sign });
@@ -393,7 +394,7 @@ const PrimarySignForm = ({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search designation..."
                     onValueChange={filterDesignations}
@@ -438,8 +439,8 @@ const PrimarySignForm = ({
             </Popover>
           )}
         </div>
-        {showSubstrate && <div className="flex-1/2">
-        <Label className="text-base font-semibold mb-2.5 block">
+        {isTakeoff && <div className="flex-1/2">
+          <Label className="text-base font-semibold mb-2.5 block">
             Substrate
           </Label>
           <Select value={sign.substrate}
@@ -449,6 +450,7 @@ const PrimarySignForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='aluminum'>Aluminum</SelectItem>
+              <SelectItem value='aluminum-composite'>Aluminum Composite</SelectItem>
               <SelectItem value='plastic'>Plastic</SelectItem>
             </SelectContent>
           </Select>
@@ -576,18 +578,23 @@ const PrimarySignForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="fourFootTypeIII">
-                Four Foot Type III
+                4' T-III RIGHT
               </SelectItem>
-              <SelectItem value="hStand">H Stand</SelectItem>
-              <SelectItem value="post">Post</SelectItem>
-              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="fourFootTypeIII">
+                4' T-III LEFT
+              </SelectItem>
+              {isTakeoff && <SelectItem value='sixFootTypeIII'>6' T-III RIGHT</SelectItem>}
+              {isTakeoff && <SelectItem value='sixFootTypeIII'>6' T-III LEFT</SelectItem>}
+              <SelectItem value="hStand">H-FOOT</SelectItem>
+              <SelectItem value="none">LOOSE</SelectItem>
+              <SelectItem value="post">POST</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">
-            B Lights
+            B Light Quantity
           </Label>
           <Input
             type="number"
@@ -603,23 +610,61 @@ const PrimarySignForm = ({
           />
         </div>
 
-        <div className="flex-1">
+        {isTakeoff && localSign.bLights > 0 && <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">
-            Covers
+            Color
           </Label>
-          <Input
-            type="number"
-            value={localSign.covers || ""}
-            onChange={(e) =>
-              handleSignUpdate(
-                "covers",
-                parseInt(e.target.value) || 0
-              )
-            }
-            min={0}
-            className="w-full"
-          />
-        </div>
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder='Choose color' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='red'>Red</SelectItem>
+              <SelectItem value='yellow'>Yellow</SelectItem>
+              <SelectItem value='white'>White</SelectItem>
+            </SelectContent>
+          </Select></div>}
+
+        {isTakeoff ?
+          <div className="flex-1">
+            <div className="flex gap-x-2 items-center">
+              <Checkbox
+                onCheckedChange={(checked) => checked ? handleCoversChange(1) : handleCoversChange(0)}
+                checked={localSign.covers > 0}
+                id='cover-checkbox'
+              />
+              <Label htmlFor='cover-checkbox' className="text-sm font-medium block">
+                Include cover
+              </Label>
+            </div>
+            <div className="flex gap-x-2 items-center">
+              <Checkbox
+                onCheckedChange={(checked) => checked ? console.log('hi') : console.log('hi')}
+                // checked={}
+                id='stiffener-checkbox'
+              />
+              <Label htmlFor="stiffener-checkbox" className="text-sm font-medium block">
+                Include stiffener
+              </Label>
+            </div>
+          </div>
+          : <div className="flex-1">
+            <Label className="text-sm font-medium mb-2 block">
+              Covers
+            </Label>
+            <Input
+              type="number"
+              value={localSign.covers || ""}
+              onChange={(e) =>
+                handleSignUpdate(
+                  "covers",
+                  parseInt(e.target.value) || 0
+                )
+              }
+              min={0}
+              className="w-full"
+            />
+          </div>}
       </div>
 
       <div className="flex justify-end space-x-3 pt-2">

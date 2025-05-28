@@ -117,7 +117,7 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
       width: defaultDimension.width,
       height: defaultDimension.height,
       sheeting: selectedDesignation.sheeting,
-      quantity: 1,
+      quantity: 0,
       associatedStructure: "none",
       bLights: 0,
       covers: 0,

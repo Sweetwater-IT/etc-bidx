@@ -21,7 +21,7 @@ export function SignOrderList() {
                 width: 0,
                 height: 0,
                 sheeting: 'DG',
-                quantity: 1,
+                quantity: 0,
                 associatedStructure: "none",
                 bLights: 0,
                 covers: 0,
@@ -43,7 +43,7 @@ export function SignOrderList() {
             </div>
             <div className="space-y-4">
                 {/* Add Custom Sign Form */}
-                <SignList currentPhase={0} defaultConfiguring={true}/>
+                <SignList currentPhase={0} isTakeoff={true}/>
             </div>
         </div>
     );
