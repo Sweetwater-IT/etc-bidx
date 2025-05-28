@@ -578,13 +578,13 @@ const PrimarySignForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="fourFootTypeIII">
-                4' T-III RIGHT
+                {`4'`} T-III RIGHT
               </SelectItem>
               <SelectItem value="fourFootTypeIII">
-                4' T-III LEFT
+                {`4'`} T-III LEFT
               </SelectItem>
-              {isTakeoff && <SelectItem value='sixFootTypeIII'>6' T-III RIGHT</SelectItem>}
-              {isTakeoff && <SelectItem value='sixFootTypeIII'>6' T-III LEFT</SelectItem>}
+              {isTakeoff && <SelectItem value='sixFootTypeIII'>{`6'`} T-III RIGHT</SelectItem>}
+              {isTakeoff && <SelectItem value='sixFootTypeIII'>{`6'`} T-III LEFT</SelectItem>}
               <SelectItem value="hStand">H-FOOT</SelectItem>
               <SelectItem value="none">LOOSE</SelectItem>
               <SelectItem value="post">POST</SelectItem>
