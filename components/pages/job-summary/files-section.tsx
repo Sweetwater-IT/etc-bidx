@@ -167,7 +167,7 @@ export function FilesSection({
               <ul className="space-y-2 mb-2">
                 {files.map((file) => (
                   <li key={file.id}>
-                    <div className="w-full text-left p-3 rounded-lg border border-border bg-background dark:bg-zinc-900 text-foreground dark:text-white font-semibold text-sm hover:bg-muted transition-colors">
+                    <div className="w-full text-left p-3 rounded-lg border border-border bg-background dark:bg-zinc-900 text-foreground dark:text-white font-semibold text-[12px] hover:bg-muted transition-colors">
                       {file.name}
                     </div>
                   </li>
