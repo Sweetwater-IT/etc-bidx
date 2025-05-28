@@ -68,6 +68,29 @@ export default function JobSummaryPage() {
     },
   ];
   const [infoTab, setInfoTab] = useState<"admin" | "customer">("customer");
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const notes = [
+    {
+      id: 1,
+      author: "Thiago",
+      text: "First note example",
+      date: "2024-06-01",
+    },
+    {
+      id: 2,
+      author: "Maria",
+      text: "Important note",
+      date: "2024-06-02",
+    },
+  ];
+  const files = [
+    { id: 1, name: "document.pdf", size: "1.2MB", date: "2024-06-01" },
+    { id: 2, name: "image.png", size: "500KB", date: "2024-06-02" },
+  ];
+  const jobItems = [
+    { id: 1, code: "0608-0001", description: "Main job item" },
+    { id: 2, code: "0608-0002", description: "Secondary item" },
+  ];
 
   return (
     <SidebarProvider
@@ -220,7 +243,7 @@ export default function JobSummaryPage() {
                                       }
                                     >
                                       <IconClipboard className="w-4 h-4 mr-2" />{" "}
-                                      Copiar
+                                      Copy
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="text-destructive"
@@ -229,7 +252,7 @@ export default function JobSummaryPage() {
                                       }
                                     >
                                       <IconTrash className="w-4 h-4 mr-2" />{" "}
-                                      Deletar
+                                      Delete
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -353,55 +376,228 @@ export default function JobSummaryPage() {
                           </div>
                         </div>
                       )}
-                      <button
-                        className="flex items-center gap-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground py-3 px-3 rounded-md transition-colors border-none bg-muted mb-4 justify-between min-h-[44px]"
-                        onClick={() => alert("Contract Tracker clicked!")}
-                      >
-                        <span className="flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4" /> Contract Tracker
-                        </span>
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
                       <div className="border-b border-border mb-2" />
-                      <div className="text-xs font-semibold text-muted-foreground tracking-widest flex items-center gap-2 py-2 mb-2">
-                        <StickyNote className="w-4 h-4" /> ATTACHMENTS
+                      {/* Contract Tracker Accordion */}
+                      <div className="mb-2">
+                        <button
+                          className={`flex items-center gap-2 w-full text-sm font-semibold text-foreground py-2 px-3 transition-colors bg-muted hover:bg-muted/80 justify-between ${
+                            openSection === "contract" ? "" : ""
+                          }`}
+                          style={{
+                            borderRadius:
+                              openSection === "contract"
+                                ? "12px 12px 0 0"
+                                : "12px",
+                          }}
+                          onClick={() =>
+                            setOpenSection(
+                              openSection === "contract" ? null : "contract"
+                            )
+                          }
+                          aria-expanded={openSection === "contract"}
+                        >
+                          <span className="flex items-center gap-2">
+                            <ClipboardList className="w-4 h-4" /> Contract
+                            Tracker
+                          </span>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              openSection === "contract" ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                        {openSection === "contract" && (
+                          <div
+                            className="px-4 pb-4 pt-1 bg-muted transition-all duration-300"
+                            style={{ borderRadius: "0 0 12px 12px" }}
+                          >
+                            <div className="mb-2 font-semibold text-foreground">
+                              Contract Progress
+                            </div>
+                            <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
+                              <li>Signed: 06/01/2024</li>
+                              <li>In progress: 06/05/2024</li>
+                              <li>Expected completion: 11/12/2025</li>
+                            </ul>
+                          </div>
+                        )}
                       </div>
-                      <button
-                        className="flex items-center justify-between w-full text-sm font-medium text-muted-foreground hover:text-foreground py-3 px-3 rounded-md transition-colors border-none bg-muted mb-2 min-h-[44px]"
-                        onClick={() => alert("Notes clicked!")}
-                      >
-                        <span className="flex items-center gap-2">
-                          <StickyNote className="w-4 h-4" /> Notes
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          (12)
-                        </span>
-                        <ChevronDown className="w-4 h-4 ml-1" />
-                      </button>
-                      <button
-                        className="flex items-center justify-between w-full text-sm font-medium text-muted-foreground hover:text-foreground py-3 px-3 rounded-md transition-colors border-none bg-muted mb-2 min-h-[44px]"
-                        onClick={() => alert("Files clicked!")}
-                      >
-                        <span className="flex items-center gap-2">
-                          <FileText className="w-4 h-4" /> Files
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          (12)
-                        </span>
-                        <ChevronDown className="w-4 h-4 ml-1" />
-                      </button>
-                      <button
-                        className="flex  items-center justify-between w-full text-sm font-medium bg-muted text-foreground border-none py-3 px-3 rounded-md mb-4 hover:bg-border transition-colors min-h-[44px]"
-                        onClick={() => alert("Job Items clicked!")}
-                      >
-                        <span className="flex items-center gap-2">
-                          <FolderOpen className="w-4 h-4" /> Job Items
-                        </span>
-                        <span className="text-xs font-semibold bg-background border border-border text-foreground rounded px-2 py-0.5">
-                          0608-0001
-                        </span>
-                        <ChevronDown className="w-4 h-4 ml-1 text-foreground" />
-                      </button>
+                      {/* Notes Accordion */}
+                      <div className="mb-2">
+                        <button
+                          className={`flex items-center justify-between w-full text-sm font-semibold text-foreground py-2 px-3 transition-colors bg-muted hover:bg-muted/80 ${
+                            openSection === "notes" ? "" : ""
+                          }`}
+                          style={{
+                            borderRadius:
+                              openSection === "notes"
+                                ? "12px 12px 0 0"
+                                : "12px",
+                          }}
+                          onClick={() =>
+                            setOpenSection(
+                              openSection === "notes" ? null : "notes"
+                            )
+                          }
+                          aria-expanded={openSection === "notes"}
+                        >
+                          <span className="flex items-center gap-2">
+                            <StickyNote className="w-4 h-4" /> Notes
+                            <span className="text-xs text-muted-foreground">
+                              {notes.length}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              openSection === "notes" ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                        {openSection === "notes" && (
+                          <div
+                            className="px-3 pb-4 pt-1 bg-muted transition-all duration-300"
+                            style={{ borderRadius: "0 0 12px 12px" }}
+                          >
+                            <ul className="space-y-2 mb-2">
+                              {notes.map((note) => (
+                                <li
+                                  key={note.id}
+                                  className="p-3 rounded-lg bg-background flex flex-col gap-1 border border-border"
+                                >
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="font-medium">
+                                      {note.author}
+                                    </span>
+                                    <span className="ml-auto">{note.date}</span>
+                                  </div>
+                                  <span className="text-foreground text-sm">
+                                    {note.text}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <button className="w-full py-2 mt-1 rounded-lg bg-muted text-xs text-muted-foreground hover:bg-muted/70 border border-dashed border-border font-medium transition-colors">
+                              + Add Note
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Files Accordion */}
+                      <div className="mb-2">
+                        <button
+                          className={`flex items-center justify-between w-full text-sm font-semibold text-foreground py-2 px-3 transition-colors bg-muted hover:bg-muted/80 ${
+                            openSection === "files" ? "" : ""
+                          }`}
+                          style={{
+                            borderRadius:
+                              openSection === "files"
+                                ? "12px 12px 0 0"
+                                : "12px",
+                          }}
+                          onClick={() =>
+                            setOpenSection(
+                              openSection === "files" ? null : "files"
+                            )
+                          }
+                          aria-expanded={openSection === "files"}
+                        >
+                          <span className="flex items-center gap-2">
+                            <FileText className="w-4 h-4" /> Files
+                            <span className="text-xs text-muted-foreground">
+                              {files.length}
+                            </span>
+                          </span>
+
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              openSection === "files" ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                        {openSection === "files" && (
+                          <div
+                            className="px-3 pb-4 pt-1 bg-muted transition-all duration-300"
+                            style={{ borderRadius: "0 0 12px 12px" }}
+                          >
+                            <ul className="space-y-2 mb-2">
+                              {files.map((file) => (
+                                <li
+                                  key={file.id}
+                                  className="p-3 rounded-lg bg-background flex items-center justify-between border border-border"
+                                >
+                                  <span className="text-sm text-foreground font-medium">
+                                    {file.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {file.size} • {file.date}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <button className="w-full py-2 mt-1 rounded-lg bg-muted text-xs text-muted-foreground hover:bg-muted/70 border border-dashed border-border font-medium transition-colors">
+                              + Add File
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Job Items Accordion */}
+                      <div className="mb-4">
+                        <button
+                          className={`flex items-center justify-between w-full text-sm font-semibold text-foreground py-2 px-3 transition-colors bg-muted hover:bg-muted/80 ${
+                            openSection === "jobitems" ? "" : ""
+                          }`}
+                          style={{
+                            borderRadius:
+                              openSection === "jobitems"
+                                ? "12px 12px 0 0"
+                                : "12px",
+                          }}
+                          onClick={() =>
+                            setOpenSection(
+                              openSection === "jobitems" ? null : "jobitems"
+                            )
+                          }
+                          aria-expanded={openSection === "jobitems"}
+                        >
+                          <span className="flex items-center gap-2">
+                            <FolderOpen className="w-4 h-4" /> Job Items
+                            <span className="text-xs font-semibold bg-background border border-border text-foreground rounded px-2 py-0.5">
+                              {jobItems[0].code}
+                            </span>
+                          </span>
+
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              openSection === "jobitems" ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                        {openSection === "jobitems" && (
+                          <div
+                            className="px-3 pb-4 pt-1  bg-muted transition-all duration-300"
+                            style={{ borderRadius: "0 0 12px 12px" }}
+                          >
+                            <ul className="space-y-2 mb-2">
+                              {jobItems.map((item) => (
+                                <li
+                                  key={item.id}
+                                  className="p-3 rounded-lg bg-background flex flex-col border border-border"
+                                >
+                                  <span className="text-sm text-foreground font-medium">
+                                    {item.code}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {item.description}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <button className="w-full py-2 mt-1 rounded-lg bg-muted text-xs text-muted-foreground hover:bg-muted/70 border border-dashed border-border font-medium transition-colors">
+                              + Add Job Item
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </aside>
