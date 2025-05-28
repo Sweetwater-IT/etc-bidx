@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { FileText, ChevronDown, X } from "lucide-react";
+import { FileText, ChevronDown, X, Trash2 } from "lucide-react";
 
 const ATTACH_OPTIONS = [
   "Flagging Price List",
@@ -19,6 +19,7 @@ interface FilesSectionProps {
   files: File[];
   onAddFile: (file: Omit<File, "id">) => void;
   onUpdateFileOptions: (id: number, options: string[]) => void;
+  onRemoveFile?: (id: number) => void;
 }
 
 export function FilesSection({
@@ -27,6 +28,7 @@ export function FilesSection({
   files,
   onAddFile,
   onUpdateFileOptions,
+  onRemoveFile,
 }: FilesSectionProps) {
   const [addingFile, setAddingFile] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -167,8 +169,35 @@ export function FilesSection({
               <ul className="space-y-2 mb-2">
                 {files.map((file) => (
                   <li key={file.id}>
-                    <div className="w-full text-left p-3 rounded-lg border border-border bg-background dark:bg-zinc-900 text-foreground dark:text-white font-semibold text-[12px] hover:bg-muted transition-colors">
-                      {file.name}
+                    <div className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-background dark:bg-zinc-900 text-foreground dark:text-white hover:bg-muted transition-colors shadow-sm">
+                      <FileText className="w-5 h-5 text-primary/80 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-[13px] truncate">
+                          {file.name}
+                        </div>
+                        {file.attachedOptions.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {file.attachedOptions.map((opt) => (
+                              <span
+                                key={opt}
+                                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium border border-primary/20"
+                              >
+                                {opt}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {onRemoveFile && (
+                        <button
+                          className="ml-2 p-1 rounded hover:text-red-600 transition-colors cursor-pointer"
+                          onClick={() => onRemoveFile(file.id)}
+                          title="Remove file"
+                          type="button"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}

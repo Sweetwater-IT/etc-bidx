@@ -29,28 +29,123 @@ export default function JobSummaryPage() {
   };
   const bidPhases = [
     {
-      name: "I",
+      name: "Phase 1",
       start: "12.11.2024",
       end: "12.11.2025",
       products: [
-        { name: "4'Ft Type III", params: 333, value: "", actions: true },
-        { name: "H Stands", params: 0, value: 23, actions: true },
-        { name: "Sand Bags", params: 12, value: "", actions: true },
-        { name: "Covers", params: 0, value: "", actions: true },
-        {
-          name: "Spring Loader Metal Stands",
-          params: 0,
-          value: "",
-          actions: true,
-        },
+        { name: "Four Foot Type III", params: 10, value: 100, actions: true },
+        { name: "H Stand", params: 5, value: 50, actions: true },
+        { name: "Post", params: 20, value: 200, actions: true },
+        { name: "Six Foot Wings", params: 8, value: 80, actions: true },
+        { name: "Metal Stands", params: 12, value: 120, actions: true },
+        { name: "Covers", params: 7, value: 70, actions: true },
+        { name: "Sandbags", params: 15, value: 150, actions: true },
+        { name: "HI Vertical Panels", params: 6, value: 60, actions: true },
         {
           name: "Type XI Vertical Panels",
-          params: 0,
-          value: "",
+          params: 9,
+          value: 90,
           actions: true,
         },
-        { name: "B-Lites", params: 0, value: 2, actions: true },
-        { name: "A / C Lites", params: 342, value: 222, actions: true },
+        { name: "B-Lights", params: 3, value: 30, actions: true },
+        { name: "AC Lights", params: 4, value: 40, actions: true },
+        { name: "Sharps", params: 2, value: 20, actions: true },
+      ],
+    },
+    {
+      name: "Phase 2",
+      start: "13.11.2024",
+      end: "13.11.2025",
+      products: [
+        { name: "Four Foot Type III", params: 12, value: 110, actions: true },
+        { name: "H Stand", params: 6, value: 55, actions: true },
+        { name: "Post", params: 18, value: 210, actions: true },
+        { name: "Six Foot Wings", params: 9, value: 85, actions: true },
+        { name: "Metal Stands", params: 10, value: 130, actions: true },
+        { name: "Covers", params: 8, value: 75, actions: true },
+        { name: "Sandbags", params: 14, value: 160, actions: true },
+        { name: "HI Vertical Panels", params: 7, value: 65, actions: true },
+        {
+          name: "Type XI Vertical Panels",
+          params: 8,
+          value: 95,
+          actions: true,
+        },
+        { name: "B-Lights", params: 4, value: 35, actions: true },
+        { name: "AC Lights", params: 5, value: 45, actions: true },
+        { name: "Sharps", params: 3, value: 25, actions: true },
+      ],
+    },
+    {
+      name: "Phase 3",
+      start: "14.11.2024",
+      end: "14.11.2025",
+      products: [
+        { name: "Four Foot Type III", params: 14, value: 120, actions: true },
+        { name: "H Stand", params: 7, value: 60, actions: true },
+        { name: "Post", params: 22, value: 220, actions: true },
+        { name: "Six Foot Wings", params: 10, value: 90, actions: true },
+        { name: "Metal Stands", params: 13, value: 140, actions: true },
+        { name: "Covers", params: 9, value: 80, actions: true },
+        { name: "Sandbags", params: 16, value: 170, actions: true },
+        { name: "HI Vertical Panels", params: 8, value: 70, actions: true },
+        {
+          name: "Type XI Vertical Panels",
+          params: 10,
+          value: 100,
+          actions: true,
+        },
+        { name: "B-Lights", params: 5, value: 40, actions: true },
+        { name: "AC Lights", params: 6, value: 50, actions: true },
+        { name: "Sharps", params: 4, value: 30, actions: true },
+      ],
+    },
+    {
+      name: "Phase 4",
+      start: "15.11.2024",
+      end: "15.11.2025",
+      products: [
+        { name: "Four Foot Type III", params: 16, value: 130, actions: true },
+        { name: "H Stand", params: 8, value: 65, actions: true },
+        { name: "Post", params: 24, value: 230, actions: true },
+        { name: "Six Foot Wings", params: 11, value: 95, actions: true },
+        { name: "Metal Stands", params: 15, value: 150, actions: true },
+        { name: "Covers", params: 10, value: 85, actions: true },
+        { name: "Sandbags", params: 18, value: 180, actions: true },
+        { name: "HI Vertical Panels", params: 9, value: 75, actions: true },
+        {
+          name: "Type XI Vertical Panels",
+          params: 12,
+          value: 105,
+          actions: true,
+        },
+        { name: "B-Lights", params: 6, value: 45, actions: true },
+        { name: "AC Lights", params: 7, value: 55, actions: true },
+        { name: "Sharps", params: 5, value: 35, actions: true },
+      ],
+    },
+    {
+      name: "Phase 5",
+      start: "16.11.2024",
+      end: "16.11.2025",
+      products: [
+        { name: "Four Foot Type III", params: 18, value: 140, actions: true },
+        { name: "H Stand", params: 9, value: 70, actions: true },
+        { name: "Post", params: 26, value: 240, actions: true },
+        { name: "Six Foot Wings", params: 12, value: 100, actions: true },
+        { name: "Metal Stands", params: 17, value: 160, actions: true },
+        { name: "Covers", params: 11, value: 90, actions: true },
+        { name: "Sandbags", params: 20, value: 190, actions: true },
+        { name: "HI Vertical Panels", params: 10, value: 80, actions: true },
+        {
+          name: "Type XI Vertical Panels",
+          params: 14,
+          value: 110,
+          actions: true,
+        },
+        { name: "B-Lights", params: 7, value: 50, actions: true },
+        { name: "AC Lights", params: 8, value: 60, actions: true },
+        { name: "Sharps", params: 6, value: 40, actions: true },
       ],
     },
   ];
@@ -72,9 +167,8 @@ export default function JobSummaryPage() {
   ]);
 
   const [fileList, setFileList] = useState<FileType[]>([
-    { id: 1, name: "Flagging Price List", attachedOptions: [] },
-    { id: 2, name: "Flagging Service Area", attachedOptions: [] },
-    { id: 3, name: "Bedford Branch Sell Sheet", attachedOptions: [] },
+    { id: 1, name: "Document", attachedOptions: ["Flagging Price List"] },
+    { id: 2, name: "Image", attachedOptions: ["Flagging Service Area"] },
   ]);
 
   const jobItems = [
@@ -96,6 +190,10 @@ export default function JobSummaryPage() {
         file.id === id ? { ...file, attachedOptions: options } : file
       )
     );
+  };
+
+  const handleRemoveFile = (id: number) => {
+    setFileList((prev) => prev.filter((file) => file.id !== id));
   };
 
   return (
@@ -158,6 +256,7 @@ export default function JobSummaryPage() {
                         files={fileList}
                         onAddFile={handleAddFile}
                         onUpdateFileOptions={handleUpdateFileOptions}
+                        onRemoveFile={handleRemoveFile}
                       />
                       <JobItemsSection
                         isOpen={openSection === "jobitems"}

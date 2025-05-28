@@ -1,19 +1,28 @@
-"use client"
+"use client";
 
-import { usePathname, useRouter } from "next/navigation"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { data } from "@/components/app-sidebar"
-import { Input } from "@/components/ui/input"
-import { ModeToggle } from "@/components/toggle-color"
-import { IconBell, IconPower, IconPlus, IconBriefcase, IconClipboard, IconBuilding, IconUser, IconFileText } from "@tabler/icons-react"
+import { usePathname, useRouter } from "next/navigation";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { data } from "@/components/app-sidebar";
+import { Input } from "@/components/ui/input";
+import { ModeToggle } from "@/components/toggle-color";
+import {
+  IconBell,
+  IconPower,
+  IconPlus,
+  IconBriefcase,
+  IconClipboard,
+  IconBuilding,
+  IconUser,
+  IconFileText,
+} from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -21,39 +30,43 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname = usePathname();
+  const router = useRouter();
 
   const handleNewItem = (route: string) => {
-    router.push(route)
-  }
+    router.push(route);
+  };
 
   const findTitle = (items: any[]): string | undefined => {
     for (const item of items) {
-      if (item.url === pathname) return item.title || item.name
+      if (item.url === pathname) return item.title || item.name;
       if (item.items) {
-        const found = findTitle(item.items)
-        if (found) return found
+        const found = findTitle(item.items);
+        if (found) return found;
       }
     }
-    return undefined
-  }
+    return undefined;
+  };
 
   const getCurrentTitle = () => {
-    if (customTitle) return customTitle
-    
+    if (customTitle) return customTitle;
+
     const allItems = [
       ...data.navMain,
       ...data.navClouds,
       ...data.navSecondary,
-      ...data.documents.map(doc => ({ title: doc.name, url: doc.url }))
-    ]
-    const foundTitle = findTitle(allItems)
-    return foundTitle || (pathname === "/" ? "Dashboard" : "")
-  }
+      ...data.documents.map((doc) => ({ title: doc.name, url: doc.url })),
+    ];
+    const foundTitle = findTitle(allItems);
+    return foundTitle || (pathname === "/" ? "Dashboard" : "");
+  };
 
   // Novo componente para o menu de criação
-  function DropdownNewMenu({ handleNewItem }: { handleNewItem: (route: string) => void }) {
+  function DropdownNewMenu({
+    handleNewItem,
+  }: {
+    handleNewItem: (route: string) => void;
+  }) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -63,31 +76,31 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleNewItem('/jobs/available')}>
+          <DropdownMenuItem onClick={() => handleNewItem("/jobs/available")}>
             <IconBriefcase className="size-4 mr-2" />
             Available Job
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleNewItem('/jobs/active-bids')}>
+          <DropdownMenuItem onClick={() => handleNewItem("/jobs/active-bids")}>
             <IconClipboard className="size-4 mr-2" />
             Active Bid
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleNewItem('/jobs/active-jobs')}>
+          <DropdownMenuItem onClick={() => handleNewItem("/jobs/active-jobs")}>
             <IconBuilding className="size-4 mr-2" />
             Active Job
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleNewItem('/customers')}>
+          <DropdownMenuItem onClick={() => handleNewItem("/customers")}>
             <IconUser className="size-4 mr-2" />
             Customer
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleNewItem('/quotes/create')}>
+          <DropdownMenuItem onClick={() => handleNewItem("/quotes/create")}>
             <IconFileText className="size-4 mr-2" />
             Quote
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    )
+    );
   }
 
   return (
@@ -99,9 +112,21 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
             <div className="relative">
               <Input placeholder="Search..." className="pl-10 pr-16" />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                <svg
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
               </span>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-muted rounded px-2 py-0.5 text-muted-foreground select-none">⌘ k</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-muted rounded px-2 py-0.5 text-muted-foreground select-none">
+                ⌘ k
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -123,5 +148,5 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
         )}
       </div>
     </header>
-  )
+  );
 }
