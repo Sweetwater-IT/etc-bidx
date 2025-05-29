@@ -124,6 +124,7 @@ export default function SignFormContent() {
             const signOrderData = {
                 requestor: adminInfo.requestor.name!,
                 contractor_id: adminInfo.customer.id!,
+                contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
                 need_date: new Date(adminInfo.needDate).toISOString(),
                 start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : '',
@@ -162,10 +163,7 @@ export default function SignFormContent() {
     return (
         <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-between border-b px-6 py-3">
-                <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-semibold">Sign Order Form</h1>
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-auto -mt-15">
                     {/**This should be a save and submit */}
                     <Button
                         onClick={handleSave}
