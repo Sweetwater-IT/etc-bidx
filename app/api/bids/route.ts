@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
+import { safeNumber } from '@/lib/safe-number';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 
-// GET: Fetch all bids with optional filtering
+// GET: Fetch all bids with optional filtering, plus counts and stats
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
+    const includeStats = searchParams.get('includeStats') === 'true';
+    
+    // Get date filter parameters for stats
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     
     // Handle sorting parameters
     let orderBy = searchParams.get('orderBy') || 'created_at';
-    // Map frontend column names to database column names
     if (searchParams.get('sortBy')) {
       const sortBy = searchParams.get('sortBy');
       switch (sortBy) {
@@ -28,18 +32,18 @@ export async function GET(request: NextRequest) {
           orderBy = 'due_date';
           break;
         default:
-          // Use the sortBy value directly if it doesn't need mapping
           orderBy = sortBy || 'created_at';
       }
     }
     
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const ascending = sortOrder === 'asc';
-    
-    // Calculate offset for pagination
     const offset = (page - 1) * limit;
     
     let tableName = 'available_jobs';
+    const status = searchParams.get('status');
+    
+    // Build base queries
     let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
     let dataQuery = supabase
       .from(tableName)
@@ -47,77 +51,51 @@ export async function GET(request: NextRequest) {
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
       
-    // Handle filter parameters
+    // Handle filter parameters (existing filter logic)
     const filtersParam = searchParams.get('filters');
     if (filtersParam) {
       try {
         const filters = JSON.parse(filtersParam);
-        console.log('Parsed filters:', filters);
         
-        // Apply each filter
         Object.entries(filters).forEach(([field, value]) => {
-          console.log(`Processing filter: ${field} with value:`, value);
-          
-          // Skip empty values
           if (value === undefined || value === null || value === '') {
-            console.log(`Skipping empty value for ${field}`);
             return;
           }
           
           let dbField = field;
           switch (field) {
             case 'county':
-              dbField = 'county';
-              break;
             case 'owner':
-              dbField = 'owner';
-              break;
             case 'branch':
-              dbField = 'branch';
-              console.log(`Branch filter with value: ${value}`);
-              break;
             case 'estimator':
-              dbField = 'estimator';
-              break;
-            case 'status':
-              dbField = 'status';
+              dbField = field;
               break;
             case 'dateField':
             case 'dateFrom':
             case 'dateTo':
-              // Handle date filters separately
-              console.log(`Date filter: ${field}`);
-              return; // Skip the standard filter application
+              return;
           }
           
-          // Apply the filter
           if (field === 'estimator') {
-            // For estimator, we need to match against the estimator field which might store the name
-            // but we're filtering by ID, so we need to join with the users table
-            // This is a simplification - in a real app, you'd need to handle this properly
             console.log('Estimator filter not fully implemented yet');
           } else {
-            // Handle both array and single value cases
             if (Array.isArray(value)) {
               if (value.length > 0) {
-                console.log(`Applying array filter: ${dbField} IN ${JSON.stringify(value)}`);
                 dataQuery = dataQuery.in(dbField, value as string[]);
                 countQuery = countQuery.in(dbField, value as string[]);
               }
             } else {
-              console.log(`Applying single value filter: ${dbField} = ${value}`);
               dataQuery = dataQuery.eq(dbField, value);
               countQuery = countQuery.eq(dbField, value);
             }
           }
         });
         
-        // Handle date range filters if present
+        // Handle date range filters
         if (filters.dateField && filters.dateField.length > 0) {
           const dateField = filters.dateField[0];
           let dbDateField = '';
           
-          // Map UI date field to database column
           if (dateField === 'Letting Date') {
             dbDateField = 'letting_date';
           } else if (dateField === 'Due Date') {
@@ -125,13 +103,11 @@ export async function GET(request: NextRequest) {
           }
           
           if (dbDateField && filters.dateFrom && filters.dateFrom.length > 0) {
-            console.log(`Applying date from filter: ${dbDateField} >= ${filters.dateFrom[0]}`);
             dataQuery = dataQuery.gte(dbDateField, filters.dateFrom[0]);
             countQuery = countQuery.gte(dbDateField, filters.dateFrom[0]);
           }
           
           if (dbDateField && filters.dateTo && filters.dateTo.length > 0) {
-            console.log(`Applying date to filter: ${dbDateField} <= ${filters.dateTo[0]}`);
             dataQuery = dataQuery.lte(dbDateField, filters.dateTo[0]);
             countQuery = countQuery.lte(dbDateField, filters.dateTo[0]);
           }
@@ -141,8 +117,8 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // Handle status filtering
     if (status) {
-      // Special case for 'archived' filter - fetch from archived_available_jobs table instead
       if (status === 'archived') {
         tableName = 'archived_available_jobs';
         countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true }).is('deleted_at', null);
@@ -154,7 +130,6 @@ export async function GET(request: NextRequest) {
           .range(offset, offset + limit - 1);
       } else {
         let dbStatus: string;
-        
         switch (status) {
           case 'bid':
             dbStatus = 'Bid';
@@ -163,39 +138,6 @@ export async function GET(request: NextRequest) {
             dbStatus = 'No Bid';
             break;
           case 'unset':
-            // Add filter parameters if any are active
-            const filtersParam = searchParams.get('filters');
-            if (filtersParam) {
-              try {
-                const filters = JSON.parse(filtersParam);
-                console.log('Applying filters:', filters);
-                
-                // Apply each filter to the query
-                Object.entries(filters).forEach(([field, values]) => {
-                  if (Array.isArray(values) && values.length > 0) {
-                    // Map frontend field names to database column names
-                    let dbField = field;
-                    switch (field) {
-                      case 'county':
-                        dbField = 'county';
-                        break;
-                      case 'owner':
-                        dbField = 'owner';
-                        break;
-                      case 'status':
-                        dbField = 'status';
-                        break;
-                    }
-                    
-                    // Apply the filter
-                    dataQuery = dataQuery.in(dbField, values as string[]);
-                    countQuery = countQuery.in(dbField, values as string[]);
-                  }
-                });
-              } catch (error) {
-                console.error('Error parsing filters:', error);
-              }
-            }
             dbStatus = 'Unset';
             break;
           default:
@@ -207,11 +149,9 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Execute both queries in parallel
-    const [countResult, dataResult] = await Promise.all([
-      countQuery,
-      dataQuery
-    ]);
+    // Execute main queries first
+    const countResult = await countQuery;
+    const dataResult = await dataQuery;
     
     if (countResult.error || dataResult.error) {
       const error = countResult.error || dataResult.error;
@@ -224,7 +164,7 @@ export async function GET(request: NextRequest) {
     const totalCount = countResult.count || 0;
     const pageCount = Math.ceil(totalCount / limit);
     
-    return NextResponse.json({
+    const response: any = {
       success: true, 
       data: dataResult.data || [],
       pagination: {
@@ -233,7 +173,111 @@ export async function GET(request: NextRequest) {
         pageCount,
         totalCount
       }
-    });
+    };
+    
+    // Execute count queries sequentially if stats are requested
+    if (includeStats) {
+      // Count all jobs (NO DATE FILTER - always shows total counts)
+      const allCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true });
+      
+      // Count unset jobs (NO DATE FILTER)
+      const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset');
+      
+      // Count bid jobs (NO DATE FILTER)
+      const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid');
+      
+      // Count no bid jobs (NO DATE FILTER)
+      const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid');
+      
+      // Count archived jobs (NO DATE FILTER)
+      const archivedCountResult = await supabase.from('archived_available_jobs').select('id', { count: 'exact', head: true }).is('deleted_at', null);
+      
+      // STATS QUERIES - THESE GET DATE FILTERING
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Start of today
+      
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      sevenDaysFromNow.setHours(23, 59, 59, 999); // End of day 7 days from now
+      
+      // Build filtered queries for stats calculation
+      let filteredUnsetQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset');
+      let filteredBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid');
+      let filteredNoBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid');
+      let filteredDueSoonQuery = supabase
+        .from('available_jobs')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['Unset', 'Bid'])
+        .gte('due_date', today.toISOString())
+        .lte('due_date', sevenDaysFromNow.toISOString());
+      
+      // Apply date filtering to stats queries if provided
+      if (startDate && endDate) {
+        filteredUnsetQuery = filteredUnsetQuery.gte('letting_date', startDate).lte('letting_date', endDate);
+        filteredBidQuery = filteredBidQuery.gte('letting_date', startDate).lte('letting_date', endDate);
+        filteredNoBidQuery = filteredNoBidQuery.gte('letting_date', startDate).lte('letting_date', endDate);
+        filteredDueSoonQuery = filteredDueSoonQuery.gte('letting_date', startDate).lte('letting_date', endDate);
+      }
+      
+      // Execute filtered stats queries
+      const filteredUnsetResult = await filteredUnsetQuery;
+      const filteredBidResult = await filteredBidQuery;
+      const filteredNoBidResult = await filteredNoBidQuery;
+      const dueSoonCountResult = await filteredDueSoonQuery;
+      
+      // Check for errors in count queries
+      if (allCountResult.error || unsetCountResult.error || bidCountResult.error || 
+          noBidCountResult.error || archivedCountResult.error || dueSoonCountResult.error ||
+          filteredUnsetResult.error || filteredBidResult.error || filteredNoBidResult.error) {
+        console.error('Error in count queries:', {
+          allCount: allCountResult.error,
+          unsetCount: unsetCountResult.error,
+          bidCount: bidCountResult.error,
+          noBidCount: noBidCountResult.error,
+          archivedCount: archivedCountResult.error,
+          dueSoonCount: dueSoonCountResult.error,
+          filteredUnset: filteredUnsetResult.error,
+          filteredBid: filteredBidResult.error,
+          filteredNoBid: filteredNoBidResult.error
+        });
+      }
+      
+      // Counts remain unfiltered (for segment badges)
+      const counts = {
+        all: allCountResult.count || 0,
+        unset: unsetCountResult.count || 0,
+        bid: bidCountResult.count || 0,
+        'no-bid': noBidCountResult.count || 0,
+        archived: archivedCountResult.count || 0
+      };
+      
+      // Stats use filtered data (for cards)
+      const filteredOpenBidsCount = (filteredUnsetResult.count || 0) + (filteredBidResult.count || 0);
+      const filteredTotalBids = (filteredBidResult.count || 0) + (filteredNoBidResult.count || 0);
+      const bidNoRatio = filteredTotalBids > 0 
+        ? ((filteredBidResult.count || 0) / filteredTotalBids * 100).toFixed(1)
+        : '0.0';
+      
+      const stats = [
+        {
+          title: 'Open bids',
+          value: filteredOpenBidsCount.toString()
+        },
+        {
+          title: 'Jobs due in next 7 days',
+          value: (dueSoonCountResult.count || 0).toString()
+        },
+        {
+          title: 'Bid / No Bid Ratio',
+          value: `${bidNoRatio}%`
+        }
+      ];
+      
+      response.counts = counts;
+      response.stats = stats;
+    }
+    
+    return NextResponse.json(response);
     
   } catch (error) {
     console.error('Unexpected error:', error);

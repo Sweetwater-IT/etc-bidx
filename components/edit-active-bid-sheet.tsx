@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { HashIcon, CalendarIcon, UserIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon } from "lucide-react";
 import { type ActiveBid } from "@/data/active-bids";
 import { type JobPageData } from "@/app/jobs/[job]/content";
-import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface EditActiveBidSheetProps {
   open: boolean;
@@ -122,7 +122,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {lettingDate ? format(lettingDate, "MM/dd/yyyy") : <span>Pick a date</span>}
+                      {lettingDate ? formatDate(lettingDate) : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -263,7 +263,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "MM/dd/yyyy") : <span>Pick a date</span>}
+                        {startDate ? formatDate(startDate) : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -289,7 +289,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "MM/dd/yyyy") : <span>Pick a date</span>}
+                        {endDate ? formatDate(endDate) : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">

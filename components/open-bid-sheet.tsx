@@ -20,6 +20,7 @@ import {
   PercentIcon,
   RouteIcon,
   TruckIcon,
+  AlertCircle,
 } from "lucide-react"
 import {
   Command,
@@ -31,12 +32,13 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
 import { useState, useEffect } from "react"
 import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client"
 import { toast } from "sonner"
 import { County } from "@/types/TCounty"
 import { AVAILABLE_JOB_SERVICES, AvailableJob, AvailableJobServices } from "@/data/available-jobs"
+import { formatDate } from "@/lib/formatUTCDate"
+import { Separator } from "./ui/separator"
 
 interface OpenBidSheetProps {
   open: boolean
@@ -54,7 +56,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [county, setCounty] = useState('')
   const [branch, setBranch] = useState('')
   const [location, setLocation] = useState('')
-  const [platform, setPlatform] = useState('ecms')
+  const [platform, setPlatform] = useState('ECMS')
   const [status, setStatus] = useState<'Bid' | 'No Bid' | 'Unset'>('Unset')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dbe, setDbe] = useState('')
@@ -81,7 +83,25 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [openStates, setOpenStates] = useState({
     requestor: false,
     owner: false,
+    county: false,
+    lettingDate: false,
+    // dueDate: false,
   })
+
+  // Function to check if all required fields are filled
+  const areAllRequiredFieldsFilled = () => {
+    return (
+      contractNumber.trim() !== '' &&
+      dbe.trim() !== '' &&
+      stateRoute.trim() !== '' &&
+      requestor.trim() !== '' &&
+      owner.trim() !== '' &&
+      county.trim() !== '' &&
+      branch.trim() !== '' &&
+      location.trim() !== '' &&
+      platform.trim() !== ''
+    );
+  };
 
   useEffect(() => {
     async function loadReferenceData() {
@@ -175,7 +195,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       // Form will be reset with default values from the reference data
       setContractNumber('')
       setLocation('')
-      setPlatform('ecms')
+      setPlatform('ECMS')
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
@@ -244,8 +264,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
       const today = new Date().toISOString().split('T')[0]
 
-      const formattedLettingDate = lettingDate ? format(lettingDate, 'yyyy-MM-dd') : today
-      const formattedDueDate = dueDate ? format(dueDate, 'yyyy-MM-dd') : today
+      const formattedLettingDate = lettingDate ? formatDate(lettingDate) : today
+      const formattedDueDate = dueDate ? formatDate(dueDate) : today
 
       const bidData = {
         contract_number: contractNumber,
@@ -310,24 +330,55 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
     setNoBidReason(value);
   }
 
+  useEffect(() => {
+    if (!lettingDate) return;
+  
+    const newDueDate = new Date(lettingDate);
+    newDueDate.setDate(newDueDate.getDate() - 2);
+    setDueDate(newDueDate);
+  }, [lettingDate])
+
+  const handleCountyChange = (countyName: string) => {
+    const selectedCounty = counties.find(c => c.name === countyName);
+    if (selectedCounty) {
+      setCounty(selectedCounty.name);
+      // Auto-set branch based on county
+      if (selectedCounty.branch) {
+        setBranch(selectedCounty.branch);
+      }
+      setOpenStates(prev => ({ ...prev, county: false }));
+    }
+  };
+
+  const handleRequestorChange = (requestorName: string) => {
+    setRequestor(requestorName);
+    setOpenStates(prev => ({ ...prev, requestor: false }));
+  };
+
+  const handleOwnerChange = (ownerName: string) => {
+    setOwner(ownerName);
+    setOpenStates(prev => ({ ...prev, owner: false }));
+  };
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{job ? 'Edit Open Bid' : 'Create a new Open Bid'}</SheetTitle>
+          <Separator/>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col overflow-y-auto h-full">
+        <form onSubmit={handleSubmit} className="-mt-2 flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-6 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 w-full">
-                  <Label>Contract Number <span className="text-red-500">*</span></Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Contract Number <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Contract Number"
-                      className="pl-9"
+                      className="pl-9 h-10"
                       value={contractNumber}
                       onChange={(e) => setContractNumber(e.target.value.toUpperCase())}
                       required
@@ -336,12 +387,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>DBE % <span className="text-red-500">*</span></Label>
+                  <Label className="text-sm font-medium text-muted-foreground">DBE % <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <PercentIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="0"
-                      className="pl-9"
+                      className="pl-9 h-10"
                       type="number"
                       min="0"
                       max="100"
@@ -353,12 +404,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>State Route <span className="text-red-500">*</span></Label>
+                  <Label className="text-sm font-medium text-muted-foreground">State Route <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <TruckIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="State Route"
-                      className="pl-9"
+                      className="pl-9 h-10"
                       value={stateRoute}
                       onChange={(e) => setStateRoute(e.target.value.toUpperCase())}
                       required
@@ -367,52 +418,43 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>Requestor <span className="text-red-500">*</span></Label>
-                  <Popover
-                    open={openStates.requestor}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, requestor: open }))}
-                  >
+                  <Label className="text-sm font-medium text-muted-foreground">Requestor <span className="text-red-500">*</span></Label>
+                  <Popover open={openStates.requestor} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, requestor: open }))}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={openStates.requestor}
-                        className="w-full justify-between text-left font-normal"
+                        className="w-full justify-between"
                         disabled={isLoading}
                       >
-                        <span>
-                          {requestor ? requestor : "Select requestor..."}
-                        </span>
-                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        {requestor || "Select requestor..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <PopoverContent
+                      className="w-full p-0"
+                      avoidCollisions={false}
+                    >
                       <Command>
                         <CommandInput placeholder="Search requestor..." />
                         <CommandEmpty>No requestor found.</CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {users.length > 0 ? (
-                            users.map((user) => (
-                              <CommandItem
-                                key={user.id}
-                                value={user.name}
-                                onSelect={() => {
-                                  setRequestor(user.name);
-                                  setOpenStates(prev => ({ ...prev, requestor: false }));
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    requestor === user.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {user.name}
-                              </CommandItem>
-                            ))
-                          ) : (
-                            <CommandItem disabled>Loading requestors...</CommandItem>
-                          )}
+                        <CommandGroup>
+                          {users.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.name}
+                              onSelect={() => handleRequestorChange(user.name)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  requestor === user.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {user.name}
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
@@ -420,166 +462,157 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>Owner</Label>
-                  <Popover
-                    open={openStates.owner}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}
-                  >
+                  <Label className="text-sm font-medium text-muted-foreground">Owner <span className="text-red-500">*</span></Label>
+                  <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full justify-between text-left font-normal"
+                        role="combobox"
+                        aria-expanded={openStates.owner}
+                        className="w-full justify-between"
                         disabled={isLoading}
                       >
-                        <span>
-                          {owner ? owner : "Select owner..."}
-                        </span>
-                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        {owner || "Select owner..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-full p-0">
                       <Command>
                         <CommandInput placeholder="Search owner..." />
                         <CommandEmpty>No owner found.</CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {owners.length > 0 ? (
-                            owners.map((ownerItem) => (
-                              <CommandItem
-                                key={ownerItem.id}
-                                value={ownerItem.name}
-                                onSelect={() => {
-                                  console.log(ownerItem.name)
-                                  setOwner(ownerItem.name);
-                                  setOpenStates(prev => ({ ...prev, owner: false }));
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    owner === ownerItem.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {ownerItem.name}
-                              </CommandItem>
-                            ))
-                          ) : (
-                            <CommandItem disabled>Loading owners...</CommandItem>
-                          )}
+                        <CommandGroup>
+                          {owners.map((ownerItem) => (
+                            <CommandItem
+                              key={ownerItem.id}
+                              value={ownerItem.name}
+                              onSelect={() => handleOwnerChange(ownerItem.name)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  owner === ownerItem.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {ownerItem.name}
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
                   </Popover>
                 </div>
-                
 
                 <div className="space-y-2 w-full">
-                  <Label>Platform</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Platform <span className="text-red-500">*</span></Label>
                   <Select value={platform} onValueChange={setPlatform}>
                     <SelectTrigger className="w-full pl-9 relative">
                       <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ecms">ECMS</SelectItem>
-                      <SelectItem value="Pennbid">Pennbid</SelectItem>
-                      <SelectItem value="Turnpike">Turnpike</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="ECMS">ECMS</SelectItem>
+                      <SelectItem value="PENNBID">Pennbid</SelectItem>
+                      <SelectItem value="TURNPIKE">Turnpike</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>Letting Date <span className="text-red-500">*</span></Label>
-                  <Popover>
+                  <Label className="text-sm font-medium text-muted-foreground">Letting Date <span className="text-red-500">*</span></Label>
+                  <Popover open={openStates.lettingDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, lettingDate: open }))}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className="w-full justify-between text-left font-normal"
                       >
                         <span>
-                          {lettingDate ? format(lettingDate, "PPP") : "Select date"}
+                          {lettingDate ? formatDate(lettingDate) : "Select date"}
                         </span>
                         <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={lettingDate} onSelect={setLettingDate} />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2 w-full">
-                  <Label>Due Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between text-left font-normal"
-                      >
-                        <span>
-                          {dueDate ? format(dueDate, "PPP") : "Select date"}
-                        </span>
-                        <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={dueDate}
-                        onSelect={setDueDate}
-                        initialFocus
+                      <Calendar 
+                        mode="single" 
+                        selected={lettingDate} 
+                        onSelect={(date) => {
+                          setLettingDate(date);
+                          setOpenStates(prev => ({ ...prev, lettingDate: false }));
+                        }} 
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>County <span className="text-red-500">*</span></Label>
-                  <Popover modal={true}>
-                    <PopoverTrigger asChild disabled={isLoading}>
+                  <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                  {/**Leaving popover in in case this needs to be editable again */}
+                  {/* <Popover open={openStates.dueDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, dueDate: open }))}>
+                    <PopoverTrigger asChild> */}
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between text-left font-normal"
+                        disabled
+                      >
+                        <span>
+                          {dueDate ? formatDate(dueDate) : ""}
+                        </span>
+                        <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
+                      </Button>
+                    {/* </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={dueDate}
+                        onSelect={(date) => {
+                          setDueDate(date);
+                          setOpenStates(prev => ({ ...prev, dueDate: false }));
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover> */}
+                </div>
+
+                <div className="space-y-2 w-full">
+                  <Label className="text-sm font-medium text-muted-foreground">County <span className="text-red-500">*</span></Label>
+                  <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
+                    <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        className="w-full justify-between text-left font-normal"
+                        aria-expanded={openStates.county}
+                        className="w-full justify-between"
+                        disabled={isLoading}
                       >
-                        <span>
-                          {county ? county : "Select county..."}
-                        </span>
-                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        {county || "Select county..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent
+                      className="w-full p-0"
+                      avoidCollisions={false}
+                    >
                       <Command>
-                        <CommandInput placeholder="Search county..." className="h-9" />
+                        <CommandInput placeholder="Search county..." />
                         <CommandEmpty>No county found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandList>
-                            {counties.length > 0 ? (
-                              counties.map((countyItem) => (
-                                <CommandItem
-                                  key={countyItem.id}
-                                  value={countyItem.name}
-                                  onSelect={() => {
-                                    setCounty(countyItem.name);
-                                    // Auto-set branch based on county
-                                    if (countyItem.branch) {
-                                      setBranch(countyItem.branch);
-                                    }
-                                  }}
-                                >
-                                  {countyItem.name}
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      county === countyItem.id.toString() ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                </CommandItem>
-                              ))
-                            ) : (
-                              <CommandItem disabled>Loading counties...</CommandItem>
-                            )}
-                          </CommandList>
+                          {counties.map((countyItem) => (
+                            <CommandItem
+                              key={countyItem.id}
+                              value={countyItem.name}
+                              onSelect={() => handleCountyChange(countyItem.name)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  county === countyItem.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {countyItem.name}
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
@@ -587,12 +620,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 </div>
 
                 <div className="space-y-2 w-full">
-                  <Label>Location</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Location <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Location"
-                      className="pl-9"
+                      className="pl-9 h-10"
                       value={location}
                       onChange={(e) => setLocation(e.target.value.toUpperCase())}
                     />
@@ -601,7 +634,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
               </div>
 
               {!!job && <div className="space-y-2 w-full">
-                <Label>Status <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium text-muted-foreground">Status <span className="text-red-500">*</span></Label>
                 <Select value={status} onValueChange={(value) => setStatus(value as 'Bid' | 'No Bid' | 'Unset')}>
                   <SelectTrigger className="w-full pl-9 relative">
                     <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -631,9 +664,10 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value.toUpperCase())}
                 placeholder="Enter custom reason"
+                className="h-10"
               />}
               <div className="space-y-2 w-full">
-                <Label>Services Required <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium text-muted-foreground">Services Required <span className="text-red-500">*</span></Label>
                 <p className="text-sm text-muted-foreground">Select all that apply</p>
                 <div className="flex flex-wrap gap-4">
                   {AVAILABLE_JOB_SERVICES.map((service) => (
@@ -654,23 +688,34 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
           </div>
 
           <div className="p-6 pt-0">
-            <div className="flex justify-between gap-4">
-              <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                type="submit"
-                disabled={isSubmitting}
-                onClick={(e) => {
-                  console.log('Submit button clicked')
-                  if (!isSubmitting) {
-                    handleSubmit(e as unknown as React.FormEvent)
-                  }
-                }}
-              >
-                {isSubmitting ? (job ? "Updating..." : "Creating...") : (job ? "Update" : "Create")}
-              </Button>
+            <div className="flex flex-col gap-4">
+              <Separator/>
+              {!areAllRequiredFieldsFilled() && (
+                <div className="flex items-center gap-2 text-amber-500">
+                  <AlertCircle size={16} />
+                  <span>
+                    Please fill in all required fields before proceeding.
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between gap-4">
+                <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  type="submit"
+                  disabled={isSubmitting || !areAllRequiredFieldsFilled()}
+                  onClick={(e) => {
+                    console.log('Submit button clicked')
+                    if (!isSubmitting) {
+                      handleSubmit(e as unknown as React.FormEvent)
+                    }
+                  }}
+                >
+                  {isSubmitting ? (job ? "Updating..." : "Creating...") : (job ? "Update" : "Create")}
+                </Button>
+              </div>
             </div>
           </div>
         </form>

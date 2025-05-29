@@ -3,15 +3,12 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { format } from "date-fns"
-import { CalendarIcon, UserIcon, HashIcon, MapPinIcon, LayersIcon, GlobeIcon, EyeIcon } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import { useState, useEffect } from "react"
 import { AvailableJob } from "@/data/available-jobs"
-
+import { EyeIcon } from "lucide-react"
+import { formatDate } from "@/lib/formatUTCDate"
+import { Badge } from "./ui/badge"
+import { Separator } from "./ui/separator"
 interface JobDetailsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -22,9 +19,6 @@ interface JobDetailsSheetProps {
 export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: JobDetailsSheetProps & {
   onNavigate?: (direction: 'up' | 'down') => void
 }) {
-  const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined)
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-
   useEffect(() => {
     if (!open) return
 
@@ -42,17 +36,6 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, onNavigate])
 
-  // Update dates when job changes
-  useEffect(() => {
-    if (job) {
-      setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined)
-      setDueDate(job.dueDate ? new Date(job.dueDate) : undefined)
-    } else {
-      setLettingDate(undefined)
-      setDueDate(undefined)
-    }
-  }, [job])
-
   const handleEdit = () => {
     if (job && onEdit) {
       onOpenChange(false)  // Close the details sheet
@@ -64,14 +47,23 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
-          <div className="flex items-center gap-2">
-            <SheetTitle>Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+          <div className="flex items-center">
+            <SheetTitle>Available Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
           </div>
+          <Separator/>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="space-y-6 p-6">
+          <div className="-mt-2 space-y-6 p-6">
+          <div className='w-full flex justify-between items-start'>
+                <div className="flex flex-col gap-y-2">
+                <Label className="font-medium">Status</Label>
+                <Badge variant={`${job?.status === 'Unset' ? 'secondary' : job?.status === 'Bid' ? 'successful' : 'destructive' }`}>
+                  {job?.status || '-'}
+                </Badge>
+                </div>
+                <span className="text-xs h-1/2 bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+              </div>
             {/* Contract Number and Requestor */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1 w-full">
@@ -111,14 +103,14 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
               <div className="space-y-1 w-full">
                 <Label className="font-medium">Letting Date</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.lettingDate ? format(new Date(job.lettingDate), 'MM/dd/yyyy') : '-'}
+                  {job?.lettingDate ? formatDate(job.lettingDate) : '-'}
                 </div>
               </div>
 
               <div className="space-y-1 w-full">
                 <Label className="font-medium">Due Date</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.dueDate ? format(new Date(job.dueDate), 'MM/dd/yyyy') : '-'}
+                  {job?.dueDate ? formatDate(job.dueDate) : '-'}
                 </div>
               </div>
             </div>
@@ -144,7 +136,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
               <div className="space-y-1 w-full">
                 <Label className="font-medium">DBE %</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.dbe || '-'}
+                  %{job?.dbe || '-'}
                 </div>
               </div>
 
@@ -158,26 +150,19 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
 
             {/* Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`space-y-1 ${job?.status === 'No Bid' ? 'w-1/2' : 'w-full'}`}>
-                <Label className="font-medium">Status</Label>
-                <div className="text-sm text-muted-foreground">
-                  {job?.status || '-'}
-                </div>
-              </div>
-
               {job?.status === 'No Bid' && <div className="space-y-1 w-full">
                 <Label className="font-medium">No Bid Reason</Label>
                 <div className="text-sm text-muted-foreground">
                   {job?.noBidReason || '-'}
                 </div>
               </div>}
-            </div>
             {/* Branch */}
-            <div className="space-y-1 w-full">
+            <div className="space-y-1 w-1/2">
               <Label className="font-medium">Branch</Label>
               <div className="text-sm text-muted-foreground">
                 {job?.county.secondary || '-'}
               </div>
+            </div>
             </div>
 
             {/* Services Required */}
