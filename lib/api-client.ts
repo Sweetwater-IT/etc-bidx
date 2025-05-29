@@ -23,12 +23,40 @@ type BidEstimateInsert = Database['public']['Tables']['bid_estimates']['Insert']
 /**
  * Fetch all available jobs with optional filtering
  */
+export async function fetchBids(options: {
+  status?: 'Bid' | 'No Bid' | 'Unset' | 'archived' | string;
+  limit?: number;
+  orderBy?: string;
+  ascending?: boolean;
+  includeStats: true; // When includeStats is true, return the full object
+  startDate?: string;
+  endDate?: string;
+}): Promise<{
+  data: AvailableJob[], 
+  counts: Record<'all' | 'unset' | 'bid' | 'archived' | 'no-bid', number>, 
+  stats: {title: string, value: string}[]
+}>;
+
 export async function fetchBids(options?: {
   status?: 'Bid' | 'No Bid' | 'Unset' | 'archived' | string;
   limit?: number;
   orderBy?: string;
   ascending?: boolean;
-}): Promise<AvailableJob[]> {
+  includeStats?: false; // When includeStats is false/undefined, return just the array
+  startDate?: string;
+  endDate?: string;
+}): Promise<AvailableJob[]>;
+
+// Implementation
+export async function fetchBids(options?: {
+  status?: 'Bid' | 'No Bid' | 'Unset' | 'archived' | string;
+  limit?: number;
+  orderBy?: string;
+  ascending?: boolean;
+  includeStats?: boolean;
+  startDate?: string;
+  endDate?: string;
+}) {
   const params = new URLSearchParams();
 
   if (options?.status) {
@@ -47,6 +75,18 @@ export async function fetchBids(options?: {
     params.append('ascending', options.ascending.toString());
   }
 
+  if (options?.includeStats) {
+    params.append('includeStats', 'true');
+  }
+
+  if (options?.startDate) {
+    params.append('startDate', options.startDate);
+  }
+
+  if (options?.endDate) {
+    params.append('endDate', options.endDate);
+  }
+
   const queryString = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`/api/bids${queryString}`);
 
@@ -56,6 +96,11 @@ export async function fetchBids(options?: {
   }
 
   const result = await response.json();
+
+  if (options?.includeStats) {
+    return { data: result.data, counts: result.counts, stats: result.stats };
+  }
+
   return result.data;
 }
 
