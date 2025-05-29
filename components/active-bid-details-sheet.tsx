@@ -6,7 +6,6 @@ import { EyeIcon, PencilIcon, Check, ChevronsUpDown, Loader2 } from "lucide-reac
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { type ActiveBid } from "@/data/active-bids";
-import { type JobPageData } from "@/app/jobs/[job]/content";
 import { format } from "date-fns";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,7 +20,7 @@ interface ActiveBidDetailsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bid?: ActiveBid;
-  onEdit?: (item: JobPageData) => void;
+  onEdit?: (item: ActiveBid) => void;
   onNavigate?: (direction: 'up' | 'down') => void;
   onRefresh?: () => void; // Callback to refresh the data table
 }
