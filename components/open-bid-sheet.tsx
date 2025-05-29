@@ -56,7 +56,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
   const [county, setCounty] = useState('')
   const [branch, setBranch] = useState('')
   const [location, setLocation] = useState('')
-  const [platform, setPlatform] = useState('ECMS')
+  const [platform, setPlatform] = useState('')
   const [status, setStatus] = useState<'Bid' | 'No Bid' | 'Unset'>('Unset')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dbe, setDbe] = useState('')
@@ -128,10 +128,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
         setBranches(branchesData)
 
-        if (!job && usersData.length && ownersData.length && countiesData.length) {
-          setRequestor(usersData[0].name);
-          setOwner(ownersData[0].name);    
-          setCounty(countiesData[0].name);
+        if (!job && usersData.length && ownersData.length && countiesData.length) {;
         
           // Get branch from county
           const selectedCounty = countiesData.find(c => c.id.toString() === countiesData[0].id.toString())
@@ -195,7 +192,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       // Form will be reset with default values from the reference data
       setContractNumber('')
       setLocation('')
-      setPlatform('ECMS')
+      setPlatform('')
       setStatus('Unset')
       setLettingDate(undefined)
       setDueDate(undefined)
@@ -365,20 +362,19 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{job ? 'Edit Open Bid' : 'Create a new Open Bid'}</SheetTitle>
-          <Separator/>
         </SheetHeader>
+        <Separator className='w-full -mt-2'/>
 
-        <form onSubmit={handleSubmit} className="-mt-2 flex flex-col overflow-y-auto h-full">
+        <form onSubmit={handleSubmit} className="-mt-4 flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-6 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">Contract Number <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <HashIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Contract Number"
-                      className="pl-9 h-10"
+                      className="h-10"
                       value={contractNumber}
                       onChange={(e) => setContractNumber(e.target.value.toUpperCase())}
                       required
@@ -389,10 +385,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">DBE % <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <PercentIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="0"
-                      className="pl-9 h-10"
+                      className="h-10"
                       type="number"
                       min="0"
                       max="100"
@@ -406,10 +401,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">State Route <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <TruckIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="State Route"
-                      className="pl-9 h-10"
+                      className="h-10"
                       value={stateRoute}
                       onChange={(e) => setStateRoute(e.target.value.toUpperCase())}
                       required
@@ -425,11 +419,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         variant="outline"
                         role="combobox"
                         aria-expanded={openStates.requestor}
-                        className="w-full justify-between"
+                        className="w-full justify-between text-muted-foreground"
                         disabled={isLoading}
                       >
                         {requestor || "Select requestor..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -469,7 +463,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         variant="outline"
                         role="combobox"
                         aria-expanded={openStates.owner}
-                        className="w-full justify-between"
+                        className="w-full justify-between text-muted-foreground"
                         disabled={isLoading}
                       >
                         {owner || "Select owner..."}
@@ -505,9 +499,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">Platform <span className="text-red-500">*</span></Label>
                   <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger className="w-full pl-9 relative">
-                      <LayersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue />
+                    <SelectTrigger className="w-full font-medium relative">
+                      <SelectValue placeholder='Select platform...'/>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ECMS">ECMS</SelectItem>
@@ -524,7 +517,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full justify-between text-left font-normal"
+                        className="w-full text-muted-foreground justify-between text-left font-normal"
                       >
                         <span>
                           {lettingDate ? formatDate(lettingDate) : "Select date"}
@@ -556,7 +549,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         disabled
                       >
                         <span>
-                          {dueDate ? formatDate(dueDate) : ""}
+                          {dueDate ? formatDate(dueDate) : "Due date"}
                         </span>
                         <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
                       </Button>
@@ -583,7 +576,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                         variant="outline"
                         role="combobox"
                         aria-expanded={openStates.county}
-                        className="w-full justify-between"
+                        className="w-full font-medium text-muted-foreground justify-between"
                         disabled={isLoading}
                       >
                         {county || "Select county..."}
@@ -622,10 +615,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">Location <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Location"
-                      className="pl-9 h-10"
+                      className="h-10"
                       value={location}
                       onChange={(e) => setLocation(e.target.value.toUpperCase())}
                     />
@@ -687,12 +679,12 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
             </div>
           </div>
 
+          <Separator/>
           <div className="p-6 pt-0">
             <div className="flex flex-col gap-4">
-              <Separator/>
               {!areAllRequiredFieldsFilled() && (
-                <div className="flex items-center gap-2 text-amber-500">
-                  <AlertCircle size={16} />
+                <div className="flex items-center mt-2 text-sm gap-2 text-amber-500">
+                  <AlertCircle size={14} />
                   <span>
                     Please fill in all required fields before proceeding.
                   </span>
