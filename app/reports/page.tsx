@@ -4,7 +4,6 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { type JobData } from "@/data/jobs-data";
 import { CardActions } from "@/components/card-actions";
 import { GenerateReportSheet } from "@/components/generate-report-sheet";
 import { useState } from "react";
@@ -55,7 +54,7 @@ export default function ReportsPage() {
 
               {/* <SectionCards data={REPORTS_CARDS} /> */}
 
-              <DataTable<JobData>
+              <DataTable<[]>
                 data={[]}
                 columns={COLUMNS}
                 segments={SEGMENTS}

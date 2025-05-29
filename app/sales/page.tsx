@@ -7,7 +7,6 @@ import { SiteHeader } from "@/components/site-header";
 import { SALE_TRACKER_COLUMNS, saleTrackerData } from "@/data/sale-tracker";
 import { SectionCards } from "@/components/section-cards";
 import { CardActions } from "@/components/card-actions";
-import type { CardData } from "@/data/jobs-cards";
 import { CreateSaleItemSheet } from "@/components/create-sale-item-sheet";
 import { useState } from "react";
 
@@ -18,7 +17,7 @@ const SALE_TRACKER_SEGMENTS = [
   { label: "Archived", value: "archived" },
 ];
 
-const saleTrackerCards: CardData[] = [
+const saleTrackerCards = [
   {
     title: "Total Sales",
     value: "$6,750",
