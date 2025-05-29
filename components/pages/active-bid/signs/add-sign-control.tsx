@@ -172,7 +172,7 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
         <PopoverContent className="w-full p-0">
           <Command>
             <CommandInput
-              placeholder="Search designation..."
+              placeholder="Search designation or description..."
               onValueChange={filterDesignations}
             />
             <CommandList>
@@ -181,10 +181,12 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
                 {isLoading ? (
                   <div className="py-6 text-center text-sm">Loading...</div>
                 ) : (
-                  filteredDesignations.map((item) => (
+                  [...filteredDesignations]
+                    .sort((a, b) => a.designation.localeCompare(b.designation))
+                    .map((item) => (
                     <CommandItem
                       key={item.designation}
-                      value={item.designation}
+                      value={`${item.designation} - ${item.description}`}
                       onSelect={() => handleDesignationSelect(item.designation)}
                     >
                       <div className="flex items-center">
