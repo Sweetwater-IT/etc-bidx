@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { data } from "@/components/app-sidebar";
+import { data, quickActions } from "@/components/app-sidebar";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/toggle-color";
 import {
@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import React from "react";
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -76,28 +77,15 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleNewItem("/jobs/available")}>
-            <IconBriefcase className="size-4 mr-2" />
-            Available Job
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleNewItem("/jobs/active-bids")}>
-            <IconClipboard className="size-4 mr-2" />
-            Active Bid
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleNewItem("/jobs/active-jobs")}>
-            <IconBuilding className="size-4 mr-2" />
-            Active Job
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleNewItem("/customers")}>
-            <IconUser className="size-4 mr-2" />
-            Customer
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleNewItem("/quotes/create")}>
-            <IconFileText className="size-4 mr-2" />
-            Quote
-          </DropdownMenuItem>
+          {quickActions.map((action, idx) => (
+            <React.Fragment key={action.route}>
+              <DropdownMenuItem onClick={() => handleNewItem(action.route)}>
+                <action.icon className="size-4 mr-2" />
+                {action.label}
+              </DropdownMenuItem>
+              {action.withSeparator && <DropdownMenuSeparator />}
+            </React.Fragment>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     );
