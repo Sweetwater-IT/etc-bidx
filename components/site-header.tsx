@@ -82,7 +82,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
               <DropdownMenuItem onClick={() => handleNewItem(action.route)}>
                 <action.icon className="size-4 mr-2" />
                 {action.label}
-              </DropdownMenuItem>
+          </DropdownMenuItem>
               {action.withSeparator && <DropdownMenuSeparator />}
             </React.Fragment>
           ))}
