@@ -19,7 +19,7 @@ export async function POST(req : NextRequest) {
         end_date: signOrderData.end_date,
         sale: signOrderData.order_type.includes('sale'),
         rental: signOrderData.order_type.includes('rental'),
-        perm_signs: signOrderData.order_type.includes('perm_signs'),
+        perm_signs: signOrderData.order_type.includes('permanent signs'),
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
         status: 'in-process'
