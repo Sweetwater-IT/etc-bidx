@@ -198,6 +198,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
     const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
     const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
+    const [selectedActiveBid, setSelectedActiveBid] = useState<ActiveBid | null>(null);
+    const [activeBidDetailsSheetOpen, setActiveBidDetailsSheetOpen] = useState(false);
+    const [editActiveBidSheetOpen, setEditActiveBidSheetOpen] = useState(false);
 
 
     //ACTIVE JOBS (IE WON JOBS)
@@ -710,11 +713,45 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchAvailableJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
+            setCardData([{
+                title: 'Active Bids',
+                value: '18'
+            },
+            {
+                title: 'Success Rate',
+                value: '72%'
+            },
+            {
+                title: 'Average Bid',
+                value: '$125,000'
+            },
+            {
+                title: 'Response Time',
+                value: '2.4 days'
+            }
+            ])
             fetchActiveBidCounts();
         } else if (isActiveJobs) {
             loadActiveJobs();
             fetchActiveJobCounts();
             fetchNextJobNumber();
+            setCardData([{
+                title: 'Current Jobs',
+                value: '12'
+            },
+            {
+                title: 'Completion Rate',
+                value: '94%'
+            },
+            {
+                title: 'Total Value',
+                value: '$1.2M'
+            },
+            {
+                title: 'Client Rating',
+                value: '4.8/5'
+            }
+            ])
         }
     }, [
         isAvailableJobs,
@@ -733,20 +770,59 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     useEffect(() => {
         if (!isAvailableJobs) return;
-        
+
         // Only proceed if we have both from and to dates
         if (!dateRange?.from || !dateRange?.to) return;
-    
+
         const startDate = dateRange.from.toISOString().split('T')[0];
         const endDate = dateRange.to.toISOString().split('T')[0];
-    
+
         // Fetch updated counts and stats with date filter
         fetchAvailableJobCounts(startDate, endDate);
-    }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]); 
+    }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]);
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
     const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
+
+    const handleActiveBidViewDetails = (item: ActiveBid) => {
+        console.log('View details clicked:', item);
+        setSelectedActiveBid(item);
+        setActiveBidDetailsSheetOpen(true);
+    };
+
+    const handleActiveBidNavigation = (direction: 'up' | 'down') => {
+        if (!selectedActiveBid || !activeBids.length) return;
+
+        const currentIndex = activeBids.findIndex(bid =>
+            bid.contractNumber === selectedActiveBid.contractNumber
+        );
+
+        if (currentIndex === -1) return;
+
+        let nextIndex;
+        if (direction === 'down') {
+            nextIndex = (currentIndex + 1) % activeBids.length;
+        } else {
+            nextIndex = (currentIndex - 1 + activeBids.length) % activeBids.length;
+        }
+
+        setSelectedActiveBid(activeBids[nextIndex]);
+    };
+
+    const handleActiveBidEdit = (item: ActiveBid) => {
+        if (item.contractNumber) {
+            const params = new URLSearchParams({
+                initialStep: '6',
+                openSummary: 'true',
+                contractNumber: typeof item.contractNumber === 'string' ? item.contractNumber : item.contractNumber.main
+            });
+            router.push(`/active-bid?${params.toString()}`);
+        } else {
+            console.error('Cannot edit bid: Missing contract number');
+            toast.error('Cannot edit this bid. Missing contract number');
+        }
+    };
 
     // Custom columns for active jobs that match the image
     const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
@@ -1199,7 +1275,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
             ];
 
     const handleCreateClick = () => {
-        console.log('available jobs clicked')
         if (isAvailableJobs) {
             setIsCreatingAvailableJob(true);
         } else if (isActiveBids) {
@@ -1245,116 +1320,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         console.log('Archive clicked:', item)
         initiateArchiveJobs([item])
     }
-
-    const ActiveBidsTable = ({ bids }: { bids: ActiveBid[] }) => {
-        const [selectedBid, setSelectedBid] = useState<ActiveBid | undefined>(undefined);
-        const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
-        const [editSheetOpen, setEditSheetOpen] = useState(false);
-
-        const handleRowClick = (item: JobPageData) => {
-            if ('lettingDate' in item) { // Check if it's an ActiveBid
-                setSelectedBid(item as ActiveBid);
-                setDetailsSheetOpen(true);
-            }
-        };
-
-        const handleBidNavigation = (direction: 'up' | 'down') => {
-            if (!selectedBid || !bids.length) return;
-
-            const currentIndex = bids.findIndex(bid =>
-                bid.contractNumber === selectedBid.contractNumber
-            );
-
-            if (currentIndex === -1) return;
-
-            let nextIndex;
-            if (direction === 'down') {
-                nextIndex = (currentIndex + 1) % bids.length;
-            } else {
-                nextIndex = (currentIndex - 1 + bids.length) % bids.length;
-            }
-
-            setSelectedBid(bids[nextIndex]);
-        };
-
-        const handleEdit = (item: JobPageData) => {
-            if ('lettingDate' in item) { // Check if it's an ActiveBid
-                const bid = item as ActiveBid;
-                if (bid.contractNumber) {
-                    const params = new URLSearchParams({
-                        initialStep: '6',
-                        openSummary: 'true',
-                        contractNumber: typeof bid.contractNumber === 'string' ? bid.contractNumber : bid.contractNumber.main
-                    })
-                    window.location.href = `/active-bid?${params.toString()}`;
-                } else {
-                    console.error('Cannot edit bid: Missing contract number');
-                    toast.error('Cannot edit this bid. Missing contract number');
-                }
-            }
-        };
-
-        const handleEditSuccess = () => {
-            setEditSheetOpen(false);
-            loadActiveBids();
-        };
-
-        return (
-            <>
-                <DataTable<ActiveBid>
-                    columns={ACTIVE_BIDS_COLUMNS}
-                    data={bids}
-                    onRowClick={handleRowClick}
-                    segments={segments}
-                    segmentValue={activeSegment}
-                    segmentCounts={activeBidCounts}
-                    onSegmentChange={handleSegmentChange}
-                    selectedItem={detailsSheetOpen && selectedBid ? selectedBid : undefined}
-                    stickyLastColumn
-                    onArchiveSelected={initiateArchiveBids}
-                    onDeleteSelected={initiateDeleteBids}
-                    tableRef={activeBidsTableRef}
-                    onViewDetails={(item) => {
-                        if ('lettingDate' in item) {
-                            setSelectedBid(item as ActiveBid);
-                            setDetailsSheetOpen(true);
-                        }
-                    }}
-                    onEdit={handleEdit}
-                    onUpdateStatus={(item, status) => {
-                        if ('lettingDate' in item) {
-                            // For active bids, the status passed from the DataTable component is already
-                            // in the correct format ('Won', 'Pending', 'Lost', etc.) because we're showing those
-                            // exact values in the dropdown menu
-                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
-                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
-                        }
-                    }}
-                    // Pagination props
-                    pageCount={activeBidsPageCount}
-                    pageIndex={activeBidsPageIndex}
-                    pageSize={activeBidsPageSize}
-                    onPageChange={setActiveBidsPageIndex}
-                    onPageSizeChange={setActiveBidsPageSize}
-                    totalCount={activeBidsTotalCount}
-                />
-                <ActiveBidDetailsSheet
-                    open={detailsSheetOpen}
-                    onOpenChange={setDetailsSheetOpen}
-                    bid={selectedBid}
-                    onEdit={handleEdit}
-                    onNavigate={handleBidNavigation}
-                    onRefresh={loadActiveBids}
-                />
-                <EditActiveBidSheet
-                    open={editSheetOpen}
-                    onOpenChange={setEditSheetOpen}
-                    bid={selectedBid}
-                    onSuccess={handleEditSuccess}
-                />
-            </>
-        );
-    };
 
     return (
         <SidebarProvider
@@ -1460,7 +1425,47 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onReset={handleResetControls}
                                 />
                             ) : isActiveBids ? (
-                                <ActiveBidsTable bids={data as ActiveBid[]} />
+                                <DataTable<ActiveBid>
+                                    data={data as ActiveBid[]}
+                                    columns={columns}
+                                    segments={segments}
+                                    segmentValue={activeSegment}
+                                    segmentCounts={activeBidCounts}
+                                    onSegmentChange={handleSegmentChange}
+                                    selectedItem={activeBidDetailsSheetOpen && selectedActiveBid ? selectedActiveBid : undefined}
+                                    stickyLastColumn
+                                    onArchiveSelected={initiateArchiveBids}
+                                    onDeleteSelected={initiateDeleteBids}
+                                    tableRef={activeBidsTableRef}
+                                    onViewDetails={(item) => {
+                                        if ('lettingDate' in item) {
+                                            handleActiveBidViewDetails(item as ActiveBid);
+                                        }
+                                    }}
+                                    onRowClick={(item) => {
+                                        if ('lettingDate' in item) {
+                                            handleActiveBidViewDetails(item as ActiveBid);
+                                        }
+                                    }}
+                                    onEdit={(item) => {
+                                        if ('lettingDate' in item) {
+                                            handleActiveBidEdit(item as ActiveBid);
+                                        }
+                                    }}
+                                    onUpdateStatus={(item, status) => {
+                                        if ('lettingDate' in item) {
+                                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
+                                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                                        }
+                                    }}
+                                    // Pagination props
+                                    pageCount={activeBidsPageCount}
+                                    pageIndex={activeBidsPageIndex}
+                                    pageSize={activeBidsPageSize}
+                                    onPageChange={setActiveBidsPageIndex}
+                                    onPageSizeChange={setActiveBidsPageSize}
+                                    totalCount={activeBidsTotalCount}
+                                />
                             ) : (
                                 <DataTable<ActiveJob>
                                     data={data as ActiveJob[]}
@@ -1525,6 +1530,28 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 onEdit={handleEdit}
                                 onNavigate={handleJobNavigation}
                             />}
+
+                            {isActiveBids && selectedActiveBid && (
+                                <>
+                                    <ActiveBidDetailsSheet
+                                        open={activeBidDetailsSheetOpen}
+                                        onOpenChange={setActiveBidDetailsSheetOpen}
+                                        bid={selectedActiveBid}
+                                        onEdit={handleActiveBidEdit}
+                                        onNavigate={handleActiveBidNavigation}
+                                        onRefresh={loadActiveBids}
+                                    />
+                                    <EditActiveBidSheet
+                                        open={editActiveBidSheetOpen}
+                                        onOpenChange={setEditActiveBidSheetOpen}
+                                        bid={selectedActiveBid}
+                                        onSuccess={() => {
+                                            setEditActiveBidSheetOpen(false);
+                                            loadActiveBids();
+                                        }}
+                                    />
+                                </>
+                            )}
 
                             {isActiveJobs && (
                                 <>

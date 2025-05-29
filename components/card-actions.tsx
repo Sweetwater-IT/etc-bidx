@@ -86,7 +86,7 @@ export function CardActions({
                     </span>
                   )
                 ) : (
-                  <span>Pick a date range</span>
+                  <span>Jan 1, 2025 - May 29, 2025</span>
                 )}
               </Button>
             </PopoverTrigger>
