@@ -12,12 +12,14 @@ export async function POST(req : NextRequest) {
       .insert({
         requestor: signOrderData.requestor,
         contractor_id: signOrderData.contractor_id,
+        contract_number: signOrderData.contract_number,
         order_date: signOrderData.order_date,
         need_date: signOrderData.need_date,
         start_date: signOrderData.start_date,
         end_date: signOrderData.end_date,
-        sale: signOrderData.order_type === 'sale',
-        rental: signOrderData.order_type === 'rental',
+        sale: signOrderData.order_type.includes('sale'),
+        rental: signOrderData.order_type.includes('rental'),
+        perm_signs: signOrderData.order_type.includes('perm_signs'),
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
         status: 'in-process'
@@ -138,7 +140,9 @@ export async function GET(req : NextRequest) {
           end_date,
           sale,
           rental,
+          perm_signs,
           job_number,
+          contract_number,
           status
         `, { count: 'exact' });
       
@@ -175,9 +179,9 @@ export async function GET(req : NextRequest) {
         need_date: item.need_date,
         start_date: item.start_date,
         end_date: item.need_date,
-        sale: item.sale,
-        rental: item.rental,
         job_number: item.job_number,
+        contract_number: item.contract_number,
+        type: `${!!item.sale ? 'S' : ''}${!!item.rental ? !!item.sale ? ', R' : 'R' : ''}${!!item.perm_signs ? !!item.rental ? ', P' : 'P' : ''}`,
         status: item.status
       }));
       

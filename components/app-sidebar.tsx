@@ -148,20 +148,20 @@ export const data = {
     },
     {
       title: "Sign Orders",
-      url: "/sign-orders",
+      url: "/takeoffs",
       icon: IconUsers,
       items: [
         {
           title: "New Sign Order",
-          url: "/sign-orders/new",
+          url: "/takeoffs/new",
         },
         {
           title: "Build Takeoff",
-          url: "/sign-orders/build-takeoff",
+          url: "/takeoffs/new",
         },
         {
           title: "Load Sheet",
-          url: "/sign-orders/load-sheet",
+          url: "/takeoffs/load-sheet",
         },
       ],
     },
