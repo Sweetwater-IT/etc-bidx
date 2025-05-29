@@ -153,7 +153,7 @@ export const data = {
       items: [
         {
           title: "New Sign Order",
-          url: "/takeoffs/new",
+          url: "/takeoffs/load-sheet",
         },
         {
           title: "Build Takeoff",
