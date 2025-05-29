@@ -6,6 +6,8 @@ import { Button } from "../../../components/ui/button";
 import { DataTable } from "../../../components/data-table";
 import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
 import { SiteHeader } from "../../../components/site-header";
+import { getJobCards } from "../../../data/jobs-cards";
+import { type JobType } from "../../../data/jobs-data";
 import { availableJobsColumns, AvailableJobServices } from "../../../data/available-jobs";
 import { FilterOption } from "../../../components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
@@ -29,7 +31,6 @@ import { PencilIcon } from "lucide-react";
 import { AvailableJob } from "../../../data/available-jobs";
 import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
-import { DateRange } from "react-day-picker";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -78,8 +79,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     // Filtering state for available jobs
     const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
-    const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
     // Reference data for dropdowns and filters
     const [referenceData, setReferenceData] = useState<{
@@ -252,11 +251,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
         notFound();
     }
 
-    const isAvailableJobs = job === "available";
-    const isActiveBids = job === "active-bids";
-    const isActiveJobs = job === "active-jobs";
+    const jobType = job as JobType;
+    const cards = getJobCards(jobType);
 
-
+    const isAvailableJobs = jobType === "available";
+    const isActiveBids = jobType === "active-bids";
+    const isActiveJobs = jobType === "active-jobs";
 
     const handleSegmentChange = (value: string) => {
         console.log("Segment changed to:", value);
@@ -472,8 +472,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 lettingDate: e.admin_data.lettingDate ? e.admin_data.lettingDate : "",
                 startDate: e.admin_data.startDate ? e.admin_data.startDate : "",
                 endDate: e.admin_data.endDate ? e.admin_data.endDate : "",
-                projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ?
-                    Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+                projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ? 
+                Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
                 totalHours: e.mpt_rental?._summary?.hours || 0,
                 mptValue: e.mpt_rental._summary.revenue || 0,
                 permSignValue: 0, // Not in the new structure
@@ -613,29 +613,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [nextJobNumber, jobNumberYear]);
 
     // This effect will run whenever activeSegment changes
-    const fetchAvailableJobCounts = useCallback(async (startDate?: string, endDate?: string) => {
+    // Function to fetch job counts for all segments
+    const fetchJobCounts = useCallback(async () => {
         if (!isAvailableJobs) return;
-        startLoading();
+
         try {
-            const options: any = { limit: 1000, includeStats: true };
+            startLoading();
 
-            // Add date filters if provided
-            if (startDate && endDate) {
-                options.startDate = startDate;
-                options.endDate = endDate;
-            }
+            // Fetch all jobs with no status filter to get the true total count
+            // Use a high limit to ensure we get all records
+            const allJobs = await fetchBids({ limit: 1000 });
 
-            const fetchedBidsData = await fetchBids(options);
+            // Fetch counts for each status separately
+            const [unsetJobs, noBidJobs, bidJobs, archivedJobs] = await Promise.all([
+                fetchBids({ status: "Unset", limit: 1000 }),   // Unset jobs
+                fetchBids({ status: "No Bid", limit: 1000 }),  // No Bid jobs
+                fetchBids({ status: "Bid", limit: 1000 }),     // Bid jobs
+                fetchBids({ status: "archived", limit: 1000 }) // Archived jobs
+            ]);
 
             setJobCounts({
-                all: fetchedBidsData.counts.all,
-                unset: fetchedBidsData.counts.unset,
-                'no-bid': fetchedBidsData.counts["no-bid"],
-                bid: fetchedBidsData.counts.bid,
-                archived: fetchedBidsData.counts.archived
+                all: allJobs.length,          // Actual count from API without status filter
+                unset: unsetJobs.length,      // Count of Unset jobs
+                'no-bid': noBidJobs.length,   // Count of No Bid jobs
+                bid: bidJobs.length,          // Count of Bid jobs
+                archived: archivedJobs.length // Count of Archived jobs
             });
-
-            setCardData(fetchedBidsData.stats);
         } catch (error) {
             console.error("Error fetching job counts:", error);
             toast.error("Failed to fetch job counts");
@@ -707,42 +710,28 @@ export function JobPageContent({ job }: JobPageContentProps) {
     useEffect(() => {
         if (isAvailableJobs) {
             loadAvailableJobs();
-            fetchAvailableJobCounts();
+            fetchJobCounts();
+        } else if (isActiveBids) {
+            loadActiveBids();
+        } else if (isActiveJobs) {
+            loadActiveJobs();
+            fetchActiveJobCounts();
+        }
+    }, [isAvailableJobs, isActiveBids, isActiveJobs, loadAvailableJobs, loadActiveBids, loadActiveJobs, activeSegment, fetchJobCounts, fetchActiveJobCounts]);
+
+    useEffect(() => {
+        if (isAvailableJobs) {
+            loadAvailableJobs();
+            fetchJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
             fetchActiveBidCounts();
         } else if (isActiveJobs) {
             loadActiveJobs();
             fetchActiveJobCounts();
-            fetchNextJobNumber();
+            fetchNextJobNumber(); // Fetch next job number when active-jobs is selected
         }
-    }, [
-        isAvailableJobs,
-        isActiveBids,
-        isActiveJobs,
-        loadAvailableJobs,
-        loadActiveBids,
-        loadActiveJobs,
-        fetchAvailableJobCounts,
-        fetchActiveBidCounts,
-        fetchActiveJobCounts,
-        fetchNextJobNumber,
-        job,
-        activeSegment
-    ]);
-
-    useEffect(() => {
-        if (!isAvailableJobs) return;
-        
-        // Only proceed if we have both from and to dates
-        if (!dateRange?.from || !dateRange?.to) return;
-    
-        const startDate = dateRange.from.toISOString().split('T')[0];
-        const endDate = dateRange.to.toISOString().split('T')[0];
-    
-        // Fetch updated counts and stats with date filter
-        fetchAvailableJobCounts(startDate, endDate);
-    }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]); 
+    }, [job, loadAvailableJobs, loadActiveBids, loadActiveJobs, fetchJobCounts, fetchNextJobNumber, fetchActiveJobCounts, fetchActiveBidCounts, isAvailableJobs, isActiveBids, isActiveJobs]);
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
@@ -761,7 +750,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "contractor", title: "Contractor" },
         { key: "startDate", title: "Start Date" },
         { key: "endDate", title: "End Date" },
-        { key: 'createdAt', title: 'Created At' }
+        { key: 'createdAt', title: 'Created At'}
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
@@ -785,14 +774,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
             await changeBidStatus(job.id, status);
             toast.success(`Job status updated to ${status}`);
             await loadAvailableJobs();
-            await fetchAvailableJobCounts();
+            await fetchJobCounts();
         } catch (error) {
             console.error('Error updating job status:', error);
             toast.error('Failed to update job status');
         } finally {
             stopLoading();
         }
-    }, [loadAvailableJobs, fetchAvailableJobCounts, startLoading, stopLoading]);
+    }, [loadAvailableJobs, fetchJobCounts, startLoading, stopLoading]);
 
     const handleUpdateActiveBidStatus = useCallback(async (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => {
         try {
@@ -1378,8 +1367,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             createButtonLabel={createButtonLabel}
                                             onCreateClick={handleCreateClick}
                                             onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                            date={isAvailableJobs ? dateRange : undefined}
-                                            setDate={isAvailableJobs ? setDateRange : undefined}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
                                         />
                                     </div>
@@ -1399,7 +1386,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 </div>
                             </div>
 
-                            <SectionCards data={cardData} />
+                            <SectionCards data={cards} />
 
                             {isAvailableJobs ? (
                                 <DataTable<AvailableJob>
@@ -1504,19 +1491,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 <OpenBidSheet
                                     open={isCreatingAvailableJob}
                                     onOpenChange={setIsCreatingAvailableJob}
-                                    onSuccess={() => {
-                                        loadAvailableJobs();
-                                        fetchAvailableJobCounts();
-                                    }}
+                                    onSuccess={loadAvailableJobs}
                                     job={undefined}
                                 />
                             ) : isEditingAvailableJob ? <OpenBidSheet
                                 open={isEditingAvailableJob}
                                 onOpenChange={setIsEditingAvailableJob}
-                                onSuccess={() => {
-                                    loadAvailableJobs();
-                                    fetchAvailableJobCounts();
-                                }}
+                                onSuccess={loadAvailableJobs}
                                 job={selectedJob || undefined}
                             /> : <JobDetailsSheet
                                 open={openBidSheetOpen}

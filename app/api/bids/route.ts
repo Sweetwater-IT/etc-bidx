@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     
     let tableName = 'available_jobs';
-    let status = searchParams.get('status');
+    const status = searchParams.get('status');
     
     // Build base queries
     let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     const totalCount = countResult.count || 0;
     const pageCount = Math.ceil(totalCount / limit);
     
-    let response: any = {
+    const response: any = {
       success: true, 
       data: dataResult.data || [],
       pagination: {
