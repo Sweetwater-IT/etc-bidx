@@ -4,7 +4,6 @@ import { AppSidebar } from "../../../components/app-sidebar";
 import { DataTable } from "../../../components/data-table";
 import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
 import { SiteHeader } from "../../../components/site-header";
-import { type JobData } from "../../../data/jobs-data";
 import { SectionCards } from "../../../components/section-cards";
 import { CardActions } from "../../../components/card-actions";
 import { useState } from "react";
@@ -83,7 +82,7 @@ export default function JobListPage() {
 
               <SectionCards data={JOB_LIST_CARDS} />
 
-              <DataTable<JobData>
+              <DataTable<[]>
                 data={[]}
                 columns={COLUMNS}
                 segments={JOB_LIST_SEGMENTS}
