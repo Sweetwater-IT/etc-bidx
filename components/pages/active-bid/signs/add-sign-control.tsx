@@ -74,18 +74,21 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
       return;
     }
 
-    if (!searchTerm || searchTerm.length < 2) {
-      setFilteredDesignations(designationData);
-      return;
-    }
-
     try {
-      const filtered = designationData.filter(
-        (item) =>
-          item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
+      let filtered;
+      
+      if (!searchTerm || searchTerm.length < 2) {
+        filtered = [...designationData];
+      } else {
+        filtered = designationData.filter(
+          (item) =>
+            item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      filtered.sort((a, b) => a.designation.localeCompare(b.designation));
+      
       setFilteredDesignations(filtered);
     } catch (error) {
       console.error("Error filtering designations:", error);
