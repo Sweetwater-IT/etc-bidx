@@ -16,6 +16,11 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconBriefcase,
+  IconClipboard,
+  IconBuilding,
+  IconUser,
+  IconFileText,
 } from "@tabler/icons-react";
 import Link from "next/link";
 
@@ -118,13 +123,13 @@ export const data = {
         },
         {
           title: "Flagging Rates",
-          url: "/portal/flagging-rates"
+          url: "/portal/flagging-rates",
         },
         {
           title: "Payback calculations",
           url: "/portal/payback-calculations",
         },
-      ]
+      ],
     },
     {
       title: "Customers",
@@ -142,10 +147,24 @@ export const data = {
       icon: IconUsers,
     },
     {
-      title: "Takeoff Builder",
-      url: "/takeoff-builder",
+      title: "Sign Orders",
+      url: "/sign-orders",
       icon: IconUsers,
-    }
+      items: [
+        {
+          title: "New Sign Order",
+          url: "/sign-orders/new",
+        },
+        {
+          title: "Build Takeoff",
+          url: "/sign-orders/build-takeoff",
+        },
+        {
+          title: "Load Sheet",
+          url: "/sign-orders/load-sheet",
+        },
+      ],
+    },
   ] as NavItem[],
   navClouds: [
     {
@@ -236,6 +255,52 @@ export const data = {
   ] as Document[],
 };
 
+export const quickActions = [
+  {
+    label: "Available Job",
+    icon: IconBriefcase,
+    route: "/jobs/available",
+  },
+  {
+    label: "Active Bid",
+    icon: IconClipboard,
+    route: "/active-bid",
+  },
+  {
+    label: "Active Job",
+    icon: IconBuilding,
+    route: "/jobs/active-jobs",
+    withSeparator: true,
+  },
+  {
+    label: "Customer",
+    icon: IconUser,
+    route: "/customers",
+    withSeparator: true,
+  },
+  {
+    label: "Quote",
+    icon: IconFileText,
+    route: "/quotes/create",
+    withSeparator: true,
+  },
+  {
+    label: "New Sign Order",
+    icon: IconClipboard,
+    route: "/sign-orders/new",
+  },
+  {
+    label: "Build Takeoff",
+    icon: IconBuilding,
+    route: "/sign-orders/build-takeoff",
+  },
+  {
+    label: "Load Sheet",
+    icon: IconFileText,
+    route: "/sign-orders/load-sheet",
+  },
+];
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -247,10 +312,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
               <Link href="/">
-
                 <span className="text-base font-semibold">BidX</span>
                 {/* <ModeToggle /> */}
-              
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
