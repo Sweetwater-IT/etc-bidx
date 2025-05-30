@@ -56,7 +56,7 @@ export default function QuoteItemRow({
     { value: "3", label: "Consulting" },
   ];
   const [openProductSheet, setOpenProductSheet] = useState(false);
-  const [productInput, setProductInput] = useState("");
+  const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const filteredProducts = productOptions.filter((p) =>
@@ -105,10 +105,10 @@ export default function QuoteItemRow({
       <div
         className="grid items-center gap-2"
         style={{
-          gridTemplateColumns: "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto auto",
+          gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
         }}
       >
-        <div className="relative max-w-[180px]">
+        <div className="relative">
           <input
             ref={inputRef}
             className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
@@ -290,11 +290,11 @@ export default function QuoteItemRow({
     <div
       className="grid gap-4 pb-4 items-center border-b border-border"
       style={{
-        gridTemplateColumns: "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto auto",
+        gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
       }}
     >
       <div>
-        <div className="relative max-w-[180px]">
+        <div className="relative">
           <input
             ref={inputRef}
             className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
@@ -322,17 +322,17 @@ export default function QuoteItemRow({
           )}
         </div>
       </div>
-      <div className="text-foreground w-full truncate">
+      <div className="text-foreground w-full truncate ml-2">
         {item.description ? (
           item.description
         ) : (
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-4">
         {item.uom ? item.uom : <span className="opacity-50">—</span>}
       </div>
-      <div>
+      <div className="ml-2 mr-2">
         <Input
           type="number"
           placeholder="Qty"
@@ -342,14 +342,14 @@ export default function QuoteItemRow({
           }
         />
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-[6px]">
         {item.unitPrice ? (
           `$${displayUnitPrice.toFixed(2)}`
         ) : (
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-2">
         {!item.itemNumber &&
         !item.description &&
         !item.uom &&
@@ -364,7 +364,7 @@ export default function QuoteItemRow({
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-2">
         {item.discount ? item.discount : <span className="opacity-50">—</span>}
       </div>
       <div className="text-foreground text-left max-w-[140px] w-full">
@@ -374,8 +374,7 @@ export default function QuoteItemRow({
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div></div>
-      <div className="flex items-center justify-end gap-2">
+      <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
