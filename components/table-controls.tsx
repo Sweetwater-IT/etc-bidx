@@ -75,6 +75,8 @@ interface TableControlsProps {
   activeSort?: { field: string; direction: 'asc' | 'desc' };
   activeFilters?: any;
   className?: string;
+  setShowFilters?: (show: boolean) => void
+  showFilters?: boolean
 }
 
 export function TableControls({
@@ -87,10 +89,7 @@ export function TableControls({
   className,
   showFilters,
   setShowFilters
-}: Omit<TableControlsProps, 'filterOptions' | 'branchOptions' | 'ownerOptions' | 'countyOptions' | 'estimatorOptions'> & {
-  showFilters: boolean;
-  setShowFilters: (show: boolean) => void;
-}) {
+}: Omit<TableControlsProps, 'filterOptions' | 'branchOptions' | 'ownerOptions' | 'countyOptions' | 'estimatorOptions'>) {
   
   // State for filter values
   const [branch, setBranch] = useState<string>("");
@@ -251,7 +250,7 @@ export function TableControls({
             variant="outline"
             size="sm"
             className="h-9 gap-1"
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={() => setShowFilters ? setShowFilters(!showFilters): console.log('Set show filters not set')}
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
