@@ -136,6 +136,8 @@ export interface DataTableProps<TData extends object> {
   onFilterChange?: (filters: Record<string, any>) => void;
   onReset?: () => void;
   onViewJobSummary?: (item: TData) => void;
+  showFilters?: boolean;
+  setShowFilters?: (show: boolean) => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -332,6 +334,8 @@ export function DataTable<TData extends object>({
   onFilterChange,
   onReset,
   onViewJobSummary,
+  showFilters,
+  setShowFilters,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
@@ -676,8 +680,6 @@ export function DataTable<TData extends object>({
   ]);
 
   // State for filter visibility
-  const [showFilters, setShowFilters] = useState(false);
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState<TData[]>([]);
 
