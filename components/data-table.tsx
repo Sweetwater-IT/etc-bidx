@@ -966,7 +966,7 @@ export function DataTable<TData extends object>({
       </div>
 
       {/* Pagination Controls */}
-      {pageCount && pageCount > 1 && (
+      {pageCount && pageCount > 1 ? (
         <div className="px-6">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
@@ -978,6 +978,7 @@ export function DataTable<TData extends object>({
                 </div>
               )}
             </div>
+
             <div className="flex items-center space-x-6 lg:space-x-8">
               <div className="flex items-center space-x-2">
                 <p className="text-sm font-medium">Rows per page</p>
@@ -1045,6 +1046,8 @@ export function DataTable<TData extends object>({
             </div>
           </div>
         </div>
+      ) : (
+        <div />
       )}
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
