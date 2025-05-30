@@ -10,6 +10,7 @@ import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
 import { SaleItem } from "@/types/TSaleItem";
 import { AdminInformationSheet } from "./AdminInformationSheet";
+import { ContractJobSelector } from "./ContractJobSelector";
 
 interface Estimate {
   contract_number: string;
@@ -53,6 +54,10 @@ export function QuoteAdminInformation() {
   const [allEstimates, setAllEstimates] = useState<Estimate[]>([]);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [isLoadingEstimatesJobs, setIsLoadingEstimatesJobs] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<"create" | "edit">("create");
+  const [selectedContractJob, setSelectedContractJob] = useState<any>(null);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     getCustomers();
@@ -249,36 +254,68 @@ export function QuoteAdminInformation() {
     fetchBidData();
   }, [associatedContractNumber, setCounty, setStateRoute, setEcmsPoNumber]);
 
+  const handleAddNew = () => {
+    setSheetMode("create");
+    setSelectedContractJob(null);
+    setSheetOpen(true);
+  };
+  const handleEdit = () => {
+    setSheetMode("edit");
+    setSheetOpen(true);
+  };
+  const handleSelect = (job) => {
+    setSelectedContractJob(job);
+    setSheetMode("edit");
+    setSheetOpen(false);
+    // Aqui você pode setar o associatedContractNumber, etc
+  };
+
   return (
-    <AdminInformationSheet
-      quoteType={quoteType}
-      setQuoteType={setQuoteType}
-      paymentTerms={paymentTerms}
-      setPaymentTerms={setPaymentTerms}
-      quoteDate={quoteDate}
-      setQuoteDate={setQuoteDate}
-      selectedCustomers={selectedCustomers}
-      setSelectedCustomers={setSelectedCustomers}
-      digitalSignature={digitalSignature}
-      setDigitalSignature={setDigitalSignature}
-      county={county}
-      setCounty={setCounty}
-      ecmsPoNumber={ecmsPoNumber}
-      setEcmsPoNumber={setEcmsPoNumber}
-      stateRoute={stateRoute}
-      setStateRoute={setStateRoute}
-      associatedContractNumber={associatedContractNumber || ""}
-      setAssociatedContractNumber={setAssociatedContractNumber}
-      setQuoteItems={setQuoteItems}
-      adminData={adminData}
-      setAdminData={setAdminData}
-      customers={customers}
-      isLoading={isLoading}
-      selectedBranch={selectedBranch}
-      setSelectedBranch={setSelectedBranch}
-      isLoadingEstimatesJobs={isLoadingEstimatesJobs}
-      allEstimates={allEstimates}
-      allJobs={allJobs}
-    />
+    <>
+      <ContractJobSelector
+        allEstimates={allEstimates}
+        allJobs={allJobs}
+        selectedContractJob={selectedContractJob}
+        onSelect={handleSelect}
+        onAddNew={handleAddNew}
+        onEdit={handleEdit}
+        searchValue={searchValue}
+        setSearchValue={setSearchValue}
+      />
+      {sheetOpen && (
+        <AdminInformationSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          quoteType={quoteType}
+          setQuoteType={setQuoteType}
+          paymentTerms={paymentTerms}
+          setPaymentTerms={setPaymentTerms}
+          quoteDate={quoteDate}
+          setQuoteDate={setQuoteDate}
+          selectedCustomers={selectedCustomers}
+          setSelectedCustomers={setSelectedCustomers}
+          digitalSignature={digitalSignature}
+          setDigitalSignature={setDigitalSignature}
+          county={county}
+          setCounty={setCounty}
+          ecmsPoNumber={ecmsPoNumber}
+          setEcmsPoNumber={setEcmsPoNumber}
+          stateRoute={stateRoute}
+          setStateRoute={setStateRoute}
+          associatedContractNumber={associatedContractNumber || ""}
+          setAssociatedContractNumber={setAssociatedContractNumber}
+          setQuoteItems={setQuoteItems}
+          adminData={adminData}
+          setAdminData={setAdminData}
+          customers={customers}
+          isLoading={isLoading}
+          selectedBranch={selectedBranch}
+          setSelectedBranch={setSelectedBranch}
+          isLoadingEstimatesJobs={isLoadingEstimatesJobs}
+          allEstimates={allEstimates}
+          allJobs={allJobs}
+        />
+      )}
+    </>
   );
 }

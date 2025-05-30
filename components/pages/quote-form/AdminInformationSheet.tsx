@@ -62,6 +62,8 @@ interface AdminInformationSheetProps {
   isLoadingEstimatesJobs: boolean;
   allEstimates: Estimate[];
   allJobs: Job[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function AdminInformationSheet({
@@ -93,6 +95,8 @@ export function AdminInformationSheet({
   isLoadingEstimatesJobs,
   allEstimates,
   allJobs,
+  open,
+  onOpenChange,
 }: AdminInformationSheetProps) {
   // Estados locais
   const [localContractNumber, setLocalContractNumber] = useState(
@@ -153,12 +157,7 @@ export function AdminInformationSheet({
   };
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Settings2 className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[500px] sm:max-w-[600px] pt-2">
         <SheetHeader>
           <SheetTitle className="text-2xl font-semibold">
@@ -205,7 +204,7 @@ export function AdminInformationSheet({
           />
         </div>
 
-        <div className="flex justify-end mt-6 mr-4">
+        <div className="flex justify-end mt-6 mr">
           <Button onClick={handleSave} variant="default">
             Save
           </Button>
