@@ -118,7 +118,8 @@ export type EstimateAction =
 	| {
 		type: 'ADD_PERMANENT_SIGNS_ITEM';
 		payload: {
-			key: PMSItemKeys
+			key: PMSItemKeys,
+			id: string
 		}
 	}
 	| {
@@ -145,8 +146,7 @@ export type EstimateAction =
 	| {
 		type: 'UPDATE_PERMANENT_SIGNS_EQUIPMENT',
 		payload: {
-			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF', //the perm signs number
-			pmsEquipType: PMSEquipmentKey,// the actual equipment piece (should exclude labor and fuel and custom items )
+			signId: string,
 			key: keyof PMSEquipment,//name cost quantity markup
 			value: number
 		}
@@ -154,15 +154,15 @@ export type EstimateAction =
 	| {
 		type: 'UPDATE_PERMANENT_SIGNS_ITEM';
 		payload: {
-			key: PMSItemKeys;
-			field: string;
+			signId: string;
+			field: keyof PMSTypeB;
 			value: any;
 		}
 	}
 	| {
 		type: 'DELETE_PERMANENT_SIGNS_ITEM';
 		payload: {
-			key: PMSItemKeys;
+			signId: string
 		}
 	}
 	| {

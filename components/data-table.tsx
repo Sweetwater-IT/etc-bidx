@@ -77,6 +77,7 @@ const handleStatusVariant = (status: string) => {
     case "open":
       return "default";
     case "pending":
+    case 'in_progress':
       return "warning";
     case "urgent":
     case "no bid":
@@ -88,6 +89,7 @@ const handleStatusVariant = (status: string) => {
       return "successful";
     case "unset":
     case "draft":
+    case 'complete':
     default:
       return "secondary";
   }
@@ -201,12 +203,12 @@ function formatCellValue(value: any, key: string) {
   }
 
   // Handle status badges
-  if (key === "status") {
+  if (key === "status" || key === 'projectStatus' || key === 'billingStatus') {
     const variant = handleStatusVariant(value);
 
     return (
-      <Badge variant={variant} className="font-medium">
-        {value}
+      <Badge variant={variant} className={`font-medium ${variant === 'warning' && 'text-black'}`}>
+        {(key === 'projectStatus' || key === 'billingStatus') ? value.replace('_', ' ') : value}
       </Badge>
     );
   }
@@ -255,7 +257,9 @@ function formatCellValue(value: any, key: string) {
       const dayNum = utcDate.getUTCDate();
       const yearNum = utcDate.getUTCFullYear();
 
-      return `${monthName} ${dayNum}, ${yearNum}`;
+      const timestamp = ', ' + value.split("T")[1].split(':')[0] + ':' + value.split("T")[1].split(':')[1]
+
+      return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp  : ''}`;
     } catch {
       return value;
     }

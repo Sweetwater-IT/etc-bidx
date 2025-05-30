@@ -5,15 +5,11 @@ export type PermanentSigns = {
     trucks: number;
     personnel: number;
     OWtrips: number;
-    pmsTypeB?: PMSTypeB;
-    pmsTypeF?: PMSTypeF;
-    resetTypeB?: PMSResetB;
-    resetTypeF?: PMSResetF;
-    removeTypeB?: PMSRemoveB;
-    removeTypeF?: PMSRemoveF;
+    signItems: (PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF)[]
 }
 
 export type PMSTypeB = {
+    id: string;
     name: string;
     numberInstalls: number;
     signSqFt: number;
@@ -36,6 +32,7 @@ export type PMSTypeB = {
 }
 
 export type PMSTypeF = {
+    id: string;
     name: string;
     numberInstalls: number;
     permSignBolts: number;
@@ -55,6 +52,7 @@ export type PMSTypeF = {
 }
 
 export type PMSResetB = {
+    id: string;
     name: string;
     numberInstalls: number;
     permSignBolts: number;
@@ -70,6 +68,7 @@ export type PMSResetB = {
 }
 
 export type PMSResetF = {
+    id: string;
     name: string;
     numberInstalls: number;
     permSignBolts: number;
@@ -83,6 +82,7 @@ export type PMSResetF = {
 }
 
 export type PMSRemoveB = {
+    id: string;
     name: string;
     numberInstalls: number;
     permSignBolts: number;
@@ -92,6 +92,7 @@ export type PMSRemoveB = {
 }
 
 export type PMSRemoveF = {
+    id: string;
     name: string;
     numberInstalls: number;
     permSignBolts: number;

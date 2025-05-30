@@ -31,5 +31,5 @@ export const ACTIVE_BIDS_COLUMNS = [
   { key: "estimator", title: 'Estimator', className: 'min-w-35'},
   { key: "county", title: "County", className: 'max-w-40' },
   { key: "status", title: "Status" },
-  { key: "total", title: "Total", className: "text-right" },
+  { key: "createdAt", title: "Created At", className: 'whitespace-nowrap' },
 ]
