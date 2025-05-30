@@ -105,8 +105,8 @@ export function QuoteAdminInformation() {
         const data = await response.json();
         
         if (response.ok) {
-          setAllEstimates(data.estimates || []);
-          setAllJobs(data.jobs || []);
+          setAllEstimates(data.estimates.filter(e => !!e.contract_number) || []);
+          setAllJobs(data.jobs.filter(j => !!j.job_number) || []);
         } else {
           console.error('Failed to fetch estimates and jobs:', data.error);
           toast.error(data.error)
