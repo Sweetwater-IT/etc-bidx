@@ -63,7 +63,6 @@ export function QuoteAdminInformation() {
     getCustomers();
   }, []);
 
-  // Clear associated contract number when branch or quote type changes
   useEffect(() => {
     setAssociatedContractNumber("");
     setCounty("");
@@ -73,7 +72,6 @@ export function QuoteAdminInformation() {
     setAdminData(undefined);
   }, [selectedBranch, quoteType]);
 
-  //initialize
   useEffect(() => {
     const fetchEstimatesAndJobs = async () => {
       try {
@@ -99,7 +97,6 @@ export function QuoteAdminInformation() {
     fetchEstimatesAndJobs();
   }, []);
 
-  //this gets all the details for a bid whenever you hit job number or estimate and select a contract
   useEffect(() => {
     if (
       !associatedContractNumber ||
@@ -207,7 +204,6 @@ export function QuoteAdminInformation() {
               (ri) => {
                 quoteItemsFromEstimate.push({
                   id: generateUniqueId(),
-                  //TODO map equipment item numbers to names
                   itemNumber: "0901-0120",
                   description: ri.name,
                   uom: "EA",
@@ -226,7 +222,6 @@ export function QuoteAdminInformation() {
             (data.data.sale_items as SaleItem[]).forEach((si) => {
               quoteItemsFromEstimate.push({
                 id: generateUniqueId(),
-                //TODO map equipment item numbers to names
                 itemNumber: si.itemNumber,
                 description: si.name,
                 uom: "EA",
@@ -267,7 +262,16 @@ export function QuoteAdminInformation() {
     setSelectedContractJob(job);
     setSheetMode("edit");
     setSheetOpen(false);
-    // Aqui você pode setar o associatedContractNumber, etc
+
+    if (job) {
+      if ("contract_number" in job) {
+        setAssociatedContractNumber(job.contract_number);
+        setQuoteType("estimate");
+      } else if ("job_number" in job) {
+        setAssociatedContractNumber(job.job_number);
+        setQuoteType("job");
+      }
+    }
   };
 
   return (

@@ -98,7 +98,6 @@ export function AdminInformationSheet({
   open,
   onOpenChange,
 }: AdminInformationSheetProps) {
-  // Estados locais
   const [localContractNumber, setLocalContractNumber] = useState(
     associatedContractNumber
   );
@@ -112,17 +111,19 @@ export function AdminInformationSheet({
   const [localSelectedCustomers, setLocalSelectedCustomers] =
     useState(selectedCustomers);
 
-  // Atualiza os estados locais ao abrir/receber novos dados
   useEffect(() => {
-    setLocalContractNumber(associatedContractNumber);
-    setLocalCounty(county);
-    setLocalEcmsPoNumber(ecmsPoNumber);
-    setLocalStateRoute(stateRoute);
-    setLocalPaymentTerms(paymentTerms);
-    setLocalQuoteDate(quoteDate);
-    setLocalDigitalSignature(digitalSignature);
-    setLocalSelectedCustomers(selectedCustomers);
+    if (open) {
+      setLocalContractNumber(associatedContractNumber);
+      setLocalCounty(county);
+      setLocalEcmsPoNumber(ecmsPoNumber);
+      setLocalStateRoute(stateRoute);
+      setLocalPaymentTerms(paymentTerms);
+      setLocalQuoteDate(quoteDate);
+      setLocalDigitalSignature(digitalSignature);
+      setLocalSelectedCustomers(selectedCustomers);
+    }
   }, [
+    open,
     associatedContractNumber,
     county,
     ecmsPoNumber,
@@ -153,7 +154,6 @@ export function AdminInformationSheet({
     setQuoteDate(localQuoteDate);
     setDigitalSignature(localDigitalSignature);
     setSelectedCustomers(localSelectedCustomers);
-    // Adicione outros campos se necessário
   };
 
   return (
