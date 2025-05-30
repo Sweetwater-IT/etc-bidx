@@ -9,7 +9,7 @@ import {
   Plus,
   Loader
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useEstimate } from "@/contexts/EstimateContext";
 import {
@@ -21,12 +21,14 @@ import {
 } from "@/types/MPTEquipment";
 import { safeNumber } from "@/lib/safe-number";
 import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
-import { fetchReferenceData } from "@/lib/api-client";
+import { createActiveBid, fetchReferenceData } from "@/lib/api-client";
 import EquipmentRentalTab from "@/components/BidItems/equipment-rental-tab";
 import SaleItemsStep from "./sale-items-step";
 import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
 import ServiceWorkTab from "@/components/BidItems/service-work-tab";
 import PermanentSignsSummaryStep from "@/components/BidItems/permanent-signs-tab";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+import { toast } from "sonner";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -96,13 +98,15 @@ const formatLabel = (key: string) => {
 const BidItemsStep5 = ({
   currentStep,
   setCurrentStep,
-  currentPhase
+  currentPhase,
+  setIsViewSummaryOpen
 }: {
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   currentPhase: number;
+  setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { mptRental, adminData, dispatch } = useEstimate();
+  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
   const [activeTab, setActiveTab] = useState("mpt");
   const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
   const [newCustomItem, setNewCustomItem] = useState<Omit<CustomLightAndDrumItem, 'id'>>({
@@ -111,13 +115,14 @@ const BidItemsStep5 = ({
     usefulLife: 0
   });
   const [itemName, setItemName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [initialSubmission, setInitialSubmission] = useState<boolean>(false);
 
   // Fetch equipment data
   useEffect(() => {
     const initializeEquipmentData = async () => {
-      setIsLoading(true);
-
       try {
         // Set default values for truck and fuel costs
         dispatch({
@@ -346,8 +351,6 @@ const BidItemsStep5 = ({
             },
           });
         });
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -435,6 +438,26 @@ const BidItemsStep5 = ({
     dispatch,
     currentPhase
   ]);
+
+  const handleSubmit = useCallback(async () => {
+    try {
+      setIsViewSummaryOpen(true);
+      setIsSubmitting(true);
+      setError(null);
+
+      await createActiveBid(adminData, mptRental, equipmentRental,
+        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
+      toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
+      if (!initialSubmission) {
+        setInitialSubmission(true);
+      }
+    } catch (error) {
+      console.error("Error creating bid:", error);
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, initialSubmission, setIsViewSummaryOpen]);
 
   // Handle equipment input changes
   const handleStandardInputChange = (
@@ -859,35 +882,35 @@ const BidItemsStep5 = ({
               {/* Equipment Tab */}
               <TabsContent value="equipment" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <EquipmentRentalTab/>
+                  <EquipmentRentalTab />
                 </div>
               </TabsContent>
 
               {/* Permanent Signs Tab */}
               <TabsContent value="permanent" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <PermanentSignsSummaryStep/>
+                  <PermanentSignsSummaryStep />
                 </div>
               </TabsContent>
 
               {/* Flagging Tab */}
               <TabsContent value="flagging" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <FlaggingServicesTab/>
+                  <FlaggingServicesTab />
                 </div>
               </TabsContent>
 
               {/* Sale Items Tab */}
               <TabsContent value="sale" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <SaleItemsStep/>
+                  <SaleItemsStep />
                 </div>
               </TabsContent>
 
               {/* Patterns Tab */}
               <TabsContent value="patterns" className="mt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <ServiceWorkTab/>
+                  <ServiceWorkTab />
                 </div>
               </TabsContent>
             </Tabs>
@@ -897,8 +920,10 @@ const BidItemsStep5 = ({
               <Button variant="outline" onClick={() => setCurrentStep(4)}>
                 Back
               </Button>
-              <Button onClick={handleNext}>
-                Next
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {initialSubmission
+                  ? 'Update' : 'Done'
+                }
               </Button>
             </div>
           </div>

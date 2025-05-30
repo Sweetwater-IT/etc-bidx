@@ -1,5 +1,4 @@
 "use client";
-import { FormData } from "@/types/IFormData";
 import { useState, ReactElement, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import AdminInformationAccordion from "./active-bid/admin-information-accordion/admin-information-accordion";
@@ -19,7 +18,7 @@ import PhaseInfoStep2 from "./active-bid/steps/phase-info-step2";
 import MUTCDSignsStep3 from "./active-bid/steps/mutcd-signs-step3";
 import TripAndLaborStep4 from "./active-bid/steps/trip-and-labor-step4";
 import BidItemsStep5 from "./active-bid/steps/bid-items-step5";
-import BidSummaryStep6 from "./active-bid/steps/bid-summary-step6";
+import StepperSaveButtons from "./active-bid/steps/stepper-save-buttons";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   return (
@@ -69,9 +68,8 @@ const StepsMain = () => {
   return (
     <EstimateProvider>
       <div
-        className={`relative min-h-screen ${
-          isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
-        }`}
+        className={`relative min-h-screen ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
+          }`}
         style={{ transition: "all 0.3s ease-in-out" }}
       >
         {!isFullscreen && (
@@ -97,9 +95,8 @@ const StepsMain = () => {
         {isFullscreen ? (
           <div className="w-full flex">
             <div
-              className={`${
-                isSidebarVisible ? "w-3/4 pr-6" : "w-full"
-              } transition-all duration-300`}
+              className={`${isSidebarVisible ? "w-3/4 pr-6" : "w-full"
+                } transition-all duration-300`}
             >
               <div className="mb-4 flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Bid Form</h2>
@@ -107,7 +104,7 @@ const StepsMain = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="w-48">
-                        {" "}
+                        <StepperSaveButtons/>
                         {/* Reduced width for better proportions */}
                         <AddPhaseButton
                           setCurrentPhase={setCurrentPhase}
@@ -126,11 +123,10 @@ const StepsMain = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-                          className={`backdrop-blur-sm ${
-                            isSidebarVisible
+                          className={`backdrop-blur-sm ${isSidebarVisible
                               ? "bg-slate-200/80 border-slate-300"
                               : "bg-white/50"
-                          }`}
+                            }`}
                         >
                           {isSidebarVisible ? (
                             <PanelLeftClose className="h-4 w-4" />
@@ -227,19 +223,6 @@ const StepsMain = () => {
                       currentStep={5}
                       setCurrentStep={setCurrentStep}
                       currentPhase={currentPhase}
-                    />
-                  )}
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    Bid Summary
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <BidSummaryStep6
-                      currentStep={6}
-                      setCurrentStep={setCurrentStep}
-                      isViewSummaryOpen={isViewSummaryOpen}
                       setIsViewSummaryOpen={setIsViewSummaryOpen}
                     />
                   )}
@@ -295,6 +278,7 @@ const StepsMain = () => {
                 overflowY: "auto",
               }}
             >
+              <StepperSaveButtons/>
               <AddPhaseButton
                 setCurrentPhase={setCurrentPhase}
                 setCurrentStep={setCurrentStep}

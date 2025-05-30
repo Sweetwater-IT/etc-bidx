@@ -66,7 +66,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
     Flagging: false,
     "Perm Signs": false,
     'Equipment Rental': false,
-    'Other' : false
+    'Other': false
   })
 
   const [users, setUsers] = useState<{ id: string, name: string }[]>([])
@@ -128,8 +128,9 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
         setBranches(branchesData)
 
-        if (!job && usersData.length && ownersData.length && countiesData.length) {;
-        
+        if (!job && usersData.length && ownersData.length && countiesData.length) {
+          ;
+
           // Get branch from county
           const selectedCounty = countiesData.find(c => c.id.toString() === countiesData[0].id.toString())
           if (selectedCounty?.branch) {
@@ -137,7 +138,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
             setBranch(branchId)
           }
         }
-        
+
       } catch (error) {
         console.error('Error loading reference data:', error)
         toast.error('Failed to load form data. Please try again.')
@@ -156,8 +157,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setContractNumber(job.contractNumber)
       setRequestor(job.requestor)
       setOwner(job.owner)
-      setCounty(job.county.main) 
-      setBranch(job.county.secondary) 
+      setCounty(job.county.main)
+      setBranch(job.county.secondary)
       setLocation(job.location)
       setPlatform(job.platform)
       setStatus(job.status as 'Bid' | 'No Bid' | 'Unset')
@@ -166,11 +167,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
       setDbe(job.dbe ? job.dbe.toString() : '')
       setStateRoute(job.stateRoute || '')
       setSelectedServices(job.services)
-      
+
       // Handle noBidReason
       if (job.noBidReason) {
         const predefinedReasons = ['No MPT', 'Outside of service area', 'Project cancelled', 'Outside of scope'];
-        
+
         if (predefinedReasons.includes(job.noBidReason)) {
           // It's a predefined reason
           setNoBidReason(job.noBidReason);
@@ -209,7 +210,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         'Other': false
       })
     }
-  }, [job, open]) 
+  }, [job, open])
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -238,8 +239,8 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
     const requiredFields = [
       { field: contractNumber, name: 'Contract number' },
-      { field: dbe, name : 'DBE %'},
-      { field: stateRoute, name: 'State Route'},
+      { field: dbe, name: 'DBE %' },
+      { field: stateRoute, name: 'State Route' },
       { field: requestor, name: 'Requestor' },
       { field: owner, name: 'Owner' },
       { field: county, name: 'County' },
@@ -316,11 +317,11 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
     }
   }
 
-  const handleNoBidReasonChange = (value : string) => {
-    if(value === 'Custom'){
+  const handleNoBidReasonChange = (value: string) => {
+    if (value === 'Custom') {
       setCustomReasonSelected(true);
     }
-    if(value === 'No MPT' || value === 'Outside of service area' || value === 'Project cancelled' || value === 'Outside of scope'){
+    if (value === 'No MPT' || value === 'Outside of service area' || value === 'Project cancelled' || value === 'Outside of scope') {
       setCustomReasonSelected(false);
     }
 
@@ -329,7 +330,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
 
   useEffect(() => {
     if (!lettingDate) return;
-  
+
     const newDueDate = new Date(lettingDate);
     newDueDate.setDate(newDueDate.getDate() - 2);
     setDueDate(newDueDate);
@@ -363,7 +364,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{job ? 'Edit Open Bid' : 'Create a new Open Bid'}</SheetTitle>
         </SheetHeader>
-        <Separator className='w-full -mt-2'/>
+        <Separator className='w-full -mt-2' />
 
         <form onSubmit={handleSubmit} className="-mt-4 flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto">
@@ -386,7 +387,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   <Label className="text-sm font-medium text-muted-foreground">DBE % <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <Input
-                      placeholder="0"
+                      placeholder="DBE %"
                       className="h-10"
                       type="number"
                       min="0"
@@ -499,21 +500,30 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">Platform <span className="text-red-500">*</span></Label>
                   <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger className="w-full font-medium relative">
-                      <SelectValue placeholder='Select platform...'/>
+                    <SelectTrigger className="w-full font-medium text-muted-foreground relative">
+                      <SelectValue placeholder='Select platform...' />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ECMS">ECMS</SelectItem>
-                      <SelectItem value="PENNBID">Pennbid</SelectItem>
-                      <SelectItem value="TURNPIKE">Turnpike</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
+                      <SelectItem value="PENNBID">PENNBID</SelectItem>
+                      <SelectItem value="TURNPIKE">TURNPIKE</SelectItem>
+                      <SelectItem value="OTHER">OTHER</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">Letting Date <span className="text-red-500">*</span></Label>
-                  <Popover open={openStates.lettingDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, lettingDate: open }))}>
+                  <Input
+                    id='letting-date'
+                    type='date'
+                    pattern="^\\d*(\\.\\d{0,2})?$"
+                    placeholder={'Letting date'}
+                    value={lettingDate ? lettingDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setLettingDate(new Date(e.target.value))}
+                    className="h-10"
+                  />
+                  {/* <Popover open={openStates.lettingDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, lettingDate: open }))}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -526,16 +536,16 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar 
-                        mode="single" 
-                        selected={lettingDate} 
+                      <Calendar
+                        mode="single"
+                        selected={lettingDate}
                         onSelect={(date) => {
                           setLettingDate(date);
                           setOpenStates(prev => ({ ...prev, lettingDate: false }));
-                        }} 
+                        }}
                       />
                     </PopoverContent>
-                  </Popover>
+                  </Popover> */}
                 </div>
 
                 <div className="space-y-2 w-full">
@@ -543,17 +553,16 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                   {/**Leaving popover in in case this needs to be editable again */}
                   {/* <Popover open={openStates.dueDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, dueDate: open }))}>
                     <PopoverTrigger asChild> */}
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between text-left font-normal"
-                        disabled
-                      >
-                        <span>
-                          {dueDate ? formatDate(dueDate) : "Due date"}
-                        </span>
-                        <CalendarIcon className="h-4 w-4 opacity-50 ml-2" />
-                      </Button>
-                    {/* </PopoverTrigger>
+                  <Input
+                    id='due-date'
+                    type='date'
+                    pattern="^\\d*(\\.\\d{0,2})?$"
+                    placeholder={'Due date'}
+                    value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setDueDate(new Date(e.target.value))}
+                    className="h-10"
+                  />
+                  {/* </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
@@ -666,10 +675,10 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
                     <div key={service} className="flex items-center space-x-2">
                       <Checkbox id={service}
                         onCheckedChange={(checked) => setSelectedServices(prev => ({
-                          ...prev, 
+                          ...prev,
                           [service]: checked
                         }))}
-                        checked={selectedServices[service]}  
+                        checked={selectedServices[service]}
                       />
                       <Label htmlFor={service}>{service}</Label>
                     </div>
@@ -679,7 +688,7 @@ export function OpenBidSheet({ open, onOpenChange, onSuccess, job }: OpenBidShee
             </div>
           </div>
 
-          <Separator/>
+          <Separator />
           <div className="p-6 pt-0">
             <div className="flex flex-col gap-4">
               {!areAllRequiredFieldsFilled() && (
