@@ -455,7 +455,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-
+            console.log(pagination)
 
             const transformedData = data.map(e => ({
                 id: e.id,
@@ -464,7 +464,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractor: e.contractor_name || '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
-                county: {
+                county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
                     main: e.admin_data.county.name,
                     secondary: e.admin_data.county.branch
                 },
@@ -528,7 +528,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 billingStatus: job.billingStatus,
                 contractNumber: job.contractNumber,
                 location: job.location,
-                county: job.county,
+                county:  (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch},
                 branch: job.branch,
                 contractor: job.contractor,
                 startDate: job.startDate,
@@ -1465,6 +1465,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onPageChange={setActiveBidsPageIndex}
                                     onPageSizeChange={setActiveBidsPageSize}
                                     totalCount={activeBidsTotalCount}
+
+                                    // Sorting props
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    onSortChange={handleSortChange}
+                                    // Filtering props
+                                    filterOptions={filterOptions}
+                                    branchOptions={branchOptions}
+                                    ownerOptions={ownerOptions}
+                                    countyOptions={countyOptions}
+                                    estimatorOptions={estimatorOptions}
+                                    activeFilters={activeFilters}
+                                    onFilterChange={handleFilterChange}
+                                    onReset={handleResetControls}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
