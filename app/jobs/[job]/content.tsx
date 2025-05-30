@@ -1343,8 +1343,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             createButtonLabel={createButtonLabel}
                                             onCreateClick={handleCreateClick}
                                             onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                            date={isAvailableJobs ? dateRange : undefined}
-                                            setDate={isAvailableJobs ? setDateRange : undefined}
+                                            date={dateRange}
+                                            setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
                                         />
                                     </div>
