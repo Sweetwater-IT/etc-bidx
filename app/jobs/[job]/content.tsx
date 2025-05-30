@@ -830,14 +830,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "bidNumber", title: "Bid Number" },
         { key: "projectStatus", title: "Project Status" },
         { key: "billingStatus", title: "Billing Status" },
-        { key: "contractNumber", title: "Contract Number" },
-        { key: "location", title: "Location" },
+        { key: "contractNumber", title: "Contract Number", className: 'truncate whitespace-nowrap max-w-40' },
+        { key: "location", title: "Location", className: 'truncate whitespace-nowrap max-w-30' },
         { key: "county", title: "County" },
         { key: "branch", title: "Branch" },
         { key: "contractor", title: "Contractor" },
-        { key: "startDate", title: "Start Date" },
-        { key: "endDate", title: "End Date" },
-        { key: 'createdAt', title: 'Created At' }
+        { key: "startDate", title: "Start Date", className: 'whitespace-nowrap' },
+        { key: "endDate", title: "End Date", className: 'whitespace-nowrap' },
+        { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
@@ -1575,7 +1575,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         job={selectedActiveJob || undefined}
                                         onEdit={handleActiveJobEdit}
                                         onNavigate={handleActiveJobNavigation}
-                                        loadActiveJobs={loadActiveJobs}
                                     />
                                     <EditActiveJobSheet
                                         open={editActiveJobSheetOpen}

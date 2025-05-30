@@ -792,7 +792,7 @@ export function DataTable<TData extends object>({
                     : undefined
                 }
                 activeFilters={activeFilters}
-                showFilters={showFilters}
+                showFilters={!!showFilters}
                 setShowFilters={setShowFilters}
               />
             )}
@@ -826,7 +826,7 @@ export function DataTable<TData extends object>({
         {/* Filter Dropdowns - Below Segments Row */}
         {onFilterChange && (
           <FilterDropdowns
-            showFilters={showFilters}
+            showFilters={!!showFilters}
             branchOptions={branchOptions || []}
             ownerOptions={ownerOptions || []}
             countyOptions={countyOptions || []}
