@@ -313,7 +313,7 @@ export function QuoteItems() {
           className="grid text-sm font-medium text-muted-foreground border-b pb-2"
           style={{
             gridTemplateColumns:
-              "210px 200px 80px 80px 100px 100px 100px 140px 28px",
+              "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto",
           }}
         >
           <div className="uppercase">Item # / SKU</div>
