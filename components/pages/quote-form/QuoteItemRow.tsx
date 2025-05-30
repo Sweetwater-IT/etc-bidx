@@ -71,7 +71,7 @@ export default function QuoteItemRow({
     unitPrice: "",
     discountType: "dollar",
     discount: "",
-    notes: ""
+    notes: "",
   });
 
   const [digits, setDigits] = useState({
@@ -80,14 +80,18 @@ export default function QuoteItemRow({
   });
 
   function formatDecimal(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
+    return (parseInt(value, 10) / 100).toFixed(2);
   }
 
   function formatPercentage(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
+    return (parseInt(value, 10) / 100).toFixed(2);
   }
 
-  function handleNextDigits(current: string, inputType: string, data: string): string {
+  function handleNextDigits(
+    current: string,
+    inputType: string,
+    data: string
+  ): string {
     let digits = current;
 
     if (inputType === "insertText" && /\d/.test(data)) {
@@ -176,13 +180,19 @@ export default function QuoteItemRow({
           <Input
             type="text"
             placeholder="$0.00"
-            value={digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""}
+            value={
+              digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
+            }
             onChange={(e) => {
               const ev = e.nativeEvent as InputEvent;
               const { inputType } = ev;
               const data = (ev.data || "").replace(/\$/g, "");
 
-              const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
+              const nextDigits = handleNextDigits(
+                digits.unitPrice,
+                inputType,
+                data
+              );
               setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
             }}
           />
@@ -207,19 +217,29 @@ export default function QuoteItemRow({
           <Input
             type="text"
             placeholder={item.discountType === "dollar" ? "$0.00" : "0.00%"}
-            value={digits.discount ? 
-              item.discountType === "dollar" 
-                ? `$ ${formatDecimal(digits.discount)}` 
-                : `${formatPercentage(digits.discount)}%` 
-              : ""}
+            value={
+              digits.discount
+                ? item.discountType === "dollar"
+                  ? `$ ${formatDecimal(digits.discount)}`
+                  : `${formatPercentage(digits.discount)}%`
+                : ""
+            }
             onChange={(e) => {
               const ev = e.nativeEvent as InputEvent;
               const { inputType } = ev;
               const data = (ev.data || "").replace(/[$\s%]/g, "");
 
-              const nextDigits = handleNextDigits(digits.discount, inputType, data);
+              const nextDigits = handleNextDigits(
+                digits.discount,
+                inputType,
+                data
+              );
               setDigits((prev) => ({ ...prev, discount: nextDigits }));
-              handleItemUpdate(item.id, "discount", Number(formatDecimal(nextDigits)));
+              handleItemUpdate(
+                item.id,
+                "discount",
+                Number(formatDecimal(nextDigits))
+              );
             }}
           />
         </div>
@@ -275,8 +295,16 @@ export default function QuoteItemRow({
         <Button
           onClick={() => {
             handleItemUpdate(item.id, "itemNumber", productInput);
-            handleItemUpdate(item.id, "unitPrice", Number(formatDecimal(digits.unitPrice)));
-            handleItemUpdate(item.id, "discount", Number(formatDecimal(digits.discount)));
+            handleItemUpdate(
+              item.id,
+              "unitPrice",
+              Number(formatDecimal(digits.unitPrice))
+            );
+            handleItemUpdate(
+              item.id,
+              "discount",
+              Number(formatDecimal(digits.discount))
+            );
             setEditingItemId(null);
             setEditingSubItemId(null);
           }}
@@ -417,7 +445,12 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter item number or SKU"
                 value={newProduct.itemNumber}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, itemNumber: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    itemNumber: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -426,14 +459,21 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter product description"
                 value={newProduct.description}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label>UOM</Label>
               <Select
                 value={newProduct.uom}
-                onValueChange={(value) => setNewProduct(prev => ({ ...prev, uom: value }))}
+                onValueChange={(value) =>
+                  setNewProduct((prev) => ({ ...prev, uom: value }))
+                }
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select UOM" />
@@ -454,7 +494,12 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter quantity"
                 value={newProduct.quantity}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, quantity: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    quantity: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -463,15 +508,24 @@ export default function QuoteItemRow({
                 type="text"
                 className="bg-background"
                 placeholder="$0.00"
-                value={digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""}
+                value={
+                  digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
+                }
                 onChange={(e) => {
                   const ev = e.nativeEvent as InputEvent;
                   const { inputType } = ev;
                   const data = (ev.data || "").replace(/\$/g, "");
 
-                  const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
+                  const nextDigits = handleNextDigits(
+                    digits.unitPrice,
+                    inputType,
+                    data
+                  );
                   setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                  setNewProduct(prev => ({ ...prev, unitPrice: formatDecimal(nextDigits) }));
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    unitPrice: formatDecimal(nextDigits),
+                  }));
                 }}
               />
             </div>
@@ -479,7 +533,9 @@ export default function QuoteItemRow({
               <Label>Discount Type</Label>
               <Select
                 value={newProduct.discountType}
-                onValueChange={(value) => setNewProduct(prev => ({ ...prev, discountType: value }))}
+                onValueChange={(value) =>
+                  setNewProduct((prev) => ({ ...prev, discountType: value }))
+                }
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select discount type" />
@@ -495,20 +551,31 @@ export default function QuoteItemRow({
               <Input
                 type="text"
                 className="bg-background"
-                placeholder={newProduct.discountType === "dollar" ? "$0.00" : "0.00%"}
-                value={digits.discount ? 
-                  newProduct.discountType === "dollar" 
-                    ? `$ ${formatDecimal(digits.discount)}` 
-                    : `${formatPercentage(digits.discount)}%` 
-                  : ""}
+                placeholder={
+                  newProduct.discountType === "dollar" ? "$0.00" : "0.00%"
+                }
+                value={
+                  digits.discount
+                    ? newProduct.discountType === "dollar"
+                      ? `$ ${formatDecimal(digits.discount)}`
+                      : `${formatPercentage(digits.discount)}%`
+                    : ""
+                }
                 onChange={(e) => {
                   const ev = e.nativeEvent as InputEvent;
                   const { inputType } = ev;
                   const data = (ev.data || "").replace(/[$\s%]/g, "");
 
-                  const nextDigits = handleNextDigits(digits.discount, inputType, data);
+                  const nextDigits = handleNextDigits(
+                    digits.discount,
+                    inputType,
+                    data
+                  );
                   setDigits((prev) => ({ ...prev, discount: nextDigits }));
-                  setNewProduct(prev => ({ ...prev, discount: formatDecimal(nextDigits) }));
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    discount: formatDecimal(nextDigits),
+                  }));
                 }}
               />
             </div>
@@ -518,7 +585,9 @@ export default function QuoteItemRow({
                 className="bg-background min-h-[100px]"
                 placeholder="Enter any additional notes"
                 value={newProduct.notes}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
+                }
               />
             </div>
             <Separator className="my-2" />
@@ -537,11 +606,11 @@ export default function QuoteItemRow({
                     unitPrice: "",
                     discountType: "dollar",
                     discount: "",
-                    notes: ""
+                    notes: "",
                   });
                   setDigits({
                     unitPrice: "000",
-                    discount: "000"
+                    discount: "000",
                   });
                 }}
               >
