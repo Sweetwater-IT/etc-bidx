@@ -3,29 +3,13 @@
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { useCustomers } from "@/hooks/use-customers";
 import { useEffect, useState } from "react";
-import { Customer } from "@/types/Customer";
 import { toast } from "sonner";
 import { AdminData } from "@/types/TAdminData";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
-import { Flagging } from "@/types/TFlagging";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
 import { SaleItem } from "@/types/TSaleItem";
-import { QuoteTypeSection } from "./sections/QuoteTypeSection";
-import { BranchAndContractSection } from "./sections/BranchAndContractSection";
-import { LocationDetailsSection } from "./sections/LocationDetailsSection";
-import { PaymentAndDateSection } from "./sections/PaymentAndDateSection";
-import { CustomersSection } from "./sections/CustomersSection";
-import { DigitalSignatureSection } from "./sections/DigitalSignatureSection";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Settings2 } from "lucide-react";
+import { AdminInformationSheet } from "./AdminInformationSheet";
 
 interface Estimate {
   contract_number: string;
@@ -265,79 +249,36 @@ export function QuoteAdminInformation() {
     fetchBidData();
   }, [associatedContractNumber, setCounty, setStateRoute, setEcmsPoNumber]);
 
-  const handleCustomerSelection = (customerNames: string[] | undefined) => {
-    if (!customerNames) {
-      setSelectedCustomers([]);
-      return;
-    }
-
-    const selectedCustomerObjects = customerNames
-      .map((name) => customers.find((c) => c.name === name))
-      .filter((customer): customer is Customer => !!customer);
-
-    setSelectedCustomers(selectedCustomerObjects);
-  };
-
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Settings2 className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
-
-      <SheetContent className="w-[500px] sm:max-w-[600px] pt-2">
-        <SheetHeader>
-          <SheetTitle className="text-2xl font-semibold">
-            Admin Information
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="border-b" />
-        <div className="mt-2 grid grid-cols-1 items-center gap-4 md:grid-cols-2 px-4">
-          <QuoteTypeSection quoteType={quoteType} setQuoteType={setQuoteType} />
-
-          <BranchAndContractSection
-            quoteType={quoteType}
-            selectedBranch={selectedBranch}
-            setSelectedBranch={setSelectedBranch}
-            associatedContractNumber={associatedContractNumber}
-            setAssociatedContractNumber={setAssociatedContractNumber}
-            isLoadingEstimatesJobs={isLoadingEstimatesJobs}
-            allEstimates={allEstimates}
-            allJobs={allJobs}
-          />
-
-          <LocationDetailsSection
-            county={county}
-            setCounty={setCounty}
-            ecmsPoNumber={ecmsPoNumber}
-            setEcmsPoNumber={setEcmsPoNumber}
-            stateRoute={stateRoute}
-            setStateRoute={setStateRoute}
-            quoteType={quoteType}
-          />
-
-          <PaymentAndDateSection
-            paymentTerms={paymentTerms}
-            setPaymentTerms={setPaymentTerms}
-            quoteDate={quoteDate}
-            setQuoteDate={setQuoteDate}
-          />
-
-          <CustomersSection
-            customers={customers}
-            selectedCustomers={selectedCustomers}
-            handleCustomerSelection={handleCustomerSelection}
-            isLoading={isLoading}
-          />
-
-          <DigitalSignatureSection
-            digitalSignature={digitalSignature}
-            setDigitalSignature={setDigitalSignature}
-          />
-        </div>
-      </SheetContent>
-    </Sheet>
+    <AdminInformationSheet
+      quoteType={quoteType}
+      setQuoteType={setQuoteType}
+      paymentTerms={paymentTerms}
+      setPaymentTerms={setPaymentTerms}
+      quoteDate={quoteDate}
+      setQuoteDate={setQuoteDate}
+      selectedCustomers={selectedCustomers}
+      setSelectedCustomers={setSelectedCustomers}
+      digitalSignature={digitalSignature}
+      setDigitalSignature={setDigitalSignature}
+      county={county}
+      setCounty={setCounty}
+      ecmsPoNumber={ecmsPoNumber}
+      setEcmsPoNumber={setEcmsPoNumber}
+      stateRoute={stateRoute}
+      setStateRoute={setStateRoute}
+      associatedContractNumber={associatedContractNumber || ""}
+      setAssociatedContractNumber={setAssociatedContractNumber}
+      setQuoteItems={setQuoteItems}
+      adminData={adminData}
+      setAdminData={setAdminData}
+      customers={customers}
+      isLoading={isLoading}
+      selectedBranch={selectedBranch}
+      setSelectedBranch={setSelectedBranch}
+      isLoadingEstimatesJobs={isLoadingEstimatesJobs}
+      allEstimates={allEstimates}
+      allJobs={allJobs}
+    />
   );
 }
