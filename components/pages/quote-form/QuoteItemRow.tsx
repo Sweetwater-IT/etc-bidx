@@ -478,7 +478,11 @@ export default function QuoteItemRow({
             {item.associatedItems.map((subItem, idx) => (
               <div
                 key={subItem.id || idx}
-                className={`grid gap-4 items-center bg-muted rounded py-2 pl-1 pr-1 ${idx !== item.associatedItems.length - 1 ? 'border-b border-border' : ''}`}
+                className={`grid gap-4 items-center bg-muted py-0 pr-1
+                  ${idx === 0 ? 'rounded-tl rounded-tr' : ''}
+                  ${idx === item.associatedItems.length - 1 ? 'rounded-bl rounded-br' : ''}
+                  ${idx !== item.associatedItems.length - 1 ? 'border-b border-border' : ''}
+                `}
                 style={{
                   gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
                 }}
@@ -487,6 +491,7 @@ export default function QuoteItemRow({
                   <Input
                     placeholder="#"
                     value={subItem.itemNumber || ""}
+                    className="text-sm border-none"
                     onChange={(e) =>
                       handleCompositeItemUpdate(
                         item.id,
@@ -497,14 +502,14 @@ export default function QuoteItemRow({
                     }
                   />
                 </div>
-                <div className="text-foreground w-full truncate ml-2">
+                <div className="text-foreground w-full truncate ml-2 text-sm">
                   {subItem.description ? (
                     subItem.description
                   ) : (
                     <span className="opacity-50">—</span>
                   )}
                 </div>
-                <div className="text-foreground ml-4">
+                <div className="text-foreground ml-[18px] text-sm">
                   {subItem.uom ? (
                     subItem.uom
                   ) : (
@@ -516,6 +521,7 @@ export default function QuoteItemRow({
                     type="number"
                     placeholder="Qty"
                     value={subItem.quantity || ""}
+                    className="text-sm border-none"
                     onChange={(e) =>
                       handleCompositeItemUpdate(
                         item.id,
@@ -526,22 +532,22 @@ export default function QuoteItemRow({
                     }
                   />
                 </div>
-                <div className="text-foreground ml-[6px]">
+                <div className="text-foreground ml-[10px] text-sm">
                   {subItem.unitPrice ? (
                     `$${Number(subItem.unitPrice).toFixed(2)}`
                   ) : (
                     <span className="opacity-50">—</span>
                   )}
                 </div>
-                <div className="text-foreground ml-2">
+                <div className="text-foreground ml-3 text-sm">
                   {/* Discount/Type não exibido para subitem, mas pode adicionar se quiser */}
                   <span className="opacity-50">—</span>
                 </div>
-                <div className="text-foreground ml-2">
+                <div className="text-foreground ml-3 text-sm">
                   {/* Discount não exibido para subitem, mas pode adicionar se quiser */}
                   <span className="opacity-50">—</span>
                 </div>
-                <div className="text-foreground text-left max-w-[140px] w-full">
+                <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
                   {subItem.unitPrice && subItem.quantity ? (
                     `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
                   ) : (
