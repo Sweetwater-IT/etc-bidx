@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { ActiveJob } from '@/data/active-jobs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,8 +12,8 @@ export async function GET(request: NextRequest) {
     if (counts) {
       try {
         const { data: allJobs, error: allJobsError } = await supabase
-          .from('jobs_complete')
-          .select('id, branch_code, project_status');
+          .from('jobs')
+          .select('id, admin_data_entries(county), archived');
 
         if (allJobsError) {
           return NextResponse.json(
@@ -21,12 +22,14 @@ export async function GET(request: NextRequest) {
           );
         }
 
+        const filteredCountiesJobs = allJobs.filter(job => !!job.admin_data_entries && !!(job.admin_data_entries as any).county)
+
         const countData = {
           all: allJobs.length,
-          west: allJobs.filter(job => job.branch_code === '30').length,
-          turbotville: allJobs.filter(job => job.branch_code === '20').length,
-          hatfield: allJobs.filter(job => job.branch_code === '10').length,
-          archived: allJobs.filter(job => job.project_status === 'Archived').length
+          west: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Bedford' || (job.admin_data_entries as any).county.branch === 'WEST').length,
+          turbotville: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Turbotville').length,
+          hatfield: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Hatfield').length,
+          archived: allJobs.filter(job => !!job.archived).length
         };
 
         return NextResponse.json(countData);
@@ -135,37 +138,6 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Process all jobs
-      interface Job {
-        id: any;
-        job_number: string;
-        branch_code: string;
-        owner_type: string;
-        created_at: string;
-        project_status: string;
-        billing_status: string;
-        admin_data: any;
-        contractor_name: string;
-        customer_contract_number: string;
-        project_manager: string;
-        pm_email: string;
-        pm_phone: string;
-        total_cost: number;
-        total_revenue: number;
-        total_gross_profit: number;
-        total_days: number;
-        total_hours: number;
-        total_phases: number;
-        overdays: number;
-        job_summary: string;
-        equipment_rental: boolean;
-        mpt_rental: boolean;
-        flagging: boolean;
-        service_work: boolean;
-        sale_items: boolean;
-        county?: { name: string; };
-      }
-
       // Get all job IDs that don't have contractor names for batch lookup
       const jobsWithoutContractors = data?.filter(job => !job.contractor_name).map(job => job.id) || [];
       
@@ -189,7 +161,40 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const formattedJobs = data?.map((job: Job) => {
+      // Fetch won bid items for all jobs
+      const jobIds = data?.map(job => job.id) || [];
+      const wonBidItemsMap = new Map();
+      
+      if (jobIds.length > 0) {
+        const { data: wonBidItems, error: wonItemError } = await supabase
+          .from('won_bid_items')
+          .select(`
+            job_id,
+            bid_item_numbers(
+              item_number,
+              description
+            )
+          `)
+          .in('job_id', jobIds);
+
+        if (!wonItemError && wonBidItems) {
+          // Group won bid items by job_id
+          wonBidItems.forEach(item => {
+            if (!wonBidItemsMap.has(item.job_id)) {
+              wonBidItemsMap.set(item.job_id, []);
+            }
+            
+            // Concatenate item_number and description with a space
+            const bidItemNumbers = item.bid_item_numbers as any;
+            if (bidItemNumbers && bidItemNumbers.item_number && bidItemNumbers.description) {
+              const concatenatedItem = `${bidItemNumbers.item_number} ${bidItemNumbers.description}`;
+              wonBidItemsMap.get(item.job_id).push(concatenatedItem);
+            }
+          });
+        }
+      }
+
+      const formattedJobs = data?.map((job: any) => {
         const branchNameMap: Record<string, string> = {
           '10': 'Hatfield',
           '20': 'Turbotville',
@@ -208,13 +213,16 @@ export async function GET(request: NextRequest) {
         }
         
         let countyName = '';
+        let countyJson = {};
         if (job.county && typeof job.county === 'object' && job.county.name) {
           countyName = job.county.name;
+          countyJson = job.county;
         } else if (adminData && adminData.county) {
           if (typeof adminData.county === 'string') {
             countyName = adminData.county;
           } else if (typeof adminData.county === 'object' && adminData.county.name) {
             countyName = adminData.county.name;
+            countyJson = adminData.county;
           }
         }
         
@@ -238,7 +246,10 @@ export async function GET(request: NextRequest) {
           // Check if we found a contractor name in the lookup
           contractorName = contractorLookups.get(job.id) || '';
         }
-        
+
+        // Get won bid items for this job
+        const wonBidItems = wonBidItemsMap.get(job.id) || [];
+
         return {
           id: job.id,
           jobNumber: job.job_number || '',
@@ -260,8 +271,10 @@ export async function GET(request: NextRequest) {
           flagging: Boolean(job.flagging),
           saleItems: Boolean(job.sale_items),
           overdays: job.overdays || 0,
+          countyJson,
           createdAt: job.created_at || '',
           status: job.project_status || 'In Progress',
+          wonBidItems: wonBidItems
         };
       }) || [];
 
@@ -292,12 +305,12 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { newStatus, type, jobNumber } = await request.json();
+    const { formData } = await request.json();
 
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
       .select('id')
-      .eq('job_number', jobNumber)
+      .eq('job_number', formData.jobNumber)
       .single();
 
     if (jobNumberError || !jobNumberData) {
@@ -308,10 +321,24 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const { data: adminDataResult, error: adminDataError } = await supabase
+      .from('admin_data_entries')
+      .update({'county' : formData.countyJson, 'location' : formData.location, 'contract_number': formData.contractNumber,
+        'start_date': formData.startDate, 'end_date': formData.endDate})
+      .eq('job_id', formData.id)
+
+      if (adminDataError) {
+        console.error('Supabase error:', adminDataError);
+        return NextResponse.json(
+          { message: 'Failed to update job status', error: adminDataError.message },
+          { status: 500 }
+        );
+      }
+
     // Now update the job status using the job_number_id
     const { data, error } = await supabase
       .from('jobs')
-      .update({ [type]: newStatus })
+      .update({ 'bid_number': formData.bidNumber, })
       .eq('job_number_id', jobNumberData.id);
 
     if (error) {
@@ -323,7 +350,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'Job status updated successfully', data },
+      { message: 'Job status updated successfully', data: {data, adminDataResult} },
       { status: 200 }
     );
 

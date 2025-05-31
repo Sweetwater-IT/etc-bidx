@@ -1,3 +1,5 @@
+import { County } from "@/types/TCounty"
+
 export type ActiveJob = {
   jobNumber: string
   bidNumber: string
@@ -5,7 +7,8 @@ export type ActiveJob = {
   billingStatus: string
   contractNumber: string
   location: string
-  county: string
+  county: {main: string, secondary: string} | string
+  countyJson: County | undefined
   branch: string
   contractor: string
   startDate: string
@@ -20,6 +23,7 @@ export type ActiveJob = {
   overdays: number
   createdAt: string
   status: string
+  wonBidItems: string[]
 }
 
 export const ACTIVE_JOBS_SEGMENTS = [

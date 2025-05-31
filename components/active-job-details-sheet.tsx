@@ -181,14 +181,14 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                   <div className="space-y-1 w-full">
                     <Label className="text-sm text-muted-foreground">Labor Rate</Label>
                     <div className="font-medium">
-                      {job.laborRate || ''}
+                      {(job.countyJson && job.countyJson.laborRate) ? job.countyJson.laborRate.toFixed(2) : ''}
                     </div>
                   </div>
 
                   <div className="space-y-1 w-full">
                     <Label className="text-sm text-muted-foreground">Fringe Rate</Label>
                     <div className="font-medium">
-                      {job.fringeRate || ''}
+                      {(job.countyJson && job.countyJson.laborRate) ? job.countyJson.fringeRate.toFixed(2) : ''}
                     </div>
                   </div>
                 </div>
@@ -196,14 +196,11 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                 <div className="space-y-1 w-full">
                   <Label className="font-medium">Services Required</Label>
                   <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                    {job?.mpt && <span className="px-2 py-0.5 bg-gray-100 rounded-md">MPT</span>}
-                    {job?.rental && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
-                    {job?.permSigns && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Perm Signs</span>}
-                    {job?.flagging && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
-                    {job?.saleItems && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Sale</span>}
+                    {job?.wonBidItems.map((wbi, index) => <span key={index} className="px-2 py-0.5 bg-gray-100 rounded-md">{wbi}</span>)}
                   </div>
                 </div>
-                <div className="space-y-2 w-full">
+
+                {job?.overdays && job?.overdays > 0 && <div className="space-y-2 w-full">
                   <Label>Overdays</Label>
                   <div className="flex items-center mt-2 text-sm gap-2 text-amber-500">
                     <AlertCircle size={14} />
@@ -211,7 +208,7 @@ export function ActiveJobDetailsSheet({ open, onOpenChange, job, onEdit, onNavig
                       This job is overdays
                     </span>
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
 
