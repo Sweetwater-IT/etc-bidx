@@ -63,6 +63,17 @@ export default function QuoteItemRow({
     p.label.toLowerCase().includes(productInput.toLowerCase())
   );
 
+  const [newProduct, setNewProduct] = useState({
+    itemNumber: "",
+    description: "",
+    uom: "",
+    quantity: "",
+    unitPrice: "",
+    discountType: "dollar",
+    discount: "",
+    notes: ""
+  });
+
   const [digits, setDigits] = useState({
     unitPrice: "000",
     discount: "000",
@@ -81,7 +92,7 @@ export default function QuoteItemRow({
 
     if (inputType === "insertText" && /\d/.test(data)) {
       const candidate = current + data;
-      if (parseInt(candidate, 10) <= 99999) digits = candidate;
+      digits = candidate;
     } else if (inputType === "deleteContentBackward") {
       digits = current.slice(0, -1);
     }
@@ -208,6 +219,7 @@ export default function QuoteItemRow({
 
               const nextDigits = handleNextDigits(digits.discount, inputType, data);
               setDigits((prev) => ({ ...prev, discount: nextDigits }));
+              handleItemUpdate(item.id, "discount", Number(formatDecimal(nextDigits)));
             }}
           />
         </div>
@@ -262,10 +274,13 @@ export default function QuoteItemRow({
       <div className="flex justify-end mt-4">
         <Button
           onClick={() => {
+            handleItemUpdate(item.id, "itemNumber", productInput);
+            handleItemUpdate(item.id, "unitPrice", Number(formatDecimal(digits.unitPrice)));
+            handleItemUpdate(item.id, "discount", Number(formatDecimal(digits.discount)));
             setEditingItemId(null);
             setEditingSubItemId(null);
           }}
-          className="bg-black hover:bg-black/90"
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           Save Changes
         </Button>
@@ -402,6 +417,8 @@ export default function QuoteItemRow({
               <Input
                 className="bg-background"
                 placeholder="Enter item number or SKU"
+                value={newProduct.itemNumber}
+                onChange={(e) => setNewProduct(prev => ({ ...prev, itemNumber: e.target.value }))}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -409,11 +426,16 @@ export default function QuoteItemRow({
               <Input
                 className="bg-background"
                 placeholder="Enter product description"
+                value={newProduct.description}
+                onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label>UOM</Label>
-              <Select>
+              <Select
+                value={newProduct.uom}
+                onValueChange={(value) => setNewProduct(prev => ({ ...prev, uom: value }))}
+              >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select UOM" />
                 </SelectTrigger>
@@ -432,6 +454,8 @@ export default function QuoteItemRow({
                 type="number"
                 className="bg-background"
                 placeholder="Enter quantity"
+                value={newProduct.quantity}
+                onChange={(e) => setNewProduct(prev => ({ ...prev, quantity: e.target.value }))}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -448,14 +472,15 @@ export default function QuoteItemRow({
 
                   const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
                   setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
+                  setNewProduct(prev => ({ ...prev, unitPrice: formatDecimal(nextDigits) }));
                 }}
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label>Discount Type</Label>
               <Select
-                value={item.discountType}
-                onValueChange={(value) => handleItemUpdate(item.id, "discountType", value)}
+                value={newProduct.discountType}
+                onValueChange={(value) => setNewProduct(prev => ({ ...prev, discountType: value }))}
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select discount type" />
@@ -471,9 +496,9 @@ export default function QuoteItemRow({
               <Input
                 type="text"
                 className="bg-background"
-                placeholder={item.discountType === "dollar" ? "$0.00" : "0.00%"}
+                placeholder={newProduct.discountType === "dollar" ? "$0.00" : "0.00%"}
                 value={digits.discount ? 
-                  item.discountType === "dollar" 
+                  newProduct.discountType === "dollar" 
                     ? `$ ${formatDecimal(digits.discount)}` 
                     : `${formatPercentage(digits.discount)}%` 
                   : ""}
@@ -484,6 +509,7 @@ export default function QuoteItemRow({
 
                   const nextDigits = handleNextDigits(digits.discount, inputType, data);
                   setDigits((prev) => ({ ...prev, discount: nextDigits }));
+                  setNewProduct(prev => ({ ...prev, discount: formatDecimal(nextDigits) }));
                 }}
               />
             </div>
@@ -492,6 +518,8 @@ export default function QuoteItemRow({
               <Textarea
                 className="bg-background min-h-[100px]"
                 placeholder="Enter any additional notes"
+                value={newProduct.notes}
+                onChange={(e) => setNewProduct(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
             <Separator className="my-2" />
@@ -499,6 +527,24 @@ export default function QuoteItemRow({
               <Button
                 type="button"
                 className="bg-black text-white py-2 mt-4 text-md font-semibold hover:bg-black/90 transition rounded"
+                onClick={() => {
+                  // Aqui você pode adicionar a lógica para salvar o novo produto
+                  setOpenProductSheet(false);
+                  setNewProduct({
+                    itemNumber: "",
+                    description: "",
+                    uom: "",
+                    quantity: "",
+                    unitPrice: "",
+                    discountType: "dollar",
+                    discount: "",
+                    notes: ""
+                  });
+                  setDigits({
+                    unitPrice: "000",
+                    discount: "000"
+                  });
+                }}
               >
                 Save Product
               </Button>

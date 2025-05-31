@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelect } from "@/components/ui/multiselect";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { useCustomers } from "@/hooks/use-customers";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Customer } from "@/types/Customer";
 import { toast } from "sonner";
 import { AdminData } from "@/types/TAdminData";
@@ -23,6 +23,14 @@ import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 import { Flagging } from "@/types/TFlagging";
 import { EquipmentRentalItem } from "@/types/IEquipmentRentalItem";
 import { SaleItem } from "@/types/TSaleItem";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
 const PAYMENT_TERMS = [
   { value: "COD", label: "COD" },
@@ -81,6 +89,14 @@ export function QuoteAdminInformation() {
   const [allEstimates, setAllEstimates] = useState<Estimate[]>([]);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [isLoadingEstimatesJobs, setIsLoadingEstimatesJobs] = useState(false);
+  const [openContractSheet, setOpenContractSheet] = useState(false);
+  const [contractInput, setContractInput] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [newContract, setNewContract] = useState({
+    contractNumber: "",
+    branch: "",
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getCustomers();
@@ -280,30 +296,107 @@ export function QuoteAdminInformation() {
     setSelectedCustomers(selectedCustomerObjects);
   };
 
+  // Filtro para busca
+  const filteredEstimates = allEstimates
+    .filter(e => !!e.contract_number)
+    .filter(e =>
+      e.contract_number.toLowerCase().includes(contractInput.toLowerCase()) && (selectedBranch === 'All' ? true : e.branch === selectedBranch)
+    );
+  const filteredJobs = allJobs
+    .filter(j => !!j.job_number)
+    .filter(j =>
+      j.job_number.toLowerCase().includes(contractInput.toLowerCase()) && (selectedBranch === 'All' ? true : j.branch === selectedBranch)
+    );
+
   return (
     <div className="rounded-lg border p-6">
       <h2 className="mb-4 text-lg font-semibold">Admin Information</h2>
-      <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 items-center gap-4">
         <div className="space-y-2">
-          <Label>Quote Type</Label>
-          <Select value={quoteType} onValueChange={(value) => setQuoteType(value as "new" | "estimate" | "job")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose quote type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="estimate">Estimate</SelectItem>
-              <SelectItem value="job">Job</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Contract / Job</Label>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
+              placeholder="Search or add a contract/job..."
+              value={contractInput}
+              onChange={(e) => {
+                setContractInput(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            />
+            {showDropdown && (
+              <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-64 overflow-auto">
+                <div
+                  className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted font-semibold"
+                  onMouseDown={() => {
+                    setShowDropdown(false);
+                    setOpenContractSheet(true);
+                  }}
+                >
+                  + Add new
+                </div>
+                <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground font-bold">Estimates</div>
+                {filteredEstimates.length === 0 && <div className="px-3 py-2 text-muted-foreground">No estimates found</div>}
+                {filteredEstimates.map((estimate) => (
+                  <div
+                    key={estimate.contract_number}
+                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                    onMouseDown={() => {
+                      setAssociatedContractNumber(estimate.contract_number);
+                      setContractInput(estimate.contract_number);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    {estimate.contract_number} <span className="text-xs text-muted-foreground">({estimate.branch})</span>
+                  </div>
+                ))}
+                <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground font-bold">Jobs</div>
+                {filteredJobs.length === 0 && <div className="px-3 py-2 text-muted-foreground">No jobs found</div>}
+                {filteredJobs.map((job) => (
+                  <div
+                    key={job.job_number}
+                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                    onMouseDown={() => {
+                      setAssociatedContractNumber(job.job_number);
+                      setContractInput(job.job_number);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    {job.job_number} <span className="text-xs text-muted-foreground">({job.branch})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-
-        {(quoteType === "estimate" || quoteType === "job") && (
-          <>
-            <div className="space-y-2">
+      </div>
+      {/* Sheet para adicionar novo contrato */}
+      <Sheet open={openContractSheet} onOpenChange={setOpenContractSheet}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle className="text-2xl mb-2">Add New Contract</SheetTitle>
+            <Separator className="mb-4" />
+          </SheetHeader>
+          <form className="flex flex-col gap-5 mt-4 px-4">
+            <div className="flex flex-col gap-1">
+              <Label>Contract Number</Label>
+              <Input
+                className="bg-background"
+                placeholder="Enter contract number"
+                value={newContract.contractNumber}
+                onChange={(e) => setNewContract(prev => ({ ...prev, contractNumber: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
               <Label>Branch</Label>
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                <SelectTrigger>
+              <Select
+                value={newContract.branch}
+                onValueChange={(value) => setNewContract(prev => ({ ...prev, branch: value }))}
+              >
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
@@ -315,110 +408,23 @@ export function QuoteAdminInformation() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{quoteType === "estimate" ? "Contract Number" : "Job Number"}</Label>
-              <Select
-                value={associatedContractNumber || ""}
-                onValueChange={setAssociatedContractNumber}
-                disabled={isLoadingEstimatesJobs}
+            <Separator className="my-2" />
+            <SheetClose asChild>
+              <button
+                type="button"
+                className="bg-primary text-primary-foreground rounded py-2 mt-4 text-lg font-semibold hover:bg-primary/90 transition"
+                onClick={() => {
+                  // Aqui você pode adicionar lógica para salvar o novo contrato
+                  setOpenContractSheet(false);
+                  setNewContract({ contractNumber: "", branch: "" });
+                }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={`Select ${quoteType === "estimate" ? "contract" : "job"} number`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {quoteType === "estimate" 
-                    ? allEstimates.filter(estimate => selectedBranch === 'All' ? true : estimate.branch === selectedBranch).map((estimate, index) => (
-                        <SelectItem key={index} value={estimate.contract_number}>
-                          {estimate.contract_number}
-                        </SelectItem>
-                      ))
-                    : allJobs.filter(job => selectedBranch === 'All' ? true : job.branch === selectedBranch).map(job => (
-                        <SelectItem key={job.job_number} value={job.job_number}>
-                          {job.job_number}
-                        </SelectItem>
-                      ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>County</Label>
-              <Input
-                placeholder="County"
-                value={county}
-                onChange={(e) => setCounty(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>ECMS / PO #</Label>
-              <Input
-                placeholder="ECMS / PO #"
-                value={ecmsPoNumber}
-                onChange={(e) => setEcmsPoNumber(e.target.value)}
-                disabled={quoteType === "job"}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>State Route</Label>
-              <Input
-                placeholder="State Route"
-                value={stateRoute}
-                onChange={(e) => setStateRoute(e.target.value)}
-              />
-            </div>
-          </>
-        )}
-
-        <div className="space-y-2">
-          <Label>Payment Terms</Label>
-          <Select value={paymentTerms} onValueChange={setPaymentTerms}>
-            <SelectTrigger>
-              <SelectValue placeholder="Payment Terms" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_TERMS.map(term => (
-                <SelectItem key={term.value} value={term.value}>
-                  {term.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Quote Date</Label>
-          <Input
-            type="date"
-            value={quoteDate}
-            onChange={(e) => setQuoteDate(e.target.value)}
-          />
-        </div>
-
-        <div className="md:col-span-2 space-y-2">
-          <Label>Customers</Label>
-          <MultiSelect
-            options={customers.map(customer => ({
-              label: customer.name,
-              value: customer.name
-            }))}
-            selected={selectedCustomers.map(customer => customer.name)}
-            onChange={handleCustomerSelection}
-            placeholder="Select customers"
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="flex items-center h-full pt-5">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="digital-signature"
-              checked={digitalSignature}
-              onCheckedChange={setDigitalSignature}
-            />
-            <Label htmlFor="digital-signature">Digital signature</Label>
-          </div>
-        </div>
-      </div>
+                Save Contract
+              </button>
+            </SheetClose>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
