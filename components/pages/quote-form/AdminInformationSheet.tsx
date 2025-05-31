@@ -154,6 +154,7 @@ export function AdminInformationSheet({
     setQuoteDate(localQuoteDate);
     setDigitalSignature(localDigitalSignature);
     setSelectedCustomers(localSelectedCustomers);
+    onOpenChange(false);
   };
 
   return (
@@ -204,7 +205,7 @@ export function AdminInformationSheet({
           />
         </div>
 
-        <div className="flex justify-end mt-6 mr">
+        <div className="flex justify-end mt-6 mr-4">
           <Button onClick={handleSave} variant="default">
             Save
           </Button>
