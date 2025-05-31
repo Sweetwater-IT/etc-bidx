@@ -25,7 +25,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 
 export default function QuoteItemRow({
@@ -56,7 +56,7 @@ export default function QuoteItemRow({
     { value: "3", label: "Consulting" },
   ];
   const [openProductSheet, setOpenProductSheet] = useState(false);
-  const [productInput, setProductInput] = useState("");
+  const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const filteredProducts = productOptions.filter((p) =>
@@ -71,23 +71,44 @@ export default function QuoteItemRow({
     unitPrice: "",
     discountType: "dollar",
     discount: "",
-    notes: ""
+    notes: "",
   });
 
   const [digits, setDigits] = useState({
-    unitPrice: "000",
-    discount: "000",
+    unitPrice: item.unitPrice
+      ? (item.unitPrice * 100).toString().padStart(3, "0")
+      : "000",
+    discount: item.discount
+      ? (item.discount * 100).toString().padStart(3, "0")
+      : "000",
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      setDigits({
+        unitPrice: item.unitPrice
+          ? (item.unitPrice * 100).toString().padStart(3, "0")
+          : "000",
+        discount: item.discount
+          ? (item.discount * 100).toString().padStart(3, "0")
+          : "000",
+      });
+    }
+  }, [isEditing, item.unitPrice, item.discount]);
+
   function formatDecimal(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
+    return (parseInt(value, 10) / 100).toFixed(2);
   }
 
   function formatPercentage(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
+    return (parseInt(value, 10) / 100).toFixed(2);
   }
 
-  function handleNextDigits(current: string, inputType: string, data: string): string {
+  function handleNextDigits(
+    current: string,
+    inputType: string,
+    data: string
+  ): string {
     let digits = current;
 
     if (inputType === "insertText" && /\d/.test(data)) {
@@ -101,236 +122,65 @@ export default function QuoteItemRow({
   }
 
   const content = isEditing ? (
-    <div className="space-y-4 border-b border-border last:border-b-0 pb-4">
-      <div
-        className="grid items-center gap-2"
-        style={{
-          gridTemplateColumns: "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto auto",
-        }}
-      >
-        <div className="relative max-w-[180px]">
-          <input
-            ref={inputRef}
-            className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
-            placeholder="Search or add a product..."
-            value={productInput}
-            onChange={(e) => {
-              setProductInput(e.target.value);
-              setShowDropdown(true);
-            }}
-            onFocus={() => setShowDropdown(true)}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-          />
-          {showDropdown && (
-            <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
-              <div
-                className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                onMouseDown={() => {
-                  setShowDropdown(false);
-                  setOpenProductSheet(true);
-                }}
-              >
-                + Add new product
-              </div>
-            </div>
-          )}
-        </div>
-        <div>
-          <Input
-            placeholder="Description"
-            value={item.description}
-            onChange={(e) =>
-              handleItemUpdate(item.id, "description", e.target.value)
-            }
-            className=" w-full"
-          />
-        </div>
-        <div>
-          <Select
-            value={item.uom}
-            onValueChange={(value) => handleItemUpdate(item.id, "uom", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="UOM" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(UOM_TYPES).map((uom: any) => (
-                <SelectItem key={uom} value={uom}>
-                  {uom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Input
-            type="number"
-            placeholder="Qty"
-            value={item.quantity || ""}
-            onChange={(e) =>
-              handleItemUpdate(item.id, "quantity", Number(e.target.value))
-            }
-          />
-        </div>
-        <div>
-          <Input
-            type="text"
-            placeholder="$0.00"
-            value={digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""}
-            onChange={(e) => {
-              const ev = e.nativeEvent as InputEvent;
-              const { inputType } = ev;
-              const data = (ev.data || "").replace(/\$/g, "");
-
-              const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
-              setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-            }}
-          />
-        </div>
-        <div>
-          <Select
-            value={item.discountType}
-            onValueChange={(value) =>
-              handleItemUpdate(item.id, "discountType", value)
-            }
-          >
-            <SelectTrigger className="shrink-[2]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="dollar">$</SelectItem>
-              <SelectItem value="percentage">%</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Input
-            type="text"
-            placeholder={item.discountType === "dollar" ? "$0.00" : "0.00%"}
-            value={digits.discount ? 
-              item.discountType === "dollar" 
-                ? `$ ${formatDecimal(digits.discount)}` 
-                : `${formatPercentage(digits.discount)}%` 
-              : ""}
-            onChange={(e) => {
-              const ev = e.nativeEvent as InputEvent;
-              const { inputType } = ev;
-              const data = (ev.data || "").replace(/[$\s%]/g, "");
-
-              const nextDigits = handleNextDigits(digits.discount, inputType, data);
-              setDigits((prev) => ({ ...prev, discount: nextDigits }));
-              handleItemUpdate(item.id, "discount", Number(formatDecimal(nextDigits)));
-            }}
-          />
-        </div>
-        <div className="text-center w-full">
-          ${calculateExtendedPrice(item)}
-        </div>
-        <div></div>
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemoveItem(item.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <QuoteItemSubItems
-        item={item}
-        editingSubItemId={editingSubItemId}
-        setEditingSubItemId={setEditingSubItemId}
-        handleAddCompositeItem={handleAddCompositeItem}
-        handleCompositeItemUpdate={handleCompositeItemUpdate}
-        handleDeleteComposite={handleDeleteComposite}
-        UOM_TYPES={UOM_TYPES}
-      />
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleAddCompositeItem(item)}
-          disabled={item.associatedItems?.some(
-            (ai) => !ai.itemNumber || ai.itemNumber === ""
-          )}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Sub Item
-        </Button>
-      </div>
-      <div>
-        <div className="text-xs font-semibold mb-1 text-muted-foreground">
-          Notes
-        </div>
-        <Textarea
-          placeholder="Notes"
-          value={item.notes || ""}
-          onChange={(e) => handleItemUpdate(item.id, "notes", e.target.value)}
-          className="min-h-[60px]"
-        />
-      </div>
-      <div className="flex justify-end mt-4">
-        <Button
-          onClick={() => {
-            handleItemUpdate(item.id, "itemNumber", productInput);
-            handleItemUpdate(item.id, "unitPrice", Number(formatDecimal(digits.unitPrice)));
-            handleItemUpdate(item.id, "discount", Number(formatDecimal(digits.discount)));
-            setEditingItemId(null);
-            setEditingSubItemId(null);
-          }}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          Save Changes
-        </Button>
-      </div>
-    </div>
-  ) : (
     <div
       className="grid gap-4 pb-4 items-center border-b border-border"
       style={{
-        gridTemplateColumns: "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto auto",
+        gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
       }}
     >
-      <div>
-        <div className="relative max-w-[180px]">
-          <input
-            ref={inputRef}
-            className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
-            placeholder="Search or add a product..."
-            value={productInput}
-            onChange={(e) => {
-              setProductInput(e.target.value);
-              setShowDropdown(true);
-            }}
-            onFocus={() => setShowDropdown(true)}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-          />
-          {showDropdown && (
-            <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
-              <div
-                className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                onMouseDown={() => {
-                  setShowDropdown(false);
-                  setOpenProductSheet(true);
-                }}
-              >
-                + Add new product
-              </div>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
+          placeholder="Search or add a product..."
+          value={productInput}
+          onChange={(e) => {
+            setProductInput(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+        />
+        {showDropdown && (
+          <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
+            <div
+              className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+              onMouseDown={() => {
+                setShowDropdown(false);
+                setOpenProductSheet(true);
+              }}
+            >
+              + Add new product
             </div>
-          )}
-        </div>
-      </div>
-      <div className="text-foreground w-full truncate">
-        {item.description ? (
-          item.description
-        ) : (
-          <span className="opacity-50">—</span>
+          </div>
         )}
       </div>
-      <div className="text-foreground">
-        {item.uom ? item.uom : <span className="opacity-50">—</span>}
+      <div>
+        <Input
+          placeholder="Description"
+          value={item.description || ""}
+          onChange={(e) =>
+            handleItemUpdate(item.id, "description", e.target.value)
+          }
+          className="w-full"
+        />
+      </div>
+      <div>
+        <Select
+          value={item.uom || ""}
+          onValueChange={(value) => handleItemUpdate(item.id, "uom", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="UOM" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.values(UOM_TYPES).map((uom: any) => (
+              <SelectItem key={uom} value={uom}>
+                {uom}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <Input
@@ -340,16 +190,166 @@ export default function QuoteItemRow({
           onChange={(e) =>
             handleItemUpdate(item.id, "quantity", Number(e.target.value))
           }
+          className="w-full"
         />
       </div>
-      <div className="text-foreground">
+      <div>
+        <Input
+          type="text"
+          placeholder="$0.00"
+          value={digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""}
+          onChange={(e) => {
+            const ev = e.nativeEvent as InputEvent;
+            const { inputType } = ev;
+            const data = (ev.data || "").replace(/\$/g, "");
+
+            const nextDigits = handleNextDigits(
+              digits.unitPrice,
+              inputType,
+              data
+            );
+            setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
+            handleItemUpdate(
+              item.id,
+              "unitPrice",
+              Number(formatDecimal(nextDigits))
+            );
+          }}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <Select
+          value={item.discountType || "dollar"}
+          onValueChange={(value) =>
+            handleItemUpdate(item.id, "discountType", value)
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dollar">$</SelectItem>
+            <SelectItem value="percentage">%</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Input
+          type="text"
+          placeholder={item.discountType === "dollar" ? "$0.00" : "0.00%"}
+          value={
+            digits.discount
+              ? item.discountType === "dollar"
+                ? `$ ${formatDecimal(digits.discount)}`
+                : `${formatPercentage(digits.discount)}%`
+              : ""
+          }
+          onChange={(e) => {
+            const ev = e.nativeEvent as InputEvent;
+            const { inputType } = ev;
+            const data = (ev.data || "").replace(/[$\s%]/g, "");
+
+            const nextDigits = handleNextDigits(
+              digits.discount,
+              inputType,
+              data
+            );
+            setDigits((prev) => ({ ...prev, discount: nextDigits }));
+            handleItemUpdate(
+              item.id,
+              "discount",
+              Number(formatDecimal(nextDigits))
+            );
+          }}
+          className="w-full"
+        />
+      </div>
+      <div className=" w-full">${calculateExtendedPrice(item)}</div>
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (isEditing) {
+              setEditingItemId(null);
+            } else {
+              handleRemoveItem(item.id);
+            }
+          }}
+        >
+          {isEditing ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <MoreVertical className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div
+      className="grid gap-4 pb-4 items-center border-b border-border"
+      style={{
+        gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
+      }}
+    >
+      <div>
+        <div className="relative">
+          <input
+            ref={inputRef}
+            className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
+            placeholder="Search or add a product..."
+            value={productInput}
+            onChange={(e) => {
+              setProductInput(e.target.value);
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          />
+          {showDropdown && (
+            <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
+              <div
+                className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                onMouseDown={() => {
+                  setShowDropdown(false);
+                  setOpenProductSheet(true);
+                }}
+              >
+                + Add new product
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="text-foreground w-full truncate ml-2">
+        {item.description ? (
+          item.description
+        ) : (
+          <span className="opacity-50">—</span>
+        )}
+      </div>
+      <div className="text-foreground ml-4">
+        {item.uom ? item.uom : <span className="opacity-50">—</span>}
+      </div>
+      <div className="ml-2 mr-2">
+        <Input
+          type="number"
+          placeholder="Qty"
+          value={item.quantity || ""}
+          onChange={(e) =>
+            handleItemUpdate(item.id, "quantity", Number(e.target.value))
+          }
+        />
+      </div>
+      <div className="text-foreground ml-[6px]">
         {item.unitPrice ? (
           `$${displayUnitPrice.toFixed(2)}`
         ) : (
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-2">
         {!item.itemNumber &&
         !item.description &&
         !item.uom &&
@@ -364,7 +364,7 @@ export default function QuoteItemRow({
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div className="text-foreground">
+      <div className="text-foreground ml-2">
         {item.discount ? item.discount : <span className="opacity-50">—</span>}
       </div>
       <div className="text-foreground text-left max-w-[140px] w-full">
@@ -374,8 +374,7 @@ export default function QuoteItemRow({
           <span className="opacity-50">—</span>
         )}
       </div>
-      <div></div>
-      <div className="flex items-center justify-end gap-2">
+      <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -418,7 +417,12 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter item number or SKU"
                 value={newProduct.itemNumber}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, itemNumber: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    itemNumber: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -427,14 +431,21 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter product description"
                 value={newProduct.description}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label>UOM</Label>
               <Select
                 value={newProduct.uom}
-                onValueChange={(value) => setNewProduct(prev => ({ ...prev, uom: value }))}
+                onValueChange={(value) =>
+                  setNewProduct((prev) => ({ ...prev, uom: value }))
+                }
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select UOM" />
@@ -455,7 +466,12 @@ export default function QuoteItemRow({
                 className="bg-background"
                 placeholder="Enter quantity"
                 value={newProduct.quantity}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, quantity: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    quantity: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -464,15 +480,24 @@ export default function QuoteItemRow({
                 type="text"
                 className="bg-background"
                 placeholder="$0.00"
-                value={digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""}
+                value={
+                  digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
+                }
                 onChange={(e) => {
                   const ev = e.nativeEvent as InputEvent;
                   const { inputType } = ev;
                   const data = (ev.data || "").replace(/\$/g, "");
 
-                  const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
+                  const nextDigits = handleNextDigits(
+                    digits.unitPrice,
+                    inputType,
+                    data
+                  );
                   setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                  setNewProduct(prev => ({ ...prev, unitPrice: formatDecimal(nextDigits) }));
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    unitPrice: formatDecimal(nextDigits),
+                  }));
                 }}
               />
             </div>
@@ -480,7 +505,9 @@ export default function QuoteItemRow({
               <Label>Discount Type</Label>
               <Select
                 value={newProduct.discountType}
-                onValueChange={(value) => setNewProduct(prev => ({ ...prev, discountType: value }))}
+                onValueChange={(value) =>
+                  setNewProduct((prev) => ({ ...prev, discountType: value }))
+                }
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select discount type" />
@@ -496,20 +523,31 @@ export default function QuoteItemRow({
               <Input
                 type="text"
                 className="bg-background"
-                placeholder={newProduct.discountType === "dollar" ? "$0.00" : "0.00%"}
-                value={digits.discount ? 
-                  newProduct.discountType === "dollar" 
-                    ? `$ ${formatDecimal(digits.discount)}` 
-                    : `${formatPercentage(digits.discount)}%` 
-                  : ""}
+                placeholder={
+                  newProduct.discountType === "dollar" ? "$0.00" : "0.00%"
+                }
+                value={
+                  digits.discount
+                    ? newProduct.discountType === "dollar"
+                      ? `$ ${formatDecimal(digits.discount)}`
+                      : `${formatPercentage(digits.discount)}%`
+                    : ""
+                }
                 onChange={(e) => {
                   const ev = e.nativeEvent as InputEvent;
                   const { inputType } = ev;
                   const data = (ev.data || "").replace(/[$\s%]/g, "");
 
-                  const nextDigits = handleNextDigits(digits.discount, inputType, data);
+                  const nextDigits = handleNextDigits(
+                    digits.discount,
+                    inputType,
+                    data
+                  );
                   setDigits((prev) => ({ ...prev, discount: nextDigits }));
-                  setNewProduct(prev => ({ ...prev, discount: formatDecimal(nextDigits) }));
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    discount: formatDecimal(nextDigits),
+                  }));
                 }}
               />
             </div>
@@ -519,7 +557,9 @@ export default function QuoteItemRow({
                 className="bg-background min-h-[100px]"
                 placeholder="Enter any additional notes"
                 value={newProduct.notes}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
+                }
               />
             </div>
             <Separator className="my-2" />
@@ -538,11 +578,11 @@ export default function QuoteItemRow({
                     unitPrice: "",
                     discountType: "dollar",
                     discount: "",
-                    notes: ""
+                    notes: "",
                   });
                   setDigits({
                     unitPrice: "000",
-                    discount: "000"
+                    discount: "000",
                   });
                 }}
               >

@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 
@@ -27,32 +33,41 @@ export function QuoteEmailDetails() {
 
   // Create contact options from all selected customers
   const getContactOptions = () => {
-    const options: { value: string; label: string; customer: string; name: string }[] = [];
-    
-    selectedCustomers.forEach(customer => {
+    const options: {
+      value: string;
+      label: string;
+      customer: string;
+      name: string;
+    }[] = [];
+
+    selectedCustomers.forEach((customer) => {
       customer.emails.forEach((email, index) => {
         if (email) {
           options.push({
             value: email,
-            label: `${customer.names[index] || "Unknown"} (${email}) - ${customer.name}`,
+            label: `${customer.names[index] || "Unknown"} (${email}) - ${
+              customer.name
+            }`,
             customer: customer.name,
-            name: customer.names[index] || "Unknown"
+            name: customer.names[index] || "Unknown",
           });
         }
       });
     });
-    
+
     return options;
   };
 
   const contactOptions = getContactOptions();
 
   const handleToChange = (value: string) => {
-    const selectedContact = contactOptions.find(option => option.value === value);
+    const selectedContact = contactOptions.find(
+      (option) => option.value === value
+    );
     if (selectedContact) {
       setPointOfContact({
         email: selectedContact.value,
-        name: selectedContact.name
+        name: selectedContact.name,
       });
     }
   };
@@ -70,7 +85,7 @@ export function QuoteEmailDetails() {
           <Button onClick={handleAddContact}>Add New Contact</Button>
         </div>
       </div>
-      
+
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>To</Label>
@@ -82,8 +97,8 @@ export function QuoteEmailDetails() {
               <SelectValue placeholder="Select point of contact" />
             </SelectTrigger>
             <SelectContent>
-              {contactOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+              {contactOptions.map((option, idx) => (
+                <SelectItem key={option.value + "-" + idx} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -97,9 +112,9 @@ export function QuoteEmailDetails() {
             value={ccEmails}
             onChange={setCcEmails}
             placeholder="Add CC emails..."
-            options={contactOptions.map(opt => ({
+            options={contactOptions.map((opt) => ({
               value: opt.value,
-              label: opt.label
+              label: opt.label,
             }))}
           />
         </div>
@@ -110,16 +125,16 @@ export function QuoteEmailDetails() {
             value={bccEmails}
             onChange={setBccEmails}
             placeholder="Add BCC emails..."
-            options={contactOptions.map(opt => ({
+            options={contactOptions.map((opt) => ({
               value: opt.value,
-              label: opt.label
+              label: opt.label,
             }))}
           />
         </div>
 
         <div className="space-y-2">
           <Label>Subject</Label>
-          <Input 
+          <Input
             placeholder="Subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
@@ -128,15 +143,12 @@ export function QuoteEmailDetails() {
 
         <div className="space-y-2">
           <Label>From</Label>
-          <Input 
-            value="it@establishedtraffic.com"
-            disabled
-          />
+          <Input value="it@establishedtraffic.com" disabled />
         </div>
 
         <div className="space-y-2">
           <Label>Body</Label>
-          <Textarea 
+          <Textarea
             placeholder="Body"
             className="min-h-[150px]"
             value={emailBody}

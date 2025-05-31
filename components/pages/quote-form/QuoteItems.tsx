@@ -187,27 +187,27 @@ export function QuoteItems() {
         ],
       }));
     } else {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItem.id
-            ? {
-                ...item,
-                associatedItems: [
-                  ...(item.associatedItems || []),
-                  {
-                    id: newId,
-                    itemNumber: "",
-                    description: "",
-                    uom: "",
-                    quantity: 0,
-                    unitPrice: 0,
-                    notes: "",
-                  },
-                ],
-              }
-            : item
-        )
-      );
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItem.id
+          ? {
+              ...item,
+              associatedItems: [
+                ...(item.associatedItems || []),
+                {
+                  id: newId,
+                  itemNumber: "",
+                  description: "",
+                  uom: "",
+                  quantity: 0,
+                  unitPrice: 0,
+                  notes: "",
+                },
+              ],
+            }
+          : item
+      )
+    );
     }
     setEditingSubItemId(newId);
   };
@@ -228,19 +228,19 @@ export function QuoteItems() {
           ) || [],
       }));
     } else {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-                ...item,
-                associatedItems:
-                  item.associatedItems?.map((ai) =>
-                    ai.id === subItemId ? { ...ai, [field]: value } : ai
-                  ) || [],
-              }
-            : item
-        )
-      );
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+              ...item,
+              associatedItems:
+                item.associatedItems?.map((ai) =>
+                  ai.id === subItemId ? { ...ai, [field]: value } : ai
+                ) || [],
+            }
+          : item
+      )
+    );
     }
   };
 
@@ -253,18 +253,18 @@ export function QuoteItems() {
           prev.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
       }));
     } else {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-                ...item,
-                associatedItems:
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+              ...item,
+              associatedItems:
                   item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
                   [],
-              }
-            : item
-        )
-      );
+            }
+          : item
+      )
+    );
     }
   };
 
@@ -297,7 +297,7 @@ export function QuoteItems() {
   };
 
   return (
-    <div className="rounded-lg border p-6">
+    <div className="rounded-lg">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Quote Items</h2>
         <Button onClick={handleAddNewItem}>
@@ -312,8 +312,7 @@ export function QuoteItems() {
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2"
           style={{
-            gridTemplateColumns:
-              "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto",
+            gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
           }}
         >
           <div className="uppercase">Item # / SKU</div>
@@ -323,7 +322,7 @@ export function QuoteItems() {
           <div className="uppercase">Unit Price</div>
           <div className="uppercase">Disc. Type</div>
           <div className="uppercase">Discount</div>
-          <div className="uppercase text-right">Extended Price</div>
+          <div className="uppercase">Extended Price</div>
         </div>
 
         {/* Items */}
@@ -341,13 +340,13 @@ export function QuoteItems() {
           UOM_TYPES={UOM_TYPES}
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
-        />
-      </div>
+                />
+              </div>
 
       <div className="flex justify-start">
-        <Button
+                <Button
           className="mt-4 border-none p-0 !bg-transparent shadow-none"
-          variant="outline"
+                  variant="outline"
           onClick={handleAddNewItem}
         >
           + Add New Item
