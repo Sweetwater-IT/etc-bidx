@@ -21,18 +21,17 @@ type ContractData = {
 };
 
 const COLUMNS = [
-    { key: "letting_date", title: "Letting Date" },
-    { key: "contract_number", title: "Contract #" },
+    { key: "letting_date", title: "Letting Date", sortable: true },
+    { key: "contract_number", title: "Contract #", sortable: true },
     { key: "contractor", title: "Contractor" },
     { key: "status", title: "Status" },
     { key: "county", title: "County" },
     { key: "branch", title: "Branch" },
     { key: "estimator", title: "Estimator" },
-    { key: "created_at", title: "Created At" },
+    { key: "created_at", title: "Created At", sortable: true },
 ];
 
 const ContractManagementTable = () => {
-
     const router = useRouter();
     const [contracts, setContracts] = useState<ContractData[]>([]);
     const { startLoading, stopLoading } = useLoading();
@@ -42,6 +41,62 @@ const ContractManagementTable = () => {
         won: 0,
         'won-pending': 0,
     });
+
+    // Add state for filters
+    const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+    const [showFilters, setShowFilters] = useState(false);
+    const [branchOptions, setBranchOptions] = useState<{ label: string; value: string }[]>([]);
+    const [countyOptions, setCountyOptions] = useState<{ label: string; value: string }[]>([]);
+    const [estimatorOptions, setEstimatorOptions] = useState<{ label: string; value: string }[]>([]);
+    const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+    // Add table ref for resetting selection
+    const tableRef = React.useRef<{ resetRowSelection: () => void } | null>(null);
+
+    // Fetch reference data for filters
+    useEffect(() => {
+        const fetchReferenceData = async () => {
+            try {
+                const [branchesRes, countiesRes, estimatorsRes] = await Promise.all([
+                    fetch('/api/reference-data?type=branches'),
+                    fetch('/api/reference-data?type=counties'),
+                    fetch('/api/reference-data?type=estimators')
+                ]);
+
+                const [branchesData, countiesData, estimatorsData] = await Promise.all([
+                    branchesRes.json(),
+                    countiesRes.json(),
+                    estimatorsRes.json()
+                ]);
+
+                if (branchesData.success) {
+                    setBranchOptions(branchesData.data.map((b: any) => ({
+                        label: b.name,
+                        value: b.code
+                    })));
+                }
+
+                if (countiesData.success) {
+                    setCountyOptions(countiesData.data.map((c: any) => ({
+                        label: c.name,
+                        value: c.name
+                    })));
+                }
+
+                if (estimatorsData.success) {
+                    setEstimatorOptions(estimatorsData.data.map((e: any) => ({
+                        label: e.name,
+                        value: e.name
+                    })));
+                }
+            } catch (error) {
+                console.error("Error fetching reference data:", error);
+            }
+        };
+
+        fetchReferenceData();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -60,7 +115,7 @@ const ContractManagementTable = () => {
                     });
                 }
 
-                // Fetch data for current segment
+                // Fetch data for current segment with filters
                 let statusParam = '';
                 if (currentSegment === 'won') {
                     statusParam = '&status=won';
@@ -68,7 +123,19 @@ const ContractManagementTable = () => {
                     statusParam = '&status=won-pending';
                 }
 
-                const response = await fetch(`/api/jobs/active-jobs/contract-management?page=1&limit=100${statusParam}`);
+                // Add filter parameters if any are active
+                let filterParams = '';
+                if (Object.keys(activeFilters).length > 0) {
+                    filterParams = `&filters=${JSON.stringify(activeFilters)}`;
+                }
+
+                // Add sorting parameters if available
+                let sortParams = '';
+                if (sortBy) {
+                    sortParams = `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+                }
+
+                const response = await fetch(`/api/jobs/active-jobs/contract-management?page=1&limit=100${statusParam}${filterParams}${sortParams}`);
                 const result = await response.json();
 
                 if (result.success && result.data) {
@@ -95,7 +162,7 @@ const ContractManagementTable = () => {
         };
 
         fetchData();
-    }, [currentSegment]);
+    }, [currentSegment, activeFilters, sortBy, sortOrder]);
 
     const handleSegmentChange = (value: string) => {
         setCurrentSegment(value);
@@ -103,6 +170,74 @@ const ContractManagementTable = () => {
 
     const handleViewDetails = (item: ContractData) => {
         router.push(`/contracts/${encodeURIComponent(item.contract_number)}`);
+    };
+
+    const handleFilterChange = (filters: Record<string, any>) => {
+        setActiveFilters(filters);
+    };
+
+    const handleResetFilters = () => {
+        setActiveFilters({});
+    };
+
+    const handleSortChange = (column: string, direction: 'asc' | 'desc') => {
+        setSortBy(column);
+        setSortOrder(direction);
+    };
+
+    // Add handlers for bulk actions
+    const handleArchiveSelected = async (selectedRows: ContractData[]) => {
+        try {
+            const response = await fetch('/api/contracts/archive', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ids: selectedRows.map(row => row.id)
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Refresh the data
+                if (handleSegmentChange && currentSegment) {
+                    handleSegmentChange(currentSegment);
+                }
+            } else {
+                console.error('Failed to archive contracts:', result.message);
+            }
+        } catch (error) {
+            console.error('Error archiving contracts:', error);
+        }
+    };
+
+    const handleDeleteSelected = async (selectedRows: ContractData[]) => {
+        try {
+            const response = await fetch('/api/contracts/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ids: selectedRows.map(row => row.id)
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Refresh the data
+                if (handleSegmentChange && currentSegment) {
+                    handleSegmentChange(currentSegment);
+                }
+            } else {
+                console.error('Failed to delete contracts:', result.message);
+            }
+        } catch (error) {
+            console.error('Error deleting contracts:', error);
+        }
     };
 
     return (
@@ -118,6 +253,23 @@ const ContractManagementTable = () => {
             onSegmentChange={handleSegmentChange}
             stickyLastColumn
             onViewDetails={handleViewDetails}
+            // Add filter props
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            branchOptions={branchOptions}
+            countyOptions={countyOptions}
+            estimatorOptions={estimatorOptions}
+            activeFilters={activeFilters}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+            // Add sorting props
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
+            // Add bulk action props
+            onArchiveSelected={handleArchiveSelected}
+            onDeleteSelected={handleDeleteSelected}
+            tableRef={tableRef}
         />
     )
 }

@@ -86,11 +86,70 @@ export async function GET(request: NextRequest) {
         );
       }
     }
+
+    // First, build a query to get all bids that match our filters (for counting)
+    let countQuery = supabase
+      .from('estimate_complete')
+      .select('id, status, archived, admin_data', { count: 'exact', head: false });
+
+    // Apply the same basic filters we'll use for the main query
+    if (status) {
+      const upperStatus = status.toUpperCase();
+      if (upperStatus === 'WON' || upperStatus === 'WON-PENDING') {
+        countQuery = countQuery.eq('status', 'WON');
+      } else if (upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
+        countQuery = countQuery.eq('status', upperStatus);
+      } else if (upperStatus === 'ARCHIVED') {
+        countQuery = countQuery.eq('archived', true);
+      }
+    }
+
+    if (division && division !== 'all') {
+      const statusValues = ['PENDING', 'WON', 'LOST', 'DRAFT', 'WON-PENDING'];
+      if (statusValues.includes(division.toUpperCase())) {
+        if (division.toUpperCase() === 'WON' || division.toUpperCase() === 'WON-PENDING') {
+          countQuery = countQuery.eq('status', 'WON');
+        } else {
+          countQuery = countQuery.eq('status', division.toUpperCase());
+        }
+      } else {
+        countQuery = countQuery.eq('admin_data->>division', division);
+      }
+    }
+
+    // Get the filtered count data first
+    const { data: filteredBids, count: totalFilteredCount, error: countError } = await countQuery;
     
+    if (countError) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch bid count', error: countError.message },
+        { status: 500 }
+      );
+    }
+
+    // Now we need to handle won-pending filtering for the count
+    let actualTotalCount = totalFilteredCount || 0;
+    
+    if (status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')) {
+      // We need to get job data to determine actual won vs won-pending count
+      const wonBidIds = (filteredBids || []).filter(bid => bid.status === 'WON').map(bid => bid.id);
+      const jobsData = await getJobsDataForBids(wonBidIds);
+      
+      if (status.toLowerCase() === 'won') {
+        actualTotalCount = (filteredBids || []).filter(bid => 
+          bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won'
+        ).length;
+      } else if (status.toLowerCase() === 'won-pending') {
+        actualTotalCount = (filteredBids || []).filter(bid => 
+          bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won-pending'
+        ).length;
+      }
+    }
+
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
-    // Build base query
+    // Build main query for the actual data we'll return
     let query = supabase
       .from('estimate_complete')
       .select(detailed ? '*' : `
@@ -107,10 +166,9 @@ export async function GET(request: NextRequest) {
         mpt_rental->_summary->>revenue as mpt_revenue,
         mpt_rental->_summary->>grossProfit as mpt_gross_profit
       `)
-      .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1);
+      .order(orderBy, { ascending });
 
-    // Apply basic status filters (we'll refine won/won-pending after getting job data)
+    // Apply the same basic status filters
     if (status) {
       const upperStatus = status.toUpperCase();
       if (upperStatus === 'WON' || upperStatus === 'WON-PENDING') {
@@ -135,7 +193,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data, error } = await query;
+    // For won/won-pending filtering, we need to fetch more records than we need
+    // because we'll filter them after determining the actual status
+    let fetchLimit = limit;
+    let fetchOffset = offset;
+    
+    if (status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')) {
+      // Fetch more records to account for filtering
+      fetchLimit = Math.min(limit * 3, 1000); // Fetch up to 3x the needed amount, max 1000
+      fetchOffset = Math.max(0, offset - limit); // Start a bit earlier
+    }
+
+    const { data, error } = await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
     
     if (error || !data) {
       return NextResponse.json(
@@ -148,18 +217,16 @@ export async function GET(request: NextRequest) {
     const wonBidIds = data.filter(bid => (bid as any).status === 'WON').map(bid => (bid as any).id);
     const jobsData = await getJobsDataForBids(wonBidIds);
 
-    // Transform and filter data
+    // Transform data
     let transformedData = data.map((bid: any) => {
       const actualStatus = getActualStatus(bid, jobsData);
       
       if (detailed) {
-        // Return full detailed data with corrected status
         return {
           ...bid,
           status: actualStatus
         };
       } else {
-        // Return flattened data for grid view
         return {
           id: bid.id,
           status: actualStatus,
@@ -200,16 +267,21 @@ export async function GET(request: NextRequest) {
       transformedData = transformedData.filter(bid => bid.status === targetStatus);
     }
 
-    const totalCount = transformedData.length;
+    // Apply proper pagination to the filtered results
+    const startIndex = status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending') 
+      ? Math.max(0, offset - fetchOffset) 
+      : 0;
+    const endIndex = startIndex + limit;
+    const paginatedData = transformedData.slice(startIndex, endIndex);
     
     return NextResponse.json({
       success: true, 
-      data: transformedData,
+      data: paginatedData,
       pagination: {
         page,
         pageSize: limit,
-        pageCount: Math.ceil(totalCount / limit),
-        totalCount
+        pageCount: Math.ceil(actualTotalCount / limit),
+        totalCount: actualTotalCount
       }
     });
   } catch (error) {
@@ -220,6 +292,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

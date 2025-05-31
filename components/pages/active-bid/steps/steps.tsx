@@ -4,7 +4,6 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import AdminInformationStep1 from "./admin-information-step1";
 import BidItemsStep5 from "./bid-items-step5";
-import BidSummaryStep6 from "./bid-summary-step6";
 import MUTCDSignsStep3 from "./mutcd-signs-step3";
 import TripAndLaborStep4 from "./trip-and-labor-step4";
 import PhaseInfoStep2 from "./phase-info-step2";
@@ -14,7 +13,7 @@ interface StepsProps {
   setCurrentStep: Dispatch<SetStateAction<number>>;
   currentPhase: number
   isViewSummaryOpen: boolean;
-  setIsViewSummaryOpen: (value : boolean) => void
+  setIsViewSummaryOpen: Dispatch<SetStateAction<boolean>>
 }
 
 const Steps = ({
@@ -68,11 +67,6 @@ const Steps = ({
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
           currentPhase={currentPhase}
-        />
-        <BidSummaryStep6
-          currentStep={currentStep}
-          setCurrentStep={setCurrentStep}
-          isViewSummaryOpen={isViewSummaryOpen}
           setIsViewSummaryOpen={setIsViewSummaryOpen}
         />
       </div>

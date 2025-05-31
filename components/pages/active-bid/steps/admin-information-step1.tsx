@@ -402,6 +402,18 @@ const AdminInformationStep1 = ({
     return digits.padStart(3, "0");
   }
 
+  //sync with changes from accordion
+  useEffect(() => {
+    if (adminData.fuelCostPerGallon !== null && adminData.fuelCostPerGallon !== undefined) {
+      setDigits((prev) => ({
+        ...prev,
+        dieselCost: Math.round((adminData.fuelCostPerGallon || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+      }));
+    }
+  }, [adminData.fuelCostPerGallon]);
+
   return (
     <div>
       <div className="relative">
@@ -440,7 +452,7 @@ const AdminInformationStep1 = ({
                       {field.label}
                     </Label>
                     {field.name === "county" ? (
-                      <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
+                      <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -459,7 +471,7 @@ const AdminInformationStep1 = ({
                           <Command>
                             <CommandInput placeholder="Search county..." />
                             <CommandEmpty>No county found.</CommandEmpty>
-                            <CommandGroup>
+                            <CommandGroup className="h-80 overflow-y-auto">
                               {counties.map((county) => (
                                 <CommandItem
                                   key={county.id}
@@ -555,7 +567,7 @@ const AdminInformationStep1 = ({
                       </Popover>
                     ) : field.name === "division" || field.name === "workType" ? (
                       <RadioGroup
-                        value={field.name === "division" ? adminData.division || 'PUBLIC' : adminData.rated}
+                        value={field.name === "division" ? adminData.division || undefined : adminData.rated}
                         onValueChange={(value) =>
                           field.name === "division"
                             ? dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'division', value } })

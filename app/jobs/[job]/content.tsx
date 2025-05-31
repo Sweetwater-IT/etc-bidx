@@ -455,7 +455,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-
+            console.log(pagination)
 
             const transformedData = data.map(e => ({
                 id: e.id,
@@ -464,7 +464,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractor: e.contractor_name || '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
-                county: {
+                county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
                     main: e.admin_data.county.name,
                     secondary: e.admin_data.county.branch
                 },
@@ -528,12 +528,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 billingStatus: job.billingStatus,
                 contractNumber: job.contractNumber,
                 location: job.location,
-                county: job.county,
+                county:  (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch},
+                countyJson: job.countyJson,
                 branch: job.branch,
                 contractor: job.contractor,
                 startDate: job.startDate,
                 endDate: job.endDate,
                 createdAt: job.createdAt ? job.createdAt : "",
+                wonBidItems: job.wonBidItems
             }));
 
             setActiveJobs(uiJobs);
@@ -830,14 +832,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "bidNumber", title: "Bid Number" },
         { key: "projectStatus", title: "Project Status" },
         { key: "billingStatus", title: "Billing Status" },
-        { key: "contractNumber", title: "Contract Number" },
-        { key: "location", title: "Location" },
+        { key: "contractNumber", title: "Contract Number", className: 'truncate whitespace-nowrap max-w-40' },
+        { key: "location", title: "Location", className: 'truncate whitespace-nowrap max-w-30' },
         { key: "county", title: "County" },
         { key: "branch", title: "Branch" },
         { key: "contractor", title: "Contractor" },
-        { key: "startDate", title: "Start Date" },
-        { key: "endDate", title: "End Date" },
-        { key: 'createdAt', title: 'Created At' }
+        { key: "startDate", title: "Start Date", className: 'whitespace-nowrap' },
+        { key: "endDate", title: "End Date", className: 'whitespace-nowrap' },
+        { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
@@ -1465,6 +1467,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onPageChange={setActiveBidsPageIndex}
                                     onPageSizeChange={setActiveBidsPageSize}
                                     totalCount={activeBidsTotalCount}
+
+                                    // Sorting props
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    onSortChange={handleSortChange}
+                                    // Filtering props
+                                    filterOptions={filterOptions}
+                                    branchOptions={branchOptions}
+                                    ownerOptions={ownerOptions}
+                                    countyOptions={countyOptions}
+                                    estimatorOptions={estimatorOptions}
+                                    activeFilters={activeFilters}
+                                    onFilterChange={handleFilterChange}
+                                    onReset={handleResetControls}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
@@ -1561,13 +1577,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         job={selectedActiveJob || undefined}
                                         onEdit={handleActiveJobEdit}
                                         onNavigate={handleActiveJobNavigation}
-                                        loadActiveJobs={loadActiveJobs}
                                     />
                                     <EditActiveJobSheet
                                         open={editActiveJobSheetOpen}
                                         onOpenChange={setEditActiveJobSheetOpen}
                                         job={selectedActiveJob || undefined}
-                                        onSuccess={loadAvailableJobs}
+                                        onSuccess={loadActiveJobs}
+
                                     />
                                 </>
                             )}

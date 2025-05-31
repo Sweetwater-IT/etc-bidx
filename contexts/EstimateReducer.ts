@@ -498,47 +498,54 @@ export const estimateReducer = (
 				}
 			}
 
-		case "UPDATE_PERMANENT_SIGNS_EQUIPMENT":
-			if (!state.permanentSigns) return state;
-			//e.g. pmsTypeB, 'flatSheetAlumSigns', quantity, 12
-			const { pmsType, pmsEquipType, key: permSignKey, value: permSignValue } = action.payload;
+		// case "UPDATE_PERMANENT_SIGNS_EQUIPMENT":
+		// 	if (!state.permanentSigns) return state;
+		// 	//e.g. pmsTypeB, 'flatSheetAlumSigns', quantity, 12
+		// 	const { pmsType, pmsEquipType, key: permSignKey, value: permSignValue } = action.payload;
 
-			const foundPms = state.permanentSigns[pmsType] as Record<string, any>;
-			const foundEquip = foundPms[pmsEquipType as string];
-			// Make a deep copy of the state to safely modify
-			return {
-				//everything about the state but permanent signs
-				...state,
-				permanentSigns: {
-					//everything about the permanent signs but the particular post type
-					...state.permanentSigns,
-					[pmsType]: {
-						//everything about the particular post type except for the individual equipment piece
-						...foundPms,
-						[pmsEquipType]: {
-							//everyting about the individual equipment piece except the quantity
-							...foundEquip,
-							[permSignKey]: permSignValue
-						}
-					}
-				}
-			}
+		// 	const foundPms = state.permanentSigns[pmsType] as Record<string, any>;
+		// 	const foundEquip = foundPms[pmsEquipType as string];
+		// 	// Make a deep copy of the state to safely modify
+		// 	return {
+		// 		//everything about the state but permanent signs
+		// 		...state,
+		// 		permanentSigns: {
+		// 			//everything about the permanent signs but the particular post type
+		// 			...state.permanentSigns,
+		// 			[pmsType]: {
+		// 				//everything about the particular post type except for the individual equipment piece
+		// 				...foundPms,
+		// 				[pmsEquipType]: {
+		// 					//everyting about the individual equipment piece except the quantity
+		// 					...foundEquip,
+		// 					[permSignKey]: permSignValue
+		// 				}
+		// 			}
+		// 		}
+		// 	}
 
 		case "ADD_PERMANENT_SIGNS_ITEM":
 			if (!state.permanentSigns) return state;
-			const { key: keyToBeAdded } = action.payload
+			const { key: keyToBeAdded, id: newPMSId } = action.payload
 			let defaultObjectToBeAdded: any;
 			switch (keyToBeAdded) {
 				case 'pmsTypeB':
-					defaultObjectToBeAdded = defaultPMSTypeB;
+					defaultObjectToBeAdded = {
+						...defaultPMSTypeB,
+						id: newPMSId
+					}
 					break;
 				case 'pmsTypeF':
-					defaultObjectToBeAdded = defaultPMSTypeF;
+					defaultObjectToBeAdded = {
+						...defaultPMSTypeF,
+						id: newPMSId
+					}
 					break;
 				case 'resetTypeB':
 					defaultObjectToBeAdded = {
 						...defaultPMSRemoveB,
 						name: '0941-0001',
+						id: newPMSId
 						// permSignBolts
 					}
 					break;
@@ -546,14 +553,21 @@ export const estimateReducer = (
 					defaultObjectToBeAdded = {
 						...defaultPMSRemoveF,
 						name: '0945-0001',
+						id: newPMSId
 						// permSignBolts
 					}
 					break;
 				case 'removeTypeB': 
-					defaultObjectToBeAdded = defaultPMSRemoveB;
+					defaultObjectToBeAdded = {
+						...defaultPMSRemoveB,
+						id: newPMSId
+					}
 					break;
 				case 'removeTypeF':
-					defaultObjectToBeAdded = defaultPMSRemoveF;
+					defaultObjectToBeAdded = {
+						...defaultPMSRemoveF,
+						id: newPMSId
+					}
 					break;
 				default: 
 					defaultObjectToBeAdded = undefined;
@@ -563,37 +577,36 @@ export const estimateReducer = (
 				...state,
 				permanentSigns: {
 					...state.permanentSigns,
-					[keyToBeAdded]: defaultObjectToBeAdded
+					signItems: [...state.permanentSigns.signItems, defaultObjectToBeAdded]
 				}
 			}
 			case "UPDATE_PERMANENT_SIGNS_ITEM":
 				if (!state.permanentSigns) return state;
-				const { key: itemKey, field, value: fieldValue } = action.payload;
-				
-				const currentItem = state.permanentSigns[itemKey];
-				if (!currentItem) return state;
+				const { signId : permanentSignIdToUpdate, field, value: fieldValue } = action.payload;
 				
 				return {
 					...state,
 					permanentSigns: {
 						...state.permanentSigns,
-						[itemKey]: {
-							...currentItem,
-							[field]: fieldValue
-						}
+						signItems: state.permanentSigns.signItems.map(pmsItem => {
+							if(pmsItem.id !== permanentSignIdToUpdate) return pmsItem;
+							return {
+								...pmsItem,
+								[field] : fieldValue
+							}
+						})
 					}
 				};
 			
 			case "DELETE_PERMANENT_SIGNS_ITEM":
 				if (!state.permanentSigns) return state;
-				const { key: deleteKey } = action.payload;
-				
-				const { [deleteKey]: deletedItem, ...remainingItems } = state.permanentSigns;
+				const { signId : permanentSignIdToDelete } = action.payload;
 				
 				return {
 					...state,
 					permanentSigns: {
-						...remainingItems
+						...state.permanentSigns,
+						signItems: state.permanentSigns.signItems.filter(pmsItem => pmsItem.id !== permanentSignIdToDelete)
 					}
 				};
 

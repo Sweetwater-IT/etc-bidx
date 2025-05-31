@@ -77,6 +77,7 @@ const handleStatusVariant = (status: string) => {
     case "open":
       return "default";
     case "pending":
+    case 'in_progress':
       return "warning";
     case "urgent":
     case "no bid":
@@ -88,6 +89,7 @@ const handleStatusVariant = (status: string) => {
       return "successful";
     case "unset":
     case "draft":
+    case 'complete':
     default:
       return "secondary";
   }
@@ -136,6 +138,8 @@ export interface DataTableProps<TData extends object> {
   onFilterChange?: (filters: Record<string, any>) => void;
   onReset?: () => void;
   onViewJobSummary?: (item: TData) => void;
+  showFilters?: boolean;
+  setShowFilters?: (show: boolean) => void;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -201,12 +205,12 @@ function formatCellValue(value: any, key: string) {
   }
 
   // Handle status badges
-  if (key === "status") {
+  if (key === "status" || key === 'projectStatus' || key === 'billingStatus') {
     const variant = handleStatusVariant(value);
 
     return (
-      <Badge variant={variant} className="font-medium">
-        {value}
+      <Badge variant={variant} className={`font-medium ${variant === 'warning' && 'text-black'}`}>
+        {(key === 'projectStatus' || key === 'billingStatus') ? value.replace('_', ' ') : value}
       </Badge>
     );
   }
@@ -255,7 +259,9 @@ function formatCellValue(value: any, key: string) {
       const dayNum = utcDate.getUTCDate();
       const yearNum = utcDate.getUTCFullYear();
 
-      return `${monthName} ${dayNum}, ${yearNum}`;
+      const timestamp = ', ' + value.split("T")[1].split(':')[0] + ':' + value.split("T")[1].split(':')[1]
+
+      return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp  : ''}`;
     } catch {
       return value;
     }
@@ -332,6 +338,8 @@ export function DataTable<TData extends object>({
   onFilterChange,
   onReset,
   onViewJobSummary,
+  showFilters,
+  setShowFilters,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
@@ -676,8 +684,6 @@ export function DataTable<TData extends object>({
   ]);
 
   // State for filter visibility
-  const [showFilters, setShowFilters] = useState(false);
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState<TData[]>([]);
 
@@ -786,7 +792,7 @@ export function DataTable<TData extends object>({
                     : undefined
                 }
                 activeFilters={activeFilters}
-                showFilters={showFilters}
+                showFilters={!!showFilters}
                 setShowFilters={setShowFilters}
               />
             )}
@@ -820,7 +826,7 @@ export function DataTable<TData extends object>({
         {/* Filter Dropdowns - Below Segments Row */}
         {onFilterChange && (
           <FilterDropdowns
-            showFilters={showFilters}
+            showFilters={!!showFilters}
             branchOptions={branchOptions || []}
             ownerOptions={ownerOptions || []}
             countyOptions={countyOptions || []}
