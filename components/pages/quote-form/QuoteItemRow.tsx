@@ -341,10 +341,13 @@ export default function QuoteItemRow({
       </div>
     );
   } else {
+    const hasSubItems = item.associatedItems && item.associatedItems.length > 0;
     content = (
       <>
         <div
-          className="grid gap-4 pb-4 items-center border-b border-border"
+          className={`grid gap-4 pb-4 items-center ${
+            !hasSubItems ? "border-b border-border" : ""
+          }`}
           style={{
             gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
           }}
@@ -469,95 +472,94 @@ export default function QuoteItemRow({
           </div>
         </div>
 
-        {item.associatedItems && item.associatedItems.length > 0 && (
-          <div className="mt-2 mb-8">
-            <div className="text-sm font-semibold mb-2 text-muted-foreground">
-              Sub Items
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      #
-                    </th>
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      Description
-                    </th>
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      UOM
-                    </th>
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      Qty
-                    </th>
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      Unit Price
-                    </th>
-                    <th className="px-2 pt-2 pb-1 text-left font-medium text-xs text-muted-foreground">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="border-b border-border">
-                  {item.associatedItems.map((subItem, idx) => (
-                    <tr
-                      key={subItem.id || idx}
-                      className="border-b border-border last:border-0"
-                    >
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.itemNumber || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.description || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.uom || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.quantity || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.unitPrice !== undefined
-                            ? `$${Number(subItem.unitPrice).toFixed(2)}`
-                            : "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="font-semibold text-base text-foreground">
-                          {subItem.quantity && subItem.unitPrice !== undefined
-                            ? `$${(
-                                subItem.quantity * subItem.unitPrice
-                              ).toFixed(2)}`
-                            : "-"}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Subitens visual: igual ao item principal, mas com fundo cinza e recuo, e separadores entre eles */}
+        {hasSubItems && (
+          <div className="mb-12 -mt-3 border-b border-border pb-4">
+            {item.associatedItems.map((subItem, idx) => (
+              <div
+                key={subItem.id || idx}
+                className={`grid gap-4 items-center bg-muted rounded py-2 pl-1 pr-1 ${idx !== item.associatedItems.length - 1 ? 'border-b border-border' : ''}`}
+                style={{
+                  gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
+                }}
+              >
+                <div className="text-foreground w-full truncate">
+                  <Input
+                    placeholder="#"
+                    value={subItem.itemNumber || ""}
+                    onChange={(e) =>
+                      handleCompositeItemUpdate(
+                        item.id,
+                        subItem.id,
+                        "itemNumber",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+                <div className="text-foreground w-full truncate ml-2">
+                  {subItem.description ? (
+                    subItem.description
+                  ) : (
+                    <span className="opacity-50">—</span>
+                  )}
+                </div>
+                <div className="text-foreground ml-4">
+                  {subItem.uom ? (
+                    subItem.uom
+                  ) : (
+                    <span className="opacity-50">—</span>
+                  )}
+                </div>
+                <div className="ml-2 mr-2">
+                  <Input
+                    type="number"
+                    placeholder="Qty"
+                    value={subItem.quantity || ""}
+                    onChange={(e) =>
+                      handleCompositeItemUpdate(
+                        item.id,
+                        subItem.id,
+                        "quantity",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                </div>
+                <div className="text-foreground ml-[6px]">
+                  {subItem.unitPrice ? (
+                    `$${Number(subItem.unitPrice).toFixed(2)}`
+                  ) : (
+                    <span className="opacity-50">—</span>
+                  )}
+                </div>
+                <div className="text-foreground ml-2">
+                  {/* Discount/Type não exibido para subitem, mas pode adicionar se quiser */}
+                  <span className="opacity-50">—</span>
+                </div>
+                <div className="text-foreground ml-2">
+                  {/* Discount não exibido para subitem, mas pode adicionar se quiser */}
+                  <span className="opacity-50">—</span>
+                </div>
+                <div className="text-foreground text-left max-w-[140px] w-full">
+                  {subItem.unitPrice && subItem.quantity ? (
+                    `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
+                  ) : (
+                    <span className="opacity-50">—</span>
+                  )}
+                </div>
+                <div />
+              </div>
+            ))}
           </div>
         )}
-  
-        {item.notes && item.notes.trim() !== "" && (
+        {/* Notes visualização */}
+        {/* {item.notes && item.notes.trim() !== "" && (
           <div className="mt-2 mb-8">
-            <div className="text-xs font-semibold mb-1 text-muted-foreground">
-              Notes
-            </div>
-            <div className="py-2 text-base text-foreground whitespace-pre-line">
-              {item.notes}
-            </div>
+            <div className="text-xs font-semibold mb-1 text-muted-foreground">Notes</div>
+            <div className="py-2 text-base text-foreground whitespace-pre-line">{item.notes}</div>
           </div>
-        )}
+        )} */}
       </>
     );
   }

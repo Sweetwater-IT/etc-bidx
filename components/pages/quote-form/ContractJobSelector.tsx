@@ -104,7 +104,7 @@ export function ContractJobSelector({
             <div className="relative">
               <input
                 ref={inputRef}
-                className="w-full rounded-md pr-3 py-2 mb-1"
+                className={`w-full rounded-md pr-3 py-2 mb-1 ${selectedContractJob ? '' : 'border border-border px-2'}`}
                 placeholder="Search or add a contract/job..."
                 value={
                   selectedContractJob
