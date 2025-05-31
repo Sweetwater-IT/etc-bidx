@@ -5,18 +5,33 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { HashIcon, LayersIcon, UserIcon, CalendarIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
-import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface EditActiveJobSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   job?: ActiveJob;
   onSuccess?: () => void;
+}
+
+function formatDateForInput(date: Date | string | null | undefined): string {
+  if (!date) return '';
+
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    const year = dateObj.getFullYear();
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const day = dateObj.getDate().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error('Error formatting date for input:', e);
+    return '';
+  }
 }
 
 type Statuses = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE'
@@ -26,15 +41,52 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
+  // State for decimal masking
+  const [digits, setDigits] = useState({
+    laborRate: "000",
+    fringeRate: "000",
+  });
+
+  function formatDecimal(value: string): string {
+    return (parseInt(value, 10) / 100).toFixed(2)
+  }
+
+  function handleNextDigits(current: string, inputType: string, data: string): string {
+    let digits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      const candidate = current + data;
+      if (parseInt(candidate, 10) <= 99999) digits = candidate;
+    } else if (inputType === "deleteContentBackward") {
+      digits = current.slice(0, -1);
+    }
+
+    return digits.padStart(3, "0");
+  }
+
   useEffect(() => {
     if (job) {
       setFormData(job);
       setStartDate(job.startDate ? new Date(job.startDate) : undefined);
       setEndDate(job.endDate ? new Date(job.endDate) : undefined);
+
+      // Initialize digits for rate fields
+      setDigits({
+        laborRate: Math.round((job.countyJson?.laborRate || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+        fringeRate: Math.round((job.countyJson?.fringeRate || 0) * 100)
+          .toString()
+          .padStart(3, "0"),
+      });
     } else {
       setFormData({});
       setStartDate(undefined);
       setEndDate(undefined);
+      setDigits({
+        laborRate: "000",
+        fringeRate: "000",
+      });
     }
   }, [job]);
 
@@ -45,18 +97,33 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
     }));
   };
 
-  const handleDateChange = (field: 'startDate' | 'endDate', date: Date | undefined) => {
+  const handleRateChange = (field: 'laborRate' | 'fringeRate', value: string) => {
+    const numValue = Number(value);
+    setFormData(prev => ({
+      ...prev,
+      countyJson: prev.countyJson ? {
+        ...prev.countyJson,
+        [field]: numValue
+      } : {
+        [field]: numValue
+      } as any
+    }));
+  };
+
+  const handleDateChange = (field: 'startDate' | 'endDate', dateString: string) => {
     if (field === 'startDate') {
+      const date = dateString ? new Date(dateString + 'T00:00:00') : undefined;
       setStartDate(date);
       setFormData(prev => ({
         ...prev,
-        startDate: date ? format(date, 'yyyy-MM-dd') : undefined
+        startDate: dateString || undefined
       }));
     } else {
+      const date = dateString ? new Date(dateString + 'T00:00:00') : undefined;
       setEndDate(date);
       setFormData(prev => ({
         ...prev,
-        endDate: date ? format(date, 'yyyy-MM-dd') : undefined
+        endDate: dateString || undefined
       }));
     }
   };
@@ -201,19 +268,18 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
                   <div className="relative">
                     <Input
                       type="date"
-                      value={startDate ? format(startDate, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => handleDateChange('startDate', e.target.value ? new Date(e.target.value) : undefined)}
+                      value={startDate ? formatDateForInput(startDate) : ''}
+                      onChange={(e) => handleDateChange('startDate', e.target.value)}
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2 w-full">
                   <Label>End Date</Label>
                   <div className="relative">
                     <Input
                       type="date"
-                      value={endDate ? format(endDate, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => handleDateChange('endDate', e.target.value ? new Date(e.target.value) : undefined)}
+                      value={endDate ? formatDateForInput(endDate) : ''}
+                      onChange={(e) => handleDateChange('endDate', e.target.value)}
                     />
                   </div>
                 </div>
@@ -223,18 +289,42 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
                 <div className="space-y-2 w-full">
                   <Label>Labor Rate</Label>
                   <Input
-                    type="number"
-                    value={formData.laborRate || ''}
-                    onChange={(e) => handleInputChange('laborRate', e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    pattern="^\\d*(\\.\\d{0,2})?$"
+                    value={`$ ${formatDecimal(digits.laborRate)}`}
+                    onChange={(e) => {
+                      const ev = e.nativeEvent as InputEvent;
+                      const { inputType } = ev;
+                      const data = (ev.data || "").replace(/\$/g, "");
+
+                      const nextDigits = handleNextDigits(digits.laborRate, inputType, data);
+                      setDigits((prev) => ({ ...prev, laborRate: nextDigits }));
+
+                      const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                      handleRateChange('laborRate', formatted);
+                    }}
                   />
                 </div>
 
                 <div className="space-y-2 w-full">
                   <Label>Fringe Rate</Label>
                   <Input
-                    type="number"
-                    value={formData.fringeRate || ''}
-                    onChange={(e) => handleInputChange('fringeRate', e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    pattern="^\\d*(\\.\\d{0,2})?$"
+                    value={`$ ${formatDecimal(digits.fringeRate)}`}
+                    onChange={(e) => {
+                      const ev = e.nativeEvent as InputEvent;
+                      const { inputType } = ev;
+                      const data = (ev.data || "").replace(/\$/g, "");
+
+                      const nextDigits = handleNextDigits(digits.fringeRate, inputType, data);
+                      setDigits((prev) => ({ ...prev, fringeRate: nextDigits }));
+
+                      const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                      handleRateChange('fringeRate', formatted);
+                    }}
                   />
                 </div>
               </div>
@@ -242,15 +332,11 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
               <div className="space-y-1 w-full">
                 <Label className="font-medium">Services Required</Label>
                 <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                  {job?.mpt && <span className="px-2 py-0.5 bg-gray-100 rounded-md">MPT</span>}
-                  {job?.rental && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
-                  {job?.permSigns && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Perm Signs</span>}
-                  {job?.flagging && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Equipment Rental</span>}
-                  {job?.saleItems && <span className="px-2 py-0.5 bg-gray-100 rounded-md">Sale</span>}
+                  {job?.wonBidItems.map((wbi, index) => <span key={index} className="px-2 py-0.5 bg-gray-100 rounded-md">{wbi}</span>)}
                 </div>
               </div>
 
-              <div className="space-y-2 w-full">
+              {job?.overdays && job?.overdays > 0 && <div className="space-y-2 w-full">
                 <Label>Overdays</Label>
                 <div className="flex items-center mt-2 text-sm gap-2 text-amber-500">
                   <AlertCircle size={14} />
@@ -258,7 +344,7 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
                     This job is overdays
                   </span>
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
           <div className="flex justify-end p-6 pt-0 gap-4">
@@ -273,4 +359,4 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
       </SheetContent>
     </Sheet>
   );
-} 
+}

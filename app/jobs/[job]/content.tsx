@@ -529,11 +529,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractNumber: job.contractNumber,
                 location: job.location,
                 county:  (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch},
+                countyJson: job.countyJson,
                 branch: job.branch,
                 contractor: job.contractor,
                 startDate: job.startDate,
                 endDate: job.endDate,
                 createdAt: job.createdAt ? job.createdAt : "",
+                wonBidItems: job.wonBidItems
             }));
 
             setActiveJobs(uiJobs);
@@ -1580,7 +1582,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         open={editActiveJobSheetOpen}
                                         onOpenChange={setEditActiveJobSheetOpen}
                                         job={selectedActiveJob || undefined}
-                                        onSuccess={loadAvailableJobs}
+                                        onSuccess={loadActiveJobs}
+
                                     />
                                 </>
                             )}
