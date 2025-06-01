@@ -43,6 +43,7 @@ interface SignItem {
   stiffner: string;
   assigned_to: string;
   in_stock: boolean;
+  status: string;
 }
 
 // Helper function to determine branch based on ID (temporary solution)
@@ -145,29 +146,31 @@ export default function SignOrderTrackerPage() {
         setSignItems([
           {
             id: 1,
-            designation: 'R1-1',
-            description: 'STOP',
-            width: 30,
-            height: 30,
+            designation: 'W1-3L',
+            description: 'Left curve arrow',
+            width: 36,
+            height: 36,
             quantity: 2,
-            sheeting: 'Type III',
+            sheeting: 'Type XI',
             structure: 'Aluminum',
             stiffner: 'None',
             assigned_to: 'John Doe',
-            in_stock: true
+            in_stock: true,
+            status: 'In Progress'
           },
           {
             id: 2,
-            designation: 'W1-8',
-            description: 'CHEVRON',
-            width: 24,
+            designation: 'R1-1',
+            description: 'Stop sign',
+            width: 30,
             height: 30,
-            quantity: 4,
-            sheeting: 'Type III',
+            quantity: 5,
+            sheeting: 'Type IX',
             structure: 'Aluminum',
-            stiffner: 'None',
+            stiffner: '1.5" Angle',
             assigned_to: 'Jane Smith',
-            in_stock: false
+            in_stock: false,
+            status: 'Pending'
           }
         ]);
         
@@ -519,6 +522,7 @@ export default function SignOrderTrackerPage() {
                         <th className="border p-2 text-left">Stiffner</th>
                         <th className="border p-2 text-left">Assigned to</th>
                         <th className="border p-2 text-left">In Stock</th>
+                        <th className="border p-2 text-left">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -534,11 +538,16 @@ export default function SignOrderTrackerPage() {
                           <td className="border p-2">{item.stiffner}</td>
                           <td className="border p-2">{item.assigned_to}</td>
                           <td className="border p-2">{item.in_stock ? 'Yes' : 'No'}</td>
+                          <td className="border p-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : item.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {item.status}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                       {signItems.length === 0 && (
                         <tr>
-                          <td colSpan={10} className="border p-2 text-center">No signs added yet</td>
+                          <td colSpan={11} className="border p-2 text-center">No signs added yet</td>
                         </tr>
                       )}
                     </tbody>

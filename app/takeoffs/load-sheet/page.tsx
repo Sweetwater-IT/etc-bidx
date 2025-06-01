@@ -22,6 +22,11 @@ const SIGN_ORDER_COLUMNS = [
   { key: "need_date", title: "Need date" },
   { key: "type", title: "Type" },
   { key: "order_number", title: "Order Number" },
+  { key: "status", title: "Status", render: (row: any) => (
+    <span className={`px-2 py-1 rounded-full text-xs ${row.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : row.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+      {row.status || 'N/A'}
+    </span>
+  )},
 ];
 
 // Tabs for sign order status
