@@ -214,10 +214,15 @@ export async function POST(request: NextRequest) {
         `)
         .eq('job_id', job_id);
 
-      if (!metadataError && projectMetadata) {
+      if (!metadataError && projectMetadata && projectMetadata[0] && projectMetadata[0].contractors) {
         //weird supabase type error where it recognizes contractors as an arry
         finalContractorName = (projectMetadata[0].contractors as any).name
       }
+      else finalContractorName = null;
+    }
+
+    if(!job.admin_data || !job.admin_data.contractNumber){
+
     }
 
     // Prepare response object

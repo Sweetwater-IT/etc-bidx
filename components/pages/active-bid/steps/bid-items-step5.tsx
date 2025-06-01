@@ -517,9 +517,6 @@ const BidItemsStep5 = ({
     });
   };
 
-  const handleNext = () => {
-    setCurrentStep(6);
-  };
 
   // Safely get equipment quantities
   const getEquipmentQuantity = (equipmentKey: EquipmentType): number | undefined => {
