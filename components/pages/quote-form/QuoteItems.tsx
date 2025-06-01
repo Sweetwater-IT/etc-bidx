@@ -310,7 +310,7 @@ export function QuoteItems() {
       <div className="space-y-4">
         {/* Header */}
         <div
-          className="grid text-sm font-medium text-muted-foreground border-b pb-2"
+          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1"
           style={{
             gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
           }}
