@@ -10,6 +10,8 @@ import { useEffect, useState, useCallback } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { useLoading } from "@/hooks/use-loading";
 import { FilterOption } from "@/components/table-controls";
+import { StatusTabs } from "@/components/ui/status-tabs";
+import { toast } from "sonner";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "requestor", title: "Requestor" },
@@ -20,6 +22,12 @@ const SIGN_ORDER_COLUMNS = [
   { key: "need_date", title: "Need date" },
   { key: "type", title: "Type" },
   { key: "order_number", title: "Order Number" },
+];
+
+// Tabs for sign order status
+const TABS = [
+  { label: "Draft", value: "in-process" },
+  { label: "Submitted", value: "completed" },
 ];
 
 const SEGMENTS = [
@@ -33,7 +41,12 @@ const SEGMENTS = [
 export default function SignOrderPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
+  const [activeTab, setActiveTab] = useState("in-process");
   const [activeSegment, setActiveSegment] = useState("all");
+  const [tabCounts, setTabCounts] = useState({
+    "in-process": 0,
+    completed: 0
+  });
   const [branchCounts, setBranchCounts] = useState({
     all: 0,
     hatfield: 0,
@@ -105,7 +118,7 @@ export default function SignOrderPage() {
     };
 
     fetchReferenceData();
-  }, []);
+  }, [activeTab]);
 
   // Initialize filter options when reference data is loaded
   useEffect(() => {
@@ -187,13 +200,16 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
+      // Add status filter based on active tab
+      params.append("status", activeTab);
+      
       // Add segment filter
       if (activeSegment !== "all") {
         if (activeSegment === "archived") {
-          params.append("status", "archived");
-        } else {
-          params.append("branch", activeSegment);
+          params.append("branch", "archived"); // This will trigger archived status filter in API
         }
+        // Note: branch filtering is temporarily disabled since the sign_orders table
+        // doesn't have a branch field yet. We'll re-enable this when the schema is updated.
       }
       
       // Add active filters
@@ -203,41 +219,64 @@ export default function SignOrderPage() {
 
       const response = await fetch(`/api/sign-orders?${params.toString()}`);
       const data = await response.json();
-
+      
       if (data.success) {
-        setQuotes(data.data);
-        setPageCount(data.pagination.pageCount);
-        setTotalCount(data.pagination.totalCount);
+        setQuotes(data.data || []);
+        setTotalCount(data.totalCount || 0);
+        setPageCount(data.pageCount || 0);
       } else {
-        console.error("Failed to fetch quotes:", data.error);
+        console.error("Error fetching sign orders:", data.error);
+        toast.error("Failed to load sign orders");
       }
     } catch (error) {
       console.error("Error fetching quotes:", error);
     } finally {
       stopLoading();
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading]);
+  }, [activeTab, activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading]);
 
-  // Fetch quote counts for segments
-  const fetchQuoteCounts = useCallback(async () => {
+  // Fetch counts for each tab and segment
+  const fetchCounts = useCallback(async () => {
     try {
-      const response = await fetch('/api/sign-orders?counts=true');
-      const data = await response.json();
+      // Fetch tab counts
+      const tabResponse = await fetch('/api/sign-orders?counts=true&countBy=status');
+      const tabData = await tabResponse.json();
       
-      if (data.success) {
-        setBranchCounts({
-          all: data.counts.all || 0,
-          hatfield: data.counts.hatfield || 0,
-          turbotville: data.counts.turbotville || 0,
-          bedford: data.counts.bedford || 0,
-          archived: data.counts.archived || 0
+      if (tabData.success) {
+        setTabCounts({
+          "in-process": tabData.counts["in-process"] || 0,
+          completed: tabData.counts.completed || 0
         });
+      } else {
+        console.error("Error fetching tab counts:", tabData.error);
+      }
+      
+      // Fetch segment counts filtered by active tab
+      const segmentResponse = await fetch(`/api/sign-orders?counts=true&status=${activeTab}`);
+      const segmentData = await segmentResponse.json();
+      
+      if (segmentData.success) {
+        setBranchCounts({
+          all: segmentData.counts.all || 0,
+          hatfield: segmentData.counts.hatfield || 0,
+          turbotville: segmentData.counts.turbotville || 0,
+          bedford: segmentData.counts.bedford || 0,
+          archived: segmentData.counts.archived || 0
+        });
+      } else {
+        console.error("Error fetching segment counts:", segmentData.error);
       }
     } catch (error) {
-      console.error("Error fetching quote counts:", error);
+      console.error("Error fetching counts:", error);
     }
-  }, []);
+  }, [activeTab]);
 
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPageIndex(0); // Reset to first page
+  };
+  
   // Handle segment change
   const handleSegmentChange = (value: string) => {
     setActiveSegment(value);
@@ -284,15 +323,18 @@ export default function SignOrderPage() {
     fetchQuotes();
   }, [fetchQuotes]);
 
-  // Load counts on initial mount
+  // Load counts when tab or segment changes
   useEffect(() => {
-    fetchQuoteCounts();
-  }, [fetchQuoteCounts]);
+    fetchCounts();
+  }, [fetchCounts, activeTab, activeSegment]);
 
   const handleRowClick = (quote: QuoteGridView) => {
-    router.push(`/quotes/${quote.id}`);
+    router.push(`/takeoffs/sign-order/${quote.id}`);
   };
 
+  // Use tabs without counts
+  const tabsWithCounts = TABS;
+  
   // Update segments with counts
   const segmentsWithCounts = SEGMENTS.map(segment => ({
     ...segment,
@@ -310,20 +352,42 @@ export default function SignOrderPage() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push('/takeoffs/new-sign-order')}
+                className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Create sign order
+              </button>
+              <button
+                onClick={() => router.push('/takeoffs/new-load-sheet')}
+                className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Create load sheet
+              </button>
+              <button
+                onClick={() => router.push('/takeoffs/new')}
+                className="bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Create Takeoff
+              </button>
+            </div>
+          </div>
+        </SiteHeader>
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="flex items-center justify-between px-0 -mb-3">
-                <CardActions
-                  createButtonLabel="Create Takeoff"
-                  onCreateClick={() => router.push('/takeoffs/new')}
-                  hideCalendar
-                  goUpActions
-                  hideImportExport
-                />
-              </div>
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
 
+              {/* Status Tabs */}
+              <StatusTabs
+                tabs={tabsWithCounts}
+                value={activeTab}
+                onChange={handleTabChange}
+              />
+              
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
