@@ -285,6 +285,16 @@ export function QuoteAdminInformation() {
         onEdit={handleEdit}
         searchValue={searchValue}
         setSearchValue={setSearchValue}
+        quoteType={quoteType}
+        branch={selectedBranch}
+        jobNumber={associatedContractNumber}
+        county={county}
+        ecmsPoNumber={ecmsPoNumber}
+        stateRoute={stateRoute}
+        paymentTerms={paymentTerms}
+        quoteDate={quoteDate}
+        customers={selectedCustomers.map((c) => c.name)}
+        digitalSignature={digitalSignature}
       />
       {sheetOpen && (
         <AdminInformationSheet

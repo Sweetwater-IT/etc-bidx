@@ -187,27 +187,27 @@ export function QuoteItems() {
         ],
       }));
     } else {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === parentItem.id
-          ? {
-              ...item,
-              associatedItems: [
-                ...(item.associatedItems || []),
-                {
-                  id: newId,
-                  itemNumber: "",
-                  description: "",
-                  uom: "",
-                  quantity: 0,
-                  unitPrice: 0,
-                  notes: "",
-                },
-              ],
-            }
-          : item
-      )
-    );
+      setQuoteItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === parentItem.id
+            ? {
+                ...item,
+                associatedItems: [
+                  ...(item.associatedItems || []),
+                  {
+                    id: newId,
+                    itemNumber: "",
+                    description: "",
+                    uom: "",
+                    quantity: 0,
+                    unitPrice: 0,
+                    notes: "",
+                  },
+                ],
+              }
+            : item
+        )
+      );
     }
     setEditingSubItemId(newId);
   };
@@ -228,19 +228,19 @@ export function QuoteItems() {
           ) || [],
       }));
     } else {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === parentItemId
-          ? {
-              ...item,
-              associatedItems:
-                item.associatedItems?.map((ai) =>
-                  ai.id === subItemId ? { ...ai, [field]: value } : ai
-                ) || [],
-            }
-          : item
-      )
-    );
+      setQuoteItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === parentItemId
+            ? {
+                ...item,
+                associatedItems:
+                  item.associatedItems?.map((ai) =>
+                    ai.id === subItemId ? { ...ai, [field]: value } : ai
+                  ) || [],
+              }
+            : item
+        )
+      );
     }
   };
 
@@ -253,18 +253,18 @@ export function QuoteItems() {
           prev.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
       }));
     } else {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === parentItemId
-          ? {
-              ...item,
-              associatedItems:
+      setQuoteItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === parentItemId
+            ? {
+                ...item,
+                associatedItems:
                   item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
                   [],
-            }
-          : item
-      )
-    );
+              }
+            : item
+        )
+      );
     }
   };
 
@@ -340,13 +340,13 @@ export function QuoteItems() {
           UOM_TYPES={UOM_TYPES}
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
-                />
-              </div>
+        />
+      </div>
 
       <div className="flex justify-start">
-                <Button
+        <Button
           className="mt-4 border-none p-0 !bg-transparent shadow-none"
-                  variant="outline"
+          variant="outline"
           onClick={handleAddNewItem}
         >
           + Add New Item
