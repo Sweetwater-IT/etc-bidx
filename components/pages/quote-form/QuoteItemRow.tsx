@@ -13,20 +13,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Pencil, Check, MoreVertical } from "lucide-react";
-import QuoteItemSubItems from "./QuoteItemSubItems";
-import { AutoComplete } from "@/components/ui/autocomplete";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
-import { Label } from "@/components/ui/label";
+import { useProductsSearch } from "@/hooks/useProductsSearch";
+import { SubItemRow } from "./SubItemRow";
+import { createPortal } from "react-dom";
+import { ProductSheet } from "./ProductSheet";
 
 export default function QuoteItemRow({
   item,
@@ -45,23 +37,22 @@ export default function QuoteItemRow({
 }) {
   const hasAssociatedItems =
     item.associatedItems && item.associatedItems.length > 0;
+  const hasSubItems = hasAssociatedItems;
   const displayUnitPrice = hasAssociatedItems
     ? calculateCompositeUnitPrice(item)
     : item.unitPrice;
 
-  // Mock de produtos
-  const productOptions = [
-    { value: "1", label: "Server costs" },
-    { value: "2", label: "AI tool first milestone" },
-    { value: "3", label: "Consulting" },
-  ];
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const inputRef = useRef<HTMLInputElement>(null);
-  const filteredProducts = productOptions.filter((p) =>
-    p.label.toLowerCase().includes(productInput.toLowerCase())
-  );
+
+  const { products, loading } = useProductsSearch(productInput);
 
   const [newProduct, setNewProduct] = useState({
     itemNumber: "",
@@ -82,6 +73,30 @@ export default function QuoteItemRow({
       ? (item.discount * 100).toString().padStart(3, "0")
       : "000",
   });
+
+  const [subItemDropdown, setSubItemDropdown] = useState({});
+  const [subItemInput, setSubItemInput] = useState({});
+
+  const [isCustomLocal, setIsCustomLocal] = useState(!!item.isCustom);
+  useEffect(() => {
+    setIsCustomLocal(!!item.isCustom);
+  }, [item.isCustom]);
+
+  const updateDropdownPosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  };
+
+  const handleFocus = () => {
+    updateDropdownPosition();
+    setShowDropdown(true);
+  };
 
   useEffect(() => {
     if (isEditing) {
@@ -121,316 +136,357 @@ export default function QuoteItemRow({
     return digits.padStart(3, "0");
   }
 
-  let content;
+  useEffect(() => {
+    console.log("openProductSheet", openProductSheet);
+  }, [openProductSheet]);
+
+  const handleProductSelect = (product: any) => {
+    setProductInput(product.item_number);
+    setShowDropdown(false);
+
+    handleItemUpdate(item.id, "itemNumber", product.item_number);
+    handleItemUpdate(item.id, "description", product.description);
+    handleItemUpdate(item.id, "uom", product.uom);
+  };
+
+  const handleSubItemProductSelect = (product: any, subItemId: string) => {
+    handleCompositeItemUpdate(
+      item.id,
+      subItemId,
+      "itemNumber",
+      product.item_number
+    );
+    handleCompositeItemUpdate(
+      item.id,
+      subItemId,
+      "description",
+      product.description
+    );
+    handleCompositeItemUpdate(item.id, subItemId, "uom", product.uom);
+  };
+
   if (isEditing) {
-    content = (
-      <div className="space-y-4 border-b border-border last:border-b-0 pb-4">
+    const isCustom = isCustomLocal;
+    return (
+      <>
+      <div
+        className={`space-y-4 mb-1 ${
+          !hasSubItems ? "border-b border-border pb-4" : ""
+        }`}
+      >
         <div
           className="grid items-center gap-2"
           style={{
-            gridTemplateColumns: "2fr 3fr 1fr 1fr 1fr 1fr 1fr 1fr auto auto",
-          }}
-        >
-          <div className="relative">
-            <input
-              ref={inputRef}
-              className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
-              placeholder="Search or add a product..."
-              value={productInput}
-              onChange={(e) => {
-                setProductInput(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-            />
-            {showDropdown && (
-              <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
-                <div
-                  className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                  onMouseDown={() => {
-                    setShowDropdown(false);
-                    setOpenProductSheet(true);
-                  }}
-                >
-                  + Add new product
-                </div>
-              </div>
-            )}
-          </div>
-          <div>
-            <Input
-              placeholder="Description"
-              value={item.description || ""}
-              onChange={(e) =>
-                handleItemUpdate(item.id, "description", e.target.value)
-              }
-              className="w-full"
-            />
-          </div>
-          <div>
-            <Select
-              value={item.uom || ""}
-              onValueChange={(value) => handleItemUpdate(item.id, "uom", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="UOM" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(UOM_TYPES).map((uom: any) => (
-                  <SelectItem key={uom} value={uom}>
-                    {uom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Input
-              type="number"
-              placeholder="Qty"
-              value={item.quantity || ""}
-              onChange={(e) =>
-                handleItemUpdate(item.id, "quantity", Number(e.target.value))
-              }
-              className="w-full"
-            />
-          </div>
-          <div>
-            <Input
-              type="text"
-              placeholder="$0.00"
-              value={
-                digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
-              }
-              onChange={(e) => {
-                const ev = e.nativeEvent as InputEvent;
-                const { inputType } = ev;
-                const data = (ev.data || "").replace(/\$/g, "");
-
-                const nextDigits = handleNextDigits(
-                  digits.unitPrice,
-                  inputType,
-                  data
-                );
-                setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                handleItemUpdate(
-                  item.id,
-                  "unitPrice",
-                  Number(formatDecimal(nextDigits))
-                );
-              }}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <Select
-              value={item.discountType || "dollar"}
-              onValueChange={(value) =>
-                handleItemUpdate(item.id, "discountType", value)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dollar">$</SelectItem>
-                <SelectItem value="percentage">%</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Input
-              type="text"
-              placeholder={item.discountType === "dollar" ? "$0.00" : "0.00%"}
-              value={
-                digits.discount
-                  ? item.discountType === "dollar"
-                    ? `$ ${formatDecimal(digits.discount)}`
-                    : `${formatPercentage(digits.discount)}%`
-                  : ""
-              }
-              onChange={(e) => {
-                const ev = e.nativeEvent as InputEvent;
-                const { inputType } = ev;
-                const data = (ev.data || "").replace(/[$\s%]/g, "");
-
-                const nextDigits = handleNextDigits(
-                  digits.discount,
-                  inputType,
-                  data
-                );
-                setDigits((prev) => ({ ...prev, discount: nextDigits }));
-                handleItemUpdate(
-                  item.id,
-                  "discount",
-                  Number(formatDecimal(nextDigits))
-                );
-              }}
-              className="w-full"
-            />
-          </div>
-          <div className=" w-full">${calculateExtendedPrice(item)}</div>
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (isEditing) {
-                  setEditingItemId(null);
-                } else {
-                  handleRemoveItem(item.id);
-                }
-              }}
-            >
-              {isEditing ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <MoreVertical className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Bloco de subitens */}
-        <QuoteItemSubItems
-          item={item}
-          editingSubItemId={editingSubItemId}
-          setEditingSubItemId={setEditingSubItemId}
-          handleAddCompositeItem={handleAddCompositeItem}
-          handleCompositeItemUpdate={handleCompositeItemUpdate}
-          handleDeleteComposite={handleDeleteComposite}
-          UOM_TYPES={UOM_TYPES}
-        />
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleAddCompositeItem(item)}
-            disabled={item.associatedItems?.some(
-              (ai) => !ai.itemNumber || ai.itemNumber === ""
-            )}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Sub Item
-          </Button>
-        </div>
-        {/* Campo Notes */}
-        <div>
-          <div className="text-xs font-semibold mb-1 text-muted-foreground">
-            Notes
-          </div>
-          <Textarea
-            placeholder="Notes"
-            value={item.notes || ""}
-            onChange={(e) => handleItemUpdate(item.id, "notes", e.target.value)}
-            className="min-h-[60px]"
-          />
-        </div>
-        <div className="flex justify-end mt-4">
-          <Button
-            onClick={() => {
-              setEditingItemId(null);
-              setEditingSubItemId(null);
+              gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
             }}
-            className="bg-black hover:bg-black/90"
           >
-            Save Changes
-          </Button>
-        </div>
-      </div>
-    );
-  } else {
-    const hasSubItems = item.associatedItems && item.associatedItems.length > 0;
-    content = (
-      <>
-        <div
-          className={`grid gap-4 pb-4 items-center ${
-            !hasSubItems ? "border-b border-border" : ""
-          }`}
-          style={{
-            gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
-          }}
-        >
-          <div>
+            {/* Produto */}
             <div className="relative">
-              <input
+              <Input
                 ref={inputRef}
-                className="w-full h-9 px-3 text-base border rounded focus:outline-none focus:ring-2 focus:ring-black bg-background text-foreground"
+                className="w-full h-9 px-3 text-base text-foreground"
                 placeholder="Search or add a product..."
                 value={productInput}
                 onChange={(e) => {
-                  setProductInput(e.target.value);
+                  const value = e.target.value;
+                  setProductInput(value);
                   setShowDropdown(true);
                 }}
-                onFocus={() => setShowDropdown(true)}
+                onFocus={handleFocus}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               />
-              {showDropdown && (
-                <div className="absolute left-0 right-0 mt-1 bg-background border rounded shadow z-20 max-h-48 overflow-auto">
+              {showDropdown &&
+                createPortal(
                   <div
-                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                    onMouseDown={() => {
-                      setShowDropdown(false);
+                    className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
+                    style={{
+                      top: `${dropdownPosition.top}px`,
+                      left: `${dropdownPosition.left}px`,
+                      width: `${dropdownPosition.width}px`,
+                    }}
+                  >
+                  <div
+                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                       setOpenProductSheet(true);
                     }}
                   >
                     + Add new product
                   </div>
-                </div>
+                  {loading ? (
+                      <div className="px-3 py-2 text-foreground">
+                        Loading...
+                      </div>
+                  ) : products.length > 0 ? (
+                    products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                        onMouseDown={() => handleProductSelect(product)}
+                      >
+                        {product.item_number} - {product.description}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-foreground">
+                      No products found
+                    </div>
+                  )}
+                  </div>,
+                  document.body
               )}
             </div>
+            {/* Descrição */}
+            <div className="text-foreground w-full truncate text-base">
+              {isCustom ? (
+              <Input
+                placeholder="Description"
+                value={item.description || ""}
+                onChange={(e) =>
+                  handleItemUpdate(item.id, "description", e.target.value)
+                }
+                className="w-full"
+              />
+              ) : (
+                item.description || <span className="opacity-50">—</span>
+              )}
+            </div>
+            {/* UOM */}
+            <div className="text-foreground text-base">
+              {isCustom ? (
+              <Select
+                value={item.uom || ""}
+                onValueChange={(value) =>
+                  handleItemUpdate(item.id, "uom", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="UOM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(UOM_TYPES).map((uom: any) => (
+                    <SelectItem key={uom} value={uom}>
+                      {uom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              ) : (
+                item.uom || <span className="opacity-50">—</span>
+              )}
+            </div>
+            {/* Quantidade */}
+            <div className="">
+              <Input
+                type="number"
+                placeholder="Qty"
+                value={item.quantity || ""}
+                className="text-base text-foreground"
+                onChange={(e) =>
+                  handleItemUpdate(item.id, "quantity", Number(e.target.value))
+                }
+              />
+            </div>
+            {/* Unit Price */}
+            <div className="text-foreground text-base">
+              {isCustom ? (
+              <Input
+                type="text"
+                placeholder="$0.00"
+                value={
+                    digits.unitPrice
+                      ? `$ ${formatDecimal(digits.unitPrice)}`
+                      : ""
+                }
+                onChange={(e) => {
+                  const ev = e.nativeEvent as InputEvent;
+                  const { inputType } = ev;
+                  const data = (ev.data || "").replace(/\$/g, "");
+                  const nextDigits = handleNextDigits(
+                    digits.unitPrice,
+                    inputType,
+                    data
+                  );
+                  setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
+                  handleItemUpdate(
+                    item.id,
+                    "unitPrice",
+                    Number(formatDecimal(nextDigits))
+                  );
+                }}
+                className="w-full"
+              />
+              ) : item.unitPrice ? (
+                `$${Number(item.unitPrice).toFixed(2)}`
+              ) : (
+                <span className="opacity-50">—</span>
+              )}
+            </div>
+            {/* Discount (editável e unificado) */}
+            <div className="text-foreground text-base flex items-center gap-1">
+              {isCustom ? (
+                <>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Discount"
+                    value={item.discount || ""}
+                    onChange={(e) =>
+                      handleItemUpdate(
+                        item.id,
+                        "discount",
+                        Number(e.target.value)
+                      )
+                    }
+                    className="text-base w-full"
+                  />
+                  <div className="w-[62px] h-full">
+              <Select
+                value={item.discountType || "dollar"}
+                onValueChange={(value) =>
+                  handleItemUpdate(item.id, "discountType", value)
+                }
+              >
+                      <SelectTrigger className="w-[20px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dollar">$</SelectItem>
+                  <SelectItem value="percentage">%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+                </>
+              ) : item.discount ? (
+                item.discountType === "dollar" ? (
+                  `$${Number(item.discount).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}`
+                ) : (
+                  `${Number(item.discount).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}%`
+                )
+              ) : (
+                <span className="opacity-50">—</span>
+              )}
+            </div>
+            {/* Total */}
+            <div className="text-foreground text-left max-w-[140px] w-full text-base">
+              {item.unitPrice && item.quantity ? (
+                `$${calculateExtendedPrice(item)}`
+              ) : (
+                <span className="opacity-50">—</span>
+              )}
+            </div>
+            {/* Botão de salvar */}
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingItemId(null)}
+              >
+                  <Check className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="text-foreground w-full truncate ml-2">
+        </div>
+        {/* Subitens visual: igual ao item principal, mas com fundo cinza e recuo */}
+        {hasSubItems && (
+          <div className="relative border-b border-border mb-1">
+            {/* Linha vertical */}
+            <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
+            {item.associatedItems.map((subItem, idx) => (
+              <div key={subItem.id || idx} className="pl-4 relative z-10">
+                {/* Linha horizontal para conectar à vertical */}
+                <div
+                  className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
+                  style={{ transform: "translateY(-50%)" }}
+                />
+                <SubItemRow
+                  item={item}
+                  subItem={subItem}
+                  handleCompositeItemUpdate={handleCompositeItemUpdate}
+                  handleDeleteComposite={handleDeleteComposite}
+                  editingSubItemId={editingSubItemId}
+                  setEditingSubItemId={setEditingSubItemId}
+                  UOM_TYPES={UOM_TYPES}
+                  setOpenProductSheet={setOpenProductSheet}
+                  handleSubItemProductSelect={handleSubItemProductSelect}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <ProductSheet
+          open={openProductSheet}
+          onOpenChange={setOpenProductSheet}
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          digits={digits}
+          setDigits={setDigits}
+          UOM_TYPES={UOM_TYPES}
+          formatDecimal={formatDecimal}
+          formatPercentage={formatPercentage}
+          handleNextDigits={handleNextDigits}
+          editingSubItemId={editingSubItemId}
+          handleCompositeItemUpdate={handleCompositeItemUpdate}
+          handleItemUpdate={handleItemUpdate}
+          item={item}
+          setProductInput={setProductInput}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={`grid items-center mb-1 gap-2 ${
+            !hasSubItems ? "border-b border-border pb-1" : ""
+          }`}
+          style={{
+          gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
+          }}
+        >
+          <div>
+            <div className="relative">
+            <div className="w-full text-base text-foreground">
+              {item.itemNumber || <span className="opacity-50">#</span>}
+            </div>
+          </div>
+        </div>
+        <div className="text-foreground w-full truncate ml-2 text-base">
             {item.description ? (
               item.description
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-4">
+        <div className="text-foreground text-base">
             {item.uom ? item.uom : <span className="opacity-50">—</span>}
           </div>
-          <div className="ml-2 mr-2">
-            <Input
-              type="number"
-              placeholder="Qty"
-              value={item.quantity || ""}
-              onChange={(e) =>
-                handleItemUpdate(item.id, "quantity", Number(e.target.value))
-              }
-            />
+        <div className="">
+          <div className="text-base text-foreground">
+            {item.quantity || <span className="opacity-50">—</span>}
           </div>
-          <div className="text-foreground ml-[6px]">
+        </div>
+        <div className="text-foreground text-sm">
             {item.unitPrice ? (
-              `$${displayUnitPrice.toFixed(2)}`
+            `$${Number(item.unitPrice).toFixed(2)}`
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-2">
-            {!item.itemNumber &&
-            !item.description &&
-            !item.uom &&
-            !item.unitPrice &&
-            !item.discount ? (
-              <span className="opacity-50">—</span>
-            ) : item.discountType === "dollar" ? (
-              "$"
-            ) : item.discountType === "percentage" ? (
-              "%"
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
+        <div className="text-foreground text-base">
+          {item.discount
+            ? item.discountType === "dollar"
+              ? `$${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+              : `${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+            : <span className="opacity-50">—</span>}
           </div>
-          <div className="text-foreground ml-2">
-            {item.discount ? (
-              item.discount
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground text-left max-w-[140px] w-full">
+        <div className="text-foreground text-left max-w-[140px] w-full text-base">
             {item.unitPrice && item.quantity ? (
               `$${calculateExtendedPrice(item)}`
             ) : (
@@ -439,8 +495,11 @@ export default function QuoteItemRow({
           </div>
           <div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
+              <DropdownMenuTrigger
+                asChild
+                className="flex items-center justify-center"
+              >
+                <Button variant="ghost" size="sm" className="!p-[6px]">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -460,7 +519,6 @@ export default function QuoteItemRow({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setEditingItemId(item.id);
                     handleAddCompositeItem(item);
                   }}
                 >
@@ -472,295 +530,49 @@ export default function QuoteItemRow({
           </div>
         </div>
 
-        {/* Subitens visual: igual ao item principal, mas com fundo cinza e recuo, e separadores entre eles */}
-        {hasSubItems && (
-          <div className="mb-12 -mt-3 border-b border-border pb-4">
-            {item.associatedItems.map((subItem, idx) => (
+      {hasSubItems && (
+        <div className="relative border-b border-border mb-1">
+          <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
+          {item.associatedItems.map((subItem, idx) => (
+            <div key={subItem.id || idx} className="pl-4 relative z-10">
+              {/* Linha horizontal para conectar à vertical */}
               <div
-                key={subItem.id || idx}
-                className={`grid gap-4 items-center bg-muted py-0 pr-1
-                  ${idx === 0 ? 'rounded-tl rounded-tr' : ''}
-                  ${idx === item.associatedItems.length - 1 ? 'rounded-bl rounded-br' : ''}
-                  ${idx !== item.associatedItems.length - 1 ? 'border-b border-border' : ''}
-                `}
-                style={{
-                  gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px",
-                }}
-              >
-                <div className="text-foreground w-full truncate">
-                  <Input
-                    placeholder="#"
-                    value={subItem.itemNumber || ""}
-                    className="text-sm border-none"
-                    onChange={(e) =>
-                      handleCompositeItemUpdate(
-                        item.id,
-                        subItem.id,
-                        "itemNumber",
-                        e.target.value
-                      )
-                    }
-                  />
-                </div>
-                <div className="text-foreground w-full truncate ml-2 text-sm">
-                  {subItem.description ? (
-                    subItem.description
-                  ) : (
-                    <span className="opacity-50">—</span>
-                  )}
-                </div>
-                <div className="text-foreground ml-[18px] text-sm">
-                  {subItem.uom ? (
-                    subItem.uom
-                  ) : (
-                    <span className="opacity-50">—</span>
-                  )}
-                </div>
-                <div className="ml-2 mr-2">
-                  <Input
-                    type="number"
-                    placeholder="Qty"
-                    value={subItem.quantity || ""}
-                    className="text-sm border-none"
-                    onChange={(e) =>
-                      handleCompositeItemUpdate(
-                        item.id,
-                        subItem.id,
-                        "quantity",
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </div>
-                <div className="text-foreground ml-[10px] text-sm">
-                  {subItem.unitPrice ? (
-                    `$${Number(subItem.unitPrice).toFixed(2)}`
-                  ) : (
-                    <span className="opacity-50">—</span>
-                  )}
-                </div>
-                <div className="text-foreground ml-3 text-sm">
-                  {/* Discount/Type não exibido para subitem, mas pode adicionar se quiser */}
-                  <span className="opacity-50">—</span>
-                </div>
-                <div className="text-foreground ml-3 text-sm">
-                  {/* Discount não exibido para subitem, mas pode adicionar se quiser */}
-                  <span className="opacity-50">—</span>
-                </div>
-                <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
-                  {subItem.unitPrice && subItem.quantity ? (
-                    `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
-                  ) : (
-                    <span className="opacity-50">—</span>
-                  )}
-                </div>
-                <div />
-              </div>
-            ))}
-          </div>
-        )}
-        {/* Notes visualização */}
-        {/* {item.notes && item.notes.trim() !== "" && (
-          <div className="mt-2 mb-8">
-            <div className="text-xs font-semibold mb-1 text-muted-foreground">Notes</div>
-            <div className="py-2 text-base text-foreground whitespace-pre-line">{item.notes}</div>
-          </div>
-        )} */}
-      </>
-    );
-  }
+                className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
+                style={{ transform: "translateY(-50%)" }}
+              />
+            <SubItemRow
+              item={item}
+              subItem={subItem}
+              handleCompositeItemUpdate={handleCompositeItemUpdate}
+              handleDeleteComposite={handleDeleteComposite}
+              editingSubItemId={editingSubItemId}
+              setEditingSubItemId={setEditingSubItemId}
+              UOM_TYPES={UOM_TYPES}
+              setOpenProductSheet={setOpenProductSheet}
+              handleSubItemProductSelect={handleSubItemProductSelect}
+            />
+            </div>
+          ))}
+        </div>
+      )}
 
-  return (
-    <>
-      {content}
-      <Sheet open={openProductSheet} onOpenChange={setOpenProductSheet}>
-        <SheetContent side="right">
-          <SheetHeader>
-            <SheetTitle className="text-2xl mb-2">Add New Product</SheetTitle>
-            <Separator className="mt-2" />
-          </SheetHeader>
-          <form className="flex flex-col gap-5 px-4">
-            <div className="flex flex-col gap-1">
-              <Label>Item # / SKU</Label>
-              <Input
-                className="bg-background"
-                placeholder="Enter item number or SKU"
-                value={newProduct.itemNumber}
-                onChange={(e) =>
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    itemNumber: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Description</Label>
-              <Input
-                className="bg-background"
-                placeholder="Enter product description"
-                value={newProduct.description}
-                onChange={(e) =>
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>UOM</Label>
-              <Select
-                value={newProduct.uom}
-                onValueChange={(value) =>
-                  setNewProduct((prev) => ({ ...prev, uom: value }))
-                }
-              >
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Select UOM" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(UOM_TYPES).map((uom: any) => (
-                    <SelectItem key={uom} value={uom}>
-                      {uom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                className="bg-background"
-                placeholder="Enter quantity"
-                value={newProduct.quantity}
-                onChange={(e) =>
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    quantity: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Unit Price</Label>
-              <Input
-                type="text"
-                className="bg-background"
-                placeholder="$0.00"
-                value={
-                  digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
-                }
-                onChange={(e) => {
-                  const ev = e.nativeEvent as InputEvent;
-                  const { inputType } = ev;
-                  const data = (ev.data || "").replace(/\$/g, "");
-
-                  const nextDigits = handleNextDigits(
-                    digits.unitPrice,
-                    inputType,
-                    data
-                  );
-                  setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    unitPrice: formatDecimal(nextDigits),
-                  }));
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Discount Type</Label>
-              <Select
-                value={newProduct.discountType}
-                onValueChange={(value) =>
-                  setNewProduct((prev) => ({ ...prev, discountType: value }))
-                }
-              >
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Select discount type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dollar">$</SelectItem>
-                  <SelectItem value="percentage">%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Discount</Label>
-              <Input
-                type="text"
-                className="bg-background"
-                placeholder={
-                  newProduct.discountType === "dollar" ? "$0.00" : "0.00%"
-                }
-                value={
-                  digits.discount
-                    ? newProduct.discountType === "dollar"
-                      ? `$ ${formatDecimal(digits.discount)}`
-                      : `${formatPercentage(digits.discount)}%`
-                    : ""
-                }
-                onChange={(e) => {
-                  const ev = e.nativeEvent as InputEvent;
-                  const { inputType } = ev;
-                  const data = (ev.data || "").replace(/[$\s%]/g, "");
-
-                  const nextDigits = handleNextDigits(
-                    digits.discount,
-                    inputType,
-                    data
-                  );
-                  setDigits((prev) => ({ ...prev, discount: nextDigits }));
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    discount: formatDecimal(nextDigits),
-                  }));
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>Notes</Label>
-              <Textarea
-                className="bg-background min-h-[100px]"
-                placeholder="Enter any additional notes"
-                value={newProduct.notes}
-                onChange={(e) =>
-                  setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
-                }
-              />
-            </div>
-            <Separator className="my-2" />
-            <SheetClose asChild>
-              <Button
-                type="button"
-                className="bg-black text-white py-2 mt-4 text-md font-semibold hover:bg-black/90 transition rounded"
-                onClick={() => {
-                  // Aqui você pode adicionar a lógica para salvar o novo produto
-                  setOpenProductSheet(false);
-                  setNewProduct({
-                    itemNumber: "",
-                    description: "",
-                    uom: "",
-                    quantity: "",
-                    unitPrice: "",
-                    discountType: "dollar",
-                    discount: "",
-                    notes: "",
-                  });
-                  setDigits({
-                    unitPrice: "000",
-                    discount: "000",
-                  });
-                }}
-              >
-                Save Product
-              </Button>
-            </SheetClose>
-          </form>
-        </SheetContent>
-      </Sheet>
+      <ProductSheet
+        open={openProductSheet}
+        onOpenChange={setOpenProductSheet}
+        newProduct={newProduct}
+        setNewProduct={setNewProduct}
+        digits={digits}
+        setDigits={setDigits}
+        UOM_TYPES={UOM_TYPES}
+        formatDecimal={formatDecimal}
+        formatPercentage={formatPercentage}
+        handleNextDigits={handleNextDigits}
+        editingSubItemId={editingSubItemId}
+        handleCompositeItemUpdate={handleCompositeItemUpdate}
+        handleItemUpdate={handleItemUpdate}
+        item={item}
+        setProductInput={setProductInput}
+      />
     </>
   );
 }
