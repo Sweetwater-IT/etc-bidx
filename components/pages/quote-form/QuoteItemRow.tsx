@@ -967,6 +967,23 @@ export default function QuoteItemRow({
                 className="bg-black text-white py-2 mt-4 text-md font-semibold hover:bg-black/90 transition rounded"
                 onClick={() => {
                   setOpenProductSheet(false);
+                  if (editingSubItemId) {
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "itemNumber", newProduct.itemNumber);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "description", newProduct.description);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "uom", newProduct.uom);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "quantity", newProduct.quantity);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "unitPrice", newProduct.unitPrice);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "discountType", newProduct.discountType);
+                    handleCompositeItemUpdate(item.id, editingSubItemId, "discount", newProduct.discount);
+                  } else {
+                    handleItemUpdate(item.id, "itemNumber", newProduct.itemNumber);
+                    handleItemUpdate(item.id, "description", newProduct.description);
+                    handleItemUpdate(item.id, "uom", newProduct.uom);
+                    handleItemUpdate(item.id, "quantity", newProduct.quantity);
+                    handleItemUpdate(item.id, "unitPrice", newProduct.unitPrice);
+                    handleItemUpdate(item.id, "discountType", newProduct.discountType);
+                    handleItemUpdate(item.id, "discount", newProduct.discount);
+                  }
                   setNewProduct({
                     itemNumber: "",
                     description: "",
