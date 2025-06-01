@@ -98,7 +98,6 @@ export function ContractJobSelector({
 
       <div className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          {/* Contract / Job ocupa 2 colunas */}
           <div className="md:col-span-2 col-span-1">
             <div className="mb-2 font-medium">Contract / Job</div>
             <div className="relative">
