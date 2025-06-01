@@ -1,9 +1,11 @@
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { AdminData } from '../../../types/TAdminData';
+import { formatDecimal } from '@/lib/formatDecimals';
+import { handleNextDigits } from '@/lib/handleNextDigits';
 
 interface PrevailingWagesSectionProps {
     adminData: AdminData;
@@ -18,6 +20,39 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
     cpr,
     onCprChange
 }) => {
+
+    const [digits, setDigits] = useState({
+        laborRate: "000",
+        fringeRate: "000",
+    });
+
+    // Update digits when county changes or when switching between RATED/NON-RATED
+    useEffect(() => {
+        if (adminData.county && adminData.rated === 'RATED') {
+            setDigits((prev) => ({
+                ...prev,
+                laborRate: Math.round((adminData.county.laborRate || 0) * 100)
+                    .toString()
+                    .padStart(3, "0"),
+                fringeRate: Math.round((adminData.county.fringeRate || 0) * 100)
+                    .toString()
+                    .padStart(3, "0"),
+            }));
+        }
+    }, [adminData.county, adminData.rated]);
+
+    // Handle rate changes with decimal formatting
+    const handleRateChange = (field: 'laborRate' | 'fringeRate', formattedValue: string) => {
+        const numValue = Number(formattedValue);
+        setAdminData(prev => ({
+            ...prev,
+            county: {
+                ...prev.county!,
+                [field]: numValue
+            }
+        }));
+    };
+
     return (
         <div className="rounded-lg border bg-card p-6">
             <h3 className="mb-6 text-lg font-semibold">Prevailing Wages</h3>
@@ -38,10 +73,24 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                             $
                         </div>
                         <Input
-                            type={adminData.rated === 'RATED' ? 'number' : 'text'}
+                            inputMode={adminData.rated === 'RATED' ? "decimal" : "none"}
+                            pattern={adminData.rated === 'RATED' ? "^\\d*(\\.\\d{0,2})?$" : undefined}
                             className="rounded-l-none bg-muted/50"
-                            value={adminData.rated === 'RATED' ? adminData.county.laborRate : 'SHOP'}
-                            onChange={(e) => setAdminData(prev => ({ ...prev, county: { ...prev.county, laborRate: Number(e.target.value) } }))}
+                            value={adminData.rated === 'RATED' ? `$ ${formatDecimal(digits.laborRate)}` : 'SHOP'}
+                            onChange={(e) => {
+                                if (adminData.rated === 'RATED') {
+                                    const ev = e.nativeEvent as InputEvent;
+                                    const { inputType } = ev;
+                                    const data = (ev.data || "").replace(/\$/g, "");
+
+                                    const nextDigits = handleNextDigits(digits.laborRate, inputType, data);
+                                    setDigits((prev) => ({ ...prev, laborRate: nextDigits }));
+
+                                    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                                    handleRateChange('laborRate', formatted);
+                                }
+                            }}
+                            readOnly={adminData.rated === 'NON-RATED'}
                         />
                     </div>
                 </div>
@@ -53,10 +102,24 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                             $
                         </div>
                         <Input
-                            type={adminData.rated === 'RATED' ? 'number' : 'text'}
+                            inputMode={adminData.rated === 'RATED' ? "decimal" : "none"}
+                            pattern={adminData.rated === 'RATED' ? "^\\d*(\\.\\d{0,2})?$" : undefined}
                             className="rounded-l-none bg-muted/50"
-                            value={adminData.rated === 'RATED' ? adminData.county.fringeRate : 'SHOP'}
-                            onChange={(e) => setAdminData(prev => ({ ...prev, county: { ...prev.county, fringeRate: Number(e.target.value) } }))}
+                            value={adminData.rated === 'RATED' ? `$ ${formatDecimal(digits.fringeRate)}` : 'SHOP'}
+                            onChange={(e) => {
+                                if (adminData.rated === 'RATED') {
+                                    const ev = e.nativeEvent as InputEvent;
+                                    const { inputType } = ev;
+                                    const data = (ev.data || "").replace(/\$/g, "");
+
+                                    const nextDigits = handleNextDigits(digits.fringeRate, inputType, data);
+                                    setDigits((prev) => ({ ...prev, fringeRate: nextDigits }));
+
+                                    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                                    handleRateChange('fringeRate', formatted);
+                                }
+                            }}
+                            readOnly={adminData.rated === 'NON-RATED'}
                         />
                     </div>
                 </div>

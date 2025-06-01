@@ -167,6 +167,11 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     }
   };
 
+  useEffect(() => {
+    setSelectedContractor('');
+    setSelectedSubcontractor('');
+  }, [open])
+
   const handleContractorSelect = (value: string) => {
     setSelectedContractor(value);
     setHasChanges(value !== originalContractor);

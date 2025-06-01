@@ -104,7 +104,7 @@ const ContractManagementTable = () => {
                 startLoading();
 
                 // Fetch counts first
-                const countsResponse = await fetch('/api/jobs/active-jobs/contract-management?counts=true');
+                const countsResponse = await fetch('/api/jobs/contract-management?counts=true');
                 const countsData = await countsResponse.json();
 
                 if (countsData.success) {
@@ -135,7 +135,7 @@ const ContractManagementTable = () => {
                     sortParams = `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
                 }
 
-                const response = await fetch(`/api/jobs/active-jobs/contract-management?page=1&limit=100${statusParam}${filterParams}${sortParams}`);
+                const response = await fetch(`/api/jobs/contract-management?page=1&limit=100${statusParam}${filterParams}${sortParams}`);
                 const result = await response.json();
 
                 if (result.success && result.data) {

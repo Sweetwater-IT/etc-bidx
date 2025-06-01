@@ -24,6 +24,10 @@ import {
   Loader2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { formatDecimal } from '@/lib/formatDecimals';
+import { handleNextDigits } from '@/lib/handleNextDigits';
+import { validateEmail } from '@/lib/emailValidation';
+import { handlePhoneInput } from '@/lib/phone-number-functions';
 
 // Define item structure
 interface JobItem {
@@ -84,6 +88,13 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     project_phone: pmPhone || '',
     items: [] as JobItem[]
   });
+
+  // State for decimal masking - track digits for each contract value field
+  const [contractValueDigits, setContractValueDigits] = useState<Record<string, string>>({});
+  const [customItemDigits, setCustomItemDigits] = useState<string>("000");
+  
+  // State for validation errors
+  const [emailError, setEmailError] = useState<string>();
   
   // Update form values when props change
   useEffect(() => {
@@ -143,6 +154,24 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }));
   };
 
+  // Handle email change with validation
+  const handleEmailChange = (value: string) => {
+    handleInputChange('project_email', value);
+    
+    // Validate email
+    const validation = validateEmail(value);
+    setEmailError(validation.isValid ? undefined : validation.message);
+  };
+
+  // Handle phone change
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const ev = e.nativeEvent as InputEvent;
+    const { inputType } = ev;
+    const data = ev.data || "";
+    const newValue = handlePhoneInput(inputType, data, formValues.project_phone || "");
+    handleInputChange('project_phone', newValue);
+  };
+
   // Toggle item on job
   const handleOnJobToggle = (item: ItemNumber, checked: boolean) => {
     if (checked) {
@@ -161,6 +190,12 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         ...prev,
         items: [...prev.items, newItem]
       }));
+
+      // Initialize digits for this item
+      setContractValueDigits(prev => ({
+        ...prev,
+        [item.item_number]: "000"
+      }));
     } else {
       // Remove item from form data when unchecked
       const updatedItems = formValues.items.filter(
@@ -171,6 +206,13 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         ...prev,
         items: updatedItems
       }));
+
+      // Remove digits for this item
+      setContractValueDigits(prev => {
+        const newDigits = { ...prev };
+        delete newDigits[item.item_number];
+        return newDigits;
+      });
     }
   };
   
@@ -191,6 +233,44 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         items: updatedItems
       };
     });
+  };
+
+  // Handle next digits for contract values (higher limit than standard rates)
+  function handleNextDigitsContractValue(current: string, inputType: string, data: string): string {
+    let digits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      const candidate = current + data;
+      // Allow up to 9,999,999.99 (9 digits total)
+      if (parseInt(candidate, 10) <= 999999999) digits = candidate;
+    } else if (inputType === "deleteContentBackward") {
+      digits = current.slice(0, -1);
+    }
+
+    return digits.padStart(3, "0");
+  }
+
+  // Handle contract value change with decimal masking
+  const handleContractValueChange = (itemNumber: string, inputType: string, data: string) => {
+    const currentDigits = contractValueDigits[itemNumber] || "000";
+    const nextDigits = handleNextDigitsContractValue(currentDigits, inputType, data);
+    
+    setContractValueDigits(prev => ({
+      ...prev,
+      [itemNumber]: nextDigits
+    }));
+
+    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+    handleItemFieldChange(itemNumber, 'contractValue', parseFloat(formatted));
+  };
+
+  // Handle custom item contract value change
+  const handleCustomContractValueChange = (inputType: string, data: string) => {
+    const nextDigits = handleNextDigitsContractValue(customItemDigits, inputType, data);
+    setCustomItemDigits(nextDigits);
+
+    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+    handleCustomItemChange('contractValue', parseFloat(formatted));
   };
   
   // Handle custom item field change
@@ -222,6 +302,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         uom: '',
         contractValue: 0
       });
+      setCustomItemDigits("000");
       setShowCustomForm(false);
     }
   };
@@ -232,6 +313,13 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       ...prev,
       items: prev.items.filter(item => item.itemNumber !== itemNumber)
     }));
+
+    // Remove digits for this item
+    setContractValueDigits(prev => {
+      const newDigits = { ...prev };
+      delete newDigits[itemNumber];
+      return newDigits;
+    });
   };
   
   // Check if form is valid
@@ -370,20 +458,27 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                 <Input
                   id="project_email"
                   type="email"
+                  inputMode="email"
                   value={formValues.project_email}
-                  onChange={(e) => handleInputChange('project_email', e.target.value)}
-                  placeholder="Project manager email"
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  placeholder="manager@company.com"
+                  className={emailError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                   required
                 />
+                {emailError && (
+                  <p className="text-sm text-red-600">{emailError}</p>
+                )}
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="project_phone">Project Manager Phone</Label>
                 <Input
                   id="project_phone"
+                  type="text"
+                  inputMode="tel"
                   value={formValues.project_phone}
-                  onChange={(e) => handleInputChange('project_phone', e.target.value)}
-                  placeholder="Project manager phone"
+                  onChange={handlePhoneChange}
+                  placeholder="(555) 123-4567"
                   required
                 />
               </div>
@@ -441,13 +536,11 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                         <TableCell>
                           {isOnJob && (
                             <Input
-                              type="number"
-                              min={0}
-                              value={formValues.items[formItemIndex].quantity}
+                              type="text"
+                              value={formValues.items[formItemIndex].quantity === 0 ? '' : formValues.items[formItemIndex].quantity}
                               onChange={(e) => 
                                 handleItemFieldChange(item.item_number, 'quantity', parseFloat(e.target.value) || 0)
                               }
-                              placeholder="Quantity"
                             />
                           )}
                         </TableCell>
@@ -455,13 +548,16 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                         <TableCell>
                           {isOnJob && (
                             <Input
-                              type="number"
-                              min={0}
-                              value={formValues.items[formItemIndex].contractValue}
-                              onChange={(e) => 
-                                handleItemFieldChange(item.item_number, 'contractValue', parseFloat(e.target.value) || 0)
-                              }
-                              placeholder="Value"
+                              inputMode="decimal"
+                              pattern="^\\d*(\\.\\d{0,2})?$"
+                              value={`$ ${formatDecimal(contractValueDigits[item.item_number] || "000")}`}
+                              onChange={(e) => {
+                                const ev = e.nativeEvent as InputEvent;
+                                const { inputType } = ev;
+                                const data = (ev.data || "").replace(/\$/g, "");
+                                handleContractValueChange(item.item_number, inputType, data);
+                              }}
+                              placeholder="$ 0.00"
                             />
                           )}
                         </TableCell>
@@ -501,13 +597,16 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     <TableCell>{item.uom}</TableCell>
                     <TableCell>
                       <Input
-                        type="number"
-                        min={0}
-                        value={item.contractValue}
-                        onChange={(e) => 
-                          handleItemFieldChange(item.itemNumber, 'contractValue', parseFloat(e.target.value) || 0)
-                        }
-                        placeholder="Value"
+                        inputMode="decimal"
+                        pattern="^\\d*(\\.\\d{0,2})?$"
+                        value={`$ ${formatDecimal(contractValueDigits[item.itemNumber] || "000")}`}
+                        onChange={(e) => {
+                          const ev = e.nativeEvent as InputEvent;
+                          const { inputType } = ev;
+                          const data = (ev.data || "").replace(/\$/g, "");
+                          handleContractValueChange(item.itemNumber, inputType, data);
+                        }}
+                        placeholder="$ 0.00"
                       />
                     </TableCell>
                     <TableCell>
@@ -558,11 +657,16 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="number"
-                        min={0}
-                        value={newCustomItem.contractValue}
-                        onChange={(e) => handleCustomItemChange('contractValue', parseFloat(e.target.value) || 0)}
-                        placeholder="Value"
+                        inputMode="decimal"
+                        pattern="^\\d*(\\.\\d{0,2})?$"
+                        value={`$ ${formatDecimal(customItemDigits)}`}
+                        onChange={(e) => {
+                          const ev = e.nativeEvent as InputEvent;
+                          const { inputType } = ev;
+                          const data = (ev.data || "").replace(/\$/g, "");
+                          handleCustomContractValueChange(inputType, data);
+                        }}
+                        placeholder="$ 0.00"
                       />
                     </TableCell>
                     <TableCell>

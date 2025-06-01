@@ -259,7 +259,10 @@ function formatCellValue(value: any, key: string) {
       const dayNum = utcDate.getUTCDate();
       const yearNum = utcDate.getUTCFullYear();
 
-      const timestamp = ', ' + value.split("T")[1].split(':')[0] + ':' + value.split("T")[1].split(':')[1]
+      const hoursValue = parseInt(value.split("T")[1].split(':')[0])
+      const amOrPm = hoursValue > 12 ? 'PM' : 'AM'
+      const hoursFormatted = hoursValue > 12 ? hoursValue - 12 : hoursValue
+      const timestamp = ', ' + hoursFormatted + ':' + value.split("T")[1].split(':')[1] + amOrPm
 
       return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp  : ''}`;
     } catch {

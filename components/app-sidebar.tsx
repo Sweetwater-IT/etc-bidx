@@ -152,7 +152,7 @@ export const data = {
       icon: IconUsers,
       items: [
         {
-          title: "New Sign Order",
+          title: "Sign Order List",
           url: "/takeoffs/load-sheet",
         },
         {
