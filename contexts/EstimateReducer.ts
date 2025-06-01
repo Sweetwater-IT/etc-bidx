@@ -729,7 +729,7 @@ export const estimateReducer = (
 					...p,
 					startDate: p.startDate ? new Date(p.startDate) : null,
 					endDate: p.endDate ? new Date(p.endDate) : null,
-					signs: []
+					signs: p.signs
 				}))
 			}
 

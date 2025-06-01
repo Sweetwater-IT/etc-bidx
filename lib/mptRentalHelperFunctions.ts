@@ -31,7 +31,7 @@ export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Reco
     sharps: { totalDaysRequired: 0, totalQuantity: 0 }
   };
 
-  if (!mptRental.phases) return equipmentTotals;
+  if (!mptRental.phases) return equipmentTotals; 
 
   mptRental.phases.forEach((phase) => {
     if (!phase?.standardEquipment) return;
@@ -39,8 +39,7 @@ export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Reco
     // Get all entries for a given phase's standard equipment
     Object.entries(phase.standardEquipment).forEach(([key, value]) => {
       const equipmentType = key as EquipmentType;
-
-      if (equipmentTotals.hasOwnProperty(equipmentType) && value?.quantity && phase?.days) {
+      if (value.quantity >= 0 && phase?.days >= 0) {
         // Add the quantity and days from the phase to the totals
         equipmentTotals[equipmentType].totalQuantity += value.quantity;
         equipmentTotals[equipmentType].totalDaysRequired += phase.days;
@@ -280,7 +279,6 @@ export function calculateEquipmentCostSummary(equipmentRental: MPTRentalEstimati
     });
 
   const equipmentCostSummary = calculateCostMetrics(equipmentRental, combinedTotals);
-
   const details = {
     equipmentBreakdown: Object.entries(combinedTotals)
       .filter(([type]) => equipmentRental.equipmentCosts?.[type as EquipmentType])
