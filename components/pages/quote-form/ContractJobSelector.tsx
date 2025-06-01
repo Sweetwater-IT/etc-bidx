@@ -124,7 +124,7 @@ export function ContractJobSelector({
               />
               {/* Dropdown */}
               {dropdownOpen && !selectedContractJob && (
-                <div className="absolute left-0 right-0 z-10 bg-popover border border-border rounded shadow max-h-64 overflow-auto mt-1">
+                <div className="absolute left-0 right-0 z-20 bg-popover border border-border rounded shadow max-h-64 overflow-auto mt-1">
                   <div
                     className="cursor-pointer px-3 py-2 hover:bg-muted border-b font-medium"
                     onMouseDown={onAddNew}

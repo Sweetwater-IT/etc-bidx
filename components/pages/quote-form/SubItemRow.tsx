@@ -72,7 +72,7 @@ export function SubItemRow({
   return (
     <div
       className={`grid items-center bg-muted py-0 pr-1 gap-2`}
-      style={{ gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px", }}
+      style={{ gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px", }}
     >
       {editingSubItemId === subItem.id ? (
         <>

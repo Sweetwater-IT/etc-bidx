@@ -177,7 +177,7 @@ export default function QuoteItemRow({
         <div
           className="grid items-center gap-2"
           style={{
-              gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
+              gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
             }}
           >
             {/* Produto */}
@@ -447,7 +447,7 @@ export default function QuoteItemRow({
             !hasSubItems ? "border-b border-border pb-1" : ""
           }`}
           style={{
-          gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
+          gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
           }}
         >
           <div>
