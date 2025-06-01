@@ -979,7 +979,10 @@ export default function QuoteItemRow({
           </div>
           <div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild className="flex items-center justify-center">
+              <DropdownMenuTrigger
+                asChild
+                className="flex items-center justify-center"
+              >
                 <Button variant="ghost" size="sm" className="!p-[6px]">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
