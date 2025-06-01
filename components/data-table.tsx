@@ -260,7 +260,7 @@ function formatCellValue(value: any, key: string) {
       const yearNum = utcDate.getUTCFullYear();
 
       const hoursValue = parseInt(value.split("T")[1].split(':')[0])
-      let amOrPm = hoursValue > 12 ? 'PM' : 'AM'
+      const amOrPm = hoursValue > 12 ? 'PM' : 'AM'
       const hoursFormatted = hoursValue > 12 ? hoursValue - 12 : hoursValue
       const timestamp = ', ' + hoursFormatted + ':' + value.split("T")[1].split(':')[1] + amOrPm
 
