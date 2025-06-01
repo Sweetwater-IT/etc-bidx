@@ -16,7 +16,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '
 interface SignOrder {
   id: number;
   requestor: string;
-  customer: string;
+  contractor_id: number;
+  contractors?: { name: string };
   branch?: string;
   order_date: string;
   need_date: string;
@@ -24,7 +25,9 @@ interface SignOrder {
   end_date: string;
   job_number: string;
   contract_number: string;
-  type: string;
+  sale: boolean;
+  rental: boolean;
+  perm_signs: boolean;
   status: string;
 }
 
@@ -42,6 +45,14 @@ interface SignItem {
   in_stock: boolean;
 }
 
+// Helper function to determine branch based on ID (temporary solution)
+const determineBranch = (id: number): string => {
+  if (id < 100) return 'Hatfield';
+  if (id < 200) return 'Turbotville';
+  if (id < 300) return 'Bedford';
+  return 'Archived';
+};
+
 export default function SignOrderTrackerPage() {
   const params = useParams();
   const router = useRouter();
@@ -55,6 +66,11 @@ export default function SignOrderTrackerPage() {
   const [openRequestor, setOpenRequestor] = useState(false);
   const [openCustomer, setOpenCustomer] = useState(false);
   const [openBranch, setOpenBranch] = useState(false);
+  
+  // Order type checkboxes state
+  const [isSale, setIsSale] = useState(false);
+  const [isRental, setIsRental] = useState(false);
+  const [isPermanent, setIsPermanent] = useState(false);
   
   // Dummy data for dropdowns - would be fetched from API in real implementation
   const requestors = [
@@ -102,7 +118,14 @@ export default function SignOrderTrackerPage() {
           throw new Error('Invalid API response format');
         }
         
-        setSignOrder(data.data);
+        // Add branch information based on ID ranges (temporary solution)
+        // This would be replaced with actual branch data from the API
+        const orderWithBranch = {
+          ...data.data,
+          branch: determineBranch(data.data.id)
+        };
+        
+        setSignOrder(orderWithBranch);
         
         // Set dates if available
         if (data.data.order_date) {
@@ -111,6 +134,11 @@ export default function SignOrderTrackerPage() {
         if (data.data.need_date) {
           setNeedDate(new Date(data.data.need_date));
         }
+        
+        // Set order type checkboxes based on data
+        if (data.data.sale) setIsSale(true);
+        if (data.data.rental) setIsRental(true);
+        if (data.data.perm_signs) setIsPermanent(true);
         
         // Fetch sign items (this would be a separate API call)
         // For now, we'll use dummy data
@@ -327,7 +355,7 @@ export default function SignOrderTrackerPage() {
                             aria-expanded={openCustomer}
                             className="w-full justify-between"
                           >
-                            {signOrder.customer || 'Select customer...'}
+                            {signOrder.contractors?.name || 'Select customer...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -341,14 +369,18 @@ export default function SignOrderTrackerPage() {
                                   key={customer.id}
                                   value={customer.name}
                                   onSelect={() => {
-                                    setSignOrder(prev => prev ? {...prev, customer: customer.name} : null);
+                                    setSignOrder(prev => prev ? {
+                                      ...prev, 
+                                      contractor_id: customer.id,
+                                      contractors: { name: customer.name }
+                                    } : null);
                                     setOpenCustomer(false);
                                   }}
                                 >
                                   <Check
                                     className={cn(
                                       "mr-2 h-4 w-4",
-                                      signOrder.customer === customer.name ? "opacity-100" : "opacity-0"
+                                      signOrder.contractors?.name === customer.name ? "opacity-100" : "opacity-0"
                                     )}
                                   />
                                   {customer.name}
@@ -402,15 +434,42 @@ export default function SignOrderTrackerPage() {
                       <label className="block text-sm font-medium mb-1">Order Type</label>
                       <div className="flex gap-4 mt-2">
                         <div className="flex items-center">
-                          <input type="checkbox" id="sale" className="mr-2" />
+                          <input 
+                            type="checkbox" 
+                            id="sale" 
+                            className="mr-2" 
+                            checked={isSale}
+                            onChange={(e) => {
+                              setIsSale(e.target.checked);
+                              setSignOrder(prev => prev ? {...prev, sale: e.target.checked} : null);
+                            }}
+                          />
                           <label htmlFor="sale">Sale</label>
                         </div>
                         <div className="flex items-center">
-                          <input type="checkbox" id="rental" className="mr-2" />
+                          <input 
+                            type="checkbox" 
+                            id="rental" 
+                            className="mr-2" 
+                            checked={isRental}
+                            onChange={(e) => {
+                              setIsRental(e.target.checked);
+                              setSignOrder(prev => prev ? {...prev, rental: e.target.checked} : null);
+                            }}
+                          />
                           <label htmlFor="rental">Rental</label>
                         </div>
                         <div className="flex items-center">
-                          <input type="checkbox" id="permanent" className="mr-2" />
+                          <input 
+                            type="checkbox" 
+                            id="permanent" 
+                            className="mr-2" 
+                            checked={isPermanent}
+                            onChange={(e) => {
+                              setIsPermanent(e.target.checked);
+                              setSignOrder(prev => prev ? {...prev, perm_signs: e.target.checked} : null);
+                            }}
+                          />
                           <label htmlFor="permanent">Permanent Signs</label>
                         </div>
                       </div>
