@@ -462,20 +462,27 @@ export default function QuoteItemRow({
 
         {/* Subitens visual: igual ao item principal, mas com fundo cinza e recuo */}
         {hasSubItems && (
-          <div className="border-b border-border pb-4">
+          <div className="relative border-b border-border mb-1">
+            {/* Linha vertical */}
+            <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
             {item.associatedItems.map((subItem, idx) => (
-              <SubItemRow
-                key={subItem.id || idx}
-                item={item}
-                subItem={subItem}
-                handleCompositeItemUpdate={handleCompositeItemUpdate}
-                handleDeleteComposite={handleDeleteComposite}
-                editingSubItemId={editingSubItemId}
-                setEditingSubItemId={setEditingSubItemId}
-                UOM_TYPES={UOM_TYPES}
-                setOpenProductSheet={setOpenProductSheet}
-                handleSubItemProductSelect={handleSubItemProductSelect}
-              />
+              <div key={subItem.id || idx} className="pl-4 relative z-10">
+                <div
+                  className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
+                  style={{ transform: "translateY(-50%)" }}
+                />
+                <SubItemRow
+                  item={item}
+                  subItem={subItem}
+                  handleCompositeItemUpdate={handleCompositeItemUpdate}
+                  handleDeleteComposite={handleDeleteComposite}
+                  editingSubItemId={editingSubItemId}
+                  setEditingSubItemId={setEditingSubItemId}
+                  UOM_TYPES={UOM_TYPES}
+                  setOpenProductSheet={setOpenProductSheet}
+                  handleSubItemProductSelect={handleSubItemProductSelect}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -770,20 +777,27 @@ export default function QuoteItemRow({
       )}
 
       {hasSubItems && (
-        <div className="border-b border-border mb-1">
+        <div className="relative border-b border-border mb-1">
+          <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
           {item.associatedItems.map((subItem, idx) => (
-            <SubItemRow
-              key={subItem.id || idx}
-              item={item}
-              subItem={subItem}
-              handleCompositeItemUpdate={handleCompositeItemUpdate}
-              handleDeleteComposite={handleDeleteComposite}
-              editingSubItemId={editingSubItemId}
-              setEditingSubItemId={setEditingSubItemId}
-              UOM_TYPES={UOM_TYPES}
-              setOpenProductSheet={setOpenProductSheet}
-              handleSubItemProductSelect={handleSubItemProductSelect}
-            />
+            <div key={subItem.id || idx} className="pl-4 relative z-10">
+              {/* Linha horizontal para conectar à vertical */}
+              <div
+                className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
+                style={{ transform: "translateY(-50%)" }}
+              />
+              <SubItemRow
+                item={item}
+                subItem={subItem}
+                handleCompositeItemUpdate={handleCompositeItemUpdate}
+                handleDeleteComposite={handleDeleteComposite}
+                editingSubItemId={editingSubItemId}
+                setEditingSubItemId={setEditingSubItemId}
+                UOM_TYPES={UOM_TYPES}
+                setOpenProductSheet={setOpenProductSheet}
+                handleSubItemProductSelect={handleSubItemProductSelect}
+              />
+            </div>
           ))}
         </div>
       )}

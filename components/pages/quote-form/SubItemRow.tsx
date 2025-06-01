@@ -124,7 +124,7 @@ export function SubItemRow({
                 )}
             </div>
           </div>
-          <div className="text-foreground w-full truncate ml-2 text-sm">
+          <div className="text-foreground w-full truncate ml-0 text-sm">
             {subItem.description ? (
               subItem.description
             ) : (
@@ -223,7 +223,7 @@ export function SubItemRow({
                   onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 />
               ) : (
-                <div className="w-full px-3 text-base text-foreground">
+                <div className="w-full px-3 text-sm text-foreground">
                   {productInput || <span className="opacity-50">—</span>}
                 </div>
               )}
@@ -274,17 +274,17 @@ export function SubItemRow({
                 )}
             </div>
           </div>
-          <div className="text-foreground w-full truncate ml-2 text-sm">
+          <div className="text-foreground w-full truncate -ml-1 text-sm">
             {subItem.description ? (
               subItem.description
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-[19px] text-sm">
+          <div className="text-foreground ml-[10px] text-sm">
             {subItem.uom ? subItem.uom : <span className="opacity-50">—</span>}
           </div>
-          <div className="ml-3 mr-2">
+          <div className="ml-1 mr-2">
             {editingSubItemId === subItem.id ? (
               <Input
                 type="number"
@@ -306,14 +306,14 @@ export function SubItemRow({
               </div>
             )}
           </div>
-          <div className="text-foreground ml-[11px] text-sm">
+          <div className="text-foreground ml-[5px] text-sm">
             {subItem.unitPrice ? (
               `$${Number(subItem.unitPrice).toFixed(2)}`
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-4 text-sm">
+          <div className="text-foreground ml-2 text-sm">
             {subItem.discountType === "dollar" ? (
               "$"
             ) : subItem.discountType === "percentage" ? (
@@ -322,14 +322,14 @@ export function SubItemRow({
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-4 text-sm">
+          <div className="text-foreground ml-3 text-sm">
             {subItem.discount ? (
               subItem.discount
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-2">
+          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
             {subItem.unitPrice && subItem.quantity ? (
               `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
             ) : (
