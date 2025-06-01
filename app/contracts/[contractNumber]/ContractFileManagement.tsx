@@ -17,6 +17,8 @@ import FringeBenefitsStatement from './EmploymentBenefits';
 import { toast } from 'sonner';
 import WorkerProtectionCertification from './WorkersProtection';
 import { GenerateEmploymentVerificationForm } from './EmploymentVerification';
+import { formatDecimal } from '@/lib/formatDecimals';
+import { handleNextDigits } from '@/lib/handleNextDigits';
 
 interface SenderInfo {
     name: string;
@@ -44,8 +46,8 @@ interface ContractFileManagementProps {
     customer: Customer | null,
     setCustomer: Dispatch<SetStateAction<Customer | null>>
     allCustomers: Customer[]
-    jobId : number | undefined
-    setFiles : Dispatch<SetStateAction<File[]>>
+    jobId: number | undefined
+    setFiles: Dispatch<SetStateAction<File[]>>
 }
 
 const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
@@ -71,6 +73,11 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
     const [users, setUsers] = useState<{ id: number; name: string; email: string; role: string }[]>([]);
     const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
     const [customLaborSelected, setCustomLaborSelected] = useState<boolean>(false);
+
+    const [digits, setDigits] = useState({
+        laborRate: "000",
+        fringeRate: "000",
+    });
 
     const [saving, setSaving] = useState<boolean>(false);
 
@@ -126,6 +133,32 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
         }
     };
 
+    useEffect(() => {
+        if (adminData.county) {
+            setDigits((prev) => ({
+                ...prev,
+                laborRate: Math.round((adminData.county.laborRate || 0) * 100)
+                    .toString()
+                    .padStart(3, "0"),
+                fringeRate: Math.round((adminData.county.fringeRate || 0) * 100)
+                    .toString()
+                    .padStart(3, "0"),
+            }));
+        }
+    }, [adminData.county]);
+
+    const handleRateChange = (field: 'laborRate' | 'fringeRate', formattedValue: string) => {
+        const numValue = Number(formattedValue);
+        setAdminData(prev => ({
+            ...prev,
+            county: {
+                ...prev.county!,
+                [field]: numValue
+            }
+        }));
+    };
+
+
     const handleSenderChange = (senderName: string, fieldName: 'sender' | 'senderWp' | 'senderEv' = 'sender') => {
         const selectedUser = users.find(u => u.name === senderName);
         if (selectedUser) {
@@ -146,18 +179,18 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
         setOpenStates(prev => ({ ...prev, owner: false }));
     };
 
-    const handleDocSave = async (type : 'fringe-benefits' | 'employment-verification' | 'workers-protection') => {
-        if(!jobId){
+    const handleDocSave = async (type: 'fringe-benefits' | 'employment-verification' | 'workers-protection') => {
+        if (!jobId) {
             toast.error('Job id is not set yet, plase wait');
             return;
         }
         setSaving(true)
-        let blob : Blob;
-        let filename : string;
-        if (type === 'fringe-benefits'){
+        let blob: Blob;
+        let filename: string;
+        if (type === 'fringe-benefits') {
             blob = await ReactPDF.pdf(<FringeBenefitsStatement laborGroup={laborGroup} sender={sender} adminData={adminData} />).toBlob();
             filename = 'Fringe Benefits Letter'
-        } if(type === 'workers-protection'){
+        } else if (type === 'workers-protection') {
             blob = await ReactPDF.pdf(<WorkerProtectionCertification sender={sender} />).toBlob()
             filename = "Worker's Protection Form"
         } else {
@@ -165,7 +198,7 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
             filename = 'Employment Verification Form'
         }
 
-        const file = new File([blob], filename, {type: 'application/pdf'})
+        const file = new File([blob], filename, { type: 'application/pdf' })
 
         const formData = new FormData();
         formData.append('file', file)
@@ -176,7 +209,7 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
             body: formData
         })
 
-        if(!fileResponse.ok){
+        if (!fileResponse.ok) {
             const fileError = await fileResponse.json();
             toast.error("Couldn't save files: " + fileError.message)
         }
@@ -214,7 +247,7 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                             <div className="mt-1 flex">
                                 <Input
                                     value={adminData.srRoute}
-                                    onChange={(e) => setAdminData(prevState => ({...prevState, srRoute: e.target.value}))}
+                                    onChange={(e) => setAdminData(prevState => ({ ...prevState, srRoute: e.target.value }))}
                                     className="bg-muted/50 rounded-l-none"
                                 />
                             </div>
@@ -313,14 +346,20 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                                     $
                                 </div>
                                 <Input
-                                    value={adminData.county?.laborRate || ''}
-                                    onChange={(e) => setAdminData(prev => ({
-                                        ...prev,
-                                        county: {
-                                            ...prev.county,
-                                            laborRate: Number(e.target.value)
-                                        }
-                                    }))}
+                                    inputMode="decimal"
+                                    pattern="^\\d*(\\.\\d{0,2})?$"
+                                    value={`$ ${formatDecimal(digits.laborRate)}`}
+                                    onChange={(e) => {
+                                        const ev = e.nativeEvent as InputEvent;
+                                        const { inputType } = ev;
+                                        const data = (ev.data || "").replace(/\$/g, "");
+
+                                        const nextDigits = handleNextDigits(digits.laborRate, inputType, data);
+                                        setDigits((prev) => ({ ...prev, laborRate: nextDigits }));
+
+                                        const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                                        handleRateChange('laborRate', formatted);
+                                    }}
                                     className="bg-muted/50 rounded-l-none"
                                 />
                             </div>
@@ -332,14 +371,20 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                                     $
                                 </div>
                                 <Input
-                                    value={adminData.county?.fringeRate || ''}
-                                    onChange={(e) => setAdminData(prev => ({
-                                        ...prev,
-                                        county: {
-                                            ...prev.county,
-                                            fringeRate: Number(e.target.value)
-                                        }
-                                    }))}
+                                    inputMode="decimal"
+                                    pattern="^\\d*(\\.\\d{0,2})?$"
+                                    value={`$ ${formatDecimal(digits.fringeRate)}`}
+                                    onChange={(e) => {
+                                        const ev = e.nativeEvent as InputEvent;
+                                        const { inputType } = ev;
+                                        const data = (ev.data || "").replace(/\$/g, "");
+
+                                        const nextDigits = handleNextDigits(digits.fringeRate, inputType, data);
+                                        setDigits((prev) => ({ ...prev, fringeRate: nextDigits }));
+
+                                        const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                                        handleRateChange('fringeRate', formatted);
+                                    }}
                                     className="bg-muted/50 rounded-l-none"
                                 />
                             </div>
@@ -428,9 +473,9 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                         <Button variant="outline" onClick={onFringeBenefitsPreview}>
                             Preview
                         </Button>
-                        <Button 
-                        disabled={saving}
-                        onClick={() => handleDocSave('fringe-benefits')}>Generate Document</Button>
+                        <Button
+                            disabled={saving}
+                            onClick={() => handleDocSave('fringe-benefits')}>Generate Document</Button>
                     </div>
                 </div>
             </div>
@@ -488,8 +533,8 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                             Preview
                         </Button>
                         <Button
-                        disabled={saving}
-                        onClick={() => handleDocSave('workers-protection')}>Generate Document</Button>
+                            disabled={saving}
+                            onClick={() => handleDocSave('workers-protection')}>Generate Document</Button>
                     </div>
                 </div>
             </div>
@@ -653,9 +698,9 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                         <Button variant="outline" onClick={onEmploymentVerificationPreview}>
                             Preview
                         </Button>
-                        <Button 
-                        disabled={saving}
-                        onClick={() => handleDocSave('employment-verification')}>Generate Document</Button>
+                        <Button
+                            disabled={saving}
+                            onClick={() => handleDocSave('employment-verification')}>Generate Document</Button>
                     </div>
                 </div>
             </div>

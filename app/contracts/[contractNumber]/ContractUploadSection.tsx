@@ -13,7 +13,7 @@ const ContractUploadSection: React.FC<Props> = ({ setFiles, jobId, maxFiles = 10
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles, // Allow multiple files to be uploaded
-        jobId,
+        uniqueIdentifier : jobId,
         apiEndpoint: '/api/files/contract-management',
         accept: {
             'application/pdf': ['.pdf'],
@@ -53,7 +53,7 @@ const ContractUploadSection: React.FC<Props> = ({ setFiles, jobId, maxFiles = 10
     return (
         <div className="rounded-lg border bg-card p-6">
             <h3 className="mb-6 text-lg font-semibold">Contract Documents</h3>
-            <Dropzone {...fileUploadProps} className="p-8">
+            <Dropzone {...fileUploadProps} className="p-8 cursor-pointer">
                 <DropzoneContent />
                 <DropzoneEmptyState />
             </Dropzone>

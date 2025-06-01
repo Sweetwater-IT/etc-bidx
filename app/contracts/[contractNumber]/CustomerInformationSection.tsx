@@ -5,9 +5,11 @@ import { Label } from '../../../components/ui/label';
 import { Customer } from '../../../types/Customer';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../../../components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useCustomers } from '../../../hooks/use-customers';
+import { validateEmail } from '@/lib/emailValidation';
+import { handlePhoneInput } from '@/lib/phone-number-functions';
 
 interface FormInputProps {
     label: string;
@@ -16,6 +18,8 @@ interface FormInputProps {
     disabled?: boolean;
     className?: string;
     prefix?: string;
+    type?: 'text' | 'email' | 'phone';
+    error?: string;
     onChange?: (value: string) => void;
 }
 
@@ -26,11 +30,25 @@ function FormInput({
     disabled,
     className,
     prefix,
+    type = 'text',
+    error,
     onChange
 }: FormInputProps) {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (type === 'phone') {
+            const ev = e.nativeEvent as InputEvent;
+            const { inputType } = ev;
+            const data = ev.data || "";
+            const newValue = handlePhoneInput(inputType, data, value || "");
+            onChange?.(newValue);
+        } else {
+            onChange?.(e.target.value);
+        }
+    };
+
     return (
         <div className={className}>
-            <Label>{label}</Label>
+            <Label className={error ? "text-red-600" : ""}>{label}</Label>
             <div className="mt-1 flex">
                 {prefix && (
                     <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
@@ -41,10 +59,24 @@ function FormInput({
                     value={value}
                     placeholder={placeholder}
                     disabled={disabled}
-                    className={cn(prefix && "rounded-l-none", "bg-muted/50")}
-                    onChange={(e) => onChange?.(e.target.value)}
+                    type={type === 'phone' ? 'text' : type}
+                    inputMode={type === 'phone' ? 'tel' : type === 'email' ? 'email' : 'text'}
+                    className={cn(
+                        prefix && "rounded-l-none", 
+                        "bg-muted/50",
+                        error && "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    )}
+                    onChange={handleChange}
                 />
+                {error && (
+                    <div className="ml-2 flex items-center">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                    </div>
+                )}
             </div>
+            {error && (
+                <p className="mt-1 text-sm text-red-600">{error}</p>
+            )}
         </div>
     );
 }
@@ -79,6 +111,23 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
     
     // State for popover open
     const [openCustomer, setOpenCustomer] = useState(false);
+    
+    // State for validation errors
+    const [emailError, setEmailError] = useState<string>();
+    
+    // Handle email change with validation
+    const handleEmailChange = (value: string) => {
+        onPmEmailChange(value);
+        
+        // Validate email on blur or when complete
+        const validation = validateEmail(value);
+        setEmailError(validation.isValid ? undefined : validation.message);
+    };
+    
+    // Handle phone change
+    const handlePhoneChange = (formattedValue: string) => {
+        onPmPhoneChange(formattedValue);
+    };
 
     return (
         <div className="rounded-lg border bg-card p-6">
@@ -137,25 +186,36 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
                         </PopoverContent>
                     </Popover>
                 </div>
+                
                 <FormInput
                     label="Customer Contract Number"
                     value={customerContractNumber}
-                    onChange={onCustomerContractNumberChange}
+                    onChange={(value) => onCustomerContractNumberChange(value.toUpperCase())}
+                    placeholder="Contract number"
                 />
+                
                 <FormInput
                     label="Project Manager"
                     value={projectManager}
                     onChange={onProjectManagerChange}
+                    placeholder="Manager name"
                 />
+                
                 <FormInput
                     label="PM Email"
+                    type="email"
                     value={pmEmail}
-                    onChange={onPmEmailChange}
+                    onChange={handleEmailChange}
+                    placeholder="Project manager email"
+                    error={emailError}
                 />
+                
                 <FormInput
                     label="PM Phone"
+                    type="phone"
                     value={pmPhone}
-                    onChange={onPmPhoneChange}
+                    onChange={handlePhoneChange}
+                    placeholder="Phone number"
                 />
             </div>
         </div>

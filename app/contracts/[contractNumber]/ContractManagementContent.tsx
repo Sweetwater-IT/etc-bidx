@@ -104,7 +104,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
             if (!contractNumber || isLoadingCustomers) return;
             startLoading();
             try {
-                const jobResponse = await fetch('/api/jobs/active-jobs/contract-management', {
+                const jobResponse = await fetch('/api/jobs/contract-management', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
