@@ -57,10 +57,22 @@ export function SubItemRow({
 
   const isCustom = subItem.isCustom;
 
+  // Função utilitária para calcular o total do subitem já com desconto
+  function calculateSubItemTotal(subItem) {
+    const base = (subItem.unitPrice || 0) * (subItem.quantity || 0);
+    const discountAmount = subItem.discountType === "dollar"
+      ? Number(subItem.discount || 0)
+      : base * (Number(subItem.discount || 0) / 100);
+    return (base - discountAmount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   return (
     <div
       className={`grid items-center bg-muted py-0 pr-1 gap-2`}
-      style={{ gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 2fr 40px", }}
+      style={{ gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px", }}
     >
       {editingSubItemId === subItem.id ? (
         <>
@@ -126,7 +138,7 @@ export function SubItemRow({
                 )}
             </div>
           </div>
-          <div className="text-foreground w-full truncate text-sm -ml-1">
+          <div className="text-foreground w-full truncate text-sm -ml-3">
             {isCustom ? (
               <Input
                 placeholder="Description"
@@ -147,17 +159,12 @@ export function SubItemRow({
               <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="text-foreground text-sm -ml-2">
+          <div className="text-foreground text-sm -ml-3 mr-3">
             {isCustom ? (
               <Select
                 value={subItem.uom || ""}
                 onValueChange={(value) =>
-                  handleCompositeItemUpdate(
-                    item.id,
-                    subItem.id,
-                    "uom",
-                    value
-                  )
+                  handleCompositeItemUpdate(item.id, subItem.id, "uom", value)
                 }
               >
                 <SelectTrigger>
@@ -177,7 +184,7 @@ export function SubItemRow({
               <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="-ml-2">
+          <div className="-ml-3 mr-2">
             <Input
               type="number"
               placeholder="Qty"
@@ -193,7 +200,7 @@ export function SubItemRow({
               }
             />
           </div>
-          <div className="text-foreground text-sm">
+          <div className="text-foreground text-sm -ml-2">
             {isCustom ? (
               <Input
                 type="number"
@@ -215,16 +222,63 @@ export function SubItemRow({
               <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="text-foreground text-sm">
-            {subItem.discount
-              ? subItem.discountType === "dollar"
-                ? `$${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-                : `${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-              : <span className="opacity-50">—</span>}
+          <div className="text-foreground text-sm flex items-center gap-1">
+            {isCustom ? (
+              <>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Discount"
+                  value={subItem.discount || ""}
+                  onChange={(e) =>
+                    handleCompositeItemUpdate(
+                      item.id,
+                      subItem.id,
+                      "discount",
+                      Number(e.target.value)
+                    )
+                  }
+                  className=" text-sm w-full"
+                />
+                <div className="w-[62px] h-full">
+                  <Select
+                    value={subItem.discountType || "dollar"}
+                    onValueChange={(value) =>
+                      handleCompositeItemUpdate(
+                        item.id,
+                        subItem.id,
+                        "discountType",
+                        value
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-[20px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dollar">$</SelectItem>
+                      <SelectItem value="percentage">%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            ) : subItem.discount ? (
+              subItem.discountType === "dollar" ? (
+                `$${Number(subItem.discount).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}`
+              ) : (
+                `${Number(subItem.discount).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}%`
+              )
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
           </div>
           <div className="text-foreground text-left max-w-[140px] w-full text-sm">
             {subItem.unitPrice && subItem.quantity ? (
-              `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
+              `$${calculateSubItemTotal(subItem)}`
             ) : (
               <span className="opacity-50">—</span>
             )}
@@ -271,15 +325,23 @@ export function SubItemRow({
             )}
           </div>
           <div className="text-foreground text-sm">
-            {subItem.discount
-              ? subItem.discountType === "dollar"
-                ? `$${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-                : `${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-              : <span className="opacity-50">—</span>}
+            {subItem.discount ? (
+              subItem.discountType === "dollar" ? (
+                `$${Number(subItem.discount).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}`
+              ) : (
+                `${Number(subItem.discount).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}%`
+              )
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
           </div>
           <div className="text-foreground text-left max-w-[140px] w-full text-sm">
             {subItem.unitPrice && subItem.quantity ? (
-              `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
+              `$${calculateSubItemTotal(subItem)}`
             ) : (
               <span className="opacity-50">—</span>
             )}

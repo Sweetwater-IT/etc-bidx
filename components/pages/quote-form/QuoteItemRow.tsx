@@ -169,15 +169,15 @@ export default function QuoteItemRow({
     const isCustom = isCustomLocal;
     return (
       <>
+      <div
+        className={`space-y-4 mb-1 ${
+          !hasSubItems ? "border-b border-border pb-4" : ""
+        }`}
+      >
         <div
-          className={`space-y-4 mb-1 ${
-            !hasSubItems ? "border-b border-border pb-4" : ""
-          }`}
-        >
-          <div
-            className="grid items-center gap-2"
-            style={{
-              gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 2fr 40px",
+          className="grid items-center gap-2"
+          style={{
+              gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
             }}
           >
             {/* Produto */}
@@ -205,50 +205,49 @@ export default function QuoteItemRow({
                       width: `${dropdownPosition.width}px`,
                     }}
                   >
-                    <div
-                      className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
+                  <div
+                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        // setShowDropdown(false);
-                        setOpenProductSheet(true);
-                      }}
-                    >
-                      + Add new product
-                    </div>
-                    {loading ? (
+                      setOpenProductSheet(true);
+                    }}
+                  >
+                    + Add new product
+                  </div>
+                  {loading ? (
                       <div className="px-3 py-2 text-foreground">
                         Loading...
                       </div>
-                    ) : products.length > 0 ? (
-                      products.map((product) => (
-                        <div
-                          key={product.id}
-                          className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                          onMouseDown={() => handleProductSelect(product)}
-                        >
-                          {product.item_number} - {product.description}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-foreground">
-                        No products found
+                  ) : products.length > 0 ? (
+                    products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                        onMouseDown={() => handleProductSelect(product)}
+                      >
+                        {product.item_number} - {product.description}
                       </div>
-                    )}
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-foreground">
+                      No products found
+                    </div>
+                  )}
                   </div>,
                   document.body
-                )}
+              )}
             </div>
             {/* Descrição */}
             <div className="text-foreground w-full truncate text-base">
               {isCustom ? (
-                <Input
-                  placeholder="Description"
-                  value={item.description || ""}
-                  onChange={(e) =>
-                    handleItemUpdate(item.id, "description", e.target.value)
-                  }
-                  className="w-full"
-                />
+              <Input
+                placeholder="Description"
+                value={item.description || ""}
+                onChange={(e) =>
+                  handleItemUpdate(item.id, "description", e.target.value)
+                }
+                className="w-full"
+              />
               ) : (
                 item.description || <span className="opacity-50">—</span>
               )}
@@ -256,23 +255,23 @@ export default function QuoteItemRow({
             {/* UOM */}
             <div className="text-foreground text-base">
               {isCustom ? (
-                <Select
-                  value={item.uom || ""}
-                  onValueChange={(value) =>
-                    handleItemUpdate(item.id, "uom", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="UOM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(UOM_TYPES).map((uom: any) => (
-                      <SelectItem key={uom} value={uom}>
-                        {uom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select
+                value={item.uom || ""}
+                onValueChange={(value) =>
+                  handleItemUpdate(item.id, "uom", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="UOM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(UOM_TYPES).map((uom: any) => (
+                    <SelectItem key={uom} value={uom}>
+                      {uom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               ) : (
                 item.uom || <span className="opacity-50">—</span>
               )}
@@ -292,50 +291,91 @@ export default function QuoteItemRow({
             {/* Unit Price */}
             <div className="text-foreground text-base">
               {isCustom ? (
-                <Input
-                  type="text"
-                  placeholder="$0.00"
-                  value={
+              <Input
+                type="text"
+                placeholder="$0.00"
+                value={
                     digits.unitPrice
                       ? `$ ${formatDecimal(digits.unitPrice)}`
                       : ""
-                  }
-                  onChange={(e) => {
-                    const ev = e.nativeEvent as InputEvent;
-                    const { inputType } = ev;
-                    const data = (ev.data || "").replace(/\$/g, "");
-                    const nextDigits = handleNextDigits(
-                      digits.unitPrice,
-                      inputType,
-                      data
-                    );
-                    setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                    handleItemUpdate(
-                      item.id,
-                      "unitPrice",
-                      Number(formatDecimal(nextDigits))
-                    );
-                  }}
-                  className="w-full"
-                />
+                }
+                onChange={(e) => {
+                  const ev = e.nativeEvent as InputEvent;
+                  const { inputType } = ev;
+                  const data = (ev.data || "").replace(/\$/g, "");
+                  const nextDigits = handleNextDigits(
+                    digits.unitPrice,
+                    inputType,
+                    data
+                  );
+                  setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
+                  handleItemUpdate(
+                    item.id,
+                    "unitPrice",
+                    Number(formatDecimal(nextDigits))
+                  );
+                }}
+                className="w-full"
+              />
               ) : item.unitPrice ? (
                 `$${Number(item.unitPrice).toFixed(2)}`
               ) : (
                 <span className="opacity-50">—</span>
               )}
             </div>
-            {/* Discount */}
-            <div className="text-foreground text-base">
-              {item.discount
-                ? item.discountType === "dollar"
-                  ? `$${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-                  : `${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-                : <span className="opacity-50">—</span>}
+            {/* Discount (editável e unificado) */}
+            <div className="text-foreground text-base flex items-center gap-1">
+              {isCustom ? (
+                <>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Discount"
+                    value={item.discount || ""}
+                    onChange={(e) =>
+                      handleItemUpdate(
+                        item.id,
+                        "discount",
+                        Number(e.target.value)
+                      )
+                    }
+                    className="text-base w-full"
+                  />
+                  <div className="w-[62px] h-full">
+              <Select
+                value={item.discountType || "dollar"}
+                onValueChange={(value) =>
+                  handleItemUpdate(item.id, "discountType", value)
+                }
+              >
+                      <SelectTrigger className="w-[20px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dollar">$</SelectItem>
+                  <SelectItem value="percentage">%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+                </>
+              ) : item.discount ? (
+                item.discountType === "dollar" ? (
+                  `$${Number(item.discount).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}`
+                ) : (
+                  `${Number(item.discount).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}%`
+                )
+              ) : (
+                <span className="opacity-50">—</span>
+              )}
             </div>
             {/* Total */}
             <div className="text-foreground text-left max-w-[140px] w-full text-base">
               {item.unitPrice && item.quantity ? (
-                `$${(item.unitPrice * item.quantity).toFixed(2)}`
+                `$${calculateExtendedPrice(item)}`
               ) : (
                 <span className="opacity-50">—</span>
               )}
@@ -347,7 +387,7 @@ export default function QuoteItemRow({
                 size="sm"
                 onClick={() => setEditingItemId(null)}
               >
-                <Check className="h-4 w-4" />
+                  <Check className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -404,91 +444,91 @@ export default function QuoteItemRow({
     <>
       <div
         className={`grid items-center mb-1 gap-2 ${
-          !hasSubItems ? "border-b border-border pb-1" : ""
-        }`}
-        style={{
-          gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 2fr 40px",
-        }}
-      >
-        <div>
-          <div className="relative">
+            !hasSubItems ? "border-b border-border pb-1" : ""
+          }`}
+          style={{
+          gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
+          }}
+        >
+          <div>
+            <div className="relative">
             <div className="w-full text-base text-foreground">
               {item.itemNumber || <span className="opacity-50">#</span>}
             </div>
           </div>
         </div>
         <div className="text-foreground w-full truncate ml-2 text-base">
-          {item.description ? (
-            item.description
-          ) : (
-            <span className="opacity-50">—</span>
-          )}
-        </div>
+            {item.description ? (
+              item.description
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
+          </div>
         <div className="text-foreground text-base">
-          {item.uom ? item.uom : <span className="opacity-50">—</span>}
-        </div>
+            {item.uom ? item.uom : <span className="opacity-50">—</span>}
+          </div>
         <div className="">
           <div className="text-base text-foreground">
             {item.quantity || <span className="opacity-50">—</span>}
           </div>
         </div>
         <div className="text-foreground text-sm">
-          {item.unitPrice ? (
+            {item.unitPrice ? (
             `$${Number(item.unitPrice).toFixed(2)}`
-          ) : (
-            <span className="opacity-50">—</span>
-          )}
-        </div>
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
+          </div>
         <div className="text-foreground text-base">
           {item.discount
             ? item.discountType === "dollar"
               ? `$${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
               : `${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
             : <span className="opacity-50">—</span>}
-        </div>
+          </div>
         <div className="text-foreground text-left max-w-[140px] w-full text-base">
-          {item.unitPrice && item.quantity ? (
-            `$${(item.unitPrice * item.quantity).toFixed(2)}`
-          ) : (
-            <span className="opacity-50">—</span>
-          )}
-        </div>
-        <div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              asChild
-              className="flex items-center justify-center"
-            >
-              <Button variant="ghost" size="sm" className="!p-[6px]">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setEditingItemId(item.id);
-                  setEditingSubItemId(null);
-                }}
+            {item.unitPrice && item.quantity ? (
+              `$${calculateExtendedPrice(item)}`
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
+          </div>
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                asChild
+                className="flex items-center justify-center"
               >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleAddCompositeItem(item);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sub Item
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Button variant="ghost" size="sm" className="!p-[6px]">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingItemId(item.id);
+                    setEditingSubItemId(null);
+                  }}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleAddCompositeItem(item);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Sub Item
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
 
       {hasSubItems && (
         <div className="relative border-b border-border mb-1">
@@ -500,17 +540,17 @@ export default function QuoteItemRow({
                 className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
                 style={{ transform: "translateY(-50%)" }}
               />
-              <SubItemRow
-                item={item}
-                subItem={subItem}
-                handleCompositeItemUpdate={handleCompositeItemUpdate}
-                handleDeleteComposite={handleDeleteComposite}
-                editingSubItemId={editingSubItemId}
-                setEditingSubItemId={setEditingSubItemId}
-                UOM_TYPES={UOM_TYPES}
-                setOpenProductSheet={setOpenProductSheet}
-                handleSubItemProductSelect={handleSubItemProductSelect}
-              />
+            <SubItemRow
+              item={item}
+              subItem={subItem}
+              handleCompositeItemUpdate={handleCompositeItemUpdate}
+              handleDeleteComposite={handleDeleteComposite}
+              editingSubItemId={editingSubItemId}
+              setEditingSubItemId={setEditingSubItemId}
+              UOM_TYPES={UOM_TYPES}
+              setOpenProductSheet={setOpenProductSheet}
+              handleSubItemProductSelect={handleSubItemProductSelect}
+            />
             </div>
           ))}
         </div>
