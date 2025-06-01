@@ -55,6 +55,8 @@ export function SubItemRow({
     setShowDropdown(true);
   };
 
+  const isCustom = subItem.isCustom;
+  
   return (
     <div
       className={`grid gap-4 items-center bg-muted py-0 pr-1`}
@@ -125,6 +127,178 @@ export function SubItemRow({
             </div>
           </div>
           <div className="text-foreground w-full truncate ml-0 text-sm">
+            {isCustom ? (
+              <Input
+                placeholder="Description"
+                value={subItem.description || ""}
+                onChange={(e) =>
+                  handleCompositeItemUpdate(
+                    item.id,
+                    subItem.id,
+                    "description",
+                    e.target.value
+                  )
+                }
+                className="w-full"
+              />
+            ) : (
+              subItem.description ? (
+                subItem.description
+              ) : (
+                <span className="opacity-50">—</span>
+              )
+            )}
+          </div>
+          <div className="text-foreground ml-[18px] text-sm">
+            {isCustom ? (
+              <Select
+                value={subItem.uom || ""}
+                onValueChange={(value) =>
+                  handleCompositeItemUpdate(
+                    item.id,
+                    subItem.id,
+                    "uom",
+                    value
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="UOM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(UOM_TYPES).map((uom: any) => (
+                    <SelectItem key={uom} value={uom}>
+                      {uom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              subItem.uom ? subItem.uom : <span className="opacity-50">—</span>
+            )}
+          </div>
+          <div className="ml-2 mr-2">
+            <Input
+              type="number"
+              placeholder="Qty"
+              value={subItem.quantity || ""}
+              className="text-sm"
+              onChange={(e) =>
+                handleCompositeItemUpdate(
+                  item.id,
+                  subItem.id,
+                  "quantity",
+                  Number(e.target.value)
+                )
+              }
+            />
+          </div>
+          <div className="text-foreground ml-[10px] text-sm">
+            {isCustom ? (
+              <Input
+                type="number"
+                placeholder="Unit Price"
+                value={subItem.unitPrice || ""}
+                onChange={(e) =>
+                  handleCompositeItemUpdate(
+                    item.id,
+                    subItem.id,
+                    "unitPrice",
+                    Number(e.target.value)
+                  )
+                }
+                className="w-full"
+              />
+            ) : (
+              subItem.unitPrice ? (
+                `$${Number(subItem.unitPrice).toFixed(2)}`
+              ) : (
+                <span className="opacity-50">—</span>
+              )
+            )}
+          </div>
+          <div className="text-foreground ml-3 text-sm">
+            {isCustom ? (
+              <Select
+                value={subItem.discountType || "dollar"}
+                onValueChange={(value) =>
+                  handleCompositeItemUpdate(
+                    item.id,
+                    subItem.id,
+                    "discountType",
+                    value
+                  )
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dollar">$</SelectItem>
+                  <SelectItem value="percentage">%</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              subItem.discountType === "dollar" ? (
+                "$"
+              ) : subItem.discountType === "percentage" ? (
+                "%"
+              ) : (
+                <span className="opacity-50">—</span>
+              )
+            )}
+          </div>
+          <div className="text-foreground ml-3 text-sm">
+            {isCustom ? (
+              <Input
+                type="number"
+                placeholder="Discount"
+                value={subItem.discount || ""}
+                onChange={(e) =>
+                  handleCompositeItemUpdate(
+                    item.id,
+                    subItem.id,
+                    "discount",
+                    Number(e.target.value)
+                  )
+                }
+                className="w-full"
+              />
+            ) : (
+              subItem.discount ? (
+                subItem.discount
+              ) : (
+                <span className="opacity-50">—</span>
+              )
+            )}
+          </div>
+          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
+            {subItem.unitPrice && subItem.quantity ? (
+              `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
+            ) : (
+              <span className="opacity-50">—</span>
+            )}
+          </div>
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditingSubItemId(null);
+              }}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="text-foreground w-full truncate">
+            <div className="w-full px-3 text-base text-foreground">
+              {subItem.itemNumber || <span className="opacity-50">—</span>}
+            </div>
+          </div>
+          <div className="text-foreground w-full truncate ml-0 text-sm">
             {subItem.description ? (
               subItem.description
             ) : (
@@ -135,26 +309,9 @@ export function SubItemRow({
             {subItem.uom ? subItem.uom : <span className="opacity-50">—</span>}
           </div>
           <div className="ml-2 mr-2">
-            {editingSubItemId === subItem.id ? (
-              <Input
-                type="number"
-                placeholder="Qty"
-                value={subItem.quantity || ""}
-                className="text-sm"
-                onChange={(e) =>
-                  handleCompositeItemUpdate(
-                    item.id,
-                    subItem.id,
-                    "quantity",
-                    Number(e.target.value)
-                  )
-                }
-              />
-            ) : (
-              <div className="text-sm text-foreground">
-                {subItem.quantity || <span className="opacity-50">—</span>}
-              </div>
-            )}
+            <div className="text-sm text-foreground">
+              {subItem.quantity || <span className="opacity-50">—</span>}
+            </div>
           </div>
           <div className="text-foreground ml-[10px] text-sm">
             {subItem.unitPrice ? (
@@ -187,156 +344,6 @@ export function SubItemRow({
             )}
           </div>
           <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditingSubItemId(null);
-              }}
-            >
-              <Check className="h-4 w-4" />
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="text-foreground w-full truncate">
-            <div className="w-full">
-              {editingSubItemId === subItem.id ? (
-                <Input
-                  ref={inputRef}
-                  className="w-full h-9 px-3 text-base !bg-transparent text-foreground"
-                  placeholder="Search or add a product..."
-                  value={productInput}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setProductInput(value);
-                    handleCompositeItemUpdate(
-                      item.id,
-                      subItem.id,
-                      "itemNumber",
-                      value
-                    );
-                    setShowDropdown(true);
-                  }}
-                  onFocus={handleFocus}
-                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                />
-              ) : (
-                <div className="w-full px-3 text-sm text-foreground">
-                  {productInput || <span className="opacity-50">—</span>}
-                </div>
-              )}
-              {showDropdown &&
-                createPortal(
-                  <div
-                    className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
-                    style={{
-                      top: `${dropdownPosition.top}px`,
-                      left: `${dropdownPosition.left}px`,
-                      width: `${dropdownPosition.width}px`,
-                    }}
-                  >
-                    <div
-                      className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
-                      onMouseDown={() => {
-                        setShowDropdown(false);
-                        setOpenProductSheet(true);
-                      }}
-                    >
-                      + Add new product
-                    </div>
-                    {loading ? (
-                      <div className="px-3 py-2 text-foreground">
-                        Loading...
-                      </div>
-                    ) : products.length > 0 ? (
-                      products.map((product) => (
-                        <div
-                          key={product.id}
-                          className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                          onMouseDown={() => {
-                            handleSubItemProductSelect(product, subItem.id);
-                            setProductInput(product.item_number);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          {product.item_number} - {product.description}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-foreground">
-                        No products found
-                      </div>
-                    )}
-                  </div>,
-                  document.body
-                )}
-            </div>
-          </div>
-          <div className="text-foreground w-full truncate -ml-1 text-sm">
-            {subItem.description ? (
-              subItem.description
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground ml-[10px] text-sm">
-            {subItem.uom ? subItem.uom : <span className="opacity-50">—</span>}
-          </div>
-          <div className="ml-1 mr-2">
-            {editingSubItemId === subItem.id ? (
-              <Input
-                type="number"
-                placeholder="Qty"
-                value={subItem.quantity || ""}
-                className="text-sm"
-                onChange={(e) =>
-                  handleCompositeItemUpdate(
-                    item.id,
-                    subItem.id,
-                    "quantity",
-                    Number(e.target.value)
-                  )
-                }
-              />
-            ) : (
-              <div className="text-sm text-foreground">
-                {subItem.quantity || <span className="opacity-50">—</span>}
-              </div>
-            )}
-          </div>
-          <div className="text-foreground ml-[5px] text-sm">
-            {subItem.unitPrice ? (
-              `$${Number(subItem.unitPrice).toFixed(2)}`
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground ml-2 text-sm">
-            {subItem.discountType === "dollar" ? (
-              "$"
-            ) : subItem.discountType === "percentage" ? (
-              "%"
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground ml-3 text-sm">
-            {subItem.discount ? (
-              subItem.discount
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
-            {subItem.unitPrice && subItem.quantity ? (
-              `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="flex items-center justify-end pr-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild className="flex">
                 <Button variant="ghost" size="sm" className="!p-[6px]">
