@@ -125,7 +125,11 @@ export default function QuoteItemRow({
   let content;
   if (isEditing) {
     content = (
-      <div className="space-y-4 border-b border-border last:border-b-0 pb-4">
+      <div
+        className={`space-y-4 mb-1 ${
+          !hasSubItems ? "border-b border-border pb-4" : ""
+        }`}
+      >
         <div
           className="grid items-center gap-2"
           style={{
@@ -722,7 +726,11 @@ export default function QuoteItemRow({
   return (
     <>
       {isEditing ? (
-        <div className="space-y-4 mb-1">
+        <div
+          className={`space-y-4 mb-1 ${
+            !hasSubItems ? "border-b border-border pb-1" : ""
+          }`}
+        >
           <div
             className="grid items-center gap-2"
             style={{
