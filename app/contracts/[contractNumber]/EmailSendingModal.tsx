@@ -106,7 +106,7 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
             });
             
             // Send email
-            const response = await fetch('/api/jobs/active-jobs/contract-management/send', {
+            const response = await fetch('/api/jobs/contract-management/send', {
                 method: 'POST',
                 body: formData,
             });
