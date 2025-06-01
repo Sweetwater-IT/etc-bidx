@@ -56,16 +56,16 @@ export function SubItemRow({
   };
 
   const isCustom = subItem.isCustom;
-  
+
   return (
     <div
-      className={`grid gap-4 items-center bg-muted py-0 pr-1`}
-      style={{ gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 1fr 2fr 40px" }}
+      className={`grid items-center bg-muted py-0 pr-1 gap-2`}
+      style={{ gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 1fr 2fr 40px", }}
     >
       {editingSubItemId === subItem.id ? (
         <>
           <div className="text-foreground w-full truncate">
-            <div className="w-full">
+            <div className="w-full pr-3">
               <Input
                 ref={inputRef}
                 className="w-full h-9 px-3 text-base text-foreground"
@@ -126,7 +126,7 @@ export function SubItemRow({
                 )}
             </div>
           </div>
-          <div className="text-foreground w-full truncate ml-0 text-sm">
+          <div className="text-foreground w-full truncate text-sm -ml-1">
             {isCustom ? (
               <Input
                 placeholder="Description"
@@ -139,17 +139,15 @@ export function SubItemRow({
                     e.target.value
                   )
                 }
-                className="w-full"
+                className="w-full text-sm"
               />
+            ) : subItem.description ? (
+              subItem.description
             ) : (
-              subItem.description ? (
-                subItem.description
-              ) : (
-                <span className="opacity-50">—</span>
-              )
+              <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="text-foreground ml-[18px] text-sm">
+          <div className="text-foreground text-sm -ml-2">
             {isCustom ? (
               <Select
                 value={subItem.uom || ""}
@@ -173,11 +171,13 @@ export function SubItemRow({
                   ))}
                 </SelectContent>
               </Select>
+            ) : subItem.uom ? (
+              subItem.uom
             ) : (
-              subItem.uom ? subItem.uom : <span className="opacity-50">—</span>
+              <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="ml-2 mr-2">
+          <div className="-ml-2">
             <Input
               type="number"
               placeholder="Qty"
@@ -193,7 +193,7 @@ export function SubItemRow({
               }
             />
           </div>
-          <div className="text-foreground ml-[10px] text-sm">
+          <div className="text-foreground text-sm">
             {isCustom ? (
               <Input
                 type="number"
@@ -209,70 +209,20 @@ export function SubItemRow({
                 }
                 className="w-full"
               />
+            ) : subItem.unitPrice ? (
+              `$${Number(subItem.unitPrice).toFixed(2)}`
             ) : (
-              subItem.unitPrice ? (
-                `$${Number(subItem.unitPrice).toFixed(2)}`
-              ) : (
-                <span className="opacity-50">—</span>
-              )
+              <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="text-foreground ml-3 text-sm">
-            {isCustom ? (
-              <Select
-                value={subItem.discountType || "dollar"}
-                onValueChange={(value) =>
-                  handleCompositeItemUpdate(
-                    item.id,
-                    subItem.id,
-                    "discountType",
-                    value
-                  )
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dollar">$</SelectItem>
-                  <SelectItem value="percentage">%</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              subItem.discountType === "dollar" ? (
-                "$"
-              ) : subItem.discountType === "percentage" ? (
-                "%"
-              ) : (
-                <span className="opacity-50">—</span>
-              )
-            )}
+          <div className="text-foreground text-sm">
+            {subItem.discount
+              ? subItem.discountType === "dollar"
+                ? `$${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                : `${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+              : <span className="opacity-50">—</span>}
           </div>
-          <div className="text-foreground ml-3 text-sm">
-            {isCustom ? (
-              <Input
-                type="number"
-                placeholder="Discount"
-                value={subItem.discount || ""}
-                onChange={(e) =>
-                  handleCompositeItemUpdate(
-                    item.id,
-                    subItem.id,
-                    "discount",
-                    Number(e.target.value)
-                  )
-                }
-                className="w-full"
-              />
-            ) : (
-              subItem.discount ? (
-                subItem.discount
-              ) : (
-                <span className="opacity-50">—</span>
-              )
-            )}
-          </div>
-          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
+          <div className="text-foreground text-left max-w-[140px] w-full text-sm">
             {subItem.unitPrice && subItem.quantity ? (
               `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
             ) : (
@@ -294,49 +244,40 @@ export function SubItemRow({
       ) : (
         <>
           <div className="text-foreground w-full truncate">
-            <div className="w-full px-3 text-base text-foreground">
+            <div className="w-full text-sm text-foreground pl-2">
               {subItem.itemNumber || <span className="opacity-50">—</span>}
             </div>
           </div>
-          <div className="text-foreground w-full truncate ml-0 text-sm">
+          <div className="text-foreground w-full truncate text-sm">
             {subItem.description ? (
               subItem.description
             ) : (
-              <span className="opacity-50">—</span>
+              <span className="opacity-50 text-sm">—</span>
             )}
           </div>
-          <div className="text-foreground ml-[18px] text-sm">
+          <div className="text-foreground text-sm -ml-2">
             {subItem.uom ? subItem.uom : <span className="opacity-50">—</span>}
           </div>
-          <div className="ml-2 mr-2">
+          <div className="">
             <div className="text-sm text-foreground">
               {subItem.quantity || <span className="opacity-50">—</span>}
             </div>
           </div>
-          <div className="text-foreground ml-[10px] text-sm">
+          <div className="text-foreground text-sm">
             {subItem.unitPrice ? (
               `$${Number(subItem.unitPrice).toFixed(2)}`
             ) : (
               <span className="opacity-50">—</span>
             )}
           </div>
-          <div className="text-foreground ml-3 text-sm">
-            {subItem.discountType === "dollar" ? (
-              "$"
-            ) : subItem.discountType === "percentage" ? (
-              "%"
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
+          <div className="text-foreground text-sm">
+            {subItem.discount
+              ? subItem.discountType === "dollar"
+                ? `$${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                : `${Number(subItem.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+              : <span className="opacity-50">—</span>}
           </div>
-          <div className="text-foreground ml-3 text-sm">
-            {subItem.discount ? (
-              subItem.discount
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div className="text-foreground text-left max-w-[140px] w-full text-sm ml-1">
+          <div className="text-foreground text-left max-w-[140px] w-full text-sm">
             {subItem.unitPrice && subItem.quantity ? (
               `$${(subItem.unitPrice * subItem.quantity).toFixed(2)}`
             ) : (
