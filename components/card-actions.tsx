@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { IconCalendar, IconDownload, IconUpload, IconPlus, IconX } from "@tabler/icons-react";
 import { DateRange } from "react-day-picker";
 import { ImportSheet } from "./import-sheet";
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface CardActionsProps {
   date?: DateRange | undefined
@@ -86,7 +87,11 @@ export function CardActions({
                     </span>
                   )
                 ) : (
-                  <span>Jan 1, 2025 - May 29, 2025</span>
+                  <span>Jan 1, 2025 - {new Date().toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric', 
+                    year: 'numeric'
+                  })}</span>
                 )}
               </Button>
             </PopoverTrigger>

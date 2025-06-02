@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
-import { EyeIcon, PencilIcon, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { EyeIcon, PencilIcon, Check, ChevronsUpDown, Loader2, XIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { type ActiveBid } from "@/data/active-bids";
@@ -47,12 +47,12 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
   const [saving, setSaving] = useState(false);
   const [editingContractor, setEditingContractor] = useState(false);
   const [editingSubcontractor, setEditingSubcontractor] = useState(false);
-  const [selectedContractor, setSelectedContractor] = useState<string>('');
+  const [selectedContractor, setSelectedContractor] = useState<Customer>();
   const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>('');
-  const [originalContractor, setOriginalContractor] = useState<string>('');
+  const [originalContractor, setOriginalContractor] = useState<Customer>();
   const [originalSubcontractor, setOriginalSubcontractor] = useState<string>('');
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,7 +66,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
       const formattedCustomers: Customer[] = data.map((customer: any) => ({
         id: customer.id,
         name: customer.name,
-        displayName: customer.display_name || customer.name,
+        displayName: customer.display_name ? customer.display_name : customer.name,
         emails: [],
         phones: [],
         names: [],
@@ -94,7 +94,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
   useEffect(() => {
     if (!open) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' && onNavigate) {
         e.preventDefault();
@@ -104,11 +104,11 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
         onNavigate('up');
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onNavigate]);
-  
+
   useEffect(() => {
     if (open) {
       fetchCustomers();
@@ -117,31 +117,29 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
 
   useEffect(() => {
     if (bid) {
-      const contractorValue = formatValue(bid.contractor);
-      const subcontractorValue = formatValue(bid.subcontractor);
-      
-      setSelectedContractor(contractorValue);
-      setSelectedSubcontractor(subcontractorValue);
-      setOriginalContractor(contractorValue);
-      setOriginalSubcontractor(subcontractorValue);
+      const associatedContractor = customers.find(c => c.name === bid.contractor);
+      setSelectedContractor(associatedContractor);
+      setSelectedSubcontractor(bid.subcontractor);
+      setOriginalContractor(associatedContractor);
+      setOriginalSubcontractor(bid.subcontractor);
       try {
-        setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ? 
+        setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ?
           new Date(bid.lettingDate) : undefined);
       } catch (e) {
         console.error("Invalid letting date format:", bid.lettingDate);
         setLettingDate(undefined);
       }
-      
+
       try {
-        setStartDate((bid.startDate && bid.startDate !== '-') ? 
+        setStartDate((bid.startDate && bid.startDate !== '-') ?
           new Date(bid.startDate) : undefined);
       } catch (e) {
         console.error("Invalid start date format:", bid.startDate);
         setStartDate(undefined);
       }
-      
+
       try {
-        setEndDate((bid.endDate && bid.endDate !== '-') ? 
+        setEndDate((bid.endDate && bid.endDate !== '-') ?
           new Date(bid.endDate) : undefined);
       } catch (e) {
         console.error("Invalid end date format:", bid.endDate);
@@ -152,7 +150,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
       setStartDate(undefined);
       setEndDate(undefined);
     }
-  }, [bid]);
+  }, [bid, customers]);
 
 
 
@@ -167,14 +165,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     }
   };
 
-  useEffect(() => {
-    setSelectedContractor('');
-    setSelectedSubcontractor('');
-  }, [open])
-
-  const handleContractorSelect = (value: string) => {
-    setSelectedContractor(value);
-    setHasChanges(value !== originalContractor);
+  const handleContractorSelect = (id: string) => {
+    const associatedContractor = customers.find(c => c.id === parseInt(id))
+    setSelectedContractor(associatedContractor);
+    setHasChanges(!originalContractor ? false : parseInt(id) !== originalContractor.id);
     setEditingContractor(false);
   };
 
@@ -183,10 +177,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
     setHasChanges(value !== originalSubcontractor);
     setEditingSubcontractor(false);
   };
-  
+
   const saveChanges = async () => {
     if (!bid?.id || !hasChanges) return;
-    
+
     setSaving(true);
     try {
       // Save contractor changes if any
@@ -197,21 +191,21 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
           .select('id')
           .eq('name', selectedContractor)
           .single();
-        
+
         if (contractorError) {
           throw new Error(`Contractor not found: ${contractorError.message}`);
         }
-        
+
         // Check if project_metadata exists for this bid
         const { data: metadataData, error: metadataError } = await supabase
           .from('project_metadata')
           .select('id')
           .eq('bid_estimate_id', bid.id);
-        
+
         if (metadataError) {
           throw new Error(`Error checking metadata: ${metadataError.message}`);
         }
-        
+
         if (metadataData && metadataData.length > 0) {
           // Update existing metadata
           await supabase
@@ -224,21 +218,21 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             .from('project_metadata')
             .insert({ bid_estimate_id: bid.id, contractor_id: contractorData.id });
         }
-        
+
         setOriginalContractor(selectedContractor);
       }
-      
+
       // Save subcontractor changes if any
       if (selectedSubcontractor !== originalSubcontractor) {
         // Find subcontractor ID from name or create a new one
         let subcontractorId;
-        
+
         const { data: existingSubcontractor, error: subError } = await supabase
           .from('subcontractors')
           .select('id')
           .eq('name', selectedSubcontractor)
           .single();
-        
+
         if (subError) {
           // Create new subcontractor
           const { data: newSubcontractor, error: createError } = await supabase
@@ -246,26 +240,26 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             .insert({ name: selectedSubcontractor })
             .select('id')
             .single();
-          
+
           if (createError) {
             throw new Error(`Error creating subcontractor: ${createError.message}`);
           }
-          
+
           subcontractorId = newSubcontractor.id;
         } else {
           subcontractorId = existingSubcontractor.id;
         }
-        
+
         // Check if project_metadata exists for this bid
         const { data: metadataData, error: metadataError } = await supabase
           .from('project_metadata')
           .select('id')
           .eq('bid_estimate_id', bid.id);
-        
+
         if (metadataError) {
           throw new Error(`Error checking metadata: ${metadataError.message}`);
         }
-        
+
         if (metadataData && metadataData.length > 0) {
           // Update existing metadata
           await supabase
@@ -278,18 +272,18 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             .from('project_metadata')
             .insert({ bid_estimate_id: bid.id, subcontractor_id: subcontractorId });
         }
-        
+
         setOriginalSubcontractor(selectedSubcontractor);
       }
-      
+
       toast.success("Changes saved successfully");
       setHasChanges(false);
-      
+
       // Refresh the data table before closing the drawer
       if (onRefresh) {
         onRefresh();
       }
-      
+
       onOpenChange(false); // Close the drawer after saving
     } catch (error) {
       console.error("Error saving changes:", error);
@@ -306,14 +300,14 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
   // Helper function to format display values
   const formatValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return '';
-    
+
     // Handle objects with main and secondary properties
     if (typeof value === 'object' && value !== null) {
       if ('main' in value) {
         return String(value.main);
       }
     }
-    
+
     return String(value);
   };
 
@@ -331,9 +325,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
             <SheetTitle>Active bid{bid?.originalContractNumber ? `: ${bid.originalContractNumber}` : ''}</SheetTitle>
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View bid summary <EyeIcon className="h-3 w-3" /></span>
           </div>
-          <Separator/>
+          <Separator />
         </SheetHeader>
-        
+
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto p-6 pt-2">
             <div className="space-y-5">
@@ -358,10 +352,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                 <div className="space-y-1 w-full">
                   <div className="flex items-center gap-2">
                     <Label className="font-medium">Contractor</Label>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-5 w-5 rounded-full focus:outline-none" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 rounded-full focus:outline-none"
                       onClick={() => setEditingContractor(!editingContractor)}
                       tabIndex={-1}
                     >
@@ -376,7 +370,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                           role="combobox"
                           className="w-fit justify-between"
                         >
-                          {selectedContractor || "Select contractor..."}
+                          {selectedContractor?.name || selectedContractor?.displayName || "Select contractor..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -388,16 +382,16 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                             {customers.map((customer) => (
                               <CommandItem
                                 key={customer.id}
-                                value={customer.name}
+                                value={customer.id.toString()}
                                 onSelect={handleContractorSelect}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    selectedContractor === customer.name ? "opacity-100" : "opacity-0"
+                                    selectedContractor?.id === customer.id ? "opacity-100" : "opacity-0"
                                   )}
                                 />
-                                {customer.name}
+                                {customer.displayName}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -405,8 +399,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="text-sm text-muted-foreground">
-                      {selectedContractor || '-'}
+                    <div key={selectedContractor?.id} className="flex justify-between items-center text-sm text-muted-foreground">
+                      {selectedContractor ? (selectedContractor.displayName || selectedContractor.name) : originalContractor ? (originalContractor.displayName || originalContractor.name) : '-'}
+                      {selectedContractor && originalContractor && selectedContractor.id !== originalContractor.id &&
+                        <XIcon className="cursor-pointer" onClick={() => setSelectedContractor(undefined)} />}
                     </div>
                   )}
                 </div>
@@ -414,10 +410,10 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                 <div className="space-y-1 w-full">
                   <div className="flex items-center gap-2">
                     <Label className="font-medium">Subcontractor</Label>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-5 w-5 rounded-full focus:outline-none" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 rounded-full focus:outline-none"
                       onClick={() => setEditingSubcontractor(!editingSubcontractor)}
                       tabIndex={-1}
                     >
@@ -461,8 +457,9 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="text-sm text-muted-foreground">
-                      {selectedSubcontractor || '-'}
+                    <div className="text-sm text-muted-foreground flex justify-between items-center">
+                      {selectedSubcontractor ? selectedSubcontractor : originalSubcontractor ? originalSubcontractor : '-'}
+                      {selectedSubcontractor && selectedSubcontractor !== '-' && <XIcon className="cursor-pointer" onClick={() => setSelectedSubcontractor('')} />}
                     </div>
                   )}
                 </div>
@@ -584,7 +581,7 @@ export function ActiveBidDetailsSheet({ open, onOpenChange, bid, onEdit, onNavig
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleEdit}
                 disabled={saving}
               >

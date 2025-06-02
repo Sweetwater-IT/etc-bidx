@@ -419,13 +419,13 @@ const AdminInformationAccordion = ({ currentStep }: AdminInformationAccordionPro
               {renderField("Division", "division", adminData.division)}
               {renderField("Start Date", "startDate", formatDate(isEditing ? tempData.startDate : adminData.startDate))}
               {renderField("End Date", "endDate", formatDate(isEditing ? tempData.endDate : adminData.endDate))}
-              {renderField("Total Days", "totalDays", getTotalDays())}
+              {renderField("Total Days", "totalDays", getTotalDays().toString() + ' days')}
               {renderField("Letting Date", "lettingDate", formatDate(isEditing ? tempData.lettingDate : adminData.lettingDate))}
               {renderField("SR Route", "srRoute", adminData.srRoute)}
-              {renderField("DBE %", "dbe", adminData.dbe)}
-              {renderField("One Way Travel Time (min)", "owTravelTimeMins", adminData.owTravelTimeMins ?? null)}
-              {renderField("One Way Mileage", "owMileage", adminData.owMileage ?? null)}
-              {renderField("Diesel Cost per Gallon", "fuelCostPerGallon", adminData.fuelCostPerGallon ?? null)}
+              {renderField("DBE %", "dbe", adminData.dbe + '%')}
+              {renderField("One Way Travel Time (min)", "owTravelTimeMins", adminData.owTravelTimeMins ?  adminData.owTravelTimeMins + ' mins' : null)}
+              {renderField("One Way Mileage", "owMileage", adminData.owMileage ? adminData.owMileage + ' mi' : null)}
+              {renderField("Diesel Cost per Gallon", "fuelCostPerGallon", adminData.fuelCostPerGallon ? `$${adminData.fuelCostPerGallon.toFixed(2)}` : null)}
               
               {((isEditing ? tempData.winterStart : adminData.winterStart) || (isEditing ? tempData.winterEnd : adminData.winterEnd)) && (
                 <>

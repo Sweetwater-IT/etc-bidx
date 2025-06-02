@@ -338,7 +338,7 @@ export async function PATCH(request: NextRequest) {
     // Now update the job status using the job_number_id
     const { data, error } = await supabase
       .from('jobs')
-      .update({ 'bid_number': formData.bidNumber, })
+      .update({ 'bid_number': formData.bidNumber, 'project_status': formData.projectStatus, 'billing_status': formData.billingStatus })
       .eq('job_number_id', jobNumberData.id);
 
     if (error) {
