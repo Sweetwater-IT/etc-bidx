@@ -170,46 +170,30 @@ export function QuoteItems() {
   // Handle adding sub-item
   const handleAddCompositeItem = (parentItem: QuoteItem) => {
     const newId = generateUniqueId();
-    if (parentItem.id === newQuoteItem.id) {
-      setNewQuoteItem((prev) => ({
-        ...prev,
-        associatedItems: [
-          ...(prev.associatedItems || []),
-          {
-            id: newId,
-            itemNumber: "",
-            description: "",
-            uom: "",
-            quantity: 0,
-            unitPrice: 0,
-            notes: "",
-          },
-        ],
-      }));
-    } else {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItem.id
-            ? {
-                ...item,
-                associatedItems: [
-                  ...(item.associatedItems || []),
-                  {
-                    id: newId,
-                    itemNumber: "",
-                    description: "",
-                    uom: "",
-                    quantity: 0,
-                    unitPrice: 0,
-                    notes: "",
-                  },
-                ],
-              }
-            : item
-        )
-      );
-    }
-    setEditingSubItemId(newId);
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItem.id
+          ? {
+              ...item,
+              associatedItems: [
+                ...(item.associatedItems || []),
+                {
+                  id: newId,
+                  itemNumber: "",
+                  description: "",
+                  uom: "",
+                  quantity: 0,
+                  unitPrice: 0,
+                  discount: 0,
+                  discountType: "dollar",
+                  notes: "",
+                  isCustom: true,
+                },
+              ],
+            }
+          : item
+      )
+    );
   };
 
   // Handle sub-item updates
@@ -314,9 +298,9 @@ export function QuoteItems() {
       <div className="space-y-4">
         {/* Header */}
         <div
-          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2" 
+          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
           style={{
-            gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
+            gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
           }}
         >
           <div className="uppercase">Item # / SKU</div>
