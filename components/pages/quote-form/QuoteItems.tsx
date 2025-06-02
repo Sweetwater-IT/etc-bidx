@@ -279,21 +279,25 @@ export function QuoteItems() {
     }));
   };
 
-  // Função para adicionar novo item vazio no modo 'pré-adicionar'
+  // Handle adding new item
   const handleAddNewItem = () => {
-    const newItem: QuoteItem = {
-      id: generateUniqueId(),
-      itemNumber: "",
-      description: "",
-      uom: "",
-      quantity: 0,
-      unitPrice: 0,
-      discount: 0,
-      discountType: "percentage",
-      notes: "",
-      associatedItems: [],
-    };
-    setQuoteItems((prev) => [...prev, newItem]);
+    const newId = generateUniqueId();
+    setQuoteItems((prevItems) => [
+      ...prevItems,
+      {
+        id: newId,
+        itemNumber: "",
+        description: "",
+        uom: "",
+        quantity: 0,
+        unitPrice: 0,
+        discount: 0,
+        discountType: "dollar",
+        notes: "",
+        associatedItems: [],
+      },
+    ]);
+    setEditingItemId(newId);
   };
 
   return (

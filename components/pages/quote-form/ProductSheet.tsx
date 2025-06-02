@@ -34,17 +34,20 @@ export function ProductSheet({
   handleItemUpdate,
   item,
   setProductInput,
+  setEditingItemId,
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
-        <SheetHeader>
-          <SheetTitle className="text-2xl mb-2">Add New Product</SheetTitle>
-          <Separator className="mt-2" />
+      <SheetContent side="right" className="flex flex-col h-full">
+        <SheetHeader className="p-0 pt-6">
+          <SheetTitle className="text-md ml-6">Add New Product</SheetTitle>
+          <Separator className="mt-1" />
         </SheetHeader>
-        <form className="flex flex-col gap-5 px-4 max-h-[80vh] overflow-y-auto">
+        <form className="flex flex-col gap-5 px-4 flex-1 overflow-y-auto">
           <div className="flex flex-col gap-1">
-            <Label>Item # / SKU</Label>
+            <Label className="text-sm font-medium bled:opacity-50 text-muted-foreground">
+              Item # / SKU
+            </Label>
             <Input
               className="bg-background"
               placeholder="Enter item number or SKU"
@@ -58,7 +61,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label>Description</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Description</Label>
             <Input
               className="bg-background"
               placeholder="Enter product description"
@@ -72,7 +75,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label>UOM</Label>
+            <Label className="text-sm font-medium text-muted-foreground">UOM</Label>
             <Select
               value={newProduct.uom}
               onValueChange={(value) =>
@@ -92,7 +95,7 @@ export function ProductSheet({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <Label>Quantity</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Quantity</Label>
             <Input
               type="number"
               className="bg-background"
@@ -107,7 +110,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label>Unit Price</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Unit Price</Label>
             <Input
               type="text"
               className="bg-background"
@@ -133,7 +136,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label>Discount</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Discount</Label>
             <div className="flex items-center">
               <Input
                 type="text"
@@ -183,7 +186,7 @@ export function ProductSheet({
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <Label>Notes</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Notes</Label>
             <Textarea
               className="bg-background min-h-[100px]"
               placeholder="Enter any additional notes"
@@ -193,11 +196,12 @@ export function ProductSheet({
               }
             />
           </div>
-          <Separator className="my-2" />
+        </form>
+        <div className="px-4 py-4 border-t">
           <SheetClose asChild>
             <Button
               type="button"
-              className="bg-black text-white py-2 mt-4 text-md font-semibold hover:bg-black/90 transition rounded"
+              className="bg-black text-white py-2 w-full text-md font-semibold hover:bg-black/90 transition rounded-md"
               onClick={() => {
                 onOpenChange(false);
                 if (editingSubItemId) {
@@ -271,6 +275,7 @@ export function ProductSheet({
                   handleItemUpdate(item.id, "discount", newProduct.discount);
                   handleItemUpdate(item.id, "isCustom", true);
                   setProductInput(newProduct.itemNumber);
+                  setEditingItemId(item.id);
                 }
                 setNewProduct({
                   itemNumber: "",
@@ -291,7 +296,7 @@ export function ProductSheet({
               Save Product
             </Button>
           </SheetClose>
-        </form>
+        </div>
       </SheetContent>
     </Sheet>
   );
