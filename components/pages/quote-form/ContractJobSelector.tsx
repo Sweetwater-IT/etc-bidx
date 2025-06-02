@@ -85,9 +85,7 @@ export function ContractJobSelector({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                Edit
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSelect(null)}>
                 Delete
               </DropdownMenuItem>
@@ -98,13 +96,16 @@ export function ContractJobSelector({
 
       <div className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          {/* Contract / Job ocupa 2 colunas */}
           <div className="md:col-span-2 col-span-1">
-            <div className="mb-2 font-medium">Contract / Job</div>
+            <div className={`${selectedContractJob ? "" : "mb-2"} font-medium text-sm`}>
+              Contract / Job
+            </div>
             <div className="relative">
               <input
                 ref={inputRef}
-                className={`w-full rounded-md pr-3 py-2 mb-1 ${selectedContractJob ? '' : 'border border-border px-2'}`}
+                className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${
+                  selectedContractJob ? "" : "border border-border px-2"
+                }`}
                 placeholder="Search or add a contract/job..."
                 value={
                   selectedContractJob
@@ -173,81 +174,81 @@ export function ContractJobSelector({
       {selectedContractJob && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4">
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Quote Type
             </label>
-            <div className="pr-3 py-1 text-[14px] select-text cursor-default text-muted-foreground">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {quoteType || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Branch
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default ">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {branch && branch !== "All" ? branch : "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Job Number
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {jobNumber || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               County
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 text-foreground select-text cursor-default">
               {county || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               ECMS/PO#
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {ecmsPoNumber || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               State Route
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {stateRoute || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Payment Terms
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {paymentTerms || "-"}
             </div>
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Quote Date
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {quoteDate || "-"}
             </div>
           </div>
           {/* Customers ocupa 2 colunas, Digital Signature na terceira */}
           <div className="flex flex-col md:col-span-2">
-            <label className="text-sm font-semibold mb-1 text-muted-foreground">
+            <label className="text-sm font-semibold">
               Customers
             </label>
-            <div className="pr-3 py-1 text-[14px] text-foreground select-text cursor-default">
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {customers && customers.length > 0 ? customers.join(", ") : "-"}
             </div>
           </div>
 
           <div className="flex flex-col md:col-span-1">
-            <label className="text-sm font-semibold text-muted-foreground mb-1">
+            <label className="text-sm font-semibold">
               Digital Signature
             </label>
             <div className="flex items-center h-full">
@@ -257,7 +258,7 @@ export function ContractJobSelector({
                 checked={!!digitalSignature}
                 className="mr-2"
               />
-              <span className="text-[14px] text-foreground select-text cursor-default">
+              <span className="select-text cursor-default text-muted-foreground">
                 Digital signature
               </span>
             </div>

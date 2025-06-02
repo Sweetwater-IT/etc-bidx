@@ -45,6 +45,7 @@ export default function QuoteItemRow({
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
@@ -94,8 +95,18 @@ export default function QuoteItemRow({
   };
 
   const handleFocus = () => {
-    updateDropdownPosition();
-    setShowDropdown(true);
+    if (!item.itemNumber) {
+      setIsSearching(true);
+      updateDropdownPosition();
+      setShowDropdown(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setShowDropdown(false);
+      setIsSearching(false);
+    }, 150);
   };
 
   useEffect(() => {
@@ -140,6 +151,34 @@ export default function QuoteItemRow({
     console.log("openProductSheet", openProductSheet);
   }, [openProductSheet]);
 
+  useEffect(() => {
+    if (openProductSheet && editingSubItemId) {
+      const subItem = item.associatedItems?.find(
+        (s) => s.id === editingSubItemId
+      );
+      if (subItem) {
+        setNewProduct({
+          itemNumber: subItem.itemNumber || "",
+          description: subItem.description || "",
+          uom: subItem.uom || "",
+          quantity: subItem.quantity || 0,
+          unitPrice: subItem.unitPrice || "",
+          discountType: subItem.discountType || "dollar",
+          discount: subItem.discount || "",
+          notes: subItem.notes || "",
+        });
+        setDigits({
+          unitPrice: subItem.unitPrice
+            ? (subItem.unitPrice * 100).toString().padStart(3, "0")
+            : "000",
+          discount: subItem.discount
+            ? (subItem.discount * 100).toString().padStart(3, "0")
+            : "000",
+        });
+      }
+    }
+  }, [openProductSheet, editingSubItemId, item.associatedItems]);
+
   const handleProductSelect = (product: any) => {
     setProductInput(product.item_number);
     setShowDropdown(false);
@@ -165,370 +204,205 @@ export default function QuoteItemRow({
     handleCompositeItemUpdate(item.id, subItemId, "uom", product.uom);
   };
 
-  if (isEditing) {
-    const isCustom = isCustomLocal;
-    return (
-      <>
-      <div
-        className={`space-y-4 mb-1 ${
-          !hasSubItems ? "border-b border-border pb-4" : ""
-        }`}
-      >
-        <div
-          className="grid items-center gap-2"
-          style={{
-              gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
-            }}
-          >
-            {/* Produto */}
-            <div className="relative">
-              <Input
-                ref={inputRef}
-                className="w-full h-9 px-3 text-base text-foreground"
-                placeholder="Search or add a product..."
-                value={productInput}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setProductInput(value);
-                  setShowDropdown(true);
-                }}
-                onFocus={handleFocus}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              />
-              {showDropdown &&
-                createPortal(
-                  <div
-                    className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
-                    style={{
-                      top: `${dropdownPosition.top}px`,
-                      left: `${dropdownPosition.left}px`,
-                      width: `${dropdownPosition.width}px`,
-                    }}
-                  >
-                  <div
-                    className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                      setOpenProductSheet(true);
-                    }}
-                  >
-                    + Add new product
-                  </div>
-                  {loading ? (
-                      <div className="px-3 py-2 text-foreground">
-                        Loading...
-                      </div>
-                  ) : products.length > 0 ? (
-                    products.map((product) => (
-                      <div
-                        key={product.id}
-                        className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                        onMouseDown={() => handleProductSelect(product)}
-                      >
-                        {product.item_number} - {product.description}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-foreground">
-                      No products found
-                    </div>
-                  )}
-                  </div>,
-                  document.body
-              )}
-            </div>
-            {/* Descrição */}
-            <div className="text-foreground w-full truncate text-base">
-              {isCustom ? (
-              <Input
-                placeholder="Description"
-                value={item.description || ""}
-                onChange={(e) =>
-                  handleItemUpdate(item.id, "description", e.target.value)
-                }
-                className="w-full"
-              />
-              ) : (
-                item.description || <span className="opacity-50">—</span>
-              )}
-            </div>
-            {/* UOM */}
-            <div className="text-foreground text-base">
-              {isCustom ? (
-              <Select
-                value={item.uom || ""}
-                onValueChange={(value) =>
-                  handleItemUpdate(item.id, "uom", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="UOM" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(UOM_TYPES).map((uom: any) => (
-                    <SelectItem key={uom} value={uom}>
-                      {uom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              ) : (
-                item.uom || <span className="opacity-50">—</span>
-              )}
-            </div>
-            {/* Quantidade */}
-            <div className="">
-              <Input
-                type="number"
-                placeholder="Qty"
-                value={item.quantity || ""}
-                className="text-base text-foreground"
-                onChange={(e) =>
-                  handleItemUpdate(item.id, "quantity", Number(e.target.value))
-                }
-              />
-            </div>
-            {/* Unit Price */}
-            <div className="text-foreground text-base">
-              {isCustom ? (
-              <Input
-                type="text"
-                placeholder="$0.00"
-                value={
-                    digits.unitPrice
-                      ? `$ ${formatDecimal(digits.unitPrice)}`
-                      : ""
-                }
-                onChange={(e) => {
-                  const ev = e.nativeEvent as InputEvent;
-                  const { inputType } = ev;
-                  const data = (ev.data || "").replace(/\$/g, "");
-                  const nextDigits = handleNextDigits(
-                    digits.unitPrice,
-                    inputType,
-                    data
-                  );
-                  setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-                  handleItemUpdate(
-                    item.id,
-                    "unitPrice",
-                    Number(formatDecimal(nextDigits))
-                  );
-                }}
-                className="w-full"
-              />
-              ) : item.unitPrice ? (
-                `$${Number(item.unitPrice).toFixed(2)}`
-              ) : (
-                <span className="opacity-50">—</span>
-              )}
-            </div>
-            {/* Discount (editável e unificado) */}
-            <div className="text-foreground text-base flex items-center gap-1">
-              {isCustom ? (
-                <>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="Discount"
-                    value={item.discount || ""}
-                    onChange={(e) =>
-                      handleItemUpdate(
-                        item.id,
-                        "discount",
-                        Number(e.target.value)
-                      )
-                    }
-                    className="text-base w-full"
-                  />
-                  <div className="w-[62px] h-full">
-              <Select
-                value={item.discountType || "dollar"}
-                onValueChange={(value) =>
-                  handleItemUpdate(item.id, "discountType", value)
-                }
-              >
-                      <SelectTrigger className="w-[20px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dollar">$</SelectItem>
-                  <SelectItem value="percentage">%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-                </>
-              ) : item.discount ? (
-                item.discountType === "dollar" ? (
-                  `$${Number(item.discount).toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}`
-                ) : (
-                  `${Number(item.discount).toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}%`
-                )
-              ) : (
-                <span className="opacity-50">—</span>
-              )}
-            </div>
-            {/* Total */}
-            <div className="text-foreground text-left max-w-[140px] w-full text-base">
-              {item.unitPrice && item.quantity ? (
-                `$${calculateExtendedPrice(item)}`
-              ) : (
-                <span className="opacity-50">—</span>
-              )}
-            </div>
-            {/* Botão de salvar */}
-            <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingItemId(null)}
-              >
-                  <Check className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        {/* Subitens visual: igual ao item principal, mas com fundo cinza e recuo */}
-        {hasSubItems && (
-          <div className="relative border-b border-border mb-1">
-            {/* Linha vertical */}
-            <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
-            {item.associatedItems.map((subItem, idx) => (
-              <div key={subItem.id || idx} className="pl-4 relative z-10">
-                {/* Linha horizontal para conectar à vertical */}
-                <div
-                  className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
-                  style={{ transform: "translateY(-50%)" }}
-                />
-                <SubItemRow
-                  item={item}
-                  subItem={subItem}
-                  handleCompositeItemUpdate={handleCompositeItemUpdate}
-                  handleDeleteComposite={handleDeleteComposite}
-                  editingSubItemId={editingSubItemId}
-                  setEditingSubItemId={setEditingSubItemId}
-                  UOM_TYPES={UOM_TYPES}
-                  setOpenProductSheet={setOpenProductSheet}
-                  handleSubItemProductSelect={handleSubItemProductSelect}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-        <ProductSheet
-          open={openProductSheet}
-          onOpenChange={setOpenProductSheet}
-          newProduct={newProduct}
-          setNewProduct={setNewProduct}
-          digits={digits}
-          setDigits={setDigits}
-          UOM_TYPES={UOM_TYPES}
-          formatDecimal={formatDecimal}
-          formatPercentage={formatPercentage}
-          handleNextDigits={handleNextDigits}
-          editingSubItemId={editingSubItemId}
-          handleCompositeItemUpdate={handleCompositeItemUpdate}
-          handleItemUpdate={handleItemUpdate}
-          item={item}
-          setProductInput={setProductInput}
-        />
-      </>
-    );
-  }
-
   return (
     <>
       <div
         className={`grid items-center mb-1 gap-2 ${
-            !hasSubItems ? "border-b border-border pb-1" : ""
-          }`}
-          style={{
-          gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr 2fr 2fr 40px",
-          }}
-        >
-          <div>
-            <div className="relative">
-            <div className="w-full text-base text-foreground">
-              {item.itemNumber || <span className="opacity-50">#</span>}
+          !hasSubItems ? "border-b border-border pb-1" : ""
+        }`}
+        style={{
+          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
+        }}
+      >
+        {/* Produto: input sempre disponível */}
+        <div className="relative">
+          {!!item.itemNumber ? (
+            <div className="text-foreground w-full truncate text-sm ml-2">
+              {item.itemNumber}
             </div>
-          </div>
-        </div>
-        <div className="text-foreground w-full truncate ml-2 text-base">
-            {item.description ? (
-              item.description
-            ) : (
-              <span className="opacity-50">—</span>
+          ) : (
+            <Input
+            ref={inputRef}
+            className={`w-full h-9 text-base text-foreground bg-transparent ${
+              item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
+            }`}
+            placeholder="Search or add a product..."
+            value={productInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setProductInput(value);
+              setShowDropdown(true);
+            }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+              readOnly={!!item.itemNumber}
+            />
+          )}
+
+          {showDropdown && isSearching &&
+            createPortal(
+              <div
+                className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
+                style={{
+                  top: `${dropdownPosition.top}px`,
+                  left: `${dropdownPosition.left}px`,
+                  width: `${dropdownPosition.width}px`,
+                }}
+              >
+                <div
+                  className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setOpenProductSheet(true);
+                  }}
+                >
+                  + Add new product
+                </div>
+                {loading ? (
+                  <div className="px-3 py-2 text-foreground">Loading...</div>
+                ) : products.length > 0 ? (
+                  products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
+                      onMouseDown={() => handleProductSelect(product)}
+                    >
+                      {product.item_number} - {product.description}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-foreground">
+                    No products found
+                  </div>
+                )}
+              </div>,
+              document.body
             )}
-          </div>
+        </div>
+        {/* Descrição */}
+        <div className="text-foreground w-full truncate ml-2 text-base pr-2">
+          {item.description ? (
+            item.description
+          ) : (
+            <span className="opacity-50">—</span>
+          )}
+        </div>
         <div className="text-foreground text-base">
-            {item.uom ? item.uom : <span className="opacity-50">—</span>}
-          </div>
-        <div className="">
-          <div className="text-base text-foreground">
-            {item.quantity || <span className="opacity-50">—</span>}
-          </div>
+          {item.uom ? item.uom : <span className="opacity-50">—</span>}
+        </div>
+        {/* Qty: stepper com input */}
+        <div className="flex items-center justify-start gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="w-7 h-7 flex items-center justify-center border rounded bg-muted hover:bg-accent "
+            onClick={() =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Math.max(0, Number(item.quantity || 0) - 1)
+              )
+            }
+            tabIndex={-1}
+          >
+            -
+          </Button>
+          <Input
+            min={0}
+            value={item.quantity || 0}
+            onChange={(e) =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Math.max(0, Number(e.target.value))
+              )
+            }
+            className="no-spinner w-16 h-6 px-2 py-1 border rounded text-center bg-background !border-none shadow-none"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="w-7 h-7 flex items-center justify-center border rounded bg-muted  hover:bg-accent "
+            onClick={() =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Number(item.quantity || 0) + 1
+              )
+            }
+            tabIndex={-1}
+          >
+            +
+          </Button>
         </div>
         <div className="text-foreground text-sm">
-            {item.unitPrice ? (
+          {item.unitPrice ? (
             `$${Number(item.unitPrice).toFixed(2)}`
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-        <div className="text-foreground text-base">
-          {item.discount
-            ? item.discountType === "dollar"
-              ? `$${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-              : `${Number(item.discount).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-            : <span className="opacity-50">—</span>}
-          </div>
-        <div className="text-foreground text-left max-w-[140px] w-full text-base">
-            {item.unitPrice && item.quantity ? (
-              `$${calculateExtendedPrice(item)}`
-            ) : (
-              <span className="opacity-50">—</span>
-            )}
-          </div>
-          <div>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                asChild
-                className="flex items-center justify-center"
-              >
-                <Button variant="ghost" size="sm" className="!p-[6px]">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditingItemId(item.id);
-                    setEditingSubItemId(null);
-                  }}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleAddCompositeItem(item);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Sub Item
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          ) : (
+            <span className="opacity-50">—</span>
+          )}
         </div>
+        <div className="text-foreground text-base">
+          {item.discount ? (
+            item.discountType === "dollar" ? (
+              `$${Number(item.discount).toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })}`
+            ) : (
+              `${Number(item.discount).toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })}%`
+            )
+          ) : (
+            <span className="opacity-50">—</span>
+          )}
+        </div>
+        <div className="text-foreground w-full text-base text-center">
+          {item.unitPrice && item.quantity ? (
+            `$${calculateExtendedPrice(item)}`
+          ) : (
+            <span className="opacity-50">—</span>
+          )}
+        </div>
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              asChild
+              className="flex items-center justify-center"
+            >
+              <Button variant="ghost" size="sm" className="!p-[2px]">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setOpenProductSheet(true);
+                  setEditingItemId(item.id);
+                  setEditingSubItemId(null);
+                }}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  handleAddCompositeItem(item);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Sub Item
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
       {hasSubItems && (
         <div className="relative border-b border-border mb-1">
@@ -540,17 +414,17 @@ export default function QuoteItemRow({
                 className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
                 style={{ transform: "translateY(-50%)" }}
               />
-            <SubItemRow
-              item={item}
-              subItem={subItem}
-              handleCompositeItemUpdate={handleCompositeItemUpdate}
-              handleDeleteComposite={handleDeleteComposite}
-              editingSubItemId={editingSubItemId}
-              setEditingSubItemId={setEditingSubItemId}
-              UOM_TYPES={UOM_TYPES}
-              setOpenProductSheet={setOpenProductSheet}
-              handleSubItemProductSelect={handleSubItemProductSelect}
-            />
+              <SubItemRow
+                item={item}
+                subItem={subItem}
+                handleCompositeItemUpdate={handleCompositeItemUpdate}
+                handleDeleteComposite={handleDeleteComposite}
+                editingSubItemId={editingSubItemId}
+                setEditingSubItemId={setEditingSubItemId}
+                UOM_TYPES={UOM_TYPES}
+                setOpenProductSheet={setOpenProductSheet}
+                handleSubItemProductSelect={handleSubItemProductSelect}
+              />
             </div>
           ))}
         </div>
@@ -568,10 +442,11 @@ export default function QuoteItemRow({
         formatPercentage={formatPercentage}
         handleNextDigits={handleNextDigits}
         editingSubItemId={editingSubItemId}
-        handleCompositeItemUpdate={handleCompositeItemUpdate}
         handleItemUpdate={handleItemUpdate}
         item={item}
         setProductInput={setProductInput}
+        setEditingItemId={setEditingItemId}
+        setEditingSubItemId={setEditingSubItemId}
       />
     </>
   );
