@@ -46,8 +46,8 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
-        <SheetHeader className="p-6 pb-0">
-          <div className="flex items-center">
+        <SheetHeader className="p-0">
+          <div className="flex items-center p-6 pb-2">
             <SheetTitle>Available Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
           </div>
           <Separator/>
@@ -180,7 +180,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
           </div>
         </div>
 
-        <SheetFooter className="p-6 pt-0">
+        <SheetFooter className="px-4 py-4 border-t flex gap-2">
           <div className="flex justify-between gap-4">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Cancel

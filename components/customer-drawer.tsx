@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 import { CustomerContacts } from "@/components/customer-contacts"
 import { CustomerProvider } from "@/contexts/customer-context"
+import { Separator } from "@/components/ui/separator"
 
 interface CustomerDrawerProps {
   open: boolean
@@ -102,18 +103,19 @@ export const CustomerDrawer = memo(function CustomerDrawer({
           }
         `}</style>
         <div className="flex flex-col h-full">
-          <DrawerHeader className="border-b pb-4">
-            <div className="flex justify-between items-center">
+          <DrawerHeader className="p-0">
+            <div className="flex items-center p-6 pb-2">
               <DrawerTitle className="text-xl font-semibold">
                 {isViewMode ? 'Customer Details' : 'Create New Customer'}
               </DrawerTitle>
-              <DrawerClose className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-gray-100">
+              <DrawerClose className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-gray-100 ml-2">
                 <X className="h-4 w-4" />
               </DrawerClose>
             </div>
+            <Separator />
           </DrawerHeader>
           
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-6 pt-2 pb-24">
             {isViewMode && customerData ? (
               <div className="space-y-6">
                 <CustomerDetails customer={customerData} />
@@ -191,6 +193,17 @@ export const CustomerDrawer = memo(function CustomerDrawer({
                 onCancel={handleClose}
               />
             ) : null}
+          </div>
+
+          <div className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10 justify-end">
+            <div className="flex justify-between gap-4 w-full max-w-[351px]">
+              <Button variant="outline" className="flex-1" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={() => {}}>
+                Edit
+              </Button>
+            </div>
           </div>
         </div>
       </DrawerContent>
