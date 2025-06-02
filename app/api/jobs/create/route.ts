@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
         contractor_id: contractorId,
         pm_email: jobData.project_email,
         pm_phone: jobData.project_phone,
+        project_manager: jobData.project_manager,
         customer_contract_number: jobData.customer_contract_number,
       }, {
         onConflict: 'job_id'

@@ -14,6 +14,7 @@ import {
   Check,
   ChevronsUpDown,
   Loader2,
+  XIcon,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -76,10 +77,10 @@ export function ActiveBidDetailsSheet({
   const [saving, setSaving] = useState(false);
   const [editingContractor, setEditingContractor] = useState(false);
   const [editingSubcontractor, setEditingSubcontractor] = useState(false);
-  const [selectedContractor, setSelectedContractor] = useState<string>("");
+  const [selectedContractor, setSelectedContractor] = useState<Customer>();
   const [selectedSubcontractor, setSelectedSubcontractor] =
     useState<string>("");
-  const [originalContractor, setOriginalContractor] = useState<string>("");
+  const [originalContractor, setOriginalContractor] = useState<Customer>();
   const [originalSubcontractor, setOriginalSubcontractor] =
     useState<string>("");
   const [hasChanges, setHasChanges] = useState(false);
@@ -97,7 +98,9 @@ export function ActiveBidDetailsSheet({
       const formattedCustomers: Customer[] = data.map((customer: any) => ({
         id: customer.id,
         name: customer.name,
-        displayName: customer.display_name || customer.name,
+        displayName: customer.display_name
+          ? customer.display_name
+          : customer.name,
         emails: [],
         phones: [],
         names: [],
@@ -148,13 +151,13 @@ export function ActiveBidDetailsSheet({
 
   useEffect(() => {
     if (bid) {
-      const contractorValue = formatValue(bid.contractor);
-      const subcontractorValue = formatValue(bid.subcontractor);
-
-      setSelectedContractor(contractorValue);
-      setSelectedSubcontractor(subcontractorValue);
-      setOriginalContractor(contractorValue);
-      setOriginalSubcontractor(subcontractorValue);
+      const associatedContractor = customers.find(
+        (c) => c.name === bid.contractor
+      );
+      setSelectedContractor(associatedContractor);
+      setSelectedSubcontractor(bid.subcontractor);
+      setOriginalContractor(associatedContractor);
+      setOriginalSubcontractor(bid.subcontractor);
       try {
         setLettingDate(
           bid.lettingDate && bid.lettingDate !== "-"
@@ -190,7 +193,7 @@ export function ActiveBidDetailsSheet({
       setStartDate(undefined);
       setEndDate(undefined);
     }
-  }, [bid]);
+  }, [bid, customers]);
 
   const handleEdit = () => {
     if (hasChanges) {
@@ -203,14 +206,12 @@ export function ActiveBidDetailsSheet({
     }
   };
 
-  useEffect(() => {
-    setSelectedContractor("");
-    setSelectedSubcontractor("");
-  }, [open]);
-
-  const handleContractorSelect = (value: string) => {
-    setSelectedContractor(value);
-    setHasChanges(value !== originalContractor);
+  const handleContractorSelect = (id: string) => {
+    const associatedContractor = customers.find((c) => c.id === parseInt(id));
+    setSelectedContractor(associatedContractor);
+    setHasChanges(
+      !originalContractor ? false : parseInt(id) !== originalContractor.id
+    );
     setEditingContractor(false);
   };
 
@@ -389,8 +390,8 @@ export function ActiveBidDetailsSheet({
           <Separator />
         </SheetHeader>
 
-        <div className="flex flex-col h-full relative">
-          <div className="flex-1 overflow-y-auto p-6 pt-2 pb-24">
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-6 pt-3">
             <div className="space-y-5">
               {/* Letting Date */}
               <div className="space-y-1 w-full">
@@ -416,9 +417,7 @@ export function ActiveBidDetailsSheet({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 w-full">
                   <div className="flex items-center gap-2">
-                    <Label className="font-medium text-muted-foreground">
-                      Contractor
-                    </Label>
+                    <Label className="font-medium">Contractor</Label>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -441,7 +440,9 @@ export function ActiveBidDetailsSheet({
                           role="combobox"
                           className="w-fit justify-between"
                         >
-                          {selectedContractor || "Select contractor..."}
+                          {selectedContractor?.name ||
+                            selectedContractor?.displayName ||
+                            "Select contractor..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -453,18 +454,18 @@ export function ActiveBidDetailsSheet({
                             {customers.map((customer) => (
                               <CommandItem
                                 key={customer.id}
-                                value={customer.name}
+                                value={customer.id.toString()}
                                 onSelect={handleContractorSelect}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    selectedContractor === customer.name
+                                    selectedContractor?.id === customer.id
                                       ? "opacity-100"
                                       : "opacity-0"
                                   )}
                                 />
-                                {customer.name}
+                                {customer.displayName}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -472,17 +473,32 @@ export function ActiveBidDetailsSheet({
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="text-foreground">
-                      {selectedContractor || "-"}
+                    <div
+                      key={selectedContractor?.id}
+                      className="flex justify-between items-center text-sm text-muted-foreground"
+                    >
+                      {selectedContractor
+                        ? selectedContractor.displayName ||
+                          selectedContractor.name
+                        : originalContractor
+                        ? originalContractor.displayName ||
+                          originalContractor.name
+                        : "-"}
+                      {selectedContractor &&
+                        originalContractor &&
+                        selectedContractor.id !== originalContractor.id && (
+                          <XIcon
+                            className="cursor-pointer"
+                            onClick={() => setSelectedContractor(undefined)}
+                          />
+                        )}
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-1 w-full">
                   <div className="flex items-center gap-2">
-                    <Label className="font-medium text-muted-foreground">
-                      Subcontractor
-                    </Label>
+                    <Label className="font-medium">Subcontractor</Label>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -534,8 +550,19 @@ export function ActiveBidDetailsSheet({
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="text-foreground ">
-                      {selectedSubcontractor || "-"}
+                    <div className="text-sm text-muted-foreground flex justify-between items-center">
+                      {selectedSubcontractor
+                        ? selectedSubcontractor
+                        : originalSubcontractor
+                        ? originalSubcontractor
+                        : "-"}
+                      {selectedSubcontractor &&
+                        selectedSubcontractor !== "-" && (
+                          <XIcon
+                            className="cursor-pointer"
+                            onClick={() => setSelectedSubcontractor("")}
+                          />
+                        )}
                     </div>
                   )}
                 </div>
@@ -546,7 +573,9 @@ export function ActiveBidDetailsSheet({
                 <Label className="font-medium text-muted-foreground">
                   Owner
                 </Label>
-                <div className="font-medium">{formatValue(bid?.owner) || "-"}</div>
+                <div className="font-medium">
+                  {formatValue(bid?.owner) || "-"}
+                </div>
               </div>
 
               {/* County & Branch */}
@@ -685,7 +714,7 @@ export function ActiveBidDetailsSheet({
               >
                 Cancel
               </Button>
-              <Button className="flex-1" onClick={handleEdit} disabled={saving}>
+              <Button onClick={handleEdit} disabled={saving} className="flex-1">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {hasChanges
                   ? originalContractor || originalSubcontractor
