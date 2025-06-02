@@ -73,7 +73,7 @@ const SaleItemsRevenueAndProfit = () => {
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 
   return (
-    <div className="bg-white rounded-lg border p-4 md:row-span-1">      
+    <div className="bg-white rounded-lg p-2 md:row-span-1">      
       {/* Header */}
       <div className="grid grid-cols-5 mb-2">
         <div className="font-medium">Sale Items</div>
@@ -140,7 +140,7 @@ const SaleItemsRevenueAndProfit = () => {
         <>
           <div className="flex flex-col">
             <p className="text-center py-2 text-gray-500 italic">
-              No sale items available
+              No sale items added
             </p>
           </div>
           

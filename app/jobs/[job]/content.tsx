@@ -826,9 +826,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    // Custom columns for active jobs that match the image
     const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
-        { key: "jobNumber", title: "Job Number" },
+        { key: "jobNumber", title: "Job Number", className: 'whitespace-nowrap' },
         { key: "bidNumber", title: "Bid Number" },
         { key: "projectStatus", title: "Project Status" },
         { key: "billingStatus", title: "Billing Status" },
