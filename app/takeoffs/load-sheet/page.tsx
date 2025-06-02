@@ -20,13 +20,13 @@ const SIGN_ORDER_COLUMNS = [
   { key: "contract_number", title: "Contract Number"},
   { key: "order_date", title: "Order date" },
   { key: "need_date", title: "Need date" },
-  { key: "type", title: "Type" },
-  { key: "order_number", title: "Order Number" },
   { key: "status", title: "Status", render: (row: any) => (
     <span className={`px-2 py-1 rounded-full text-xs ${row.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : row.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
       {row.status || 'N/A'}
     </span>
   )},
+  { key: "type", title: "Type" },
+  { key: "order_number", title: "Order Number" },
 ];
 
 // Tabs for sign order status
@@ -362,7 +362,7 @@ export default function SignOrderPage() {
             <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
             <div className="flex gap-3">
               <button
-                onClick={() => router.push('/takeoffs/new-sign-order')}
+                onClick={() => router.push('/takeoffs/new')}
                 className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
               >
                 Create sign order
