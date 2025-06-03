@@ -3,18 +3,20 @@ import { Page, Text, View, Document, Image } from '@react-pdf/renderer';
 import { AdminData } from '@/types/TAdminData';
 import { QuoteItem } from '@/types/IQuoteItem';
 // import { User } from '@/types/User';
-import { PaymentTerms,  } from './QuoteAdminInformation';
+import { PaymentTerms, } from './QuoteAdminInformation';
 import { proposalStyles } from './proposal-parts/proposalStyles';
 import { StandardConditions, StandardExclusions } from './proposal-parts/StandardTermsAndConditions';
 import { StandardRentalEquipmentAgreement } from './proposal-parts/RentalEquipmentAgreement';
 import { StandardFlaggingTermsConditions } from './proposal-parts/FlaggingTermsAndConditions';
 import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
+import { User } from '@/types/User';
+import { Customer } from '@/types/Customer';
 
 interface Props {
   adminData: AdminData
   items?: QuoteItem[]
-  customers: string[]
-//   email: string
+  customers: Customer[]
+  sender: User
   quoteDate: Date
   quoteNumber: string
   paymentTerms: PaymentTerms
@@ -23,9 +25,10 @@ interface Props {
   county: string
   sr: string
   ecms: string
+  pointOfContact: { name: string, email: string }
 }
 
-export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, adminData, items, customers, includedTerms, customTaC,
+export const BidProposalReactPDF = ({ paymentTerms, pointOfContact, quoteNumber, sender, quoteDate, adminData, items, customers, includedTerms, customTaC,
   county, sr, ecms, }: Props) => {
   // Calculate the total for all items including composite items
   const calculateTotal = () => {
@@ -68,7 +71,7 @@ export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, admi
       : 0;
 
     // Apply discount to the combined total
-    return ((parentItemValue + compositeTotal) * discountMultiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2});
+    return ((parentItemValue + compositeTotal) * discountMultiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const total = calculateTotal();
@@ -102,24 +105,28 @@ export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, admi
           }}
           render={({ pageNumber }) => (
             pageNumber > 1 ? (
-              <Text>Quote For: {customers.length > 1 ? 'Estimating' : customers[0]} - Quote ID: {quoteNumber} cont.</Text>
+              <Text>Quote For: {customers.length > 1 ? 'Estimating' : customers[0].name} - Quote ID: {quoteNumber} cont.</Text>
             ) : null
           )}
         />
 
         {/* Company Info and Header */}
         <View style={proposalStyles.companyInfoContainer}>
-          <Image style={proposalStyles.img} src='/logo.jpg' />
-          <View style={proposalStyles.leftInfo}>
-            <Text style={proposalStyles.infoText}>ESTABLISHED TRAFFIC CONTROL</Text>
+          <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}>
+            <Image style={proposalStyles.img} src='/logo.jpg' />
+            <Text style={proposalStyles.etcHeader}>Established Traffic Control, Inc.</Text>
+          </View>
+          <View>
+            <Text style={proposalStyles.quoteNumber}>{quoteNumber}</Text>
+            <Text style={proposalStyles.infoText}>{sender.name}</Text>
+            <Text style={proposalStyles.infoText}>{sender.email}</Text>
             <Text style={proposalStyles.infoText}>3162 UNIONVILLE PIKE</Text>
             <Text style={proposalStyles.infoText}>HATFIELD, PA 19440</Text>
             <Text style={proposalStyles.infoText}>OFFICE: (215) 997-8801</Text>
             <Text style={proposalStyles.infoText}>FAX: (215) 997-8868</Text>
             <Text style={proposalStyles.infoText}>DBE / VBE</Text>
           </View>
-          <View style={proposalStyles.rightInfo}>
-            {/* Table structure */}
+          {/* <View style={proposalStyles.rightInfo}>
             <View style={proposalStyles.quoteTable}>
               <View style={proposalStyles.quoteTableRow}>
                 <View style={[proposalStyles.quoteTableCell, { borderRight: '1px solid right' }]}>
@@ -149,90 +156,108 @@ export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, admi
             <Text style={proposalStyles.validThrough}>
               Quote valid through {new Date(quoteDate.getTime() + (30 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
             </Text>
-          </View>
+          </View> */}
         </View>
-        {/* Main container with space-between justification */}
-        <View style={[{ flexDirection: 'row', justifyContent: 'space-between', margin: '0 30px', marginTop: 15 }]}>
-          {/* Left box - Attention/Requested By */}
-          <View style={proposalStyles.simpleBox}>
-            <View style={proposalStyles.simpleBoxRow}>
+        {/* <View>
+            <View>
               <Text style={proposalStyles.quoteTableLabel}>
                 Attention
               </Text>
             </View>
-            <View style={[proposalStyles.simpleBoxRow, { fontSize: 11 }]}>
+            <View style={{ fontSize: 11 }}>
               <Text>{customers.length > 1 ? 'Estimating' : customers[0]}</Text>
             </View>
-          </View>
+          </View> */}
 
-          {/* Right box - Job Information */}
-          <View style={proposalStyles.jobInfoBox}>
-            <View style={proposalStyles.infoGrid}>
+        {/* Right box - Job Information */}
+        {/* <View style={proposalStyles.infoGrid}>
               <View style={proposalStyles.infoGridCell}>
                 <Text style={proposalStyles.quoteTableLabel}>County:</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
                 <Text>{county}</Text>
               </View>
               <View style={proposalStyles.infoGridCell}>
                 <Text style={proposalStyles.quoteTableLabel}>State Route:</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
                 <Text>{sr}</Text>
               </View>
               <View style={proposalStyles.infoGridCell}>
-                <Text style={proposalStyles.quoteTableLabel}>ECMS</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
+                <Text style={proposalStyles.quoteTableLabel}>ECMS:</Text>
                 <Text>{ecms}</Text>
               </View>
               <View style={proposalStyles.infoGridCell}>
-                <Text style={proposalStyles.quoteTableLabel}>Start Date</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
+                <Text style={proposalStyles.quoteTableLabel}>Start Date:</Text>
                 <Text>{adminData.startDate && new Date(adminData.startDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}</Text>
               </View>
               <View style={proposalStyles.infoGridCell}>
-                <Text style={proposalStyles.quoteTableLabel}>End Date</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
+                <Text style={proposalStyles.quoteTableLabel}>End Date:</Text>
                 <Text>{adminData.endDate && new Date(adminData.endDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}</Text>
               </View>
               <View style={proposalStyles.infoGridCell}>
                 <Text style={proposalStyles.quoteTableLabel}>Total days:</Text>
-              </View>
-              <View style={proposalStyles.infoGridCell}>
                 <Text>
                   {(adminData.startDate && adminData.endDate)
                     ? `${Math.ceil((new Date(adminData.endDate).getTime() - new Date(adminData.startDate).getTime()) / (1000 * 60 * 60 * 24))} days`
                     : ''}
                 </Text>
               </View>
-            </View>
+            </View> */}
+        <View style={{ flexDirection: 'row', marginTop: 10 }}>
+          {/* Sold To Column */}
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={proposalStyles.quoteTableLabel}>Sold To:</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].name}</Text>
+            <Text style={{ fontSize: 10 }}>ATT: {pointOfContact.name}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].address}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].city}, {customers[0].state} {customers[0].zip} US</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].mainPhone}</Text>
+            <Text style={{ fontSize: 10, marginTop: 15 }}>Created: {quoteDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}</Text>
+          </View>
+
+          {/* Bill To Column */}
+          <View style={{ flex: 1, paddingHorizontal: 5 }}>
+            <Text style={proposalStyles.quoteTableLabel}>Bill To:</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].name}</Text>
+            <Text style={{ fontSize: 10 }}>ATT: {pointOfContact.name}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].address}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].city}, {customers[0].state} {customers[0].zip} US</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].mainPhone}</Text>
+          </View>
+
+          {/* Ship To Column */}
+          <View style={{ flex: 1, paddingLeft: 10 }}>
+            <Text style={proposalStyles.quoteTableLabel}>Ship To:</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].name}</Text>
+            <Text style={{ fontSize: 10 }}>ATT: {pointOfContact.name}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].address}</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].city}, {customers[0].state} {customers[0].zip} US</Text>
+            <Text style={{ fontSize: 10 }}>{customers[0].mainPhone}</Text>
+            <Text style={{ fontSize: 10, marginTop: 15, textAlign: 'right' }}>
+              Expires: {new Date(quoteDate.getTime() + (30 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+            </Text>
           </View>
         </View>
 
         {/* Table for items */}
         <View style={proposalStyles.table}>
           <View style={proposalStyles.tableHeader}>
-            <Text style={proposalStyles.tableHeaderCell}>ITEM # / SKU</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: 3}]}>DESCRIPTION</Text>
-            <Text style={proposalStyles.tableHeaderCell}>PRICE</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex : .8}]}>UOM</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: .8}]}>QTY</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { borderRightWidth: 0 }]}>TOTAL</Text>
+            <Text style={proposalStyles.tableHeaderCell}>ITEM #</Text>
+            <Text style={[proposalStyles.tableHeaderCell, { flex: 3 }]}>DESCRIPTION</Text>
+            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>QTY</Text>
+            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>UOM</Text>
+            <Text style={proposalStyles.tableHeaderCell}>UNIT PRICE</Text>
+            <Text style={[proposalStyles.tableHeaderCell, { borderRightWidth: 0 }]}>EXTENDED PRICE</Text>
           </View>
+
           {/* First render all actual items */}
           {items?.map((item, index) => (
             <View key={`item-${index}`} style={proposalStyles.tableRow}>
               <Text style={proposalStyles.tableCell}>{item.itemNumber}</Text>
-              <Text style={[proposalStyles.tableCell, { flex: 3}]}>{item.description + '\n\n' + item.notes}</Text>
-              <Text style={proposalStyles.tableCell}>
-                ${item.unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              <Text style={[proposalStyles.tableCell, { flex: 3 }]}>{item.description + '\n\n' + item.notes}</Text>
+              <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.quantity}</Text>
+              <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.uom || 'EA'}</Text>
+              <Text style={[proposalStyles.tableCell, { textAlign: 'right'}]}>
+                ${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
-              <Text style={[proposalStyles.tableCell, { flex: .8}]}>{item.uom || 'EA'}</Text>
-              <Text style={[proposalStyles.tableCell, { flex: .8}]}>{item.quantity}</Text>
-              <Text style={[proposalStyles.tableCell, { borderRightWidth: 0 }]}>
+              <Text style={[proposalStyles.tableCell, { textAlign: 'right' }]}>
                 ${calculateExtendedPrice(item)}
               </Text>
             </View>
@@ -242,20 +267,20 @@ export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, admi
           {Array(Math.max(0, 10 - (items?.length || 0))).fill(null).map((_, i) => (
             <View key={`empty-${i}`} style={proposalStyles.tableRow}>
               <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, {flex: 3}]}></Text>
+              <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
               <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex : 0.8}]}></Text>
               <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
-              <Text style={[proposalStyles.tableCell, { borderRightWidth: 0 }]}>$    -</Text>
+              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
+              <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>$    -</Text>
             </View>
           ))}
           <View style={proposalStyles.tableRow}>
             <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, {flex: 3}]}></Text>
+            <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
             <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, { flex : 0.8}]}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}>TOTAL</Text>
-            <Text style={[proposalStyles.tableCell, { borderRightWidth: 0 }]}>${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
+            <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
+            <Text style={[proposalStyles.tableCell, { flex: 0.8, textAlign: 'right' }]}>TOTAL</Text>
+            <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
         </View>
 
@@ -270,7 +295,26 @@ export const BidProposalReactPDF = ({ paymentTerms, quoteNumber, quoteDate, admi
           {customTaC && customTaC.length > 0 && <Text style={{ fontSize: 11, display: 'flex', flexDirection: 'row' }}>{customTaC}</Text>}
         </View>}
 
-        <View style={{ marginTop: 40, marginHorizontal: 30 }}>
+        <View style={{ backgroundColor: '#e4e4e4', padding: 12, marginTop: 15}}>
+            <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
+              <Text style={{ textAlign: 'left', fontWeight: 'bold'}}>Sub Total</Text>
+              <Text style={{ textAlign: 'right'}}>${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            </View>
+            <View style={{justifyContent: 'space-between', flexDirection: 'row', marginTop: 10}}>
+              <Text style={{ textAlign: 'left', fontWeight: 'bold'}}>Miscellaneous</Text>
+              <Text style={{ textAlign: 'right'}}>0</Text>
+            </View>
+            <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
+              <Text style={{ textAlign: 'left', fontWeight: 'bold'}}>Estimated Sales Tax</Text>
+              <Text style={{ textAlign: 'right'}}>0</Text>
+            </View>
+            <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
+              <Text style={{ textAlign: 'left', fontWeight: 'bold'}}>Total</Text>
+              <Text style={{ textAlign: 'right', fontWeight: 'bold'}}>${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            </View>
+        </View>
+
+        <View style={{ marginTop: 20, marginHorizontal: 30 }}>
           <Text style={{ fontSize: 10, textAlign: 'center', color: '#000080' }}>
             IF THE PROPOSAL IS ACCEPTED, PLEASE SIGN AND DATE BELOW AND RETURN. THANK YOU!,
           </Text>

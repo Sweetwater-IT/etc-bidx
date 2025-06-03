@@ -6,6 +6,7 @@ import { QuoteItem } from "@/types/IQuoteItem";
 import { format } from "date-fns";
 import { AdminData } from "@/types/TAdminData";
 import { PaymentTerms } from "@/components/pages/quote-form/QuoteAdminInformation";
+import { User } from "@/types/User";
 
 interface PointOfContact {
   name : string;
@@ -90,8 +91,8 @@ interface QuoteFormState {
   quoteId: string;
   setQuoteId: Dispatch<SetStateAction<string>>
 
-  fromEmail: string;
-  setFromEmail: Dispatch<SetStateAction<string>>
+  sender: User;
+  setSender: Dispatch<SetStateAction<User>>
 }
 
 const QuoteFormContext = createContext<QuoteFormState | undefined>(undefined);
@@ -114,7 +115,6 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>('');
-  const [fromEmail, setFromEmail] = useState<string>('')
   const [status, setStatus] = useState<QuoteStatus>('Not Sent')
   
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
@@ -157,6 +157,12 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
   const [notes, setNotes] = useState<string>('')
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([])
   const [uniqueToken, setUniqueToken] = useState<string>('')
+
+  const [sender, setSender] = useState<User>({
+    name: 'Napoleon Dunn',
+    email: 'it@establishedtraffic.com',
+    role: 'President'
+  }) 
 
   // Update payment terms when customers change
   useEffect(() => {
@@ -227,8 +233,8 @@ export default function QuoteFormProvider({ children }: { children: React.ReactN
     setAdditionalFiles,
     uniqueToken,
     setUniqueToken,
-    fromEmail,
-    setFromEmail
+    sender,
+    setSender
   };
   
   return (

@@ -2,35 +2,25 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PDFViewer } from '@react-pdf/renderer';
 import { BidProposalReactPDF } from './BidProposalReactPDF';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
-import { PaymentTerms } from './QuoteAdminInformation';
+import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider';
+import { PaymentTerms } from './AdminInformationSheet';
+import { PDFViewer } from '@react-pdf/renderer';
 
 export const QuotePreviewButton = () => {
-  const {
-    adminData,
-    selectedCustomers,
-    quoteItems,
-    quoteDate,
-    quoteId,
-    paymentTerms,
-    includeTerms,
-    customTerms,
-    county,
-    stateRoute,
-    ecmsPoNumber
-  } = useQuoteForm();
-  
+
   const [isOpen, setIsOpen] = useState(false);
+
+  const { adminData, quoteItems, quoteDate, quoteId, includeTerms, selectedCustomers, sender,
+    customTerms, paymentTerms, county, stateRoute, ecmsPoNumber, pointOfContact } = useQuoteForm()
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -41,15 +31,17 @@ export const QuotePreviewButton = () => {
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Quote Preview</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden h-full">
-          {isOpen && (
-            <PDFViewer width="100%" height="800px" style={{border: 'none'}}>
+        <div className="flex-1 overflow-y-auto h-full">
+          {isOpen && (<>
+            <PDFViewer height={1250} width='100%'>
               <BidProposalReactPDF
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
-                customers={selectedCustomers.map(c => c.name)}
+                customers={selectedCustomers}
                 quoteDate={new Date(quoteDate)}
                 quoteNumber={quoteId}
+                sender={sender}
+                pointOfContact={pointOfContact ?? { name: '', email: ''}}
                 paymentTerms={paymentTerms as PaymentTerms}
                 includedTerms={includeTerms}
                 customTaC={includeTerms['custom-terms'] ? customTerms : ''}
@@ -58,6 +50,7 @@ export const QuotePreviewButton = () => {
                 ecms={ecmsPoNumber}
               />
             </PDFViewer>
+          </>
           )}
         </div>
       </DialogContent>
