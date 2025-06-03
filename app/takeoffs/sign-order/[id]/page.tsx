@@ -963,7 +963,10 @@ export default function SignOrderTrackerPage() {
                             <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
                             <SelectItem value="LOOSE">LOOSE</SelectItem>
-                            <SelectItem value="POST">POST</SelectItem>
+                            <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
+                            <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
+                            <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
+                            <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
