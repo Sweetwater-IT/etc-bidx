@@ -11,7 +11,6 @@ import { QuoteTermsAndConditions } from "@/components/pages/quote-form/QuoteTerm
 import { QuoteNotes } from "@/components/pages/quote-form/QuoteNotes";
 import { QuotePreviewButton } from "@/components/pages/quote-form/PreviewButton";
 import { sendQuoteEmail } from "@/lib/api-client";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import ReactPDF from '@react-pdf/renderer';
 import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
@@ -46,11 +45,11 @@ export default function QuoteFormContent() {
     additionalFiles,
     uniqueToken,
     setUniqueToken,
-    fromEmail,
     quoteDate,
     setStatus,
     quoteType,
-    associatedContractNumber
+    associatedContractNumber,
+    sender
   } = useQuoteForm();
 
   const handleSendQuote = async () => {
@@ -74,7 +73,7 @@ export default function QuoteFormContent() {
         email: string;
         contactId: number | undefined;
         point_of_contact?: boolean;
-        cc?: boolean;
+        cc?: boolean; 
         bcc?: boolean;
       }[] = [];
   
@@ -110,9 +109,11 @@ export default function QuoteFormContent() {
         <BidProposalReactPDF
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
-          customers={selectedCustomers.map(c => c.name)}
+          customers={selectedCustomers}
           quoteDate={new Date(quoteDate)}
           quoteNumber={quoteId}
+          pointOfContact={pointOfContact}
+          sender={sender}
           paymentTerms={paymentTerms as PaymentTerms}
           includedTerms={includeTerms}
           customTaC={includeTerms['custom-terms'] ? customTerms : ''}
@@ -154,7 +155,7 @@ export default function QuoteFormContent() {
         },
         {
           pointOfContact: pointOfContact,
-          fromEmail: fromEmail || 'it@establishedtraffic.com',
+          fromEmail: sender.email || 'it@establishedtraffic.com',
           recipients: recipients,
           cc: ccEmails,
           bcc: bccEmails,

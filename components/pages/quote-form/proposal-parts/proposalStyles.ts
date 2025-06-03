@@ -1,23 +1,28 @@
-export const proposalStyles = {
+import { StyleSheet } from "@react-pdf/renderer";
+
+export const proposalStyles = StyleSheet.create({
     page: {
         padding: 30,
         fontSize: 12,
     },
     companyInfoContainer: {
-        flexDirection: 'row' as const,
-        marginBottom: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 5
     },
-    leftInfo: {
-        flex: 1,
-        marginLeft: 10,
+    etcHeader: {
+        fontSize: 12,
+        fontWeight: 600
     },
-    rightInfo: {
-        flex: 1,
-        alignItems: 'flex-end' as const,
+    quoteNumber: {
+        fontWeight: 600,
+        textAlign: 'right'
     },
     infoText: {
-        fontSize: 10,
+        fontSize: 8,
         marginBottom: 2,
+        textAlign: 'right'
     },
     img: {
         width: 100,
@@ -25,11 +30,11 @@ export const proposalStyles = {
     },
     quoteTable: {
         width: 200,
-        border: '1px solid black',
+        border: '1px solid gray',
     },
     quoteTableRow: {
         flexDirection: 'row' as const,
-        borderBottom: '1px solid black',
+        borderBottom: '1px solid gray',
     },
     quoteTableCell: {
         flex: 1,
@@ -37,43 +42,27 @@ export const proposalStyles = {
         fontSize: 10,
     },
     quoteTableLabel: {
-        fontWeight: 'bold',
-        fontSize: 10,
+        fontSize: 12,
+        fontWeight: 'bold'
     },
     validThrough: {
         fontSize: 10,
         marginTop: 5,
     },
-    simpleBox: {
-        width: '45%',
-        border: '1px solid black',
-        padding: 5,
-    },
-    simpleBoxRow: {
-        marginBottom: 5,
-    },
-    jobInfoBox: {
-        width: '45%',
-        border: '1px solid black',
-        padding: 5,
-    },
     infoGrid: {
-        flexDirection: 'row' as const,
-        flexWrap: 'wrap' as const,
+        flexDirection: 'column'
     },
-    infoGridCell: {
-        width: '50%',
-        fontSize: 10,
-        marginBottom: 3,
-    },
+    // infoGridCell: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     fontSize: 10
+    // },
     table: {
-        marginTop: 20,
-        border: '1px solid black',
+        marginTop: 5,
     },
     tableHeader: {
         flexDirection: 'row' as const,
         backgroundColor: '#e4e4e4',
-        borderBottom: '1px solid black',
         padding: 5,
     },
     tableHeaderCell: {
@@ -81,18 +70,16 @@ export const proposalStyles = {
         fontSize: 10,
         fontWeight: 'bold',
         padding: 3,
-        borderRight: '1px solid black',
     },
     tableRow: {
         flexDirection: 'row' as const,
-        borderBottom: '1px solid black',
-        minHeight: 25,
+        borderBottom: '1px solid gray',
+        minHeight: 20,
     },
     tableCell: {
         flex: 1,
         fontSize: 9,
         padding: 3,
-        borderRight: '1px solid black',
     },
     warningText: {
         marginTop: 10,
@@ -100,4 +87,4 @@ export const proposalStyles = {
         textAlign: 'center' as const,
         fontWeight: 'bold',
     },
-};
+});
