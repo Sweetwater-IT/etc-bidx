@@ -507,7 +507,7 @@ const AdminInformationStep1 = ({
                             <CommandItem
                               key={customer.id}
                               value={customer.id.toString()}
-                              // onSelect={}
+                              onSelect={(e) => setSelectedContractor(customers.find(c => c.id.toString() === e))}
                             >
                               <Check
                                 className={cn(

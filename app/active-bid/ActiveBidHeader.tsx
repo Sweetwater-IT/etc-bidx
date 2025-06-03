@@ -28,8 +28,8 @@ const ActiveBidHeader = () => {
     try {
       startLoading();
 
-      await createActiveBid({ ...adminData, contractNumber: adminData.contractNumber + '-DRAFT' }, mptRental, equipmentRental,
-        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
+      await createActiveBid({ ...adminData, contractNumber: adminData.contractNumber.includes('-DRAFT') ? adminData.contractNumber : adminData.contractNumber + '-DRAFT' }, 
+      mptRental, equipmentRental,  flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       router.push('/jobs/active-bids');
     } catch (error) {

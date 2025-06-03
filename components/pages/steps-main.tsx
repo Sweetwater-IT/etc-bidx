@@ -235,7 +235,7 @@ const StepsMain = () => {
 
             {/* Sidebar */}
             {isSidebarVisible && (
-              <div className="w-1/4 space-y-4 sticky top-10 h-fit transition-all duration-300 pl-4 border-l">
+              <div className="w-1/4 space-y-4 sticky h-screen overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
                 <AdminInformationAccordion currentStep={currentStep} />
                 <PhaseSummaryAccordion
                   currentStep={currentStep}
