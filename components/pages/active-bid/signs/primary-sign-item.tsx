@@ -27,7 +27,7 @@ const PrimarySignItem = ({
   currentPhase,
   isTakeoff = false,
 }: PrimarySignItemProps) => {
-  const { dispatch, mptRental, editable } = useEstimate();
+  const { dispatch, mptRental } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(true);
   // Local image preview state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -241,21 +241,16 @@ const PrimarySignItem = ({
               variant="ghost"
               size="sm"
               onClick={() => handleAddSecondarySign(primarySign.id)}
-              disabled={!editable}
-              aria-disabled={!editable}
             >
               Add Secondary
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleEditSign} disabled={!editable}
-              aria-disabled={!editable}>
+            <Button variant="ghost" size="sm" onClick={handleEditSign}>
               Edit
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleSignDelete(primarySign.id)}
-              disabled={!editable}
-              aria-disabled={!editable}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
