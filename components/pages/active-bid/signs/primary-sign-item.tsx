@@ -241,6 +241,8 @@ const PrimarySignItem = ({
               variant="ghost"
               size="sm"
               onClick={() => handleAddSecondarySign(primarySign.id)}
+              disabled={!editable}
+              aria-disabled={!editable}
             >
               Add Secondary
             </Button>

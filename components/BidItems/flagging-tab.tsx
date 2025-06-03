@@ -48,6 +48,12 @@ const FlaggingServicesTab = () => {
   const [selectedMarkupRate, setSelectedMarkupRate] = useState<number | null>(null);
   const [displayEquipCost, setDisplayEquipCost] = useState<number>(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingArrowBoardCost, setEditingArrowBoardCost] = useState(false);
+  const [editingMessageBoardCost, setEditingMessageBoardCost] = useState(false);
+  const [editingTMACost, setEditingTMACost] = useState(false);
+  const [arrowBoardCost, setArrowBoardCost] = useState(String(flagging?.arrowBoards.cost || ''));
+  const [messageBoardCost, setMessageBoardCost] = useState(String(flagging?.messageBoards.cost || ''));
+  const [tmaCost, setTMACost] = useState(String(flagging?.TMA.cost || ''));
 
   // Calculate equipment cost
   const getEquipCost = useCallback(() => {
@@ -421,21 +427,39 @@ const FlaggingServicesTab = () => {
           </div>
           {/* Arrow Boards */}
           <div className="flex flex-col gap-2">
-            <Label className="text-base">Arrow Boards ($/day)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={flagging?.arrowBoards.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-left"
-              disabled={!editable}
-              aria-disabled={!editable}
-              placeholder="$ 0.00"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-base">Arrow Boards Quantity</Label>
+            <Label className="text-base">
+              Arrow Boards (
+              {editingArrowBoardCost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={arrowBoardCost}
+                  autoFocus
+                  onChange={e => setArrowBoardCost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(arrowBoardCost) || 0);
+                    setEditingArrowBoardCost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(arrowBoardCost) || 0);
+                      setEditingArrowBoardCost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left px-1 py-0.5"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingArrowBoardCost(true)}
+                >
+                  ${flagging?.arrowBoards.cost || 0}
+                </span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
@@ -461,21 +485,39 @@ const FlaggingServicesTab = () => {
           </div>
           {/* Message Boards */}
           <div className="flex flex-col gap-2">
-            <Label className="text-base">Message Boards ($/day)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={flagging?.messageBoards.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-left"
-              disabled={!editable}
-              aria-disabled={!editable}
-              placeholder="$ 0.00"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-base">Message Boards Quantity</Label>
+            <Label className="text-base">
+              Message Boards (
+              {editingMessageBoardCost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={messageBoardCost}
+                  autoFocus
+                  onChange={e => setMessageBoardCost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('messageBoards', 'cost', parseFloat(messageBoardCost) || 0);
+                    setEditingMessageBoardCost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('messageBoards', 'cost', parseFloat(messageBoardCost) || 0);
+                      setEditingMessageBoardCost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingMessageBoardCost(true)}
+                >
+                  ${flagging?.messageBoards.cost || 0}
+                </span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
@@ -501,21 +543,37 @@ const FlaggingServicesTab = () => {
           </div>  
           {/* TMA */}
           <div className="flex flex-col gap-2">
-            <Label className="text-base">TMA ($/day)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={flagging?.TMA.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-left"
-              disabled={!editable}
-              aria-disabled={!editable}
-              placeholder="$ 0.00"  
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-base">TMA Quantity</Label>
+            <Label className="text-base">
+              TMA (
+              {editingTMACost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={tmaCost}
+                  autoFocus
+                  onChange={e => setTMACost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('TMA', 'cost', parseFloat(tmaCost) || 0);
+                    setEditingTMACost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('TMA', 'cost', parseFloat(tmaCost) || 0);
+                      setEditingTMACost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left px-1 py-0.5"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingTMACost(true)}
+                >${flagging?.TMA.cost || 0}</span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
