@@ -5,7 +5,7 @@ import QuoteFormProvider from "@/app/quotes/create/QuoteFormProvider";
 import SignFormContent from "./SignOrderContent";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 
-export default async function CreateQuotePage() {
+export default async function NewSignOrderPage() {
     return (
         <SidebarProvider
             style={
@@ -17,7 +17,9 @@ export default async function CreateQuotePage() {
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
-                <SiteHeader />
+                <SiteHeader>
+                    <h1 className="text-3xl font-bold mt-2 ml-0">New Sign Order</h1>
+                </SiteHeader>
                     <EstimateProvider>
                         <SignFormContent />
                     </EstimateProvider>

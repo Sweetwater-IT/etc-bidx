@@ -81,9 +81,6 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                   {/* Left section - Revenue summaries */}
                   <div className="flex flex-col flex-1 space-y-2 min-w-0">
                     <RevenueAndProfitSummary />
-                    <FlaggingRevenueAndProfit />
-                    <RentalRevenueAndProfit />
-                    <SaleItemsRevenueAndProfit />
                   </div>
                   
                   {/* Right section - Labor, Sign summaries, and SaleItemsSummary */}

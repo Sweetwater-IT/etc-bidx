@@ -14,12 +14,15 @@ import {
   calculateTruckAndFuelCostSummary,
   getAllTotals
 } from '@/lib/mptRentalHelperFunctions'
+import FlaggingRevenueAndProfit from './FlaggingRevenueAndProfit'
+import RentalRevenueAndProfit from './RentalRevenueAndProfit'
+import SaleItemsRevenueAndProfit from './SaleItemsRevenueAndProfit'
 
 interface BasicSummaryTotals {
-    totalCost: number;
-    totalRevenue: number;
-    totalGrossProfit: number;
-    grossProfitMargin: number;
+  totalCost: number;
+  totalRevenue: number;
+  totalGrossProfit: number;
+  grossProfitMargin: number;
 }
 
 const RevenueAndProfitSummary = () => {
@@ -143,8 +146,8 @@ const RevenueAndProfitSummary = () => {
   }, [mptRentalStats, lightAndDrumRentalStats, totalSignCostStats, totalRatedLaborStats, totalTruckAndFuelStats, allTotals])
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString('en-US', { 
-      style: 'currency', 
+    return value.toLocaleString('en-US', {
+      style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -157,115 +160,118 @@ const RevenueAndProfitSummary = () => {
 
   return (
     <div className='border rounded-md p-2 mb-2'>
-        <h3 className="text-lg font-medium mb-4 ml-2">Revenue and Profit Summary</h3>
-        {/* Grid Header */}
-        <div className="grid grid-cols-5 mb-2">
-          <div className="px-3 pb-2 font-medium">
-            <span className="border-b border-dotted border-gray-400 cursor-help">MPT</span>
-          </div>
-          <div className="px-3 pb-2 font-medium">
+      <h3 className="text-lg font-medium mb-4 ml-2">Revenue and Profit Summary</h3>
+      {/* Grid Header */}
+      <div className="grid grid-cols-5 mb-2">
+        <div className="px-3 pb-2 font-medium">
+          <span className="border-b border-dotted border-gray-400 cursor-help">MPT</span>
+        </div>
+        <div className="px-3 pb-2 font-medium">
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="border-b border-dotted border-gray-400 cursor-help">Revenue</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Revenue = (Number of Items × Daily Rate × Project Days)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="pb-2 font-medium">
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="border-b border-dotted border-gray-400 cursor-help">Cost</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Cost = (Depreciation Cost + Maintenance Cost + Setup/Takedown Cost)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="pb-2 font-medium">
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="border-b border-dotted border-gray-400 text-left cursor-help">Gross Profit</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Gross Profit = (Revenue - Cost)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="pb-2 font-medium">
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="border-b border-dotted border-gray-400 cursor-help">Gross Margin</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Margin = (Gross Profit ÷ Revenue) × 100%</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Grid Rows */}
+      {data.map((row, index) => (
+        <div
+          key={index}
+          className={`grid grid-cols-5 border-t border-gray-200 ${index === data.length - 1 ? 'bg-green-50' : ''}`}
+        >
+          <div className="px-3 py-1 text-sm">{row.mptRevenueAndGP}</div>
+          <div className="px-3 py-1 text-sm">
             <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">Revenue</span>
+              <TooltipTrigger className="cursor-help">
+                {formatCurrency(row.revenue)}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Revenue = (Number of Items × Daily Rate × Project Days)</p>
+                {row.mptRevenueAndGP === 'MPT' ? <p>MPT Revenue = Sum of all MPT equipment daily rates × project days</p> : null}
+                {row.mptRevenueAndGP === 'Rental' ? <p>Rental Revenue = Sum of all rental equipment daily rates × project days</p> : null}
+                {row.mptRevenueAndGP === 'Perm. Signs' ? <p>Permanent Signs Revenue = Sum of all permanent sign costs</p> : null}
+                {row.mptRevenueAndGP === 'Flagging' ? <p>Flagging Revenue = Labor rate × flagging hours</p> : null}
+                {row.mptRevenueAndGP === 'Sale' ? <p>Sale Revenue = Sum of all sale item costs</p> : null}
+                {row.mptRevenueAndGP === 'Total' ? <p>Total Revenue = Sum of all revenue categories</p> : null}
+                {!['MPT', 'Rental', 'Perm. Signs', 'Flagging', 'Sale', 'Total'].includes(row.mptRevenueAndGP) && <p>Revenue for {row.mptRevenueAndGP} = {formatCurrency(row.revenue)}</p>}
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="pb-2 font-medium">
+          <div className="py-1 text-sm">
             <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">Cost</span>
+              <TooltipTrigger className="cursor-help">
+                {formatCurrency(row.cost)}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Cost = (Depreciation Cost + Maintenance Cost + Setup/Takedown Cost)</p>
+                {row.mptRevenueAndGP === 'MPT' ? <p>MPT Cost = Sum of all MPT equipment costs (depreciation + maintenance)</p> : null}
+                {row.mptRevenueAndGP === 'Rental' ? <p>Rental Cost = Sum of all rental equipment costs</p> : null}
+                {row.mptRevenueAndGP === 'Perm. Signs' ? <p>Permanent Signs Cost = Sum of material and labor costs</p> : null}
+                {row.mptRevenueAndGP === 'Flagging' ? <p>Flagging Cost = Labor cost × flagging hours</p> : null}
+                {row.mptRevenueAndGP === 'Sale' ? <p>Sale Cost = Sum of all sale item costs</p> : null}
+                {row.mptRevenueAndGP === 'Total' ? <p>Total Cost = Sum of all cost categories</p> : null}
+                {!['MPT', 'Rental', 'Perm. Signs', 'Flagging', 'Sale', 'Total'].includes(row.mptRevenueAndGP) && <p>Cost for {row.mptRevenueAndGP} = {formatCurrency(row.cost)}</p>}
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="pb-2 font-medium">
+          <div className="py-1 text-sm">
             <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 text-left cursor-help">Gross Profit</span>
+              <TooltipTrigger className="cursor-help">
+                {formatCurrency(row.grossProfit ?? 0)}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Gross Profit = (Revenue - Cost)</p>
+                <p>Gross Profit = Revenue - Cost = {formatCurrency(row.grossProfit ?? 0)}</p>
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="pb-2 font-medium">
+          <div className="py-1 text-sm">
             <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">Gross Margin</span>
+              <TooltipTrigger className="cursor-help">
+                {formatPercentage(row.grossMargin)}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Margin = (Gross Profit ÷ Revenue) × 100%</p>
+                <p>Gross Margin = (Gross Profit ÷ Revenue) × 100% = {formatPercentage(row.grossMargin)}</p>
               </TooltipContent>
             </Tooltip>
           </div>
         </div>
-
-        {/* Grid Rows */}
-        {data.map((row, index) => (
-          <div 
-            key={index} 
-            className={`grid grid-cols-5 border-t border-gray-200 ${index === data.length - 1 ? 'bg-green-50' : ''}`}
-          >
-            <div className="px-3 py-1 text-sm">{row.mptRevenueAndGP}</div>
-            <div className="px-3 py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
-                  {formatCurrency(row.revenue)}
-                </TooltipTrigger>
-                <TooltipContent>
-                  {row.mptRevenueAndGP === 'MPT' ? <p>MPT Revenue = Sum of all MPT equipment daily rates × project days</p> : null}
-                  {row.mptRevenueAndGP === 'Rental' ? <p>Rental Revenue = Sum of all rental equipment daily rates × project days</p> : null}
-                  {row.mptRevenueAndGP === 'Perm. Signs' ? <p>Permanent Signs Revenue = Sum of all permanent sign costs</p> : null}
-                  {row.mptRevenueAndGP === 'Flagging' ? <p>Flagging Revenue = Labor rate × flagging hours</p> : null}
-                  {row.mptRevenueAndGP === 'Sale' ? <p>Sale Revenue = Sum of all sale item costs</p> : null}
-                  {row.mptRevenueAndGP === 'Total' ? <p>Total Revenue = Sum of all revenue categories</p> : null}
-                  {!['MPT', 'Rental', 'Perm. Signs', 'Flagging', 'Sale', 'Total'].includes(row.mptRevenueAndGP) && <p>Revenue for {row.mptRevenueAndGP} = {formatCurrency(row.revenue)}</p>}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
-                  {formatCurrency(row.cost)}
-                </TooltipTrigger>
-                <TooltipContent>
-                  {row.mptRevenueAndGP === 'MPT' ? <p>MPT Cost = Sum of all MPT equipment costs (depreciation + maintenance)</p> : null}
-                  {row.mptRevenueAndGP === 'Rental' ? <p>Rental Cost = Sum of all rental equipment costs</p> : null}
-                  {row.mptRevenueAndGP === 'Perm. Signs' ? <p>Permanent Signs Cost = Sum of material and labor costs</p> : null}
-                  {row.mptRevenueAndGP === 'Flagging' ? <p>Flagging Cost = Labor cost × flagging hours</p> : null}
-                  {row.mptRevenueAndGP === 'Sale' ? <p>Sale Cost = Sum of all sale item costs</p> : null}
-                  {row.mptRevenueAndGP === 'Total' ? <p>Total Cost = Sum of all cost categories</p> : null}
-                  {!['MPT', 'Rental', 'Perm. Signs', 'Flagging', 'Sale', 'Total'].includes(row.mptRevenueAndGP) && <p>Cost for {row.mptRevenueAndGP} = {formatCurrency(row.cost)}</p>}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
-                  {formatCurrency(row.grossProfit ?? 0)}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Gross Profit = Revenue - Cost = {formatCurrency(row.grossProfit ?? 0)}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
-                  {formatPercentage(row.grossMargin)}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Gross Margin = (Gross Profit ÷ Revenue) × 100% = {formatPercentage(row.grossMargin)}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        ))}
+      ))}
+      <FlaggingRevenueAndProfit />
+      <RentalRevenueAndProfit />
+      <SaleItemsRevenueAndProfit />
     </div>
   )
 }

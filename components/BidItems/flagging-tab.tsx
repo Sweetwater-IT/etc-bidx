@@ -277,7 +277,7 @@ const FlaggingServicesTab = () => {
                 </div>
               </div>
               
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="rate-type" className="text-base whitespace-nowrap">Rate Type</Label>
                 <div className="w-40">
                   <Select
@@ -303,10 +303,9 @@ const FlaggingServicesTab = () => {
                 </div>
               </div>
               
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="gas-cost" className="text-base">Gas Cost Per Gallon ($)</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
                     id="gas-cost"
                     type="number"
@@ -316,56 +315,57 @@ const FlaggingServicesTab = () => {
                     onChange={(e) => handleInputChange('fuelCostPerGallon', parseFloat(e.target.value) || 0)}
                     disabled={!editable || flagging?.standardPricing}
                     aria-disabled={!editable || flagging?.standardPricing}
-                    className="w-40 text-right"
+                    placeholder="$ 0.00"
+                    className="w-40 text-left"
                   />
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-rate" className="text-base">Flagging Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-rate"
                     value={adminData.county?.flaggingRate || ""}
                     disabled
-                    className="w-40 text-right"
+                    placeholder="$ 0.00"
+                    className="w-40 text-left"
                   />
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-base-rate" className="text-base">Flagging Base Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-base-rate"
                     type="number"
                     min={0}
+                    placeholder="$ 0.00"
                     step={0.01}
                     value={adminData.county?.flaggingBaseRate || ""}
                     onChange={(e) => handleCountyRateChange('flaggingBaseRate', parseFloat(e.target.value) || 0)}
                     disabled={!editable || flagging?.standardPricing}
                     aria-disabled={!editable || flagging?.standardPricing}
-                    className="w-40 text-right"
+                    className="w-40 text-left"
                   />
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-fringe-rate" className="text-base">Flagging Fringe Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-fringe-rate"
                     type="number"
+                    placeholder="$ 0.00"
                     min={0}
                     step={0.01}
                     value={adminData.county?.flaggingFringeRate || ""}
                     onChange={(e) => handleCountyRateChange('flaggingFringeRate', parseFloat(e.target.value) || 0)}
                     disabled={!editable || flagging?.standardPricing}
                     aria-disabled={!editable || flagging?.standardPricing}
-                    className="w-40 text-right"
+                    className="w-40 text-left"
                   />
                 </div>
               </div>
@@ -560,12 +560,7 @@ const FlaggingServicesTab = () => {
         <h3 className="text-lg font-medium mb-3 text-left">Cost Summary</h3>
         <div className="space-y-4">
           <div className="flex flex-col space-y-1">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="on-site-hours" className="text-base">On Site Job Hours</Label>
-              <span className="text-sm text-muted-foreground">
-                ${flaggingCostSummary && flaggingCostSummary.onSiteJobHoursCost ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </span>
-            </div>
+            <Label htmlFor="on-site-hours" className="text-base">On Site Job Hours</Label>
             <Input
               id="on-site-hours"
               type="number"
@@ -576,15 +571,13 @@ const FlaggingServicesTab = () => {
               aria-disabled={!editable || flagging?.standardPricing}
               className="w-40 text-right"
             />
+            <span className="text-sm text-muted-foreground">
+              ${flaggingCostSummary && flaggingCostSummary.onSiteJobHoursCost ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
           </div>
           
           <div className="flex flex-col space-y-1">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="travel-time" className="text-base">Round Trip Travel Time Hours</Label>
-              <span className="text-sm text-muted-foreground">
-                ${flaggingCostSummary && flaggingCostSummary.rtTravelTimeHoursCost ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              </span>
-            </div>
+            <Label htmlFor="travel-time" className="text-base">Round Trip Travel Time Hours</Label>
             <Input
               id="travel-time"
               type="number"
@@ -593,33 +586,36 @@ const FlaggingServicesTab = () => {
               readOnly
               className="w-40 text-right"
             />
+            <span className="text-sm text-muted-foreground">
+              ${flaggingCostSummary && flaggingCostSummary.rtTravelTimeHoursCost ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+            </span>
           </div>
           
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col space-y-1">
             <Label className="text-base">Over Time Hours</Label>
             <span>{getOvertimeHours()}</span>
           </div>
           
-          <div className="flex justify-between items-center pt-3 border-t">
+          <div className="flex flex-col space-y-1 pt-3 border-t">
             <Label className="text-base font-medium">Total Hours</Label>
             <span className="font-medium">{getTotalHours()}</span>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span className="text-base font-medium">Total Labor Cost</span>
+          <div className="flex flex-col space-y-1">
+            <Label className="text-base font-medium">Total Labor Cost</Label>
             <span className="font-medium">
               ${flaggingCostSummary && flaggingCostSummary.totalLaborCost ? flaggingCostSummary.totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
             </span>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span className="text-base font-medium">Truck and Fuel Cost</span>
+          <div className="flex flex-col space-y-1">
+            <Label className="text-base font-medium">Truck and Fuel Cost</Label>
             <span className="font-medium">
               ${flaggingCostSummary && flaggingCostSummary.totalFuelCost ? flaggingCostSummary.totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
             </span>
           </div>
           
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col space-y-1">
             <Label htmlFor="additional-costs" className="text-base font-medium">Additional Costs</Label>
             <Input
               id="additional-costs"
@@ -634,22 +630,22 @@ const FlaggingServicesTab = () => {
             />
           </div>
           
-          <div className="flex justify-between items-center pt-3 border-t">
-            <span className="text-base font-bold">Total Cost</span>
+          <div className="flex flex-col space-y-1 pt-3 border-t">
+            <Label className="text-base font-bold">Total Cost</Label>
             <span className="font-bold">
               ${flaggingCostSummary && flaggingCostSummary.totalFlaggingCost ? flaggingCostSummary.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
             </span>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span className="text-base font-medium">Total Cost Per Hour</span>
+          <div className="flex flex-col space-y-1">
+            <Label className="text-base font-medium">Total Cost Per Hour</Label>
             <span className="font-medium">
               ${flaggingCostSummary && flaggingCostSummary.totalCostPerHour ? flaggingCostSummary.totalCostPerHour.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
             </span>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span className="text-base">Total Equipment Revenue</span>
+          <div className="flex flex-col space-y-1">
+            <Label className="text-base">Total Equipment Revenue</Label>
             <span>
               ${displayEquipCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>

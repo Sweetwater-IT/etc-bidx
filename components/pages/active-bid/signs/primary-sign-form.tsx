@@ -2,11 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import {
-  PrimarySign,
-  SheetingType,
-  EquipmentType
-} from "@/types/MPTEquipment";
+import { PrimarySign, SheetingType, EquipmentType } from "@/types/MPTEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { processSignData } from "./process-sign-data";
 import { Checkbox } from "@/components/ui/checkbox";
+import Image from "next/image";
+
 // Type definitions for processed sign data
 interface SignDesignation {
   designation: string;
@@ -53,22 +51,34 @@ interface PrimarySignFormProps {
   sign: PrimarySign;
   currentPhase: number;
   setIsConfiguring: React.Dispatch<React.SetStateAction<boolean>>;
-  isTakeoff?: boolean
+  isTakeoff?: boolean;
 }
 
 const PrimarySignForm = ({
   sign,
   currentPhase,
   setIsConfiguring,
-  isTakeoff
+  isTakeoff,
 }: PrimarySignFormProps) => {
   const { dispatch } = useEstimate();
   const [localSign, setLocalSign] = useState<PrimarySign>({ ...sign });
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
-  const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
+  const [filteredDesignations, setFilteredDesignations] = useState<
+    SignDesignation[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [isCustom, setIsCustom] = useState(sign.isCustom || false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Handler para upload de imagem
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
 
   // Fetch all sign designations and dimensions at once
   useEffect(() => {
@@ -124,10 +134,7 @@ const PrimarySignForm = ({
     }
   };
 
-  const handleSignUpdate = (
-    field: keyof PrimarySign,
-    value: any
-  ) => {
+  const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
     const updatedSign = { ...localSign, [field]: value };
     setLocalSign(updatedSign);
 
@@ -155,8 +162,8 @@ const PrimarySignForm = ({
           phaseNumber: currentPhase,
           equipmentType: oldStructure as EquipmentType,
           equipmentProperty: "quantity",
-          value: 0 // Remove old structure
-        }
+          value: 0, // Remove old structure
+        },
       });
     }
 
@@ -167,8 +174,8 @@ const PrimarySignForm = ({
           phaseNumber: currentPhase,
           equipmentType: newStructure as EquipmentType,
           equipmentProperty: "quantity",
-          value: localSign.quantity // Set quantity to match the sign
-        }
+          value: localSign.quantity, // Set quantity to match the sign
+        },
       });
     }
   };
@@ -180,8 +187,8 @@ const PrimarySignForm = ({
         phaseNumber: currentPhase,
         equipmentType: "BLights" as EquipmentType,
         equipmentProperty: "quantity",
-        value: newValue * localSign.quantity
-      }
+        value: newValue * localSign.quantity,
+      },
     });
   };
 
@@ -192,8 +199,8 @@ const PrimarySignForm = ({
         phaseNumber: currentPhase,
         equipmentType: "covers" as EquipmentType,
         equipmentProperty: "quantity",
-        value: newValue * localSign.quantity
-      }
+        value: newValue * localSign.quantity,
+      },
     });
   };
 
@@ -206,8 +213,8 @@ const PrimarySignForm = ({
           phaseNumber: currentPhase,
           equipmentType: localSign.associatedStructure as EquipmentType,
           equipmentProperty: "quantity",
-          value: newValue
-        }
+          value: newValue,
+        },
       });
     }
 
@@ -218,8 +225,8 @@ const PrimarySignForm = ({
           phaseNumber: currentPhase,
           equipmentType: "BLights" as EquipmentType,
           equipmentProperty: "quantity",
-          value: newValue * localSign.bLights
-        }
+          value: newValue * localSign.bLights,
+        },
       });
     }
 
@@ -230,8 +237,8 @@ const PrimarySignForm = ({
           phaseNumber: currentPhase,
           equipmentType: "covers" as EquipmentType,
           equipmentProperty: "quantity",
-          value: newValue * localSign.covers
-        }
+          value: newValue * localSign.covers,
+        },
       });
     }
   };
@@ -248,7 +255,7 @@ const PrimarySignForm = ({
           setLocalSign({
             ...localSign,
             width,
-            height
+            height,
           });
         }
       }
@@ -271,33 +278,33 @@ const PrimarySignForm = ({
     // Get default dimension from the selected designation
     const defaultDimension =
       selectedDesignation.dimensions &&
-        selectedDesignation.dimensions.length > 0
+      selectedDesignation.dimensions.length > 0
         ? selectedDesignation.dimensions[0]
         : { width: 0, height: 0 };
 
     // Update the local sign with designation-related fields
-    setLocalSign(prev => ({
+    setLocalSign((prev) => ({
       ...prev,
       designation: designationValue,
       width: defaultDimension.width,
       height: defaultDimension.height,
       sheeting: selectedDesignation.sheeting,
-      description: selectedDesignation.description
+      description: selectedDesignation.description,
     }));
   };
 
   const handleSignSave = () => {
     // Update the sign in the context using UPDATE_MPT_SIGN
     Object.entries(localSign).forEach(([key, value]) => {
-      if (key !== 'id') {
+      if (key !== "id") {
         dispatch({
           type: "UPDATE_MPT_SIGN",
           payload: {
             phase: currentPhase,
             signId: sign.id,
             key: key as keyof PrimarySign,
-            value
-          }
+            value,
+          },
         });
       }
     });
@@ -335,20 +342,19 @@ const PrimarySignForm = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-2">
-        <Switch
-          id="custom-sign"
-          checked={isCustom}
-          onCheckedChange={(checked) => {
-            setIsCustom(checked);
-            handleSignUpdate("isCustom", checked);
-          }}
-        />
-        <Label htmlFor="custom-sign">Custom Sign</Label>
-      </div>
-
-      <div className="w-full flex gap-0">
-        <div className="flex-1/2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <Switch
+              id="custom-sign"
+              checked={isCustom}
+              onCheckedChange={(checked) => {
+                setIsCustom(checked);
+                handleSignUpdate("isCustom", checked);
+              }}
+            />
+            <Label htmlFor="custom-sign">Custom Sign</Label>
+          </div>
           <Label className="text-base font-semibold mb-2.5 block">
             Designation
           </Label>
@@ -399,16 +405,16 @@ const PrimarySignForm = ({
                     placeholder="Search designation..."
                     onValueChange={filterDesignations}
                   />
-                  <CommandEmpty>
-                    No designation found.
-                  </CommandEmpty>
+                  <CommandEmpty>No designation found.</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
                       {filteredDesignations.map((item) => (
                         <CommandItem
                           key={item.designation}
                           value={item.designation}
-                          onSelect={() => handleDesignationSelect(item.designation)}
+                          onSelect={() =>
+                            handleDesignationSelect(item.designation)
+                          }
                         >
                           <div className="flex items-center w-full">
                             <Check
@@ -439,53 +445,96 @@ const PrimarySignForm = ({
             </Popover>
           )}
         </div>
-        {isTakeoff && <div className="flex-1/2">
+        <label
+          className="w-24 h-24 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer bg-gray-50 group shrink-0"
+          title="Upload image"
+        >
+          <input
+            type="file"
+            className="hidden"
+            tabIndex={-1}
+            accept="image/*"
+            onChange={handleImageChange}
+          />
+          {imagePreview ? (
+            <Image
+              src={imagePreview}
+              alt="Preview"
+              className="w-full h-full object-cover rounded"
+              width={80}
+              height={80}
+            />
+          ) : (
+            <>
+              <Image
+                src="/image_placeholder.svg"
+                alt="No image"
+                width={40}
+                height={40}
+                className="w-10 h-10 opacity-80 group-hover:opacity-100"
+              />
+              <span className="text-xs text-gray-500">Upload</span>
+            </>
+          )}
+        </label>
+      </div>
+
+      {isTakeoff && (
+        <div className="flex-1/2">
           <Label className="text-base font-semibold mb-2.5 block">
             Substrate
           </Label>
-          <Select value={sign.substrate}
-            onValueChange={(value) => dispatch({ type: 'UPDATE_MPT_SIGN', payload: { signId: sign.id, key: 'substrate', phase: currentPhase, value } })}>
+          <Select
+            value={sign.substrate}
+            onValueChange={(value) =>
+              dispatch({
+                type: "UPDATE_MPT_SIGN",
+                payload: {
+                  signId: sign.id,
+                  key: "substrate",
+                  phase: currentPhase,
+                  value,
+                },
+              })
+            }
+          >
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Select substrate" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='aluminum'>Aluminum</SelectItem>
-              <SelectItem value='aluminum-composite'>Aluminum Composite</SelectItem>
-              <SelectItem value='plastic'>Plastic</SelectItem>
+              <SelectItem value="aluminum">Aluminum</SelectItem>
+              <SelectItem value="aluminum-composite">
+                Aluminum Composite
+              </SelectItem>
+              <SelectItem value="plastic">Plastic</SelectItem>
             </SelectContent>
           </Select>
-        </div>}
-      </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         {isCustom ? (
           <>
             <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">
-                Width
-              </Label>
+              <Label className="text-sm font-medium mb-2 block">Width</Label>
               <Input
                 type="number"
                 value={localSign.width || ""}
-                onChange={(e) => handleSignUpdate(
-                  "width",
-                  parseFloat(e.target.value) || 0
-                )}
+                onChange={(e) =>
+                  handleSignUpdate("width", parseFloat(e.target.value) || 0)
+                }
                 min={0}
                 step="0.1"
               />
             </div>
             <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">
-                Height
-              </Label>
+              <Label className="text-sm font-medium mb-2 block">Height</Label>
               <Input
                 type="number"
                 value={localSign.height || ""}
-                onChange={(e) => handleSignUpdate(
-                  "height",
-                  parseFloat(e.target.value) || 0
-                )}
+                onChange={(e) =>
+                  handleSignUpdate("height", parseFloat(e.target.value) || 0)
+                }
                 min={0}
                 step="0.1"
               />
@@ -493,9 +542,7 @@ const PrimarySignForm = ({
           </>
         ) : (
           <div className="flex-2">
-            <Label className="text-sm font-medium mb-2 block">
-              Dimensions
-            </Label>
+            <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
             <Select
               value={
                 localSign.width && localSign.height
@@ -509,10 +556,7 @@ const PrimarySignForm = ({
               </SelectTrigger>
               <SelectContent>
                 {getAvailableDimensions().map((dim, index) => (
-                  <SelectItem
-                    key={index}
-                    value={`${dim.width}x${dim.height}`}
-                  >
+                  <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
                     {dim.width} x {dim.height}
                   </SelectItem>
                 ))}
@@ -522,14 +566,10 @@ const PrimarySignForm = ({
         )}
 
         <div className="flex-2">
-          <Label className="text-sm font-medium mb-2 block">
-            Sheeting
-          </Label>
+          <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
           <Select
             value={localSign.sheeting || "HI"}
-            onValueChange={(value) =>
-              handleSignUpdate("sheeting", value)
-            }
+            onValueChange={(value) => handleSignUpdate("sheeting", value)}
             disabled={!localSign.isCustom}
           >
             <SelectTrigger className="w-full">
@@ -544,17 +584,12 @@ const PrimarySignForm = ({
         </div>
 
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">
-            Quantity
-          </Label>
+          <Label className="text-sm font-medium mb-2 block">Quantity</Label>
           <Input
             type="number"
             value={localSign.quantity || ""}
             onChange={(e) =>
-              handleSignUpdate(
-                "quantity",
-                parseInt(e.target.value) || 0
-              )
+              handleSignUpdate("quantity", parseInt(e.target.value) || 0)
             }
             min={0}
             className="w-full"
@@ -564,9 +599,7 @@ const PrimarySignForm = ({
 
       <div className="flex items-center gap-4">
         <div className="flex-2">
-          <Label className="text-sm font-medium mb-2 block">
-            Structure
-          </Label>
+          <Label className="text-sm font-medium mb-2 block">Structure</Label>
           <Select
             value={localSign.associatedStructure || "none"}
             onValueChange={(value) =>
@@ -580,11 +613,17 @@ const PrimarySignForm = ({
               <SelectItem value="fourFootTypeIII">
                 {`4'`} T-III RIGHT
               </SelectItem>
-              <SelectItem value="fourFootTypeIII">
-                {`4'`} T-III LEFT
-              </SelectItem>
-              {isTakeoff && <SelectItem value='sixFootTypeIII'>{`6'`} T-III RIGHT</SelectItem>}
-              {isTakeoff && <SelectItem value='sixFootTypeIII'>{`6'`} T-III LEFT</SelectItem>}
+              <SelectItem value="fourFootTypeIII">{`4'`} T-III LEFT</SelectItem>
+              {isTakeoff && (
+                <SelectItem value="sixFootTypeIII">
+                  {`6'`} T-III RIGHT
+                </SelectItem>
+              )}
+              {isTakeoff && (
+                <SelectItem value="sixFootTypeIII">
+                  {`6'`} T-III LEFT
+                </SelectItem>
+              )}
               <SelectItem value="hStand">H-FOOT</SelectItem>
               <SelectItem value="none">LOOSE</SelectItem>
               <SelectItem value="post">POST</SelectItem>
@@ -600,83 +639,83 @@ const PrimarySignForm = ({
             type="number"
             value={localSign.bLights || ""}
             onChange={(e) =>
-              handleSignUpdate(
-                "bLights",
-                parseInt(e.target.value) || 0
-              )
+              handleSignUpdate("bLights", parseInt(e.target.value) || 0)
             }
             min={0}
             className="w-full"
           />
         </div>
 
-        {isTakeoff && localSign.bLights > 0 && <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">
-            Color
-          </Label>
-          <Select>
-            <SelectTrigger>
-              <SelectValue placeholder='Choose color' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='red'>Red</SelectItem>
-              <SelectItem value='yellow'>Yellow</SelectItem>
-              <SelectItem value='white'>White</SelectItem>
-            </SelectContent>
-          </Select></div>}
+        {isTakeoff && localSign.bLights > 0 && (
+          <div className="flex-1">
+            <Label className="text-sm font-medium mb-2 block">Color</Label>
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose color" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="red">Red</SelectItem>
+                <SelectItem value="yellow">Yellow</SelectItem>
+                <SelectItem value="white">White</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-        {isTakeoff ?
+        {isTakeoff ? (
           <div className="flex-1">
             <div className="flex gap-x-2 items-center">
               <Checkbox
-                onCheckedChange={(checked) => checked ? handleCoversChange(1) : handleCoversChange(0)}
+                onCheckedChange={(checked) =>
+                  checked ? handleCoversChange(1) : handleCoversChange(0)
+                }
                 checked={localSign.covers > 0}
-                id='cover-checkbox'
+                id="cover-checkbox"
               />
-              <Label htmlFor='cover-checkbox' className="text-sm font-medium block">
+              <Label
+                htmlFor="cover-checkbox"
+                className="text-sm font-medium block"
+              >
                 Include cover
               </Label>
             </div>
             <div className="flex gap-x-2 items-center">
               <Checkbox
-                onCheckedChange={(checked) => checked ? console.log('hi') : console.log('hi')}
+                onCheckedChange={(checked) =>
+                  checked ? console.log("hi") : console.log("hi")
+                }
                 // checked={}
-                id='stiffener-checkbox'
+                id="stiffener-checkbox"
               />
-              <Label htmlFor="stiffener-checkbox" className="text-sm font-medium block">
+              <Label
+                htmlFor="stiffener-checkbox"
+                className="text-sm font-medium block"
+              >
                 Include stiffener
               </Label>
             </div>
           </div>
-          : <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">
-              Covers
-            </Label>
+        ) : (
+          <div className="flex-1">
+            <Label className="text-sm font-medium mb-2 block">Covers</Label>
             <Input
               type="number"
               value={localSign.covers || ""}
               onChange={(e) =>
-                handleSignUpdate(
-                  "covers",
-                  parseInt(e.target.value) || 0
-                )
+                handleSignUpdate("covers", parseInt(e.target.value) || 0)
               }
               min={0}
               className="w-full"
             />
-          </div>}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end space-x-3 pt-2">
-        <Button
-          variant="outline"
-          onClick={handleCancel}
-        >
+        <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
-        <Button onClick={handleSignSave}>
-          Save Sign
-        </Button>
+        <Button onClick={handleSignSave}>Save Sign</Button>
       </div>
     </div>
   );
