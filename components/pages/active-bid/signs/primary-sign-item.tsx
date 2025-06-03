@@ -12,6 +12,7 @@ import { Trash2 } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { generateUniqueId } from "./generate-stable-id";
 import "./no-spinner.css";
+import Image from "next/image";
 
 interface PrimarySignItemProps {
   primarySign: PrimarySign;
@@ -28,6 +29,17 @@ const PrimarySignItem = ({
 }: PrimarySignItemProps) => {
   const { dispatch, mptRental } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(true);
+  // Local image preview state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Handle image selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
 
   const handleEditSign = () => {
     setIsConfiguring(true);
@@ -124,85 +136,102 @@ const PrimarySignItem = ({
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
       {isConfiguring ? (
-        <PrimarySignForm
-          sign={primarySign}
-          currentPhase={currentPhase}
-          setIsConfiguring={setIsConfiguring}
-          isTakeoff={isTakeoff}
-        />
+        // Edit mode: input de upload, mostrar preview se imagePreview existir
+        <>
+          <PrimarySignForm
+            sign={primarySign}
+            currentPhase={currentPhase}
+            setIsConfiguring={setIsConfiguring}
+            isTakeoff={isTakeoff}
+          />
+        </>
       ) : (
         <div className="flex justify-between items-center">
-          <div className="w-full">
-            <div className="font-medium">
-              {primarySign.designation}{" "}
-              {primarySign.description && `- ${primarySign.description}`}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {primarySign.width}x{primarySign.height} • B Lights:{" "}
-              {primarySign.bLights} • Covers: {primarySign.covers}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                Qty:
-              </span>
-              <div className="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent "
-                  onClick={() => {
-                    const value = Math.max(1, primarySign.quantity - 1);
-                    dispatch({
-                      type: "UPDATE_MPT_SIGN",
-                      payload: {
-                        phase: currentPhase,
-                        signId: primarySign.id,
-                        key: "quantity",
-                        value,
-                      },
-                    });
-                  }}
-                  aria-label="Diminuir quantidade"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  value={primarySign.quantity}
-                  onChange={(e) => {
-                    const value = Math.max(1, Number(e.target.value));
-                    dispatch({
-                      type: "UPDATE_MPT_SIGN",
-                      payload: {
-                        phase: currentPhase,
-                        signId: primarySign.id,
-                        key: "quantity",
-                        value,
-                      },
-                    });
-                  }}
-                  className="no-spinner w-12 px-2 py-1 border rounded text-center bg-background !border-none"
-                  style={{ width: 48, height: 28 }}
+          <div className="w-full flex items-start gap-3">
+            {/* Miniatura quadrada na lista, só mostra se salvo */}
+            {imagePreview && (
+              <div className="w-20 h-20 flex items-center justify-center rounded bg-gray-50 overflow-hidden">
+                <Image
+                  src={imagePreview}
+                  alt="Preview"
+                  className="object-cover w-full h-full"
+                  width={48}
+                  height={48}
                 />
-                <button
-                  type="button"
-                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
-                  onClick={() => {
-                    const value = primarySign.quantity + 1;
-                    dispatch({
-                      type: "UPDATE_MPT_SIGN",
-                      payload: {
-                        phase: currentPhase,
-                        signId: primarySign.id,
-                        key: "quantity",
-                        value,
-                      },
-                    });
-                  }}
-                  aria-label="Aumentar quantidade"
-                >
-                  +
-                </button>
+              </div>
+            )}
+            <div>
+              <div className="font-medium">
+                {primarySign.designation}{" "}
+                {primarySign.description && `- ${primarySign.description}`}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {primarySign.width}x{primarySign.height} • B Lights:{" "}
+                {primarySign.bLights} • Covers: {primarySign.covers}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Qty:
+                </span>
+                <div className="inline-flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent "
+                    onClick={() => {
+                      const value = Math.max(1, primarySign.quantity - 1);
+                      dispatch({
+                        type: "UPDATE_MPT_SIGN",
+                        payload: {
+                          phase: currentPhase,
+                          signId: primarySign.id,
+                          key: "quantity",
+                          value,
+                        },
+                      });
+                    }}
+                    aria-label="Diminuir quantidade"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={primarySign.quantity}
+                    onChange={(e) => {
+                      const value = Math.max(1, Number(e.target.value));
+                      dispatch({
+                        type: "UPDATE_MPT_SIGN",
+                        payload: {
+                          phase: currentPhase,
+                          signId: primarySign.id,
+                          key: "quantity",
+                          value,
+                        },
+                      });
+                    }}
+                    className="no-spinner w-12 px-2 py-1 border rounded text-center bg-background !border-none"
+                    style={{ width: 48, height: 28 }}
+                  />
+                  <button
+                    type="button"
+                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                    onClick={() => {
+                      const value = primarySign.quantity + 1;
+                      dispatch({
+                        type: "UPDATE_MPT_SIGN",
+                        payload: {
+                          phase: currentPhase,
+                          signId: primarySign.id,
+                          key: "quantity",
+                          value,
+                        },
+                      });
+                    }}
+                    aria-label="Aumentar quantidade"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           </div>
