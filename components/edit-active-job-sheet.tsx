@@ -151,12 +151,14 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
-        <SheetHeader className="p-6 pb-0">
-          <SheetTitle>Edit Job: {job?.jobNumber}</SheetTitle>
-        </SheetHeader>
-        <Separator className='w-full -mt-2' />
+        <div className="flex flex-col gap-2 relative z-10 bg-background">
+          <SheetHeader className="p-6 pb-4">
+            <SheetTitle>Edit Job: {job?.jobNumber}</SheetTitle>
+          </SheetHeader>
+          <Separator className='w-full -mt-2' />
+        </div>
 
-        <div className="flex flex-col overflow-y-auto -mt-4">
+        <div className="flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

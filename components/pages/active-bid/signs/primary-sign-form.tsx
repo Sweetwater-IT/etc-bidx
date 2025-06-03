@@ -341,7 +341,7 @@ const PrimarySignForm = ({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-full">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -478,6 +478,7 @@ const PrimarySignForm = ({
           )}
         </label>
       </div>
+      
 
       {isTakeoff && (
         <div className="flex-1/2">
@@ -710,8 +711,7 @@ const PrimarySignForm = ({
           </div>
         )}
       </div>
-
-      <div className="flex justify-end space-x-3 pt-2">
+      <div className="flex max-w-fit justify-start space-x-3">
         <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>

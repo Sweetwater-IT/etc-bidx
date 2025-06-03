@@ -1438,12 +1438,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveBids}
                                     onDeleteSelected={initiateDeleteBids}
                                     tableRef={activeBidsTableRef}
-                                    // onViewDetails={(item) => {
-                                    //     if(!selectedActiveBid) return;
-                                    //     const params = new URLSearchParams;
-                                    //     params.append('contractNumber', selectedActiveBid.originalContractNumber!);
-                                    //     router.push(`/active-bids?${params.toString()}`)
-                                    // }}
+                                    onViewDetails={(item) => {
+                                        // if ('lettingDate' in item) {
+                                        //     handleActiveBidViewDetails(item as ActiveBid);
+                                        // }
+                                    }}
                                     onRowClick={(item) => {
                                         // if(!selectedActiveBid) return;
                                         const params = new URLSearchParams;
@@ -1458,12 +1457,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     //         handleActiveBidEdit(item as ActiveBid);
                                     //     }
                                     // }}
-                                    // onUpdateStatus={(item, status) => {
-                                    //     if ('lettingDate' in item) {
-                                    //         const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
-                                    //         handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
-                                    //     }
-                                    // }}
+                                    onUpdateStatus={(item, status) => {
+                                        if ('lettingDate' in item) {
+                                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
+                                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                                        }
+                                    }}
                                     // Pagination props
                                     pageCount={activeBidsPageCount}
                                     pageIndex={activeBidsPageIndex}

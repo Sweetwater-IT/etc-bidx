@@ -15,6 +15,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { safeNumber } from "@/lib/safe-number";
 
 const step: Step = {
     id: "step-2",
@@ -25,6 +26,7 @@ const step: Step = {
 
 // Calculate days between dates (abstracted function)
 const calculateDays = (start: Date, end: Date): number => {
+    console.log('running calculated days with start date:', start, end)
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Include both start and end date
     return diffDays;
@@ -51,8 +53,8 @@ const PhaseInfoStep2 = ({
             payload: { key: name, value, phase: currentPhase },
         });
 
-        if (mptRental.phases[currentPhase].startDate && mptRental.phases[currentPhase].endDate) {
-            const days = name === 'startDate' ? calculateDays(value, mptRental.phases[currentPhase].endDate) : 
+        if (mptRental.phases[currentPhase].startDate && (mptRental.phases[currentPhase].endDate || (name === 'endDate' && !!value))) {
+            const days = name === 'startDate' ? calculateDays(value, mptRental.phases[currentPhase].endDate!) : 
             calculateDays(mptRental.phases[currentPhase].startDate, value)
 
             dispatch({
@@ -75,7 +77,7 @@ const PhaseInfoStep2 = ({
     };
 
     const setEndDateFromDays = (days: number) => {
-        if (!mptRental.phases[currentPhase].startDate) return;
+        if (!mptRental.phases[currentPhase].startDate ) return;
 
         const startDate = mptRental.phases[currentPhase].startDate
         // Calculate new end date
@@ -231,7 +233,7 @@ const PhaseInfoStep2 = ({
                                             <div className="flex items-center gap-2">
                                                 <Input
                                                     className="w-20"
-                                                    onChange={(e) => setEndDateFromDays(parseInt(e.target.value))}
+                                                    onChange={(e) => setEndDateFromDays(safeNumber(parseInt(e.target.value)))}
                                                     placeholder="Days"
                                                     type="number"
                                                     min="1"
