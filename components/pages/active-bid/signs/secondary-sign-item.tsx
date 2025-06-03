@@ -19,7 +19,7 @@ const SecondarySignItem = ({
   currentPhase,
   isTakeoff = false
 }: SecondarySignItemProps) => {
-  const { dispatch } = useEstimate();
+  const { dispatch, editable } = useEstimate();
   const [isConfiguring, setIsConfiguring] = useState(true);
 
   const handleEditSign = () => {
@@ -63,6 +63,8 @@ const SecondarySignItem = ({
               variant="ghost"
               size="sm"
               onClick={handleEditSign}
+              disabled={!editable}
+              aria-disabled={!editable}
             >
               Edit
             </Button>
@@ -70,6 +72,8 @@ const SecondarySignItem = ({
               variant="ghost"
               size="sm"
               onClick={() => handleSignDelete(secondarySign.id)}
+              disabled={!editable}
+              aria-disabled={!editable}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

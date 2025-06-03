@@ -19,6 +19,7 @@ import MUTCDSignsStep3 from "./active-bid/steps/mutcd-signs-step3";
 import TripAndLaborStep4 from "./active-bid/steps/trip-and-labor-step4";
 import BidItemsStep5 from "./active-bid/steps/bid-items-step5";
 import StepperSaveButtons from "./active-bid/steps/stepper-save-buttons";
+import { useSidebar } from "../ui/sidebar";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   return (
@@ -45,7 +46,10 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
 const StepsMain = () => {
   const searchParams = useSearchParams();
   const initialStepParam = searchParams?.get("initialStep");
+  const tuckedSidebar = searchParams?.get('tuckSidebar')
+  const setFullscreen = searchParams?.get('fullscreen')
 
+  const { toggleSidebar } = useSidebar()
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
   const [currentStep, setCurrentStep] = useState(
@@ -64,6 +68,14 @@ const StepsMain = () => {
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
+
+  useEffect(() => {
+    if(tuckedSidebar && tuckedSidebar === 'true')
+    toggleSidebar();
+
+    if(setFullscreen && setFullscreen === 'true')
+    setIsFullscreen(true)
+  }, [tuckedSidebar, setFullscreen])
 
   return (
     <EstimateProvider>
@@ -103,7 +115,7 @@ const StepsMain = () => {
                 <div className="flex items-center gap-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="w-48">
+                      <div>
                         <StepperSaveButtons/>
                         {/* Reduced width for better proportions */}
                         <AddPhaseButton

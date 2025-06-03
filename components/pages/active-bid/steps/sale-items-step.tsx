@@ -10,7 +10,7 @@ import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
 
 const SaleItemsStep = () => {
-  const { saleItems, dispatch } = useEstimate();
+  const { saleItems, dispatch, editable } = useEstimate();
   const [isAddingItem, setIsAddingItem] = useState(saleItems.length === 0);
   const [newItemNumber, setNewItemNumber] = useState("");
   const [configuringItemNumber, setConfiguringItemNumber] = useState<string | null>(null);
@@ -240,6 +240,8 @@ const SaleItemsStep = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditItem(item.itemNumber)}
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     >
                       Edit
                     </Button>
@@ -247,6 +249,8 @@ const SaleItemsStep = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleItemDelete(item.itemNumber)}
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -273,6 +277,8 @@ const SaleItemsStep = () => {
                   }
                 }}
                 placeholder="Enter item number"
+                disabled={!editable}
+                aria-disabled={!editable}
               />
               <Button onClick={handleItemNumberSubmit}>Add</Button>
             </div>
@@ -284,6 +290,8 @@ const SaleItemsStep = () => {
             variant="outline"
             onClick={() => setIsAddingItem(true)}
             className="w-full mt-4"
+            disabled={!editable}
+            aria-disabled={!editable}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Another Item

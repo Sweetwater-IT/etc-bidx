@@ -6,7 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEstimate } from '@/contexts/EstimateContext';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
 import Link from 'next/link';
-import React, { useState } from 'react'
+import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react'
 
 const DEFAULT_TOTALS = {
     revenue: '',
@@ -17,14 +18,20 @@ const DEFAULT_TOTALS = {
 
 const StepperSaveButtons = () => {
 
-    const {equipmentRental, flagging} = useEstimate();
+    const {adminData, mptRental, equipmentRental, flagging, dispatch } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
 
-    const { adminData, mptRental } = useEstimate();
+    const searchParams = useSearchParams();
 
+    const defaultEditable = searchParams?.get('defaultEditable')
+
+    useEffect(() => {
+        if(defaultEditable && defaultEditable === 'false')
+        dispatch({ type: 'TOGGLE_EDITABLE'})
+    }, [defaultEditable])
 
     return (
         <>
@@ -42,7 +49,7 @@ const StepperSaveButtons = () => {
                 saleTotals={DEFAULT_TOTALS}
                 flaggingTotals={DEFAULT_TOTALS}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 mb-2">
                 {/* Worksheet Dropdown Button */}
                 <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                     <PopoverTrigger asChild>
@@ -77,8 +84,9 @@ const StepperSaveButtons = () => {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <Button onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                <Button><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
+                <Button className='p-4' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
+                <Button className='p-4'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
+                <Button className='p-4' onClick={() => dispatch({ type: 'TOGGLE_EDITABLE' })}>Edit</Button>
             </div>
         </>
     )

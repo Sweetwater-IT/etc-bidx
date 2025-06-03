@@ -106,7 +106,7 @@ const BidItemsStep5 = ({
   currentPhase: number;
   setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
+  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems, editable } = useEstimate();
   const [activeTab, setActiveTab] = useState("mpt");
   const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
   const [newCustomItem, setNewCustomItem] = useState<Omit<CustomLightAndDrumItem, 'id'>>({
@@ -660,6 +660,8 @@ const BidItemsStep5 = ({
                                   'quantity'
                                 )}
                                 className="w-full"
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                             <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
@@ -682,6 +684,8 @@ const BidItemsStep5 = ({
                           id="emergency-job"
                           checked={adminData?.emergencyJob || false}
                           onCheckedChange={handleEmergencyJobChange}
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                         <Label htmlFor="emergency-job">Emergency Job</Label>
                       </div>
@@ -704,6 +708,8 @@ const BidItemsStep5 = ({
                                 'quantity'
                               )}
                               className="w-full"
+                              disabled={!editable}
+                              aria-disabled={!editable}
                             />
                           </div>
                           <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
@@ -728,6 +734,8 @@ const BidItemsStep5 = ({
                                   }
                                 })}
                                 className="w-full"
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                           )}
@@ -751,6 +759,8 @@ const BidItemsStep5 = ({
                           value={itemName}
                           onChange={(e) => setItemName(e.target.value)}
                           placeholder="Enter item name"
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                       </div>
                       <div className="col-span-3">
@@ -762,6 +772,8 @@ const BidItemsStep5 = ({
                           value={newCustomItem.quantity || ''}
                           onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
                           placeholder=""
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                       </div>
                       <div className="col-span-3">
@@ -774,6 +786,8 @@ const BidItemsStep5 = ({
                           value={newCustomItem.cost || ''}
                           onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
                           placeholder=""
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                       </div>
                       <div className="col-span-3">
@@ -785,6 +799,8 @@ const BidItemsStep5 = ({
                           value={newCustomItem.usefulLife || ''}
                           onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
                           placeholder=""
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                       </div>
                     </div>
@@ -792,7 +808,8 @@ const BidItemsStep5 = ({
                     <Button
                       onClick={handleAddCustomItem}
                       className="mt-2"
-                      disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                      disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0 || !editable}
+                      aria-disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0 || !editable}
                     >
                       <Plus className="mr-2 h-4 w-4" /> Add Custom Item
                     </Button>
@@ -830,6 +847,8 @@ const BidItemsStep5 = ({
                                     value: parseFloat(e.target.value) || 0
                                   }
                                 })}
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                             <div className="col-span-3">
@@ -847,6 +866,8 @@ const BidItemsStep5 = ({
                                     value: parseFloat(e.target.value) || 0
                                   }
                                 })}
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                             <div className="col-span-2">
@@ -863,6 +884,8 @@ const BidItemsStep5 = ({
                                     value: parseFloat(e.target.value) || 0
                                   }
                                 })}
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                             <div className="col-span-2">
