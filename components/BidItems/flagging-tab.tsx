@@ -301,7 +301,6 @@ const FlaggingServicesTab = () => {
               <div className="flex flex-col gap-2">
                 <Label htmlFor="gas-cost" className="text-base">Gas Cost Per Gallon ($)</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
                   <Input
                     id="gas-cost"
                     type="number"
@@ -310,7 +309,7 @@ const FlaggingServicesTab = () => {
                     value={safeNumber(flagging?.fuelCostPerGallon) || ""}
                     onChange={(e) => handleInputChange('fuelCostPerGallon', parseFloat(e.target.value) || 0)}
                     disabled={flagging?.standardPricing}
-                    placeholder="0.00"
+                    placeholder="$ 0.00"
                     className="w-40 text-left"
                   />
                 </div>
@@ -318,12 +317,12 @@ const FlaggingServicesTab = () => {
               <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-rate" className="text-base">Flagging Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-rate"
                     value={adminData.county?.flaggingRate || ""}
                     disabled
-                    placeholder="0.00"
+                    placeholder="$ 0.00"
                     className="w-40 text-left"
                   />
                 </div>
@@ -331,12 +330,12 @@ const FlaggingServicesTab = () => {
               <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-base-rate" className="text-base">Flagging Base Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-base-rate"
                     type="number"
                     min={0}
-                    placeholder="0.00"
+                    placeholder="$ 0.00"
                     step={0.01}
                     value={adminData.county?.flaggingBaseRate || ""}
                     onChange={(e) => handleCountyRateChange('flaggingBaseRate', parseFloat(e.target.value) || 0)}
@@ -348,11 +347,11 @@ const FlaggingServicesTab = () => {
               <div className="flex flex-col gap-2">
                 <Label htmlFor="flagging-fringe-rate" className="text-base">Flagging Fringe Rate</Label>
                 <div className="flex items-center">
-                  <DollarSign className="mr-1 h-4 w-4" />
+
                   <Input
                     id="flagging-fringe-rate"
                     type="number"
-                    placeholder="0.00"
+                    placeholder="$ 0.00"
                     min={0}
                     step={0.01}
                     value={adminData.county?.flaggingFringeRate || ""}
