@@ -22,7 +22,7 @@ const TripAndLaborStep4 = ({
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   currentPhase;
 }) => {
-  const { mptRental, dispatch } = useEstimate();
+  const { mptRental, dispatch, editable } = useEstimate();
   const currentPhaseData = mptRental?.phases?.[currentPhase] || { days: 0, personnel: 0, numberTrucks: 0, additionalRatedHours: 0, additionalNonRatedHours: 0, maintenanceTrips: 0 };
 
   const handleInputChange = (name: any, value: number | undefined) => {
@@ -94,6 +94,8 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     />
                   </div>
                   <div>
@@ -110,6 +112,8 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     />
                   </div>
                 </div>
@@ -134,6 +138,8 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     />
                   </div>
                   <div>
@@ -151,6 +157,8 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     />
                   </div>
                   <div>
@@ -168,6 +176,8 @@ const TripAndLaborStep4 = ({
                           e.target.value === "" ? undefined : parseFloat(e.target.value)
                         )
                       }
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     />
                   </div>
                 </div>

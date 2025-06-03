@@ -60,7 +60,7 @@ const AdminInformationStep1 = ({
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }) => {
 
-  const { adminData, dispatch } = useEstimate();
+  const { adminData, dispatch, editable } = useEstimate();
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
@@ -459,6 +459,8 @@ const AdminInformationStep1 = ({
                             role="combobox"
                             aria-expanded={openStates.county}
                             className="w-full justify-between"
+                            disabled={!editable}
+                            aria-disabled={!editable}
                           >
                             {adminData.county?.name || "Select county..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -499,6 +501,8 @@ const AdminInformationStep1 = ({
                             role="combobox"
                             aria-expanded={openStates.estimator}
                             className="w-full justify-between"
+                            disabled={!editable}
+                            aria-disabled={!editable}
                           >
                             {adminData.estimator || "Select estimator..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -536,6 +540,8 @@ const AdminInformationStep1 = ({
                             role="combobox"
                             aria-expanded={openStates.owner}
                             className="w-full justify-between"
+                            disabled={!editable}
+                            aria-disabled={!editable}
                           >
                             {adminData.owner || "Select owner..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -574,6 +580,8 @@ const AdminInformationStep1 = ({
                             : dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'rated', value } })
                         }
                         className="flex flex-col space-y-1"
+                        disabled={!editable}
+                        aria-disabled={!editable}
                       >
                         {field.options?.map((option) => (
                           <div key={option} className="flex items-center space-x-2">
@@ -599,6 +607,8 @@ const AdminInformationStep1 = ({
                                 winterShutdown: checked
                               }));
                             }}
+                            disabled={!editable}
+                            aria-disabled={!editable}
                           />
                           <Label htmlFor={field.name} className="text-sm">
                             {field.label}
@@ -627,6 +637,8 @@ const AdminInformationStep1 = ({
                                   });
                                 }}
                                 className="h-10"
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                             <div>
@@ -649,6 +661,8 @@ const AdminInformationStep1 = ({
                                   });
                                 }}
                                 className="h-10"
+                                disabled={!editable}
+                                aria-disabled={!editable}
                               />
                             </div>
                           </div>
@@ -719,6 +733,8 @@ const AdminInformationStep1 = ({
                             }
                           }}
                           className="h-10"
+                          disabled={!editable}
+                          aria-disabled={!editable}
                         />
                         {field.hasToggle && (
                           <div className="flex items-center gap-2">
@@ -734,6 +750,8 @@ const AdminInformationStep1 = ({
                               checked={!!toggleStates[field.name]}
                               onChange={() => handleToggleChange(field.name)}
                               className="h-4 w-4"
+                              disabled={!editable}
+                              aria-disabled={!editable}
                             />
                           </div>
                         )}

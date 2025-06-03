@@ -86,7 +86,11 @@ export function CardActions({
                     </span>
                   )
                 ) : (
-                  <span>Jan 1, 2025 - May 29, 2025</span>
+                  <span>Jan 1, 2025 - {new Date().toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric', 
+                    year: 'numeric'
+                  })}</span>
                 )}
               </Button>
             </PopoverTrigger>

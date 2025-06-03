@@ -1439,27 +1439,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveBids}
                                     onDeleteSelected={initiateDeleteBids}
                                     tableRef={activeBidsTableRef}
-                                    onViewDetails={(item) => {
-                                        if ('lettingDate' in item) {
-                                            handleActiveBidViewDetails(item as ActiveBid);
-                                        }
-                                    }}
+                                    // onViewDetails={(item) => {
+                                    //     if(!selectedActiveBid) return;
+                                    //     const params = new URLSearchParams;
+                                    //     params.append('contractNumber', selectedActiveBid.originalContractNumber!);
+                                    //     router.push(`/active-bids?${params.toString()}`)
+                                    // }}
                                     onRowClick={(item) => {
-                                        if ('lettingDate' in item) {
-                                            handleActiveBidViewDetails(item as ActiveBid);
-                                        }
+                                        // if(!selectedActiveBid) return;
+                                        const params = new URLSearchParams;
+                                        params.append('contractNumber', item.contractNumber as string);
+                                        params.append('tuckSidebar', 'true');
+                                        params.append('fullscreen', 'true');
+                                        params.append('defaultEditable', 'false');
+                                        router.push(`/active-bid?${params.toString()}`)
                                     }}
-                                    onEdit={(item) => {
-                                        if ('lettingDate' in item) {
-                                            handleActiveBidEdit(item as ActiveBid);
-                                        }
-                                    }}
-                                    onUpdateStatus={(item, status) => {
-                                        if ('lettingDate' in item) {
-                                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
-                                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
-                                        }
-                                    }}
+                                    // onEdit={(item) => {
+                                    //     if ('lettingDate' in item) {
+                                    //         handleActiveBidEdit(item as ActiveBid);
+                                    //     }
+                                    // }}
+                                    // onUpdateStatus={(item, status) => {
+                                    //     if ('lettingDate' in item) {
+                                    //         const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
+                                    //         handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                                    //     }
+                                    // }}
                                     // Pagination props
                                     pageCount={activeBidsPageCount}
                                     pageIndex={activeBidsPageIndex}

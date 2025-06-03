@@ -6,6 +6,7 @@ import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingOb
 import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
 import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
+import { SetStateAction } from "react";
 
 // Define the reducer's context type
 export interface EstimateContextType extends Estimate {
@@ -703,6 +704,7 @@ export const estimateReducer = (
 				mptRental: defaultMPTObject,
 				flagging: defaultFlaggingObject,
 				equipmentRental: [],
+				editable: true
 				// permanentSigns: defaultPermanentSignsObject, 
 			};
 
@@ -760,6 +762,12 @@ export const estimateReducer = (
 			return {
 				...state,
 				saleItems: action.payload
+			}
+		
+		case 'TOGGLE_EDITABLE':
+			return {
+				...state,
+				editable: !state.editable
 			}
 
 		default:
