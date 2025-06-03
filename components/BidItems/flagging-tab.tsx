@@ -43,7 +43,7 @@ const NON_RATED_MARKUP_PERCENTAGES = [50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70
 const RATED_MARKUP_PERCENTAGES = [42.5, 45, 47.5, 50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70];
 
 const FlaggingServicesTab = () => {
-  const { adminData, flagging, dispatch } = useEstimate();
+  const { adminData, flagging, dispatch, editable } = useEstimate();
   const [flaggingCostSummary, setFlaggingCostSummary] = useState<any>(null);
   const [selectedMarkupRate, setSelectedMarkupRate] = useState<number | null>(null);
   const [displayEquipCost, setDisplayEquipCost] = useState<number>(0);
@@ -260,12 +260,16 @@ const FlaggingServicesTab = () => {
                     id="standard-pricing"
                     checked={flagging?.standardPricing || false}
                     onCheckedChange={handleStandardPricingToggle}
+                    disabled={!editable}
+                    aria-disabled={!editable}
                   />
                   {flagging?.standardPricing && (
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => setDialogOpen(true)}
+                      disabled={!editable}
+                      aria-disabled={!editable}
                     >
                       Edit
                     </Button>
@@ -285,7 +289,8 @@ const FlaggingServicesTab = () => {
                         value
                       }
                     })}
-                    disabled={flagging?.standardPricing}
+                    disabled={!editable || flagging?.standardPricing}
+                    aria-disabled={!editable || flagging?.standardPricing}
                   >
                     <SelectTrigger id="rate-type" className="w-full">
                       <SelectValue placeholder="Select rate type" />
@@ -308,7 +313,8 @@ const FlaggingServicesTab = () => {
                     step={0.01}
                     value={safeNumber(flagging?.fuelCostPerGallon) || ""}
                     onChange={(e) => handleInputChange('fuelCostPerGallon', parseFloat(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
+                    disabled={!editable || flagging?.standardPricing}
+                    aria-disabled={!editable || flagging?.standardPricing}
                     placeholder="$ 0.00"
                     className="w-40 text-left"
                   />
@@ -339,7 +345,8 @@ const FlaggingServicesTab = () => {
                     step={0.01}
                     value={adminData.county?.flaggingBaseRate || ""}
                     onChange={(e) => handleCountyRateChange('flaggingBaseRate', parseFloat(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
+                    disabled={!editable || flagging?.standardPricing}
+                    aria-disabled={!editable || flagging?.standardPricing}
                     className="w-40 text-left"
                   />
                 </div>
@@ -356,7 +363,8 @@ const FlaggingServicesTab = () => {
                     step={0.01}
                     value={adminData.county?.flaggingFringeRate || ""}
                     onChange={(e) => handleCountyRateChange('flaggingFringeRate', parseFloat(e.target.value) || 0)}
-                    disabled={flagging?.standardPricing}
+                    disabled={!editable || flagging?.standardPricing}
+                    aria-disabled={!editable || flagging?.standardPricing}
                     className="w-40 text-left"
                   />
                 </div>
@@ -369,29 +377,33 @@ const FlaggingServicesTab = () => {
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="personnel" className="text-base">Personnel</Label>
-            <Input
-              id="personnel"
-              type="number"
-              min={0}
-              value={safeNumber(flagging?.personnel) || ""}
-              onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
-              placeholder="0"
-              className="w-40 text-left"
-            />
+            <div className="flex items-center">
+              <Input
+                id="personnel"
+                type="number"
+                min={0}
+                value={safeNumber(flagging?.personnel) || ""}
+                onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
+                disabled={!editable || flagging?.standardPricing}
+                aria-disabled={!editable || flagging?.standardPricing}
+                className="w-40 text-right"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="trucks" className="text-base">Number of Trucks</Label>
-            <Input
-              id="trucks"
-              type="number"
-              min={0}
-              value={safeNumber(flagging?.numberTrucks) || ""}
-              onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
-              placeholder="0"
-              className="w-40 text-left"
-            />
+            <div className="flex items-center">
+              <Input
+                id="trucks"
+                type="number"
+                min={0}
+                value={safeNumber(flagging?.numberTrucks) || ""}
+                onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
+                disabled={!editable || flagging?.standardPricing}
+                aria-disabled={!editable || flagging?.standardPricing}
+                className="w-40 text-right"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="ow-miles" className="text-base">One-Way Miles</Label>
@@ -414,8 +426,9 @@ const FlaggingServicesTab = () => {
               step={0.01}
               value={flagging?.arrowBoards.cost || ""}
               onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
-              placeholder="$ 0.00"
-              className="w-40 text-left"
+              className="w-40 text-right"
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -425,9 +438,9 @@ const FlaggingServicesTab = () => {
               min={0}
               value={safeNumber(flagging?.arrowBoards.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('arrowBoards', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
-              placeholder="0"
-              className="w-40 text-left"
+              disabled={!editable || flagging?.standardPricing}
+              aria-disabled={!editable || flagging?.standardPricing}
+              className="w-40 text-right"
             />
           </div>
           <div className="flex flex-col gap-2 mb-4">
@@ -438,6 +451,8 @@ const FlaggingServicesTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('arrowBoards', 'includeInLumpSum', checked === true)
               }
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>
           {/* Message Boards */}
@@ -449,8 +464,9 @@ const FlaggingServicesTab = () => {
               step={0.01}
               value={flagging?.messageBoards.cost || ""}
               onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
-              placeholder="$ 0.00"
-              className="w-40 text-left"
+              className="w-40 text-right"
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -460,9 +476,9 @@ const FlaggingServicesTab = () => {
               min={0}
               value={safeNumber(flagging?.messageBoards.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('messageBoards', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
-              placeholder="0"
-              className="w-40 text-left"
+              disabled={!editable || flagging?.standardPricing}
+              aria-disabled={!editable || flagging?.standardPricing}
+              className="w-40 text-right"
             />
           </div>
           <div className="flex flex-col gap-2 mb-4">
@@ -473,6 +489,8 @@ const FlaggingServicesTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('messageBoards', 'includeInLumpSum', checked === true)
               }
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>  
           {/* TMA */}
@@ -484,8 +502,9 @@ const FlaggingServicesTab = () => {
               step={0.01}
               value={flagging?.TMA.cost || ""}
               onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
-              placeholder="$ 0.00"
-              className="w-40 text-left"
+              className="w-40 text-right"
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -495,9 +514,9 @@ const FlaggingServicesTab = () => {
               min={0}
               value={safeNumber(flagging?.TMA.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('TMA', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
-              placeholder="0"
-              className="w-40 text-left"
+              disabled={!editable || flagging?.standardPricing}
+              aria-disabled={!editable || flagging?.standardPricing}
+              className="w-40 text-right"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -508,6 +527,8 @@ const FlaggingServicesTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('TMA', 'includeInLumpSum', checked === true)
               }
+              disabled={!editable}
+              aria-disabled={!editable}
             />
           </div>
         </div>
@@ -525,7 +546,8 @@ const FlaggingServicesTab = () => {
               min={0}
               value={safeNumber(flagging?.onSiteJobHours) || ""}
               onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
+              disabled={!editable || flagging?.standardPricing}
+              aria-disabled={!editable || flagging?.standardPricing}
               className="w-40 text-right"
             />
             <span className="text-sm text-muted-foreground">
@@ -540,6 +562,7 @@ const FlaggingServicesTab = () => {
               type="number"
               value={Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}
               disabled
+              readOnly
               className="w-40 text-right"
             />
             <span className="text-sm text-muted-foreground">
@@ -580,7 +603,8 @@ const FlaggingServicesTab = () => {
               step={0.01}
               value={safeNumber(flagging?.additionalEquipmentCost) || ""}
               onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
-              disabled={flagging?.standardPricing}
+              disabled={!editable || flagging?.standardPricing}
+              aria-disabled={!editable || flagging?.standardPricing}
               className="w-40 text-right"
             />
           </div>
@@ -630,7 +654,8 @@ const FlaggingServicesTab = () => {
               <div className="flex justify-center">
                 <Checkbox
                   checked={flagging?.markupRate === rate}
-                  disabled={flagging?.standardPricing}
+                  disabled={!editable || flagging?.standardPricing}
+                  aria-disabled={!editable || flagging?.standardPricing}
                   onCheckedChange={(checked) => {
                     setSelectedMarkupRate(null);
                     if (checked) {

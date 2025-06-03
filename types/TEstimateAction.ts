@@ -205,3 +205,4 @@ export type EstimateAction =
 	| { type: 'COPY_FLAGGING', payload: Flagging }
 	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
+	| { type: 'TOGGLE_EDITABLE' }

@@ -9,7 +9,7 @@ import React from 'react'
 const ActiveBidHeader = () => {
 
   const params = useSearchParams();
-  const source = params?.get('source') === 'active-bids' ? 'Active Bids' : 'Available Jobs' 
+  const source = (params?.get('source') === 'active-bids' || params?.get('fullscreen') === 'true')  ? 'Active Bids' : 'Available Jobs' 
   const contractNumber = params?.get('contract-number')
 
   return (

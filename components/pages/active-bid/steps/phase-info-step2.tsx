@@ -39,7 +39,7 @@ const PhaseInfoStep2 = ({
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
     currentPhase: number;
 }) => {
-    const { mptRental, dispatch } = useEstimate();
+    const { mptRental, dispatch, editable } = useEstimate();
 
     // Update phase dates in context
     const handleDateChange = (value: Date | undefined, name: 'startDate' | 'endDate') => {
@@ -135,6 +135,8 @@ const PhaseInfoStep2 = ({
                                             <Button
                                                 variant="outline"
                                                 className="w-full justify-start text-left font-normal"
+                                                disabled={!editable}
+                                                aria-disabled={!editable}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {mptRental.phases[currentPhase].startDate ? (
@@ -163,6 +165,8 @@ const PhaseInfoStep2 = ({
                                             <Button
                                                 variant="outline"
                                                 className="w-full justify-start text-left font-normal"
+                                                disabled={!editable}
+                                                aria-disabled={!editable}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {mptRental.phases[currentPhase].endDate ? (
@@ -193,6 +197,8 @@ const PhaseInfoStep2 = ({
                                         value={mptRental.phases[currentPhase].name}
                                         onChange={handlePhaseNameChange}
                                         placeholder={`Phase ${currentPhase + 1}`}
+                                        disabled={!editable}
+                                        aria-disabled={!editable}
                                     />
                                 </div>
                             </div>
@@ -206,19 +212,19 @@ const PhaseInfoStep2 = ({
                                         <div className="flex items-center gap-3">
                                             <Badge
                                                 className="px-3 py-1 cursor-pointer hover:bg-primary"
-                                                onClick={() => setEndDateFromDays(30)}
+                                                onClick={() => editable ? setEndDateFromDays(30): ''}
                                             >
                                                 30
                                             </Badge>
                                             <Badge
                                                 className="px-3 py-1 cursor-pointer hover:bg-primary"
-                                                onClick={() => setEndDateFromDays(60)}
+                                                onClick={() => editable ? setEndDateFromDays(60) : ''}
                                             >
                                                 60
                                             </Badge>
                                             <Badge
                                                 className="px-3 py-1 cursor-pointer hover:bg-primary"
-                                                onClick={() => setEndDateFromDays(90)}
+                                                onClick={() => editable ? setEndDateFromDays(90) : ''}
                                             >
                                                 90
                                             </Badge>
@@ -229,6 +235,8 @@ const PhaseInfoStep2 = ({
                                                     placeholder="Days"
                                                     type="number"
                                                     min="1"
+                                                    disabled={!editable}
+                                                    aria-disabled={!editable}
                                                 />
                                             </div>
                                         </div>
