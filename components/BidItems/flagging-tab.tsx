@@ -48,6 +48,12 @@ const FlaggingServicesTab = () => {
   const [selectedMarkupRate, setSelectedMarkupRate] = useState<number | null>(null);
   const [displayEquipCost, setDisplayEquipCost] = useState<number>(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingArrowBoardCost, setEditingArrowBoardCost] = useState(false);
+  const [editingMessageBoardCost, setEditingMessageBoardCost] = useState(false);
+  const [editingTMACost, setEditingTMACost] = useState(false);
+  const [arrowBoardCost, setArrowBoardCost] = useState(String(flagging?.arrowBoards.cost || ''));
+  const [messageBoardCost, setMessageBoardCost] = useState(String(flagging?.messageBoards.cost || ''));
+  const [tmaCost, setTMACost] = useState(String(flagging?.TMA.cost || ''));
 
   // Calculate equipment cost
   const getEquipCost = useCallback(() => {
@@ -375,7 +381,7 @@ const FlaggingServicesTab = () => {
         {/* Resources and Equipment Section */}
         <h3 className="text-lg font-medium mb-3 text-left">Resources and Equipment</h3>
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="personnel" className="text-base">Personnel</Label>
             <div className="flex items-center">
               <Input
@@ -386,12 +392,12 @@ const FlaggingServicesTab = () => {
                 onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
                 disabled={!editable || flagging?.standardPricing}
                 aria-disabled={!editable || flagging?.standardPricing}
-                className="w-40 text-right"
+                className="w-40 text-left"
+                placeholder="0"
               />
             </div>
           </div>
-          
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="trucks" className="text-base">Number of Trucks</Label>
             <div className="flex items-center">
               <Input
@@ -402,45 +408,58 @@ const FlaggingServicesTab = () => {
                 onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
                 disabled={!editable || flagging?.standardPricing}
                 aria-disabled={!editable || flagging?.standardPricing}
-                className="w-40 text-right"
+                className="w-40 text-left"
+                placeholder="0"
               />
             </div>
           </div>
-          
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="ow-miles" className="text-base">One-Way Miles</Label>
-            <div className="flex items-center">
-              <Input
-                id="ow-miles"
-                type="number"
-                min={0}
-                value={safeNumber(adminData?.owMileage) || ""}
-                disabled
-                className="w-40 text-right"
-              />
-            </div>
-          </div>
-          
-          {/* Arrow Boards */}
-          <div className="flex justify-between items-center">
-            <Label className="text-base">Arrow Boards ($/day)</Label>
             <Input
+              id="ow-miles"
               type="number"
               min={0}
-              step={0.01}
-              value={flagging?.arrowBoards.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
+              value={safeNumber(adminData?.owMileage) || ""}
+              disabled
+              placeholder="0"
+              className="w-40 text-left"
             />
           </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <CornerDownRight className="mr-2 h-4 w-4" />
-              <Label className="text-base">Quantity</Label>
-            </div>
+          {/* Arrow Boards */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-base">
+              Arrow Boards (
+              {editingArrowBoardCost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={arrowBoardCost}
+                  autoFocus
+                  onChange={e => setArrowBoardCost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(arrowBoardCost) || 0);
+                    setEditingArrowBoardCost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(arrowBoardCost) || 0);
+                      setEditingArrowBoardCost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left px-1 py-0.5"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingArrowBoardCost(true)}
+                >
+                  ${flagging?.arrowBoards.cost || 0}
+                </span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
@@ -448,11 +467,11 @@ const FlaggingServicesTab = () => {
               onChange={(e) => handleEquipmentInputChange('arrowBoards', 'quantity', parseInt(e.target.value) || 0)}
               disabled={!editable || flagging?.standardPricing}
               aria-disabled={!editable || flagging?.standardPricing}
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="0"
             />
           </div>
-          
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-2 mb-4">
             <Label htmlFor="include-arrow-boards" className="text-base">Include in lump sum</Label>
             <Checkbox
               id="include-arrow-boards"
@@ -464,27 +483,41 @@ const FlaggingServicesTab = () => {
               aria-disabled={!editable}
             />
           </div>
-          
           {/* Message Boards */}
-          <div className="flex justify-between items-center">
-            <Label className="text-base">Message Boards ($/day)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={flagging?.messageBoards.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
-            />
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <Keyboard className="mr-2 h-4 w-4" />
-              <Label className="text-base">Quantity</Label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-base">
+              Message Boards (
+              {editingMessageBoardCost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={messageBoardCost}
+                  autoFocus
+                  onChange={e => setMessageBoardCost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('messageBoards', 'cost', parseFloat(messageBoardCost) || 0);
+                    setEditingMessageBoardCost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('messageBoards', 'cost', parseFloat(messageBoardCost) || 0);
+                      setEditingMessageBoardCost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingMessageBoardCost(true)}
+                >
+                  ${flagging?.messageBoards.cost || 0}
+                </span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
@@ -492,11 +525,11 @@ const FlaggingServicesTab = () => {
               onChange={(e) => handleEquipmentInputChange('messageBoards', 'quantity', parseInt(e.target.value) || 0)}
               disabled={!editable || flagging?.standardPricing}
               aria-disabled={!editable || flagging?.standardPricing}
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="0"
             />
           </div>
-          
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-2 mb-4">
             <Label htmlFor="include-message-boards" className="text-base">Include in lump sum</Label>
             <Checkbox
               id="include-message-boards"
@@ -507,28 +540,40 @@ const FlaggingServicesTab = () => {
               disabled={!editable}
               aria-disabled={!editable}
             />
-          </div>
-          
+          </div>  
           {/* TMA */}
-          <div className="flex justify-between items-center">
-            <Label className="text-base">TMA ($/day)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={flagging?.TMA.cost || ""}
-              onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
-              className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
-            />
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <Car className="mr-2 h-4 w-4" />
-              <Label className="text-base">Quantity</Label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-base">
+              TMA (
+              {editingTMACost ? (
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={tmaCost}
+                  autoFocus
+                  onChange={e => setTMACost(e.target.value)}
+                  onBlur={() => {
+                    handleEquipmentInputChange('TMA', 'cost', parseFloat(tmaCost) || 0);
+                    setEditingTMACost(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleEquipmentInputChange('TMA', 'cost', parseFloat(tmaCost) || 0);
+                      setEditingTMACost(false);
+                    }
+                  }}
+                  className="w-16 inline-block text-left px-1 py-0.5"
+                  style={{display: 'inline-block'}}
+                />
+              ) : (
+                <span
+                  className="underline cursor-pointer text-primary -mx-1"
+                  onClick={() => setEditingTMACost(true)}
+                >${flagging?.TMA.cost || 0}</span>
+              )}
+              /day)
+            </Label>
             <Input
               type="number"
               min={0}
@@ -536,11 +581,11 @@ const FlaggingServicesTab = () => {
               onChange={(e) => handleEquipmentInputChange('TMA', 'quantity', parseInt(e.target.value) || 0)}
               disabled={!editable || flagging?.standardPricing}
               aria-disabled={!editable || flagging?.standardPricing}
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="0"
             />
           </div>
-          
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="include-tma" className="text-base">Include in lump sum</Label>
             <Checkbox
               id="include-tma"
@@ -569,7 +614,8 @@ const FlaggingServicesTab = () => {
               onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
               disabled={!editable || flagging?.standardPricing}
               aria-disabled={!editable || flagging?.standardPricing}
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="0"
             />
             <span className="text-sm text-muted-foreground">
               ${flaggingCostSummary && flaggingCostSummary.onSiteJobHoursCost ? flaggingCostSummary.onSiteJobHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
@@ -584,7 +630,8 @@ const FlaggingServicesTab = () => {
               value={Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}
               disabled
               readOnly
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="0"
             />
             <span className="text-sm text-muted-foreground">
               ${flaggingCostSummary && flaggingCostSummary.rtTravelTimeHoursCost ? flaggingCostSummary.rtTravelTimeHoursCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
@@ -626,7 +673,8 @@ const FlaggingServicesTab = () => {
               onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
               disabled={!editable || flagging?.standardPricing}
               aria-disabled={!editable || flagging?.standardPricing}
-              className="w-40 text-right"
+              className="w-40 text-left"
+              placeholder="$ 0.00"
             />
           </div>
           

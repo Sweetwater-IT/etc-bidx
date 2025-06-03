@@ -246,8 +246,13 @@ const PrimarySignItem = ({
             >
               Add Secondary
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleEditSign} disabled={!editable}
-              aria-disabled={!editable}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEditSign}
+              disabled={!editable}
+              aria-disabled={!editable}
+            >
               Edit
             </Button>
             <Button
