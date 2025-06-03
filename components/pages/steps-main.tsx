@@ -56,29 +56,20 @@ const StepsMain = () => {
     initialStepParam ? parseInt(initialStepParam) : 1
   );
   const [currentPhase, setCurrentPhase] = useState(0);
-  const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    // For non-edit mode, check if we should open summary
-    const openSummary = searchParams?.get("openSummary") === "true";
-    if (initialStepParam === "6" && openSummary) {
-      setIsViewSummaryOpen(true);
-    }
-  }, [initialStepParam, searchParams]);
+  const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);;
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
 
   useEffect(() => {
-    if(tuckedSidebar && tuckedSidebar === 'true')
+    // if(tuckedSidebar && tuckedSidebar === 'true')
     toggleSidebar();
 
-    if(setFullscreen && setFullscreen === 'true')
+    // if(setFullscreen && setFullscreen === 'true')
     setIsFullscreen(true)
-  }, [tuckedSidebar, setFullscreen])
+  }, [])
 
   return (
-    <EstimateProvider>
       <div
         className={`relative min-h-screen ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
           }`}
@@ -319,7 +310,6 @@ const StepsMain = () => {
           </>
         )}
       </div>
-    </EstimateProvider>
   );
 };
 

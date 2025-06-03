@@ -6,7 +6,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEstimate } from '@/contexts/EstimateContext';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 
 const DEFAULT_TOTALS = {
@@ -23,15 +22,6 @@ const StepperSaveButtons = () => {
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
-
-    const searchParams = useSearchParams();
-
-    const defaultEditable = searchParams?.get('defaultEditable')
-
-    useEffect(() => {
-        if(defaultEditable && defaultEditable === 'false')
-        dispatch({ type: 'TOGGLE_EDITABLE'})
-    }, [defaultEditable])
 
     return (
         <>

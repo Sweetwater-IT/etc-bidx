@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Suspense } from "react";
 import ActiveBidHeader from "./ActiveBidHeader";
 import StepsMain from "@/components/pages/steps-main";
+import { EstimateProvider } from "@/contexts/EstimateContext";
 
 function ActiveBidContent() {
   return (
@@ -11,10 +12,12 @@ function ActiveBidContent() {
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
           <div className="px-6">
-            <div className="mb-6">
-              <ActiveBidHeader />
-            </div>
-            <StepsMain />
+            <EstimateProvider>
+              <div className="mb-6">
+                <ActiveBidHeader />
+              </div>
+              <StepsMain />
+            </EstimateProvider>
           </div>
         </div>
       </div>
