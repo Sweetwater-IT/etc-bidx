@@ -121,12 +121,12 @@ export function ProductSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex flex-col h-full">
         <SheetHeader className="p-0 pt-6">
-          <SheetTitle className="text-[24px] ml-6">Add New Product</SheetTitle>
-          <Separator className="mt-1" />
+          <SheetTitle className="text-[16px] ml-6">Add New Product</SheetTitle>
+          <Separator className="mt-2" />
         </SheetHeader>
-        <form className="flex flex-col gap-5 px-4 flex-1 overflow-y-auto">
+        <form className="flex flex-col gap-5 px-6 flex-1 overflow-y-auto pt-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium bled:opacity-50 text-muted-foreground">
+            <Label className="text-[15px] font-medium bled:opacity-50 text-muted-foreground">
               Item # / SKU
             </Label>
             <Input
@@ -142,7 +142,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Description
             </Label>
             <Input
@@ -158,7 +158,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               UOM
             </Label>
             <Select
@@ -180,7 +180,7 @@ export function ProductSheet({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Quantity
             </Label>
             <Input
@@ -197,7 +197,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Unit Price
             </Label>
             <Input
@@ -225,7 +225,7 @@ export function ProductSheet({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Discount
             </Label>
             <div className="flex items-center">
@@ -277,7 +277,7 @@ export function ProductSheet({
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Notes
             </Label>
             <Textarea
@@ -290,12 +290,12 @@ export function ProductSheet({
             />
           </div>
         </form>
-        <div className="px-4 py-4 border-t flex gap-2">
+        <div className="px-4 py-4 border-t flex gap-4">
           <SheetClose asChild>
             <Button
               type="button"
               variant="outline"
-              className="w-1/2 text-sm font-semibold rounded-md"
+              className="flex-1 text-sm rounded-md"
               onClick={() => onOpenChange(false)}
             >
               Cancel
@@ -304,7 +304,7 @@ export function ProductSheet({
           <SheetClose asChild>
             <Button
               type="button"
-              className="bg-black text-white py-2 w-1/2 text-sm font-semibold hover:bg-black/90 transition rounded-md"
+              className=" text-white py-2 flex-1 text-sm  transition rounded-md"
               onClick={() => {
                 onOpenChange(false);
                 if (editingSubItemId) {
