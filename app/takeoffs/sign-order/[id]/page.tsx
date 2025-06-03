@@ -23,6 +23,8 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SiteHeader } from '@/components/site-header';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface SignOrder {
   id: number;
@@ -40,6 +42,7 @@ interface SignOrder {
   rental: boolean;
   perm_signs: boolean;
   status: string;
+  assigned_to?: string;
 }
 
 interface SignItem {
@@ -53,12 +56,14 @@ interface SignItem {
   structure: string;
   stiffner: string;
   assigned_to: string;
-  in_stock: boolean;
-  status: string;
+  in_stock: number;
+  order: number;
+  make: number;
+  bLights: number;
+  covers: number;
   substrate?: string;
   includeCover?: boolean;
   includeStiffener?: boolean;
-  bLights?: number;
   isCustom?: boolean;
 }
 
@@ -88,12 +93,14 @@ export default function SignOrderTrackerPage() {
     structure: 'LOOSE',
     stiffner: 'None',
     assigned_to: '',
-    in_stock: false,
-    status: 'Pending',
+    in_stock: 0,
+    order: 0,
+    make: 0,
+    bLights: 0,
+    covers: 0,
     substrate: 'Aluminum',
     includeCover: false,
-    includeStiffener: false,
-    bLights: 0
+    includeStiffener: false
   });
   const [loading, setLoading] = useState(true);
   const [orderDate, setOrderDate] = useState<Date | undefined>(undefined);
@@ -197,8 +204,11 @@ export default function SignOrderTrackerPage() {
                 structure: signData.structure || 'N/A',
                 stiffner: signData.stiffner || 'None',
                 assigned_to: signData.assigned_to || 'Unassigned',
-                in_stock: signData.in_stock || false,
-                status: signData.status || 'Pending'
+                in_stock: Number(signData.in_stock) || 0,
+                order: Number(signData.order) || 0,
+                make: Number(signData.make) || 0,
+                bLights: Number(signData.bLights) || 0,
+                covers: Number(signData.covers) || 0
               };
             });
 
@@ -231,9 +241,73 @@ export default function SignOrderTrackerPage() {
     alert('Export functionality not implemented yet');
   };
 
-  const handleSubmitOrder = () => {
-    // Submit order functionality would go here
-    alert('Submit order functionality not implemented yet');
+  const handleSubmitOrder = async () => {
+    if (!signOrder) return;
+
+    try {
+      setLoading(true);
+
+      const updatedSignItems = [...signItems];
+      if (showAddForm && newSign.designation) {
+        updatedSignItems.push(newSign);
+        setSignItems(updatedSignItems);
+        setShowAddForm(false);
+      }
+
+      // Convert the sign items array to the expected signs object format
+      const signsObject = updatedSignItems.reduce((acc, item) => {
+        acc[item.id.toString()] = {
+          designation: item.designation,
+          description: item.description,
+          width: item.width,
+          height: item.height,
+          quantity: item.quantity,
+          sheeting: item.sheeting,
+          structure: item.structure,
+          stiffner: item.stiffner,
+          assigned_to: item.assigned_to,
+          in_stock: item.in_stock,
+          order: item.order,
+          make: item.make,
+          bLights: item.bLights,
+          covers: item.covers,
+          substrate: item.substrate,
+          includeCover: item.includeCover,
+          includeStiffener: item.includeStiffener
+        };
+        return acc;
+      }, {});
+
+      // Use our new API endpoint that doesn't include the assigned_to field
+      const response = await fetch(`/api/sign-orders/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: params?.id,
+          signs: signsObject,
+          status: 'Submitted', // Mark the order as submitted
+          submitted_at: new Date().toISOString(), // Add submission timestamp
+          assigned_to: signOrder.assigned_to // Include the assigned_to field
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to submit sign order');
+      }
+
+      setLoading(false);
+
+      // Show success toast message
+      toast.success('Order submitted successfully!');
+    } catch (error: any) {
+      console.error('Error submitting sign order:', error);
+      setLoading(false);
+      toast.error(`Error: ${error.message || 'Failed to submit sign order'}`);
+    }
   };
 
   const handleAddNewSign = () => {
@@ -253,12 +327,14 @@ export default function SignOrderTrackerPage() {
       structure: 'LOOSE',
       stiffner: 'None',
       assigned_to: '',
-      in_stock: false,
-      status: 'Pending',
+      in_stock: 0,
+      order: 0,
+      make: 0,
+      bLights: 0,
+      covers: 0,
       substrate: 'Aluminum',
       includeCover: false,
-      includeStiffener: false,
-      bLights: 0
+      includeStiffener: false
     });
   };
 
@@ -278,11 +354,13 @@ export default function SignOrderTrackerPage() {
       stiffner: newSign.stiffner || 'None',
       assigned_to: newSign.assigned_to || '',
       in_stock: newSign.in_stock,
-      status: newSign.status,
+      order: newSign.order,
+      make: newSign.make,
+      bLights: newSign.bLights,
+      covers: newSign.covers,
       substrate: newSign.substrate,
       includeCover: newSign.includeCover,
-      includeStiffener: newSign.includeStiffener,
-      bLights: newSign.bLights
+      includeStiffener: newSign.includeStiffener
     };
 
     // Add the new sign to the signItems array
@@ -332,11 +410,13 @@ export default function SignOrderTrackerPage() {
           stiffner: item.stiffner,
           assigned_to: item.assigned_to,
           in_stock: item.in_stock,
-          status: item.status,
+          order: item.order,
+          make: item.make,
+          bLights: item.bLights,
+          covers: item.covers,
           substrate: item.substrate,
           includeCover: item.includeCover,
-          includeStiffener: item.includeStiffener,
-          bLights: item.bLights
+          includeStiffener: item.includeStiffener
         };
         return acc;
       }, {});
@@ -384,6 +464,7 @@ export default function SignOrderTrackerPage() {
         "--header-height": "calc(var(--spacing) * 12)",
       } as React.CSSProperties}
     >
+      <Toaster />
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader>
@@ -640,6 +721,25 @@ export default function SignOrderTrackerPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Assigned to</label>
+                      <Select
+                        value={signOrder.assigned_to || ''}
+                        onValueChange={(value) => {
+                          setSignOrder(prev => prev ? { ...prev, assigned_to: value } : null);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tom Daywalt">Tom Daywalt</SelectItem>
+                          <SelectItem value="Richie Sweigert">Richie Sweigert</SelectItem>
+                          <SelectItem value="David Grooms">David Grooms</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -857,8 +957,10 @@ export default function SignOrderTrackerPage() {
                             <SelectValue placeholder="None" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="T-III RIGHT">T-III RIGHT</SelectItem>
-                            <SelectItem value="T-III LEFT">T-III LEFT</SelectItem>
+                            <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
+                            <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
+                            <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
+                            <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
                             <SelectItem value="LOOSE">LOOSE</SelectItem>
                             <SelectItem value="POST">POST</SelectItem>
@@ -881,65 +983,22 @@ export default function SignOrderTrackerPage() {
 
                       <div className="flex-1">
                         <Label className="text-sm font-medium mb-2 block">
-                          Assigned to
+                          Covers
                         </Label>
-                        <Select
-                          value={newSign.assigned_to}
-                          onValueChange={(value) => setNewSign({ ...newSign, assigned_to: value })}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select person" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="John Doe">John Doe</SelectItem>
-                            <SelectItem value="Jane Smith">Jane Smith</SelectItem>
-                            <SelectItem value="Mike Johnson">Mike Johnson</SelectItem>
-                            <SelectItem value="Sarah Williams">Sarah Williams</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          type="number"
+                          value={newSign.covers}
+                          onChange={(e) => setNewSign({ ...newSign, covers: parseInt(e.target.value) || 0 })}
+                          min={0}
+                          className="w-full"
+                        />
                       </div>
+
                     </div>
                     
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
-                        <Label className="text-sm font-medium mb-2 block">
-                          Status
-                        </Label>
-                        <Select
-                          value={newSign.status}
-                          onValueChange={(value) => setNewSign({ ...newSign, status: value })}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium mb-2 block">
-                          In Stock
-                        </Label>
-                        <Select
-                          value={newSign.in_stock ? "Yes" : "No"}
-                          onValueChange={(value) => setNewSign({ ...newSign, in_stock: value === "Yes" })}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">Yes</SelectItem>
-                            <SelectItem value="No">No</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex flex-col gap-2 mt-8">
+                        <div className="flex flex-col gap-2 mt-2">
                           <div className="flex gap-x-2 items-center">
                             <Checkbox
                               id="cover-checkbox"
@@ -990,9 +1049,11 @@ export default function SignOrderTrackerPage() {
                       <th className="border p-2 text-left">Sheeting</th>
                       <th className="border p-2 text-left">Structure</th>
                       <th className="border p-2 text-left">Stiffner</th>
-                      <th className="border p-2 text-left">Assigned to</th>
                       <th className="border p-2 text-left">In Stock</th>
-                      <th className="border p-2 text-left">Status</th>
+                      <th className="border p-2 text-left">Order</th>
+                      <th className="border p-2 text-left">Make</th>
+                      <th className="border p-2 text-left">B Lights</th>
+                      <th className="border p-2 text-left">Covers</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1090,44 +1151,156 @@ export default function SignOrderTrackerPage() {
                           />
                         </td>
                         <td className="border p-2">
+                          <div className="flex items-center">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.in_stock) || 0;
+                                updatedItems[index].in_stock = Math.max(0, currentValue - 1);
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              -
+                            </Button>
+                            <Input 
+                              type="number" 
+                              value={item.in_stock || 0} 
+                              onChange={(e) => {
+                                const updatedItems = [...signItems];
+                                const value = parseInt(e.target.value);
+                                updatedItems[index].in_stock = isNaN(value) ? 0 : Math.max(0, value);
+                                setSignItems(updatedItems);
+                              }}
+                              className="h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs"
+                              min={0}
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.in_stock) || 0;
+                                updatedItems[index].in_stock = currentValue + 1;
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border p-2">
+                          <div className="flex items-center">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.order) || 0;
+                                updatedItems[index].order = Math.max(0, currentValue - 1);
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              -
+                            </Button>
+                            <Input 
+                              type="number" 
+                              value={item.order || 0} 
+                              onChange={(e) => {
+                                const updatedItems = [...signItems];
+                                const value = parseInt(e.target.value);
+                                updatedItems[index].order = isNaN(value) ? 0 : Math.max(0, value);
+                                setSignItems(updatedItems);
+                              }}
+                              className="h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs"
+                              min={0}
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.order) || 0;
+                                updatedItems[index].order = currentValue + 1;
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border p-2">
+                          <div className="flex items-center">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.make) || 0;
+                                updatedItems[index].make = Math.max(0, currentValue - 1);
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              -
+                            </Button>
+                            <Input 
+                              type="number" 
+                              value={item.make || 0} 
+                              onChange={(e) => {
+                                const updatedItems = [...signItems];
+                                const value = parseInt(e.target.value);
+                                updatedItems[index].make = isNaN(value) ? 0 : Math.max(0, value);
+                                setSignItems(updatedItems);
+                              }}
+                              className="h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs"
+                              min={0}
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
+                              onClick={() => {
+                                const updatedItems = [...signItems];
+                                const currentValue = Number(item.make) || 0;
+                                updatedItems[index].make = currentValue + 1;
+                                setSignItems(updatedItems);
+                              }}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border p-2">
                           <Input 
                             className="w-full" 
-                            value={item.assigned_to} 
+                            type="number" 
+                            value={item.bLights || 0} 
                             onChange={(e) => {
                               const updatedItems = [...signItems];
-                              updatedItems[index].assigned_to = e.target.value;
+                              updatedItems[index].bLights = parseInt(e.target.value) || 0;
                               setSignItems(updatedItems);
                             }}
+                            min={0}
                           />
                         </td>
                         <td className="border p-2">
-                          <select 
-                            className="w-full p-2 border rounded" 
-                            value={item.in_stock ? 'Yes' : 'No'}
+                          <Input 
+                            className="w-full" 
+                            type="number" 
+                            value={item.covers || 0} 
                             onChange={(e) => {
                               const updatedItems = [...signItems];
-                              updatedItems[index].in_stock = e.target.value === 'Yes';
+                              updatedItems[index].covers = parseInt(e.target.value) || 0;
                               setSignItems(updatedItems);
                             }}
-                          >
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                          </select>
-                        </td>
-                        <td className="border p-2">
-                          <select 
-                            className="w-full p-2 border rounded"
-                            value={item.status}
-                            onChange={(e) => {
-                              const updatedItems = [...signItems];
-                              updatedItems[index].status = e.target.value;
-                              setSignItems(updatedItems);
-                            }}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Completed">Completed</option>
-                          </select>
+                            min={0}
+                          />
                         </td>
                       </tr>
                     ))}
