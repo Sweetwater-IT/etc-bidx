@@ -49,7 +49,8 @@ const SignsViewOnly = () => {
                 <div key={index} >
                     <div className="text-sm font-semibold mb-2 pl-6">Phase {index + 1} {phase.name.trim() !== '' && ''} {phase.name}</div>
                     <DataTable<ExtendedSign>
-                        data={phase.signs.map(sign => ({...sign, dimensions: `${sign.width} x ${sign.height}`} as ExtendedSign))}
+                        data={phase.signs.length === 0 ? [{description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-'} as any] : 
+                        phase.signs.map(sign => ({...sign, dimensions: `${sign.width} x ${sign.height}`} as ExtendedSign))}
                         columns={SIGN_COLUMNS}
                         hideDropdown
                     />

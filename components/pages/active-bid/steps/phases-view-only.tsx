@@ -24,7 +24,7 @@ const PhasesViewOnly = () => {
 
   return (
     <DataTable<Phase>
-        data={mptRental.phases}
+        data={mptRental.phases.map(p => ({...p, name: (p.name && p.name.trim() !== '') ? p.name : '-'}))}
         columns={PHASES_COLUMNS}
         hideDropdown={true}
     />
