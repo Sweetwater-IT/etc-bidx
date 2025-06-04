@@ -704,7 +704,7 @@ export const estimateReducer = (
 				mptRental: defaultMPTObject,
 				flagging: defaultFlaggingObject,
 				equipmentRental: [],
-				editable: true
+				ratesAcknowledged: false
 				// permanentSigns: defaultPermanentSignsObject, 
 			};
 
@@ -764,10 +764,10 @@ export const estimateReducer = (
 				saleItems: action.payload
 			}
 		
-		case 'TOGGLE_EDITABLE':
+		case 'SET_RATES_ACKNOWLEDGED':
 			return {
 				...state,
-				editable: !state.editable
+				ratesAcknowledged: action.payload
 			}
 
 		default:

@@ -101,7 +101,7 @@ const StepsMain = () => {
                 } transition-all duration-300`}
             >
               <div className="mb-4 flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Bid Form</h2>
+                <div></div>
                 <div className="flex items-center gap-4">
                   <Tooltip>
                     <TooltipTrigger asChild>

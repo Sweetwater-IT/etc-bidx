@@ -26,7 +26,7 @@ interface StaticPriceData {
 type EquipmentType = 'Truck Mounted Attenuator' | 'Message Board' | 'Arrow Board' | 'Speed Trailer'
 
 const EquipmentSummaryStep = () => {
-  const { equipmentRental, dispatch, editable } = useEstimate();
+  const { equipmentRental, dispatch } = useEstimate();
   const [isAddingEquipment, setIsAddingEquipment] = useState(equipmentRental.length === 0);
   const [selectedType, setSelectedType] = useState<EquipmentType | 'custom'>('Truck Mounted Attenuator');
   const [customName, setCustomName] = useState("");
@@ -140,8 +140,8 @@ const EquipmentSummaryStep = () => {
                       onChange={(e) =>
                         handleEquipmentUpdate(index, "name", e.target.value)
                       }
-                      disabled={isEquipmentType(item.name) || !editable}
-                      aria-disabled={isEquipmentType(item.name) || !editable}
+                      disabled={isEquipmentType(item.name) }
+                      aria-disabled={isEquipmentType(item.name) }
                       className="w-[200px]"
                     />
                   </div>
@@ -160,8 +160,6 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
                       />
                     </div>
                     <div className="flex-1">
@@ -178,8 +176,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
+  
+                        
                       />
                     </div>
                     <div className="flex-1">
@@ -196,8 +194,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
+                        
+                        
                       />
                     </div>
                     <div className="flex-1">
@@ -214,8 +212,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
+                        
+                        
                       />
                     </div>
                     <div className="flex-1">
@@ -227,8 +225,8 @@ const EquipmentSummaryStep = () => {
                           onCheckedChange={(checked) =>
                             handleEquipmentUpdate(index, "reRentForCurrentJob", checked)
                           }
-                          disabled={!editable}
-                          aria-disabled={!editable}
+                          
+                          
                         />
                       </div>
                     </div>
@@ -249,8 +247,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
+                        
+                        
                       />
                     </div>
                     <div className="flex-1">
@@ -267,8 +265,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        disabled={!editable}
-                        aria-disabled={!editable}
+                        
+                        
                       />
                     </div>
                   </div>}
@@ -299,8 +297,8 @@ const EquipmentSummaryStep = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditEquipment(index)}
-                      disabled={!editable}
-                      aria-disabled={!editable}
+                      
+                      
                     >
                       Edit
                     </Button>
@@ -308,8 +306,8 @@ const EquipmentSummaryStep = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEquipmentDelete(index)}
-                      disabled={!editable}
-                      aria-disabled={!editable}
+                      
+                      
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -332,8 +330,8 @@ const EquipmentSummaryStep = () => {
                     setCustomName("");
                   }
                 }}
-                disabled={!editable}
-                aria-disabled={!editable}
+                
+                
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose equipment type" />
@@ -348,8 +346,8 @@ const EquipmentSummaryStep = () => {
               </Select>
               <Button
                 onClick={handleItemNameSubmit}
-                disabled={!selectedType || (selectedType === "custom" && !customName.trim()) || !editable}
-                aria-disabled={!selectedType || (selectedType === "custom" && !customName.trim()) || !editable}
+                disabled={!selectedType || (selectedType === "custom" && !customName.trim()) }
+                aria-disabled={!selectedType || (selectedType === "custom" && !customName.trim()) }
               >
                 Add
               </Button>
@@ -376,8 +374,8 @@ const EquipmentSummaryStep = () => {
             variant="outline"
             onClick={() => setIsAddingEquipment(true)}
             className="w-full mt-4"
-            disabled={!editable}
-            aria-disabled={!editable}
+            
+            
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Another Equipment

@@ -13,7 +13,7 @@ const defaultBidState: EstimateContextType = {
   equipmentRental: [],
   flagging: defaultFlaggingObject,
   saleItems: [],
-  editable: true
+  ratesAcknowledged: false
 };
 
 const EstimateContext = createContext<EstimateContextType>(defaultBidState);

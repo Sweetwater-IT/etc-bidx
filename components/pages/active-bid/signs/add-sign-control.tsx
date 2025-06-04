@@ -31,7 +31,7 @@ interface AddSignControlProps {
 }
 
 const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
-  const { dispatch, editable } = useEstimate();
+  const { dispatch } = useEstimate();
   const [open, setOpen] = useState(false);
   const [showSelect, setShowSelect] = useState(false);
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
@@ -151,8 +151,6 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
             setShowSelect(true);
             setOpen(true);
           }}
-          disabled={!editable}
-          aria-disabled={!editable}
         >
           + Add another sign
         </Button>
@@ -169,8 +167,6 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
                 aria-expanded={open}
                 className="w-full justify-between"
                 onClick={() => setOpen((prev) => !prev)}
-                disabled={!editable}
-                aria-disabled={!editable}
               >
                 Select Designation
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
