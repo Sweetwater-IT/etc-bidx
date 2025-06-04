@@ -35,7 +35,7 @@ const SEGMENTS = [
   { label: "Archived", value: "archived" },
 ];
 
-export default function SignOrderPage() {
+export default function SignShopOrdersPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
   const [activeSegment, setActiveSegment] = useState("all");
@@ -171,8 +171,8 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
-      // Always use Draft (in-process) status
-      params.append("status", "in-process");
+      // Always use Draft (submitted) status
+      params.append("status", "submitted");
       
       // Add segment filter
       if (activeSegment !== "all") {
@@ -209,8 +209,8 @@ export default function SignOrderPage() {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      // Fetch segment counts filtered by in-process status
-      const segmentResponse = await fetch(`/api/sign-shop-orders-api?counts=true&status=in-process`);
+      // Fetch segment counts filtered by submitted status
+      const segmentResponse = await fetch(`/api/sign-shop-orders-api?counts=true&status=submitted`);
       const segmentData = await segmentResponse.json();
       
       if (segmentData.success) {
@@ -275,27 +275,7 @@ export default function SignOrderPage() {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/takeoffs/sign-order')}
-                className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Create sign order
-              </button>
-              <button
-                onClick={() => router.push('/takeoffs/new-load-sheet')}
-                className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Create load sheet
-              </button>
-              <button
-                onClick={() => router.push('/takeoffs/new')}
-                className="bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Create Takeoff
-              </button>
-            </div>
+            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Shop Orders</h1>
           </div>
         </SiteHeader>
         <div className="flex flex-1 flex-col">

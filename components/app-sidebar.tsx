@@ -156,6 +156,10 @@ export const data = {
           url: "/takeoffs/load-sheet",
         },
         {
+          title: "Sign Shop Orders",
+          url: "/takeoffs/sign-shop-orders",
+        },
+        {
           title: "Build Takeoff",
           url: "/takeoffs/new",
         },
