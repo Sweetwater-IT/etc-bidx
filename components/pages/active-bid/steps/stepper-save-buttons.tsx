@@ -44,7 +44,6 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     const handleSubmit = async () => {
         try {
             startLoading();
-
             await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
@@ -115,8 +114,8 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                 </Popover>
                     <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
                     <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
-                {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ''}</Button>}
-                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{initialSubmission ? 'Update' : 'Create'} bid</Button>}
+                {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
+                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{mode === 'new' ? 'Create' : 'Update'} bid</Button>}
             </div>
         </>
     )

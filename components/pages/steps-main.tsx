@@ -233,7 +233,7 @@ const StepsMain = () => {
 
             {/* Sidebar */}
             {isSidebarVisible && (
-              <div className="w-1/4 space-y-4 sticky h-screen overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
+              <div className="w-1/4 space-y-4 sticky max-h-[80vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
                 <AdminInformationAccordion currentStep={currentStep} />
                 <PhaseSummaryAccordion
                   currentStep={currentStep}
@@ -275,7 +275,7 @@ const StepsMain = () => {
               style={{
                 position: "sticky",
                 top: "2.5rem",
-                maxHeight: "calc(100vh - 2.5rem)",
+                maxHeight: "calc(82vh - 2.5rem)",
                 overflowY: "auto",
               }}
             >
