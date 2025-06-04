@@ -13,7 +13,7 @@ import BidItemsViewOnly from './bid-items-view-only'
 
 const BidViewOnlyContainer = () => {
     return (
-        <div className='flex'>
+        <div className='flex pr-6'>
             <div className='w-2/3'>
                 <div className="text-xl font-semibold pl-6 mb-4">Admin Information</div>
                 <AdminInfoViewOnly />
@@ -26,7 +26,7 @@ const BidViewOnlyContainer = () => {
                 <div className="text-xl font-semibold pl-6 mb-4 mt-8">Bid Items</div>
                 <BidItemsViewOnly/>
             </div>
-            <div className="w-1/3 space-y-4 sticky h-screen overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
+            <div className="w-1/3 space-y-4 sticky max-h-[70vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
                 <AdminInformationAccordion currentStep={1} />
                 <PhaseSummaryAccordion
                     currentStep={1}

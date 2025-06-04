@@ -1,5 +1,5 @@
 // PrimarySignItem.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   PrimarySign,
   SecondarySign,
@@ -13,6 +13,7 @@ import { useEstimate } from "@/contexts/EstimateContext";
 import { generateUniqueId } from "./generate-stable-id";
 import "./no-spinner.css";
 import Image from "next/image";
+import { useParams, useSearchParams } from "next/navigation";
 
 interface PrimarySignItemProps {
   primarySign: PrimarySign;
@@ -31,6 +32,15 @@ const PrimarySignItem = ({
   const [isConfiguring, setIsConfiguring] = useState(true);
   // Local image preview state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  //use effect to set configuring to false when viewing a bid in edit mode
+  const params = useSearchParams();
+  const contractNumber = params?.get('contractNumber');
+
+  useEffect(() => {
+    if(contractNumber && contractNumber !== '')
+    setIsConfiguring(false)
+  }, [contractNumber])
 
   // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
