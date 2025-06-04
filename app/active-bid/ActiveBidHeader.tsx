@@ -15,7 +15,12 @@ import { Separator } from '@/components/ui/separator'
 import StepperSaveButtons from '@/components/pages/active-bid/steps/stepper-save-buttons'
 import { Badge } from '@/components/ui/badge'
 
-const ActiveBidHeader = () => {
+interface Props {
+  mode: 'edit' | 'view' | 'new'
+  status: string;
+}
+
+const ActiveBidHeader = ({mode, status}: Props) => {
 
   const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork } = useEstimate()
 
@@ -58,9 +63,9 @@ const ActiveBidHeader = () => {
           </h1>
           {source && <p className="text-muted-foreground">Source: {source}</p>}
         </div>
-        <Badge variant='secondary' className='ml-2 text-xl'>Draft</Badge>
+        <Badge variant={status === 'PENDING' ? 'secondary' : status === 'WON' ? 'successful' : 'destructive'} className='ml-2 text-lg'>{status}</Badge>
       </div>
-      <StepperSaveButtons/>
+      <StepperSaveButtons mode={mode} status={status}/>
     </div>
   )
 }

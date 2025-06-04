@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEstimate } from '@/contexts/EstimateContext';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
 import Link from 'next/link';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 
 const DEFAULT_TOTALS = {
@@ -13,15 +14,24 @@ const DEFAULT_TOTALS = {
     grossProfit: '',
     grossMargin: '',
   };
+
+interface Props {
+    mode : 'view' | 'edit' | 'new'
+    status: string
+}
   
 
-const StepperSaveButtons = () => {
+const StepperSaveButtons = ({mode, status}: Props) => {
 
     const {adminData, mptRental, equipmentRental, flagging, dispatch } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
+
+    const router = useRouter()
+
+    const params = useSearchParams();
 
     return (
         <>
@@ -41,9 +51,9 @@ const StepperSaveButtons = () => {
             />
             <div className="flex gap-x-2">
                 {/* Worksheet Dropdown Button */}
-                {/* <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
+                {mode !== 'view' && <><Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline">
+                        <Button size='sm' variant="outline">
                             View Worksheet
                         </Button>
                     </PopoverTrigger>
@@ -74,9 +84,9 @@ const StepperSaveButtons = () => {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <Button className='p-4' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                <Button className='p-4'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button> */}
-                <Button className='p-4' size='sm' onClick={() => dispatch({ type: 'TOGGLE_EDITABLE' })}>Edit Draft</Button>
+                <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
+                <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
+                {status !== 'WON' && <Button className='p-4' size='sm' onClick={() => mode === 'view' ? router.push(`/active-bid/edit?${params?.toString()}`) : ''}>Edit Draft</Button>}
             </div>
         </>
     )

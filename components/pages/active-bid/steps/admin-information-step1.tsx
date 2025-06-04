@@ -110,18 +110,6 @@ const AdminInformationStep1 = ({
   const [selectedContractor, setSelectedContractor] = useState<Customer>();
   const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>()
 
-  useEffect(() => {
-
-    // Add a small delay to ensure context is fully initialized
-    const timer = setTimeout(() => {
-      if (defaultEditable === 'false' && !editToggleSet && editable) {
-        dispatch({ type: 'TOGGLE_EDITABLE' });
-        setEditToggleSet(true);
-      }
-    }, 50); // Small delay
-
-    return () => clearTimeout(timer);
-  }, [defaultEditable, dispatch, editable, editToggleSet]);
 
   function formatDecimal(value: string): string {
     return (parseInt(value, 10) / 100).toFixed(2)

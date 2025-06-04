@@ -1280,7 +1280,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             setIsCreatingAvailableJob(true);
         } else if (isActiveBids) {
             // Route to the active-bid page instead of opening a sheet
-            router.push("/active-bid");
+            router.push("/active-bid/new");
         } else if (isActiveJobs) {
             setCreateJobSheetOpen(true);
         }
@@ -1439,9 +1439,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onDeleteSelected={initiateDeleteBids}
                                     tableRef={activeBidsTableRef}
                                     onViewDetails={(item) => {
-                                        // if ('lettingDate' in item) {
-                                        //     handleActiveBidViewDetails(item as ActiveBid);
-                                        // }
+                                        const params = new URLSearchParams;
+                                        params.append('contractNumber', item.contractNumber as string);
+                                        params.append('tuckSidebar', 'true');
+                                        params.append('fullscreen', 'true');
+                                        params.append('defaultEditable', 'false');
+                                        router.push(`/active-bid/view?${params.toString()}`)
                                     }}
                                     onRowClick={(item) => {
                                         // if(!selectedActiveBid) return;
@@ -1450,7 +1453,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         params.append('tuckSidebar', 'true');
                                         params.append('fullscreen', 'true');
                                         params.append('defaultEditable', 'false');
-                                        router.push(`/active-bid?${params.toString()}`)
+                                        router.push(`/active-bid/view?${params.toString()}`)
                                     }}
                                     // onEdit={(item) => {
                                     //     if ('lettingDate' in item) {

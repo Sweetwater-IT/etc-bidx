@@ -2,30 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Suspense } from "react";
-import ActiveBidHeader from "../ActiveBidHeader";
-import StepsMain from "@/components/pages/steps-main";
-import { EstimateProvider } from "@/contexts/EstimateContext";
-import AdminInfoViewOnly from "@/components/pages/active-bid/steps/admin-info-view-only";
-import BidViewOnlyContainer from "@/components/pages/active-bid/steps/bid-view-only-container";
-
-function ActiveBidContent({mode} : {mode: string}) {
-  return (
-    <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <div>
-            <EstimateProvider>
-              <div className="mb-6 px-6">
-                <ActiveBidHeader />
-              </div>
-              {mode === 'view' ? <BidViewOnlyContainer/> : <StepsMain />}
-            </EstimateProvider>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import ActiveBidContent from "./ActiveBidContent";
 
 export default async function ActiveBidPage({params} : {params : any}) {
 
