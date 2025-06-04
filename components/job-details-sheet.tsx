@@ -136,7 +136,7 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
               <div className="space-y-1 w-full">
                 <Label className="font-medium">DBE %</Label>
                 <div className="text-sm text-muted-foreground">
-                  %{job?.dbe || '-'}
+                  {job?.dbe || '-'}%
                 </div>
               </div>
 

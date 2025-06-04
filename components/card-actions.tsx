@@ -22,16 +22,16 @@ interface CardActionsProps {
   hideImportExport?: boolean
 }
 
-export function CardActions({ 
-  date, 
-  setDate, 
-  onCreateClick, 
-  onImportSuccess, 
-  createButtonLabel = "Create Open Bid", 
-  hideCalendar = false, 
-  goUpActions = false, 
+export function CardActions({
+  date,
+  setDate,
+  onCreateClick,
+  onImportSuccess,
+  createButtonLabel = "Create Open Bid",
+  hideCalendar = false,
+  goUpActions = false,
   importType = 'available-jobs',
-  hideImportExport 
+  hideImportExport
 }: CardActionsProps) {
 
   const [importOpen, setImportOpen] = useState(false)
@@ -50,18 +50,34 @@ export function CardActions({
 
   // Handle clearing the date range
   const handleClearDate = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+
     if (setDate) {
-      // Reset to default range (today to 7 days from now)
+      // Reset to default range (beginning of year to today)
       const today = new Date();
-      const sevenDaysFromNow = new Date();
-      sevenDaysFromNow.setDate(today.getDate() + 7);
-      
+      const beginningOfYear = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+
       setDate({
-        from: today,
-        to: sevenDaysFromNow
+        from: undefined,
+        to: undefined
       });
+
+      // Close calendar after a brief delay to ensure state updates
+      setTimeout(() => {
+        setCalendarOpen(false);
+      }, 0);
     }
+  };
+
+  // Get default date range for display
+  const getDefaultDateRange = () => {
+    const today = new Date();
+    return `Jan 1, ${today.getFullYear()} - ${today.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })}`;
   };
 
   return (
@@ -76,33 +92,29 @@ export function CardActions({
                   date.to ? (
                     <span className="flex items-center justify-between w-full">
                       <span>{format(date.from, "LLL d, y")} - {format(date.to, "LLL d, y")}</span>
-                      <IconX 
-                        className="h-4 w-4 ml-2 hover:bg-gray-200 rounded" 
-                        onClick={handleClearDate}
-                      />
+                      <div onClick={handleClearDate} className="ml-2 hover:bg-gray-200 rounded p-1 z-10 flex-shrink-0">
+                        <IconX className="h-3 w-3" />
+                      </div>
                     </span>
                   ) : (
                     <span>
-                      {format(date.from, "LLL d, y")} - Select end date
+                      {format(date.from, "LLL d, y")} - {date.to ? format(date.to, 'LLL d, y') : format(new Date(), 'LLL d, y')}
                     </span>
                   )
                 ) : (
-                  <span>Jan 1, 2025 - {new Date().toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric', 
-                    year: 'numeric'
-                  })}</span>
+                  <span>{getDefaultDateRange()}</span>
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar 
-                initialFocus 
-                mode="range" 
-                defaultMonth={date?.from} 
-                selected={date} 
-                onSelect={handleDateSelect} 
-                numberOfMonths={2} 
+              <Calendar
+                key={`${date?.from?.getTime()}-${date?.to?.getTime()}`}
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={handleDateSelect}
+                numberOfMonths={2}
               />
             </PopoverContent>
           </Popover>
@@ -116,9 +128,9 @@ export function CardActions({
               <IconUpload className="h-4 w-4 mr-2" />
               Import
             </Button>
-            <ImportSheet 
-              open={importOpen} 
-              onOpenChange={setImportOpen} 
+            <ImportSheet
+              open={importOpen}
+              onOpenChange={setImportOpen}
               onImportSuccess={onImportSuccess}
               importType={importType}
             />
