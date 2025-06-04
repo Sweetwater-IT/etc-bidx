@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
       const { data: updatedBid, error: updateError } = await supabase
         .from('bid_estimates')
         .update({
-          status: 'PENDING',
+          status: adminData.contractNumber.includes('-DRAFT') ? 'DRAFT' : 'PENDING',
           total_revenue: allTotals.totalRevenue,
           total_cost: allTotals.totalCost,
           total_gross_profit: allTotals.totalGrossProfit,
