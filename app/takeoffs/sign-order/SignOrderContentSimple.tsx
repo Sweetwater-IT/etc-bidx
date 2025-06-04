@@ -1,19 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import SignSummaryAccordion from "@/components/pages/active-bid/sign-summary-accordion/sign-summary-accordion";
 import { useEffect, useState } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { exportSignListToExcel } from "@/lib/exportSignListToExcel";
-import { SignOrderList } from "./SignOrderList";
-import { SignOrderAdminInfo } from "./SignOrderAdminInfo";
+import { SignOrderList } from "../new/SignOrderList";
+import { SignOrderAdminInfo } from "../new/SignOrderAdminInfo";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { Customer } from "@/types/Customer";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { Textarea } from "@/components/ui/textarea";
-import SignOrderSummary from "./SignOrderSummary";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -31,11 +29,7 @@ export interface SignOrderAdminInformation {
     endDate?: Date
 }
 
-interface SignFormContentProps {
-    orderId?: string;
-}
-
-export default function SignFormContent({ orderId }: SignFormContentProps) {
+export default function SignOrderContentSimple() {
     const { dispatch, mptRental } = useEstimate();
 
     // Set up admin info state in the parent component
@@ -59,104 +53,6 @@ export default function SignFormContent({ orderId }: SignFormContentProps) {
         dispatch({ type: 'ADD_MPT_RENTAL' });
         dispatch({ type: 'ADD_MPT_PHASE' });
     }, [dispatch]);
-    
-    // Fetch sign order data if orderId is provided
-    useEffect(() => {
-        async function fetchSignOrderData() {
-            if (!orderId) return;
-            
-            try {
-                // Fetch sign order data
-                const response = await fetch(`/api/sign-orders/${orderId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to fetch sign order data');
-                }
-                
-                const data = await response.json();
-                
-                if (data.success && data.data) {
-                    const orderData = data.data;
-                    
-                    // Update the order number in the header
-                    const orderNumberElement = document.getElementById('order-number');
-                    if (orderNumberElement) {
-                        orderNumberElement.textContent = ` #${orderData.id || orderId}`;
-                    }
-                    
-                    // Extract customer data if available
-                    let customerData: Customer | null = null;
-                    if (orderData.contractor_id) {
-                        customerData = {
-                            id: orderData.contractor_id,
-                            name: orderData.contractors?.name || 'N/A'
-                        } as Customer;
-                    }
-                    
-                    // Extract requestor data if available
-                    let requestorData: User | null = null;
-                    if (orderData.requestor) {
-                        // Create basic user object with name and branch information
-                        // This structure is required for the branch dropdown to update automatically
-                        requestorData = {
-                            name: orderData.requestor,
-                            email: '',  // Required by User interface
-                            role: '',    // Required by User interface
-                            branches: orderData.branch ? { 
-                                name: orderData.branch as any 
-                            } : undefined
-                        };
-                        
-                        console.log('Setting requestor with branch:', requestorData);
-                    }
-                    
-                    // First set the admin info without the requestor to avoid branch auto-update
-                    setAdminInfo(prev => ({
-                        ...prev,
-                        customer: customerData,
-                        orderDate: orderData.order_date ? new Date(orderData.order_date) : new Date(),
-                        needDate: orderData.need_date ? new Date(orderData.need_date) : new Date(),
-                        orderType: orderData.order_type || [],
-                        selectedBranch: orderData.branch || 'All',
-                        jobNumber: orderData.job_number || '',
-                        contractNumber: orderData.contract_number || '',
-                        startDate: orderData.start_date ? new Date(orderData.start_date) : undefined,
-                        endDate: orderData.end_date ? new Date(orderData.end_date) : undefined
-                    }));
-                    
-                    // Then set the requestor separately to ensure branch is already set
-                    setTimeout(() => {
-                        setAdminInfo(prev => ({
-                            ...prev,
-                            requestor: requestorData
-                        }));
-                    }, 0);
-                    
-                    // Update sign list if available
-                    if (orderData.signs && Array.isArray(orderData.signs)) {
-                        dispatch({
-                            type: 'ADD_BATCH_MPT_SIGNS',
-                            payload: {
-                                phaseNumber: 0,
-                                signs: orderData.signs
-                            }
-                        });
-                    }
-                    
-                    // Update notes if available
-                    if (orderData.notes) {
-                        setLocalNotes(orderData.notes);
-                        setSavedNotes(orderData.notes);
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching sign order data:', error);
-                toast.error('Failed to load sign order data');
-            }
-        }
-        
-        fetchSignOrderData();
-    }, [orderId, dispatch]);
 
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
@@ -295,23 +191,22 @@ export default function SignFormContent({ orderId }: SignFormContentProps) {
                             <DropzoneEmptyState />
                         </Dropzone>
                     </div>
-                    <SignOrderSummary currentPhase={0}/>
                     <div className="rounded-lg border p-4">
-                    <h2 className="mb-2 text-lg font-semibold">Notes</h2>
-                    <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                            {savedNotes ? savedNotes : 'No notes saved for this takeoff'}
+                        <h2 className="mb-2 text-lg font-semibold">Notes</h2>
+                        <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">
+                                {savedNotes ? savedNotes : 'No notes saved for this takeoff'}
+                            </div>
+                            <Textarea
+                                placeholder="Add notes here..."
+                                value={localNotes}
+                                onChange={(e) => setLocalNotes(e.target.value)}
+                            />
+                            <Button className="w-full" onClick={() => setSavedNotes(prevState => prevState ? prevState + ' ' + localNotes : localNotes)}>
+                                Save Notes
+                            </Button>
                         </div>
-                        <Textarea
-                            placeholder="Add notes here..."
-                            value={localNotes}
-                            onChange={(e) => setLocalNotes(e.target.value)}
-                        />
-                        <Button className="w-full" onClick={() => setSavedNotes(prevState => prevState ? prevState + ' ' + localNotes : localNotes)}>
-                            Save Notes
-                        </Button>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
