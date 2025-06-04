@@ -259,7 +259,7 @@ const AdminInfoViewOnly = () => {
             </div>
 
             <div className="flex flex-col items-ends justify-end">
-                <Button onClick={handleSaveContractors} className='w-3/4 px-2'>
+                <Button onClick={handleSaveContractors} className='w-[90%] px-2'>
                     Save contractor/subcontractor
                 </Button>
             </div>

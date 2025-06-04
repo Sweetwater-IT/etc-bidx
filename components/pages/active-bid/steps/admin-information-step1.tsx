@@ -132,6 +132,11 @@ const AdminInformationStep1 = ({
       toggleStates.shopRate
     );
   };
+  
+  useEffect(() => {
+    if(contractNumberFromParams && contractNumberFromParams !== '')
+    setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true}))
+  }, [contractNumberFromParams])
 
   useEffect(() => {
     const allRatesAcknowledged = toggleStates.laborRate && toggleStates.fringeRate && toggleStates.shopRate;

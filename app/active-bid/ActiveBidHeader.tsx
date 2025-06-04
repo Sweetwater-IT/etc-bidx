@@ -59,10 +59,10 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
           <h1 className="text-3xl whitespace-nowrap font-bold">
               {contractNumber ?? 'Create New Bid'}
           </h1>
-          {mode !== 'new' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
+          {mode === 'view' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
         </div>
         {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'} 
-        className={`ml-2 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
+        className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
       </div>
       <StepperSaveButtons key={status} mode={mode} status={status}/>
     </div>
