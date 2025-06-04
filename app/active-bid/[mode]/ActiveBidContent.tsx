@@ -8,15 +8,15 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useLoading } from "@/hooks/use-loading";
 
-function formatCreatedAt (value: string){
+function formatCreatedAt(value: string) {
     const dateStr = value.split("T")[0]; // Gets "2025-05-26"
-      const [year, month, day] = dateStr.split("-");
-      const utcDate = new Date(
+    const [year, month, day] = dateStr.split("-");
+    const utcDate = new Date(
         Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day))
-      );
+    );
 
-      // Use native JavaScript methods to format in UTC
-      const monthNames = [
+    // Use native JavaScript methods to format in UTC
+    const monthNames = [
         "Jan",
         "Feb",
         "Mar",
@@ -29,17 +29,17 @@ function formatCreatedAt (value: string){
         "Oct",
         "Nov",
         "Dec",
-      ];
-      const monthName = monthNames[utcDate.getUTCMonth()];
-      const dayNum = utcDate.getUTCDate();
-      const yearNum = utcDate.getUTCFullYear();
+    ];
+    const monthName = monthNames[utcDate.getUTCMonth()];
+    const dayNum = utcDate.getUTCDate();
+    const yearNum = utcDate.getUTCFullYear();
 
-      const hoursValue = parseInt(value.split("T")[1].split(':')[0])
-      const amOrPm = hoursValue > 12 ? 'PM' : 'AM'
-      const hoursFormatted = hoursValue > 12 ? hoursValue - 12 : hoursValue
-      const timestamp = ', ' + hoursFormatted + ':' + value.split("T")[1].split(':')[1] + amOrPm
+    const hoursValue = parseInt(value.split("T")[1].split(':')[0])
+    const amOrPm = hoursValue > 12 ? 'PM' : 'AM'
+    const hoursFormatted = hoursValue > 12 ? hoursValue - 12 : hoursValue
+    const timestamp = ', ' + hoursFormatted + ':' + value.split("T")[1].split(':')[1] + amOrPm
 
-      return `${monthName} ${dayNum}, ${yearNum}${timestamp}`;
+    return `${monthName} ${dayNum}, ${yearNum}${timestamp}`;
 }
 
 function ActiveBidContent({ mode }: { mode: string }) {
@@ -47,7 +47,7 @@ function ActiveBidContent({ mode }: { mode: string }) {
     const [bidStatus, setBidStatus] = useState<string>();
     const [createdAt, setCreatedAt] = useState<string>();
 
-    const {startLoading, stopLoading} = useLoading()
+    const { startLoading, stopLoading } = useLoading()
 
     const searchParams = useSearchParams();
 
@@ -57,10 +57,10 @@ function ActiveBidContent({ mode }: { mode: string }) {
 
         const getEstimateMetadata = async () => {
             startLoading();
-            if(contractNumber && contractNumber !== ''){
+            if (contractNumber && contractNumber !== '') {
                 const estimateResponse = await fetch('/api/active-bids/' + contractNumber);
 
-                if(!estimateResponse.ok){
+                if (!estimateResponse.ok) {
                     toast.error('Error retrieving estimate status and contractor')
                 }
                 else {
@@ -72,7 +72,7 @@ function ActiveBidContent({ mode }: { mode: string }) {
             stopLoading();
         }
 
-        if(mode !== 'new'){
+        if (mode !== 'new') {
             getEstimateMetadata();
         }
     }, [mode])
@@ -81,11 +81,9 @@ function ActiveBidContent({ mode }: { mode: string }) {
         <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                    <div>
+                    <div className="relative">
                         <EstimateProvider>
-                            <div className={`mb-6 px-6 ${mode !== 'view' ? 'border-b-1': ''}`}>
-                                <ActiveBidHeader createdAt={createdAt ? formatCreatedAt(createdAt) : ''} status={bidStatus ?? ''} mode={mode as 'view' | 'new' | 'edit'} />
-                            </div>
+                            <ActiveBidHeader createdAt={createdAt ? formatCreatedAt(createdAt) : ''} status={bidStatus ?? ''} mode={mode as 'view' | 'new' | 'edit'} />
                             {mode === 'view' ? <BidViewOnlyContainer /> : <StepsMain />}
                         </EstimateProvider>
                     </div>
