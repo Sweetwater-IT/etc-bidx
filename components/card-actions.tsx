@@ -59,8 +59,8 @@ export function CardActions({
       const beginningOfYear = new Date(today.getFullYear(), 0, 1); // January 1st of current year
 
       setDate({
-        from: beginningOfYear,
-        to: today
+        from: undefined,
+        to: undefined
       });
 
       // Close calendar after a brief delay to ensure state updates

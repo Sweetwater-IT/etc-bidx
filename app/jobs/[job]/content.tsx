@@ -772,15 +772,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     useEffect(() => {
         if (!isAvailableJobs) return;
-
-        // Only proceed if we have both from and to dates
-        if (!dateRange?.from || !dateRange?.to) return;
-
-        const startDate = dateRange.from.toISOString().split('T')[0];
-        const endDate = dateRange.to.toISOString().split('T')[0];
-
-        // Fetch updated counts and stats with date filter
-        fetchAvailableJobCounts(startDate, endDate);
+        if (dateRange?.from && !dateRange.to) return;
+        if (dateRange?.to && !dateRange.from) return;
+    
+        let startDate: string;
+        let endDate: string;
+    
+        if (dateRange?.from && dateRange?.to) {
+            // Use the selected date range
+            startDate = dateRange.from.toISOString().split('T')[0];
+            endDate = dateRange.to.toISOString().split('T')[0];
+            fetchAvailableJobCounts(startDate, endDate);
+        } else {
+            fetchAvailableJobCounts();
+        }
+    
     }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]);
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
