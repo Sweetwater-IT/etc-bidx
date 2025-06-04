@@ -853,7 +853,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             source: 'available-jobs'
         }).toString();
 
-        router.push(`/active-bid?${queryParams}`);
+        router.push(`/active-bid/new?${queryParams}`);
     }, [router]);
 
     const handleUpdateStatus = useCallback(async (job: AvailableJob, status: 'Bid' | 'No Bid' | 'Unset') => {
