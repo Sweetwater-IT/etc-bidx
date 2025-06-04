@@ -39,9 +39,9 @@ const StepperSaveButtons = () => {
                 saleTotals={DEFAULT_TOTALS}
                 flaggingTotals={DEFAULT_TOTALS}
             />
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="flex gap-x-2">
                 {/* Worksheet Dropdown Button */}
-                <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
+                {/* <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                     <PopoverTrigger asChild>
                         <Button variant="outline">
                             View Worksheet
@@ -75,8 +75,8 @@ const StepperSaveButtons = () => {
                     </PopoverContent>
                 </Popover>
                 <Button className='p-4' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                <Button className='p-4'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
-                <Button className='p-4' onClick={() => dispatch({ type: 'TOGGLE_EDITABLE' })}>Edit</Button>
+                <Button className='p-4'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button> */}
+                <Button className='p-4' size='sm' onClick={() => dispatch({ type: 'TOGGLE_EDITABLE' })}>Edit Draft</Button>
             </div>
         </>
     )

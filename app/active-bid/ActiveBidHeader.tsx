@@ -11,6 +11,9 @@ import { useLoading } from '@/hooks/use-loading'
 import { createActiveBid } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { Separator } from '@/components/ui/separator'
+import StepperSaveButtons from '@/components/pages/active-bid/steps/stepper-save-buttons'
+import { Badge } from '@/components/ui/badge'
 
 const ActiveBidHeader = () => {
 
@@ -28,8 +31,8 @@ const ActiveBidHeader = () => {
     try {
       startLoading();
 
-      await createActiveBid({ ...adminData, contractNumber: adminData.contractNumber.includes('-DRAFT') ? adminData.contractNumber : adminData.contractNumber + '-DRAFT' }, 
-      mptRental, equipmentRental,  flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
+      await createActiveBid({ ...adminData, contractNumber: adminData.contractNumber.includes('-DRAFT') ? adminData.contractNumber : adminData.contractNumber + '-DRAFT' },
+        mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       router.push('/jobs/active-bids');
     } catch (error) {
@@ -42,15 +45,22 @@ const ActiveBidHeader = () => {
   }
 
   return (
-    <div>
-      <Button variant='ghost'  onClick={handleSubmit}>
-        <XIcon className="w-3 -ml-2 cursor-pointer" />
-      </Button>
-      <h1 className="text-3xl font-bold">
-        {source === 'Active Bids' ? `Edit Bid - ${contractNumber}`
-          : "Create New Bid"}
-      </h1>
-      {source && <p className="text-muted-foreground">Source: {source}</p>}
+    <div className='flex w-full items-center justify-between gap-2 mb-2'>
+      <div className='flex items-center gap-x-2'>
+        {/* <Button variant='ghost' onClick={handleSubmit}>
+          <XIcon className="cursor-pointer" />
+        </Button> */}
+        <div>
+          <h1 className="text-3xl font-bold">
+            {/* {source === 'Active Bids' ? `Edit Bid - ${contractNumber}`
+              : "Create New Bid"} */}
+              {contractNumber}
+          </h1>
+          {source && <p className="text-muted-foreground">Source: {source}</p>}
+        </div>
+        <Badge variant='secondary' className='ml-2 text-xl'>Draft</Badge>
+      </div>
+      <StepperSaveButtons/>
     </div>
   )
 }

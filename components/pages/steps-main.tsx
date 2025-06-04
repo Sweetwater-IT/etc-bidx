@@ -107,7 +107,7 @@ const StepsMain = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>
-                        <StepperSaveButtons/>
+                        {/* <StepperSaveButtons/> */}
                         {/* Reduced width for better proportions */}
                         <AddPhaseButton
                           setCurrentPhase={setCurrentPhase}
@@ -147,7 +147,7 @@ const StepsMain = () => {
                       </TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
+                    {/* <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant="outline"
@@ -161,7 +161,7 @@ const StepsMain = () => {
                       <TooltipContent>
                         <p>Exit Fullscreen Mode - Return to Step View</p>
                       </TooltipContent>
-                    </Tooltip>
+                    </Tooltip> */}
                   </div>
                 </div>
               </div>
@@ -281,7 +281,7 @@ const StepsMain = () => {
                 overflowY: "auto",
               }}
             >
-              <StepperSaveButtons/>
+              {/* <StepperSaveButtons/> */}
               <AddPhaseButton
                 setCurrentPhase={setCurrentPhase}
                 setCurrentStep={setCurrentStep}

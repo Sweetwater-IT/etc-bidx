@@ -140,6 +140,7 @@ export interface DataTableProps<TData extends object> {
   onViewJobSummary?: (item: TData) => void;
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  hideDropdown?: boolean;
 }
 
 function formatCellValue(value: any, key: string) {
@@ -343,6 +344,7 @@ export function DataTable<TData extends object>({
   onViewJobSummary,
   showFilters,
   setShowFilters,
+  hideDropdown
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
@@ -801,7 +803,7 @@ export function DataTable<TData extends object>({
             )}
 
             {/* Table Actions Menu - without Archive/Delete */}
-            <DropdownMenu>
+            {!hideDropdown && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1">
                   <MoreHorizontal className="h-4 w-4" />
@@ -815,7 +817,7 @@ export function DataTable<TData extends object>({
                   Print
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
 
             {addButtonLabel && (
               <Button onClick={onAddClick} size="sm" className="h-9 gap-1">
