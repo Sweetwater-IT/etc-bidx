@@ -94,7 +94,7 @@ const AdminInfoViewOnly = () => {
     const handleSaveContractors = async () => {
         if (!selectedContractor && !selectedSubcontractor) return;
 
-        let body: any = {};
+        const body: any = {};
         if (selectedContractor) body.contractor_id = selectedContractor.id;
         if (selectedSubcontractor) body.subcontractor_id = selectedSubcontractor.id;
 
