@@ -446,7 +446,7 @@ const BidItemsStep5 = ({
       setError(null);
 
       await createActiveBid(adminData, mptRental, equipmentRental,
-        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
+        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       if (!initialSubmission) {
         setInitialSubmission(true);

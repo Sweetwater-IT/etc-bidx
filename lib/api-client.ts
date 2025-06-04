@@ -260,7 +260,8 @@ export async function createActiveBid(
   equipmentRental: EquipmentRentalItem[],
   flagging: Flagging | null,
   serviceWork: Flagging | null,
-  saleItems: SaleItem[]
+  saleItems: SaleItem[],
+  status: 'PENDING' | 'DRAFT'
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
   const processedAdminData = {
@@ -281,7 +282,8 @@ export async function createActiveBid(
         equipmentRental,
         flagging,
         serviceWork,
-        saleItems
+        saleItems,
+        status
       }
     }),
   });

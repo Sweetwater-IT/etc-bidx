@@ -25,14 +25,6 @@ import { toast } from "sonner";
 import { Customer } from "@/types/Customer";
 import { useCustomers } from "@/hooks/use-customers";
 
-const SUBCONTRACTOR_OPTIONS = [
-  "ETC",
-  "Atlas",
-  "RoadSafe",
-  "Rae-Lynn",
-  "Unknown",
-  "Other",
-];
 
 const step: Step = {
   id: "step-1",
@@ -107,21 +99,6 @@ const AdminInformationStep1 = ({
   });
 
   const [editToggleSet, setEditToggleSet] = useState<boolean>(false)
-  const [selectedContractor, setSelectedContractor] = useState<Customer>();
-  const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>()
-
-  useEffect(() => {
-
-    // Add a small delay to ensure context is fully initialized
-    const timer = setTimeout(() => {
-      if (defaultEditable === 'false' && !editToggleSet && editable) {
-        dispatch({ type: 'TOGGLE_EDITABLE' });
-        setEditToggleSet(true);
-      }
-    }, 50); // Small delay
-
-    return () => clearTimeout(timer);
-  }, [defaultEditable, dispatch, editable, editToggleSet]);
 
   function formatDecimal(value: string): string {
     return (parseInt(value, 10) / 100).toFixed(2)
@@ -137,8 +114,6 @@ const AdminInformationStep1 = ({
     county: false,
     estimator: false,
     owner: false,
-    contractor: false,
-    subContractor: false
   });
 
   // State for loading status
@@ -478,92 +453,6 @@ const AdminInformationStep1 = ({
           <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
               <div className="max-w-xl grid grid-cols-2 gap-6">
-                {contractNumberFromParams && <>
-                  <Popover
-                    open={openStates.contractor}
-                    modal={true}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, contractor: open }))}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        disabled={!editable}
-                        aria-disabled={!editable}
-                        className='flex justify-between'
-                      >
-                        {selectedContractor?.name ||
-                          selectedContractor?.displayName ||
-                          "Select contractor..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput placeholder="Search contractor..." />
-                        <CommandEmpty>No contractor found.</CommandEmpty>
-                        <CommandGroup className="overflow-y-auto max-h-80">
-                          {customers.map((customer) => (
-                            <CommandItem
-                              key={customer.id}
-                              value={customer.id.toString()}
-                              onSelect={(e) => setSelectedContractor(customers.find(c => c.id.toString() === e))}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedContractor?.id === customer.id
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {customer.displayName}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <Popover open={openStates.subContractor} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, subContractor: open }))}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className="w-full justify-between"
-                          disabled={!editable}
-                          aria-disabled={!editable}
-                        >
-                          {selectedSubcontractor || "Select subcontractor..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Search subcontractor..." />
-                          <CommandEmpty>No subcontractor found.</CommandEmpty>
-                          <CommandGroup>
-                            {SUBCONTRACTOR_OPTIONS.map((option) => (
-                              <CommandItem
-                                key={option}
-                                value={option}
-                                onSelect={setSelectedSubcontractor}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedSubcontractor === option
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {option}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                </>}
                 {step.fields.map((field) => (
                   <div key={field.name} className="space-y-2.5">
                     <Label

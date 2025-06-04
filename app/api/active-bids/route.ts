@@ -296,13 +296,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = body.data as {
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status } = body.data as {
       adminData: AdminData;
       mptRental: MPTRentalEstimating;
       equipmentRental: EquipmentRentalItem[];
       flagging: Flagging;
       serviceWork: Flagging;
       saleItems: SaleItem[];
+      status: 'PENDING' | 'DRAFT'
     };
 
     // Calculate totals
@@ -329,7 +330,7 @@ export async function POST(request: NextRequest) {
       const { data: updatedBid, error: updateError } = await supabase
         .from('bid_estimates')
         .update({
-          status: 'PENDING',
+          status: status,
           total_revenue: allTotals.totalRevenue,
           total_cost: allTotals.totalCost,
           total_gross_profit: allTotals.totalGrossProfit,
@@ -349,7 +350,7 @@ export async function POST(request: NextRequest) {
         .from('bid_estimates')
         .insert({
           contract_number: adminData.contractNumber, // Add this to track unique bids
-          status: 'PENDING',
+          status: status,
           total_revenue: allTotals.totalRevenue,
           total_cost: allTotals.totalCost,
           total_gross_profit: allTotals.totalGrossProfit,

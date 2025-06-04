@@ -4,24 +4,63 @@ import { Button } from '@/components/ui/button';
 import { Command, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useEstimate } from '@/contexts/EstimateContext';
+import { useLoading } from '@/hooks/use-loading';
+import { createActiveBid } from '@/lib/api-client';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
+import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
 import Link from 'next/link';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
+import { toast } from 'sonner';
 
 const DEFAULT_TOTALS = {
     revenue: '',
     grossProfit: '',
     grossMargin: '',
-  };
-  
+};
 
-const StepperSaveButtons = () => {
+interface Props {
+    mode: 'view' | 'edit' | 'new'
+    status: string
+}
 
-    const {adminData, mptRental, equipmentRental, flagging, dispatch } = useEstimate();
+
+const StepperSaveButtons = ({ mode, status }: Props) => {
+
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
+
+    const [initialSubmission, setInitialSubmisison] = useState<boolean>(false)
+
+    const { startLoading, stopLoading } = useLoading()
+
+    const router = useRouter()
+
+    const params = useSearchParams();
+
+    const handleSubmit = async () => {
+        try {
+            startLoading();
+
+            await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
+            toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
+            stopLoading()
+            router.replace('/jobs/active-bids')
+        } catch (error) {
+            console.error("Error creating bid:", error);
+            stopLoading()
+            toast.error('Bid not succesfully saved as draft: ' + error)
+        }
+    }
+
+    useEffect(() => {
+        if (mode === 'edit' && status !== 'DRAFT') {
+            setInitialSubmisison(true)
+        }
+    }, [mode, status])
 
     return (
         <>
@@ -39,11 +78,11 @@ const StepperSaveButtons = () => {
                 saleTotals={DEFAULT_TOTALS}
                 flaggingTotals={DEFAULT_TOTALS}
             />
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="flex gap-x-2">
                 {/* Worksheet Dropdown Button */}
-                <Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
+                {mode !== 'view' && initialSubmission && <><Popover open={openWorksheetPopover} onOpenChange={setOpenWorksheetPopover}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline">
+                        <Button size='sm' variant="outline">
                             View Worksheet
                         </Button>
                     </PopoverTrigger>
@@ -74,9 +113,10 @@ const StepperSaveButtons = () => {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <Button className='p-4' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                <Button className='p-4'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button>
-                <Button className='p-4' onClick={() => dispatch({ type: 'TOGGLE_EDITABLE' })}>Edit</Button>
+                    <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
+                    <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
+                {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ''}</Button>}
+                {mode !== 'view' && <Button className='p-4' size='sm' onClick={handleSubmit}>{initialSubmission ? 'Update' : 'Create'} bid</Button>}
             </div>
         </>
     )

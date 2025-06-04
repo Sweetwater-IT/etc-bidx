@@ -18,7 +18,6 @@ import PhaseInfoStep2 from "./active-bid/steps/phase-info-step2";
 import MUTCDSignsStep3 from "./active-bid/steps/mutcd-signs-step3";
 import TripAndLaborStep4 from "./active-bid/steps/trip-and-labor-step4";
 import BidItemsStep5 from "./active-bid/steps/bid-items-step5";
-import StepperSaveButtons from "./active-bid/steps/stepper-save-buttons";
 import { useSidebar } from "../ui/sidebar";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
@@ -107,7 +106,6 @@ const StepsMain = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>
-                        <StepperSaveButtons/>
                         {/* Reduced width for better proportions */}
                         <AddPhaseButton
                           setCurrentPhase={setCurrentPhase}
@@ -147,7 +145,7 @@ const StepsMain = () => {
                       </TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
+                    {/* <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant="outline"
@@ -161,7 +159,7 @@ const StepsMain = () => {
                       <TooltipContent>
                         <p>Exit Fullscreen Mode - Return to Step View</p>
                       </TooltipContent>
-                    </Tooltip>
+                    </Tooltip> */}
                   </div>
                 </div>
               </div>
@@ -281,7 +279,6 @@ const StepsMain = () => {
                 overflowY: "auto",
               }}
             >
-              <StepperSaveButtons/>
               <AddPhaseButton
                 setCurrentPhase={setCurrentPhase}
                 setCurrentStep={setCurrentStep}
