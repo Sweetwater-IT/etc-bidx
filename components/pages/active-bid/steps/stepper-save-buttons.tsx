@@ -27,7 +27,7 @@ interface Props {
 
 const StepperSaveButtons = ({ mode, status }: Props) => {
 
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
@@ -116,7 +116,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                     <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
                     <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
                 {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ''}</Button>}
-                {mode !== 'view' && <Button className='p-4' size='sm' onClick={handleSubmit}>{initialSubmission ? 'Update' : 'Create'} bid</Button>}
+                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{initialSubmission ? 'Update' : 'Create'} bid</Button>}
             </div>
         </>
     )

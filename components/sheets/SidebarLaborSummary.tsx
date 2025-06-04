@@ -52,10 +52,10 @@ const SidebarLaborSummary = () => {
       >
         <div className="px-3 py-1 text-sm">{row.item}</div>
         <div className="px-3 py-1 text-sm">
-          <Tooltip>
-            <TooltipTrigger className="cursor-help">
+          {/* <Tooltip>
+            <TooltipTrigger className="cursor-help"> */}
               {row.total.toFixed(2)} hrs
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent>
               {row.item === 'Rated Labor Hours' && (
                 <p>Rated Labor Hours = (Number of Personnel × Project Days × Hours Per Day)</p>
@@ -70,7 +70,7 @@ const SidebarLaborSummary = () => {
                 <p>Total Hours = (Rated Labor Hours + Shop Labor Hours + Permanent Sign Hours)</p>
               )}
             </TooltipContent>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
     ))}

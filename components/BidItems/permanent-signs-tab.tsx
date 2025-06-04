@@ -50,7 +50,7 @@ const determineItemType = (item: PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | P
 };
 
 const PermanentSignsSummaryStep = () => {
-  const { permanentSigns, dispatch, editable } = useEstimate();
+  const { permanentSigns, dispatch } = useEstimate();
   const [isAddingSign, setIsAddingSign] = useState(false);
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
   const [configuringId, setConfiguringId] = useState<string | null>(null);
@@ -290,8 +290,6 @@ const PermanentSignsSummaryStep = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditItem(pmsItem.id)}
-                      disabled={!editable}
-                      aria-disabled={!editable}
                     >
                       Edit
                     </Button>
@@ -299,8 +297,6 @@ const PermanentSignsSummaryStep = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleItemDelete(pmsItem.id)}
-                      disabled={!editable}
-                      aria-disabled={!editable}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -320,8 +316,6 @@ const PermanentSignsSummaryStep = () => {
                 onValueChange={(value) => {
                   setSelectedType(value as PMSItemKeys);
                 }}
-                disabled={!editable}
-                aria-disabled={!editable}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose permanent sign item" />
@@ -336,8 +330,8 @@ const PermanentSignsSummaryStep = () => {
               </Select>
               <Button
                 onClick={handleItemSubmit}
-                disabled={!editable || !selectedType}
-                aria-disabled={!editable || !selectedType}
+                disabled={!selectedType}
+                aria-disabled={!selectedType}
               >
                 Add
               </Button>
@@ -350,8 +344,6 @@ const PermanentSignsSummaryStep = () => {
             variant="outline"
             onClick={() => setIsAddingSign(true)}
             className="w-full mt-4"
-            disabled={!editable}
-            aria-disabled={!editable}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Another Sign Item

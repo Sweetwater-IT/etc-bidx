@@ -8,7 +8,7 @@ import {
 } from '@/lib/mptRentalHelperFunctions'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
 import { safeNumber } from '@/lib/safe-number'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+// import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const BidSummaryByItem = () => {
   const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate()
@@ -98,27 +98,30 @@ const BidSummaryByItem = () => {
       <div className="mb-8">
         <div className="grid grid-cols-3 mb-2">
           <div className="px-3 font-medium">
-            <span className="border-b border-dotted border-gray-400 cursor-help">Bid Item</span>
+            {/* <span className="border-b border-dotted border-gray-400 cursor-help">Bid Item</span> */}
+            Bid Item
           </div>
           <div className="px-3 font-medium">
-            <Tooltip>
+            {/* <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Total</span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Total = Revenue amount for each bid item</p>
               </TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
+            Total Revenue
           </div>
           <div className="px-3 font-medium">
-            <Tooltip>
+            {/* <Tooltip>
               <TooltipTrigger>
                 <span className="border-b border-dotted border-gray-400 cursor-help">Percentage</span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Percentage = (Item Revenue ÷ Total Revenue) × 100%</p>
               </TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
+            Percentage
           </div>
         </div>
         
@@ -129,10 +132,10 @@ const BidSummaryByItem = () => {
           >
             <div className="px-3 py-1 text-sm">{row.item}</div>
             <div className="px-3 py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
+              {/* <Tooltip>
+                <TooltipTrigger className="cursor-help"> */}
                   ${row.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </TooltipTrigger>
+                {/* </TooltipTrigger>
                 <TooltipContent>
                   {row.item === 'MPT Mobilization' && <p>MPT Mobilization = Total MPT Revenue × 0.35</p>}
                   {row.item === 'MPT' && <p>MPT = Total MPT Revenue × 0.65</p>}
@@ -142,20 +145,20 @@ const BidSummaryByItem = () => {
                   {row.item === 'Sale' && <p>Sale = Total Revenue × (Sale Revenue Percentage ÷ 100)</p>}
                   {row.item === 'Total' && <p>Total = Sum of all revenue items</p>}
                 </TooltipContent>
-              </Tooltip>
+              </Tooltip> */}
             </div>
             <div className="px-3 py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
+              {/* <Tooltip>
+                <TooltipTrigger className="cursor-help"> */}
                   {row.percentage.toFixed(2)}%
-                </TooltipTrigger>
+                {/* </TooltipTrigger>
                 <TooltipContent>
                   {row.item !== 'Total' ? 
                     <p>Percentage = (Item Revenue ÷ Total Revenue) × 100%</p> : 
                     <p>Total Percentage = 100%</p>
                   }
                 </TooltipContent>
-              </Tooltip>
+              </Tooltip> */}
             </div>
           </div>
         ))}
@@ -165,24 +168,26 @@ const BidSummaryByItem = () => {
       <div className="mt-8">
         <div className="grid grid-cols-2 mb-2">
           <div className="px-3 font-medium">
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">DISCOUNT</span>
-              </TooltipTrigger>
+            {/* <Tooltip>
+              <TooltipTrigger> */}
+                {/* <span className="border-b border-dotted border-gray-400 cursor-help">DISCOUNT</span> */}
+                DISCOUNT
+              {/* </TooltipTrigger>
               <TooltipContent>
                 <p>Discount categories applied to the bid items</p>
               </TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
           </div>
           <div className="px-3 font-medium">
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="border-b border-dotted border-gray-400 cursor-help">Rate</span>
-              </TooltipTrigger>
+            {/* <Tooltip>
+              <TooltipTrigger> */}
+                {/* <span className="border-b border-dotted border-gray-400 cursor-help">Rate</span> */}
+                Rate
+              {/* </TooltipTrigger>
               <TooltipContent>
                 <p>Discount rate applied as a percentage of the total</p>
               </TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
           </div>
         </div>
         
@@ -193,16 +198,16 @@ const BidSummaryByItem = () => {
           >
             <div className="px-3 py-1 text-sm">{row.item}</div>
             <div className="px-3 py-1 text-sm">
-              <Tooltip>
-                <TooltipTrigger className="cursor-help">
+              {/* <Tooltip>
+                <TooltipTrigger className="cursor-help"> */}
                   {safeNumber((row.discountRate * 100)).toFixed(2)}%
-                </TooltipTrigger>
+                {/* </TooltipTrigger>
                 <TooltipContent>
                   {row.item === 'MPT' && <p>MPT Discount Rate = 1 - (MPT Revenue ÷ MPT Cost)</p>}
                   {row.item === 'SIGNS' && <p>Signs Discount Rate = 1 - (Signs Revenue ÷ Signs Cost)</p>}
                   {row.item === 'Total' && <p>Total Discount Rate = 1 - ((MPT Revenue + Signs Revenue) ÷ (MPT Cost + Signs Cost))</p>}
                 </TooltipContent>
-              </Tooltip>
+              </Tooltip> */}
             </div>
           </div>
         ))}

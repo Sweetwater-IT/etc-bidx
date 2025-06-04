@@ -30,7 +30,7 @@ const NON_RATED_MARKUP_PERCENTAGES = [50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70
 const RATED_MARKUP_PERCENTAGES = [42.5, 45, 47.5, 50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70];
 
 const ServiceWorkTab = () => {
-  const { adminData, serviceWork, dispatch, editable } = useEstimate();
+  const { adminData, serviceWork, dispatch } = useEstimate();
   const [serviceWorkSummary, setServiceWorkSummary] = useState<any>(null);
   const [selectedMarkupRate, setSelectedMarkupRate] = useState<number | null>(null);
   const [displayEquipCost, setDisplayEquipCost] = useState<number>(0);
@@ -211,8 +211,6 @@ const ServiceWorkTab = () => {
                     value
                   }
                 })}
-                disabled={!editable}
-                aria-disabled={!editable}
               >
                 <SelectTrigger id="rate-type" className="w-full">
                   <SelectValue placeholder="Select rate type" />
@@ -237,8 +235,7 @@ const ServiceWorkTab = () => {
                 value={safeNumber(serviceWork?.fuelCostPerGallon) || ""}
                 onChange={(e) => handleInputChange('fuelCostPerGallon', parseFloat(e.target.value) || 0)}
                 className="w-40 text-right"
-                disabled={!editable}
-                aria-disabled={!editable}
+
               />
             </div>
           </div>
@@ -307,8 +304,7 @@ const ServiceWorkTab = () => {
                 value={safeNumber(serviceWork?.personnel) || ""}
                 onChange={(e) => handleInputChange('personnel', parseInt(e.target.value) || 0)}
                 className="w-40 text-right"
-                disabled={!editable}
-                aria-disabled={!editable}
+
               />
             </div>
           </div>
@@ -323,8 +319,7 @@ const ServiceWorkTab = () => {
                 min={0}
                 value={safeNumber(serviceWork?.numberTrucks) || ""}
                 onChange={(e) => handleInputChange('numberTrucks', parseInt(e.target.value) || 0)}
-                disabled={!editable}
-                aria-disabled={!editable}
+
                 className="w-40 text-right"
               />
             </div>
@@ -353,8 +348,7 @@ const ServiceWorkTab = () => {
               value={serviceWork?.arrowBoards.cost || ""}
               onChange={(e) => handleEquipmentInputChange('arrowBoards', 'cost', parseFloat(e.target.value) || 0)}
               className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
           
@@ -368,8 +362,7 @@ const ServiceWorkTab = () => {
               min={0}
               value={safeNumber(serviceWork?.arrowBoards.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('arrowBoards', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={!editable}
-              aria-disabled={!editable}
+              
               className="w-40 text-right"
             />
           </div>
@@ -382,8 +375,7 @@ const ServiceWorkTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('arrowBoards', 'includeInLumpSum', checked === true)
               }
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
           
@@ -397,8 +389,7 @@ const ServiceWorkTab = () => {
               value={serviceWork?.messageBoards.cost || ""}
               onChange={(e) => handleEquipmentInputChange('messageBoards', 'cost', parseFloat(e.target.value) || 0)}
               className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
           
@@ -412,8 +403,7 @@ const ServiceWorkTab = () => {
               min={0}
               value={safeNumber(serviceWork?.messageBoards.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('messageBoards', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={!editable}
-              aria-disabled={!editable}
+              
               className="w-40 text-right"
             />
           </div>
@@ -426,8 +416,7 @@ const ServiceWorkTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('messageBoards', 'includeInLumpSum', checked === true)
               }
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
           
@@ -441,8 +430,7 @@ const ServiceWorkTab = () => {
               value={serviceWork?.TMA.cost || ""}
               onChange={(e) => handleEquipmentInputChange('TMA', 'cost', parseFloat(e.target.value) || 0)}
               className="w-40 text-right"
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
           
@@ -456,8 +444,7 @@ const ServiceWorkTab = () => {
               min={0}
               value={safeNumber(serviceWork?.TMA.quantity) || ""}
               onChange={(e) => handleEquipmentInputChange('TMA', 'quantity', parseInt(e.target.value) || 0)}
-              disabled={!editable}
-              aria-disabled={!editable}
+              
               className="w-40 text-right"
             />
           </div>
@@ -470,8 +457,7 @@ const ServiceWorkTab = () => {
               onCheckedChange={(checked) => 
                 handleEquipmentInputChange('TMA', 'includeInLumpSum', checked === true)
               }
-              disabled={!editable}
-              aria-disabled={!editable}
+              
             />
           </div>
         </div>
@@ -494,8 +480,7 @@ const ServiceWorkTab = () => {
               min={0}
               value={safeNumber(serviceWork?.onSiteJobHours) || ""}
               onChange={(e) => handleInputChange('onSiteJobHours', parseInt(e.target.value) || 0)}
-              disabled={!editable}
-              aria-disabled={!editable}
+              
               className="w-40 text-right"
             />
           </div>
@@ -514,7 +499,6 @@ const ServiceWorkTab = () => {
               disabled
               readOnly
               className="w-40 text-right"
-              aria-disabled={!editable}
             />
           </div>
           
@@ -551,8 +535,7 @@ const ServiceWorkTab = () => {
               step={0.01}
               value={safeNumber(serviceWork?.additionalEquipmentCost) || ""}
               onChange={(e) => handleInputChange('additionalEquipmentCost', parseFloat(e.target.value) || 0)}
-              disabled={!editable}
-              aria-disabled={!editable}
+              
               className="w-40 text-right"
             />
           </div>
@@ -602,8 +585,6 @@ const ServiceWorkTab = () => {
               <div className="flex justify-center">
                 <Checkbox
                   checked={serviceWork?.markupRate === rate}
-                  disabled={!editable}
-                  aria-disabled={!editable}
                   onCheckedChange={(checked) => {
                     setSelectedMarkupRate(null);
                     if (checked) {

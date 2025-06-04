@@ -24,14 +24,14 @@ const SignSquareFootageTotals = () => {
       <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">High Intensity</div>
         <div className="px-3 py-1 text-sm">
-          <Tooltip>
-            <TooltipTrigger className="cursor-help">
+          {/* <Tooltip>
+            <TooltipTrigger className="cursor-help"> */}
               {mptRental ? returnSignTotalsSquareFootage(mptRental).HI.totalSquareFootage.toFixed(2) : "0.00"} sq. ft.
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent>
               <p>HI Sign Area = Sum of (Width × Height) for all High Intensity signs</p>
             </TooltipContent>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
       
@@ -39,14 +39,14 @@ const SignSquareFootageTotals = () => {
       <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">Diamond Grade</div>
         <div className="px-3 py-1 text-sm">
-          <Tooltip>
-            <TooltipTrigger className="cursor-help">
+          {/* <Tooltip>
+            <TooltipTrigger className="cursor-help"> */}
               {mptRental ? returnSignTotalsSquareFootage(mptRental).DG.totalSquareFootage.toFixed(2) : "0.00"} sq. ft.
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent>
               <p>DG Sign Area = Sum of (Width × Height) for all Diamond Grade signs</p>
             </TooltipContent>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
       
@@ -54,14 +54,14 @@ const SignSquareFootageTotals = () => {
       <div className="grid grid-cols-2 border-t border-gray-300">
         <div className="px-3 py-1 text-sm">Special</div>
         <div className="px-3 py-1 text-sm">
-          <Tooltip>
-            <TooltipTrigger className="cursor-help">
+          {/* <Tooltip>
+            <TooltipTrigger className="cursor-help"> */}
               {mptRental ? returnSignTotalsSquareFootage(mptRental).Special.totalSquareFootage.toFixed(2) : "0.00"} sq. ft.
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent>
               <p>Special Sign Area = Sum of (Width × Height) for all Special signs</p>
             </TooltipContent>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
       
@@ -69,14 +69,14 @@ const SignSquareFootageTotals = () => {
       <div className="grid grid-cols-2 border-t border-gray-300 bg-green-50">
         <div className="px-3 py-1 text-sm">Total</div>
         <div className="px-3 py-1 text-sm">
-          <Tooltip>
-            <TooltipTrigger className="cursor-help">
+          {/* <Tooltip>
+            <TooltipTrigger className="cursor-help"> */}
               {totalSquareFootage.toFixed(2)} sq. ft.
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent>
               <p>Total Area = Sum of all sign areas (HI + DG + Special)</p>
             </TooltipContent>
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
     </div>

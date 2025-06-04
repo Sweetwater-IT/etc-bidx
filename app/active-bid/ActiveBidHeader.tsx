@@ -49,7 +49,7 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
   }
 
   return (
-    <div className={`flex w-full items-center justify-between gap-2 mb-2 ${mode !== 'view' ? 'mt-12' : ''}`}>
+    <div className={`flex w-full bg-white z-50 items-center sticky top-0 justify-between px-6 gap-2 pb-4 mb-6 ${mode !== 'view' ? 'pt-6 mt-2 border-b-1' : ''}`}>
       <div className='flex items-center gap-x-0'>
         {mode !== 'view' && <Button variant='ghost' onClick={handleSubmit}>
           <XIcon className="cursor-pointer" />
