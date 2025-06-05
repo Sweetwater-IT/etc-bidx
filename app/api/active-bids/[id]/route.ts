@@ -85,7 +85,7 @@ export async function PATCH(
       .select()
       .single();
 
-      if (body.status !== 'DRAFT' && updatedBid.contractNumber.endsWith('-DRAFT')) {
+      if (body.status !== 'DRAFT' && updatedBid.contract_number.endsWith('-DRAFT')) {
         const { error: contractUpdateError } = await supabase
           .from('admin_data_entries')
           .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })
