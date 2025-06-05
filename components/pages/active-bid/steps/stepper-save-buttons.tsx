@@ -1,4 +1,5 @@
 'use client'
+import { BidSummaryDrawer } from '@/components/bid-summary-drawer';
 import { WorksheetDialog } from '@/components/sheets/WorksheetDialog';
 import { Button } from '@/components/ui/button';
 import { Command, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -32,6 +33,8 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
+
+    const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false)
 
     const [initialSubmission, setInitialSubmisison] = useState<boolean>(false)
 
@@ -114,8 +117,16 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                 </Popover>
                     <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
                     <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
-                {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
-                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{mode === 'new' ? 'Create' : 'Update'} bid</Button>}
+                {mode === 'view' && <Button
+                    variant="outline"
+                    size='sm'
+                    onClick={() => setIsViewSummaryOpen(true)}
+                >
+                    View Bid Summary
+                </Button>}
+                {mode === 'view' && status !== 'WON' && status!== 'LOST' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
+                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{(mode === 'new' || status === 'DRAFT') ? 'Create' : 'Update'} bid</Button>}
+                {mode === 'view' && <BidSummaryDrawer open={isViewSummaryOpen} onOpenChange={setIsViewSummaryOpen} />}
             </div>
         </>
     )

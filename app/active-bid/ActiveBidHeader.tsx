@@ -36,7 +36,7 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
     try {
       startLoading();
 
-      await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT');
+      await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, status as 'DRAFT' | 'PENDING');
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       router.replace('/jobs/active-bids')
     } catch (error) {

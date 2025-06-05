@@ -68,7 +68,7 @@ const PhaseInfoStep2 = ({
     const handlePhaseNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         dispatch({
             type: 'UPDATE_PHASE_NAME',
-            payload: { value: e.target.value, phase: currentPhase },
+            payload: { value: e.target.value.toUpperCase(), phase: currentPhase },
         });
     };
 
