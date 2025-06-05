@@ -51,7 +51,9 @@ const SIGN_ORDER_COLUMNS = [
     }
   },
   { key: 'type', title: 'Type' },
-  { key: 'order_number', title: 'Order Number' }
+  { key: 'order_number', title: 'Order Number' },
+  // Empty action column at the end
+  { key: 'actions', title: 'Actions', render: () => <div className="w-8"></div> }
 ]
 
 const SEGMENTS = [
@@ -302,6 +304,23 @@ export default function SignShopOrdersPage () {
     fetchCounts()
   }, [fetchCounts, activeSegment])
 
+  // Handle selected rows actions
+  const handleArchiveSelected = useCallback(async (rows: QuoteGridView[]) => {
+    console.log('Archive selected rows:', rows)
+    // Implement archive functionality here
+    toast.success(`${rows.length} sign order(s) archived successfully`)
+    // Refresh data after archiving
+    fetchQuotes()
+  }, [fetchQuotes])
+  
+  const handleDeleteSelected = useCallback(async (rows: QuoteGridView[]) => {
+    console.log('Delete selected rows:', rows)
+    // Implement delete functionality here
+    toast.success(`${rows.length} sign order(s) deleted successfully`)
+    // Refresh data after deleting
+    fetchQuotes()
+  }, [fetchQuotes])
+
   const handleRowClick = (quote: QuoteGridView) => {
     // Navigate to the sign order detail page with the correct ID
     router.push(`/takeoffs/sign-order/${quote.id}`)
@@ -345,6 +364,9 @@ export default function SignShopOrdersPage () {
                 onSegmentChange={handleSegmentChange}
                 onRowClick={handleRowClick}
                 stickyLastColumn
+                // Selection props
+                onArchiveSelected={handleArchiveSelected}
+                onDeleteSelected={handleDeleteSelected}
                 // Pagination props
                 pageCount={pageCount}
                 pageIndex={pageIndex}

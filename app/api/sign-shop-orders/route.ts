@@ -19,71 +19,79 @@ export async function GET(request: NextRequest) {
 
     // If we're just getting counts
     if (counts) {
-      // Always use only 'submitted' status for counts, regardless of what's passed in the status parameter
-      // This ensures we're only counting orders with 'submitted' status
-      const statusValues = ['Submitted', 'submitted', 'SUBMITTED'];
+      // Check if we're coming from the load-sheet page which needs both Draft and Submitted
+      // The load-sheet page sends status=Draft,Submitted in the request
+      let statusValues: string[] = [];
+      if (statusParam && statusParam.includes('Draft')) {
+        // Handle multiple statuses separated by commas for the load-sheet page
+        const statuses = statusParam.split(',').map(s => s.trim());
+        
+        // Create an array with all case variations for each status
+        statuses.forEach(status => {
+          statusValues.push(status, status.toLowerCase(), status.toUpperCase());
+        });
+
+      } else {
+        // For sign-shop-orders page, only count submitted orders
+        statusValues = ['Submitted', 'submitted', 'SUBMITTED'];
+
+      }
+
+      // Since we don't have the RPC functions, use direct count queries
+      const { count: totalCount, error: countError } = await supabase
+        .from('sign_orders')
+        .select('*', { count: 'exact', head: true })
+        .in('status', statusValues);
+
+      if (countError) {
+        console.error('Error getting total count:', countError);
+        return NextResponse.json({ success: false, error: 'Failed to get counts' }, { status: 500 });
+      }
       
-      // Log what we're doing for debugging
-      console.log('Counting only orders with status:', statusValues);
-
-      // Get total count across all branches using the database function
-      const { data: totalData, error: totalError } = await supabase
-        .rpc('get_sign_orders_count', { status_values: statusValues });
-
-      if (totalError) {
-        console.error('Error fetching total count:', totalError);
-        return NextResponse.json({ success: false, error: 'Failed to get total count' }, { status: 500 });
+      // Get all users with their branch_ids
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('name, branch_id');
+        
+      if (usersError) {
+        console.error('Error getting users:', usersError);
       }
-
-      // Get count for Hatfield branch
-      const { data: hatfieldData, error: hatfieldError } = await supabase
-        .rpc('get_sign_orders_count_by_branch', { status_values: statusValues, branch_name: 'hatfield' });
-
-      if (hatfieldError) {
-        console.error('Error fetching Hatfield count:', hatfieldError);
-        return NextResponse.json({ success: false, error: 'Failed to get Hatfield count' }, { status: 500 });
+      
+      // Create a map of user names to branch_ids
+      const userBranchMap = (users || []).reduce((map: any, user: any) => {
+        map[user.name] = user.branch_id;
+        return map;
+      }, {});
+      
+      // Get all orders with their requestors
+      const { data: allOrders, error: allOrdersError } = await supabase
+        .from('sign_orders')
+        .select('requestor')
+        .in('status', statusValues);
+        
+      if (allOrdersError) {
+        console.error('Error getting all orders:', allOrdersError);
       }
-
-      // Get count for Turbotville branch
-      const { data: turbotvilleData, error: turbotvilleError } = await supabase
-        .rpc('get_sign_orders_count_by_branch', { status_values: statusValues, branch_name: 'turbotville' });
-
-      if (turbotvilleError) {
-        console.error('Error fetching Turbotville count:', turbotvilleError);
-        return NextResponse.json({ success: false, error: 'Failed to get Turbotville count' }, { status: 500 });
-      }
-
-      // Get count for Bedford branch
-      const { data: bedfordData, error: bedfordError } = await supabase
-        .rpc('get_sign_orders_count_by_branch', { status_values: statusValues, branch_name: 'bedford' });
-
-      if (bedfordError) {
-        console.error('Error fetching Bedford count:', bedfordError);
-        return NextResponse.json({ success: false, error: 'Failed to get Bedford count' }, { status: 500 });
-      }
-
-      // Get count for archived orders
-      const { data: archivedData, error: archivedError } = await supabase
-        .rpc('get_sign_orders_count_by_branch', { status_values: statusValues, branch_name: 'archived' });
-
-      if (archivedError) {
-        console.error('Error fetching archived count:', archivedError);
-        return NextResponse.json({ success: false, error: 'Failed to get archived count' }, { status: 500 });
-      }
-
-      // Return the counts for each branch
-      const statusCounts = {
-        'all': totalData || 0,
-        'hatfield': hatfieldData || 0,
-        'turbotville': turbotvilleData || 0,
-        'bedford': bedfordData || 0,
-        'archived': archivedData || 0
+      
+      // Count orders by branch using the requestor's branch
+      const branchCounts: Record<string, number> = {
+        all: totalCount || 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        archived: 0
       };
-
-      return NextResponse.json({
-        success: true,
-        counts: statusCounts
+      
+      // Count orders by branch
+      (allOrders || []).forEach((order: any) => {
+        const branchId = userBranchMap[order.requestor];
+        if (branchId) {
+          // Increment the count for this branch
+          branchCounts[branchId] = (branchCounts[branchId] || 0) + 1;
+        }
       });
+
+      return NextResponse.json({ success: true, counts: branchCounts });
     }
 
     // Build the query for fetching sign orders
@@ -93,7 +101,6 @@ export async function GET(request: NextRequest) {
         id,
         requestor,
         contractor_id,
-        contractors!contractor_id(name),
         job_number,
         contract_number,
         order_date,
@@ -106,333 +113,217 @@ export async function GET(request: NextRequest) {
         order_number
       `);
     
-    // Always filter for only 'submitted' status orders, regardless of what's passed in the status parameter
-    // This ensures consistency with the counts and only shows orders with 'submitted' status
-    query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
-    
-    // Log what we're doing for debugging
-    console.log('Fetching only orders with status: submitted');
+    // Check if we're coming from the load-sheet page which needs both Draft and Submitted
+    // The load-sheet page sends status=Draft,Submitted in the request
+    if (statusParam && statusParam.includes('Draft')) {
+      // Handle multiple statuses separated by commas for the load-sheet page
+      const statuses = statusParam.split(',').map(s => s.trim());
+      
+      // Create an array with all case variations for each status
+      const statusValues: string[] = [];
+      statuses.forEach(status => {
+        statusValues.push(status, status.toLowerCase(), status.toUpperCase());
+      });
+      
+      query = query.in('status', statusValues);
+
+    } else {
+      // For sign-shop-orders page, only show submitted orders
+      query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
+
+    }
 
     // Apply branch filter if present
-    // We need to use a raw SQL query to join with users and branches tables
     if (branch) {
-      try {
-        // Always use only 'submitted' status for branch filtering, regardless of what's passed in the status parameter
-        // This ensures consistency with the counts and only shows orders with 'submitted' status
-        const branchStatusValues = ['Submitted', 'submitted', 'SUBMITTED'];
-        
-        // Log what we're doing for debugging
-        console.log('Branch filtering only orders with status:', branchStatusValues);
-        
-        // Use direct SQL query instead of RPC to avoid type issues
-        const { data: branchFilteredData, error: branchFilterError } = await supabase
-          .from('sign_orders')
-          .select(`
-            id, 
-            requestor,
-            contractor_id,
-            contractors!contractor_id(name),
-            job_number,
-            contract_number,
-            order_date,
-            need_date,
-            sale,
-            rental,
-            perm_signs,
-            status,
-            shop_status,
-            order_number
-          `)
-          .in('status', branchStatusValues)
-          .order(orderBy || 'order_date', { ascending })
-          .range((page - 1) * limit, page * limit - 1);
-
-        // Debug: Log the raw branch-filtered data
-        console.log('Raw branch-filtered data:', JSON.stringify(branchFilteredData, null, 2));
-        // Check specifically for order with ID 27
-        if (branchFilteredData && branchFilteredData.length > 0) {
-          console.log('First branch order order_number:', branchFilteredData[0].order_number);
-          console.log('Branch order with ID 27:', branchFilteredData.find((o: any) => o.id === 27));
-        }
-
-        if (branchFilterError) {
-          console.error('Error filtering orders:', branchFilterError);
-          return NextResponse.json({ success: false, error: 'Failed to filter orders' }, { status: 500 });
-        }
-
-        // Filter by branch using JavaScript since we can't join directly in Supabase query
-        // Get all users with their branches
-        const { data: users, error: usersError } = await supabase
+      // Map branch names to IDs
+      const branchNameToIdMap: Record<string, number> = {
+        'hatfield': 1,
+        'turbotville': 2,
+        'bedford': 3,
+        'archived': -1
+      };
+      
+      // Get branch ID from name (case insensitive)
+      let branchId: number | null = null;
+      const lowerBranch = branch.toLowerCase();
+      
+      if (branchNameToIdMap[lowerBranch] !== undefined) {
+        branchId = branchNameToIdMap[lowerBranch];
+      }
+      
+      if (branchId !== null) {
+        // Get users from the specified branch
+        const { data: branchUsers, error: branchUsersError } = await supabase
           .from('users')
-          .select('name, branches!branch_id(name)');
-
-        if (usersError) {
-          console.error('Error fetching users by branch:', usersError);
-          return NextResponse.json({ success: false, error: 'Failed to fetch users by branch' }, { status: 500 });
-        }
-
-        // Get list of users in this branch
-        const userNames = users
-          .filter((user: any) => {
-            // Check if user has branch data
-            if (!user.branches) return false;
-            
-            // Handle both array and object formats
-            if (Array.isArray(user.branches)) {
-              return user.branches.some((b: any) => 
-                b.name && b.name.toLowerCase() === branch.toLowerCase()
-              );
-            } else if (typeof user.branches === 'object') {
-              return user.branches.name && 
-                user.branches.name.toLowerCase() === branch.toLowerCase();
-            }
-            return false;
-          })
-          .map((user: any) => user.name);
+          .select('name')
+          .eq('branch_id', branchId);
           
-        console.log(`Found ${userNames.length} users in branch ${branch}:`, userNames);
-        
-        // Filter orders by requestor being in the branch
-        const branchOrders = branchFilteredData.filter((order: any) => 
-          userNames.includes(order.requestor)
-        );
-
-        // Get total count for pagination
-        let branchTotalCount = 0;
-        
-        if (userNames.length > 0) {
-          const { count, error: countError } = await supabase
-            .from('sign_orders')
-            .select('id', { count: 'exact' })
-            .in('status', branchStatusValues)
-            .in('requestor', userNames);
-
-          if (countError) {
-            console.error('Error getting branch count:', countError);
-            return NextResponse.json({ success: false, error: 'Failed to get branch count' }, { status: 500 });
-          }
+        if (branchUsersError) {
+          console.error('Error fetching branch users:', branchUsersError);
+        } else if (branchUsers && branchUsers.length > 0) {
+          // Get the names of users in this branch
+          const userNames = branchUsers.map(user => user.name);
           
-          branchTotalCount = count || 0;
+          // Filter orders by requestor name
+          query = query.in('requestor', userNames);
         }
-        
-        console.log(`Branch ${branch} has ${branchTotalCount} orders with status ${branchStatusValues.join(', ')}`);
-        
-        // If no users in this branch or no orders, return empty results
-        if (userNames.length === 0 || branchTotalCount === 0) {
-          return NextResponse.json({
-            success: true,
-            orders: [],
-            pagination: {
-              total: 0,
-              pages: 0,
-              page: page,
-              size: limit
-            }
-          });
-        }
-
-        // Format the response
-        const formattedOrders = branchOrders.map((order: any) => {
-          // Format the customer name from contractors object
-          let customerName = 'N/A';
-          if (order.contractors && Array.isArray(order.contractors) && order.contractors.length > 0) {
-            customerName = order.contractors[0].name || 'N/A';
-          }
-          
-          return {
-            id: order.id,
-            requestor: order.requestor || '',
-            customer: customerName,
-            job_number: order.job_number || '',
-            contract_number: order.contract_number || '',
-            order_date: order.order_date,
-            need_date: order.need_date,
-            status: order.status,
-            shop_status: order.shop_status || 'not-started',
-            type: order.sale ? 'Sale' : order.rental ? 'Rental' : order.perm_signs ? 'Permanent Signs' : 'Unknown',
-            order_number: order.order_number || 'N/A'
-          };
-        });
-
-        return NextResponse.json({
-          success: true,
-          orders: formattedOrders,
-          pagination: {
-            total: branchTotalCount || 0,
-            pages: Math.ceil((branchTotalCount || 0) / limit),
-            page: page,
-            size: limit
-          }
-        });
-      } catch (error) {
-        console.error('Error in branch filtering:', error);
-        return NextResponse.json({ success: false, error: 'An error occurred during branch filtering' }, { status: 500 });
       }
     }
 
-    // Apply additional filters if present
+    // Apply any additional filters from the query params
     if (filters) {
-      // Example: Apply customer filter if present
-      if (filters.customer) {
-        query = query.ilike('contractors.name', `%${filters.customer}%`);
+      // Example: filter by job_number if provided
+      if (filters.job_number) {
+        query = query.ilike('job_number', `%${filters.job_number}%`);
       }
-
-      // Example: Apply job number filter if present
-      if (filters.jobNumber) {
-        query = query.ilike('job_number', `%${filters.jobNumber}%`);
+      
+      // Example: filter by requestor if provided
+      if (filters.requestor) {
+        query = query.ilike('requestor', `%${filters.requestor}%`);
       }
     }
 
     // Apply sorting
     if (orderBy) {
       query = query.order(orderBy, { ascending });
-    } else {
-      query = query.order('order_date', { ascending: false });
     }
 
     // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
+    if (page && limit) {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit - 1;
+      query = query.range(startIndex, endIndex);
+    }
 
     // Execute the query
-    const { data: orders, error } = await query;
+
     
-    if (error) {
-      console.error('Error fetching orders:', error);
+    const { data: orders, error: ordersError } = await query;
+
+    if (ordersError) {
+      console.error('Error fetching orders:', ordersError);
       return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 });
     }
-    
-    // Debug: Log the raw data to see what's coming from the database
-    console.log('Raw orders data from DB:', JSON.stringify(orders, null, 2));
-    // Check specifically for order_number field
-    if (orders && orders.length > 0) {
-      console.log('First order order_number:', orders[0].order_number);
-      console.log('Order with ID 27:', orders.find((o: any) => o.id === 27));
-    }
-    
-    // If debug mode is enabled, return the raw data structure
-    if (debug) {
-      return NextResponse.json({ success: true, rawData: orders });
-    }
 
-    // Process the results
-    const formattedOrders = orders.map(order => {
-      // Format the customer name from contractors object
-      // Supabase returns the foreign key relationship as an array with one object
-      let customerName = 'N/A';
-      if (order.contractors && Array.isArray(order.contractors) && order.contractors.length > 0) {
-        customerName = order.contractors[0].name || 'N/A';
+
+    // Get contractor information for all orders
+    const contractorIds = orders?.map(order => order.contractor_id).filter(Boolean) || [];
+    
+    // Fetch contractor data for all orders in a single query
+    const { data: contractors, error: contractorsError } = await supabase
+      .from('contractors')
+      .select('id, display_name')
+      .in('id', contractorIds);
+      
+    if (contractorsError) {
+      console.error('Error fetching contractors:', contractorsError);
+    }
+    
+    // Create a map of contractor_id to display_name for quick lookup
+    const contractorMap = (contractors || []).reduce((map: any, contractor: any) => {
+      map[contractor.id] = contractor.display_name;
+      return map;
+    }, {});
+    
+    // Get branch information from users table
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('name, branch_id');
+      
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+    }
+    
+    // Get branch names
+    const { data: branches, error: branchesError } = await supabase
+      .from('branches')
+      .select('id, name');
+      
+    if (branchesError) {
+      console.error('Error fetching branches:', branchesError);
+    }
+    
+    // Create maps for quick lookups
+    const userBranchMap = (users || []).reduce((map: any, user: any) => {
+      map[user.name] = user.branch_id;
+      return map;
+    }, {});
+    
+    // Map branch IDs to expected UI branch names
+    // The UI expects specific branch names like 'Hatfield', 'Turbotville', 'Bedford'
+    const branchNameMap: Record<number, string> = {
+      1: 'Hatfield',
+      2: 'Turbotville',
+      3: 'Bedford'
+    };
+    
+    // Add any branch names from the database as a fallback
+    (branches || []).forEach((branch: any) => {
+      if (!branchNameMap[branch.id]) {
+        branchNameMap[branch.id] = branch.name;
       }
-      
-      // Format the combined status
-      const combinedStatus = order.status || 'Unknown';
-      
-      // Derive the type from available fields
-      let type = 'Unknown';
-      if (order.sale) {
-        type = 'Sale';
-      } else if (order.rental) {
-        type = 'Rental';
-      } else if (order.perm_signs) {
-        type = 'Permanent Signs';
-      }
-      
-      return {
-        id: order.id,
-        requestor: order.requestor || '',
-        customer: customerName,
-        job_number: order.job_number || '',
-        contract_number: order.contract_number || '',
-        order_date: order.order_date,
-        need_date: order.need_date,
-        status: combinedStatus,
-        shop_status: order.shop_status,
-        sale: order.sale || false,
-        rental: order.rental || false,
-        perm_signs: order.perm_signs || false,
-        type: type,
-        order_number: order.order_number || 'N/A'
-      };
     });
+    
+    // Process the orders to add customer names and other fields
+    const processedOrders = orders?.map((order: any) => {
+      // Format dates for consistent display
+      const orderDate = order.order_date ? new Date(order.order_date).toISOString().split('T')[0] : null;
+      const needDate = order.need_date ? new Date(order.need_date).toISOString().split('T')[0] : null;
+      
+      // Get customer name from the contractors map
+      const customerName = order.contractor_id && contractorMap[order.contractor_id] 
+        ? contractorMap[order.contractor_id] 
+        : `Customer #${order.contractor_id || 'Unknown'}`;
+      
+      // Get branch name based on requestor
+      let branchName = 'Unknown';
+      if (order.requestor) {
+        const branchId = userBranchMap[order.requestor];
+        if (branchId && branchNameMap[branchId]) {
+          branchName = branchNameMap[branchId];
+        }
+      }
+      
+      const processedOrder = {
+        ...order,
+        customer: customerName,
+        branch: branchName,
+        assigned_to: order.assigned_to || 'Unassigned',
+        type: 'Standard',
+        order_date: orderDate,
+        need_date: needDate,
+        shop_status: order.shop_status || 'not-started'
+      };
+      
+      return processedOrder;
+    }) || [];
 
-    // Get the total count for pagination
-    let countQuery = supabase
+
+    // Get total count for pagination
+    const { count: totalCount, error: countError } = await supabase
       .from('sign_orders')
-      .select('id', { count: 'exact' });
-    
-    // Apply the same status filter to the count query
-    if (statusParam) {
-      const statuses = statusParam.split(',').map(s => s.trim());
-      const statusValues: string[] = [];
-      statuses.forEach(status => {
-        statusValues.push(status, status.toLowerCase(), status.toUpperCase());
-      });
-      countQuery = countQuery.in('status', statusValues);
-    } else {
-      // Default behavior - include only Draft and Submitted status orders
-      // Explicitly exclude shop statuses like 'in-process', 'not-started', 'on-order', 'complete'
-      let defaultStatusValues = ['Draft', 'draft', 'DRAFT', 'Submitted', 'submitted', 'SUBMITTED'];
-      
-      // Make sure we're not including any shop statuses
-      defaultStatusValues = defaultStatusValues.filter(status => 
-        !['in-process', 'not-started', 'on-order', 'complete'].includes(status.toLowerCase()));
-      
-      countQuery = countQuery.in('status', defaultStatusValues);
-    }
-    
-    const { count, error: countError } = await countQuery;
+      .select('*', { count: 'exact', head: true });
 
     if (countError) {
-      console.error('Error getting count:', countError);
-      return NextResponse.json({ success: false, error: 'Failed to get count' }, { status: 500 });
+      console.error('Error fetching total count:', countError);
+      return NextResponse.json({ success: false, error: 'Failed to fetch total count' }, { status: 500 });
     }
 
-    // Return the formatted orders with pagination info
+    // Calculate total pages for pagination
+    const pages = Math.ceil((totalCount || 0) / limit);
+    
     return NextResponse.json({
       success: true,
-      orders: formattedOrders,
+      orders: processedOrders,
       pagination: {
         page,
         limit,
-        total: count || 0,
-        pages: Math.ceil((count || 0) / limit)
+        total: totalCount,
+        pages
       }
     });
   } catch (error) {
-    console.error('Error in sign-shop-orders API route:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch sign shop orders' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, ...updateData } = body;
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-      .from('sign_orders')
-      .update(updateData)
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, data });
-  } catch (error) {
-    console.error('Error updating sign order:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update sign order' },
-      { status: 500 }
-    );
+    console.error('Error processing sign shop orders request:', error);
+    return NextResponse.json({ success: false, error: 'Failed to process request' }, { status: 500 });
   }
 }
