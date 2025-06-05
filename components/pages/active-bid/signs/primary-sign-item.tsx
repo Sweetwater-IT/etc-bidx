@@ -35,12 +35,12 @@ const PrimarySignItem = ({
 
   //use effect to set configuring to false when viewing a bid in edit mode
   const params = useSearchParams();
-  const contractNumber = params?.get('contractNumber');
+  const bidId = params?.get('bidId');
 
   useEffect(() => {
-    if(contractNumber && contractNumber !== '')
+    if(bidId && bidId !== '')
     setIsConfiguring(false)
-  }, [contractNumber])
+  }, [bidId])
 
   // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
