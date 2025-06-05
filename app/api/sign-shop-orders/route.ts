@@ -264,8 +264,8 @@ export async function GET(request: NextRequest) {
         const formattedOrders = branchOrders.map((order: any) => {
           // Format the customer name from contractors object
           let customerName = 'N/A';
-          if (order.contractors && typeof order.contractors === 'object' && order.contractors.name) {
-            customerName = order.contractors.name;
+          if (order.contractors && Array.isArray(order.contractors) && order.contractors.length > 0) {
+            customerName = order.contractors[0].name || 'N/A';
           }
           
           return {
@@ -347,10 +347,10 @@ export async function GET(request: NextRequest) {
     // Process the results
     const formattedOrders = orders.map(order => {
       // Format the customer name from contractors object
-      // Supabase returns the foreign key relationship as a nested object
+      // Supabase returns the foreign key relationship as an array with one object
       let customerName = 'N/A';
-      if (order.contractors && typeof order.contractors === 'object' && order.contractors.name) {
-        customerName = order.contractors.name;
+      if (order.contractors && Array.isArray(order.contractors) && order.contractors.length > 0) {
+        customerName = order.contractors[0].name || 'N/A';
       }
       
       // Format the combined status
