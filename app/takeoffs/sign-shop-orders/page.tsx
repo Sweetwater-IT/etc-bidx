@@ -13,11 +13,20 @@ import { toast } from 'sonner'
 
 const SIGN_ORDER_COLUMNS = [
   { key: 'requestor', title: 'Requestor' },
+  { key: 'branch', title: 'Branch', render: (row: any) => (
+    <span className="capitalize">{row.branch || 'N/A'}</span>
+  )},
   { key: 'customer', title: 'Customer' },
+  { key: 'order_date', title: 'Order date', render: (row: any) => (
+    <span>{row.order_date || 'N/A'}</span>
+  )},
+  { key: 'need_date', title: 'Need date', render: (row: any) => (
+    <span>{row.need_date || 'N/A'}</span>
+  )},
+  { key: 'type', title: 'Type' },
+  { key: 'assigned_to', title: 'Assigned to' },
+  { key: 'contract_number', title: 'Contract Number'},
   { key: 'job_number', title: 'Job Number' },
-  { key: 'contract_number', title: 'Contract Number' },
-  { key: 'order_date', title: 'Order date' },
-  { key: 'need_date', title: 'Need date' },
   {
     key: 'status',
     title: 'Status',
@@ -50,7 +59,6 @@ const SIGN_ORDER_COLUMNS = [
       )
     }
   },
-  { key: 'type', title: 'Type' },
   { key: 'order_number', title: 'Order Number' },
   // Empty action column at the end
   { key: 'actions', title: 'Actions', render: () => <div className="w-8"></div> }
