@@ -22,6 +22,10 @@ const SignsViewOnly = () => {
             title: 'Dimensions'
         },
         {
+            key: 'quantity',
+            title: 'Quantity'
+        },
+        {
             key: 'sheeting',
             title: 'Sheeting'
         },
