@@ -1,12 +1,108 @@
 import { supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Function to generate sign order number
+async function generateSignOrderNumber(orderType: string[], jobNumber: string): Promise<string> {
+  try {
+    // Extract branch code from job number (e.g., 30 from JOB30-123)
+    const branchCode = jobNumber.split('-')[0].replace(/\D/g, '');
+    
+    if (!branchCode) {
+      console.error('Could not extract branch code from job number:', jobNumber);
+      return ''; // Return empty if we can't extract branch code
+    }
+    
+    // Determine order type code
+    let typeCode = 'M'; // Default to Multiple
+    
+    if (orderType.length === 1) {
+      if (orderType.includes('sale')) typeCode = 'S';
+      else if (orderType.includes('rental')) typeCode = 'R';
+      else if (orderType.includes('permanent signs')) typeCode = 'P';
+    }
+    
+    // Get the current highest sequential number for this branch and type
+    const { data, error } = await supabase
+      .from('sign_orders')
+      .select('order_number')
+      .like('order_number', `SO${typeCode}${branchCode}-%`)
+      .order('order_number', { ascending: false })
+      .limit(1);
+    
+    if (error) {
+      console.error('Error fetching existing order numbers:', error);
+      return '';
+    }
+    
+    let sequentialNumber = 1;
+    
+    if (data && data.length > 0 && data[0].order_number) {
+      // Extract the sequential number from the last order number
+      const lastOrderNumber = data[0].order_number;
+      const lastSequentialNumber = parseInt(lastOrderNumber.split('-')[1], 10);
+      
+      if (!isNaN(lastSequentialNumber)) {
+        sequentialNumber = lastSequentialNumber + 1;
+      }
+    }
+    
+    // Format the order number according to the convention
+    return `SO${typeCode}${branchCode}-${sequentialNumber}`;
+  } catch (error) {
+    console.error('Error generating sign order number:', error);
+    return ''; // Return empty on error
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Parse the request body
     const signOrderData = await req.json();
     
-    // Insert the record into the sign_orders table
+    // Check if an ID is provided - if so, update instead of insert
+    if (signOrderData.id) {
+      console.log(`Updating existing sign order with ID: ${signOrderData.id}`);
+      
+      // Update the existing record
+      const { data, error } = await supabase
+        .from('sign_orders')
+        .update({
+          requestor: signOrderData.requestor,
+          contractor_id: signOrderData.contractor_id,
+          contract_number: signOrderData.contract_number,
+          order_date: signOrderData.order_date,
+          need_date: signOrderData.need_date,
+          start_date: signOrderData.start_date,
+          end_date: signOrderData.end_date,
+          sale: signOrderData.order_type?.includes('sale'),
+          rental: signOrderData.order_type?.includes('rental'),
+          perm_signs: signOrderData.order_type?.includes('permanent'),
+          status: signOrderData.status || 'in-process',
+          job_number: signOrderData.job_number,
+          signs: signOrderData.signs
+        })
+        .eq('id', signOrderData.id)
+        .select();
+        
+      if (error) {
+        console.error('Error updating sign order:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+      
+      return NextResponse.json({ success: true, data });
+    }
+    
+    // If no ID is provided, insert a new record
+    console.log('Creating new sign order');
+    
+    // Generate sign order number
+    const orderNumber = await generateSignOrderNumber(
+      signOrderData.order_type || [],
+      signOrderData.job_number || ''
+    );
+    
+    console.log('Generated order number:', orderNumber);
+    
     const { data, error } = await supabase
       .from('sign_orders')
       .insert({
@@ -17,12 +113,13 @@ export async function POST(req: NextRequest) {
         need_date: signOrderData.need_date,
         start_date: signOrderData.start_date,
         end_date: signOrderData.end_date,
-        sale: signOrderData.order_type.includes('sale'),
-        rental: signOrderData.order_type.includes('rental'),
-        perm_signs: signOrderData.order_type.includes('permanent'),
-        status: 'in-process',
+        sale: signOrderData.order_type?.includes('sale'),
+        rental: signOrderData.order_type?.includes('rental'),
+        perm_signs: signOrderData.order_type?.includes('permanent signs'),
+        status: signOrderData.status || 'not-started', // Default status for new orders
         job_number: signOrderData.job_number,
-        signs: signOrderData.signs
+        signs: signOrderData.signs,
+        order_number: orderNumber // Save the generated order number
       });
     
     if (error) {

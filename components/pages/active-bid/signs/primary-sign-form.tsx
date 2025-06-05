@@ -611,23 +611,16 @@ const PrimarySignForm = ({
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fourFootTypeIII">
-                {`4'`} T-III RIGHT
-              </SelectItem>
-              <SelectItem value="fourFootTypeIII">{`4'`} T-III LEFT</SelectItem>
-              {isTakeoff && (
-                <SelectItem value="sixFootTypeIII">
-                  {`6'`} T-III RIGHT
-                </SelectItem>
-              )}
-              {isTakeoff && (
-                <SelectItem value="sixFootTypeIII">
-                  {`6'`} T-III LEFT
-                </SelectItem>
-              )}
-              <SelectItem value="hStand">H-FOOT</SelectItem>
-              <SelectItem value="none">LOOSE</SelectItem>
-              <SelectItem value="post">POST</SelectItem>
+              <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
+              <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
+              <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
+              <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+              <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+              <SelectItem value="LOOSE">LOOSE</SelectItem>
+              <SelectItem value="8' POST">{`8'`} POST</SelectItem>
+              <SelectItem value="10' POST">{`10'`} POST</SelectItem>
+              <SelectItem value="12' POST">{`12'`} POST</SelectItem>
+              <SelectItem value="14' POST">{`14'`} POST</SelectItem>
             </SelectContent>
           </Select>
         </div>
