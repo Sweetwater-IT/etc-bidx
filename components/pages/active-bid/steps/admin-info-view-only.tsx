@@ -5,41 +5,13 @@ import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import { fetchActiveBidByContractNumber } from '@/lib/api-client';
 import { useLoading } from '@/hooks/use-loading';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { Customer } from '@/types/Customer';
-import { cn } from '@/lib/utils';
-import { useCustomers } from '@/hooks/use-customers';
-import { toast } from 'sonner';
 
-const SUBCONTRACTOR_OPTIONS = [
-    { name: "ETC", id: 1 },
-    { name: "ATLAS", id: 2 },
-    { name: "ROADSAFE", id: 3 },
-    { name: "RAE-LYNN", id: 4 },
-    { name: "UNKNOWN", id: 5 },
-    { name: "THER", id: 6 },
-];
 
 const AdminInfoViewOnly = () => {
 
     const searchParams = useSearchParams();
     const contractNumberFromParams = searchParams?.get('contractNumber')
-
-    const [selectedContractor, setSelectedContractor] = useState<Customer>();
-    const [selectedSubcontractor, setSelectedSubcontractor] = useState<{ name: string, id: number }>()
-    const [openStates, setOpenStates] = useState({
-        contractor: false,
-        subContractor: false
-    });
-
-    const { customers, getCustomers } = useCustomers()
-
-    useEffect(() => {
-        getCustomers();
-    }, [getCustomers])
 
     const { adminData, dispatch } = useEstimate();
 
@@ -51,74 +23,6 @@ const AdminInfoViewOnly = () => {
         dispatch({ type: 'ADD_SERVICE_WORK' })
         dispatch({ type: 'ADD_PERMANENT_SIGNS' })
     }, [dispatch])
-
-    // Add this to your AdminInfoViewOnly component
-
-    useEffect(() => {
-        const fetchContractors = async () => {
-            if (!contractNumberFromParams) return;
-
-            try {
-                const response = await fetch(`/api/active-bids/update-contractors/${contractNumberFromParams}`);
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success && result.data) {
-                        // Find and set the contractor
-                        if (result.data.contractor_id) {
-                            const contractor = customers.find(c => c.id === result.data.contractor_id);
-                            if (contractor) {
-                                setSelectedContractor(contractor);
-                            }
-                        }
-
-                        // Find and set the subcontractor
-                        if (result.data.subcontractor_id) {
-                            const subcontractor = SUBCONTRACTOR_OPTIONS.find(s => s.id === result.data.subcontractor_id);
-                            if (subcontractor) {
-                                setSelectedSubcontractor(subcontractor);
-                            }
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching contractors:', error);
-            }
-        };
-
-        // Only fetch after customers are loaded
-        if (customers.length > 0 && contractNumberFromParams) {
-            fetchContractors();
-        }
-    }, [customers, contractNumberFromParams]);
-
-    const handleSaveContractors = async () => {
-        if (!selectedContractor && !selectedSubcontractor) return;
-
-        const body: any = {};
-        if (selectedContractor) body.contractor_id = selectedContractor.id;
-        if (selectedSubcontractor) body.subcontractor_id = selectedSubcontractor.id;
-
-        try {
-            const response = await fetch('/api/active-bids/update-contractors/' + contractNumberFromParams, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                toast.error(errorData.message || 'Failed to save contractors');
-            } else {
-                const result = await response.json();
-                toast.success(result.message || 'Successfully updated contractors');
-            }
-        } catch (error) {
-            console.error('Error updating contractors:', error);
-            toast.error('Failed to save contractors');
-        }
-    }
 
 
     useEffect(() => {
@@ -167,103 +71,6 @@ const AdminInfoViewOnly = () => {
                     {adminData.contractNumber || "-"}
                 </div>
             </div>
-            <div className='flex flex-col'>
-                <label className="text-sm font-semibold">
-                    Contractor
-                </label>
-                <Popover
-                    open={openStates.contractor}
-                    modal={true}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, contractor: open }))}
-                >
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            className='flex justify-between'
-                        >
-                            {selectedContractor?.name ||
-                                selectedContractor?.displayName ||
-                                "Select contractor..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                        <Command>
-                            <CommandInput placeholder="Search contractor..." />
-                            <CommandEmpty>No contractor found.</CommandEmpty>
-                            <CommandGroup className="overflow-y-auto max-h-80">
-                                {customers.map((customer) => (
-                                    <CommandItem
-                                        key={customer.id}
-                                        value={customer.id.toString()}
-                                        onSelect={(e) => setSelectedContractor(customers.find(c => c.id.toString() === e))}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                selectedContractor?.id === customer.id
-                                                    ? "opacity-100"
-                                                    : "opacity-0"
-                                            )}
-                                        />
-                                        {customer.displayName}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            </div>
-            <div className='flex flex-col'>
-                <label className="text-sm font-semibold">
-                    Subcontractor
-                </label>
-                <Popover open={openStates.subContractor} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, subContractor: open }))}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                        >
-                            {selectedSubcontractor ? selectedSubcontractor.name : "Select subcontractor..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                        <Command>
-                            <CommandInput placeholder="Search subcontractor..." />
-                            <CommandEmpty>No subcontractor found.</CommandEmpty>
-                            <CommandGroup>
-                                {SUBCONTRACTOR_OPTIONS.map((option) => (
-                                    <CommandItem
-                                        key={option.id}
-                                        value={option.name}
-                                        onSelect={(name) => setSelectedSubcontractor(SUBCONTRACTOR_OPTIONS.find(sub => sub.name === name))}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                selectedSubcontractor === option
-                                                    ? "opacity-100"
-                                                    : "opacity-0"
-                                            )}
-                                        />
-                                        {option.name}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            </div>
-
-            <div className="flex flex-col items-ends justify-end">
-                <Button onClick={handleSaveContractors} className='w-[90%] px-2'>
-                    Save contractor/subcontractor
-                </Button>
-            </div>
-
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
                     Estimator
