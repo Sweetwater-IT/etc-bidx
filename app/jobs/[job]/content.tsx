@@ -887,11 +887,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             startLoading();
             await changeActiveBidStatus(bid.id, status);
 
-            setActiveBids(prevBids =>
-                prevBids.map(item =>
-                    item.id === bid.id ? { ...item, status } : item
-                )
-            );
+            loadActiveBids();
 
             toast.success(`Bid status updated to ${status}`);
         } catch (error) {
