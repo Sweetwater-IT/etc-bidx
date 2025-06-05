@@ -55,7 +55,7 @@ const BidViewOnlyContainer = () => {
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles: 5, // Allow multiple files to be uploaded
-        jobId: bidId,
+        jobId: bidId ? Number(bidId) : undefined,
         apiEndpoint: '/api/files/contract-management',
         accept: {
             'application/pdf': ['.pdf'],
