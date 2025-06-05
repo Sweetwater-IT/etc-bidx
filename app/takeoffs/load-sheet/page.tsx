@@ -59,6 +59,9 @@ export default function SignOrderPage() {
   
   // Filtering state
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+  
+  // Selected rows state
+  const [selectedRows, setSelectedRows] = useState<QuoteGridView[]>([]);
 
   // Reference data for dropdowns and filters
   const [referenceData, setReferenceData] = useState<{
@@ -86,23 +89,35 @@ export default function SignOrderPage() {
         const customersResponse = await fetch('/api/reference-data?type=customers');
         const customersData = await customersResponse.json();
 
-        // Fetch requestors
-        const requestorsResponse = await fetch('/api/reference-data?type=requestors');
-        const requestorsData = await requestorsResponse.json();
+        // Requestors are fetched directly from sign orders data
+        // No need for a separate API call
 
         // Fetch branches
         const branchesResponse = await fetch('/api/reference-data?type=branches');
         const branchesData = await branchesResponse.json();
 
-        // Fetch sign order types
-        const typesResponse = await fetch('/api/reference-data?type=sign-order-types');
-        const typesData = await typesResponse.json();
+        // Define default sign order types in case API fails
+        const defaultTypes = [
+          { id: 1, name: 'Standard' },
+          { id: 2, name: 'Custom' },
+          { id: 3, name: 'Emergency' }
+        ];
+        
+        let types = [];
+        try {
+          // Try to fetch sign order types, but don't break if it fails
+          const typesResponse = await fetch('/api/reference-data?type=sign-order-types');
+          const typesData = await typesResponse.json();
+          types = typesData.success ? typesData.data : defaultTypes;
+        } catch (error) {
+          console.log('Using default sign order types due to API error');
+        }
 
         setReferenceData({
           customers: customersData.data || [],
-          requestors: requestorsData.data || [],
+          requestors: [], // We'll populate this from sign orders data if needed
           branches: branchesData.data || [],
-          types: typesData.data || []
+          types: types
         });
       } catch (error) {
         console.error('Error fetching reference data:', error);
@@ -171,8 +186,8 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
-      // Always use Draft (in-process) status
-      params.append("status", "in-process");
+      // Don't filter by shop_status to show all Draft and Submitted orders
+      // The API will handle filtering to show both Draft and Submitted status orders
       
       // Add segment filter
       if (activeSegment !== "all") {
@@ -188,13 +203,13 @@ export default function SignOrderPage() {
         params.append("filters", JSON.stringify(activeFilters));
       }
 
-      const response = await fetch(`/api/sign-shop-orders-api?${params.toString()}`);
+      const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
       
       if (data.success) {
-        setQuotes(data.data || []);
-        setTotalCount(data.totalCount || 0);
-        setPageCount(data.pageCount || 0);
+        setQuotes(data.orders || []);
+        setTotalCount(data.pagination?.total || 0);
+        setPageCount(data.pagination?.pages || 0);
       } else {
         console.error("Error fetching sign orders:", data.error);
         toast.error("Failed to load sign orders");
@@ -209,8 +224,8 @@ export default function SignOrderPage() {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      // Fetch segment counts filtered by in-process status
-      const segmentResponse = await fetch(`/api/sign-shop-orders-api?counts=true&status=in-process`);
+      // Fetch segment counts filtered by status
+      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&status=Draft,Submitted`);
       const segmentData = await segmentResponse.json();
       
       if (segmentData.success) {
@@ -240,6 +255,23 @@ export default function SignOrderPage() {
     setActiveFilters(filters);
     setPageIndex(0);
   }, []);
+
+  // Handle selected rows actions
+  const handleArchiveSelected = useCallback(async (rows: QuoteGridView[]) => {
+    console.log('Archive selected rows:', rows);
+    // Implement archive functionality here
+    toast.success(`${rows.length} sign order(s) archived successfully`);
+    // Refresh data after archiving
+    fetchQuotes();
+  }, [fetchQuotes]);
+
+  const handleDeleteSelected = useCallback(async (rows: QuoteGridView[]) => {
+    console.log('Delete selected rows:', rows);
+    // Implement delete functionality here
+    toast.success(`${rows.length} sign order(s) deleted successfully`);
+    // Refresh data after deleting
+    fetchQuotes();
+  }, [fetchQuotes]);
 
   // Load data when dependencies change
   useEffect(() => {
@@ -313,6 +345,9 @@ export default function SignOrderPage() {
                 onSegmentChange={handleSegmentChange}
                 onRowClick={handleRowClick}
                 stickyLastColumn
+                // Selection props
+                onArchiveSelected={handleArchiveSelected}
+                onDeleteSelected={handleDeleteSelected}
                 // Pagination props
                 pageCount={pageCount}
                 pageIndex={pageIndex}

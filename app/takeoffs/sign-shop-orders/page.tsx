@@ -86,9 +86,8 @@ export default function SignShopOrdersPage() {
         const customersResponse = await fetch('/api/reference-data?type=customers');
         const customersData = await customersResponse.json();
 
-        // Fetch requestors
-        const requestorsResponse = await fetch('/api/reference-data?type=requestors');
-        const requestorsData = await requestorsResponse.json();
+        // Requestors are fetched directly from sign orders data
+        // No need for a separate API call
 
         // Fetch branches
         const branchesResponse = await fetch('/api/reference-data?type=branches');
@@ -100,7 +99,7 @@ export default function SignShopOrdersPage() {
 
         setReferenceData({
           customers: customersData.data || [],
-          requestors: requestorsData.data || [],
+          requestors: [], // We'll populate this from sign orders data if needed
           branches: branchesData.data || [],
           types: typesData.data || []
         });
@@ -171,8 +170,8 @@ export default function SignShopOrdersPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
-      // Always use Draft (submitted) status
-      params.append("status", "submitted");
+      // Use the shop order statuses
+      params.append("status", "not-started,in-process,on-order,complete");
       
       // Add segment filter
       if (activeSegment !== "all") {
@@ -188,13 +187,13 @@ export default function SignShopOrdersPage() {
         params.append("filters", JSON.stringify(activeFilters));
       }
 
-      const response = await fetch(`/api/sign-shop-orders-api?${params.toString()}`);
+      const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
       
       if (data.success) {
-        setQuotes(data.data || []);
-        setTotalCount(data.totalCount || 0);
-        setPageCount(data.pageCount || 0);
+        setQuotes(data.orders || []);
+        setTotalCount(data.pagination?.total || 0);
+        setPageCount(data.pagination?.pages || 0);
       } else {
         console.error("Error fetching sign orders:", data.error);
         toast.error("Failed to load sign orders");
@@ -209,17 +208,17 @@ export default function SignShopOrdersPage() {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      // Fetch segment counts filtered by submitted status
-      const segmentResponse = await fetch(`/api/sign-shop-orders-api?counts=true&status=submitted`);
+      // Fetch segment counts filtered by shop order statuses
+      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&status=not-started,in-process,on-order,complete`);
       const segmentData = await segmentResponse.json();
       
       if (segmentData.success) {
         setBranchCounts({
-          all: segmentData.counts.all || 0,
-          hatfield: segmentData.counts.hatfield || 0,
-          turbotville: segmentData.counts.turbotville || 0,
-          bedford: segmentData.counts.bedford || 0,
-          archived: segmentData.counts.archived || 0
+          all: segmentData.counts?.total || 0,
+          hatfield: segmentData.counts?.hatfield || 0,
+          turbotville: segmentData.counts?.turbotville || 0,
+          bedford: segmentData.counts?.bedford || 0,
+          archived: segmentData.counts?.archived || 0
         });
       } else {
         console.error("Error fetching segment counts:", segmentData.error);
@@ -252,8 +251,8 @@ export default function SignShopOrdersPage() {
   }, [fetchCounts, activeSegment]);
 
   const handleRowClick = (quote: QuoteGridView) => {
-    // Navigate to the page with equipment summary when clicking a row
-    router.push(`/takeoffs/new?id=${quote.id}`);
+    // Navigate to the sign order detail page with the correct ID
+    router.push(`/takeoffs/sign-order/${quote.id}`);
   };
 
   // Update segments with counts

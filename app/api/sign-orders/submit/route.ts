@@ -8,7 +8,7 @@ export async function POST(
     const body = await request.json();
     const { id, signs, status, submitted_at, assigned_to } = body;
     
-    console.log(`Submitting sign order with ID: ${id}`);
+    console.log(`Submitting sign order with ID: ${id}, status: ${status}, assigned_to: ${assigned_to}`);
     
     if (!id) {
       return NextResponse.json(
@@ -26,15 +26,20 @@ export async function POST(
       filteredSigns[key] = filteredSign;
     });
 
+    // Prepare update data
+    const updateData = {
+      signs: filteredSigns,
+      status,
+      assigned_to
+      // submitted_at is still excluded as it doesn't exist in the database schema
+    };
+    
+    console.log('Updating sign order with data:', JSON.stringify(updateData));
+    
     // Update the sign order in the database with all fields
     const { data, error } = await supabase
       .from('sign_orders')
-      .update({
-        signs: filteredSigns,
-        status,
-        assigned_to
-        // submitted_at is still excluded as it doesn't exist in the database schema
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -46,6 +51,8 @@ export async function POST(
         { status: 500 }
       );
     }
+    
+    console.log('Successfully updated sign order:', data?.id, 'with status:', data?.status);
 
     return NextResponse.json({
       success: true,

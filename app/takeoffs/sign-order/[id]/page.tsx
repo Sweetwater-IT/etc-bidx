@@ -278,6 +278,9 @@ export default function SignOrderTrackerPage() {
         return acc;
       }, {});
 
+      // Log the ID being used
+      console.log('Submitting order with ID:', params?.id);
+      
       // Use our new API endpoint that doesn't include the assigned_to field
       const response = await fetch(`/api/sign-orders/submit`, {
         method: 'POST',
@@ -287,17 +290,22 @@ export default function SignOrderTrackerPage() {
         body: JSON.stringify({
           id: params?.id,
           signs: signsObject,
-          status: 'Submitted', // Mark the order as submitted
+          status: 'in-process', // Update the order status to in-process
           submitted_at: new Date().toISOString(), // Add submission timestamp
           assigned_to: signOrder.assigned_to // Include the assigned_to field
         })
       });
 
       const result = await response.json();
+      
+      console.log('API response:', result);
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to submit sign order');
       }
+      
+      // Log success message
+      console.log('Successfully submitted order with ID:', params?.id, 'Status changed to in-process');
 
       setLoading(false);
 

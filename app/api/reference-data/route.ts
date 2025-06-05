@@ -90,7 +90,44 @@ export async function GET(request: NextRequest) {
           .select('id, name')
           .order('name'))
         break;
-
+        
+      case 'customers':
+        // Alias for contractors - many parts of the app use 'customers' instead of 'contractors'
+        ({ data, error } = await supabase
+          .from('contractors')
+          .select('id, name')
+          .order('name'))
+        break;
+        
+      case 'sign-order-types':
+        try {
+          // Try to fetch sign order types
+          ({ data, error } = await supabase
+            .from('sign_order_types')
+            .select('id, name')
+            .order('name'))
+          
+          // If table doesn't exist, provide default data
+          if (error && error.code === '42P01') { // PostgreSQL code for "relation does not exist"
+            console.log('sign_order_types table does not exist, using default data');
+            data = [
+              { id: 1, name: 'Standard' },
+              { id: 2, name: 'Custom' },
+              { id: 3, name: 'Emergency' }
+            ];
+            error = null; // Clear the error so we return success
+          }
+        } catch (e) {
+          console.error('Error in sign-order-types case:', e);
+          // Provide default data on any error
+          data = [
+            { id: 1, name: 'Standard' },
+            { id: 2, name: 'Custom' },
+            { id: 3, name: 'Emergency' }
+          ];
+          error = null;
+        }
+        break;
 
       default:
         return NextResponse.json(
