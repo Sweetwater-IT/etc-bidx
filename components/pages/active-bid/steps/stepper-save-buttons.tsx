@@ -1,4 +1,5 @@
 'use client'
+import { BidSummaryDrawer } from '@/components/bid-summary-drawer';
 import { WorksheetDialog } from '@/components/sheets/WorksheetDialog';
 import { Button } from '@/components/ui/button';
 import { Command, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -11,6 +12,7 @@ import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingOb
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
+import { parseDomainOfCategoryAxis } from 'recharts/types/util/ChartUtils';
 import { toast } from 'sonner';
 
 const DEFAULT_TOTALS = {
@@ -33,6 +35,8 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
     const [openWorksheetPopover, setOpenWorksheetPopover] = useState(false);
 
+    const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false)
+
     const [initialSubmission, setInitialSubmisison] = useState<boolean>(false)
 
     const { startLoading, stopLoading } = useLoading()
@@ -41,13 +45,21 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
 
     const params = useSearchParams();
 
+    const bidId = params?.get('bidId')
+
     const handleSubmit = async () => {
         try {
             startLoading();
-            await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
+            const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', idToUse);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
-            router.replace('/jobs/active-bids')
+            const params = new URLSearchParams();
+            params.append('bidId', newBidId.id.toString());
+            params.append('tuckSidebar', 'true');
+            params.append('fullscreen', 'true');
+            params.append('defaultEditable', 'false');
+            router.replace(`/active-bid/view?${params.toString()}`)
         } catch (error) {
             console.error("Error creating bid:", error);
             stopLoading()
@@ -114,8 +126,16 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                 </Popover>
                     <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
                     <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
-                {mode === 'view' && status !== 'WON' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
-                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{mode === 'new' ? 'Create' : 'Update'} bid</Button>}
+                {mode === 'view' && <Button
+                    variant="outline"
+                    size='sm'
+                    onClick={() => setIsViewSummaryOpen(true)}
+                >
+                    View Bid Summary
+                </Button>}
+                {mode === 'view' && status !== 'WON' && status!== 'LOST' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
+                {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{(mode === 'new' || status === 'DRAFT') ? 'Create' : 'Update'} bid</Button>}
+                {mode === 'view' && <BidSummaryDrawer open={isViewSummaryOpen} onOpenChange={setIsViewSummaryOpen} />}
             </div>
         </>
     )

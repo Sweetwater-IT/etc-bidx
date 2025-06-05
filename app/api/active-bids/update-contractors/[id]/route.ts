@@ -9,13 +9,12 @@ export async function GET(
   ) {
     try {
       const resolvedParams = await params;
-      const contractNumber = decodeURIComponent(resolvedParams.id);
       
       // First, find the bid estimate using the contract number
       const { data: bidEstimate, error: bidError } = await supabase
         .from('bid_estimates')
         .select('id')
-        .eq("contract_number", contractNumber)
+        .eq("id", resolvedParams.id)
         .single();
       
       if (bidError) {
@@ -69,8 +68,6 @@ export async function GET(
   ) {
     try {
       const resolvedParams = await params;
-      const contractNumber = decodeURIComponent(resolvedParams.id);
-      console.log(contractNumber)
       const body = await request.json();
       const { contractor_id, subcontractor_id } = body;
       
@@ -78,7 +75,7 @@ export async function GET(
       const { data: bidEstimate, error: bidError } = await supabase
         .from('bid_estimates')
         .select('id')
-        .eq("contract_number", contractNumber)
+        .eq("id", resolvedParams.id)
         .single();
       
       if (bidError) {

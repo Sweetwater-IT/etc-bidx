@@ -125,25 +125,25 @@ const EquipmentSummary = () => {
                 <TableRow key={index}>
                   <TableCell>{item.displayName}</TableCell>
                   <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-help">
+                    {/* <Tooltip>
+                      <TooltipTrigger className="cursor-help"> */}
                         {item.totalQuantity}
-                      </TooltipTrigger>
+                      {/* </TooltipTrigger>
                       <TooltipContent>
                         <p>Total = Sum of {item.displayName} quantities across all phases</p>
                       </TooltipContent>
-                    </Tooltip>
+                    </Tooltip> */}
                   </TableCell>
                   {item.phaseQuantities && item.phaseQuantities.map((quantity, phaseIndex) => (
                     <TableCell key={phaseIndex}>
-                      <Tooltip>
-                        <TooltipTrigger className="cursor-help">
+                      {/* <Tooltip>
+                        <TooltipTrigger className="cursor-help"> */}
                           {quantity}
-                        </TooltipTrigger>
+                        {/* </TooltipTrigger>
                         <TooltipContent>
                           <p>Quantity of {item.displayName} used in Phase {phaseIndex + 1}</p>
                         </TooltipContent>
-                      </Tooltip>
+                      </Tooltip> */}
                     </TableCell>
                   ))}
                 </TableRow>

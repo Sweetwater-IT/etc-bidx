@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useLoading } from "@/hooks/use-loading";
+import { fetchActiveBidById } from "@/lib/api-client";
 
 function formatCreatedAt(value: string) {
     const dateStr = value.split("T")[0]; // Gets "2025-05-26"
@@ -51,22 +52,22 @@ function ActiveBidContent({ mode }: { mode: string }) {
 
     const searchParams = useSearchParams();
 
-    const contractNumber = searchParams?.get('contractNumber')
+    const bidId = searchParams?.get('bidId')
 
     useEffect(() => {
 
         const getEstimateMetadata = async () => {
             startLoading();
-            if (contractNumber && contractNumber !== '') {
-                const estimateResponse = await fetch('/api/active-bids/' + contractNumber);
 
-                if (!estimateResponse.ok) {
+            if (bidId && bidId !== '') {
+                const response = await fetchActiveBidById(bidId)
+
+                if (!response) {
                     toast.error('Error retrieving estimate status and contractor')
                 }
                 else {
-                    const data = await estimateResponse.json();
-                    setBidStatus(data.data.status)
-                    setCreatedAt(data.data.created_at)
+                    setBidStatus(response.status)
+                    setCreatedAt(response.created_at)
                 }
             }
             stopLoading();

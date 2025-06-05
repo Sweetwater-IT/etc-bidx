@@ -725,13 +725,32 @@ export const estimateReducer = (
 			};
 
 		case "COPY_MPT_RENTAL":
+			//signId, sign quantity
+			const primarySignMap: Record<string, number> = {};
+			action.payload.phases.forEach(p => {
+				p.signs.forEach(s => {
+					if('primarySignId' in s) return;
+					else {
+						primarySignMap[s.id] = s.quantity;
+					}
+				})
+			})
 			const transformedMPTData: MPTRentalEstimating = {
 				...action.payload,
+				equipmentCosts: defaultMPTObject.equipmentCosts,
 				phases: action.payload.phases.map(p => ({
 					...p,
 					startDate: p.startDate ? new Date(p.startDate) : null,
 					endDate: p.endDate ? new Date(p.endDate) : null,
-					signs: p.signs
+					signs: p.signs.map(s => {
+						//add quantity based on primary sign
+						if('primarySignId' in s){
+							return {
+								...s,
+								quantity: primarySignMap[s.primarySignId]
+							}
+						} else return s;
+					})
 				}))
 			}
 

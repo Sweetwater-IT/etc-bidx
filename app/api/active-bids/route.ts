@@ -220,10 +220,10 @@ export async function GET(request: NextRequest) {
     // Transform data
     let transformedData = data.map((bid: any) => {
       const actualStatus = getActualStatus(bid, jobsData);
-      
       if (detailed) {
         return {
           ...bid,
+          contractNumber: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.admin_data.contractNumber + '-DRAFT' : bid.admin_data.contractNumber,
           status: actualStatus
         };
       } else {
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
           total_gross_profit: bid.total_gross_profit,
           created_at: bid.created_at,
           archived: bid.archived,
-          contract_number: bid.contract_number,
+          contract_number: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.contract_number + '-DRAFT' : bid.contract_number,
           estimator: bid.estimator,
           division: bid.division,
           owner: bid.owner,
@@ -296,7 +296,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status } = body.data as {
+    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status } = body.data as {
+      id: number | undefined
       adminData: AdminData;
       mptRental: MPTRentalEstimating;
       equipmentRental: EquipmentRentalItem[];
@@ -316,16 +317,10 @@ export async function POST(request: NextRequest) {
       saleItems || []
     );
 
-    // Begin transaction - Check if bid exists for this contract
-    const { data: existingBid } = await supabase
-      .from('bid_estimates')
-      .select('id')
-      .eq('contract_number', adminData.contractNumber)
-      .single();
-
     let bidEstimateId: string;
 
-    if (existingBid) {
+    if (!!id) {
+      bidEstimateId = id.toString();
       // Update existing bid
       const { data: updatedBid, error: updateError } = await supabase
         .from('bid_estimates')
@@ -335,15 +330,13 @@ export async function POST(request: NextRequest) {
           total_cost: allTotals.totalCost,
           total_gross_profit: allTotals.totalGrossProfit,
         })
-        .eq('id', existingBid.id)
+        .eq('id', id)
         .select('id')
         .single();
 
       if (updateError) {
         throw new Error(`Failed to update bid estimate: ${updateError.message}`);
       }
-      
-      bidEstimateId = updatedBid.id;
     } else {
       // Create new bid
       const { data: newBid, error: bidError } = await supabase
@@ -705,7 +698,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      data: { id: bidEstimateId, isUpdate: !!existingBid } 
+      data: { id: bidEstimateId, isUpdate: !!id } 
     });
 
   } catch (error) {

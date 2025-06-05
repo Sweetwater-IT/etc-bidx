@@ -21,30 +21,37 @@ interface Props {
   createdAt: string;
 }
 
-const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
+const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
   const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork } = useEstimate()
 
   const params = useSearchParams();
-  const contractNumber = params?.get('contractNumber')
+  const bidId = params?.get('bidId')
 
   const { startLoading, stopLoading } = useLoading()
 
   const router = useRouter();
 
   const handleSubmit = async () => {
-    try {
-      startLoading();
-
-      await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT');
-      toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
+    if (!adminData.contractNumber || adminData.contractNumber.trim() === '') {
       router.replace('/jobs/active-bids')
-    } catch (error) {
-      console.error("Error creating bid:", error);
-      toast.error('Bid not succesfully saved as draft: ' + error)
+      return;
     }
-    finally {
-      stopLoading();
+    else {
+      try {
+        startLoading();
+        const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
+        const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
+        await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, idToUse);
+        toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
+        router.replace('/jobs/active-bids')
+      } catch (error) {
+        console.error("Error creating bid:", error);
+        toast.error('Bid not succesfully saved as draft: ' + error)
+      }
+      finally {
+        stopLoading();
+      }
     }
   }
 
@@ -54,17 +61,17 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
         {mode !== 'view' && <Button variant='ghost' onClick={handleSubmit}>
           <XIcon className="cursor-pointer" />
         </Button>}
-        {mode !== 'view' && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1'/>}
+        {mode !== 'view' && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1' />}
         <div>
           <h1 className="text-3xl whitespace-nowrap font-bold">
-              {contractNumber ?? 'Create New Bid'}
+            {adminData.contractNumber ?? 'Create New Bid'}
           </h1>
           {mode === 'view' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
         </div>
-        {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'} 
-        className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
+        {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
+          className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
       </div>
-      <StepperSaveButtons key={status} mode={mode} status={status}/>
+      <StepperSaveButtons key={status} mode={mode} status={status} />
     </div>
   )
 }
