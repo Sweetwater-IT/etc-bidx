@@ -12,7 +12,7 @@ export async function GET(
     let { data, error } = await supabase
       .from('estimate_complete')
       .select('*')
-      .filter("admin_data->>contractNumber", 'eq', decodeURIComponent(resolvedParams.id))
+      .eq('id', resolvedParams.id)
       .single();
     
     // If not found in bid_estimates, try to fetch from available_jobs (for new bids from jobs)
@@ -34,6 +34,17 @@ export async function GET(
         { success: false, message: 'Failed to fetch active bid', error: error.message },
         { status: error.code === 'PGRST116' ? 404 : 500 }
       );
+    }
+
+    //append draft if necessary
+    if(data.status === 'DRAFT'){
+      data = {
+        ...data,
+        admin_data: {
+          ...data.admin_data,
+          contractNumber : data.admin_data.contractNumber.endsWith('-DRAFT') ? data.admin_data.contractNumber : data.admin_data.contractNumber + '-DRAFT'
+        }
+      }
     }
     
     return NextResponse.json({ success: true, data });
@@ -73,6 +84,18 @@ export async function PATCH(
       .eq('id', id)
       .select()
       .single();
+
+      if (body.status !== 'DRAFT' && updatedBid.contractNumber.endsWith('-DRAFT')) {
+        const { error: contractUpdateError } = await supabase
+          .from('admin_data_entries')
+          .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })
+          .eq('bid_estimate_id', id);
+          
+        if (contractUpdateError) {
+          console.error('Error updating contract number:', contractUpdateError);
+          // Handle error as needed
+        }
+      }
     
     if (updateError) {
       return NextResponse.json(

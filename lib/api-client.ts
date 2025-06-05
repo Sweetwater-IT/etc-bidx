@@ -239,12 +239,12 @@ export async function fetchActiveBids(options?: {
 /**
  * Fetch a specific active bid by ID
  */
-export async function fetchActiveBidByContractNumber(contractNumber: string): Promise<EstimateCompleteView> {
-  const response = await fetch(`/api/active-bids/${contractNumber}`);
+export async function fetchActiveBidById(id: string): Promise<EstimateCompleteView> {
+  const response = await fetch(`/api/active-bids/${id}`);
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || `Failed to fetch active bid with ID ${contractNumber}`);
+    throw new Error(errorData.message || `Failed to fetch active bid with ID ${id}`);
   }
 
   const result = await response.json();
@@ -261,13 +261,15 @@ export async function createActiveBid(
   flagging: Flagging | null,
   serviceWork: Flagging | null,
   saleItems: SaleItem[],
-  status: 'PENDING' | 'DRAFT'
+  status: 'PENDING' | 'DRAFT',
+  id?: number,
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
   const processedAdminData = {
     ...adminData,
     division: adminData.division || 'PUBLIC', // Set default value if empty
-    owner: adminData.owner || 'PENNDOT' // Set default value if empty
+    owner: adminData.owner || 'PENNDOT', // Set default value if empty
+    contractNumber: (adminData.contractNumber.endsWith('-DRAFT') && status !== 'DRAFT') ? adminData.contractNumber.slice(0, -6) : adminData.contractNumber
   };
   
   const response = await fetch('/api/active-bids', {
@@ -277,6 +279,7 @@ export async function createActiveBid(
     },
     body: JSON.stringify({
       data: {
+        id,
         adminData: processedAdminData,
         mptRental,
         equipmentRental,

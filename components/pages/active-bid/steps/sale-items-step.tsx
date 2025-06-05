@@ -215,7 +215,7 @@ const SaleItemsStep = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-end space-x-3 pt-6">
+                  <div className="flex justify-start space-x-3 pt-6">
                     <Button
                       variant="outline"
                       onClick={() => handleItemDelete(item.itemNumber)}

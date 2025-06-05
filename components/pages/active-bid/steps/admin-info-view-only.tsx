@@ -3,7 +3,7 @@
 import { useEstimate } from '@/contexts/EstimateContext'
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
-import { fetchActiveBidByContractNumber } from '@/lib/api-client';
+import { fetchActiveBidById } from '@/lib/api-client';
 import { useLoading } from '@/hooks/use-loading';
 import { Button } from '@/components/ui/button';
 
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 const AdminInfoViewOnly = () => {
 
     const searchParams = useSearchParams();
-    const contractNumberFromParams = searchParams?.get('contractNumber')
+    const id = searchParams?.get('bidId')
 
     const { adminData, dispatch } = useEstimate();
 
@@ -28,8 +28,8 @@ const AdminInfoViewOnly = () => {
     useEffect(() => {
         const fetchData = async () => {
             startLoading();
-            if (contractNumberFromParams) {
-                const data = await fetchActiveBidByContractNumber(contractNumberFromParams);
+            if (id) {
+                const data = await fetchActiveBidById(id);
                 //estimate-view is not completley accurate yet, but eventually we could pass the whole down
                 //to one reducer functio nand update all the state at once
                 dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });

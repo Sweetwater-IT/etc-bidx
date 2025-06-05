@@ -33,7 +33,7 @@ const SUBCONTRACTOR_OPTIONS = [
 const BidViewOnlyContainer = () => {
 
     const searchParams = useSearchParams();
-    const contractNumberFromParams = searchParams?.get('contractNumber')
+    const bidId = searchParams?.get('bidId')
 
     const [localNotes, setLocalNotes] = useState<string>()
     const [contractor, setContractor] = useState<Customer>();
@@ -55,7 +55,7 @@ const BidViewOnlyContainer = () => {
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles: 5, // Allow multiple files to be uploaded
-        jobId: 100,
+        jobId: bidId ? Number(bidId) : undefined,
         apiEndpoint: '/api/files/contract-management',
         accept: {
             'application/pdf': ['.pdf'],
@@ -72,10 +72,10 @@ const BidViewOnlyContainer = () => {
 
     useEffect(() => {
         const fetchContractors = async () => {
-            if (!contractNumberFromParams) return;
+            if (!bidId) return;
 
             try {
-                const response = await fetch(`/api/active-bids/update-contractors/${contractNumberFromParams}`);
+                const response = await fetch(`/api/active-bids/update-contractors/${bidId}`);
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.data) {
@@ -104,10 +104,10 @@ const BidViewOnlyContainer = () => {
         };
 
         // Only fetch after customers are loaded
-        if (customers.length > 0 && contractNumberFromParams) {
+        if (customers.length > 0 && bidId) {
             fetchContractors();
         }
-    }, [customers, contractNumberFromParams]);
+    }, [customers, bidId]);
 
     const handleSaveContractors = async () => {
         if (!selectedContractor && !selectedSubcontractor) return;
@@ -117,7 +117,7 @@ const BidViewOnlyContainer = () => {
         if (selectedSubcontractor) body.subcontractor_id = selectedSubcontractor.id;
 
         try {
-            const response = await fetch('/api/active-bids/update-contractors/' + contractNumberFromParams, {
+            const response = await fetch('/api/active-bids/update-contractors/' + bidId, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -176,9 +176,9 @@ const BidViewOnlyContainer = () => {
                                             {customers.map((customer) => (
                                                 <CommandItem
                                                     key={customer.id}
-                                                    value={customer.id.toString()}
+                                                    value={customer.name}
                                                     onSelect={(e) => {
-                                                        setSelectedContractor(customers.find(c => c.id.toString() === e))
+                                                        setSelectedContractor(customers.find(c => c.name === e))
                                                         setOpenStates(prev => ({ ...prev, contractor: false}))
                                                     }}
                                                 >
