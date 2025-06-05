@@ -42,6 +42,7 @@ interface SignOrder {
   rental: boolean;
   perm_signs: boolean;
   status: string;
+  shop_status?: string;
   assigned_to?: string;
 }
 
@@ -290,9 +291,10 @@ export default function SignOrderTrackerPage() {
         body: JSON.stringify({
           id: params?.id,
           signs: signsObject,
-          status: 'in-process', // Update the order status to in-process
+          status: 'submitted', // Keep the status as submitted
           submitted_at: new Date().toISOString(), // Add submission timestamp
-          assigned_to: signOrder.assigned_to // Include the assigned_to field
+          assigned_to: signOrder.assigned_to, // Include the assigned_to field
+          shop_status: signOrder.shop_status || 'not-started' // Include the shop status field
         })
       });
 
@@ -311,6 +313,9 @@ export default function SignOrderTrackerPage() {
 
       // Show success toast message
       toast.success('Order submitted successfully!');
+      
+      // Redirect back to the sign shop orders page
+      router.push('/takeoffs/sign-shop-orders');
     } catch (error: any) {
       console.error('Error submitting sign order:', error);
       setLoading(false);
@@ -436,7 +441,8 @@ export default function SignOrderTrackerPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          signs: signsObject
+          signs: signsObject,
+          shop_status: signOrder.shop_status || 'not-started'
         })
       });
 
@@ -745,6 +751,26 @@ export default function SignOrderTrackerPage() {
                           <SelectItem value="Tom Daywalt">Tom Daywalt</SelectItem>
                           <SelectItem value="Richie Sweigert">Richie Sweigert</SelectItem>
                           <SelectItem value="David Grooms">David Grooms</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Shop Status</label>
+                      <Select
+                        value={signOrder.shop_status || 'not-started'}
+                        onValueChange={(value) => {
+                          setSignOrder(prev => prev ? { ...prev, shop_status: value } : null);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select shop status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="not-started">Not Started</SelectItem>
+                          <SelectItem value="in-process">In Process</SelectItem>
+                          <SelectItem value="on-order">On Order</SelectItem>
+                          <SelectItem value="complete">Complete</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

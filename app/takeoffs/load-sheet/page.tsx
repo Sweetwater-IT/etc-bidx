@@ -13,6 +13,23 @@ import { toast } from "sonner";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "requestor", title: "Requestor" },
+  { key: "shop_status", title: "Shop Status", render: (row: any) => {
+    let bgColor = 'bg-gray-100 text-gray-800';
+    if (row.shop_status === 'not-started') {
+      bgColor = 'bg-gray-100 text-gray-800';
+    } else if (row.shop_status === 'in-process') {
+      bgColor = 'bg-blue-100 text-blue-800';
+    } else if (row.shop_status === 'on-order') {
+      bgColor = 'bg-yellow-100 text-yellow-800';
+    } else if (row.shop_status === 'complete') {
+      bgColor = 'bg-green-100 text-green-800';
+    }
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs ${bgColor}`}>
+        {row.shop_status ? row.shop_status.replace(/-/g, ' ') : 'not started'}
+      </span>
+    );
+  }},
   { key: "customer", title: "Customer" },
   { key: "job_number", title: "Job Number" },
   { key: "contract_number", title: "Contract Number"},

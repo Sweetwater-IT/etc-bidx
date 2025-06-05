@@ -19,25 +19,12 @@ export async function GET(request: NextRequest) {
 
     // If we're just getting counts
     if (counts) {
-      // Prepare status filter values
-      let statusValues: string[] = [];
-      if (statusParam) {
-        // Handle multiple statuses separated by commas
-        const statuses = statusParam.split(',').map(s => s.trim());
-        
-        // Create an array with all case variations for each status
-        statuses.forEach(status => {
-          statusValues.push(status, status.toLowerCase(), status.toUpperCase());
-        });
-      } else {
-        // Default behavior - include only Draft and Submitted status orders
-        // Explicitly exclude shop statuses like 'in-process', 'not-started', 'on-order', 'complete'
-        statusValues = ['Draft', 'draft', 'DRAFT', 'Submitted', 'submitted', 'SUBMITTED'];
-        
-        // Make sure we're not including any shop statuses
-        statusValues = statusValues.filter(status => 
-          !['in-process', 'not-started', 'on-order', 'complete'].includes(status.toLowerCase()));
-      }
+      // Always use only 'submitted' status for counts, regardless of what's passed in the status parameter
+      // This ensures we're only counting orders with 'submitted' status
+      const statusValues = ['Submitted', 'submitted', 'SUBMITTED'];
+      
+      // Log what we're doing for debugging
+      console.log('Counting only orders with status:', statusValues);
 
       // Get total count across all branches using the database function
       const { data: totalData, error: totalError } = await supabase
@@ -115,44 +102,27 @@ export async function GET(request: NextRequest) {
         rental,
         perm_signs,
         status,
+        shop_status,
         order_number
       `);
     
-    // Filter by status
-    if (statusParam) {
-      // Handle multiple statuses separated by commas
-      const statuses = statusParam.split(',').map(s => s.trim());
-      
-      // Create an array with all case variations for each status
-      const statusValues: string[] = [];
-      statuses.forEach(status => {
-        statusValues.push(status, status.toLowerCase(), status.toUpperCase());
-      });
-      
-      query = query.in('status', statusValues);
-    } else {
-      // Default behavior - include both Draft and Submitted status orders with all case variations
-      query = query.in('status', ['Draft', 'draft', 'DRAFT', 'Submitted', 'submitted', 'SUBMITTED']);
-    }
+    // Always filter for only 'submitted' status orders, regardless of what's passed in the status parameter
+    // This ensures consistency with the counts and only shows orders with 'submitted' status
+    query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
+    
+    // Log what we're doing for debugging
+    console.log('Fetching only orders with status: submitted');
 
     // Apply branch filter if present
     // We need to use a raw SQL query to join with users and branches tables
     if (branch) {
       try {
-        // Prepare status values for branch filtering
-        let branchStatusValues: string[] = [];
-        if (statusParam) {
-          // Handle multiple statuses separated by commas
-          const statuses = statusParam.split(',').map(s => s.trim());
-          
-          // Create an array with all case variations for each status
-          statuses.forEach(status => {
-            branchStatusValues.push(status, status.toLowerCase(), status.toUpperCase());
-          });
-        } else {
-          // Default behavior - include both Draft and Submitted status orders
-          branchStatusValues = ['Draft', 'draft', 'DRAFT', 'Submitted', 'submitted', 'SUBMITTED'];
-        }
+        // Always use only 'submitted' status for branch filtering, regardless of what's passed in the status parameter
+        // This ensures consistency with the counts and only shows orders with 'submitted' status
+        const branchStatusValues = ['Submitted', 'submitted', 'SUBMITTED'];
+        
+        // Log what we're doing for debugging
+        console.log('Branch filtering only orders with status:', branchStatusValues);
         
         // Use direct SQL query instead of RPC to avoid type issues
         const { data: branchFilteredData, error: branchFilterError } = await supabase
@@ -170,6 +140,7 @@ export async function GET(request: NextRequest) {
             rental,
             perm_signs,
             status,
+            shop_status,
             order_number
           `)
           .in('status', branchStatusValues)
@@ -277,6 +248,7 @@ export async function GET(request: NextRequest) {
             order_date: order.order_date,
             need_date: order.need_date,
             status: order.status,
+            shop_status: order.shop_status || 'not-started',
             type: order.sale ? 'Sale' : order.rental ? 'Rental' : order.perm_signs ? 'Permanent Signs' : 'Unknown',
             order_number: order.order_number || 'N/A'
           };
@@ -375,6 +347,7 @@ export async function GET(request: NextRequest) {
         order_date: order.order_date,
         need_date: order.need_date,
         status: combinedStatus,
+        shop_status: order.shop_status,
         sale: order.sale || false,
         rental: order.rental || false,
         perm_signs: order.perm_signs || false,
