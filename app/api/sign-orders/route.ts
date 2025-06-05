@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         sale: signOrderData.order_type?.includes('sale'),
         rental: signOrderData.order_type?.includes('rental'),
         perm_signs: signOrderData.order_type?.includes('permanent signs'),
-        status: signOrderData.status || 'not-started', // Default status for new orders
+        status: signOrderData.status || 'submitted', // Default status for new orders
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
         order_number: orderNumber // Save the generated order number
@@ -427,7 +427,9 @@ export async function GET(req: NextRequest) {
             item.rental ? 'R' : '',
             item.perm_signs ? 'P' : ''
           ].filter(Boolean).join(', '),
-          status: item.status || ''
+          status: item.status || '',
+          shop_status: item.shop_status || 'not-started',
+          order_number: item.order_number || ''
         })) || [];
         
         const pageCount = Math.ceil(totalCount / limit);

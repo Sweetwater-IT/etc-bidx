@@ -6,9 +6,9 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { id, signs, status, submitted_at, assigned_to } = body;
+    const { id, signs, status, submitted_at, assigned_to, shop_status } = body;
     
-    console.log(`Submitting sign order with ID: ${id}, status: ${status}, assigned_to: ${assigned_to}`);
+    console.log(`Submitting sign order with ID: ${id}, status: ${status}, shop_status: ${shop_status}, assigned_to: ${assigned_to}`);
     
     if (!id) {
       return NextResponse.json(
@@ -30,7 +30,8 @@ export async function POST(
     const updateData = {
       signs: filteredSigns,
       status,
-      assigned_to
+      assigned_to,
+      shop_status
       // submitted_at is still excluded as it doesn't exist in the database schema
     };
     

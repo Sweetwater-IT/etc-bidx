@@ -6,25 +6,46 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { QuoteGridView } from "@/types/QuoteGridView";
+import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
 import { FilterOption } from "@/components/table-controls";
 import { toast } from "sonner";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "requestor", title: "Requestor" },
+  { key: "shop_status", title: "Shop Status", render: (row: any) => {
+    let bgColor = 'bg-gray-100 text-gray-800';
+    if (row.shop_status === 'not-started') {
+      bgColor = 'bg-gray-100 text-gray-800';
+    } else if (row.shop_status === 'in-process') {
+      bgColor = 'bg-blue-100 text-blue-800';
+    } else if (row.shop_status === 'on-order') {
+      bgColor = 'bg-yellow-100 text-yellow-800';
+    } else if (row.shop_status === 'complete') {
+      bgColor = 'bg-green-100 text-green-800';
+    }
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs ${bgColor}`}>
+        {row.shop_status ? row.shop_status.replace(/-/g, ' ') : 'not started'}
+      </span>
+    );
+  }},
+  { key: "branch", title: "Branch", render: (row: any) => (
+    <span className="capitalize">{row.branch || 'N/A'}</span>
+  )},
   { key: "customer", title: "Customer" },
-  { key: "job_number", title: "Job Number" },
-  { key: "contract_number", title: "Contract Number"},
-  { key: "order_date", title: "Order date" },
-  { key: "need_date", title: "Need date" },
-  { key: "status", title: "Status", render: (row: any) => (
-    <span className={`px-2 py-1 rounded-full text-xs ${row.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : row.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-      {row.status || 'N/A'}
-    </span>
+  { key: "order_date", title: "Order date", render: (row: any) => (
+    <span>{row.order_date || 'N/A'}</span>
+  )},
+  { key: "need_date", title: "Need date", render: (row: any) => (
+    <span>{row.need_date || 'N/A'}</span>
   )},
   { key: "type", title: "Type" },
-  { key: "order_number", title: "Order Number" },
+  { key: "assigned_to", title: "Assigned to" },
+  { key: "contract_number", title: "Contract Number"},
+  { key: "job_number", title: "Job Number" },
+  // Empty action column at the end
+  { key: "actions", title: "Actions", render: () => <div className="w-8"></div> },
 ];
 
 const SEGMENTS = [
@@ -37,7 +58,7 @@ const SEGMENTS = [
 
 export default function SignOrderPage() {
   const router = useRouter();
-  const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
+  const [quotes, setQuotes] = useState<SignOrderView[]>([]);
   const [activeSegment, setActiveSegment] = useState("all");
   const [branchCounts, setBranchCounts] = useState({
     all: 0,
@@ -61,7 +82,7 @@ export default function SignOrderPage() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   
   // Selected rows state
-  const [selectedRows, setSelectedRows] = useState<QuoteGridView[]>([]);
+  const [selectedRows, setSelectedRows] = useState<SignOrderView[]>([]);
 
   // Reference data for dropdowns and filters
   const [referenceData, setReferenceData] = useState<{
@@ -186,8 +207,8 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
-      // Don't filter by shop_status to show all Draft and Submitted orders
-      // The API will handle filtering to show both Draft and Submitted status orders
+      // Add status parameter to show both Draft and Submitted orders
+      params.append("status", "Draft,Submitted");
       
       // Add segment filter
       if (activeSegment !== "all") {
@@ -206,8 +227,30 @@ export default function SignOrderPage() {
       const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
       
+      console.log('API response:', data);
+      
       if (data.success) {
-        setQuotes(data.orders || []);
+        // Make sure we're using the correct field name from the API response
+        if (data.orders && Array.isArray(data.orders)) {
+          console.log('Orders found in response:', data.orders.length);
+          
+          // Map the orders to ensure they have all required fields
+          const processedOrders = data.orders.map((order: any) => ({
+            ...order,
+            // Ensure these fields exist with default values if missing
+            customer: order.customer || 'N/A',
+            branch: order.branch || 'Unknown',
+            assigned_to: order.assigned_to || 'Unassigned',
+            type: order.type || 'Standard'
+          }));
+          
+          setQuotes(processedOrders);
+          console.log('Processed quotes:', processedOrders.length);
+        } else {
+          console.warn('No orders array in response or empty array');
+          setQuotes([]);
+        }
+        
         setTotalCount(data.pagination?.total || 0);
         setPageCount(data.pagination?.pages || 0);
       } else {
@@ -257,22 +300,22 @@ export default function SignOrderPage() {
   }, []);
 
   // Handle selected rows actions
-  const handleArchiveSelected = useCallback(async (rows: QuoteGridView[]) => {
+  const handleArchiveSelected = useCallback(async (rows: SignOrderView[]) => {
     console.log('Archive selected rows:', rows);
     // Implement archive functionality here
     toast.success(`${rows.length} sign order(s) archived successfully`);
     // Refresh data after archiving
     fetchQuotes();
   }, [fetchQuotes]);
-
-  const handleDeleteSelected = useCallback(async (rows: QuoteGridView[]) => {
+  
+  const handleDeleteSelected = useCallback(async (rows: SignOrderView[]) => {
     console.log('Delete selected rows:', rows);
     // Implement delete functionality here
     toast.success(`${rows.length} sign order(s) deleted successfully`);
     // Refresh data after deleting
     fetchQuotes();
   }, [fetchQuotes]);
-
+  
   // Load data when dependencies change
   useEffect(() => {
     fetchQuotes();
@@ -283,10 +326,20 @@ export default function SignOrderPage() {
     fetchCounts();
   }, [fetchCounts, activeSegment]);
 
-  const handleRowClick = (quote: QuoteGridView) => {
-    // Navigate to the page with equipment summary when clicking a row
-    router.push(`/takeoffs/new?id=${quote.id}`);
-  };
+  const handleRowClick = useCallback((quote: SignOrderView) => {
+    // Navigate to the sign order detail page when clicking a row
+    router.push(`/takeoffs/sign-order/${quote.id}`);
+  }, [router]);
+  
+  // Handle view details action
+  const handleViewDetails = useCallback((row: SignOrderView) => {
+    router.push(`/takeoffs/sign-order/${row.id}`);
+  }, [router]);
+  
+  // Handle edit action
+  const handleEdit = useCallback((row: SignOrderView) => {
+    router.push(`/takeoffs/sign-order/${row.id}/edit`);
+  }, [router]);
 
   // Update segments with counts
   const segmentsWithCounts = SEGMENTS.map(segment => ({
@@ -336,7 +389,9 @@ export default function SignOrderPage() {
               
               {/* No Status Tabs - Only showing Draft content */}
               
-              <DataTable<QuoteGridView>
+
+              
+              <DataTable<SignOrderView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
                 segments={segmentsWithCounts}

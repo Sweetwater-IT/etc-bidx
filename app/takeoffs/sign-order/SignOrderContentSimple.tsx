@@ -12,6 +12,7 @@ import { Customer } from "@/types/Customer";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -31,6 +32,7 @@ export interface SignOrderAdminInformation {
 
 export default function SignOrderContentSimple() {
     const { dispatch, mptRental } = useEstimate();
+    const router = useRouter();
 
     // Set up admin info state in the parent component
     const [adminInfo, setAdminInfo] = useState<SignOrderAdminInformation>({
@@ -149,6 +151,9 @@ export default function SignOrderContentSimple() {
 
             // Show success message
             toast.success("Sign order saved successfully");
+            
+            // Redirect to sign order list page
+            router.push('/takeoffs/load-sheet');
 
         } catch (error) {
             console.error('Error saving sign order:', error);
