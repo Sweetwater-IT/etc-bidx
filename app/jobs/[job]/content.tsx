@@ -30,6 +30,7 @@ import { AvailableJob } from "../../../data/available-jobs";
 import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
 import { DateRange } from "react-day-picker";
+import { useCustomers } from "@/hooks/use-customers";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -427,6 +428,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(availableJobs[nextIndex])
     }
 
+    const { customers, getCustomers} = useCustomers();
+
+    useEffect(() => {
+        getCustomers();
+    }, [getCustomers])
 
     const loadActiveBids = useCallback(async () => {
         try {
@@ -459,7 +465,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 id: e.id,
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
-                contractor: e.contractor_name || '-',
+                //TODO refactor estimate_complete view to return contractor display name by default then contractor name
+                contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
                 county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
@@ -493,7 +500,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers]);
 
     const loadActiveJobs = useCallback(async () => {
         try {

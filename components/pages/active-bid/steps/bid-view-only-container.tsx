@@ -176,9 +176,9 @@ const BidViewOnlyContainer = () => {
                                             {customers.map((customer) => (
                                                 <CommandItem
                                                     key={customer.id}
-                                                    value={customer.id.toString()}
+                                                    value={customer.name}
                                                     onSelect={(e) => {
-                                                        setSelectedContractor(customers.find(c => c.id.toString() === e))
+                                                        setSelectedContractor(customers.find(c => c.name === e))
                                                         setOpenStates(prev => ({ ...prev, contractor: false}))
                                                     }}
                                                 >
