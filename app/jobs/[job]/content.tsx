@@ -455,12 +455,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-            console.log(pagination)
-
             const transformedData = data.map(e => ({
                 id: e.id,
-                contractNumber: e.admin_data.contractNumber,
-                originalContractNumber: e.admin_data.contractNumber,
+                contractNumber: e.contractNumber,
+                originalContractNumber: e.contractNumber,
                 contractor: e.contractor_name || '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
@@ -1446,7 +1444,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     tableRef={activeBidsTableRef}
                                     onViewDetails={(item) => {
                                         const params = new URLSearchParams;
-                                        params.append('contractNumber', item.contractNumber as string);
+                                        params.append('bidId', item.id.toString());
                                         params.append('tuckSidebar', 'true');
                                         params.append('fullscreen', 'true');
                                         params.append('defaultEditable', 'false');
@@ -1455,7 +1453,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onRowClick={(item) => {
                                         // if(!selectedActiveBid) return;
                                         const params = new URLSearchParams;
-                                        params.append('contractNumber', item.contractNumber as string);
+                                        params.append('bidId', item.id.toString());
                                         params.append('tuckSidebar', 'true');
                                         params.append('fullscreen', 'true');
                                         params.append('defaultEditable', 'false');

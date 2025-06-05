@@ -26,7 +26,7 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
   const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork } = useEstimate()
 
   const params = useSearchParams();
-  const contractNumber = params?.get('contractNumber')
+  const bidId = params?.get('bidId')
 
   const { startLoading, stopLoading } = useLoading()
 
@@ -35,8 +35,9 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
   const handleSubmit = async () => {
     try {
       startLoading();
-
-      await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, status as 'DRAFT' | 'PENDING');
+      const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
+      const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
+      await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, idToUse);
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       router.replace('/jobs/active-bids')
     } catch (error) {
@@ -57,7 +58,7 @@ const ActiveBidHeader = ({mode, status, createdAt}: Props) => {
         {mode !== 'view' && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1'/>}
         <div>
           <h1 className="text-3xl whitespace-nowrap font-bold">
-              {contractNumber ?? 'Create New Bid'}
+              {adminData.contractNumber ?? 'Create New Bid'}
           </h1>
           {mode === 'view' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
         </div>

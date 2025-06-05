@@ -44,10 +44,13 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
 
     const params = useSearchParams();
 
+    const bidId = params?.get('bidId')
+
     const handleSubmit = async () => {
         try {
             startLoading();
-            await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
+            const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
+            await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', idToUse);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
             router.replace('/jobs/active-bids')

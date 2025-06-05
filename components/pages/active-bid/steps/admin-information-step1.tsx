@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Step } from "@/types/IStep";
 import {
-  fetchActiveBidByContractNumber,
+  fetchActiveBidById,
   fetchBidById,
   fetchReferenceData,
 } from "@/lib/api-client";
@@ -71,7 +71,8 @@ const AdminInformationStep1 = ({
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
-  const contractNumberFromParams = searchParams?.get('contractNumber')
+  const source = searchParams?.get('source');
+  const bidId = searchParams?.get('bidId')
   const { startLoading, stopLoading } = useLoading();
 
   useEffect(() => {
@@ -134,9 +135,9 @@ const AdminInformationStep1 = ({
   };
   
   useEffect(() => {
-    if(contractNumberFromParams && contractNumberFromParams !== '')
+    if(bidId && bidId !== '')
     setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true}))
-  }, [contractNumberFromParams])
+  }, [bidId])
 
   useEffect(() => {
     const allRatesAcknowledged = toggleStates.laborRate && toggleStates.fringeRate && toggleStates.shopRate;
@@ -207,7 +208,7 @@ const AdminInformationStep1 = ({
         });
       }
 
-      if (availableJobId) {
+      if (availableJobId && source && source === 'available-jobs') {
         try {
           const data = await fetchBidById(parseInt(availableJobId));
 
@@ -228,8 +229,8 @@ const AdminInformationStep1 = ({
           toast.error("Couldn't populate bid with data from available job " + availableJobId + ' ' + err)
         }
       }
-      if (contractNumberFromParams) {
-        const data = await fetchActiveBidByContractNumber(contractNumberFromParams);
+      else if (bidId) {
+        const data = await fetchActiveBidById(bidId);
         //estimate-view is not completley accurate yet, but eventually we could pass the whole down
         //to one reducer functio nand update all the state at once
         dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });
