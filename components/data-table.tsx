@@ -235,37 +235,30 @@ function formatCellValue(value: any, key: string) {
   }
   if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
     try {
-      const dateStr = value.split("T")[0]; // Gets "2025-05-26"
-      const [year, month, day] = dateStr.split("-");
-      const utcDate = new Date(
-        Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day))
-      );
-
-      // Use native JavaScript methods to format in UTC
+      // Create a Date object directly from the ISO string - this will be interpreted as UTC
+      const utcDate = new Date(value);
+      
+      // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
       ];
-      const monthName = monthNames[utcDate.getUTCMonth()];
-      const dayNum = utcDate.getUTCDate();
-      const yearNum = utcDate.getUTCFullYear();
-
-      const hoursValue = parseInt(value.split("T")[1].split(':')[0])
-      const amOrPm = hoursValue > 12 ? 'PM' : 'AM'
-      const hoursFormatted = hoursValue > 12 ? hoursValue - 12 : hoursValue
-      const timestamp = ', ' + hoursFormatted + ':' + value.split("T")[1].split(':')[1] + amOrPm
-
-      return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp  : ''}`;
+      
+      const monthName = monthNames[utcDate.getMonth()]; // getMonth() instead of getUTCMonth()
+      const dayNum = utcDate.getDate(); // getDate() instead of getUTCDate()
+      const yearNum = utcDate.getFullYear(); // getFullYear() instead of getUTCFullYear()
+    
+      // For time, also use local methods
+      const hoursValue = utcDate.getHours(); // getHours() instead of parsing from string
+      const minutesValue = utcDate.getMinutes(); // getMinutes() for proper minutes
+      
+      const amOrPm = hoursValue >= 12 ? 'PM' : 'AM';
+      const hoursFormatted = hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue;
+      const minutesFormatted = minutesValue.toString().padStart(2, '0');
+      
+      const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`;
+    
+      return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp : ''}`;
     } catch {
       return value;
     }

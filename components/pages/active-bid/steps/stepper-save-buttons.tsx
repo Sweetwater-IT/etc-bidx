@@ -12,6 +12,7 @@ import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingOb
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
+import { parseDomainOfCategoryAxis } from 'recharts/types/util/ChartUtils';
 import { toast } from 'sonner';
 
 const DEFAULT_TOTALS = {
@@ -50,10 +51,15 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
         try {
             startLoading();
             const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
-            await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', idToUse);
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', idToUse);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
-            router.replace('/jobs/active-bids')
+            const params = new URLSearchParams();
+            params.append('bidId', newBidId.id.toString());
+            params.append('tuckSidebar', 'true');
+            params.append('fullscreen', 'true');
+            params.append('defaultEditable', 'false');
+            router.replace(`/active-bid/view?${params.toString()}`)
         } catch (error) {
             console.error("Error creating bid:", error);
             stopLoading()
