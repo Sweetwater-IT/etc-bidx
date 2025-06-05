@@ -1,10 +1,11 @@
 // secondary-sign-item.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import SecondarySignForm from "./secondary-sign-form";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { useSearchParams } from "next/navigation";
 
 interface SecondarySignItemProps {
   secondarySign: SecondarySign;
@@ -32,6 +33,16 @@ const SecondarySignItem = ({
       payload: id,
     });
   };
+
+    //use effect to set configuring to false when viewing a bid in edit mode
+    const params = useSearchParams();
+    const bidId = params?.get('bidId');
+  
+    useEffect(() => {
+      if(bidId && bidId !== '')
+      setIsConfiguring(false)
+    }, [bidId])
+  
 
   return (
     <div className="rounded-lg border border-blue-200 bg-card text-card-foreground shadow-sm p-4 mt-4 ml-8">

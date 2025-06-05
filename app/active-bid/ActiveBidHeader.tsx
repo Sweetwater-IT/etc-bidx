@@ -64,7 +64,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         {mode !== 'view' && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1' />}
         <div>
           <h1 className="text-3xl whitespace-nowrap font-bold">
-            {adminData.contractNumber ?? 'Create New Bid'}
+            {mode === 'new' ? 'Create New Bid' : adminData.contractNumber}
           </h1>
           {mode === 'view' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
         </div>
