@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SheetingType, EquipmentType } from "@/types/MPTEquipment";
+import { PrimarySign, SheetingType, EquipmentType, SecondarySign } from "@/types/MPTEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +60,7 @@ const PrimarySignForm = ({
   setIsConfiguring,
   isTakeoff,
 }: PrimarySignFormProps) => {
-  const { dispatch } = useEstimate();
+  const { dispatch, mptRental } = useEstimate();
   const [localSign, setLocalSign] = useState<PrimarySign>({ ...sign });
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
   const [filteredDesignations, setFilteredDesignations] = useState<
@@ -78,6 +78,34 @@ const PrimarySignForm = ({
       const url = URL.createObjectURL(file);
       setImagePreview(url);
     }
+  };
+
+  // Helper to get all secondary signs for this primary sign
+  const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
+    const desiredPhase = mptRental.phases[currentPhase];
+    if (!desiredPhase) return [];
+    
+    return desiredPhase.signs.filter(
+      (s): s is SecondarySign => 
+        'primarySignId' in s && s.primarySignId === primarySignId
+    );
+  };
+
+  // Helper to update all secondary sign quantities
+  const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
+    const secondarySigns = getSecondarySignsForPrimary(primarySignId);
+    
+    secondarySigns.forEach((secondarySign) => {
+      dispatch({
+        type: "UPDATE_MPT_SIGN",
+        payload: {
+          phase: currentPhase,
+          signId: secondarySign.id,
+          key: "quantity",
+          value: newQuantity,
+        },
+      });
+    });
   };
 
   // Fetch all sign designations and dimensions at once
@@ -241,6 +269,9 @@ const PrimarySignForm = ({
         },
       });
     }
+
+    // Update all secondary sign quantities to match the new primary sign quantity
+    updateSecondarySignQuantities(sign.id, newValue);
   };
 
   const handleDimensionSelect = (value: string) => {
@@ -611,16 +642,16 @@ const PrimarySignForm = ({
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
-              <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
-              <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
-              <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
-              <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-              <SelectItem value="LOOSE">LOOSE</SelectItem>
-              <SelectItem value="8' POST">{`8'`} POST</SelectItem>
-              <SelectItem value="10' POST">{`10'`} POST</SelectItem>
-              <SelectItem value="12' POST">{`12'`} POST</SelectItem>
-              <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+              <SelectItem value="fourFootTypeIII">{`4'`} T-III RIGHT</SelectItem>
+              {/* <SelectItem value="fourFootTypeIII">{`4'`} T-III LEFT</SelectItem>
+              <SelectItem value="fourFootTypeIII">{`6'`} T-III RIGHT</SelectItem>
+              <SelectItem value="fourFootTypeIII">{`6'`} T-III LEFT</SelectItem> */}
+              <SelectItem value="hStand">H-FOOT</SelectItem>
+              <SelectItem value="none">LOOSE</SelectItem>
+              <SelectItem value="post">{`8'`} POST</SelectItem>
+              {/* <SelectItem value="post">{`10'`} POST</SelectItem>
+              <SelectItem value="post">{`12'`} POST</SelectItem>
+              <SelectItem value="post">{`14'`} POST</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
