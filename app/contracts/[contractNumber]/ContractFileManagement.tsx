@@ -232,13 +232,10 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                         <div className="space-y-2">
                             <Label>Contract Number</Label>
                             <div className="mt-1 flex">
-                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                                    #
-                                </div>
                                 <Input
                                     value={adminData.contractNumber}
                                     disabled
-                                    className="bg-muted/50 rounded-l-none"
+                                    className="bg-muted/50"
                                 />
                             </div>
                         </div>
@@ -248,7 +245,7 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                                 <Input
                                     value={adminData.srRoute}
                                     onChange={(e) => setAdminData(prevState => ({ ...prevState, srRoute: e.target.value }))}
-                                    className="bg-muted/50 rounded-l-none"
+                                    className="bg-muted/50"
                                 />
                             </div>
                         </div>
@@ -342,9 +339,6 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                         <div className="space-y-2">
                             <Label>Labor Rate</Label>
                             <div className="mt-1 flex">
-                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                                    $
-                                </div>
                                 <Input
                                     inputMode="decimal"
                                     pattern="^\\d*(\\.\\d{0,2})?$"
@@ -360,16 +354,13 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                                         const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
                                         handleRateChange('laborRate', formatted);
                                     }}
-                                    className="bg-muted/50 rounded-l-none"
+                                    className="bg-muted/50"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label>Fringe Rate</Label>
                             <div className="mt-1 flex">
-                                <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                                    $
-                                </div>
                                 <Input
                                     inputMode="decimal"
                                     pattern="^\\d*(\\.\\d{0,2})?$"
@@ -385,7 +376,7 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
                                         const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
                                         handleRateChange('fringeRate', formatted);
                                     }}
-                                    className="bg-muted/50 rounded-l-none"
+                                    className="bg-muted/50"
                                 />
                             </div>
                         </div>

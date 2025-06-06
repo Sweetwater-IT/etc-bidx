@@ -69,13 +69,10 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                 <div className="space-y-2">
                     <Label>Labor Rate</Label>
                     <div className="flex items-center">
-                        <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                            $
-                        </div>
                         <Input
                             inputMode={adminData.rated === 'RATED' ? "decimal" : "none"}
                             pattern={adminData.rated === 'RATED' ? "^\\d*(\\.\\d{0,2})?$" : undefined}
-                            className="rounded-l-none bg-muted/50"
+                            className="bg-muted/50"
                             value={adminData.rated === 'RATED' ? `$ ${formatDecimal(digits.laborRate)}` : 'SHOP'}
                             onChange={(e) => {
                                 if (adminData.rated === 'RATED') {
@@ -98,13 +95,10 @@ const PrevailingWagesSection: React.FC<PrevailingWagesSectionProps> = ({
                 <div className="space-y-2">
                     <Label>Fringe Rate</Label>
                     <div className="flex items-center">
-                        <div className="pointer-events-none flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted text-sm text-muted-foreground">
-                            $
-                        </div>
                         <Input
                             inputMode={adminData.rated === 'RATED' ? "decimal" : "none"}
                             pattern={adminData.rated === 'RATED' ? "^\\d*(\\.\\d{0,2})?$" : undefined}
-                            className="rounded-l-none bg-muted/50"
+                            className="bg-muted/50"
                             value={adminData.rated === 'RATED' ? `$ ${formatDecimal(digits.fringeRate)}` : 'SHOP'}
                             onChange={(e) => {
                                 if (adminData.rated === 'RATED') {
