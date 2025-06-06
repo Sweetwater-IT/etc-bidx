@@ -80,6 +80,84 @@ const PrimarySignItem = ({
     });
   };
 
+  // Helper to update equipment quantities when changing sign quantity
+  const updateEquipmentQuantities = (newQuantity: number, oldQuantity: number) => {
+    // Update associated structure quantity
+    if (primarySign.associatedStructure !== "none") {
+      dispatch({
+        type: "ADD_MPT_ITEM_NOT_SIGN",
+        payload: {
+          phaseNumber: currentPhase,
+          equipmentType: primarySign.associatedStructure as EquipmentType,
+          equipmentProperty: "quantity",
+          value: newQuantity,
+        },
+      });
+    }
+
+    // Update BLights - multiply by quantity
+    if (primarySign.bLights > 0) {
+      dispatch({
+        type: "ADD_MPT_ITEM_NOT_SIGN",
+        payload: {
+          phaseNumber: currentPhase,
+          equipmentType: "BLights" as EquipmentType,
+          equipmentProperty: "quantity",
+          value: newQuantity * primarySign.bLights,
+        },
+      });
+    }
+
+    // Update covers - multiply by quantity
+    if (primarySign.covers > 0) {
+      dispatch({
+        type: "ADD_MPT_ITEM_NOT_SIGN",
+        payload: {
+          phaseNumber: currentPhase,
+          equipmentType: "covers" as EquipmentType,
+          equipmentProperty: "quantity",
+          value: newQuantity * primarySign.covers,
+        },
+      });
+    }
+  };
+
+  // Helper to update all secondary sign quantities
+  const updateSecondarySignQuantities = (newQuantity: number) => {
+    secondarySigns.forEach((secondarySign) => {
+      dispatch({
+        type: "UPDATE_MPT_SIGN",
+        payload: {
+          phase: currentPhase,
+          signId: secondarySign.id,
+          key: "quantity",
+          value: newQuantity,
+        },
+      });
+    });
+  };
+
+  const handleQuantityChange = (newQuantity: number) => {
+    const oldQuantity = primarySign.quantity;
+    
+    // Update the primary sign quantity
+    dispatch({
+      type: "UPDATE_MPT_SIGN",
+      payload: {
+        phase: currentPhase,
+        signId: primarySign.id,
+        key: "quantity",
+        value: newQuantity,
+      },
+    });
+
+    // Update equipment quantities
+    updateEquipmentQuantities(newQuantity, oldQuantity);
+    
+    // Update all secondary sign quantities
+    updateSecondarySignQuantities(newQuantity);
+  };
+
   const handleSignDelete = (id: string) => {
     // Delete the primary sign and all associated secondary signs
     // Update equipment quantities as necessary
@@ -98,11 +176,11 @@ const PrimarySignItem = ({
     });
 
     // Update equipment based on removed sign
-    updateEquipmentQuantities(primarySign, "delete");
+    updateEquipmentQuantitiesForDelete(primarySign);
   };
 
   // Helper to update equipment quantities when deleting signs
-  const updateEquipmentQuantities = (sign: PrimarySign, action: "delete") => {
+  const updateEquipmentQuantitiesForDelete = (sign: PrimarySign) => {
     // Update associated structure quantity
     if (sign.associatedStructure !== "none") {
       dispatch({
@@ -188,16 +266,8 @@ const PrimarySignItem = ({
                     type="button"
                     className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent "
                     onClick={() => {
-                      const value = Math.max(1, primarySign.quantity - 1);
-                      dispatch({
-                        type: "UPDATE_MPT_SIGN",
-                        payload: {
-                          phase: currentPhase,
-                          signId: primarySign.id,
-                          key: "quantity",
-                          value,
-                        },
-                      });
+                      const newQuantity = Math.max(1, primarySign.quantity - 1);
+                      handleQuantityChange(newQuantity);
                     }}
                     aria-label="Diminuir quantidade"
                   >
@@ -208,16 +278,8 @@ const PrimarySignItem = ({
                     min={1}
                     value={primarySign.quantity}
                     onChange={(e) => {
-                      const value = Math.max(1, Number(e.target.value));
-                      dispatch({
-                        type: "UPDATE_MPT_SIGN",
-                        payload: {
-                          phase: currentPhase,
-                          signId: primarySign.id,
-                          key: "quantity",
-                          value,
-                        },
-                      });
+                      const newQuantity = Math.max(1, Number(e.target.value));
+                      handleQuantityChange(newQuantity);
                     }}
                     className="no-spinner w-12 px-2 py-1 border rounded text-center bg-background !border-none"
                     style={{ width: 48, height: 28 }}
@@ -226,16 +288,8 @@ const PrimarySignItem = ({
                     type="button"
                     className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
                     onClick={() => {
-                      const value = primarySign.quantity + 1;
-                      dispatch({
-                        type: "UPDATE_MPT_SIGN",
-                        payload: {
-                          phase: currentPhase,
-                          signId: primarySign.id,
-                          key: "quantity",
-                          value,
-                        },
-                      });
+                      const newQuantity = primarySign.quantity + 1;
+                      handleQuantityChange(newQuantity);
                     }}
                     aria-label="Aumentar quantidade"
                   >
