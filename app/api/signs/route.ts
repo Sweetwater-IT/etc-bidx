@@ -11,8 +11,7 @@ export async function GET() {
         sign_designations (designation, description, sheeting),
         sign_dimensions (width, height)
       `)
-      .order('sign_designations(designation)')
-
+   
     if (error) {
       console.error(error)
       return NextResponse.json(
@@ -21,7 +20,11 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ success: true, data })
+    const sortedData = data
+      ?.filter(obj => !!(obj.sign_designations as any).designation)
+      ?.sort((a, b) => (a.sign_designations as any).designation.localeCompare((b.sign_designations as any).designation))
+
+    return NextResponse.json({ success: true, data: sortedData })
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(

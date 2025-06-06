@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
 import { Separator } from "./ui/separator";
+import { formatDate } from "@/lib/formatUTCDate";
 
 interface ActiveJobDetailsSheetProps {
   open: boolean;
@@ -128,13 +129,13 @@ export function ActiveJobDetailsSheet({
                     <Label className="text-sm text-muted-foreground">
                       Project Status
                     </Label>
-                    <div className="font-medium">{job.projectStatus}</div>
+                    <div className="font-medium">{job.projectStatus.replace('_', ' ')}</div>
                   </div>
                   <div className="flex flex-col space-y-1">
                     <Label className="text-sm text-muted-foreground">
                       Billing Status
                     </Label>
-                    <div className="font-medium">{job.billingStatus || ""}</div>
+                    <div className="font-medium">{job.billingStatus.replace('_', ' ') || ""}</div>
                   </div>
                 </div>
 
@@ -156,30 +157,14 @@ export function ActiveJobDetailsSheet({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 w-full">
+                  <div className="space-y-1 w-full">
                     <Label>County</Label>
-                    <div className="relative">
-                      <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        value={(job.county as any).main || ""}
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
-                        readOnly
-                        disabled
-                      />
-                    </div>
+                    <div className="font-medium">{(job.county as any).main || ""}</div>
                   </div>
 
-                  <div className="space-y-2 w-full">
+                  <div className="space-y-1 w-full">
                     <Label>Branch</Label>
-                    <div className="relative">
-                      <BuildingIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        value={job.branch || ""}
-                        className="pl-9 bg-gray-50 text-gray-700 border-gray-200"
-                        readOnly
-                        disabled
-                      />
-                    </div>
+                    <div className="font-medium">{job.branch || ""}</div>
                   </div>
                 </div>
 
@@ -196,7 +181,7 @@ export function ActiveJobDetailsSheet({
                       Start Date
                     </Label>
                     <div className="font-medium">
-                      {startDate ? startDate.toLocaleDateString() : ""}
+                      {startDate ? formatDate(startDate) : ""}
                     </div>
                   </div>
 
@@ -205,7 +190,7 @@ export function ActiveJobDetailsSheet({
                       End Date
                     </Label>
                     <div className="font-medium">
-                      {endDate ? endDate.toLocaleDateString() : ""}
+                      {endDate ? formatDate(endDate) : ""}
                     </div>
                   </div>
                 </div>
@@ -217,7 +202,7 @@ export function ActiveJobDetailsSheet({
                     </Label>
                     <div className="font-medium">
                       {job.countyJson && job.countyJson.laborRate
-                        ? job.countyJson.laborRate.toFixed(2)
+                        ? '$' + job.countyJson.laborRate.toFixed(2)
                         : ""}
                     </div>
                   </div>
@@ -228,7 +213,7 @@ export function ActiveJobDetailsSheet({
                     </Label>
                     <div className="font-medium">
                       {job.countyJson && job.countyJson.laborRate
-                        ? job.countyJson.fringeRate.toFixed(2)
+                        ? '$' + job.countyJson.fringeRate.toFixed(2)
                         : ""}
                     </div>
                   </div>
