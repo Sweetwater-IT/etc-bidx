@@ -592,328 +592,78 @@ export default function SignOrderTrackerPage () {
 
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Job Number
-                      </label>
-                      <Input
-                        value={signOrder.job_number || ''}
-                        onChange={() => {}}
-                        className='w-full'
-                      />
+                      </div>
+                      <div className='text-base mt-1'>
+                        {signOrder.job_number || '-'}
+                      </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Contract Number
-                      </label>
-                      <Input
-                        value={signOrder.contract_number || ''}
-                        onChange={() => {}}
-                        className='w-full'
-                      />
+                      </div>
+                      <div className='text-base mt-1'>
+                        {signOrder.contract_number || '-'}
+                      </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Requestor
-                      </label>
-                      <Popover
-                        open={openRequestor}
-                        onOpenChange={setOpenRequestor}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            role='combobox'
-                            aria-expanded={openRequestor}
-                            className='w-full justify-between'
-                          >
-                            {signOrder.requestor || 'Select requestor...'}
-                            <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                          <Command>
-                            <CommandInput placeholder='Search requestor...' />
-                            <CommandEmpty>No requestor found.</CommandEmpty>
-                            <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                              {requestors.map(requestor => (
-                                <CommandItem
-                                  key={requestor.id}
-                                  value={requestor.name}
-                                  onSelect={() => {
-                                    setSignOrder(prev =>
-                                      prev
-                                        ? { ...prev, requestor: requestor.name }
-                                        : null
-                                    )
-                                    setOpenRequestor(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      signOrder.requestor === requestor.name
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {requestor.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {signOrder.requestor || '-'}
+                      </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Branch
-                      </label>
-                      <Popover open={openBranch} onOpenChange={setOpenBranch}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            role='combobox'
-                            aria-expanded={openBranch}
-                            className='w-full justify-between'
-                          >
-                            {signOrder.branch || 'All'}
-                            <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                          <Command>
-                            <CommandInput placeholder='Search branch...' />
-                            <CommandEmpty>No branch found.</CommandEmpty>
-                            <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                              {branches.map(branch => (
-                                <CommandItem
-                                  key={branch.id}
-                                  value={branch.name}
-                                  onSelect={() => {
-                                    setSignOrder(prev =>
-                                      prev
-                                        ? { ...prev, branch: branch.name }
-                                        : null
-                                    )
-                                    setOpenBranch(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      signOrder.branch === branch.name
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {branch.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {signOrder.branch || '-'}
+                      </div>
                     </div>
                   </div>
 
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Customer
-                      </label>
-                      <Popover
-                        open={openCustomer}
-                        onOpenChange={setOpenCustomer}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            role='combobox'
-                            aria-expanded={openCustomer}
-                            className='w-full justify-between'
-                          >
-                            {signOrder.contractors?.name ||
-                              'Select customer...'}
-                            <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                          <Command>
-                            <CommandInput placeholder='Search customer...' />
-                            <CommandEmpty>No customer found.</CommandEmpty>
-                            <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                              {customers.map(customer => (
-                                <CommandItem
-                                  key={customer.id}
-                                  value={customer.name}
-                                  onSelect={() => {
-                                    setSignOrder(prev =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            contractor_id: customer.id,
-                                            contractors: { name: customer.name }
-                                          }
-                                        : null
-                                    )
-                                    setOpenCustomer(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      signOrder.contractors?.name ===
-                                        customer.name
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {customer.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {signOrder.contractors?.name || '-'}
+                      </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Need Date
-                      </label>
-                      <div className='flex items-center'>
-                        <Input
-                          value={needDate ? format(needDate, 'MM/dd/yyyy') : ''}
-                          onChange={() => {}}
-                          className='w-full'
-                        />
-                        <button className='ml-2 text-gray-400'>
-                          <svg
-                            xmlns='http://www.w3.org/2000/svg'
-                            width='16'
-                            height='16'
-                            viewBox='0 0 24 24'
-                            fill='none'
-                            stroke='currentColor'
-                            strokeWidth='2'
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                          >
-                            <rect
-                              x='3'
-                              y='4'
-                              width='18'
-                              height='18'
-                              rx='2'
-                              ry='2'
-                            ></rect>
-                            <line x1='16' y1='2' x2='16' y2='6'></line>
-                            <line x1='8' y1='2' x2='8' y2='6'></line>
-                            <line x1='3' y1='10' x2='21' y2='10'></line>
-                          </svg>
-                        </button>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {needDate ? format(needDate, 'MM/dd/yyyy') : '-'}
                       </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Order Date
-                      </label>
-                      <div className='flex items-center'>
-                        <Input
-                          value={
-                            orderDate ? format(orderDate, 'MM/dd/yyyy') : ''
-                          }
-                          onChange={() => {}}
-                          className='w-full'
-                        />
-                        <button className='ml-2 text-gray-400'>
-                          <svg
-                            xmlns='http://www.w3.org/2000/svg'
-                            width='16'
-                            height='16'
-                            viewBox='0 0 24 24'
-                            fill='none'
-                            stroke='currentColor'
-                            strokeWidth='2'
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                          >
-                            <rect
-                              x='3'
-                              y='4'
-                              width='18'
-                              height='18'
-                              rx='2'
-                              ry='2'
-                            ></rect>
-                            <line x1='16' y1='2' x2='16' y2='6'></line>
-                            <line x1='8' y1='2' x2='8' y2='6'></line>
-                            <line x1='3' y1='10' x2='21' y2='10'></line>
-                          </svg>
-                        </button>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {orderDate ? format(orderDate, 'MM/dd/yyyy') : '-'}
                       </div>
                     </div>
 
                     <div>
-                      <label className='block text-sm font-medium mb-1'>
+                      <div className='text-sm text-muted-foreground'>
                         Order Type
-                      </label>
-                      <div className='flex gap-4 mt-2'>
-                        <div className='flex items-center'>
-                          <input
-                            type='checkbox'
-                            id='sale'
-                            className='mr-2'
-                            checked={isSale}
-                            onChange={e => {
-                              setIsSale(e.target.checked)
-                              setSignOrder(prev =>
-                                prev
-                                  ? { ...prev, sale: e.target.checked }
-                                  : null
-                              )
-                            }}
-                          />
-                          <label htmlFor='sale'>Sale</label>
-                        </div>
-                        <div className='flex items-center'>
-                          <input
-                            type='checkbox'
-                            id='rental'
-                            className='mr-2'
-                            checked={isRental}
-                            onChange={e => {
-                              setIsRental(e.target.checked)
-                              setSignOrder(prev =>
-                                prev
-                                  ? { ...prev, rental: e.target.checked }
-                                  : null
-                              )
-                            }}
-                          />
-                          <label htmlFor='rental'>Rental</label>
-                        </div>
-                        <div className='flex items-center'>
-                          <input
-                            type='checkbox'
-                            id='permanent'
-                            className='mr-2'
-                            checked={isPermanent}
-                            onChange={e => {
-                              setIsPermanent(e.target.checked)
-                              setSignOrder(prev =>
-                                prev
-                                  ? { ...prev, perm_signs: e.target.checked }
-                                  : null
-                              )
-                            }}
-                          />
-                          <label htmlFor='permanent'>Permanent Signs</label>
-                        </div>
+                      </div>
+                      <div className='text-base mt-1'>
+                        {[isSale && 'Sale', isRental && 'Rental', isPermanent && 'Permanent Signs']
+                          .filter(Boolean)
+                          .join(', ') || '-'}
                       </div>
                     </div>
 
