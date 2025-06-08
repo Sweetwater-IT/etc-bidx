@@ -706,9 +706,7 @@ const PrimarySignForm = ({
             </div>
             <div className="flex gap-x-2 items-center">
               <Checkbox
-                onCheckedChange={(checked) =>
-                  checked ? console.log("hi") : console.log("hi")
-                }
+                onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
                 // checked={}
                 id="stiffener-checkbox"
               />
