@@ -13,6 +13,7 @@ import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/d
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import PageHeaderWithSaving from "@/components/PageContainer/PageHeaderWithSaving";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -97,7 +98,7 @@ export default function SignOrderContentSimple() {
     }, [isSuccess, files, successes, setLocalFiles]);
 
     // Handle saving the sign order
-    const handleSave = async () => {
+    const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
         // Prevent multiple submissions
         if (adminInfo.isSubmitting) return;
 
@@ -131,7 +132,8 @@ export default function SignOrderContentSimple() {
                 end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
                 order_type: adminInfo.orderType,
                 job_number: adminInfo.jobNumber,
-                signs: mptRental.phases[0].signs || {} // Access the signs from mptRental context
+                signs: mptRental.phases[0].signs || {}, // Access the signs from mptRental context
+                status
             };
 
             // Submit data to the API
@@ -151,7 +153,7 @@ export default function SignOrderContentSimple() {
 
             // Show success message
             toast.success("Sign order saved successfully");
-            
+
             // Redirect to sign order list page
             router.push('/takeoffs/load-sheet');
 
@@ -165,22 +167,27 @@ export default function SignOrderContentSimple() {
 
     return (
         <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-between border-b px-6 py-3">
-                <div className="flex items-center gap-2 ml-auto -mt-15">
-                    {/**This should be a save and submit */}
-                    <Button
-                        onClick={handleSave}
-                        disabled={adminInfo.isSubmitting}
-                    >
-                        {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
-                    </Button>
-                    <Button variant="outline" onClick={() => exportSignListToExcel('', mptRental)}>Export</Button>
-                </div>
-            </div>
+            <PageHeaderWithSaving
+                heading='Create Sign Order'
+                handleSubmit={() => handleSave('DRAFT')}
+                showX
+                saveButtons={
+                    <div className="flex items-center gap-2">
+                        {/**This should be a save and submit */}
+                        <Button
+                            onClick={() => handleSave('SUBMITTED')}
+                            disabled={adminInfo.isSubmitting}
+                        >
+                            {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
+                        </Button>
+                        {/* <Button variant="outline" onClick={() => exportSignListToExcel('', mptRental)}>Export</Button> */}
+                    </div>
+                }
+            />
 
             <div className="flex gap-6 p-6 max-w-full">
-                {/* Main Form Column (2/3) */}
-                <div className="w-2/3 space-y-6">
+                {/* Main Form Column (3/4) */}
+                <div className="w-3/4 space-y-6">
                     <SignOrderAdminInfo
                         adminInfo={adminInfo}
                         setAdminInfo={setAdminInfo}
@@ -188,9 +195,10 @@ export default function SignOrderContentSimple() {
                     <SignOrderList />
                 </div>
 
-                {/* Right Column (1/3) */}
-                <div className="w-1/3 space-y-6">
+                {/* Right Column (1/4) */}
+                <div className="w-1/4 space-y-6">
                     <div className="border rounded-lg p-4">
+                        <h2 className="mb-2 text-lg font-semibold">Files</h2>
                         <Dropzone {...fileUploadProps} className="p-8 cursor-pointer space-y-4">
                             <DropzoneContent />
                             <DropzoneEmptyState />

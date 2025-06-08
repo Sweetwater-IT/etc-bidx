@@ -1,8 +1,6 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { EstimateProvider } from "@/contexts/EstimateContext";
-import SignOrderContentSimple from "./SignOrderContentSimple";
+import CreateSignOrderContent from "./CreateSignOrderContent";
 
 export default async function CreateSignOrderPage() {
     return (
@@ -16,12 +14,7 @@ export default async function CreateSignOrderPage() {
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
-                <SiteHeader>
-                    <h1 className="text-3xl font-bold mt-2 ml-0">Create Sign Order</h1>
-                </SiteHeader>
-                <EstimateProvider>
-                    <SignOrderContentSimple />
-                </EstimateProvider>
+                <CreateSignOrderContent />
             </SidebarInset>
         </SidebarProvider>
     );
