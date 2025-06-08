@@ -77,9 +77,10 @@ export async function POST(req: NextRequest) {
           sale: signOrderData.order_type?.includes('sale'),
           rental: signOrderData.order_type?.includes('rental'),
           perm_signs: signOrderData.order_type?.includes('permanent'),
-          status: signOrderData.status || 'in-process',
+          // status: signOrderData.status || 'in-process',
           job_number: signOrderData.job_number,
-          signs: signOrderData.signs
+          signs: signOrderData.signs,
+          order_status: signOrderData.status
         })
         .eq('id', signOrderData.id)
         .select();
@@ -116,10 +117,11 @@ export async function POST(req: NextRequest) {
         sale: signOrderData.order_type?.includes('sale'),
         rental: signOrderData.order_type?.includes('rental'),
         perm_signs: signOrderData.order_type?.includes('permanent signs'),
-        status: signOrderData.status || 'submitted', // Default status for new orders
+        // status: signOrderData.status || 'submitted', // Default status for new orders
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
-        order_number: orderNumber // Save the generated order number
+        order_number: orderNumber, // Save the generated order number
+        order_status: signOrderData.status
       });
     
     if (error) {
