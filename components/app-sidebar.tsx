@@ -86,7 +86,7 @@ export const data = {
       ],
     },
     {
-      title: "Inventory Position",
+      title: "Inventory",
       url: "",
       icon: IconChartBar,
     },
@@ -96,10 +96,36 @@ export const data = {
       icon: IconFolder,
     },
     {
-      title: "Sale Tracker",
-      url: "/sales",
+      title: "Sign Orders",
+      url: "/takeoffs",
       icon: IconUsers,
+      items: [
+        {
+          title: "Sign Shop Orders",
+          url: "/takeoffs/sign-shop-orders",
+        },
+        {
+          title: "Build Takeoff",
+          url: "/takeoffs/new",
+        },
+        {
+          title: "Load Sheet",
+          url: "/takeoffs/load-sheet",
+        },
+      ],
     },
+  ] as NavItem[],
+  navSignShop: [
+    {
+      title: "Sign Order List",
+      url: "/takeoffs/load-sheet",
+    },
+    {
+      title: "Takeoffs",
+      url: "#",
+    },
+  ] as NavItem[],
+  navAdmin: [
     {
       title: "Admin Portal",
       url: "/portal",
@@ -147,27 +173,9 @@ export const data = {
       icon: IconUsers,
     },
     {
-      title: "Sign Orders",
-      url: "/takeoffs",
-      icon: IconUsers,
-      items: [
-        {
-          title: "Sign Order List",
-          url: "/takeoffs/load-sheet",
-        },
-        {
-          title: "Sign Shop Orders",
-          url: "/takeoffs/sign-shop-orders",
-        },
-        {
-          title: "Build Takeoff",
-          url: "/takeoffs/new",
-        },
-        {
-          title: "Load Sheet",
-          url: "/takeoffs/load-sheet",
-        },
-      ],
+      title: "Billing Tracker",
+      url: "",
+      icon: IconFileWord,
     },
   ] as NavItem[],
   navClouds: [
@@ -247,11 +255,6 @@ export const data = {
       icon: IconReport,
     },
     {
-      name: "Billing Tracker",
-      url: "",
-      icon: IconFileWord,
-    },
-    {
       name: "Equipment Tracker",
       url: "",
       icon: IconFileWord,
@@ -307,30 +310,32 @@ export const quickActions = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
-            >
-              <Link href="/">
-                <span className="text-base font-semibold">BidX</span>
-                {/* <ModeToggle /> */}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
-    </Sidebar>
+      <Sidebar collapsible="offcanvas" {...props}>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                  asChild
+                  className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
+              >
+                <Link href="/">
+                  <span className="text-base font-semibold">BidX</span>
+                  {/* <ModeToggle /> */}
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <NavMain items={data.navMain} label={'Project Estimating'} />
+          <NavMain items={data.navAdmin} label={'Project Admin'} />
+          <NavMain items={data.navSignShop} label={'Sign Shop'} />
+          <NavDocuments items={data.documents} />
+          <NavSecondary items={data.navSecondary} className="mt-auto" />
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser user={data.user} />
+        </SidebarFooter>
+      </Sidebar>
   );
 }

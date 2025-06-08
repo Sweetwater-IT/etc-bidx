@@ -19,9 +19,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 
-export function NavMain({
-  items,
-}: {
+export function NavMain({items, label}: {
   items: {
     title: string
     url: string
@@ -30,10 +28,13 @@ export function NavMain({
       title: string
       url: string
     }[]
-  }[]
+  }[],
+  label: string
 }) {
   const pathname = usePathname()
-  const [openItem, setOpenItem] = React.useState<string | null>('Bid / Job List')
+  const [openItem, setOpenItem] = React.useState<string | null>(
+      label === 'Project Admin' ? 'Admin Portal' : 'Bid / Job List'
+  )
 
   React.useEffect(() => {
     items.forEach((item) => {
@@ -44,59 +45,59 @@ export function NavMain({
   }, [pathname, items])
 
   return (
-    <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarGroupLabel>Project Estimating</SidebarGroupLabel>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              {item.items ? (
-                <>
-                  <SidebarMenuButton
-                    onClick={() => setOpenItem(openItem === item.title ? null : item.title)}
-                    className={pathname?.startsWith(item.url) ? "bg-muted" : ""}
-                    data-state={openItem === item.title ? "open" : "closed"}
-                  >
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                    <IconChevronDown
-                      className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180"
-                      data-state={openItem === item.title ? "open" : "closed"}
-                    />
-                  </SidebarMenuButton>
-                  {openItem === item.title && (
-                    <SidebarMenuSub>
-                      {item.items.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton
-                            asChild
-                            className={pathname === subItem.url ? "bg-muted" : ""}
-                          >
-                            <Link href={subItem.url}>
-                              {subItem.title}
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
+      <SidebarGroup>
+        <SidebarGroupContent className="flex flex-col gap-2">
+          <SidebarGroupLabel>{label}</SidebarGroupLabel>
+          <SidebarMenu>
+            {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  {item.items ? (
+                      <>
+                        <SidebarMenuButton
+                            onClick={() => setOpenItem(openItem === item.title ? null : item.title)}
+                            className={pathname?.startsWith(item.url) ? "bg-muted" : ""}
+                            data-state={openItem === item.title ? "open" : "closed"}
+                        >
+                          {item.icon && <item.icon />}
+                          <span>{item.title}</span>
+                          <IconChevronDown
+                              className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180"
+                              data-state={openItem === item.title ? "open" : "closed"}
+                          />
+                        </SidebarMenuButton>
+                        {openItem === item.title && (
+                            <SidebarMenuSub>
+                              {item.items.map((subItem) => (
+                                  <SidebarMenuSubItem key={subItem.title}>
+                                    <SidebarMenuSubButton
+                                        asChild
+                                        className={pathname === subItem.url ? "bg-muted" : ""}
+                                    >
+                                      <Link href={subItem.url}>
+                                        <span>{subItem.title}</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                        )}
+                      </>
+                  ) : (
+                      <SidebarMenuButton
+                          asChild
+                          tooltip={item.title}
+                          className={pathname === item.url ? "bg-muted" : ""}
+                      >
+                        <Link href={item.url}>
+                          {item.icon && <item.icon />}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
                   )}
-                </>
-              ) : (
-                <SidebarMenuButton
-                  asChild
-                  tooltip={item.title}
-                  className={pathname === item.url ? "bg-muted" : ""}
-                >
-                  <Link href={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              )}
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+                </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
   )
 }
