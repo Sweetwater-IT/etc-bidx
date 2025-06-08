@@ -84,6 +84,28 @@ interface SignItem {
   isCustom?: boolean
 }
 
+// Helper function to generate text for order and make quantities
+const generateOrderMakeText = (items: SignItem[]): string => {
+  const itemsWithQuantities = items.filter(item => item.order > 0 || item.make > 0)
+  if (itemsWithQuantities.length === 0) return ''
+  
+  const parts = []
+  
+  for (const item of itemsWithQuantities) {
+    if (item.order > 0) {
+      parts.push(`order ${item.order} ${item.designation}`)
+    }
+    if (item.make > 0) {
+      parts.push(`make ${item.make} ${item.designation}`)
+    }
+  }
+  
+  if (parts.length === 1) return parts[0]
+  
+  const lastPart = parts.pop()
+  return `${parts.join(', ')} and ${lastPart}`
+}
+
 // Helper function to determine branch based on ID (temporary solution)
 const determineBranch = (id: number): string => {
   if (id < 100) return 'Hatfield'
@@ -1714,13 +1736,18 @@ export default function SignOrderTrackerPage () {
               <DialogDescription>
                 {signOrder && (
                   <div className="space-y-4 mt-2">
-                    <p>
-                      Confirm you want to generate this order assigned to <strong>{signOrder.assigned_to}</strong>
+                    <p className="mb-4">
+                      Confirm you want to assign this order to <strong>{signOrder.assigned_to}</strong>
+                      {signItems.some(item => item.order > 0 || item.make > 0) ? (
+                        <span> and want to {generateOrderMakeText(signItems)}</span>
+                      ) : (
+                        <span>. No items to order or make.</span>
+                      )}
                     </p>
                     
-                    {signItems.length > 0 && (
+                    {signItems.length > 0 && signItems.some(item => item.order > 0 || item.make > 0) && (
                       <div className="space-y-2">
-                        <p className="font-medium">With the following quantities:</p>
+                        <p className="font-medium">Details:</p>
                         <div className="max-h-60 overflow-y-auto">
                           <table className="w-full text-sm">
                             <thead>
@@ -1740,14 +1767,6 @@ export default function SignOrderTrackerPage () {
                                   </tr>
                                 )
                               ))}
-                              {signItems.every(item => (item.order === 0 || item.order === undefined) && 
-                                                   (item.make === 0 || item.make === undefined)) && (
-                                <tr>
-                                  <td colSpan={3} className="text-center py-2 text-gray-500">
-                                    No items to order or make
-                                  </td>
-                                </tr>
-                              )}
                             </tbody>
                           </table>
                         </div>
