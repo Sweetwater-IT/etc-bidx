@@ -331,6 +331,7 @@ export default function SignShopOrdersPage () {
 
   const handleRowClick = (quote: QuoteGridView) => {
     // Navigate to the sign order detail page with the correct ID
+    console.log('Row clicked, navigating to:', `/takeoffs/sign-order/${quote.id}`)
     router.push(`/takeoffs/sign-order/${quote.id}`)
   }
 

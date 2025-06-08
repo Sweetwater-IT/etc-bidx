@@ -650,14 +650,16 @@ export function DataTable<TData extends object>({
           />
         ),
         cell: ({ row }: any) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => {
-              row.toggleSelected(!!value);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-          />
+          <div className="flex justify-center">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => {
+                row.toggleSelected(!!value);
+              }}
+              aria-label="Select row"
+              onClick={(e) => e.stopPropagation()} // Prevent row click when checkbox is clicked
+            />
+          </div>
         ),
         enableSorting: false,
         enableHiding: false,

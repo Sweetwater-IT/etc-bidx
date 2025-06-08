@@ -998,11 +998,14 @@ async function getCustomerRevenue(startDate?: string, endDate?: string): Promise
             // Handle project_data as a single object rather than an array
             const projectData = job.project_data;
             
+            // Check if projectData is an array and has at least one element
+            if (!Array.isArray(projectData) || projectData.length === 0) return;
+            
             // Check if contractor info exists
-            if (!(projectData as any)[0].contractor) return;
+            if (!projectData[0] || !projectData[0].contractor) return;
             
             // Handle contractor as a single object rather than an array
-            const contractor = (projectData as any)[0].contractor;
+            const contractor = projectData[0].contractor;
             if (!contractor || !contractor.name) return;
 
             const contractorId = String(contractor.id);
