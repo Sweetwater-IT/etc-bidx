@@ -129,10 +129,13 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
             <ModeToggle />
           </div>
         </div>
-        {children ? (
-          children
-        ) : (
-          <h1 className="text-3xl font-bold mt-2 ml-0">{getCurrentTitle()}</h1>
+        <h1 className="text-3xl font-bold mt-2 ml-0">
+          {customTitle || getCurrentTitle()}
+        </h1>
+        {children && (
+          <div className="flex flex-col gap-2">
+            {children}
+          </div>
         )}
       </div>
     </header>

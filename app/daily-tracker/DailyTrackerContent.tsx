@@ -1,13 +1,9 @@
 'use client'
 import { useCallback, useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { CardActions } from '../../components/card-actions'
 import { DataTable } from '../../components/data-table'
-import { CustomerDrawer } from '../../components/customer-drawer'
 import { DailyTrackerEntry } from '../../types/DailyTrackerEntry'
-import { useCustomersSWR } from '../../hooks/use-customers-swr'
 import { useDailyTrackerSWR } from '../../hooks/use-daily-tracker-swr'
-import { AddItemModal } from '../../components/add-item-modal'
 import { SectionCards } from '../../components/section-cards'
 
 interface Column {
@@ -56,15 +52,17 @@ const dailyTrackerCards = [
   }
 ];
 
-const DailyTrackerContent = () => {
+interface DailyTrackerContentProps {
+  setModalOpen: (open: boolean) => void;
+  setIsViewMode: (isView: boolean) => void;
+  setSelectedEntry: (entry: DailyTrackerEntry | null) => void;
+  onModalSuccess: () => void;
+}
+
+const DailyTrackerContent = ({ setModalOpen, setIsViewMode, setSelectedEntry, onModalSuccess }: DailyTrackerContentProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   
-  const [modalOpen, setModalOpen] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<DailyTrackerEntry | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-
   const { data: dailyTrackerEntries, totalCount = 0, isLoading, error, mutate } = useDailyTrackerSWR({
     page: currentPage + 1,
     pageSize: pageSize
@@ -78,21 +76,9 @@ const DailyTrackerContent = () => {
 
   const handleViewEntry = useCallback((entry: DailyTrackerEntry) => {
     setSelectedEntry(entry);
-    const index = dailyTrackerEntries.findIndex(e => e.id === entry.id);
-    setSelectedIndex(index >= 0 ? index : -1);
     setIsViewMode(true);
     setModalOpen(true);
-  }, [dailyTrackerEntries]);
-
-  const handleCreateEntry = useCallback(() => {
-    setSelectedEntry(null);
-    setIsViewMode(false);
-    setModalOpen(true);
-  }, []);
-
-  const handleModalSuccess = useCallback(() => {
-    mutate();
-  }, [mutate]);
+  }, [setModalOpen, setIsViewMode, setSelectedEntry]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -103,49 +89,16 @@ const DailyTrackerContent = () => {
     setCurrentPage(0);
   }, []);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!dailyTrackerEntries.length || !modalOpen) return;
-    
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex(prev => {
-        if (prev < 0) prev = 0;
-        const newIndex = prev < dailyTrackerEntries.length - 1 ? prev + 1 : prev;
-        setSelectedEntry(dailyTrackerEntries[newIndex]);
-        return newIndex;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex(prev => {
-        if (prev < 0) prev = 0;
-        const newIndex = prev > 0 ? prev - 1 : prev;
-        setSelectedEntry(dailyTrackerEntries[newIndex]);
-        return newIndex;
-      });
-    }
-  }, [dailyTrackerEntries, modalOpen]);
-
   useEffect(() => {
-    if (modalOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [modalOpen, handleKeyDown]);
+    // No longer need to handle keydown for modal as it's managed by parent
+    // window.addEventListener('keydown', handleKeyDown);
+    // return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const pageCount = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="flex flex-col items-center justify-between">
-      <div className="flex items-center justify-between px-0 -mb-3 ml-auto">
-        <CardActions
-          createButtonLabel="Add Item"
-          hideCalendar
-          goUpActions
-          onCreateClick={handleCreateEntry}
-          hideImportExport
-        />
-      </div>
-      
       {!isLoading && (
         <div className='w-full mt-3'>
           <SectionCards data={dailyTrackerCards} />
@@ -154,7 +107,7 @@ const DailyTrackerContent = () => {
             stickyLastColumn
             data={dailyTrackerEntries}
             onViewDetails={handleViewEntry}
-            selectedItem={selectedEntry || undefined}
+            selectedItem={undefined}
             pageCount={pageCount}
             pageIndex={currentPage}
             pageSize={pageSize}
@@ -164,14 +117,6 @@ const DailyTrackerContent = () => {
           />
         </div>
       )}
-      
-      <AddItemModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        entry={selectedEntry}
-        isViewMode={isViewMode}
-        onSuccess={handleModalSuccess}
-      />
     </div>
   );
 };
