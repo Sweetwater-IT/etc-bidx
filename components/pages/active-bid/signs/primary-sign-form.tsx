@@ -654,15 +654,15 @@ const PrimarySignForm = ({
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fourFootTypeIII_right">4' T-III RIGHT</SelectItem>
-              <SelectItem value="fourFootTypeIII_left">4' T-III LEFT</SelectItem>
-              <SelectItem value="sixFootTypeIII_right">6' T-III RIGHT</SelectItem>
-              <SelectItem value="sixFootTypeIII_left">6' T-III LEFT</SelectItem>
+              <SelectItem value="fourFootTypeIII_right">{`4'`} T-III RIGHT</SelectItem>
+              <SelectItem value="fourFootTypeIII_left">{`4'`} T-III LEFT</SelectItem>
+              <SelectItem value="sixFootTypeIII_right">{`6'`} T-III RIGHT</SelectItem>
+              <SelectItem value="sixFootTypeIII_left">{`6'`} T-III LEFT</SelectItem>
               <SelectItem value="hStand">H-FOOT</SelectItem>
-              <SelectItem value="post_8ft">8' POST</SelectItem>
-              <SelectItem value="post_10ft">10' POST</SelectItem>
-              <SelectItem value="post_12ft">12' POST</SelectItem>
-              <SelectItem value="post_14ft">14' POST</SelectItem>
+              <SelectItem value="post_8ft">{`8'`} POST</SelectItem>
+              <SelectItem value="post_10ft">{`10'`} POST</SelectItem>
+              <SelectItem value="post_12ft">{`12'`} POST</SelectItem>
+              <SelectItem value="post_14ft">{`14'`} POST</SelectItem>
               <SelectItem value="none">LOOSE</SelectItem>
             </SelectContent>
           </Select>
