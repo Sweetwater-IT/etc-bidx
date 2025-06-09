@@ -163,6 +163,11 @@ export const data = {
       icon: IconUsers,
     },
     {
+      title: "Daily Tracker",
+      url: "/daily-tracker",
+      icon: IconFileText,
+    },
+    {
       title: "Reporting",
       url: "/reports",
       icon: IconUsers,
