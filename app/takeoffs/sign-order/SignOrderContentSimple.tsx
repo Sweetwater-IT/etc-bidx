@@ -106,25 +106,25 @@ export default function SignOrderContentSimple() {
             setAdminInfo(prev => ({ ...prev, isSubmitting: true }));
 
             // Validate required fields
-            if (!adminInfo.requestor) {
-                toast.error("Please select a requestor");
-                return;
-            }
+            // if (!adminInfo.requestor) {
+            //     toast.error("Please select a requestor");
+            //     return;
+            // }
 
-            if (!adminInfo.customer) {
-                toast.error("Please select a contractor");
-                return;
-            }
+            // if (!adminInfo.customer) {
+            //     toast.error("Please select a contractor");
+            //     return;
+            // }
 
-            if (!adminInfo.orderType) {
-                toast.error("Please select a job type");
-                return;
-            }
+            // if (!adminInfo.orderType) {
+            //     toast.error("Please select a job type");
+            //     return;
+            // }
 
             // Prepare data for submission
             const signOrderData = {
-                requestor: adminInfo.requestor.name!,
-                contractor_id: adminInfo.customer.id!,
+                requestor: adminInfo.requestor ? adminInfo.requestor : '',
+                contractor_id: adminInfo.customer ? adminInfo.customer : undefined,
                 contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
                 need_date: new Date(adminInfo.needDate).toISOString(),
