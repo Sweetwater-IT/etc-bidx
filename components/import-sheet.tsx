@@ -143,19 +143,15 @@ export function ImportSheet({ open, onOpenChange, onImportSuccess, importType = 
             </p>
             <p>The file should have columns matching the job fields.</p>
             <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-amber-800 text-xs">
-              <p className="font-medium">Required columns:</p>
+              <p className="font-medium">Instructions for Uploading the Bid Packages by Let Date</p>
               <ul className="list-disc pl-4 mt-1">
-                <li>Contract Number (e.g., &ldquo;2024-001&rdquo;)</li>
+                <li>Step 1: Download the Bid Packages by Let Date (next 52 weeks) file</li>
+                <li>Step 2: Ensure the file type is Excel Workbook (*.xlsx)</li>
               </ul>
-              <p className="font-medium mt-2">Recommended columns:</p>
+              <p className="font-medium mt-2">Notes:</p>
               <ul className="list-disc pl-4 mt-1">
-                <li>Status (e.g., &ldquo;Bid&rdquo;, &ldquo;No Bid&rdquo;, &ldquo;Unset&rdquo;)</li>
-                <li>Requestor (e.g., &ldquo;John Smith&rdquo;)</li>
-                <li>Owner (e.g., &ldquo;Department of Transportation&rdquo;)</li>
-                <li>Letting Date (e.g., &ldquo;2024-04-15&rdquo;)</li>
-                <li>Due Date (e.g., &ldquo;2024-04-01&rdquo;)</li>
-                <li>County (e.g., &ldquo;Miami-Dade&rdquo;)</li>
-                <li>Branch (e.g., &ldquo;South Florida&rdquo;)</li>
+                <li>Due Date column is automatically updated and assumes bid is due 2 days prior to letting</li>
+                <li>User required to update DBE % and items on job</li>
               </ul>
             </div>
           </div>
