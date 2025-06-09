@@ -125,11 +125,11 @@ export async function GET(request: NextRequest) {
         statusValues.push(status, status.toLowerCase(), status.toUpperCase());
       });
       
-      query = query.in('status', statusValues);
+      // query = query.in('status', statusValues);
 
     } else {
       // For sign-shop-orders page, only show submitted orders
-      query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
+      // query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
 
     }
 
@@ -199,6 +199,7 @@ export async function GET(request: NextRequest) {
 
     
     const { data: orders, error: ordersError } = await query;
+
 
     if (ordersError) {
       console.error('Error fetching orders:', ordersError);
