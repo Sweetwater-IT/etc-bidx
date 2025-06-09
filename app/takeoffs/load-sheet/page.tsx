@@ -40,9 +40,10 @@ const SIGN_ORDER_COLUMNS = [
   { key: "need_date", title: "Need date", render: (row: any) => (
     <span>{row.need_date || 'N/A'}</span>
   )},
-  { key: "type", title: "Type" },
+  { key: "order_type", title: "Type" },
   { key: "assigned_to", title: "Assigned to" },
   { key: "contract_number", title: "Contract Number"},
+  { key: "order_number", title: "Order Number"},
   { key: "job_number", title: "Job Number" },
   // Empty action column at the end
   { key: "actions", title: "Actions", render: () => <div className="w-8"></div> },
@@ -241,7 +242,16 @@ export default function SignOrderPage() {
             customer: order.customer || 'N/A',
             branch: order.branch || 'Unknown',
             assigned_to: order.assigned_to || 'Unassigned',
-            type: order.type || 'Standard'
+            type: order.type || 'Standard',
+            order_type: (() => {
+              const typeCount = [order.rental, order.sale, order.perm_signs].filter(Boolean).length;
+              if (typeCount > 1) return 'M';
+              if (order.rental) return 'R';
+              if (order.sale) return 'S';
+              if (order.perm_signs) return 'P';
+              return '';
+            })(),
+            order_number: order.order_number == null ? '' : order.order_number,
           }));
           
           setQuotes(processedOrders);
