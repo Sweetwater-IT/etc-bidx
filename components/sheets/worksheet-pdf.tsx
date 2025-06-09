@@ -3,7 +3,7 @@ import React from 'react';
 import { Page, Text, View, Document } from '@react-pdf/renderer';
 import { AdminData } from '@/types/TAdminData';
 import { styles } from './styles/bidSummaryPDFStyle';
-import { AssociatedSignStructures, MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
+import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { Flagging } from '@/types/TFlagging';
 import { safeNumber } from '@/lib/safe-number';
@@ -707,7 +707,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                         {group.primary.sheeting}
                       </Text>
                       <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]}>
-                        {structureMapping[group.primary.associatedStructure as AssociatedSignStructures]}
+                        {structureMapping[group.primary.associatedStructure]}
                       </Text>
                       <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]}>
                         {group.primary.bLights}
