@@ -380,8 +380,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     requestor: requestorValue,
                     owner: ownerValue,
                     // Ensure dates are properly formatted and consistent
+                    // Keep the original ISO date strings from the database to avoid timezone issues
                     lettingDate: job.letting_date || '',
                     dueDate: job.due_date || '',
+                    // Add debug info to trace date issues
+                    _debug_raw_letting_date: job.letting_date,
+                    _debug_raw_due_date: job.due_date,
                     county: {
                         main: countyValue,
                         secondary: branchValue
