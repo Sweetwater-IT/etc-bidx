@@ -85,7 +85,7 @@ import {
                 </DropdownMenu>
               <div className="space-y-2 text-sm mt-4">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">4' Type III:</span>
+                  <span className="text-muted-foreground">{`4'`} Type III:</span>
                   <span>{equipmentTotals.type3}</span>
                 </div>
                 <div className="flex justify-between">
@@ -109,7 +109,7 @@ import {
                   <span>0</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">6' Wings:</span>
+                  <span className="text-muted-foreground">{`6'`} Wings:</span>
                   <span>0</span>
                 </div>
                 <div className="flex justify-between">
