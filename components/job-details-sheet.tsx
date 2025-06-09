@@ -104,6 +104,10 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                 <Label className="font-medium">Letting Date</Label>
                 <div className="text-sm text-muted-foreground">
                   {job?.lettingDate ? formatDate(job.lettingDate) : '-'}
+                  {job?.lettingDate ? (() => {
+                    console.log('JobDetailsSheet - Raw letting date:', job.lettingDate, 'Formatted:', formatDate(job.lettingDate));
+                    return null;
+                  })() : null}
                 </div>
               </div>
 
