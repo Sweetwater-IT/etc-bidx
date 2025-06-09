@@ -84,9 +84,9 @@ const PrimarySignForm = ({
   const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
     const desiredPhase = mptRental.phases[currentPhase];
     if (!desiredPhase) return [];
-    
+
     return desiredPhase.signs.filter(
-      (s): s is SecondarySign => 
+      (s): s is SecondarySign =>
         'primarySignId' in s && s.primarySignId === primarySignId
     );
   };
@@ -94,7 +94,7 @@ const PrimarySignForm = ({
   // Helper to update all secondary sign quantities
   const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
     const secondarySigns = getSecondarySignsForPrimary(primarySignId);
-    
+
     secondarySigns.forEach((secondarySign) => {
       dispatch({
         type: "UPDATE_MPT_SIGN",
@@ -170,17 +170,16 @@ const PrimarySignForm = ({
   const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
     const updatedSign = { ...localSign, [field]: value };
     setLocalSign(updatedSign);
-
+  
     // Special handling for equipment-related fields
     if (field === "associatedStructure") {
       handleStructureChange(value, localSign.associatedStructure);
     } else if (field === "bLights") {
       handleBLightsChange(value);
-    } else if (field === "cover") {
-      handleCoversChange(value);
     } else if (field === "quantity") {
       handleQuantityChange(value);
     }
+    // Removed the "cover" case to prevent recursion
   };
 
   const handleStructureChange = (
@@ -230,14 +229,21 @@ const PrimarySignForm = ({
     });
   };
 
-  const handleCoversChange = (newValue: number) => {
+  const handleCoversChange = (checked: boolean) => {
+    // Update the local sign state directly (don't call handleSignUpdate to avoid recursion)
+    const updatedSign = { ...localSign, cover: checked };
+    setLocalSign(updatedSign);
+  
+    // Set covers quantity based on whether it's checked and the sign quantity
+    const coversQuantity = checked ? localSign.quantity : 0;
+  
     dispatch({
       type: "ADD_MPT_ITEM_NOT_SIGN",
       payload: {
         phaseNumber: currentPhase,
         equipmentType: "covers" as EquipmentType,
         equipmentProperty: "quantity",
-        value: newValue * localSign.quantity,
+        value: coversQuantity,
       },
     });
   };
@@ -245,7 +251,7 @@ const PrimarySignForm = ({
   const handleQuantityChange = (newValue: number) => {
     // Update equipment quantities for the new quantity
     const equipmentType = getBaseEquipmentType(localSign.associatedStructure);
-    
+
     if (equipmentType !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
@@ -321,7 +327,7 @@ const PrimarySignForm = ({
     // Get default dimension from the selected designation
     const defaultDimension =
       selectedDesignation.dimensions &&
-      selectedDesignation.dimensions.length > 0
+        selectedDesignation.dimensions.length > 0
         ? selectedDesignation.dimensions[0]
         : { width: 0, height: 0 };
 
@@ -521,7 +527,7 @@ const PrimarySignForm = ({
           )}
         </label>
       </div>
-      
+
 
       {isTakeoff && (
         <div className="flex-1/2">
@@ -699,36 +705,34 @@ const PrimarySignForm = ({
           </div>
         )}
 
-          <div className="flex-1">
-            <div className="flex gap-x-2 items-center">
-              <Checkbox
-                onCheckedChange={(checked) =>
-                  checked ? handleCoversChange(1) : handleCoversChange(0)
-                }
-                checked={localSign.cover}
-                id="cover-checkbox"
-              />
-              <Label
-                htmlFor="cover-checkbox"
-                className="text-sm font-medium block"
-              >
-                Include cover
-              </Label>
-            </div>
-            <div className="flex gap-x-2 items-center">
-              <Checkbox
-                onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
-                // checked={}
-                id="stiffener-checkbox"
-              />
-              <Label
-                htmlFor="stiffener-checkbox"
-                className="text-sm font-medium block"
-              >
-                Include stiffener
-              </Label>
-            </div>
+        <div className="flex-1">
+          <div className="flex gap-x-2 items-center">
+            <Checkbox
+              onCheckedChange={handleCoversChange}
+              checked={localSign.cover}
+              id="cover-checkbox"
+            />
+            <Label
+              htmlFor="cover-checkbox"
+              className="text-sm font-medium block"
+            >
+              Include cover
+            </Label>
           </div>
+          <div className="flex gap-x-2 items-center">
+            <Checkbox
+              onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+              // checked={}
+              id="stiffener-checkbox"
+            />
+            <Label
+              htmlFor="stiffener-checkbox"
+              className="text-sm font-medium block"
+            >
+              Include stiffener
+            </Label>
+          </div>
+        </div>
       </div>
       <div className="flex max-w-fit justify-start space-x-3">
         <Button variant="outline" onClick={handleCancel}>

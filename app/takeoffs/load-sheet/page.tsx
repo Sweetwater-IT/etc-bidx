@@ -328,12 +328,12 @@ export default function SignOrderPage() {
 
   const handleRowClick = useCallback((quote: SignOrderView) => {
     // Navigate to the sign order detail page when clicking a row
-    router.push(`/takeoffs/sign-order/${quote.id}`);
+    router.push(`/takeoffs/sign-order/view/${quote.id}`);
   }, [router]);
   
   // Handle view details action
   const handleViewDetails = useCallback((row: SignOrderView) => {
-    router.push(`/takeoffs/sign-order/${row.id}`);
+    router.push(`/takeoffs/sign-order/view/${row.id}`);
   }, [router]);
   
   // Handle edit action
