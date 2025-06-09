@@ -98,6 +98,7 @@ export function SignOrderJobSelector({
             <div className="relative">
               <input
                 ref={inputRef}
+                disabled={!!selectedContractJob}
                 className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${
                   selectedContractJob ? "" : "border border-border px-2"
                 }`}

@@ -37,13 +37,6 @@ import { SignOrderJobSelector } from "./SignOrderJobSelector"; // Import the cus
 import { SignOrderDetailsSheet } from "../sign-order/SignOrderDetailsSheet";
 import { useSidebar } from "@/components/ui/sidebar";
 
-const BRANCHES = [
-    { value: "All", label: "All" },
-    { value: "Turbotville", label: "Turbotville" },
-    { value: "Hatfield", label: "Hatfield" },
-    { value: "Bedford", label: "Bedford" },
-];
-
 interface Job {
     job_number: string;
     branch: string;
@@ -69,16 +62,17 @@ export function SignOrderAdminInfo({
     const [allJobs, setAllJobs] = useState<Job[]>([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState<boolean>(false);
 
-    const {setOpen } = useSidebar();
+    const { setOpen } = useSidebar();
 
     useEffect(() => {
         setOpen(false)
     }, [setOpen])
-    
+
     // Job selector state
     const [selectedContractJob, setSelectedContractJob] = useState<Estimate | Job | null>(null);
     const [searchValue, setSearchValue] = useState("");
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [sheetMode, setSheetMode] = useState<'edit' | 'create'>('edit');
 
     // Fetch data on component mount
     useEffect(() => {
@@ -96,6 +90,17 @@ export function SignOrderAdminInfo({
             console.error('Error fetching users:', error);
             toast.error('Error fetching users');
         }
+    };
+
+    const handleJobCreated = (newJob: Job) => {
+        // Add the new job to the jobs list (optional - for immediate availability in dropdown)
+        setAllJobs(prev => [...prev, newJob]);
+
+        // Set this new job as selected
+        setSelectedContractJob(newJob);
+
+        // Clear search
+        setSearchValue("");
     };
 
     // Fetch jobs data
@@ -122,7 +127,7 @@ export function SignOrderAdminInfo({
     // Handle contract/job selection
     const handleContractJobSelect = (contractJob: Estimate | Job | null) => {
         setSelectedContractJob(contractJob);
-        
+
         if (contractJob) {
             // Check if it's a job or estimate
             if ('job_number' in contractJob) {
@@ -157,11 +162,13 @@ export function SignOrderAdminInfo({
 
     // Handle add new contract/job
     const handleAddNew = () => {
-        toast.info("Add new contract/job functionality to be implemented");
+        setSheetMode('create');
+        setSheetOpen(true);
     };
 
     // Handle edit contract/job
     const handleEdit = () => {
+        setSheetMode('edit');
         setSheetOpen(true);
     };
 
@@ -199,8 +206,19 @@ export function SignOrderAdminInfo({
                 startDate={adminInfo.startDate ? formatDateForDisplay(adminInfo.startDate) : undefined}
                 endDate={adminInfo.endDate ? formatDateForDisplay(adminInfo.endDate) : undefined}
                 orderType={adminInfo.orderType}
+                jobNumber={adminInfo.jobNumber}        // Add this
+                contractNumber={adminInfo.contractNumber}  // Add this
             />
-            <SignOrderDetailsSheet open={sheetOpen} onOpenChange={setSheetOpen} adminInfo={adminInfo} setAdminInfo={setAdminInfo} allUsers={allUsers} customers={customers}/>
+            <SignOrderDetailsSheet
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+                adminInfo={adminInfo}
+                setAdminInfo={setAdminInfo}
+                allUsers={allUsers}
+                customers={customers}
+                mode={sheetMode}
+                onJobCreated={handleJobCreated} // Add this prop
+            />
         </div>
     );
 }

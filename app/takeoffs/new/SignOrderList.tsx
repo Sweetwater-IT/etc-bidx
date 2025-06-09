@@ -100,10 +100,10 @@ export function SignOrderList() {
             quantity: 0,
             associatedStructure: "none",
             bLights: 0,
-            covers: 0,
+            cover: false,
             isCustom: false,
             description: '',
-            substrate: 'aluminum'
+            substrate: 'Aluminum'
         }
         dispatch({
             type: 'ADD_MPT_SIGN', payload: {
@@ -173,7 +173,7 @@ export function SignOrderList() {
                                                                 sheeting: "HI", // Default sheeting
                                                                 isCustom: false,
                                                                 description: "",
-                                                                substrate: "aluminum",
+                                                                substrate: "Aluminum",
                                                             };
                                                             dispatch({
                                                                 type: 'ADD_MPT_SIGN',

@@ -34,6 +34,7 @@ import { useState, useEffect } from "react";
 import { User } from "@/types/User";
 import { Customer } from "@/types/Customer";
 import { SignOrderAdminInformation, OrderTypes } from "./SignOrderContentSimple";
+import { toast } from "sonner";
 
 const BRANCHES = [
     { value: "All", label: "All" },
@@ -42,14 +43,24 @@ const BRANCHES = [
     { value: "Bedford", label: "Bedford" },
 ];
 
+interface Job {
+  job_number: string;
+  branch: string;
+  contractNumber?: string;
+  contractorName?: string;
+}
+
 interface SignOrderDetailsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   adminInfo: SignOrderAdminInformation;
-  setAdminInfo: (info: SignOrderAdminInformation) => void;
+  setAdminInfo: (updater: (prev: SignOrderAdminInformation) => SignOrderAdminInformation) => void;
   allUsers: User[];
   customers: Customer[];
+  mode: 'edit' | 'create';
+  onJobCreated?: (job: Job) => void; // Add this callback
 }
+
 
 export function SignOrderDetailsSheet({
   open,
@@ -58,6 +69,8 @@ export function SignOrderDetailsSheet({
   setAdminInfo,
   allUsers,
   customers,
+  mode,
+  onJobCreated,
 }: SignOrderDetailsSheetProps) {
   // Local state for form fields
   const [localRequestor, setLocalRequestor] = useState<User | null>(adminInfo.requestor);
@@ -78,18 +91,33 @@ export function SignOrderDetailsSheet({
   // Update local state when adminInfo changes or when sheet opens
   useEffect(() => {
     if (open) {
-      setLocalRequestor(adminInfo.requestor);
-      setLocalCustomer(adminInfo.customer);
-      setLocalOrderDate(adminInfo.orderDate);
-      setLocalNeedDate(adminInfo.needDate);
-      setLocalOrderType(adminInfo.orderType);
-      setLocalSelectedBranch(adminInfo.selectedBranch);
-      setLocalJobNumber(adminInfo.jobNumber);
-      setLocalContractNumber(adminInfo.contractNumber);
-      setLocalStartDate(adminInfo.startDate);
-      setLocalEndDate(adminInfo.endDate);
+      if (mode === 'create') {
+        // Reset form for new job creation
+        setLocalRequestor(adminInfo.requestor);
+        setLocalCustomer(null);
+        setLocalOrderDate(adminInfo.orderDate);
+        setLocalNeedDate(adminInfo.needDate);
+        setLocalOrderType(adminInfo.orderType);
+        setLocalSelectedBranch(adminInfo.selectedBranch);
+        setLocalJobNumber(''); // Job number will be generated/auto-filled
+        setLocalContractNumber('');
+        setLocalStartDate(adminInfo.startDate);
+        setLocalEndDate(adminInfo.endDate);
+      } else {
+        // Edit mode - populate with existing data
+        setLocalRequestor(adminInfo.requestor);
+        setLocalCustomer(adminInfo.customer);
+        setLocalOrderDate(adminInfo.orderDate);
+        setLocalNeedDate(adminInfo.needDate);
+        setLocalOrderType(adminInfo.orderType);
+        setLocalSelectedBranch(adminInfo.selectedBranch);
+        setLocalJobNumber(adminInfo.jobNumber);
+        setLocalContractNumber(adminInfo.contractNumber);
+        setLocalStartDate(adminInfo.startDate);
+        setLocalEndDate(adminInfo.endDate);
+      }
     }
-  }, [open, adminInfo]);
+  }, [open, adminInfo, mode]);
 
   // Update branch when requestor changes
   useEffect(() => {
@@ -98,9 +126,24 @@ export function SignOrderDetailsSheet({
     }
   }, [localRequestor]);
 
-  const handleSave = () => {
-    setAdminInfo({
-      ...adminInfo,
+  // Remove the generateJobNumber function since we don't need it
+  
+  const handleSave = async () => {
+    if (mode === 'create') {
+      // For new sign orders, validate required fields
+      if (!localCustomer) {
+        toast.error('Customer is required');
+        return;
+      }
+      if (!localSelectedBranch) {
+        toast.error('Branch is required');
+        return;
+      }
+    }
+  
+    // Update admin info regardless of mode
+    setAdminInfo(prev => ({
+      ...prev,
       requestor: localRequestor,
       customer: localCustomer,
       orderDate: localOrderDate,
@@ -111,7 +154,19 @@ export function SignOrderDetailsSheet({
       contractNumber: localContractNumber,
       startDate: localStartDate,
       endDate: localEndDate,
-    });
+    }));
+  
+    // If creating a new job, call the callback to update the job selector
+    if (mode === 'create' && onJobCreated) {
+      const newJob: Job = {
+        job_number: localJobNumber,
+        branch: localSelectedBranch,
+        contractNumber: localContractNumber,
+        contractorName: localCustomer?.name,
+      };
+      onJobCreated(newJob);
+    }
+    
     onOpenChange(false);
   };
 
@@ -123,12 +178,14 @@ export function SignOrderDetailsSheet({
     }
   };
 
+  const isCreateMode = mode === 'create';
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[500px] sm:max-w-[600px] pt-2">
         <SheetHeader>
           <SheetTitle className="text-2xl font-semibold">
-            Edit Sign Order Details
+            {isCreateMode ? 'Create New Sign Order' : 'Edit Sign Order Details'}
           </SheetTitle>
         </SheetHeader>
         <div className="border-b" />
@@ -146,6 +203,7 @@ export function SignOrderDetailsSheet({
                   value={localJobNumber}
                   onChange={(e) => setLocalJobNumber(e.target.value)}
                   placeholder="Job number"
+                  disabled={mode === 'create'}
                 />
               </div>
 
@@ -212,9 +270,13 @@ export function SignOrderDetailsSheet({
 
               {/* Branch */}
               <div className="space-y-2">
-                <Label>Branch</Label>
-                <Select value={localSelectedBranch} onValueChange={setLocalSelectedBranch}>
-                  <SelectTrigger>
+                <Label>Branch {isCreateMode && <span className="text-red-500">*</span>}</Label>
+                <Select 
+                  value={localSelectedBranch} 
+                  onValueChange={setLocalSelectedBranch}
+                  disabled={!isCreateMode && !!localRequestor?.branches}
+                >
+                  <SelectTrigger className={!isCreateMode && localRequestor?.branches ? "bg-muted" : ""}>
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
@@ -229,7 +291,7 @@ export function SignOrderDetailsSheet({
 
               {/* Customer */}
               <div className="space-y-2">
-                <Label>Customer</Label>
+                <Label>Customer {isCreateMode && <span className="text-red-500">*</span>}</Label>
                 <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
                   <PopoverTrigger asChild>
                     <Button
@@ -362,7 +424,7 @@ export function SignOrderDetailsSheet({
 
         <div className="flex justify-end mt-6 mr-4">
           <Button onClick={handleSave} variant="default">
-            Save Changes
+            {isCreateMode ? 'Create Sign Order' : 'Save Changes'}
           </Button>
         </div>
       </SheetContent>

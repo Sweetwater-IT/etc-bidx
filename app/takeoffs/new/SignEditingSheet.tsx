@@ -30,17 +30,17 @@ import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation } from '@/types/MPTEquipment';
+import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, StructureKey } from '@/types/MPTEquipment';
 import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
 
 interface Props {
     open: boolean;
     onOpenChange: Dispatch<SetStateAction<boolean>>;
+    setParentLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>
     mode: 'create' | 'edit';
     sign: PrimarySign | SecondarySign;
     currentPhase?: number;
     isTakeoff?: boolean;
-    setParentLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>
 }
 
 // Type guard to check if sign is SecondarySign
@@ -64,6 +64,20 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     const primarySign = isSecondary 
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
         : null;
+
+    // Get all available structure options from structureMap
+    const getStructureOptions = () => {
+        return Object.entries(structureMap).map(([key, value]) => ({
+            value: key as StructureKey,
+            label: value.displayName,
+            baseEquipmentType: value.baseEquipmentType
+        }));
+    };
+
+    // Helper function to get base equipment type from structure key
+    const getBaseEquipmentType = (structureKey: StructureKey): EquipmentType | 'none' => {
+        return structureMap[structureKey]?.baseEquipmentType || 'none';
+    };
 
     // Handler for image upload
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +177,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         }
     };
 
-    //this should be a field of PrimarySign | SecondarySign but it's causing typescript headaches so we can do that later
+    //this could be eventually moved to keyof PrimarySign | SecondarySign
     const handleSignUpdate = (field: string, value: any) => {
         const updatedSign = { ...localSign, [field]: value };
         setLocalSign(updatedSign);
@@ -173,35 +187,39 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
             handleStructureChange(value, (localSign as PrimarySign).associatedStructure);
         } else if (!isSecondary && field === "bLights") {
             handleBLightsChange(value);
-        } else if (!isSecondary && field === "covers") {
+        } else if (!isSecondary && field === "cover") {
             handleCoversChange(value);
         } else if (!isSecondary && field === "quantity") {
             handleQuantityChange(value);
         }
     };
 
-    const handleStructureChange = (newStructure: string, oldStructure: string) => {
+    const handleStructureChange = (newStructure: StructureKey, oldStructure: StructureKey) => {
         if (isSecondary) return;
 
+        // Get base equipment types for old and new structures
+        const oldBaseType = getBaseEquipmentType(oldStructure);
+        const newBaseType = getBaseEquipmentType(newStructure);
+
         // Update equipment quantities in the context
-        if (oldStructure !== "none") {
+        if (oldBaseType !== "none") {
             dispatch({
                 type: "ADD_MPT_ITEM_NOT_SIGN",
                 payload: {
                     phaseNumber: currentPhase,
-                    equipmentType: oldStructure as EquipmentType,
+                    equipmentType: oldBaseType as EquipmentType,
                     equipmentProperty: "quantity",
                     value: 0, // Remove old structure
                 },
             });
         }
 
-        if (newStructure !== "none") {
+        if (newBaseType !== "none") {
             dispatch({
                 type: "ADD_MPT_ITEM_NOT_SIGN",
                 payload: {
                     phaseNumber: currentPhase,
-                    equipmentType: newStructure as EquipmentType,
+                    equipmentType: newBaseType as EquipmentType,
                     equipmentProperty: "quantity",
                     value: (localSign as PrimarySign).quantity, // Set quantity to match the sign
                 },
@@ -223,7 +241,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         });
     };
 
-    const handleCoversChange = (newValue: number) => {
+    const handleCoversChange = (checked: boolean) => {
         if (isSecondary) return;
 
         dispatch({
@@ -232,7 +250,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                 phaseNumber: currentPhase,
                 equipmentType: "covers" as EquipmentType,
                 equipmentProperty: "quantity",
-                value: newValue * (localSign as PrimarySign).quantity,
+                value: checked ? (localSign as PrimarySign).quantity : 0,
             },
         });
     };
@@ -241,14 +259,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         if (isSecondary) return;
 
         const primarySign = localSign as PrimarySign;
+        const baseEquipmentType = getBaseEquipmentType(primarySign.associatedStructure);
 
         // Update equipment quantities for the new quantity
-        if (primarySign.associatedStructure !== "none") {
+        if (baseEquipmentType !== "none") {
             dispatch({
                 type: "ADD_MPT_ITEM_NOT_SIGN",
                 payload: {
                     phaseNumber: currentPhase,
-                    equipmentType: primarySign.associatedStructure as EquipmentType,
+                    equipmentType: baseEquipmentType as EquipmentType,
                     equipmentProperty: "quantity",
                     value: newValue,
                 },
@@ -267,14 +286,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
             });
         }
 
-        if (primarySign.covers > 0) {
+        if (primarySign.cover) {
             dispatch({
                 type: "ADD_MPT_ITEM_NOT_SIGN",
                 payload: {
                     phaseNumber: currentPhase,
                     equipmentType: "covers" as EquipmentType,
                     equipmentProperty: "quantity",
-                    value: newValue * primarySign.covers,
+                    value: newValue,
                 },
             });
         }
@@ -560,18 +579,18 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                     Substrate
                                 </Label>
                                 <Select
-                                    value={localSign.substrate || "aluminum"}
+                                    value={localSign.substrate || "Aluminum"}
                                     onValueChange={(value) => handleSignUpdate("substrate", value)}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select substrate" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="aluminum">Aluminum</SelectItem>
-                                        <SelectItem value="aluminum-composite">
+                                        <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                        <SelectItem value="Aluminum-Composite">
                                             Aluminum Composite
                                         </SelectItem>
-                                        <SelectItem value="plastic">Plastic</SelectItem>
+                                        <SelectItem value="Plastic">Plastic</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -673,19 +692,20 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                     <div>
                                         <Label className="text-sm font-medium mb-2 block">Structure</Label>
                                         <Select
-                                            value={(localSign as PrimarySign).associatedStructure || "none"}
+                                            value={(localSign as PrimarySign).associatedStructure || undefined}
                                             onValueChange={(value) =>
-                                                handleSignUpdate("associatedStructure", value)
+                                                handleSignUpdate("associatedStructure", value as StructureKey)
                                             }
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="None" />
+                                                <SelectValue placeholder="Select structure type" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="fourFootTypeIII">{`4' T-III RIGHT`}</SelectItem>
-                                                <SelectItem value="hStand">H-FOOT</SelectItem>
-                                                <SelectItem value="none">LOOSE</SelectItem>
-                                                <SelectItem value="post">{`8' POST`}</SelectItem>
+                                                {getStructureOptions().map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -730,9 +750,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                             <div className="flex items-center gap-2">
                                                 <Checkbox
                                                     onCheckedChange={(checked) =>
-                                                        checked ? handleSignUpdate("covers", 1) : handleSignUpdate("covers", 0)
+                                                        handleSignUpdate("cover", checked)
                                                     }
-                                                    checked={(localSign as PrimarySign).covers > 0}
+                                                    checked={(localSign as PrimarySign).cover || false}
                                                     id="cover-checkbox"
                                                 />
                                                 <Label
@@ -757,17 +777,20 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                             </div>
                                         </>
                                     ) : (
-                                        <div>
-                                            <Label className="text-sm font-medium mb-2 block">Covers</Label>
-                                            <Input
-                                                type="number"
-                                                value={(localSign as PrimarySign).covers || ""}
-                                                onChange={(e) =>
-                                                    handleSignUpdate("covers", parseInt(e.target.value) || 0)
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                onCheckedChange={(checked) =>
+                                                    handleSignUpdate("cover", checked)
                                                 }
-                                                min={0}
-                                                className="w-full"
+                                                checked={(localSign as PrimarySign).cover || false}
+                                                id="cover-checkbox-regular"
                                             />
+                                            <Label
+                                                htmlFor="cover-checkbox-regular"
+                                                className="text-sm font-medium"
+                                            >
+                                                Include cover
+                                            </Label>
                                         </div>
                                     )}
                                 </div>
@@ -780,7 +803,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                         <Button variant="outline" onClick={handleCancel}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>
+                        <Button onClick={handleSave} disabled={localSign.quantity < 1}>
                             Save Sign
                         </Button>
                     </div>

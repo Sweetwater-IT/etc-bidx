@@ -3,7 +3,7 @@ import { EstimateAction } from "@/types/TEstimateAction";
 import { defaultMPTObject, defaultPhaseObject } from "@/types/default-objects/defaultMPTObject";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
+import { MPTRentalEstimating, Phase, structureMap, StructureKey } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
 import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
 import { SetStateAction } from "react";
@@ -12,6 +12,11 @@ import { SetStateAction } from "react";
 export interface EstimateContextType extends Estimate {
 	dispatch: React.Dispatch<EstimateAction>;
 }
+
+// Helper function to get base equipment type from structure key
+const getBaseEquipmentType = (structureKey: StructureKey) => {
+	return structureMap[structureKey]?.baseEquipmentType;
+};
 
 // Reducer Function
 export const estimateReducer = (
@@ -499,32 +504,6 @@ export const estimateReducer = (
 				}
 			}
 
-		// case "UPDATE_PERMANENT_SIGNS_EQUIPMENT":
-		// 	if (!state.permanentSigns) return state;
-		// 	//e.g. pmsTypeB, 'flatSheetAlumSigns', quantity, 12
-		// 	const { pmsType, pmsEquipType, key: permSignKey, value: permSignValue } = action.payload;
-
-		// 	const foundPms = state.permanentSigns[pmsType] as Record<string, any>;
-		// 	const foundEquip = foundPms[pmsEquipType as string];
-		// 	// Make a deep copy of the state to safely modify
-		// 	return {
-		// 		//everything about the state but permanent signs
-		// 		...state,
-		// 		permanentSigns: {
-		// 			//everything about the permanent signs but the particular post type
-		// 			...state.permanentSigns,
-		// 			[pmsType]: {
-		// 				//everything about the particular post type except for the individual equipment piece
-		// 				...foundPms,
-		// 				[pmsEquipType]: {
-		// 					//everyting about the individual equipment piece except the quantity
-		// 					...foundEquip,
-		// 					[permSignKey]: permSignValue
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-
 		case "ADD_PERMANENT_SIGNS_ITEM":
 			if (!state.permanentSigns) return state;
 			const { key: keyToBeAdded, id: newPMSId } = action.payload
@@ -610,61 +589,6 @@ export const estimateReducer = (
 						signItems: state.permanentSigns.signItems.filter(pmsItem => pmsItem.id !== permanentSignIdToDelete)
 					}
 				};
-
-		//COMING BACK TO THIS BECAUSE WILL LIKELY HAVE TO CHANGE HOW CUTSOM ITEMS ARE ADDED TO PERM SIGNS
-		// case "ADD_CUSTOM_PMS_ITEM":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { pmsType: customPmsType, item } = action.payload;
-
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[customPmsType]: {
-		// 				...state.permanentSigns[customPmsType],
-		// 				customItems: [
-		// 					...state.permanentSigns[customPmsType].customItems,
-		// 					item
-		// 				]
-		// 			}
-		// 		}
-		// 	};
-
-		// case "UPDATE_CUSTOM_PMS_ITEM":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { pmsType: updatePmsType, itemIndex, key: itemKey, value: itemValue } = action.payload;
-
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[updatePmsType]: {
-		// 				...state.permanentSigns[updatePmsType],
-		// 				customItems: state.permanentSigns[updatePmsType]?.customItems.map(
-		// 					(item, index) => index === itemIndex
-		// 						? { ...item, [itemKey]: itemValue }
-		// 						: item
-		// 				)
-		// 			}
-		// 		}
-		// 	};
-
-		// case "DELETE_CUSTOM_PMS_ITEM":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { pmsType: deletePmsType, itemIndex: deleteIndex } = action.payload;
-
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[deletePmsType]: {
-		// 				...state.permanentSigns[deletePmsType],
-		// 				customItems: state.permanentSigns[deletePmsType].customItems.filter(
-		// 					(_, index) => index !== deleteIndex
-		// 				)
-		// 			}
-		// 		}
-		// 	};
 
 		case "ADD_SALE_ITEM":
 			return {
