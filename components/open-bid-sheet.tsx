@@ -302,10 +302,20 @@ export function OpenBidSheet({
 
       const today = new Date().toISOString().split("T")[0];
 
+      // Use ISO date format (YYYY-MM-DD) directly to avoid timezone issues
       const formattedLettingDate = lettingDate
-        ? formatDate(lettingDate)
+        ? lettingDate.toISOString().split('T')[0]
         : today;
-      const formattedDueDate = dueDate ? formatDate(dueDate) : today;
+      const formattedDueDate = dueDate 
+        ? dueDate.toISOString().split('T')[0] 
+        : today;
+        
+      console.log('Submitting dates:', {
+        lettingDate: lettingDate ? lettingDate.toISOString() : null,
+        formattedLettingDate,
+        dueDate: dueDate ? dueDate.toISOString() : null,
+        formattedDueDate
+      });
 
       const bidData = {
         contract_number: contractNumber,

@@ -320,16 +320,38 @@ export async function POST(request: NextRequest) {
     
     // Format dates consistently to YYYY-MM-DD format for all date fields
     // This ensures consistency between table view and details drawer
+    // Use direct string manipulation to avoid timezone issues
     if (typeof body.due_date === 'string') {
-      body.due_date = new Date(body.due_date).toISOString().split('T')[0];
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.due_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.due_date).toISOString().split('T')[0].split('-');
+        body.due_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
     
     if (typeof body.letting_date === 'string') {
-      body.letting_date = new Date(body.letting_date).toISOString().split('T')[0];
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.letting_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.letting_date).toISOString().split('T')[0].split('-');
+        body.letting_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
     
     if (typeof body.entry_date === 'string') {
-      body.entry_date = new Date(body.entry_date).toISOString().split('T')[0];
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.entry_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.entry_date).toISOString().split('T')[0].split('-');
+        body.entry_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
     
     // Log the formatted dates for debugging
