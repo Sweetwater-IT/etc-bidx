@@ -96,14 +96,14 @@ export const data = {
       icon: IconFolder,
     },
     {
-      title: "Sign Orders",
-      url: "/takeoffs",
+      title: "Sign Order List",
+      url: "/takeoffs/load-sheet",
       icon: IconUsers,
-      items: [
-        {
-          title: "Sign Order List",
-          url: "/takeoffs/load-sheet",
-        },
+      // items: [
+        // {
+        //   title: "Sign Order List",
+        //   url: "/takeoffs/load-sheet",
+        // },
         // {
         //   title: "Build Takeoff",
         //   url: "/takeoffs/new",
@@ -112,7 +112,7 @@ export const data = {
         //   title: "Load Sheet",
         //   url: "/takeoffs/load-sheet",
         // },
-      ],
+      // ],
     },
   ] as NavItem[],
   navSignShop: [

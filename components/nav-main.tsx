@@ -33,7 +33,7 @@ export function NavMain({items, label}: {
 }) {
   const pathname = usePathname()
   const [openItem, setOpenItem] = React.useState<string | null>(
-      label === 'Project Admin' ? 'Admin Portal' : 'Bid / Job List'
+      label === 'Project Estimating' ? 'Bid / Job List' : null
   )
 
   React.useEffect(() => {
