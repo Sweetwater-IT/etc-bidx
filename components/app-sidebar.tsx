@@ -101,24 +101,28 @@ export const data = {
       icon: IconUsers,
       items: [
         {
-          title: "Sign Shop Orders",
-          url: "/takeoffs/sign-shop-orders",
-        },
-        {
-          title: "Build Takeoff",
-          url: "/takeoffs/new",
-        },
-        {
-          title: "Load Sheet",
+          title: "Sign Order List",
           url: "/takeoffs/load-sheet",
         },
+        // {
+        //   title: "Build Takeoff",
+        //   url: "/takeoffs/new",
+        // },
+        // {
+        //   title: "Load Sheet",
+        //   url: "/takeoffs/load-sheet",
+        // },
       ],
     },
   ] as NavItem[],
   navSignShop: [
     {
-      title: "Sign Order List",
-      url: "/takeoffs/load-sheet",
+      title: "Sign Shop Orders",
+      url: "/takeoffs/sign-shop-orders",
+    },
+    {
+      title: "Daily Tracker",
+      url: "/daily-tracker",
     },
     {
       title: "Takeoffs",

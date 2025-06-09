@@ -368,7 +368,7 @@ export default function SignOrderPage() {
               >
                 Create sign order
               </button>
-              <button
+              {/* <button
                 onClick={() => router.push('/takeoffs/new-load-sheet')}
                 className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
               >
@@ -379,7 +379,7 @@ export default function SignOrderPage() {
                 className="bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium"
               >
                 Create Takeoff
-              </button>
+              </button> */}
             </div>
           </div>
         </SiteHeader>
