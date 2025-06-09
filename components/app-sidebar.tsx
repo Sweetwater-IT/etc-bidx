@@ -124,10 +124,6 @@ export const data = {
       title: "Daily Tracker",
       url: "/daily-tracker",
     },
-    {
-      title: "Takeoffs",
-      url: "#",
-    },
   ] as NavItem[],
   navAdmin: [
     {
