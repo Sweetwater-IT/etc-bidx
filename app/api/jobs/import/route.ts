@@ -43,14 +43,35 @@ export async function POST(request: Request) {
       for (const job of validJobs) {
         const { data: existingJobs } = await supabase
           .from('available_jobs')
-          .select('id')
+          .select('*')
           .eq('contract_number', job.contract_number)
           .limit(1);
         
         if (existingJobs && existingJobs.length > 0) {
+          // Ensure all fields are updated, especially dates
+          // We need to standardize the date format to YYYY-MM-DD for database storage
+          // This ensures consistency between the table and drawer views
+          const currentDateStr = new Date().toISOString().split('T')[0];
+          
+          const updatedJob = {
+            ...job,
+            // Force ISO string format for dates to ensure consistency
+            // Use current date as default for required date fields
+            letting_date: job.letting_date ? new Date(job.letting_date).toISOString().split('T')[0] : currentDateStr,
+            due_date: job.due_date ? new Date(job.due_date).toISOString().split('T')[0] : currentDateStr,
+            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr
+          };
+          
+          console.log('Updating job with dates:', {
+            original_letting_date: job.letting_date,
+            updated_letting_date: updatedJob.letting_date,
+            original_due_date: job.due_date,
+            updated_due_date: updatedJob.due_date
+          });
+          
           const { data, error } = await supabase
             .from('available_jobs')
-            .update(job)
+            .update(updatedJob)
             .eq('contract_number', job.contract_number)
             .select();
           
@@ -59,7 +80,18 @@ export async function POST(request: Request) {
             updatedCount.updated++;
           }
         } else {
-          newJobs.push(job);
+          // Standardize date formats for new jobs too
+          // Use current date as default for required date fields to satisfy type requirements
+          const currentDateStr = new Date().toISOString().split('T')[0];
+          
+          const newJob = {
+            ...job,
+            letting_date: job.letting_date ? new Date(job.letting_date).toISOString().split('T')[0] : currentDateStr,
+            due_date: job.due_date ? new Date(job.due_date).toISOString().split('T')[0] : currentDateStr,
+            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr
+          };
+          
+          newJobs.push(newJob);
           updatedCount.new++;
         }
       }
@@ -276,28 +308,60 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
 function parseExcelDate(value: any): string | null {
   if (!value) return null;
   
+  // Handle Excel numeric dates (days since 1/1/1900, with adjustment for Excel's leap year bug)
   if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)))) {
     try {
       const numericValue = typeof value === 'number' ? value : Number(value);
       
+      // Excel date range check (reasonable values between ~1900 and ~2200)
       if (numericValue > 1000 && numericValue < 100000) {
-        const excelEpoch = new Date(1899, 11, 30);
+        const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
         const jsDate = new Date(excelEpoch);
         jsDate.setDate(excelEpoch.getDate() + numericValue);
-        return jsDate.toISOString();
+        
+        // Return only the date portion in ISO format (YYYY-MM-DD)
+        return jsDate.toISOString().split('T')[0];
       }
     } catch (error) {
       console.error('Error parsing numeric Excel date:', error);
     }
   }
   
-  try {
-    const date = new Date(value);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString();
+  // Handle string dates in various formats
+  if (typeof value === 'string') {
+    // Try to handle common date formats
+    const formats = [
+      // Try direct parsing first
+      () => new Date(value),
+      // MM/DD/YYYY
+      () => {
+        const parts = value.split('/');
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+        }
+        return new Date('invalid');
+      },
+      // DD/MM/YYYY
+      () => {
+        const parts = value.split('/');
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
+        return new Date('invalid');
+      }
+    ];
+    
+    for (const format of formats) {
+      try {
+        const date = format();
+        if (!isNaN(date.getTime())) {
+          // Return only the date portion in ISO format (YYYY-MM-DD)
+          return date.toISOString().split('T')[0];
+        }
+      } catch (e) {
+        // Continue to next format
+      }
     }
-  } catch (error) {
-    console.error('Error parsing string date:', error);
   }
   
   console.warn(`Could not parse date value: ${value}`);

@@ -379,8 +379,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     status: job.status || 'Unset',
                     requestor: requestorValue,
                     owner: ownerValue,
-                    lettingDate: job.letting_date ? job.letting_date : '',
-                    dueDate: job.due_date ? job.due_date : '',
+                    // Ensure dates are properly formatted and consistent
+                    lettingDate: job.letting_date || '',
+                    dueDate: job.due_date || '',
                     county: {
                         main: countyValue,
                         secondary: branchValue
@@ -388,7 +389,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at ? job.created_at : '',
+                    createdAt: job.created_at || '',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
