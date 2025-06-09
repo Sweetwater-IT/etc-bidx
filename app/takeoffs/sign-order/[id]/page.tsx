@@ -77,6 +77,9 @@ interface SignItem {
   in_stock: number
   order: number
   make: number
+  structure: string
+  bLights: number
+  covers: number
   substrate?: string
   targetDate?: string
   includeCover?: boolean
@@ -89,7 +92,7 @@ const generateOrderMakeText = (items: SignItem[]): string => {
   const itemsWithQuantities = items.filter(item => item.order > 0 || item.make > 0)
   if (itemsWithQuantities.length === 0) return ''
   
-  const parts = []
+  const parts: any[] = []
   
   for (const item of itemsWithQuantities) {
     if (item.order > 0) {
@@ -156,29 +159,6 @@ export default function SignOrderTrackerPage () {
   const [isSale, setIsSale] = useState(false)
   const [isRental, setIsRental] = useState(false)
   const [isPermanent, setIsPermanent] = useState(false)
-
-  // Dummy data for dropdowns - would be fetched from API in real implementation
-  const requestors = [
-    { id: 1, name: 'John Doe' },
-    { id: 2, name: 'Jane Smith' },
-    { id: 3, name: 'Robert Johnson' },
-    { id: 4, name: 'Emily Davis' }
-  ]
-
-  const customers = [
-    { id: 1, name: 'Acme Corporation' },
-    { id: 2, name: 'Wayne Enterprises' },
-    { id: 3, name: 'Stark Industries' },
-    { id: 4, name: 'Umbrella Corporation' }
-  ]
-
-  const branches = [
-    { id: 1, name: 'All' },
-    { id: 2, name: 'Hatfield' },
-    { id: 3, name: 'Turbotville' },
-    { id: 4, name: 'Bedford' },
-    { id: 5, name: 'Archived' }
-  ]
 
   useEffect(() => {
     const fetchSignOrder = async () => {
@@ -388,6 +368,9 @@ export default function SignOrderTrackerPage () {
       stiffner: '',
       assigned_to: '',
       in_stock: 0,
+      structure: 'None',
+      bLights: 0,
+      covers: 0,
       order: 0,
       make: 0,
       substrate: '',
@@ -453,7 +436,7 @@ export default function SignOrderTrackerPage () {
       alert('Generate functionality not implemented yet')
       setShowGenerateConfirmDialog(false)
     } catch (error) {
-      alert(`Failed to generate: ${error?.message || 'Unknown error'}`)
+      alert(`Failed to generate: ${(error as any)?.message || 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
