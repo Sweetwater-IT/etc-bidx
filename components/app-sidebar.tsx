@@ -121,6 +121,10 @@ export const data = {
       url: "/takeoffs/sign-shop-orders",
     },
     {
+      title: "Daily Tracker",
+      url: "/daily-tracker",
+    },
+    {
       title: "Takeoffs",
       url: "#",
     },
@@ -161,11 +165,6 @@ export const data = {
       title: "Customers",
       url: "/customers",
       icon: IconUsers,
-    },
-    {
-      title: "Daily Tracker",
-      url: "/daily-tracker",
-      icon: IconFileText,
     },
     {
       title: "Reporting",
