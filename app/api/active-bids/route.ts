@@ -515,7 +515,7 @@ export async function POST(request: NextRequest) {
             description: sign.description,
             associated_structure: sign.associatedStructure,
             b_lights: sign.bLights,
-            covers: sign.covers
+            covers: sign.cover ? sign.quantity : 0
           };
         }
       });

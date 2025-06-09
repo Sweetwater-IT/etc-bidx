@@ -716,7 +716,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                         {group.primary.aLights}
                       </Text> */}
                       <Text style={[styles.phaseSummaryCell, { flex: 1 }]}>
-                        {group.primary.covers}
+                        {group.primary.cover ? group.primary.quantity : 0}
                       </Text>
                     </View>
 
