@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/command'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
+import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
 
 interface SignOrder {
   id: number
@@ -262,8 +263,8 @@ export default function SignOrderTrackerPage () {
   }, [params])
 
   const handleExport = () => {
-    // Export functionality would go here
-    alert('Export functionality not implemented yet')
+    if(!signOrder) return;
+    exportSignOrderToExcel(signOrder, signItems);
   }
 
   const handleSubmitOrder = async () => {
