@@ -123,7 +123,7 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
       quantity: 0,
       associatedStructure: "none",
       bLights: 0,
-      covers: 0,
+      cover: false,
       isCustom: false,
       description: selectedDesignation.description,
     };

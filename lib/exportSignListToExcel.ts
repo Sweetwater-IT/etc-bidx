@@ -58,7 +58,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
         sheeting: primarySign.sheeting,
         structure: structureMapping[primarySign.associatedStructure],
         bLights: primarySign.bLights,
-        covers: primarySign.covers
+        covers: primarySign.cover ? primarySign.quantity : 0
       });
 
       // Find and add all secondary signs for this primary sign

@@ -67,7 +67,7 @@ const PrimarySignItem = ({
       sheeting: "HI", // Default sheeting
       isCustom: false,
       description: "",
-      substrate: "aluminum",
+      substrate: "Aluminum",
     };
 
     // Add the new secondary sign to the context
@@ -109,14 +109,14 @@ const PrimarySignItem = ({
     }
 
     // Update covers - multiply by quantity
-    if (primarySign.covers > 0) {
+    if (primarySign.cover) {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
           equipmentType: "covers" as EquipmentType,
           equipmentProperty: "quantity",
-          value: newQuantity * primarySign.covers,
+          value: newQuantity,
         },
       });
     }
@@ -208,7 +208,7 @@ const PrimarySignItem = ({
     }
 
     // Update covers
-    if (sign.covers > 0) {
+    if (sign.cover) {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
@@ -255,7 +255,7 @@ const PrimarySignItem = ({
               </div>
               <div className="text-sm text-muted-foreground">
                 {primarySign.width}x{primarySign.height} • B Lights:{" "}
-                {primarySign.bLights} • Covers: {primarySign.covers}
+                {primarySign.bLights} • Covers: {primarySign.cover ? primarySign.quantity : 0}
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs font-medium text-muted-foreground">

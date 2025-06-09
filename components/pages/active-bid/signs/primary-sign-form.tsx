@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SheetingType, EquipmentType, SecondarySign } from "@/types/MPTEquipment";
+import { PrimarySign, SheetingType, EquipmentType, SecondarySign, structureMap, StructureKey } from "@/types/MPTEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,6 +108,11 @@ const PrimarySignForm = ({
     });
   };
 
+  // Helper to get base equipment type from structure key
+  const getBaseEquipmentType = (structureKey: StructureKey): EquipmentType | 'none' => {
+    return structureMap[structureKey]?.baseEquipmentType || 'none';
+  };
+
   // Fetch all sign designations and dimensions at once
   useEffect(() => {
     const loadSignData = async () => {
@@ -171,7 +176,7 @@ const PrimarySignForm = ({
       handleStructureChange(value, localSign.associatedStructure);
     } else if (field === "bLights") {
       handleBLightsChange(value);
-    } else if (field === "covers") {
+    } else if (field === "cover") {
       handleCoversChange(value);
     } else if (field === "quantity") {
       handleQuantityChange(value);
@@ -179,28 +184,33 @@ const PrimarySignForm = ({
   };
 
   const handleStructureChange = (
-    newStructure: string,
-    oldStructure: string
+    newStructure: StructureKey,
+    oldStructure: StructureKey
   ) => {
-    // Update equipment quantities in the context
-    if (oldStructure !== "none") {
+    // Get the base equipment types for old and new structures
+    const oldEquipmentType = getBaseEquipmentType(oldStructure);
+    const newEquipmentType = getBaseEquipmentType(newStructure);
+
+    // Remove old structure equipment if it was a valid equipment type
+    if (oldEquipmentType !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
-          equipmentType: oldStructure as EquipmentType,
+          equipmentType: oldEquipmentType,
           equipmentProperty: "quantity",
           value: 0, // Remove old structure
         },
       });
     }
 
-    if (newStructure !== "none") {
+    // Add new structure equipment if it's a valid equipment type
+    if (newEquipmentType !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
-          equipmentType: newStructure as EquipmentType,
+          equipmentType: newEquipmentType,
           equipmentProperty: "quantity",
           value: localSign.quantity, // Set quantity to match the sign
         },
@@ -234,12 +244,14 @@ const PrimarySignForm = ({
 
   const handleQuantityChange = (newValue: number) => {
     // Update equipment quantities for the new quantity
-    if (localSign.associatedStructure !== "none") {
+    const equipmentType = getBaseEquipmentType(localSign.associatedStructure);
+    
+    if (equipmentType !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
-          equipmentType: localSign.associatedStructure as EquipmentType,
+          equipmentType: equipmentType,
           equipmentProperty: "quantity",
           value: newValue,
         },
@@ -258,14 +270,14 @@ const PrimarySignForm = ({
       });
     }
 
-    if (localSign.covers > 0) {
+    if (localSign.cover) {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
           equipmentType: "covers" as EquipmentType,
           equipmentProperty: "quantity",
-          value: newValue * localSign.covers,
+          value: newValue
         },
       });
     }
@@ -635,23 +647,23 @@ const PrimarySignForm = ({
           <Select
             value={localSign.associatedStructure || "none"}
             onValueChange={(value) =>
-              handleSignUpdate("associatedStructure", value)
+              handleSignUpdate("associatedStructure", value as StructureKey)
             }
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fourFootTypeIII">{`4'`} T-III RIGHT</SelectItem>
-              {/* <SelectItem value="fourFootTypeIII">{`4'`} T-III LEFT</SelectItem>
-              <SelectItem value="fourFootTypeIII">{`6'`} T-III RIGHT</SelectItem>
-              <SelectItem value="fourFootTypeIII">{`6'`} T-III LEFT</SelectItem> */}
+              <SelectItem value="fourFootTypeIII_right">4' T-III RIGHT</SelectItem>
+              <SelectItem value="fourFootTypeIII_left">4' T-III LEFT</SelectItem>
+              <SelectItem value="sixFootTypeIII_right">6' T-III RIGHT</SelectItem>
+              <SelectItem value="sixFootTypeIII_left">6' T-III LEFT</SelectItem>
               <SelectItem value="hStand">H-FOOT</SelectItem>
+              <SelectItem value="post_8ft">8' POST</SelectItem>
+              <SelectItem value="post_10ft">10' POST</SelectItem>
+              <SelectItem value="post_12ft">12' POST</SelectItem>
+              <SelectItem value="post_14ft">14' POST</SelectItem>
               <SelectItem value="none">LOOSE</SelectItem>
-              <SelectItem value="post">{`8'`} POST</SelectItem>
-              {/* <SelectItem value="post">{`10'`} POST</SelectItem>
-              <SelectItem value="post">{`12'`} POST</SelectItem>
-              <SelectItem value="post">{`14'`} POST</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
@@ -687,14 +699,13 @@ const PrimarySignForm = ({
           </div>
         )}
 
-        {isTakeoff ? (
           <div className="flex-1">
             <div className="flex gap-x-2 items-center">
               <Checkbox
                 onCheckedChange={(checked) =>
                   checked ? handleCoversChange(1) : handleCoversChange(0)
                 }
-                checked={localSign.covers > 0}
+                checked={localSign.cover}
                 id="cover-checkbox"
               />
               <Label
@@ -718,20 +729,6 @@ const PrimarySignForm = ({
               </Label>
             </div>
           </div>
-        ) : (
-          <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">Covers</Label>
-            <Input
-              type="number"
-              value={localSign.covers || ""}
-              onChange={(e) =>
-                handleSignUpdate("covers", parseInt(e.target.value) || 0)
-              }
-              min={0}
-              className="w-full"
-            />
-          </div>
-        )}
       </div>
       <div className="flex max-w-fit justify-start space-x-3">
         <Button variant="outline" onClick={handleCancel}>

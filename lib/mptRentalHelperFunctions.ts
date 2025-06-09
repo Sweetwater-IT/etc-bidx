@@ -1,4 +1,4 @@
-import { Phase } from "@/types/MPTEquipment";
+import { Phase, StructureKey, structureMap } from "@/types/MPTEquipment";
 import { MPTRentalEstimating } from "@/types/MPTEquipment";
 import { EquipmentType } from "@/types/MPTEquipment";
 import { SheetingType } from "@/types/MPTEquipment";
@@ -195,16 +195,27 @@ interface AssociatedSignTotals {
   bLights: number,
   acLights: number
 }
+const getBaseEquipmentType = (structureKey: StructureKey) => {
+  return structureMap[structureKey]?.baseEquipmentType;
+};
 
 export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
   //loop through array an find Primary Signs by looking for associatedStructure property, then adding a number of that structure equal to the quantity
   //then add the amount of acLights, bLights, and covers, each one multiplying the quantity of the lights * quantity of sign
-  const structureCounts = phase.signs.filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0).reduce((acc, sign) => {
+  const structureCounts = phase.signs
+  .filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0)
+  .reduce((acc, sign) => {
     if ('associatedStructure' in sign) {
-      acc.cover += (sign.covers * sign.quantity);
+      // Add covers and lights (these are still simple multiplications)
+      acc.cover += (sign.cover ? sign.quantity : 0);
       // acc.acLights += (sign.aLights * sign.quantity);
       acc.bLights += (sign.bLights * sign.quantity);
-      switch (sign.associatedStructure) {
+      
+      // Get the base equipment type from the structure key
+      const baseEquipmentType = getBaseEquipmentType(sign.associatedStructure);
+      
+      // Map base equipment types to the totals object
+      switch (baseEquipmentType) {
         case 'fourFootTypeIII':
           acc.type3 += sign.quantity;
           break;
@@ -213,6 +224,13 @@ export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
           break;
         case 'post':
           acc.post += sign.quantity;
+          break;
+        case 'none':
+          // Don't add anything for loose signs
+          break;
+        default:
+          // Handle any unexpected equipment types
+          console.warn(`Unknown base equipment type: ${baseEquipmentType} for structure: ${sign.associatedStructure}`);
           break;
       }
     }
