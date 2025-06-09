@@ -65,19 +65,27 @@ export async function PATCH(request: NextRequest, { params }: any) {
 
     const body = await request.json();
 
-    // Format dates if they are provided as strings
+    // Format dates consistently to YYYY-MM-DD format for all date fields
+    // This ensures consistency between table view and details drawer
     if (typeof body.due_date === "string") {
-      body.due_date = new Date(body.due_date).toISOString();
+      body.due_date = new Date(body.due_date).toISOString().split("T")[0];
     }
 
     if (typeof body.letting_date === "string") {
-      body.letting_date = new Date(body.letting_date).toISOString();
+      body.letting_date = new Date(body.letting_date).toISOString().split("T")[0];
     }
 
     if (typeof body.entry_date === "string") {
-      // For entry_date, we only need the date part
       body.entry_date = new Date(body.entry_date).toISOString().split("T")[0];
     }
+    
+    // Log the formatted dates for debugging
+    console.log('Updating bid with formatted dates:', {
+      id,
+      letting_date: body.letting_date,
+      due_date: body.due_date,
+      entry_date: body.entry_date
+    });
 
     // Add updated_at timestamp
     const updates: AvailableJobUpdate = {
@@ -203,6 +211,20 @@ export async function PUT(request: NextRequest, { params }: any) {
     }
 
     const data = await request.json();
+    
+    // Format dates consistently to YYYY-MM-DD format for all date fields
+    // This ensures consistency between table view and details drawer
+    const formattedLettingDate = data.letting_date ? new Date(data.letting_date).toISOString().split('T')[0] : null;
+    const formattedDueDate = data.due_date ? new Date(data.due_date).toISOString().split('T')[0] : null;
+    const formattedEntryDate = data.entry_date ? new Date(data.entry_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    
+    // Log the formatted dates for debugging
+    console.log('PUT updating bid with formatted dates:', {
+      id,
+      letting_date: formattedLettingDate,
+      due_date: formattedDueDate,
+      entry_date: formattedEntryDate
+    });
 
     const { error } = await supabase
       .from("available_jobs")
@@ -215,9 +237,9 @@ export async function PUT(request: NextRequest, { params }: any) {
         location: data.location,
         platform: data.platform,
         status: data.status,
-        letting_date: data.letting_date,
-        due_date: data.due_date,
-        entry_date: data.entry_date,
+        letting_date: formattedLettingDate,
+        due_date: formattedDueDate,
+        entry_date: formattedEntryDate,
         mpt: data.mpt,
         flagging: data.flagging,
         perm_signs: data.perm_signs,
