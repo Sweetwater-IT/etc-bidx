@@ -263,8 +263,6 @@ export default function SignOrderTrackerPage () {
   }, [params])
 
   const handleExport = () => {
-    if(!signOrder) return;
-    exportSignOrderToExcel(signOrder, signItems);
   }
 
   const handleSubmitOrder = async () => {
@@ -434,7 +432,7 @@ export default function SignOrderTrackerPage () {
     try {
       setLoading(true)
       // Generate functionality would go here
-      alert('Generate functionality not implemented yet')
+      exportSignOrderToExcel(signOrder, signItems)
       setShowGenerateConfirmDialog(false)
     } catch (error) {
       alert(`Failed to generate: ${(error as any)?.message || 'Unknown error'}`)
