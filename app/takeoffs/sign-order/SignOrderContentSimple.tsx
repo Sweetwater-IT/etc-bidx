@@ -176,7 +176,7 @@ export default function SignOrderContentSimple() {
                         {/**This should be a save and submit */}
                         <Button
                             onClick={() => handleSave('SUBMITTED')}
-                            disabled={adminInfo.isSubmitting}
+                            disabled={adminInfo.isSubmitting || mptRental.phases[0].signs.length === 0}
                         >
                             {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
                         </Button>

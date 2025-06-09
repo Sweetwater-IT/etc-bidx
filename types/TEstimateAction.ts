@@ -1,6 +1,6 @@
 import { AdminData } from "./TAdminData";
 import { EmergencyFields } from "./TAdminData";
-import { CustomLightAndDrumItem, DynamicEquipmentInfo, DynamicSignInfo, EquipmentType, MPTRentalEstimating, Phase, PrimarySign, SecondarySign, SheetingType, StaticEquipmentInfo } from "./MPTEquipment";
+import { CustomLightAndDrumItem, DynamicEquipmentInfo, DynamicSignInfo, EquipmentType, MPTRentalEstimating, Phase, PrimarySign, SecondarySign, SheetingType, StaticEquipmentInfo, StructureKey } from "./MPTEquipment";
 import { SaleItem } from "./TSaleItem";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
@@ -16,13 +16,14 @@ interface AddMPTItemNotSignPayload {
 
 type MPTSignUpdatePayload =
 	| { phase: number; signId: string; key: keyof DynamicSignInfo; value: any }  // Base properties
-	| { phase: number; signId: string; key: 'designation' | 'associatedStructure' | 'bLights' | 'covers' | 'description' | 'isCustom'; value: any }  // Primary-only properties
-	| { phase: number; signId: string; key: 'primarySignId'; value: string };
+	| { phase: number; signId: string; key: 'associatedStructure'; value: StructureKey }  // Primary-only structure property
+	| { phase: number; signId: string; key: 'bLights'; value: number }  // Primary-only number property
+	| { phase: number; signId: string; key: 'cover'; value: boolean }  // Primary-only boolean property
+	| { phase: number; signId: string; key: 'primarySignId'; value: string };  // Secondary-only property
 
 export type PMSEquipmentKey = keyof PMSTypeB | keyof PMSTypeF | keyof PMSResetB | keyof PMSResetF;
 
 export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF'
-
 
 export type EstimateAction =
 	| {

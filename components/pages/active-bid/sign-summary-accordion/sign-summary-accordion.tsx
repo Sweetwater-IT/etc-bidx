@@ -77,8 +77,8 @@ const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordio
                       {"bLights" in sign && sign.bLights > 0 && (
                         <span>• B Lights: {sign.bLights}</span>
                       )}
-                      {"covers" in sign && sign.covers > 0 && (
-                        <span>• Covers: {sign.covers}</span>
+                      {"cover" in sign && sign.cover && (
+                        <span>• Covers: {sign.quantity}</span>
                       )}
                       {"primarySignId" in sign && (
                         <span className="italic">• Secondary Sign</span>

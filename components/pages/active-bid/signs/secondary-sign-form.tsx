@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SecondarySign, SheetingType, SignDesignation } from "@/types/MPTEquipment";
+import { DynamicSignInfo, PrimarySign, SecondarySign, SheetingType, SignDesignation } from "@/types/MPTEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,22 +173,28 @@ const SecondarySignForm = ({
       ...localSign,
       quantity: primarySign.quantity
     };
-
-    // Update each field of the secondary sign using UPDATE_MPT_SIGN
-    Object.entries(signToSave).forEach(([key, value]) => {
-      if (key !== 'id' && key !== 'primarySignId') {
+  
+    // Update specific fields that are allowed in MPTSignUpdatePayload
+    // These are the common fields from DynamicSignInfo
+    const allowedKeys: (keyof DynamicSignInfo)[] = [
+      'width', 'height', 'quantity', 'sheeting', 'isCustom', 
+      'designation', 'description', 'substrate', 'stiffener'
+    ];
+  
+    allowedKeys.forEach((key) => {
+      if (key in signToSave && signToSave[key] !== undefined) {
         dispatch({
           type: "UPDATE_MPT_SIGN",
           payload: {
             phase: currentPhase,
             signId: sign.id,
-            key: key as keyof PrimarySign,
-            value
+            key: key, // TypeScript now knows this is keyof DynamicSignInfo
+            value: signToSave[key]
           }
         });
       }
     });
-
+  
     setIsConfiguring(false);
   };
 
