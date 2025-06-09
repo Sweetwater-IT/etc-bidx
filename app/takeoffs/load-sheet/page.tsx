@@ -10,6 +10,8 @@ import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
 import { FilterOption } from "@/components/table-controls";
 import { toast } from "sonner";
+import { IconPlus } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "requestor", title: "Requestor" },
@@ -372,12 +374,15 @@ export default function SignOrderPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
             <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/takeoffs/sign-order')}
-                className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Create sign order
-              </button>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => router.push('/takeoffs/sign-order')}
+                  size="sm"
+                >
+                  <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
+                  Create sign order
+                </Button>
+              </div>
               {/* <button
                 onClick={() => router.push('/takeoffs/new-load-sheet')}
                 className="bg-white text-primary border border-primary hover:bg-primary/5 px-4 py-2 rounded-md text-sm font-medium"

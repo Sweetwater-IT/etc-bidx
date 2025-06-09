@@ -97,7 +97,7 @@ export const data = {
     },
     {
       title: "Sign Order List",
-      url: "/takeoffs",
+      url: "/takeoffs/load-sheet",
       icon: IconUsers,
       // items: [
         // {
