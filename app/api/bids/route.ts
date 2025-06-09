@@ -291,6 +291,12 @@ export async function GET(request: NextRequest) {
 // POST: Create a new bid
 export async function POST(request: NextRequest) {
   try {
+    // Get the user session from the request cookies
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Log authentication status for debugging
+    console.log('Authentication status:', session ? 'Authenticated' : 'Not authenticated');
+    
     const body = await request.json();
     
     // Validate required fields
@@ -312,19 +318,48 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Format dates if they are provided as strings
+    // Format dates consistently to YYYY-MM-DD format for all date fields
+    // This ensures consistency between table view and details drawer
+    // Use direct string manipulation to avoid timezone issues
     if (typeof body.due_date === 'string') {
-      body.due_date = new Date(body.due_date).toISOString();
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.due_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.due_date).toISOString().split('T')[0].split('-');
+        body.due_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
     
     if (typeof body.letting_date === 'string') {
-      body.letting_date = new Date(body.letting_date).toISOString();
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.letting_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.letting_date).toISOString().split('T')[0].split('-');
+        body.letting_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
     
     if (typeof body.entry_date === 'string') {
-      // For entry_date, we only need the date part
-      body.entry_date = new Date(body.entry_date).toISOString().split('T')[0];
+      // If it's already in YYYY-MM-DD format, keep it as is
+      if (body.entry_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Already in correct format, do nothing
+      } else {
+        // Otherwise, parse and format carefully to avoid timezone issues
+        const parts = new Date(body.entry_date).toISOString().split('T')[0].split('-');
+        body.entry_date = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
     }
+    
+    // Log the formatted dates for debugging
+    console.log('Creating new bid with formatted dates:', {
+      letting_date: body.letting_date,
+      due_date: body.due_date,
+      entry_date: body.entry_date
+    });
     
     // Set default values if not provided
     const newBid: AvailableJob = {
@@ -338,17 +373,25 @@ export async function POST(request: NextRequest) {
       other: body.other ?? false,
     };
     
+    // Try to insert with regular client first
     const { data, error } = await supabase
       .from('available_jobs')
       .insert(newBid)
       .select();
     
     if (error) {
-      console.error(error)
-      return NextResponse.json(
-        { success: false, message: 'Failed to create bid', error: error.message },
-        { status: 500 }
-      );
+      console.error('Error creating bid:', error);
+      
+      if (error.code === '42501') {
+        // This is an RLS policy error
+        return NextResponse.json({ 
+          error: 'Permission denied: Row-level security prevented this operation. Please check your database permissions.',
+          details: 'You need to either disable RLS for this table or create appropriate policies in Supabase.',
+          code: error.code 
+        }, { status: 403 });
+      }
+      
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
     return NextResponse.json(
