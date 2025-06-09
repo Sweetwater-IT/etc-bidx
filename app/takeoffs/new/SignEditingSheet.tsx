@@ -682,10 +682,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                                 <SelectValue placeholder="None" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="fourFootTypeIII">4' T-III RIGHT</SelectItem>
+                                                <SelectItem value="fourFootTypeIII">{`4' T-III RIGHT`}</SelectItem>
                                                 <SelectItem value="hStand">H-FOOT</SelectItem>
                                                 <SelectItem value="none">LOOSE</SelectItem>
-                                                <SelectItem value="post">8' POST</SelectItem>
+                                                <SelectItem value="post">{`8' POST`}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
