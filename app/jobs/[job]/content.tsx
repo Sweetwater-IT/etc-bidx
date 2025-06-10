@@ -1465,6 +1465,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onReset={handleResetControls}
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
+                                    hideDropdown={true}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
