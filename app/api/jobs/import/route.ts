@@ -20,18 +20,18 @@ export async function POST(request: Request) {
     const errors: string[] = [];
     const validJobs: AvailableJobInsert[] = [];
 
-    for (const job of jobs) {
+    for (let i = 0; i < jobs.length; i++) {
       try {
-        console.log('Processing row:', job);
+        console.log('Processing row:', jobs[i]);
         
         if (type === 'available-jobs') {
-          processAvailableJob(job, validJobs, errors, jobs.indexOf(job));
+          await processAvailableJob(jobs[i], validJobs, errors, i);
         } else {
           errors.push(`Unknown import type: ${type}`);
         }
         
       } catch (error: any) {
-        errors.push(`Row ${jobs.indexOf(job) + 1}: ${error.message}`);
+        errors.push(`Row ${i + 1}: ${error.message}`);
       }
     }
 
@@ -193,7 +193,7 @@ function cleanValue(value: any): any {
   return value;
 }
 
-function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: string[], rowIndex: number) {
+async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: string[], rowIndex: number) {
   console.log(`Processing available job row ${rowIndex + 1}`);
   
   const status = findFieldValue(job, ['Status', 'Bid Status']);
@@ -206,6 +206,9 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   ]);
   
   const county = findFieldValue(job, ['County', 'Count']);
+  
+  // Look for State Route in various possible column names
+  const stateRoute = findFieldValue(job, ['SR', 'State Route', 'StateRoute', 'State_Route', 'Route', 'SR Number', 'SR #']);
   
   const dueDate = findFieldValue(job, ['Due Date', 'Bid Due Date', 'Due']);
   
@@ -255,6 +258,40 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
   
   const parsedEntryDate = parseExcelDate(entryDate);
   
+  // If branch is not provided, look up the branch based on county
+  let branchName = cleanValue(branch);
+  const countyName = cleanValue(county);
+  
+  if (!branchName && countyName) {
+    try {
+      // Look up the branch ID from the county
+      const { data: countyData, error: countyError } = await supabase
+        .from('counties')
+        .select('branch')
+        .eq('name', countyName)
+        .single();
+      
+      if (countyError) {
+        console.warn(`Error looking up branch for county ${countyName}:`, countyError);
+      } else if (countyData && countyData.branch) {
+        // Get the branch name from the branch ID
+        const { data: branchData, error: branchError } = await supabase
+          .from('branches')
+          .select('name')
+          .eq('id', countyData.branch)
+          .single();
+        
+        if (branchError) {
+          console.warn(`Error looking up branch name for ID ${countyData.branch}:`, branchError);
+        } else if (branchData) {
+          branchName = branchData.name;
+        }
+      }
+    } catch (error) {
+      console.error(`Error during branch lookup for county ${countyName}:`, error);
+    }
+  }
+
   const mappedJob: AvailableJobInsert = {
     contract_number: contractNumber || '',
     status: mapStatus(status || 'Unset'),
@@ -262,11 +299,12 @@ function processAvailableJob(job: any, validJobs: AvailableJobInsert[], errors: 
     owner: cleanValue(owner),
     letting_date: parsedLettingDate || currentDate, // Default to current date
     due_date: parsedDueDate || currentDate, // Default to current date
-    county: cleanValue(county),
-    branch: cleanValue(branch) || 'Main Office', // Default to 'Main Office' if branch is null
+    county: countyName,
+    branch: branchName || 'turbotville', // Default to turbotville if branch lookup fails
     location: cleanValue(location),
     platform: cleanValue(platform),
     entry_date: parsedEntryDate || new Date().toISOString(),
+    state_route: cleanValue(stateRoute), // Add state route from Excel
     mpt: Boolean(mpt || false),
     flagging: Boolean(flagging || false),
     perm_signs: Boolean(permSigns || false),
