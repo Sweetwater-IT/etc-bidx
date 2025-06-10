@@ -81,6 +81,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
+    const [showFilters, setShowFilters] = useState(false);
 
     // Reference data for dropdowns and filters
     const [referenceData, setReferenceData] = useState<{
@@ -88,11 +89,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
         owners: { id: number; name: string }[];
         branches: { id: number; name: string; code: string }[];
         estimators: { id: number; name: string }[];
+        requestors: { id: number; name: string }[];
     }>({
         counties: [],
         owners: [],
         branches: [],
-        estimators: []
+        estimators: [],
+        requestors: [],
     });
 
     // Define filter options for the Available Jobs table
@@ -118,11 +121,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 const estimatorsResponse = await fetch('/api/reference-data?type=estimators');
                 const estimatorsData = await estimatorsResponse.json();
 
+                // Fetch requestors (assuming estimators can be used as requestors for filtering)
+                const requestorsResponse = await fetch('/api/reference-data?type=requestors');
+                const requestorsData = await requestorsResponse.json();
+
                 setReferenceData({
                     counties: countiesData.data || [],
                     owners: ownersData.data || [],
                     branches: branchesData.data || [],
-                    estimators: estimatorsData.data || []
+                    estimators: estimatorsData.data || [],
+                    requestors: requestorsData.data || [],
                 });
             } catch (error) {
                 console.error('Error fetching reference data:', error);
@@ -134,7 +142,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     // Initialize filter options when reference data is loaded
     useEffect(() => {
-        if (referenceData.counties.length > 0 || referenceData.owners.length > 0) {
+        if (referenceData.counties.length > 0 || referenceData.owners.length > 0 || referenceData.requestors.length > 0 || referenceData.branches.length > 0) {
             const options: FilterOption[] = [
                 {
                     label: 'County',
@@ -150,6 +158,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     options: referenceData.owners.map(owner => ({
                         label: owner.name,
                         value: owner.name
+                    }))
+                },
+                {
+                    label: 'Requestor',
+                    field: 'requestor',
+                    options: referenceData.requestors.map(requestor => ({
+                        label: requestor.name,
+                        value: requestor.name
+                    }))
+                },
+                {
+                    label: 'Branch',
+                    field: 'branch',
+                    options: referenceData.branches.map(branch => ({
+                        label: branch.name,
+                        value: branch.code
                     }))
                 },
                 {
@@ -1359,6 +1383,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             date={dateRange}
                                             setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
+                                            showFilterButton={isAvailableJobs}
+                                            showFilters={showFilters}
+                                            setShowFilters={setShowFilters}
                                         />
                                     </div>
                                     {isActiveJobs && nextJobNumber && (
@@ -1436,7 +1463,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     activeFilters={activeFilters}
                                     onFilterChange={handleFilterChange}
                                     onReset={handleResetControls}
-                                    hideDropdown={true}
+                                    showFilters={showFilters}
+                                    setShowFilters={setShowFilters}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
@@ -1500,6 +1528,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     activeFilters={activeFilters}
                                     onFilterChange={handleFilterChange}
                                     onReset={handleResetControls}
+                                    showFilters={showFilters}
+                                    setShowFilters={setShowFilters}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
