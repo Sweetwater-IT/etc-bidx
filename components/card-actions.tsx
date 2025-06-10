@@ -21,6 +21,9 @@ interface CardActionsProps {
   importType?: 'available-jobs' | 'active-bids'
   hideImportExport?: boolean
   onExport?: () => void
+  showFilterButton?: boolean
+  showFilters?: boolean
+  setShowFilters?: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export function CardActions({
@@ -33,11 +36,15 @@ export function CardActions({
   goUpActions = false,
   importType = 'available-jobs',
   hideImportExport,
-  onExport
+  onExport,
+  showFilterButton = false,
+  showFilters,
+  setShowFilters,
 }: CardActionsProps) {
 
   const [importOpen, setImportOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
 
   // Handle date selection
   const handleDateSelect = (selectedDate: DateRange | undefined) => {
@@ -141,6 +148,31 @@ export function CardActions({
               Export
             </Button>
           </>
+        )}
+        {showFilterButton && setShowFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="ml-2"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 15 15"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 mr-2"
+            >
+              <path
+                d="M11.75 3.75L15 0.5H0L3.25 3.75V11.25L5.5 13.5V14.5H9.5V13.5L11.75 11.25V3.75ZM3.81966 4.25L11.1803 4.25L8.75 1.81966L8.75 11.75L6.25 11.75L6.25 1.81966L3.81966 4.25Z"
+                fill="currentColor"
+                fillRule="evenodd"
+                clipRule="evenodd"
+              />
+            </svg>
+            Filter
+          </Button>
         )}
         <Button size="sm" onClick={onCreateClick}>
           <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
