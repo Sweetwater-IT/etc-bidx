@@ -31,6 +31,7 @@ import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
 import { DateRange } from "react-day-picker";
 import { useCustomers } from "@/hooks/use-customers";
+import { exportAvailableJobsToExcel } from "@/lib/exportAvailableJobsToExcel";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -58,11 +59,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
     //THESE ARE OPEN BIDS
     //sets the table data
     const [isCreatingAvailableJob, setIsCreatingAvailableJob] = useState<boolean>(false);
+    const [allAvailableJobRowsSelected, setAllAvailableJobRowsSelected] = useState<boolean>(false);
     const [availableJobs, setAvailableJobs] = useState<AvailableJob[]>([]);
     const [availableJobsPageIndex, setAvailableJobsPageIndex] = useState(0);
     const [availableJobsPageSize, setAvailableJobsPageSize] = useState(25);
     const [availableJobsPageCount, setAvailableJobsPageCount] = useState(0);
     const [availableJobsTotalCount, setAvailableJobsTotalCount] = useState(0);
+    const [selectedAvailableJobs, setSelectedAvailableJobs] = useState<AvailableJob[]>([]);
     const [isEditingAvailableJob, setIsEditingAvailableJob] = useState<boolean>(false)
     //tracks the state of open bids to archive
     const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
@@ -1329,6 +1332,137 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setEditActiveJobSheetOpen(true)
     }
 
+    const handleExportAvailableJobs = async () => {
+        try {
+          startLoading();
+          
+          if (allAvailableJobRowsSelected) {
+            // Fetch all jobs with current filters applied
+            const options: any = {
+              limit: availableJobsTotalCount || 10000, // Use total count or a large number
+              page: 1,
+            };
+      
+            // Apply current filters to get the same filtered dataset
+            if (Object.keys(activeFilters).length > 0) {
+              options.filters = JSON.stringify(activeFilters);
+            }
+      
+            // Apply current segment filter
+            if (activeSegment === "archived") {
+              options.status = "archived";
+            } else if (activeSegment !== "all") {
+              const dbStatus = mapUiStatusToDbStatus(activeSegment);
+              options.status = dbStatus;
+            }
+      
+            // Apply current sorting
+            if (sortBy) {
+              options.sortBy = sortBy;
+              options.sortOrder = sortOrder;
+            }
+      
+            console.log("Fetching all jobs for export with options:", options);
+      
+            const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+            if (!response.ok) {
+              throw new Error('Failed to fetch all jobs for export');
+            }
+            
+            const result = await response.json();
+            const allJobs = result.data.map((job: any) => {
+              // Use the same transformation logic from loadAvailableJobs
+              const isEffectivelyUnknown = (value: any): boolean => {
+                if (value === undefined || value === null) return true;
+                if (typeof value === 'string') {
+                  const normalized = value.toLowerCase().trim();
+                  return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                }
+                return false;
+              };
+      
+              let countyValue = '';
+              if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+                countyValue = job.county;
+              } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+                countyValue = job.county.name;
+              } else if (job.admin_data?.county) {
+                if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+                  countyValue = job.admin_data.county;
+                } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+                  countyValue = job.admin_data.county.name;
+                }
+              }
+      
+              const branchCode = job.branch_code || '';
+              const branchMap: Record<string, string> = {
+                '10': 'Hatfield',
+                '20': 'Turbotville',
+                '30': 'West'
+              };
+              let branchValue = '';
+              if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+                branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
+              } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+                branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
+              } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+                branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
+              }
+      
+              return {
+                id: job.id,
+                contractNumber: job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '',
+                status: job.status || 'Unset',
+                requestor: job.requestor || job.admin_data?.requestor || '',
+                owner: job.owner || job.admin_data?.owner || '',
+                lettingDate: job.letting_date || '',
+                dueDate: job.due_date || '',
+                county: {
+                  main: countyValue,
+                  secondary: branchValue
+                },
+                countyValue: countyValue,
+                branch: branchValue,
+                dbe: job.dbe_percentage || job.admin_data?.dbePercentage || null,
+                createdAt: job.created_at || '',
+                location: job.location || job.admin_data?.location || '',
+                platform: job.platform || job.admin_data?.platform || '',
+                noBidReason: job.no_bid_reason || null,
+                stateRoute: job.state_route || null,
+                services: {
+                  'MPT': job.mpt || false,
+                  'Flagging': job.flagging || false,
+                  'Equipment Rental': job.equipment_rental || false,
+                  'Perm Signs': job.perm_signs || false,
+                  'Other': job.other || false
+                }
+              };
+            });
+      
+            console.log(`Exporting all ${allJobs.length} jobs`);
+            exportAvailableJobsToExcel(allJobs);
+            toast.success(`Exported all ${allJobs.length} jobs to Excel`);
+            
+          } else {
+            // Export only selected rows (existing logic)
+            if (selectedAvailableJobs.length === 0) {
+              toast.error('Please select jobs in the table before exporting');
+              return;
+            }
+            
+            console.log(`Exporting ${selectedAvailableJobs.length} selected jobs`);
+            exportAvailableJobsToExcel(selectedAvailableJobs);
+            toast.success(`Exported ${selectedAvailableJobs.length} selected jobs to Excel`);
+          }
+          
+        } catch (error) {
+          console.error('Error exporting jobs:', error);
+          toast.error('Failed to export jobs. Please try again.');
+        } finally {
+          stopLoading();
+        }
+      };
+
     const handleArchive = (item: AvailableJob) => {
         console.log('Archive clicked:', item)
         initiateArchiveJobs([item])
@@ -1359,6 +1493,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             date={dateRange}
                                             setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
+                                            onExport={isAvailableJobs ? handleExportAvailableJobs : () => {}}
                                         />
                                     </div>
                                     {isActiveJobs && nextJobNumber && (
@@ -1395,6 +1530,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onEdit={handleEdit}
                                     onArchive={handleArchive}
                                     onMarkAsBidJob={handleMarkAsBidJob}
+                                    setSelectedRows={setSelectedAvailableJobs}
+                                    onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
                                     selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
                                     onUpdateStatus={(item, status: string) => {
                                         // Map segment values to proper status values if needed

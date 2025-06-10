@@ -27,10 +27,12 @@ import {
   SortOption,
 } from "@/components/table-controls";
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Minus,
   MoreHorizontal,
 } from "lucide-react";
 import { IconPlus } from "@tabler/icons-react";
@@ -59,6 +61,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useCallback, useState } from "react";
+import { Popover, PopoverContent } from "./ui/popover";
+import { PopoverTrigger } from "@radix-ui/react-popover";
+import { Separator } from "./ui/separator";
 
 export type LegacyColumn = {
   key: string;
@@ -141,6 +146,8 @@ export interface DataTableProps<TData extends object> {
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
   hideDropdown?: boolean;
+  setSelectedRows?: React.Dispatch<React.SetStateAction<TData[]>>
+  onAllRowsSelectedChange?: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 function formatCellValue(value: any, key: string) {
@@ -237,27 +244,27 @@ function formatCellValue(value: any, key: string) {
     try {
       // Create a Date object directly from the ISO string - this will be interpreted as UTC
       const utcDate = new Date(value);
-      
+
       // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
       ];
-      
+
       const monthName = monthNames[utcDate.getMonth()]; // getMonth() instead of getUTCMonth()
       const dayNum = utcDate.getDate(); // getDate() instead of getUTCDate()
       const yearNum = utcDate.getFullYear(); // getFullYear() instead of getUTCFullYear()
-    
+
       // For time, also use local methods
       const hoursValue = utcDate.getHours(); // getHours() instead of parsing from string
       const minutesValue = utcDate.getMinutes(); // getMinutes() for proper minutes
-      
+
       const amOrPm = hoursValue >= 12 ? 'PM' : 'AM';
       const hoursFormatted = hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue;
       const minutesFormatted = minutesValue.toString().padStart(2, '0');
-      
+
       const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`;
-    
+
       return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp : ''}`;
     } catch {
       return value;
@@ -337,8 +344,11 @@ export function DataTable<TData extends object>({
   onViewJobSummary,
   showFilters,
   setShowFilters,
-  hideDropdown
+  hideDropdown,
+  setSelectedRows,
+  onAllRowsSelectedChange
 }: DataTableProps<TData>) {
+
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
       id: col.key,
@@ -632,22 +642,51 @@ export function DataTable<TData extends object>({
           : "",
       });
     }
-
     // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
     if (onArchiveSelected || onDeleteSelected) {
       cols.unshift({
         id: "select",
         header: ({ table }: any) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => {
-              table.toggleAllPageRowsSelected(!!value);
-            }}
-            aria-label="Select all"
-          />
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+            <Checkbox
+              className={`-mr-8 translate-x-1 -translate-y-0.5 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black translate-y-0' : ''}`}
+              checked={table.getIsAllPageRowsSelected()}
+              onCheckedChange={(value) => {
+                // row.toggleSelected(!!value);
+              }}
+              aria-label="Select all rows"
+              role="combobox"
+            />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent avoidCollisions={false} align="start">
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(false)
+                }}
+              >
+                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs': 'items'}`} on this page
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllRowsSelected(true);
+                  onAllRowsSelectedChange?.(true)
+                }}
+              >
+                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs': 'items'}`}
+              </DropdownMenuItem>
+              <Separator />
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllRowsSelected(false);
+                  onAllRowsSelectedChange?.(false)
+                }}
+              >
+                Deselect all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
         cell: ({ row }: any) => (
           <div className="flex justify-center">
@@ -713,6 +752,13 @@ export function DataTable<TData extends object>({
     [table]
   );
 
+  React.useEffect(() => {
+    if (setSelectedRows) {
+      const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
+      setSelectedRows(selectedRows);
+    }
+  }, [table.getSelectedRowModel().rows, setSelectedRows])
+
   const handleDelete = async () => {
     if (itemsToDelete.length === 0) return;
 
@@ -731,8 +777,7 @@ export function DataTable<TData extends object>({
 
       if (result.success) {
         toast.success(
-          `Successfully deleted ${itemsToDelete.length} item${
-            itemsToDelete.length > 1 ? "s" : ""
+          `Successfully deleted ${itemsToDelete.length} item${itemsToDelete.length > 1 ? "s" : ""
           }`
         );
 
@@ -902,9 +947,9 @@ export function DataTable<TData extends object>({
                           {header.isPlaceholder
                             ? null
                             : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                         </TableHead>
                       );
                     })}
@@ -924,7 +969,7 @@ export function DataTable<TData extends object>({
                       className={cn(
                         "cursor-pointer",
                         isRowSelected(row.original, selectedItem) &&
-                          "bg-muted/50"
+                        "bg-muted/50"
                       )}
                       onClick={() => onRowClick && onRowClick(row.original)}
                     >

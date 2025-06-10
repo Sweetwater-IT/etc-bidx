@@ -20,6 +20,7 @@ interface CardActionsProps {
   goUpActions?: boolean
   importType?: 'available-jobs' | 'active-bids'
   hideImportExport?: boolean
+  onExport?: () => void
 }
 
 export function CardActions({
@@ -31,7 +32,8 @@ export function CardActions({
   hideCalendar = false,
   goUpActions = false,
   importType = 'available-jobs',
-  hideImportExport
+  hideImportExport,
+  onExport
 }: CardActionsProps) {
 
   const [importOpen, setImportOpen] = useState(false)
@@ -134,7 +136,7 @@ export function CardActions({
               onImportSuccess={onImportSuccess}
               importType={importType}
             />
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={onExport}>
               <IconDownload className="h-4 w-4 mr-2" />
               Export
             </Button>
