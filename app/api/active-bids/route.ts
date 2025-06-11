@@ -242,6 +242,12 @@ export async function GET(request: NextRequest) {
         case 'lettingDate':
           query = query.order('admin_data->>lettingDate', { ascending });
           break;
+        case 'contractor':
+          query = query.order('contractor_name', { ascending });
+          break;
+        case 'subcontractor':
+          query = query.order('subcontractor_name', { ascending });
+          break;
         default:
           query = query.order('created_at', { ascending: false });
       }
