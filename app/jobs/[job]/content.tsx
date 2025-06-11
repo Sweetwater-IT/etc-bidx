@@ -930,8 +930,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setIsEditingAvailableJob(true)
     }
 
-    const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
-        setSelectedJobsToArchive(selectedJobs);
+    const initiateArchiveJobs = () => {
+        setSelectedJobsToArchive(selectedAvailableJobs);
         setShowArchiveJobsDialog(true);
     };
 
@@ -1090,16 +1090,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setShowArchiveBidsDialog(true);
     };
 
-    const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
-        console.log('initiateDeleteJobs called with:', selectedJobs);
-
+    const initiateDeleteJobs = () => {
         if (activeSegment === 'archived') {
-            setSelectedJobsToDelete(selectedJobs);
+            setSelectedJobsToDelete(selectedAvailableJobs);
             setShowDeleteJobsDialog(true);
             return;
         }
 
-        const archivedJobs = selectedJobs.filter(job => {
+        const archivedJobs = selectedAvailableJobs.filter(job => {
             return job.status?.toLowerCase().includes('archived');
         });
 
@@ -1109,8 +1107,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
             return;
         }
 
-        if (archivedJobs.length !== selectedJobs.length) {
-            toast.warning(`${selectedJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
+        if (archivedJobs.length !== selectedAvailableJobs.length) {
+            toast.warning(`${selectedAvailableJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
         }
 
         console.log('Setting selected jobs to delete and showing dialog');
@@ -1489,11 +1487,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
       };
 
-    const handleArchive = (item: AvailableJob) => {
-        console.log('Archive clicked:', item)
-        initiateArchiveJobs([item])
-    }
-
     return (
         <SidebarProvider
             style={
@@ -1557,7 +1550,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
                                     onEdit={handleEdit}
-                                    onArchive={handleArchive}
+                                    onArchive={initiateArchiveJobs}
                                     onMarkAsBidJob={handleMarkAsBidJob}
                                     setSelectedRows={setSelectedAvailableJobs}
                                     onAllRowsSelectedChange={setAllAvailableJobRowsSelected}

@@ -9,7 +9,6 @@ import {
   ColumnDef,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -68,6 +67,7 @@ import { useCallback, useState } from "react";
 import { Popover, PopoverContent } from "./ui/popover";
 import { PopoverTrigger } from "@radix-ui/react-popover";
 import { Separator } from "./ui/separator";
+import { formatDate } from "@/lib/formatUTCDate";
 
 export type LegacyColumn = {
   key: string;
@@ -242,12 +242,12 @@ function formatCellValue(value: any, key: string) {
   }
 
   if (value instanceof Date) {
-    return format(value, "MMM d, yyyy");
+    return formatDate(value)
   }
   if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
     try {
       // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(value);
+      const utcDate = new Date(formatDate(value))
 
       // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
