@@ -20,7 +20,20 @@ export async function GET(request: NextRequest) {
     const division = searchParams.get('division');
     const counts = searchParams.get('counts');
     const detailed = searchParams.get('detailed') === 'true';
+    const filters = searchParams.get('filters');
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder');
     
+    // Parse filters if they exist
+    let parsedFilters: Record<string, string[]> = {};
+    if (filters) {
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch (error) {
+        console.error('Error parsing filters:', error);
+      }
+    }
+
     // Helper function to get job data and determine won-pending status
     const getJobsDataForBids = async (bidIds: number[]) => {
       if (bidIds.length === 0) return [];
@@ -117,6 +130,43 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Apply additional filters
+    if (Object.keys(parsedFilters).length > 0) {
+      for (const [field, values] of Object.entries(parsedFilters)) {
+        if (values && values.length > 0) {
+          switch (field) {
+            case 'county':
+              countQuery = countQuery.in('admin_data->county->>name', values);
+              break;
+            case 'owner':
+              countQuery = countQuery.in('admin_data->>owner', values);
+              break;
+            case 'requestor':
+            case 'estimator':
+              // Get the estimator name from the users table
+              const { data: estimatorData, error: estimatorError } = await supabase
+                .from('users')
+                .select('name')
+                .in('id', parsedFilters[field]);
+              
+              if (estimatorError) throw estimatorError;
+              
+              if (estimatorData && estimatorData.length > 0) {
+                const estimatorNames = estimatorData.map(e => e.name);
+                countQuery = countQuery.in('admin_data->>estimator', estimatorNames);
+              }
+              break;
+            case 'branch':
+              countQuery = countQuery.in('admin_data->county->>branch', values);
+              break;
+            case 'status':
+              countQuery = countQuery.in('status', values.map(v => v.toUpperCase()));
+              break;
+          }
+        }
+      }
+    }
+
     // Get the filtered count data first
     const { data: filteredBids, count: totalFilteredCount, error: countError } = await countQuery;
     
@@ -165,8 +215,45 @@ export async function GET(request: NextRequest) {
         total_phases, total_days, total_hours,
         mpt_rental->_summary->>revenue as mpt_revenue,
         mpt_rental->_summary->>grossProfit as mpt_gross_profit
-      `)
-      .order(orderBy, { ascending });
+      `);
+
+    // Apply sorting
+    if (sortBy) {
+      const ascending = sortOrder === 'asc';
+      switch (sortBy) {
+        case 'contractNumber':
+          query = query.order('admin_data->>contractNumber', { ascending });
+          break;
+        case 'status':
+          query = query.order('status', { ascending });
+          break;
+        case 'owner':
+          query = query.order('admin_data->>owner', { ascending });
+          break;
+        case 'county':
+          query = query.order('admin_data->county->>name', { ascending });
+          break;
+        case 'branch':
+          query = query.order('admin_data->county->>branch', { ascending });
+          break;
+        case 'estimator':
+          query = query.order('admin_data->>estimator', { ascending });
+          break;
+        case 'lettingDate':
+          query = query.order('admin_data->>lettingDate', { ascending });
+          break;
+        case 'contractor':
+          query = query.order('contractor_name', { ascending });
+          break;
+        case 'subcontractor':
+          query = query.order('subcontractor_name', { ascending });
+          break;
+        default:
+          query = query.order('created_at', { ascending: false });
+      }
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
 
     // Apply the same basic status filters
     if (status) {
@@ -190,6 +277,43 @@ export async function GET(request: NextRequest) {
         }
       } else {
         query = query.eq('admin_data->>division', division);
+      }
+    }
+
+    // Apply additional filters
+    if (Object.keys(parsedFilters).length > 0) {
+      for (const [field, values] of Object.entries(parsedFilters)) {
+        if (values && values.length > 0) {
+          switch (field) {
+            case 'county':
+              query = query.in('admin_data->county->>name', values);
+              break;
+            case 'owner':
+              query = query.in('admin_data->>owner', values);
+              break;
+            case 'requestor':
+            case 'estimator':
+              // Get the estimator name from the users table
+              const { data: estimatorData, error: estimatorError } = await supabase
+                .from('users')
+                .select('name')
+                .in('id', parsedFilters[field]);
+              
+              if (estimatorError) throw estimatorError;
+              
+              if (estimatorData && estimatorData.length > 0) {
+                const estimatorNames = estimatorData.map(e => e.name);
+                query = query.in('admin_data->>estimator', estimatorNames);
+              }
+              break;
+            case 'branch':
+              query = query.in('admin_data->county->>branch', values);
+              break;
+            case 'status':
+              query = query.in('status', values.map(v => v.toUpperCase()));
+              break;
+          }
+        }
       }
     }
 

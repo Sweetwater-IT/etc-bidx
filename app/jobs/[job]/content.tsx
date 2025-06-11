@@ -467,6 +467,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 detailed: true
             };
 
+            // Add filter parameters if any are active
+            if (Object.keys(activeFilters).length > 0) {
+                options.filters = JSON.stringify(activeFilters);
+                console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
+            }
+
             if (activeSegment !== "all") {
                 const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
 
@@ -475,6 +481,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 } else {
                     options.division = activeSegment;
                 }
+            }
+
+            // Add sorting parameters if available
+            if (sortBy) {
+                options.sortBy = sortBy;
+                options.sortOrder = sortOrder;
+                console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
 
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
@@ -488,7 +501,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 id: e.id,
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
-                //TODO refactor estimate_complete view to return contractor display name by default then contractor name
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
@@ -507,12 +519,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
                 totalHours: e.mpt_rental?._summary?.hours || 0,
                 mptValue: e.mpt_rental._summary.revenue || 0,
-                permSignValue: 0, // Not in the new structure
+                permSignValue: 0,
                 rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
                     sum + (item.revenue || 0), 0) || 0,
                 createdAt: e.created_at ? e.created_at : "",
                 total: e.mpt_rental._summary.revenue || 0
-            }))
+            }));
 
             setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
@@ -523,7 +535,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder]);
 
     const loadActiveJobs = useCallback(async () => {
         try {
@@ -744,20 +756,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else if (isActiveBids) {
             loadActiveBids();
             setCardData([{
-                title: 'Active Bids',
-                value: '18'
+                title: 'Win / Loss Ratio',
+                value: '65%'
             },
             {
-                title: 'Success Rate',
-                value: '72%'
+                title: 'Draft Bids',
+                value: '12'
             },
             {
-                title: 'Average Bid',
-                value: '$125,000'
+                title: 'Pending Bids',
+                value: '8'
             },
             {
-                title: 'Response Time',
-                value: '2.4 days'
+                title: 'Won Jobs Pending Creation',
+                value: '3'
             }
             ])
             fetchActiveBidCounts();
@@ -795,7 +807,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
         fetchActiveJobCounts,
         fetchNextJobNumber,
         job,
-        activeSegment
+        activeSegment,
+        activeFilters,
+        sortBy,
+        sortOrder
     ]);
 
     useEffect(() => {
@@ -1745,6 +1760,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             showFilterButton={false}
                                             showFilters={showFilters}
                                             setShowFilters={setShowFilters}
+                                            hideImport={isActiveBids}
                                         />
                                     </div>
                                     {isActiveJobs && nextJobNumber && (
@@ -1898,6 +1914,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onReset={handleResetControls}
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
+                                    hideDropdown={true}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>

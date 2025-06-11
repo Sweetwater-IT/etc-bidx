@@ -20,6 +20,7 @@ interface CardActionsProps {
   goUpActions?: boolean
   importType?: 'available-jobs' | 'active-bids'
   hideImportExport?: boolean
+  hideImport?: boolean
   onExport?: () => void
   showFilterButton?: boolean
   showFilters?: boolean
@@ -36,6 +37,7 @@ export function CardActions({
   goUpActions = false,
   importType = 'available-jobs',
   hideImportExport,
+  hideImport,
   onExport,
   showFilterButton = false,
   showFilters,
@@ -133,16 +135,20 @@ export function CardActions({
       <div className="flex items-center gap-2">
         {!hideImportExport && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <IconUpload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <ImportSheet
-              open={importOpen}
-              onOpenChange={setImportOpen}
-              onImportSuccess={onImportSuccess}
-              importType={importType}
-            />
+            {!hideImport && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                  <IconUpload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
+                <ImportSheet
+                  open={importOpen}
+                  onOpenChange={setImportOpen}
+                  onImportSuccess={onImportSuccess}
+                  importType={importType}
+                />
+              </>
+            )}
             <Button variant="outline" size="sm" onClick={onExport}>
               <IconDownload className="h-4 w-4 mr-2" />
               Export
