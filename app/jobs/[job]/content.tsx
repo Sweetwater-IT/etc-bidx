@@ -418,7 +418,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     platform: platformValue,
                     noBidReason,
                     stateRoute,
-                    services
+                    services,
+                    alreadyBid: job.alreadyBid || false
                 };
             });
 

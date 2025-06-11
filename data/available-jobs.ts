@@ -13,6 +13,7 @@ export type AvailableJob = {
   dbe? :string;
   noBidReason?: string;
   stateRoute?: string;
+  alreadyBid?: boolean;
   services: Record<AvailableJobServices, boolean>
 };
 

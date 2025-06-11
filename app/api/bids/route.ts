@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
     let tableName = 'available_jobs';
     const status = searchParams.get('status');
 
-    // Build base queries
+    // Build base queries - REMOVE the LEFT JOIN since there's no FK relationship
     let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
     let dataQuery = supabase
       .from(tableName)
-      .select('*')
+      .select('*')  // Just select all fields, no join
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
 
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
         countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true }).is('deleted_at', null);
         dataQuery = supabase
           .from(tableName)
-          .select('*')
+          .select('*')  // No join here either
           .is('deleted_at', null)
           .order(orderBy, { ascending })
           .range(offset, offset + limit - 1);
@@ -167,9 +167,53 @@ export async function GET(request: NextRequest) {
     const totalCount = countResult.count || 0;
     const pageCount = Math.ceil(totalCount / limit);
 
+    // NEW: Get the alreadyBid information with a separate query
+    let processedData = dataResult.data || [];
+    
+    if (processedData.length > 0) {
+      // Extract contract numbers from the fetched data
+      const contractNumbers = processedData
+        .map(item => item.contract_number)
+        .filter(contractNumber => contractNumber && contractNumber.trim() !== '');
+
+      if (contractNumbers.length > 0) {
+        // Query bid_estimates to see which contract numbers already exist
+        const bidEstimatesResult = await supabase
+          .from('bid_estimates')
+          .select('contract_number')
+          .in('contract_number', contractNumbers);
+
+        if (!bidEstimatesResult.error) {
+          // Create a Set of contract numbers that already have bids
+          const existingBids = new Set(
+            bidEstimatesResult.data?.map(item => item.contract_number) || []
+          );
+
+          // Add alreadyBid property to each item
+          processedData = processedData.map(item => ({
+            ...item,
+            alreadyBid: existingBids.has(item.contract_number)
+          }));
+        } else {
+          console.error('Error fetching bid estimates:', bidEstimatesResult.error);
+          // If there's an error, default alreadyBid to false for all items
+          processedData = processedData.map(item => ({
+            ...item,
+            alreadyBid: false
+          }));
+        }
+      } else {
+        // No valid contract numbers, set alreadyBid to false for all
+        processedData = processedData.map(item => ({
+          ...item,
+          alreadyBid: false
+        }));
+      }
+    }
+
     const response: any = {
       success: true,
-      data: dataResult.data || [],
+      data: processedData,
       pagination: {
         page,
         pageSize: limit,

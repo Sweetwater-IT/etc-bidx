@@ -468,7 +468,7 @@ export function DataTable<TData extends object>({
                 <DropdownMenuContent align="end" className="z-[200]">
                   {onMarkAsBidJob &&
                     "status" in row.original &&
-                    (row.original as any).status === "Bid" && (
+                    (row.original as any).status === "Bid" && !(row.original as any).alreadyBid && (
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
@@ -740,7 +740,7 @@ export function DataTable<TData extends object>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    manualSorting: false,
+    manualSorting: true,
     enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
     state: {
       pagination: {
