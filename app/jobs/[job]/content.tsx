@@ -1520,7 +1520,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
                                             onExport={isAvailableJobs ? handleExportAvailableJobs : () => {}}
-                                            showFilterButton={isAvailableJobs}
+                                            showFilterButton={false}
                                             showFilters={showFilters}
                                             setShowFilters={setShowFilters}
                                         />
