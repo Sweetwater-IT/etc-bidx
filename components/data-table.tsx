@@ -125,7 +125,7 @@ export interface DataTableProps<TData extends object> {
   onRowClick?: (item: TData) => void;
   onViewDetails?: (item: TData) => void;
   onEdit?: (item: TData) => void;
-  onArchive?: (item: TData) => void;
+  onArchive?: (item: TData[]) => void;
   onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
   onUpdateStatus?: (item: TData, status: string) => void;
   selectedItem?: TData;
@@ -152,6 +152,8 @@ export interface DataTableProps<TData extends object> {
   hideDropdown?: boolean;
   setSelectedRows?: React.Dispatch<React.SetStateAction<TData[]>>
   onAllRowsSelectedChange?: React.Dispatch<React.SetStateAction<boolean>>
+  allRowsSelected?: boolean
+  handleMultiDelete?: () => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -350,7 +352,9 @@ export function DataTable<TData extends object>({
   setShowFilters,
   hideDropdown,
   setSelectedRows,
-  onAllRowsSelectedChange
+  onAllRowsSelectedChange,
+  allRowsSelected,
+  handleMultiDelete
 }: DataTableProps<TData>) {
 
   const columns = React.useMemo(() => {
@@ -431,7 +435,7 @@ export function DataTable<TData extends object>({
 
               if (onArchive && !archiveSuccessful) {
                 try {
-                  await onArchive(row.original as TData);
+                  await onArchive(row.original as TData[]);
                   console.log("onArchive called successfully");
                   archiveSuccessful = true;
                 } catch (error) {
@@ -656,7 +660,7 @@ export function DataTable<TData extends object>({
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Checkbox
-                className={`translate-x-2 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+                className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={(value) => {
                   // row.toggleSelected(!!value);
@@ -768,48 +772,6 @@ export function DataTable<TData extends object>({
     }
   }, [table.getSelectedRowModel().rows, setSelectedRows])
 
-  const handleDelete = async () => {
-    if (itemsToDelete.length === 0) return;
-
-    const selectedIds = itemsToDelete.map((item) => (item as any).id);
-
-    try {
-      const response = await fetch("/api/bids/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(
-          `Successfully deleted ${itemsToDelete.length} item${itemsToDelete.length > 1 ? "s" : ""
-          }`
-        );
-
-        table.toggleAllRowsSelected(false);
-
-        if (onSegmentChange && segmentValue === "archived") {
-          window.location.href = window.location.pathname + "?segment=archived";
-        } else if (onSegmentChange) {
-          onSegmentChange(segmentValue || "");
-        }
-      } else {
-        console.error("Failed to delete items:", result.message);
-        toast.error(`Failed to delete: ${result.message}`);
-      }
-    } catch (error) {
-      console.error("Error deleting items:", error);
-      toast.error("An error occurred while deleting items.");
-    } finally {
-      setDeleteDialogOpen(false);
-      setItemsToDelete([]);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Top Controls Section */}
@@ -877,7 +839,6 @@ export function DataTable<TData extends object>({
             activeFilters={activeFilters}
           />
         )}
-
         {table.getSelectedRowModel().rows.length >= 2 && (
           <div className="flex justify-end mt-3">
             {segmentValue === "archived" ? (
@@ -885,14 +846,20 @@ export function DataTable<TData extends object>({
                 variant="destructive"
                 size="sm"
                 onClick={() => {
-                  const selectedRows = table
-                    .getSelectedRowModel()
-                    .rows.map((row) => row.original as TData);
-                  setItemsToDelete(selectedRows);
-                  setDeleteDialogOpen(true);
+                  // Don't set itemsToDelete when allRowsSelected is true
+                  // Just open the dialog directly
+                  if (allRowsSelected) {
+                    setDeleteDialogOpen(true);
+                  } else {
+                    const selectedRows = table
+                      .getSelectedRowModel()
+                      .rows.map((row) => row.original as TData);
+                    setItemsToDelete(selectedRows);
+                    setDeleteDialogOpen(true);
+                  }
                 }}
               >
-                Delete ({table.getSelectedRowModel().rows.length})
+                Delete ({allRowsSelected ? totalCount : table.getSelectedRowModel().rows.length})
               </Button>
             ) : (
               onArchiveSelected && (
@@ -901,10 +868,15 @@ export function DataTable<TData extends object>({
                   size="sm"
                   className="text-destructive border-destructive hover:bg-destructive/10"
                   onClick={async () => {
-                    const selectedRows = table
-                      .getSelectedRowModel()
-                      .rows.map((row) => row.original as TData);
-                    await onArchiveSelected(selectedRows);
+                    // Same fix for archive
+                    if (allRowsSelected) {
+                      await onArchiveSelected([]);
+                    } else {
+                      const selectedRows = table
+                        .getSelectedRowModel()
+                        .rows.map((row) => row.original as TData);
+                      await onArchiveSelected(selectedRows);
+                    }
 
                     table.toggleAllRowsSelected(false);
 
@@ -913,7 +885,7 @@ export function DataTable<TData extends object>({
                     }
                   }}
                 >
-                  Archive ({table.getSelectedRowModel().rows.length})
+                  Archive ({allRowsSelected ? totalCount : table.getSelectedRowModel().rows.length})
                 </Button>
               )
             )}
@@ -1158,7 +1130,7 @@ export function DataTable<TData extends object>({
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {itemsToDelete.length} item
+              Are you sure you want to delete {allRowsSelected ? totalCount : pageCount} item
               {itemsToDelete.length !== 1 ? "s" : ""}? This action cannot be
               undone.
             </DialogDescription>
@@ -1170,7 +1142,7 @@ export function DataTable<TData extends object>({
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={handleMultiDelete}>
               Delete
             </Button>
           </DialogFooter>
