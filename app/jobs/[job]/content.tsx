@@ -744,20 +744,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else if (isActiveBids) {
             loadActiveBids();
             setCardData([{
-                title: 'Active Bids',
-                value: '18'
+                title: 'Win / Loss Ratio',
+                value: '65%'
             },
             {
-                title: 'Success Rate',
-                value: '72%'
+                title: 'Draft Bids',
+                value: '12'
             },
             {
-                title: 'Average Bid',
-                value: '$125,000'
+                title: 'Pending Bids',
+                value: '8'
             },
             {
-                title: 'Response Time',
-                value: '2.4 days'
+                title: 'Won Jobs Pending Creation',
+                value: '3'
             }
             ])
             fetchActiveBidCounts();
