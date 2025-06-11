@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuGroup, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -18,18 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { 
-  ArrowDownAZ, 
-  ArrowUpAZ, 
-  ArrowDownUp, 
-  Filter, 
+import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ArrowDownUp,
+  Filter,
   X,
   Check,
   ChevronsUpDown,
@@ -90,78 +90,99 @@ export function TableControls({
   showFilters,
   setShowFilters
 }: Omit<TableControlsProps, 'filterOptions' | 'branchOptions' | 'ownerOptions' | 'countyOptions' | 'estimatorOptions'>) {
-  
+
   // State for filter values
-  const [branch, setBranch] = useState<string>("");
-  const [owner, setOwner] = useState<string>("");
-  const [county, setCounty] = useState<string>("");
-  const [estimator, setEstimator] = useState<string>("");
-  const [dateField, setDateField] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  
-  // Initialize filter values from activeFilters
+  const [branch, setBranch] = useState<string>(activeFilters?.branch?.[0] || "all");
+  const [owner, setOwner] = useState<string>(activeFilters?.owner?.[0] || "all");
+  const [county, setCounty] = useState<string>(activeFilters?.county?.[0] || "all");
+  const [estimator, setEstimator] = useState<string>(activeFilters?.estimator?.[0] || "all");
+  const [dateField, setDateField] = useState<string>(activeFilters?.dateField?.[0] || "none");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(
+    activeFilters?.dateFrom ? new Date(activeFilters.dateFrom[0]) : undefined
+  );
+  const [dateTo, setDateTo] = useState<Date | undefined>(
+    activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined
+  );
+
+  // Update filter states when activeFilters change
   useEffect(() => {
-    if (activeFilters.branch && activeFilters.branch.length > 0) {
-      setBranch(activeFilters.branch[0]);
-    }
-    if (activeFilters.owner && activeFilters.owner.length > 0) {
-      setOwner(activeFilters.owner[0]);
-    }
-    if (activeFilters.county && activeFilters.county.length > 0) {
-      setCounty(activeFilters.county[0]);
-    }
-    if (activeFilters.estimator && activeFilters.estimator.length > 0) {
-      setEstimator(activeFilters.estimator[0]);
-    }
-    if (activeFilters.dateField && activeFilters.dateField.length > 0) {
-      setDateField(activeFilters.dateField[0]);
-    }
-    if (activeFilters.dateFrom && activeFilters.dateFrom.length > 0) {
-      setDateFrom(new Date(activeFilters.dateFrom[0]));
-    }
-    if (activeFilters.dateTo && activeFilters.dateTo.length > 0) {
-      setDateTo(new Date(activeFilters.dateTo[0]));
-    }
+    setBranch(activeFilters?.branch?.[0] || "all");
+    setOwner(activeFilters?.owner?.[0] || "all");
+    setCounty(activeFilters?.county?.[0] || "all");
+    setEstimator(activeFilters?.estimator?.[0] || "all");
+    setDateField(activeFilters?.dateField?.[0] || "none");
+    setDateFrom(activeFilters?.dateFrom ? new Date(activeFilters.dateFrom[0]) : undefined);
+    setDateTo(activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined);
   }, [activeFilters]);
-  
+
   // Apply filters function
-  const applyFilters = () => {
-    const filters: Record<string, string[]> = {};
+  const applyFilters = useCallback(() => {
+    if (!onFilterChange) return;
     
-    // Only add filters for values that aren't the 'all' placeholder
-    if (branch && branch !== 'all') filters.branch = [branch];
-    if (owner && owner !== 'all') filters.owner = [owner];
-    if (county && county !== 'all') filters.county = [county];
-    if (estimator && estimator !== 'all') filters.estimator = [estimator];
+    // Start with a copy of the current activeFilters to preserve any filters not managed by this component
+    const filters: Record<string, any> = { ...activeFilters };
     
-    // Only add date filters if a date field is selected and it's not 'none'
-    if (dateField && dateField !== 'none' && (dateFrom || dateTo)) {
+    // Update or remove branch filter
+    if (branch && branch !== "all") {
+      filters.branch = [branch];
+    } else {
+      delete filters.branch;
+    }
+    
+    // Update or remove owner filter
+    if (owner && owner !== "all") {
+      filters.owner = [owner];
+    } else {
+      delete filters.owner;
+    }
+    
+    // Update or remove county filter
+    if (county && county !== "all") {
+      filters.county = [county];
+    } else {
+      delete filters.county;
+    }
+    
+    // Update or remove estimator filter
+    if (estimator && estimator !== "all") {
+      filters.estimator = [estimator];
+    } else {
+      delete filters.estimator;
+    }
+    
+    // Update or remove date filters
+    if (dateField && dateField !== "none") {
       filters.dateField = [dateField];
-      if (dateFrom) filters.dateFrom = [dateFrom.toISOString()];
-      if (dateTo) filters.dateTo = [dateTo.toISOString()];
+      if (dateFrom) filters.dateFrom = [dateFrom.toISOString().split('T')[0]];
+      if (dateTo) filters.dateTo = [dateTo.toISOString().split('T')[0]];
+    } else {
+      delete filters.dateField;
+      delete filters.dateFrom;
+      delete filters.dateTo;
     }
     
-    if (onFilterChange) {
-      onFilterChange(filters);
-    }
-  };
-  
+    // Log the filters being applied
+    console.log('Applying filters:', filters);
+    
+    // Apply the combined filters
+    onFilterChange(filters);
+  }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, onFilterChange, activeFilters]);
+
   // Reset filters function
   const resetFilters = () => {
-    setBranch("");
-    setOwner("");
-    setCounty("");
-    setEstimator("");
-    setDateField("");
+    setBranch("all");
+    setOwner("all");
+    setCounty("all");
+    setEstimator("all");
+    setDateField("none");
     setDateFrom(undefined);
     setDateTo(undefined);
-    
+
     if (onReset) {
       onReset();
     }
   };
-  
+
   const getIconForField = (field: string) => {
     switch (field) {
       case 'contractNumber':
@@ -184,25 +205,29 @@ export function TableControls({
   const hasActiveFilters = activeFilters && Object.keys(activeFilters).length > 0;
   // const hasActiveSort = !!activeSort;
   const hasActiveControls = hasActiveFilters;
-  
-  
+
+  // Force re-render when activeFilters changes
+  useEffect(() => {
+    console.log('Active filters changed:', activeFilters);
+  }, [activeFilters]);
+
   return (
     <div className={cn("flex flex-col w-full", className)}>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          {/* Reset Button - Only shown when filters or sorts are active */}
+          {/* Reset Button - Only shown when filters or sorts are active
           {hasActiveControls && onReset && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-9 gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={resetFilters}
             >
               <X className="h-4 w-4" />
               <span>Reset</span>
             </Button>
-          )}
-          
+          )} */}
+
           {/* Sort Dropdown */}
           {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -251,11 +276,11 @@ export function TableControls({
             variant="outline"
             size="sm"
             className="h-9 gap-1"
-            onClick={() => setShowFilters ? setShowFilters(!showFilters): console.log('Set show filters not set')}
+            onClick={() => setShowFilters ? setShowFilters(!showFilters) : console.log('Set show filters not set')}
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
-            {hasActiveFilters && (
+            {Object.keys(activeFilters).length > 0 && (
               <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                 {Object.keys(activeFilters).length}
               </span>
@@ -288,34 +313,28 @@ export function FilterDropdowns({
   className?: string;
 }) {
   // State for filter values
-  const [branch, setBranch] = useState<string>(activeFilters.branch || "");
-  const [owner, setOwner] = useState<string>(activeFilters.owner || "");
-  const [county, setCounty] = useState<string>(activeFilters.county || "");
-  const [estimator, setEstimator] = useState<string>(activeFilters.estimator || "");
-  const [dateField, setDateField] = useState<string>(activeFilters.dateField || "");
+  const [branch, setBranch] = useState<string>(activeFilters?.branch?.[0] || "all");
+  const [owner, setOwner] = useState<string>(activeFilters?.owner?.[0] || "all");
+  const [county, setCounty] = useState<string>(activeFilters?.county?.[0] || "all");
+  const [estimator, setEstimator] = useState<string>(activeFilters?.estimator?.[0] || "all");
+  const [dateField, setDateField] = useState<string>(activeFilters?.dateField?.[0] || "none");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
-    activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : undefined
+    activeFilters?.dateFrom ? new Date(activeFilters.dateFrom[0]) : undefined
   );
   const [dateTo, setDateTo] = useState<Date | undefined>(
-    activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined
+    activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined
   );
-  
+
   // Update filter states when activeFilters change
   useEffect(() => {
-    setBranch(activeFilters.branch || "");
-    setOwner(activeFilters.owner || "");
-    setCounty(activeFilters.county || "");
-    setEstimator(activeFilters.estimator || "");
-    setDateField(activeFilters.dateField || "");
-    setDateFrom(activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : undefined);
-    setDateTo(activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined);
+    setBranch(activeFilters?.branch?.[0] || "all");
+    setOwner(activeFilters?.owner?.[0] || "all");
+    setCounty(activeFilters?.county?.[0] || "all");
+    setEstimator(activeFilters?.estimator?.[0] || "all");
+    setDateField(activeFilters?.dateField?.[0] || "none");
+    setDateFrom(activeFilters?.dateFrom ? new Date(activeFilters.dateFrom[0]) : undefined);
+    setDateTo(activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined);
   }, [activeFilters]);
-  
-  // Log filter values for debugging
-  useEffect(() => {
-    console.log('Current filter values:', { branch, owner, county, estimator, dateField, dateFrom, dateTo });
-    console.log('Current activeFilters:', activeFilters);
-  }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, activeFilters]);
 
   // Apply filters function
   const applyFilters = useCallback(() => {
@@ -326,58 +345,67 @@ export function FilterDropdowns({
     
     // Update or remove branch filter
     if (branch && branch !== "all") {
-      filters.branch = branch;
+      filters.branch = [branch];
     } else {
       delete filters.branch;
     }
     
     // Update or remove owner filter
     if (owner && owner !== "all") {
-      filters.owner = owner;
+      filters.owner = [owner];
     } else {
       delete filters.owner;
     }
     
     // Update or remove county filter
     if (county && county !== "all") {
-      filters.county = county;
+      filters.county = [county];
     } else {
       delete filters.county;
     }
     
     // Update or remove estimator filter
     if (estimator && estimator !== "all") {
-      filters.estimator = estimator;
+      filters.estimator = [estimator];
     } else {
       delete filters.estimator;
     }
     
     // Update or remove date filters
     if (dateField && dateField !== "none") {
-      filters.dateField = dateField;
-      if (dateFrom) filters.dateFrom = dateFrom;
-      if (dateTo) filters.dateTo = dateTo;
+      filters.dateField = [dateField];
+      if (dateFrom) filters.dateFrom = [dateFrom.toISOString().split('T')[0]];
+      if (dateTo) filters.dateTo = [dateTo.toISOString().split('T')[0]];
     } else {
       delete filters.dateField;
       delete filters.dateFrom;
       delete filters.dateTo;
     }
     
+    // Log the filters being applied
+    console.log('Applying filters:', filters);
+    
     // Apply the combined filters
     onFilterChange(filters);
   }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, onFilterChange, activeFilters]);
-  
+
+  // Log filter values for debugging
+  useEffect(() => {
+    console.log('Current filter values:', { branch, owner, county, estimator, dateField, dateFrom, dateTo });
+    console.log('Current activeFilters:', activeFilters);
+  }, [branch, owner, county, estimator, dateField, dateFrom, dateTo, activeFilters]);
+
   if (!showFilters) return null;
-  
+
   return (
     <div className={cn("flex flex-wrap justify-end gap-2 mb-4", className)}>
       {/* Branch Filter */}
       <div className="w-40 sm:w-44">
         <Popover>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              role="combobox" 
+            <Button
+              variant="outline"
+              role="combobox"
               className="w-full justify-between h-9">
               {branch ? branchOptions.find(opt => opt.value === branch)?.label || "All Branches" : "All Branches"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -423,18 +451,30 @@ export function FilterDropdowns({
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="p-2 border-t">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    console.log('Apply Branch Filter clicked');
+                    applyFilters();
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
-      
+
       {/* Owner Filter */}
       <div className="w-40 sm:w-44">
         <Popover>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              role="combobox" 
+            <Button
+              variant="outline"
+              role="combobox"
               className="w-full justify-between h-9">
               {owner ? ownerOptions.find(opt => opt.value === owner)?.label || "All Owners" : "All Owners"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -480,18 +520,30 @@ export function FilterDropdowns({
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="p-2 border-t">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    console.log('Apply Owner Filter clicked');
+                    applyFilters();
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
-      
+
       {/* County Filter */}
       <div className="w-40 sm:w-44">
         <Popover>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              role="combobox" 
+            <Button
+              variant="outline"
+              role="combobox"
               className="w-full justify-between h-9">
               {county ? countyOptions.find(opt => opt.value === county)?.label || "All Counties" : "All Counties"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -537,18 +589,30 @@ export function FilterDropdowns({
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="p-2 border-t">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    console.log('Apply County Filter clicked');
+                    applyFilters();
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
-      
+
       {/* Estimator Filter */}
       <div className="w-40 sm:w-44">
         <Popover>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              role="combobox" 
+            <Button
+              variant="outline"
+              role="combobox"
               className="w-full justify-between h-9">
               {estimator ? estimatorOptions.find(opt => opt.value === estimator)?.label || "All Estimators" : "All Estimators"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -594,11 +658,23 @@ export function FilterDropdowns({
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="p-2 border-t">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    console.log('Apply Estimator Filter clicked');
+                    applyFilters();
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
-      
+
       {/* Date Field Filter */}
       <div className="w-40 sm:w-44">
         <Select value={dateField || "none"} onValueChange={setDateField}>
@@ -613,9 +689,9 @@ export function FilterDropdowns({
           </SelectContent>
         </Select>
       </div>
-      
+
       {/* Date Range Filters - Only shown if a date field is selected */}
-      {dateField && dateField !== 'none' && (
+      {dateField && dateField !== "none" && (
         <>
           {/* From Date */}
           <div className="w-40 sm:w-44">
@@ -639,10 +715,22 @@ export function FilterDropdowns({
                   onSelect={setDateFrom}
                   initialFocus
                 />
+                <div className="p-2 border-t">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => {
+                      console.log('Apply Date From Filter clicked');
+                      applyFilters();
+                    }}
+                  >
+                    Apply Filter
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
-          
+
           {/* To Date */}
           <div className="w-40 sm:w-44">
             <Popover>
@@ -665,24 +753,50 @@ export function FilterDropdowns({
                   onSelect={setDateTo}
                   initialFocus
                 />
+                <div className="p-2 border-t">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => {
+                      console.log('Apply Date To Filter clicked');
+                      applyFilters();
+                    }}
+                  >
+                    Apply Filter
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
         </>
       )}
-      
-      {/* Apply Filters Button */}
-      <div className="w-40 sm:w-44">
-        <Button 
-          variant="default" 
-          className="h-9 w-full"
+      {/* Clear Filters Button */}
+      <div className="w-30 sm:w-20">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1 border-none text-grey hover:bg-[#f5f5f5]"
           onClick={() => {
-            console.log('Apply Filters clicked');
-            console.log('Applying filters:', { branch, owner, county, estimator, dateField, dateFrom, dateTo });
-            applyFilters();
+            // Reset all local state
+            setBranch("all");
+            setOwner("all");
+            setCounty("all");
+            setEstimator("all");
+            setDateField("none");
+            setDateFrom(undefined);
+            setDateTo(undefined);
+
+            // Create empty filters object to clear all filters
+            const emptyFilters: Record<string, any> = {};
+            
+            // Apply the empty filters
+            if (onFilterChange) {
+              console.log('Clearing all filters');
+              onFilterChange(emptyFilters);
+            }
           }}
         >
-          Apply Filters
+          <span>Clear All</span>
         </Button>
       </div>
     </div>

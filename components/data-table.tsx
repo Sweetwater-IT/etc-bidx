@@ -831,21 +831,9 @@ export function DataTable<TData extends object>({
             {/* Sort and Filter Controls */}
             {onSortChange && (
               <TableControls
-                // onSortChange={onSortChange}
                 onFilterChange={onFilterChange}
                 onReset={onReset}
-                // sortOptions={legacyColumns
-                //   .filter((col) => col.sortable)
-                //   .map((col) => ({
-                //     label: col.title,
-                //     value: col.key,
-                //   }))}
-                // activeSort={
-                //   sortBy && sortOrder
-                //     ? { field: sortBy, direction: sortOrder }
-                //     : undefined
-                // }
-                // activeFilters={activeFilters}
+                activeFilters={activeFilters}
                 showFilters={!!showFilters}
                 setShowFilters={setShowFilters}
               />
