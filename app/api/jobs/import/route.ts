@@ -52,6 +52,7 @@ export async function POST(request: Request) {
           // We need to standardize the date format to YYYY-MM-DD for database storage
           // This ensures consistency between the table and drawer views
           const currentDateStr = new Date().toISOString().split('T')[0];
+          const currentTimestamp = new Date().toISOString();
           
           const updatedJob = {
             ...job,
@@ -59,7 +60,9 @@ export async function POST(request: Request) {
             // Use current date as default for required date fields
             letting_date: job.letting_date ? new Date(job.letting_date).toISOString().split('T')[0] : currentDateStr,
             due_date: job.due_date ? new Date(job.due_date).toISOString().split('T')[0] : currentDateStr,
-            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr
+            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr,
+            // Refresh the created_at timestamp for existing records
+            created_at: currentTimestamp
           };
           
           console.log('Updating job with dates:', {
@@ -83,12 +86,15 @@ export async function POST(request: Request) {
           // Standardize date formats for new jobs too
           // Use current date as default for required date fields to satisfy type requirements
           const currentDateStr = new Date().toISOString().split('T')[0];
+          const currentTimestamp = new Date().toISOString();
           
           const newJob = {
             ...job,
             letting_date: job.letting_date ? new Date(job.letting_date).toISOString().split('T')[0] : currentDateStr,
             due_date: job.due_date ? new Date(job.due_date).toISOString().split('T')[0] : currentDateStr,
-            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr
+            entry_date: job.entry_date ? new Date(job.entry_date).toISOString().split('T')[0] : currentDateStr,
+            // Set the created_at timestamp for new records
+            created_at: currentTimestamp
           };
           
           newJobs.push(newJob);
