@@ -117,7 +117,7 @@ export interface DataTableProps<TData extends object> {
   onAddClick?: () => void;
   onSegmentChange?: (value: string) => void;
   stickyLastColumn?: boolean;
-  onArchiveSelected?: (selectedRows: TData[]) => void;
+  onArchiveSelected?: (selectedRows:  TData[]) => void;
   onDeleteSelected?: (selectedRows: TData[]) => void;
   tableRef?: React.RefObject<{
     resetRowSelection: () => void;
@@ -125,7 +125,7 @@ export interface DataTableProps<TData extends object> {
   onRowClick?: (item: TData) => void;
   onViewDetails?: (item: TData) => void;
   onEdit?: (item: TData) => void;
-  onArchive?: (item: TData[]) => void;
+  onArchive?: ((item: TData) => void) | ((item: TData[]) => void);
   onMarkAsBidJob?: (item: TData) => void; // Prop for marking a job as a bid job
   onUpdateStatus?: (item: TData, status: string) => void;
   selectedItem?: TData;
@@ -435,7 +435,7 @@ export function DataTable<TData extends object>({
 
               if (onArchive && !archiveSuccessful) {
                 try {
-                  await onArchive(row.original as TData[]);
+                  await onArchive(row.original as any);
                   console.log("onArchive called successfully");
                   archiveSuccessful = true;
                 } catch (error) {
