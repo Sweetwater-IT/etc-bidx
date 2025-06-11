@@ -1523,6 +1523,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             showFilterButton={false}
                                             showFilters={showFilters}
                                             setShowFilters={setShowFilters}
+                                            hideImport={isActiveBids}
                                         />
                                     </div>
                                     {isActiveJobs && nextJobNumber && (
@@ -1670,6 +1671,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onReset={handleResetControls}
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
+                                    hideDropdown={true}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
