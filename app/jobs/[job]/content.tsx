@@ -1263,9 +1263,17 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     // Handler for filter changes in the available jobs table
-    const handleFilterChange = (filters: Record<string, string[]>) => {
+    const handleFilterChange = (filters: Record<string, any>) => {
         console.log('Applying filters:', filters);
-        setActiveFilters(filters);
+        // Convert the filters to the expected format
+        const formattedFilters: Record<string, string[]> = {};
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value && value !== "all" && value !== "none" && value !== "") {
+                formattedFilters[key] = Array.isArray(value) ? value : [value];
+            }
+        });
+        console.log('Setting formatted filters:', formattedFilters);
+        setActiveFilters(formattedFilters);
         // Reset to first page when filters change
         setAvailableJobsPageIndex(0);
     };
