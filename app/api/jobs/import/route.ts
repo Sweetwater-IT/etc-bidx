@@ -303,7 +303,9 @@ async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], er
     branch: branchName || 'turbotville', // Default to turbotville if branch lookup fails
     location: cleanValue(location),
     platform: cleanValue(platform),
+    created_at: parsedEntryDate || new Date().toISOString(),
     entry_date: parsedEntryDate || new Date().toISOString(),
+    updated_at: parsedEntryDate || new Date().toISOString(),
     state_route: cleanValue(stateRoute), // Add state route from Excel
     mpt: Boolean(mpt || false),
     flagging: Boolean(flagging || false),

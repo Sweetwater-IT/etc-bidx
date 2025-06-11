@@ -67,10 +67,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [availableJobsTotalCount, setAvailableJobsTotalCount] = useState(0);
     const [selectedAvailableJobs, setSelectedAvailableJobs] = useState<AvailableJob[]>([]);
     const [isEditingAvailableJob, setIsEditingAvailableJob] = useState<boolean>(false)
-    //tracks the state of open bids to archive
-    const [selectedJobsToArchive, setSelectedJobsToArchive] = useState<AvailableJob[]>([]);
-    //tracks the state of open bids to delete when on the archived tab
-    const [selectedJobsToDelete, setSelectedJobsToDelete] = useState<AvailableJob[]>([]);
     //tracks individual selected open bids when clicking on the row to open the editing sidebar
     const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null)
     //opens the confirmation to archive the open bids
@@ -85,6 +81,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
+
+    const [allActiveBidRowsSelected, setAllActiveBidRowsSelected] = useState<boolean>(false);
+    const [selectedActiveBids, setSelectedActiveBids] = useState<ActiveBid[]>([]);
 
     // Reference data for dropdowns and filters
     const [referenceData, setReferenceData] = useState<{
@@ -215,8 +214,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [activeBidsPageSize, setActiveBidsPageSize] = useState(25);
     const [activeBidsPageCount, setActiveBidsPageCount] = useState(0);
     const [activeBidsTotalCount, setActiveBidsTotalCount] = useState(0);
-    const [selectedBidsToArchive, setSelectedBidsToArchive] = useState<ActiveBid[]>([]);
-    const [selectedBidsToDelete, setSelectedBidsToDelete] = useState<ActiveBid[]>([]);
     const [showArchiveBidsDialog, setShowArchiveBidsDialog] = useState(false);
     const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
     const [selectedActiveBid, setSelectedActiveBid] = useState<ActiveBid | null>(null);
@@ -454,7 +451,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(availableJobs[nextIndex])
     }
 
-    const { customers, getCustomers} = useCustomers();
+    const { customers, getCustomers } = useCustomers();
 
     useEffect(() => {
         getCustomers();
@@ -559,7 +556,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 billingStatus: job.billingStatus,
                 contractNumber: job.contractNumber,
                 location: job.location,
-                county:  (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch},
+                county: (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch },
                 countyJson: job.countyJson,
                 branch: job.branch,
                 contractor: job.contractor,
@@ -805,10 +802,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
         if (!isAvailableJobs) return;
         if (dateRange?.from && !dateRange.to) return;
         if (dateRange?.to && !dateRange.from) return;
-    
+
         let startDate: string;
         let endDate: string;
-    
+
         if (dateRange?.from && dateRange?.to) {
             // Use the selected date range
             startDate = dateRange.from.toISOString().split('T')[0];
@@ -817,7 +814,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else {
             fetchAvailableJobCounts();
         }
-    
+
     }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]);
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
@@ -924,6 +921,108 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     }, [startLoading, stopLoading]);
 
+    const fetchAllFilteredJobs = async () => {
+        const options: any = {
+            limit: availableJobsTotalCount || 10000,
+            page: 1,
+        };
+
+        // Apply current filters
+        if (Object.keys(activeFilters).length > 0) {
+            options.filters = JSON.stringify(activeFilters);
+        }
+
+        // Apply current segment filter
+        if (activeSegment === "archived") {
+            options.status = "archived";
+        } else if (activeSegment !== "all") {
+            const dbStatus = mapUiStatusToDbStatus(activeSegment);
+            options.status = dbStatus;
+        }
+
+        // Apply current sorting
+        if (sortBy) {
+            options.sortBy = sortBy;
+            options.sortOrder = sortOrder;
+        }
+
+        const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch all jobs');
+        }
+
+        const result = await response.json();
+        return result.data.map((job: any) => {
+            // Use the same transformation logic from loadAvailableJobs
+            const isEffectivelyUnknown = (value: any): boolean => {
+                if (value === undefined || value === null) return true;
+                if (typeof value === 'string') {
+                    const normalized = value.toLowerCase().trim();
+                    return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                }
+                return false;
+            };
+
+            let countyValue = '';
+            if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+                countyValue = job.county;
+            } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+                countyValue = job.county.name;
+            } else if (job.admin_data?.county) {
+                if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+                    countyValue = job.admin_data.county;
+                } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+                    countyValue = job.admin_data.county.name;
+                }
+            }
+
+            const branchCode = job.branch_code || '';
+            const branchMap: Record<string, string> = {
+                '10': 'Hatfield',
+                '20': 'Turbotville',
+                '30': 'West'
+            };
+            let branchValue = '';
+            if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+                branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
+            } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+                branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
+            } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+                branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
+            }
+
+            return {
+                id: job.id,
+                contractNumber: job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '',
+                status: job.status || 'Unset',
+                requestor: job.requestor || job.admin_data?.requestor || '',
+                owner: job.owner || job.admin_data?.owner || '',
+                lettingDate: job.letting_date || '',
+                dueDate: job.due_date || '',
+                county: {
+                    main: countyValue,
+                    secondary: branchValue
+                },
+                countyValue: countyValue,
+                branch: branchValue,
+                dbe: job.dbe_percentage || job.admin_data?.dbePercentage || null,
+                createdAt: job.created_at || '',
+                location: job.location || job.admin_data?.location || '',
+                platform: job.platform || job.admin_data?.platform || '',
+                noBidReason: job.no_bid_reason || null,
+                stateRoute: job.state_route || null,
+                services: {
+                    'MPT': job.mpt || false,
+                    'Flagging': job.flagging || false,
+                    'Equipment Rental': job.equipment_rental || false,
+                    'Perm Signs': job.perm_signs || false,
+                    'Other': job.other || false
+                },
+                alreadyBid: job.alreadyBid || false
+            };
+        });
+    };
+
     const handleEdit = (item: AvailableJob) => {
         console.log('Edit clicked:', item)
         setSelectedJob(item)
@@ -931,8 +1030,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }
 
     const initiateArchiveJobs = (selectedJobs: AvailableJob[]) => {
-        setSelectedJobsToArchive(selectedJobs);
+        setSelectedAvailableJobs(selectedJobs);
         setShowArchiveJobsDialog(true);
+    };
+    
+    // 2. Fix initiateDeleteJobs function  
+    const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
+        setSelectedAvailableJobs(selectedJobs);
+        setShowDeleteJobsDialog(true);
     };
 
     //active jobs i.e. jobs 
@@ -940,6 +1045,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedActiveJobsToArchive(selectedJobs);
         setShowArchiveActiveJobsDialog(true);
     };
+
     const initiateDeleteActiveJobs = (selectedJobs: ActiveJob[]) => {
         console.log('initiateDeleteActiveJobs called with:', selectedJobs);
 
@@ -967,6 +1073,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedActiveJobsToDelete(archivedJobs);
         setShowDeleteActiveJobsDialog(true);
     };
+
     const handleArchiveActiveJobs = async () => {
         try {
             startLoading();
@@ -1031,12 +1138,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    const handleArchiveActiveJob = (item: ActiveJob) => {
-        console.log('Archive clicked for active job:', item);
+    const handleArchiveActiveJob = (items: ActiveJob[]) => {
+        console.log('Archive clicked for active job:', items);
 
-        if ('jobNumber' in item) {
+        if ('jobNumber' in items[0]) {
             // This is an active job
-            initiateArchiveActiveJobs([item as ActiveJob]);
+            initiateArchiveActiveJobs(items);
         }
     };
 
@@ -1056,22 +1163,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleArchiveAvailableJobs = async () => {
         try {
             startLoading();
-            const ids = selectedJobsToArchive.map(job => job.id);
-
+            
+            let jobsToArchive: AvailableJob[] = [];
+            
+            if (allAvailableJobRowsSelected) {
+                console.log('Fetching all filtered jobs for archiving');
+                jobsToArchive = await fetchAllFilteredJobs();
+                // Filter out already archived jobs
+                jobsToArchive = jobsToArchive.filter(job => 
+                    !job.status?.toLowerCase().includes('archived')
+                );
+                console.log(`Archiving all ${jobsToArchive.length} filtered non-archived jobs`);
+            } else {
+                // Filter out already archived jobs from selection
+                jobsToArchive = selectedAvailableJobs.filter(job => 
+                    !job.status?.toLowerCase().includes('archived')
+                );
+                console.log(`Archiving ${jobsToArchive.length} selected non-archived jobs`);
+            }
+    
+            if (jobsToArchive.length === 0) {
+                toast.error('No jobs to archive. All selected jobs are already archived.');
+                return false;
+            }
+    
+            const ids = jobsToArchive.map(job => job.id);
             await archiveJobs(ids);
-
-            toast.success(`Successfully archived ${ids.length} job(s)`, {
+    
+            toast.success(`Successfully archived ${jobsToArchive.length} job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-
+    
             await loadAvailableJobs();
-
+            await fetchAvailableJobCounts();
+    
             // Reset row selection after successful archive
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-
+    
             return true;
         } catch (error) {
             console.error('Error archiving jobs:', error);
@@ -1083,59 +1214,70 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    };
+    };    
 
     const initiateArchiveBids = (selectedBids: ActiveBid[]) => {
-        setSelectedBidsToArchive(selectedBids);
+        setSelectedActiveBids(selectedBids);
         setShowArchiveBidsDialog(true);
     };
-
-    const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
-        console.log('initiateDeleteJobs called with:', selectedJobs);
-
-        if (activeSegment === 'archived') {
-            setSelectedJobsToDelete(selectedJobs);
-            setShowDeleteJobsDialog(true);
-            return;
-        }
-
-        const archivedJobs = selectedJobs.filter(job => {
-            return job.status?.toLowerCase().includes('archived');
-        });
-
-        if (archivedJobs.length === 0) {
-            console.log('No archived jobs found, showing error');
-            toast.error('Only archived jobs can be deleted. Please select archived jobs.');
-            return;
-        }
-
-        if (archivedJobs.length !== selectedJobs.length) {
-            toast.warning(`${selectedJobs.length - archivedJobs.length} non-archived job(s) will be skipped.`);
-        }
-
-        console.log('Setting selected jobs to delete and showing dialog');
-        setSelectedJobsToDelete(archivedJobs);
-        setShowDeleteJobsDialog(true);
+    
+    // 7. Fix initiateDeleteBids function
+    const initiateDeleteBids = (selectedBids: ActiveBid[]) => {
+        setSelectedActiveBids(selectedBids);
+        setShowDeleteBidsDialog(true);
     };
+    
+
 
     const handleDeleteArchivedJobs = async () => {
         try {
             startLoading();
-            const ids = selectedJobsToDelete.map(job => job.id);
-
+            
+            let jobsToDelete: AvailableJob[] = [];
+            
+            if (allAvailableJobRowsSelected) {
+                console.log('Fetching all filtered jobs for deletion');
+                const allJobs = await fetchAllFilteredJobs();
+                // For deletion, we only want archived jobs
+                jobsToDelete = allJobs.filter(job => 
+                    activeSegment === 'archived' || job.status?.toLowerCase().includes('archived')
+                );
+                console.log(`Deleting all ${jobsToDelete.length} filtered archived jobs`);
+            } else {
+                // Filter for archived jobs from selection
+                if (activeSegment === 'archived') {
+                    // If we're in archived segment, all selected jobs can be deleted
+                    jobsToDelete = selectedAvailableJobs;
+                } else {
+                    // If we're not in archived segment, only delete actually archived jobs
+                    jobsToDelete = selectedAvailableJobs.filter(job => 
+                        job.status?.toLowerCase().includes('archived')
+                    );
+                }
+                console.log(`Deleting ${jobsToDelete.length} selected archived jobs`);
+            }
+    
+            if (jobsToDelete.length === 0) {
+                toast.error('No archived jobs found to delete.');
+                return false;
+            }
+    
+            const ids = jobsToDelete.map(job => job.id);
             const result = await deleteArchivedJobs(ids);
-
+    
             toast.success(`Successfully deleted ${result.count} archived job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-
+    
             await loadAvailableJobs();
-
+            await fetchAvailableJobCounts();
+            setShowArchiveJobsDialog(false)
+    
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-
+    
             return true;
         } catch (error) {
             console.error('Error deleting archived jobs:', error);
@@ -1149,50 +1291,121 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    const initiateDeleteBids = (selectedBids: ActiveBid[]) => {
-        console.log('initiateDeleteBids called with:', selectedBids);
-
-        if (activeSegment === 'archived') {
-            setSelectedBidsToDelete(selectedBids);
-            setShowDeleteBidsDialog(true);
-            return;
+    const fetchAllFilteredActiveBids = async () => {
+        const options: any = {
+            limit: activeBidsTotalCount || 10000,
+            page: 1,
+            detailed: true
+        };
+    
+        // Apply current segment filter
+        if (activeSegment !== "all") {
+            const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
+            if (statusValues.includes(activeSegment.toLowerCase())) {
+                options.status = activeSegment;
+            } else {
+                options.division = activeSegment;
+            }
         }
-
-        const archivedBids = selectedBids.filter(bid => {
-            return bid.status.toLowerCase().includes('archived');
-        });
-
-        if (archivedBids.length === 0) {
-            toast.error('Only archived bids can be deleted. Please select archived bids.');
-            return;
+    
+        // Apply current sorting if any
+        if (sortBy) {
+            options.sortBy = sortBy;
+            options.sortOrder = sortOrder;
         }
-
-        if (archivedBids.length !== selectedBids.length) {
-            toast.warning(`${selectedBids.length - archivedBids.length} non-archived bid(s) will be skipped.`);
+    
+        // Apply current filters if any
+        if (Object.keys(activeFilters).length > 0) {
+            options.filters = JSON.stringify(activeFilters);
         }
-
-        setSelectedBidsToDelete(archivedBids);
-        setShowDeleteBidsDialog(true);
+    
+        const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch all active bids');
+        }
+        
+        const result = await response.json();
+        return result.data.map((e: any) => ({
+            id: e.id,
+            contractNumber: e.contractNumber,
+            originalContractNumber: e.contractNumber,
+            contractor: (e.contractor_name && customers) ? 
+                customers.find(c => c.name === e.contractor_name)?.displayName || 
+                customers.find(c => c.name === e.contractor_name)?.name : '-',
+            subcontractor: e.subcontractor_name || '-',
+            owner: e.admin_data.owner || 'Unknown',
+            county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
+                main: e.admin_data.county.name,
+                secondary: e.admin_data.county.branch
+            },
+            branch: e.admin_data.county.branch,
+            estimator: e.admin_data.estimator || 'Unknown',
+            status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
+            division: e.admin_data.division,
+            lettingDate: e.admin_data.lettingDate ? e.admin_data.lettingDate : "",
+            startDate: e.admin_data.startDate ? e.admin_data.startDate : "",
+            endDate: e.admin_data.endDate ? e.admin_data.endDate : "",
+            projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ?
+                Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+            totalHours: e.mpt_rental?._summary?.hours || 0,
+            mptValue: e.mpt_rental._summary.revenue || 0,
+            permSignValue: 0,
+            rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
+                sum + (item.revenue || 0), 0) || 0,
+            createdAt: e.created_at ? e.created_at : "",
+            total: e.mpt_rental._summary.revenue || 0
+        }));
     };
+    
 
     const handleDeleteArchivedBids = async () => {
         try {
             startLoading();
-            const ids = selectedBidsToDelete.map(bid => bid.id);
-
+            
+            let bidsToDelete: ActiveBid[] = [];
+            
+            if (allActiveBidRowsSelected) {
+                console.log('Fetching all filtered bids for deletion');
+                const allBids = await fetchAllFilteredActiveBids();
+                // For deletion, we only want archived bids
+                bidsToDelete = allBids.filter(bid => 
+                    activeSegment === 'archived' || bid.status.toLowerCase().includes('archived')
+                );
+                console.log(`Deleting all ${bidsToDelete.length} filtered archived bids`);
+            } else {
+                // Filter for archived bids from selection
+                if (activeSegment === 'archived') {
+                    // If we're in archived segment, all selected bids can be deleted
+                    bidsToDelete = selectedActiveBids;
+                } else {
+                    // If we're not in archived segment, only delete actually archived bids
+                    bidsToDelete = selectedActiveBids.filter(bid => 
+                        bid.status.toLowerCase().includes('archived')
+                    );
+                }
+                console.log(`Deleting ${bidsToDelete.length} selected archived bids`);
+            }
+    
+            if (bidsToDelete.length === 0) {
+                toast.error('No archived bids found to delete.');
+                return false;
+            }
+    
+            const ids = bidsToDelete.map(bid => bid.id);
             const result = await deleteArchivedActiveBids(ids);
-
+    
             toast.success(`Successfully deleted ${result.count} archived bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-
+    
             await loadActiveBids();
-
+            await fetchActiveBidCounts();
+    
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-
+    
             return true;
         } catch (error) {
             console.error('Error deleting archived bids:', error);
@@ -1209,32 +1422,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleArchiveActiveBids = async () => {
         try {
             startLoading();
-            const ids = selectedBidsToArchive.map(bid => bid.id);
-
-            const nonArchivedBids = selectedBidsToArchive.filter(bid => !bid.status.toLowerCase().includes('archived'));
-            if (nonArchivedBids.length !== selectedBidsToArchive.length) {
-                toast.warning(`${selectedBidsToArchive.length - nonArchivedBids.length} bid(s) are already archived and will be skipped.`);
+            
+            let bidsToArchive: ActiveBid[] = [];
+            
+            if (allActiveBidRowsSelected) {
+                console.log('Fetching all filtered bids for archiving');
+                bidsToArchive = await fetchAllFilteredActiveBids();
+                // Filter out already archived bids
+                bidsToArchive = bidsToArchive.filter(bid => 
+                    !bid.status.toLowerCase().includes('archived')
+                );
+                console.log(`Archiving all ${bidsToArchive.length} filtered non-archived bids`);
+            } else {
+                // Filter out already archived bids from selection
+                bidsToArchive = selectedActiveBids.filter(bid => 
+                    !bid.status.toLowerCase().includes('archived')
+                );
+                console.log(`Archiving ${bidsToArchive.length} selected non-archived bids`);
             }
-
-            if (nonArchivedBids.length === 0) {
+    
+            if (bidsToArchive.length === 0) {
                 toast.error('No bids to archive. All selected bids are already archived.');
                 return false;
             }
-
+    
+            const ids = bidsToArchive.map(bid => bid.id);
             await archiveActiveBids(ids);
-
-            toast.success(`Successfully archived ${ids.length} bid(s)`, {
+    
+            toast.success(`Successfully archived ${bidsToArchive.length} bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-
+    
             await loadActiveBids();
-
+            await fetchActiveBidCounts();
+    
             // Reset row selection after successful archive
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-
+    
             return true;
         } catch (error) {
             console.error('Error archiving bids:', error);
@@ -1247,7 +1474,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     };
-
+    
     const handleViewDetails = (item: AvailableJob) => {
         setSelectedJob(item)
         setOpenBidSheetOpen(true)
@@ -1360,139 +1587,134 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const handleExportAvailableJobs = async () => {
         try {
-          startLoading();
-          
-          if (allAvailableJobRowsSelected) {
-            // Fetch all jobs with current filters applied
-            const options: any = {
-              limit: availableJobsTotalCount || 10000, // Use total count or a large number
-              page: 1,
-            };
-      
-            // Apply current filters to get the same filtered dataset
-            if (Object.keys(activeFilters).length > 0) {
-              options.filters = JSON.stringify(activeFilters);
-            }
-      
-            // Apply current segment filter
-            if (activeSegment === "archived") {
-              options.status = "archived";
-            } else if (activeSegment !== "all") {
-              const dbStatus = mapUiStatusToDbStatus(activeSegment);
-              options.status = dbStatus;
-            }
-      
-            // Apply current sorting
-            if (sortBy) {
-              options.sortBy = sortBy;
-              options.sortOrder = sortOrder;
-            }
-      
-            console.log("Fetching all jobs for export with options:", options);
-      
-            const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
-            if (!response.ok) {
-              throw new Error('Failed to fetch all jobs for export');
-            }
-            
-            const result = await response.json();
-            const allJobs = result.data.map((job: any) => {
-              // Use the same transformation logic from loadAvailableJobs
-              const isEffectivelyUnknown = (value: any): boolean => {
-                if (value === undefined || value === null) return true;
-                if (typeof value === 'string') {
-                  const normalized = value.toLowerCase().trim();
-                  return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
-                }
-                return false;
-              };
-      
-              let countyValue = '';
-              if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
-                countyValue = job.county;
-              } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
-                countyValue = job.county.name;
-              } else if (job.admin_data?.county) {
-                if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
-                  countyValue = job.admin_data.county;
-                } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
-                  countyValue = job.admin_data.county.name;
-                }
-              }
-      
-              const branchCode = job.branch_code || '';
-              const branchMap: Record<string, string> = {
-                '10': 'Hatfield',
-                '20': 'Turbotville',
-                '30': 'West'
-              };
-              let branchValue = '';
-              if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
-                branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
-              } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
-                branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
-              } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
-                branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
-              }
-      
-              return {
-                id: job.id,
-                contractNumber: job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '',
-                status: job.status || 'Unset',
-                requestor: job.requestor || job.admin_data?.requestor || '',
-                owner: job.owner || job.admin_data?.owner || '',
-                lettingDate: job.letting_date || '',
-                dueDate: job.due_date || '',
-                county: {
-                  main: countyValue,
-                  secondary: branchValue
-                },
-                countyValue: countyValue,
-                branch: branchValue,
-                dbe: job.dbe_percentage || job.admin_data?.dbePercentage || null,
-                createdAt: job.created_at || '',
-                location: job.location || job.admin_data?.location || '',
-                platform: job.platform || job.admin_data?.platform || '',
-                noBidReason: job.no_bid_reason || null,
-                stateRoute: job.state_route || null,
-                services: {
-                  'MPT': job.mpt || false,
-                  'Flagging': job.flagging || false,
-                  'Equipment Rental': job.equipment_rental || false,
-                  'Perm Signs': job.perm_signs || false,
-                  'Other': job.other || false
-                }
-              };
-            });
-      
-            console.log(`Exporting all ${allJobs.length} jobs`);
-            exportAvailableJobsToExcel(allJobs);
-            toast.success(`Exported all ${allJobs.length} jobs to Excel`);
-            
-          } else {
-            // Export only selected rows (existing logic)
-            if (selectedAvailableJobs.length === 0) {
-              toast.error('Please select jobs in the table before exporting');
-              return;
-            }
-            
-            console.log(`Exporting ${selectedAvailableJobs.length} selected jobs`);
-            exportAvailableJobsToExcel(selectedAvailableJobs);
-            toast.success(`Exported ${selectedAvailableJobs.length} selected jobs to Excel`);
-          }
-          
-        } catch (error) {
-          console.error('Error exporting jobs:', error);
-          toast.error('Failed to export jobs. Please try again.');
-        } finally {
-          stopLoading();
-        }
-      };
+            startLoading();
 
-    const handleArchive = (item: AvailableJob) => {
-        console.log('Archive clicked:', item)
-        initiateArchiveJobs([item])
-    }
+            if (allAvailableJobRowsSelected) {
+                // Fetch all jobs with current filters applied
+                const options: any = {
+                    limit: availableJobsTotalCount || 10000, // Use total count or a large number
+                    page: 1,
+                };
+
+                // Apply current filters to get the same filtered dataset
+                if (Object.keys(activeFilters).length > 0) {
+                    options.filters = JSON.stringify(activeFilters);
+                }
+
+                // Apply current segment filter
+                if (activeSegment === "archived") {
+                    options.status = "archived";
+                } else if (activeSegment !== "all") {
+                    const dbStatus = mapUiStatusToDbStatus(activeSegment);
+                    options.status = dbStatus;
+                }
+
+                // Apply current sorting
+                if (sortBy) {
+                    options.sortBy = sortBy;
+                    options.sortOrder = sortOrder;
+                }
+
+                console.log("Fetching all jobs for export with options:", options);
+
+                const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch all jobs for export');
+                }
+
+                const result = await response.json();
+                const allJobs = result.data.map((job: any) => {
+                    // Use the same transformation logic from loadAvailableJobs
+                    const isEffectivelyUnknown = (value: any): boolean => {
+                        if (value === undefined || value === null) return true;
+                        if (typeof value === 'string') {
+                            const normalized = value.toLowerCase().trim();
+                            return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                        }
+                        return false;
+                    };
+
+                    let countyValue = '';
+                    if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+                        countyValue = job.county;
+                    } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+                        countyValue = job.county.name;
+                    } else if (job.admin_data?.county) {
+                        if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+                            countyValue = job.admin_data.county;
+                        } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+                            countyValue = job.admin_data.county.name;
+                        }
+                    }
+
+                    const branchCode = job.branch_code || '';
+                    const branchMap: Record<string, string> = {
+                        '10': 'Hatfield',
+                        '20': 'Turbotville',
+                        '30': 'West'
+                    };
+                    let branchValue = '';
+                    if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+                        branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
+                    } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+                        branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
+                    } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+                        branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
+                    }
+
+                    return {
+                        id: job.id,
+                        contractNumber: job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '',
+                        status: job.status || 'Unset',
+                        requestor: job.requestor || job.admin_data?.requestor || '',
+                        owner: job.owner || job.admin_data?.owner || '',
+                        lettingDate: job.letting_date || '',
+                        dueDate: job.due_date || '',
+                        county: {
+                            main: countyValue,
+                            secondary: branchValue
+                        },
+                        countyValue: countyValue,
+                        branch: branchValue,
+                        dbe: job.dbe_percentage || job.admin_data?.dbePercentage || null,
+                        createdAt: job.created_at || '',
+                        location: job.location || job.admin_data?.location || '',
+                        platform: job.platform || job.admin_data?.platform || '',
+                        noBidReason: job.no_bid_reason || null,
+                        stateRoute: job.state_route || null,
+                        services: {
+                            'MPT': job.mpt || false,
+                            'Flagging': job.flagging || false,
+                            'Equipment Rental': job.equipment_rental || false,
+                            'Perm Signs': job.perm_signs || false,
+                            'Other': job.other || false
+                        }
+                    };
+                });
+
+                console.log(`Exporting all ${allJobs.length} jobs`);
+                exportAvailableJobsToExcel(allJobs);
+                toast.success(`Exported all ${allJobs.length} jobs to Excel`);
+
+            } else {
+                // Export only selected rows (existing logic)
+                if (selectedAvailableJobs.length === 0) {
+                    toast.error('Please select jobs in the table before exporting');
+                    return;
+                }
+
+                console.log(`Exporting ${selectedAvailableJobs.length} selected jobs`);
+                exportAvailableJobsToExcel(selectedAvailableJobs);
+                toast.success(`Exported ${selectedAvailableJobs.length} selected jobs to Excel`);
+            }
+
+        } catch (error) {
+            console.error('Error exporting jobs:', error);
+            toast.error('Failed to export jobs. Please try again.');
+        } finally {
+            stopLoading();
+        }
+    };
 
     return (
         <SidebarProvider
@@ -1519,7 +1741,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             date={dateRange}
                                             setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                            onExport={isAvailableJobs ? handleExportAvailableJobs : () => {}}
+                                            onExport={isAvailableJobs ? handleExportAvailableJobs : () => { }}
                                             showFilterButton={false}
                                             showFilters={showFilters}
                                             setShowFilters={setShowFilters}
@@ -1558,9 +1780,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
                                     onEdit={handleEdit}
-                                    onArchive={handleArchive}
+                                    onArchive={initiateArchiveJobs}
                                     onMarkAsBidJob={handleMarkAsBidJob}
+                                    handleMultiDelete={handleDeleteArchivedJobs}
                                     setSelectedRows={setSelectedAvailableJobs}
+                                    allRowsSelected={allAvailableJobRowsSelected}
                                     onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
                                     selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
                                     onUpdateStatus={(item, status: string) => {
@@ -1620,6 +1844,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveBids}
                                     onDeleteSelected={initiateDeleteBids}
                                     tableRef={activeBidsTableRef}
+                                    setSelectedRows={setSelectedActiveBids}
+                                    allRowsSelected={allActiveBidRowsSelected}
+                                    onAllRowsSelectedChange={setAllActiveBidRowsSelected}
+                                    handleMultiDelete={handleDeleteArchivedBids}
                                     onViewDetails={(item) => {
                                         const params = new URLSearchParams;
                                         params.append('bidId', item.id.toString());
@@ -1786,23 +2014,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 isOpen={showArchiveJobsDialog}
                                 onClose={() => setShowArchiveJobsDialog(false)}
                                 onConfirm={handleArchiveAvailableJobs}
-                                itemCount={selectedJobsToArchive.length}
+                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
                                 itemType="job"
                             />
+
 
                             <ConfirmArchiveDialog
                                 isOpen={showArchiveBidsDialog}
                                 onClose={() => setShowArchiveBidsDialog(false)}
                                 onConfirm={handleArchiveActiveBids}
-                                itemCount={selectedBidsToArchive.length}
+                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
                                 itemType="bid"
                             />
-
                             <ConfirmDeleteDialog
                                 isOpen={showDeleteJobsDialog}
                                 onClose={() => setShowDeleteJobsDialog(false)}
                                 onConfirm={handleDeleteArchivedJobs}
-                                itemCount={selectedJobsToDelete.length}
+                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
                                 itemType="job"
                             />
 
@@ -1810,7 +2038,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 isOpen={showDeleteBidsDialog}
                                 onClose={() => setShowDeleteBidsDialog(false)}
                                 onConfirm={handleDeleteArchivedBids}
-                                itemCount={selectedBidsToDelete.length}
+                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
                                 itemType="bid"
                             />
 
