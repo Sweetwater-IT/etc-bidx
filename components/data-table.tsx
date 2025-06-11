@@ -27,14 +27,16 @@ import {
   SortOption,
 } from "@/components/table-controls";
 import {
+  ArrowDown,
+  ArrowUp,
+  Check,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  MoreHorizontal,
-  ArrowDown,
-  ArrowUp,
   ChevronsUpDown,
+  Minus,
+  MoreHorizontal,
 } from "lucide-react";
 import { IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
@@ -43,8 +45,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -63,13 +65,15 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useCallback, useState } from "react";
+import { Popover, PopoverContent } from "./ui/popover";
+import { PopoverTrigger } from "@radix-ui/react-popover";
+import { Separator } from "./ui/separator";
 
 export type LegacyColumn = {
   key: string;
   title: string;
   className?: string;
   sortable?: boolean;
-  render?: (value: any) => React.ReactNode;
 };
 
 // Extended column type to include additional properties used in the table
@@ -146,6 +150,8 @@ export interface DataTableProps<TData extends object> {
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
   hideDropdown?: boolean;
+  setSelectedRows?: React.Dispatch<React.SetStateAction<TData[]>>
+  onAllRowsSelectedChange?: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 function formatCellValue(value: any, key: string) {
@@ -242,27 +248,27 @@ function formatCellValue(value: any, key: string) {
     try {
       // Create a Date object directly from the ISO string - this will be interpreted as UTC
       const utcDate = new Date(value);
-      
+
       // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
       ];
-      
+
       const monthName = monthNames[utcDate.getMonth()]; // getMonth() instead of getUTCMonth()
       const dayNum = utcDate.getDate(); // getDate() instead of getUTCDate()
       const yearNum = utcDate.getFullYear(); // getFullYear() instead of getUTCFullYear()
-    
+
       // For time, also use local methods
       const hoursValue = utcDate.getHours(); // getHours() instead of parsing from string
       const minutesValue = utcDate.getMinutes(); // getMinutes() for proper minutes
-      
+
       const amOrPm = hoursValue >= 12 ? 'PM' : 'AM';
       const hoursFormatted = hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue;
       const minutesFormatted = minutesValue.toString().padStart(2, '0');
-      
+
       const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`;
-    
+
       return `${monthName} ${dayNum}, ${yearNum}${key === 'createdAt' ? timestamp : ''}`;
     } catch {
       return value;
@@ -342,62 +348,23 @@ export function DataTable<TData extends object>({
   onViewJobSummary,
   showFilters,
   setShowFilters,
-  hideDropdown
+  hideDropdown,
+  setSelectedRows,
+  onAllRowsSelectedChange
 }: DataTableProps<TData>) {
+
   const columns = React.useMemo(() => {
-    const cols: ExtendedColumn<TData>[] = [];
-
-    // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
-    if (onArchiveSelected || onDeleteSelected) {
-      cols.push({
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => {
-              table.toggleAllPageRowsSelected(!!value);
-            }}
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => {
-                row.toggleSelected(!!value);
-              }}
-              aria-label="Select row"
-              onClick={(e) => e.stopPropagation()} // Prevent row click when checkbox is clicked
-            />
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        meta: {
-          className: "w-16"
-        }
-      });
-    }
-
-    // Map legacy columns to ColumnDef
-    legacyColumns.forEach((col) => {
-      const columnDef: ExtendedColumn<TData> = {
-        id: col.key, // Add id for columns
-        accessorKey: col.key,
-        header: col.title,
-        cell: (info) =>
-          col.render ? col.render(info.row.original) : formatCellValue(info.getValue(), col.key),
-        enableSorting: col.sortable,
-        meta: {
-          className: col.className,
-        },
-      };
-      cols.push(columnDef);
-    });
+    const cols: ExtendedColumn<TData>[] = legacyColumns.map((col) => ({
+      id: col.key,
+      accessorKey: col.key,
+      header: col.title,
+      cell: ({ row }: any) => {
+        const value = row.getValue(col.key);
+        return formatCellValue(value, col.key);
+      },
+      className: col.className,
+      enableSorting: col.sortable ?? true
+    }));
 
     // Add actions column if any action handlers are provided
     if (
@@ -405,13 +372,12 @@ export function DataTable<TData extends object>({
       onEdit ||
       onArchive ||
       onMarkAsBidJob ||
-      onUpdateStatus ||
-      onViewJobSummary
+      onUpdateStatus
     ) {
       cols.push({
         id: "actions",
         accessorKey: "actions",
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => {
           const handleDelete = useCallback(
             async (e: React.MouseEvent) => {
@@ -428,6 +394,7 @@ export function DataTable<TData extends object>({
                   console.log("onDeleteSelected called successfully");
                   toast.success("Item deleted successfully");
 
+                  // Force a refresh of the current segment data and counts
                   if (onSegmentChange && segmentValue) {
                     setTimeout(() => {
                       console.log(
@@ -442,7 +409,7 @@ export function DataTable<TData extends object>({
                 }
               }
             },
-            [row.original, segmentValue, onDeleteSelected, onSegmentChange]
+            [row.original]
           );
 
           const handleArchive = useCallback(
@@ -476,7 +443,7 @@ export function DataTable<TData extends object>({
                 onSegmentChange(segmentValue);
               }
             },
-            [row.original, onArchiveSelected, onArchive, onSegmentChange, segmentValue]
+            [row.original]
           );
 
           return (
@@ -491,7 +458,8 @@ export function DataTable<TData extends object>({
                   <Button
                     variant="ghost"
                     className="h-8 w-8 p-0"
-                    onClick={(e) => e.stopPropagation()} // Prevent row click
+                    onClick={(e) => e.stopPropagation()}
+                    role="combobox"
                   >
                     <span className="sr-only">Open menu</span>
                     <MoreHorizontal className="h-4 w-4" />
@@ -500,7 +468,7 @@ export function DataTable<TData extends object>({
                 <DropdownMenuContent align="end" className="z-[200]">
                   {onMarkAsBidJob &&
                     "status" in row.original &&
-                    (row.original as any).status === "Bid" && (
+                    (row.original as any).status === "Bid" && !(row.original as any).alreadyBid && (
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
@@ -515,9 +483,7 @@ export function DataTable<TData extends object>({
                   {onUpdateStatus && "status" in row.original && segments && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <DropdownMenuItem
-                          onSelect={(e) => e.preventDefault()} // Prevent closing parent dropdown
-                        >
+                        <DropdownMenuItem>
                           Mark as
                           <span className="ml-auto">
                             <svg
@@ -677,10 +643,74 @@ export function DataTable<TData extends object>({
             </div>
           );
         },
+        className: stickyLastColumn
+          ? "sticky right-0 bg-white dark:bg-background"
+          : "",
+      });
+    }
+    // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
+    if (onArchiveSelected || onDeleteSelected) {
+      cols.unshift({
+        id: "select",
+        header: ({ table }: any) => (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Checkbox
+                className={`translate-x-2 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+                checked={table.getIsAllPageRowsSelected()}
+                onCheckedChange={(value) => {
+                  // row.toggleSelected(!!value);
+                }}
+                aria-label="Select all rows"
+                role="combobox"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent avoidCollisions={false} align="start">
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(false)
+                }}
+              >
+                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllRowsSelected(true);
+                  onAllRowsSelectedChange?.(true)
+                }}
+              >
+                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
+              </DropdownMenuItem>
+              <Separator />
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllRowsSelected(false);
+                  onAllRowsSelectedChange?.(false)
+                }}
+              >
+                Deselect all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+        cell: ({ row }: any) => (
+          <div className="flex justify-center">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => {
+                row.toggleSelected(!!value);
+              }}
+              aria-label="Select row"
+              onClick={(e) => e.stopPropagation()} // Prevent row click when checkbox is clicked
+            />
+          </div>
+        ),
         meta: {
           className: "w-16 text-right",
         },
         enableSorting: false,
+        enableHiding: false,
       });
     }
 
@@ -731,6 +761,13 @@ export function DataTable<TData extends object>({
     [table]
   );
 
+  React.useEffect(() => {
+    if (setSelectedRows) {
+      const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
+      setSelectedRows(selectedRows);
+    }
+  }, [table.getSelectedRowModel().rows, setSelectedRows])
+
   const handleDelete = async () => {
     if (itemsToDelete.length === 0) return;
 
@@ -749,8 +786,7 @@ export function DataTable<TData extends object>({
 
       if (result.success) {
         toast.success(
-          `Successfully deleted ${itemsToDelete.length} item${
-            itemsToDelete.length > 1 ? "s" : ""
+          `Successfully deleted ${itemsToDelete.length} item${itemsToDelete.length > 1 ? "s" : ""
           }`
         );
 
@@ -795,21 +831,21 @@ export function DataTable<TData extends object>({
             {/* Sort and Filter Controls */}
             {onSortChange && (
               <TableControls
-                onSortChange={onSortChange}
+                // onSortChange={onSortChange}
                 onFilterChange={onFilterChange}
                 onReset={onReset}
-                sortOptions={legacyColumns
-                  .filter((col) => col.sortable)
-                  .map((col) => ({
-                    label: col.title,
-                    value: col.key,
-                  }))}
-                activeSort={
-                  sortBy && sortOrder
-                    ? { field: sortBy, direction: sortOrder }
-                    : undefined
-                }
-                activeFilters={activeFilters}
+                // sortOptions={legacyColumns
+                //   .filter((col) => col.sortable)
+                //   .map((col) => ({
+                //     label: col.title,
+                //     value: col.key,
+                //   }))}
+                // activeSort={
+                //   sortBy && sortOrder
+                //     ? { field: sortBy, direction: sortOrder }
+                //     : undefined
+                // }
+                // activeFilters={activeFilters}
                 showFilters={!!showFilters}
                 setShowFilters={setShowFilters}
               />
@@ -818,7 +854,7 @@ export function DataTable<TData extends object>({
             {/* Table Actions Menu - without Archive/Delete */}
             {!hideDropdown && <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-1">
+                <Button variant="outline" size="sm" className="h-9 gap-1" role="combobox">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -910,20 +946,25 @@ export function DataTable<TData extends object>({
                         <TableHead
                           key={header.id}
                           className={cn(
-                            "py-2 px-4 text-left text-sm font-semibold text-muted-foreground bg-gray-50 uppercase tracking-wider",
-                            (header.column.columnDef.meta as { className?: string })?.className,
-                            stickyLastColumn && header.id === table.getLeafHeaders().at(-1)?.id
-                              ? "sticky right-0 bg-gray-50 z-10"
-                              : "",
-                            header.column.getCanSort() ? "cursor-pointer select-none" : ""
+                            // Use type assertion to handle the className property
+                            (header.column.columnDef as any).className,
+                            isActions && stickyLastColumn
+                              ? "sticky right-0 bg-muted"
+                              : "text-sm !font-medium"
                           )}
                         >
-                          {header.isPlaceholder ? null : ( // Conditional rendering for placeholder headers
+                          {header.isPlaceholder || header.column.id === 'actions' ? null : header.column.id === 'select' ? (
+                            flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )
+                          ) : (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  role='combobox'
                                   className="-ml-3 h-8 data-[state=open]:bg-accent"
                                 >
                                   {flexRender(
@@ -942,13 +983,23 @@ export function DataTable<TData extends object>({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start">
                                 <DropdownMenuItem
-                                  onClick={() => header.column.toggleSorting(false)}
+                                  onClick={() => {
+                                    // Call your parent component's sort function
+                                    onSortChange?.(header.column.id, 'asc');
+                                    // Also update TanStack table state
+                                    header.column.toggleSorting(false);
+                                  }}
                                 >
                                   <ArrowUp className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                   Asc
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => header.column.toggleSorting(true)}
+                                  onClick={() => {
+                                    // Call your parent component's sort function
+                                    onSortChange?.(header.column.id, 'desc');
+                                    // Also update TanStack table state
+                                    header.column.toggleSorting(true);
+                                  }}
                                 >
                                   <ArrowDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                   Desc
@@ -956,7 +1007,11 @@ export function DataTable<TData extends object>({
                                 <DropdownMenuSeparator />
                                 {header.column.getCanSort() && (
                                   <DropdownMenuItem
-                                    onClick={() => header.column.clearSorting()}
+                                    onClick={() => {
+                                      // Clear sorting in both places
+                                      onSortChange?.('', 'asc'); // Or however you handle clearing
+                                      header.column.clearSorting();
+                                    }}
                                   >
                                     <ChevronsUpDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                     Clear Sort
@@ -984,7 +1039,7 @@ export function DataTable<TData extends object>({
                       className={cn(
                         "cursor-pointer",
                         isRowSelected(row.original, selectedItem) &&
-                          "bg-muted/50"
+                        "bg-muted/50"
                       )}
                       onClick={() => onRowClick && onRowClick(row.original)}
                     >
@@ -1094,8 +1149,10 @@ export function DataTable<TData extends object>({
                 <Button
                   variant="outline"
                   className="hidden h-8 w-8 p-0 lg:flex"
-                  onClick={() => onPageChange && onPageChange(pageCount! - 1)}
-                  disabled={pageIndex === pageCount! - 1 || !onPageChange}
+                  onClick={() =>
+                    onPageChange && onPageChange((pageCount || 1) - 1)
+                  }
+                  disabled={pageIndex === (pageCount || 1) - 1 || !onPageChange}
                 >
                   <span className="sr-only">Go to last page</span>
                   <ChevronsRight className="h-4 w-4" />

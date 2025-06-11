@@ -63,16 +63,16 @@ export type FilterOption = {
 };
 
 interface TableControlsProps {
-  onSortChange: (field: string, direction: 'asc' | 'desc') => void;
+  // onSortChange: (field: string, direction: 'asc' | 'desc') => void;
   onFilterChange?: (filters: any) => void;
   onReset?: () => void;
-  sortOptions: SortOption[];
+  // sortOptions: SortOption[];
   filterOptions?: FilterOption[];
   branchOptions?: { label: string; value: string }[];
   ownerOptions?: { label: string; value: string }[];
   countyOptions?: { label: string; value: string }[];
   estimatorOptions?: { label: string; value: string }[];
-  activeSort?: { field: string; direction: 'asc' | 'desc' };
+  // activeSort?: { field: string; direction: 'asc' | 'desc' };
   activeFilters?: any;
   className?: string;
   setShowFilters?: (show: boolean) => void
@@ -80,11 +80,11 @@ interface TableControlsProps {
 }
 
 export function TableControls({
-  onSortChange,
+  // onSortChange,
   onFilterChange,
   onReset,
-  sortOptions,
-  activeSort,
+  // sortOptions,
+  // activeSort,
   activeFilters = {},
   className,
   showFilters,
@@ -182,8 +182,9 @@ export function TableControls({
 
   // Check if any filters or sorts are active
   const hasActiveFilters = activeFilters && Object.keys(activeFilters).length > 0;
-  const hasActiveSort = !!activeSort;
-  const hasActiveControls = hasActiveFilters || hasActiveSort;
+  // const hasActiveSort = !!activeSort;
+  const hasActiveControls = hasActiveFilters;
+  
   
   return (
     <div className={cn("flex flex-col w-full", className)}>
@@ -203,7 +204,7 @@ export function TableControls({
           )}
           
           {/* Sort Dropdown */}
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 gap-1">
                 <ArrowDownUp className="h-4 w-4" />
@@ -243,7 +244,7 @@ export function TableControls({
                 ))}
               </DropdownMenuGroup>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
 
           {/* Filter Button */}
           <Button
