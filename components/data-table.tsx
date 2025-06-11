@@ -363,6 +363,7 @@ export function DataTable<TData extends object>({
         return formatCellValue(value, col.key);
       },
       className: col.className,
+      enableSorting: col.sortable ?? true
     }));
 
     // Add actions column if any action handlers are provided
@@ -458,6 +459,7 @@ export function DataTable<TData extends object>({
                     variant="ghost"
                     className="h-8 w-8 p-0"
                     onClick={(e) => e.stopPropagation()}
+                    role="combobox"
                   >
                     <span className="sr-only">Open menu</span>
                     <MoreHorizontal className="h-4 w-4" />
@@ -653,15 +655,15 @@ export function DataTable<TData extends object>({
         header: ({ table }: any) => (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-            <Checkbox
-              className={`-mr-8 translate-x-1 -translate-y-0.5 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black translate-y-0' : ''}`}
-              checked={table.getIsAllPageRowsSelected()}
-              onCheckedChange={(value) => {
-                // row.toggleSelected(!!value);
-              }}
-              aria-label="Select all rows"
-              role="combobox"
-            />
+              <Checkbox
+                className={`translate-x-2 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+                checked={table.getIsAllPageRowsSelected()}
+                onCheckedChange={(value) => {
+                  // row.toggleSelected(!!value);
+                }}
+                aria-label="Select all rows"
+                role="combobox"
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent avoidCollisions={false} align="start">
               <DropdownMenuItem
@@ -670,7 +672,7 @@ export function DataTable<TData extends object>({
                   onAllRowsSelectedChange?.(false)
                 }}
               >
-                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs': 'items'}`} on this page
+                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -678,7 +680,7 @@ export function DataTable<TData extends object>({
                   onAllRowsSelectedChange?.(true)
                 }}
               >
-                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs': 'items'}`}
+                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
               </DropdownMenuItem>
               <Separator />
               <DropdownMenuItem
@@ -738,7 +740,7 @@ export function DataTable<TData extends object>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    manualSorting: true,
+    manualSorting: false,
     enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
     state: {
       pagination: {
@@ -829,21 +831,21 @@ export function DataTable<TData extends object>({
             {/* Sort and Filter Controls */}
             {onSortChange && (
               <TableControls
-                onSortChange={onSortChange}
+                // onSortChange={onSortChange}
                 onFilterChange={onFilterChange}
                 onReset={onReset}
-                sortOptions={legacyColumns
-                  .filter((col) => col.sortable)
-                  .map((col) => ({
-                    label: col.title,
-                    value: col.key,
-                  }))}
-                activeSort={
-                  sortBy && sortOrder
-                    ? { field: sortBy, direction: sortOrder }
-                    : undefined
-                }
-                activeFilters={activeFilters}
+                // sortOptions={legacyColumns
+                //   .filter((col) => col.sortable)
+                //   .map((col) => ({
+                //     label: col.title,
+                //     value: col.key,
+                //   }))}
+                // activeSort={
+                //   sortBy && sortOrder
+                //     ? { field: sortBy, direction: sortOrder }
+                //     : undefined
+                // }
+                // activeFilters={activeFilters}
                 showFilters={!!showFilters}
                 setShowFilters={setShowFilters}
               />
@@ -852,7 +854,7 @@ export function DataTable<TData extends object>({
             {/* Table Actions Menu - without Archive/Delete */}
             {!hideDropdown && <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-1">
+                <Button variant="outline" size="sm" className="h-9 gap-1" role="combobox">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -948,15 +950,21 @@ export function DataTable<TData extends object>({
                             (header.column.columnDef as any).className,
                             isActions && stickyLastColumn
                               ? "sticky right-0 bg-muted"
-                              : ""
+                              : "text-sm !font-medium"
                           )}
                         >
-                               {header.isPlaceholder ? null : ( // Conditional rendering for placeholder headers
+                          {header.isPlaceholder || header.column.id === 'actions' ? null : header.column.id === 'select' ? (
+                            flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )
+                          ) : (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  role='combobox'
                                   className="-ml-3 h-8 data-[state=open]:bg-accent"
                                 >
                                   {flexRender(
@@ -975,13 +983,23 @@ export function DataTable<TData extends object>({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start">
                                 <DropdownMenuItem
-                                  onClick={() => header.column.toggleSorting(false)}
+                                  onClick={() => {
+                                    // Call your parent component's sort function
+                                    onSortChange?.(header.column.id, 'asc');
+                                    // Also update TanStack table state
+                                    header.column.toggleSorting(false);
+                                  }}
                                 >
                                   <ArrowUp className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                   Asc
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => header.column.toggleSorting(true)}
+                                  onClick={() => {
+                                    // Call your parent component's sort function
+                                    onSortChange?.(header.column.id, 'desc');
+                                    // Also update TanStack table state
+                                    header.column.toggleSorting(true);
+                                  }}
                                 >
                                   <ArrowDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                   Desc
@@ -989,7 +1007,11 @@ export function DataTable<TData extends object>({
                                 <DropdownMenuSeparator />
                                 {header.column.getCanSort() && (
                                   <DropdownMenuItem
-                                    onClick={() => header.column.clearSorting()}
+                                    onClick={() => {
+                                      // Clear sorting in both places
+                                      onSortChange?.('', 'asc'); // Or however you handle clearing
+                                      header.column.clearSorting();
+                                    }}
                                   >
                                     <ChevronsUpDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                                     Clear Sort

@@ -24,12 +24,12 @@ export type AvailableJobStatus = 'Bid' | 'No Bid' | 'Unset' | "Archived"
 
 export const availableJobsColumns = [
   { key: "contractNumber", title: "Contract Number", sortable: true },
-  { key: "status", title: "Status" },
-  { key: "requestor", title: "Requestor" },
-  { key: "owner", title: "Owner" },
-  { key: "lettingDate", title: "Letting Date", sortable: true },
-  { key: "dueDate", title: "Due Date", sortable: true },
-  { key: "county", title: "County" },
-  { key: "dbe", title: "DBE" },
-  { key: "createdAt", title: "Created At" },
+  { key: "status", title: "Status", sortable: false },
+  { key: "requestor", title: "Requestor", sortable: true },
+  { key: "owner", title: "Owner", sortable: true },
+  { key: "lettingDate", title: "Letting Date", sortable: false },
+  { key: "dueDate", title: "Due Date", sortable: false },
+  { key: "county", title: "County", sortable: true },
+  { key: "dbe", title: "DBE", sortable: false },
+  { key: "createdAt", title: "Created At", sortable: true },
 ] as const 
