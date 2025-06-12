@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
           total_gross_profit: bid.total_gross_profit,
           created_at: bid.created_at,
           archived: bid.archived,
-          contract_number: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.contract_number + '-DRAFT' : bid.contract_number,
+          contract_number: (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT')) ? bid.contract_number + '-DRAFT' : bid.contract_number,
           estimator: bid.estimator,
           division: bid.division,
           owner: bid.owner,

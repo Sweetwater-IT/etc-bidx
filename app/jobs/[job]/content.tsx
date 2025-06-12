@@ -23,7 +23,6 @@ import { useLoading } from "../../../hooks/use-loading";
 import { ActiveJobDetailsSheet } from "../../../components/active-job-details-sheet"
 import { EditActiveJobSheet } from "../../../components/edit-active-job-sheet"
 import { ActiveBidDetailsSheet } from "../../../components/active-bid-details-sheet"
-import { EditActiveBidSheet } from "../../../components/edit-active-bid-sheet"
 import { EditJobNumberDialog } from "../../../components/edit-job-number-dialog";
 import { PencilIcon } from "lucide-react";
 import { AvailableJob } from "../../../data/available-jobs";
@@ -32,6 +31,9 @@ import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-
 import { DateRange } from "react-day-picker";
 import { useCustomers } from "@/hooks/use-customers";
 import { exportAvailableJobsToExcel } from "@/lib/exportAvailableJobsToExcel";
+import { EstimateData, exportBidsToExcel } from "@/lib/exportBidsToExcel";
+import { EstimateProvider } from "@/contexts/EstimateContext";
+import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -218,7 +220,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [showDeleteBidsDialog, setShowDeleteBidsDialog] = useState(false);
     const [selectedActiveBid, setSelectedActiveBid] = useState<ActiveBid | null>(null);
     const [activeBidDetailsSheetOpen, setActiveBidDetailsSheetOpen] = useState(false);
-    const [editActiveBidSheetOpen, setEditActiveBidSheetOpen] = useState(false);
+    const [allActiveBidsDetailed, setAllActiveBidsDetailed] = useState<EstimateData[]>([])
+    const [viewBidSummaryOpen, setViewBidSummaryOpen] = useState<boolean>(false)
 
 
     //ACTIVE JOBS (IE WON JOBS)
@@ -460,6 +463,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const loadActiveBids = useCallback(async () => {
         try {
             startLoading();
+            const ops: any = {
+                limit: activeBidsTotalCount || 10000,
+                page: 1,
+                detailed: true
+            }
+
+            if (sortBy) {
+                ops.sortBy = sortBy
+                ops.sortOrder = sortOrder
+            }
+
+            const res = await fetch(`/api/active-bids?${new URLSearchParams(ops).toString()}`);
+            if (!res.ok) {
+                throw new Error('Failed to fetch active bids');
+            }
+
+            const resu = await res.json()
+            setAllActiveBidsDetailed(resu.data)
 
             const options: any = {
                 limit: activeBidsPageSize,
@@ -482,6 +503,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 throw new Error('Failed to fetch active bids');
             }
             const result = await response.json();
+            //raw data has all the info we need
             const { data, pagination } = result;
 
             const transformedData = data.map(e => ({
@@ -827,6 +849,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setActiveBidDetailsSheetOpen(true);
     };
 
+    const handleViewBidSummary = (item: ActiveBid) => {
+        setSelectedActiveBid(item);
+        setViewBidSummaryOpen(true);
+    }
+
     const handleActiveBidNavigation = (direction: 'up' | 'down') => {
         if (!selectedActiveBid || !activeBids.length) return;
 
@@ -844,20 +871,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
 
         setSelectedActiveBid(activeBids[nextIndex]);
-    };
-
-    const handleActiveBidEdit = (item: ActiveBid) => {
-        if (item.contractNumber) {
-            const params = new URLSearchParams({
-                initialStep: '6',
-                openSummary: 'true',
-                contractNumber: typeof item.contractNumber === 'string' ? item.contractNumber : item.contractNumber.main
-            });
-            router.push(`/active-bid?${params.toString()}`);
-        } else {
-            console.error('Cannot edit bid: Missing contract number');
-            toast.error('Cannot edit this bid. Missing contract number');
-        }
     };
 
     const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
@@ -1033,7 +1046,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedAvailableJobs(selectedJobs);
         setShowArchiveJobsDialog(true);
     };
-    
+
     // 2. Fix initiateDeleteJobs function  
     const initiateDeleteJobs = (selectedJobs: AvailableJob[]) => {
         setSelectedAvailableJobs(selectedJobs);
@@ -1163,46 +1176,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleArchiveAvailableJobs = async () => {
         try {
             startLoading();
-            
+
             let jobsToArchive: AvailableJob[] = [];
-            
+
             if (allAvailableJobRowsSelected) {
                 console.log('Fetching all filtered jobs for archiving');
                 jobsToArchive = await fetchAllFilteredJobs();
                 // Filter out already archived jobs
-                jobsToArchive = jobsToArchive.filter(job => 
+                jobsToArchive = jobsToArchive.filter(job =>
                     !job.status?.toLowerCase().includes('archived')
                 );
                 console.log(`Archiving all ${jobsToArchive.length} filtered non-archived jobs`);
             } else {
                 // Filter out already archived jobs from selection
-                jobsToArchive = selectedAvailableJobs.filter(job => 
+                jobsToArchive = selectedAvailableJobs.filter(job =>
                     !job.status?.toLowerCase().includes('archived')
                 );
                 console.log(`Archiving ${jobsToArchive.length} selected non-archived jobs`);
             }
-    
+
             if (jobsToArchive.length === 0) {
                 toast.error('No jobs to archive. All selected jobs are already archived.');
                 return false;
             }
-    
+
             const ids = jobsToArchive.map(job => job.id);
             await archiveJobs(ids);
-    
+
             toast.success(`Successfully archived ${jobsToArchive.length} job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-    
+
             await loadAvailableJobs();
             await fetchAvailableJobCounts();
-    
+
             // Reset row selection after successful archive
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-    
+
             return true;
         } catch (error) {
             console.error('Error archiving jobs:', error);
@@ -1214,32 +1227,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    };    
+    };
 
     const initiateArchiveBids = (selectedBids: ActiveBid[]) => {
         setSelectedActiveBids(selectedBids);
         setShowArchiveBidsDialog(true);
     };
-    
+
     // 7. Fix initiateDeleteBids function
     const initiateDeleteBids = (selectedBids: ActiveBid[]) => {
         setSelectedActiveBids(selectedBids);
         setShowDeleteBidsDialog(true);
     };
-    
+
 
 
     const handleDeleteArchivedJobs = async () => {
         try {
             startLoading();
-            
+
             let jobsToDelete: AvailableJob[] = [];
-            
+
             if (allAvailableJobRowsSelected) {
                 console.log('Fetching all filtered jobs for deletion');
                 const allJobs = await fetchAllFilteredJobs();
                 // For deletion, we only want archived jobs
-                jobsToDelete = allJobs.filter(job => 
+                jobsToDelete = allJobs.filter(job =>
                     activeSegment === 'archived' || job.status?.toLowerCase().includes('archived')
                 );
                 console.log(`Deleting all ${jobsToDelete.length} filtered archived jobs`);
@@ -1250,34 +1263,34 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     jobsToDelete = selectedAvailableJobs;
                 } else {
                     // If we're not in archived segment, only delete actually archived jobs
-                    jobsToDelete = selectedAvailableJobs.filter(job => 
+                    jobsToDelete = selectedAvailableJobs.filter(job =>
                         job.status?.toLowerCase().includes('archived')
                     );
                 }
                 console.log(`Deleting ${jobsToDelete.length} selected archived jobs`);
             }
-    
+
             if (jobsToDelete.length === 0) {
                 toast.error('No archived jobs found to delete.');
                 return false;
             }
-    
+
             const ids = jobsToDelete.map(job => job.id);
             const result = await deleteArchivedJobs(ids);
-    
+
             toast.success(`Successfully deleted ${result.count} archived job(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-    
+
             await loadAvailableJobs();
             await fetchAvailableJobCounts();
             setShowArchiveJobsDialog(false)
-    
+
             if (availableJobsTableRef.current) {
                 availableJobsTableRef.current.resetRowSelection();
             }
-    
+
             return true;
         } catch (error) {
             console.error('Error deleting archived jobs:', error);
@@ -1297,7 +1310,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             page: 1,
             detailed: true
         };
-    
+
         // Apply current segment filter
         if (activeSegment !== "all") {
             const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
@@ -1307,30 +1320,30 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 options.division = activeSegment;
             }
         }
-    
+
         // Apply current sorting if any
         if (sortBy) {
             options.sortBy = sortBy;
             options.sortOrder = sortOrder;
         }
-    
+
         // Apply current filters if any
         if (Object.keys(activeFilters).length > 0) {
             options.filters = JSON.stringify(activeFilters);
         }
-    
+
         const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
         if (!response.ok) {
             throw new Error('Failed to fetch all active bids');
         }
-        
+
         const result = await response.json();
         return result.data.map((e: any) => ({
             id: e.id,
             contractNumber: e.contractNumber,
             originalContractNumber: e.contractNumber,
-            contractor: (e.contractor_name && customers) ? 
-                customers.find(c => c.name === e.contractor_name)?.displayName || 
+            contractor: (e.contractor_name && customers) ?
+                customers.find(c => c.name === e.contractor_name)?.displayName ||
                 customers.find(c => c.name === e.contractor_name)?.name : '-',
             subcontractor: e.subcontractor_name || '-',
             owner: e.admin_data.owner || 'Unknown',
@@ -1356,19 +1369,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
             total: e.mpt_rental._summary.revenue || 0
         }));
     };
-    
+
 
     const handleDeleteArchivedBids = async () => {
         try {
             startLoading();
-            
+
             let bidsToDelete: ActiveBid[] = [];
-            
+
             if (allActiveBidRowsSelected) {
                 console.log('Fetching all filtered bids for deletion');
                 const allBids = await fetchAllFilteredActiveBids();
                 // For deletion, we only want archived bids
-                bidsToDelete = allBids.filter(bid => 
+                bidsToDelete = allBids.filter(bid =>
                     activeSegment === 'archived' || bid.status.toLowerCase().includes('archived')
                 );
                 console.log(`Deleting all ${bidsToDelete.length} filtered archived bids`);
@@ -1379,33 +1392,33 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     bidsToDelete = selectedActiveBids;
                 } else {
                     // If we're not in archived segment, only delete actually archived bids
-                    bidsToDelete = selectedActiveBids.filter(bid => 
+                    bidsToDelete = selectedActiveBids.filter(bid =>
                         bid.status.toLowerCase().includes('archived')
                     );
                 }
                 console.log(`Deleting ${bidsToDelete.length} selected archived bids`);
             }
-    
+
             if (bidsToDelete.length === 0) {
                 toast.error('No archived bids found to delete.');
                 return false;
             }
-    
+
             const ids = bidsToDelete.map(bid => bid.id);
             const result = await deleteArchivedActiveBids(ids);
-    
+
             toast.success(`Successfully deleted ${result.count} archived bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-    
+
             await loadActiveBids();
             await fetchActiveBidCounts();
-    
+
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-    
+
             return true;
         } catch (error) {
             console.error('Error deleting archived bids:', error);
@@ -1422,46 +1435,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleArchiveActiveBids = async () => {
         try {
             startLoading();
-            
+
             let bidsToArchive: ActiveBid[] = [];
-            
+
             if (allActiveBidRowsSelected) {
                 console.log('Fetching all filtered bids for archiving');
                 bidsToArchive = await fetchAllFilteredActiveBids();
                 // Filter out already archived bids
-                bidsToArchive = bidsToArchive.filter(bid => 
+                bidsToArchive = bidsToArchive.filter(bid =>
                     !bid.status.toLowerCase().includes('archived')
                 );
                 console.log(`Archiving all ${bidsToArchive.length} filtered non-archived bids`);
             } else {
                 // Filter out already archived bids from selection
-                bidsToArchive = selectedActiveBids.filter(bid => 
+                bidsToArchive = selectedActiveBids.filter(bid =>
                     !bid.status.toLowerCase().includes('archived')
                 );
                 console.log(`Archiving ${bidsToArchive.length} selected non-archived bids`);
             }
-    
+
             if (bidsToArchive.length === 0) {
                 toast.error('No bids to archive. All selected bids are already archived.');
                 return false;
             }
-    
+
             const ids = bidsToArchive.map(bid => bid.id);
             await archiveActiveBids(ids);
-    
+
             toast.success(`Successfully archived ${bidsToArchive.length} bid(s)`, {
                 duration: 5000,
                 position: 'top-center'
             });
-    
+
             await loadActiveBids();
             await fetchActiveBidCounts();
-    
+
             // Reset row selection after successful archive
             if (activeBidsTableRef.current) {
                 activeBidsTableRef.current.resetRowSelection();
             }
-    
+
             return true;
         } catch (error) {
             console.error('Error archiving bids:', error);
@@ -1474,7 +1487,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     };
-    
+
     const handleViewDetails = (item: AvailableJob) => {
         setSelectedJob(item)
         setOpenBidSheetOpen(true)
@@ -1716,6 +1729,38 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const handleExportActiveBids = async () => {
+        startLoading();
+
+        try {
+            if (allActiveBidRowsSelected) {
+                // Export all detailed bids when all rows are selected
+                exportBidsToExcel(allActiveBidsDetailed);
+                toast.success(`Exported all ${allActiveBidsDetailed.length} bids to Excel`);
+            } else {
+                // Export only selected rows
+                if (selectedActiveBids.length === 0) {
+                    toast.error('Please select bids in the table before exporting');
+                    return;
+                }
+
+                // Filter the detailed bids based on selected active bids
+                const selectedDetailedBids = allActiveBidsDetailed.filter(detailedBid =>
+                    selectedActiveBids.some(selectedBid => selectedBid.id === detailedBid.id)
+                );
+
+                console.log(`Exporting ${selectedActiveBids.length} selected bids`);
+                exportBidsToExcel(selectedDetailedBids);
+                toast.success(`Exported ${selectedActiveBids.length} selected bids to Excel`);
+            }
+        } catch (error) {
+            console.error('Error exporting bids:', error);
+            toast.error('Failed to export bids. Please try again.');
+        } finally {
+            stopLoading();
+        }
+    };
+
     return (
         <SidebarProvider
             style={
@@ -1741,7 +1786,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                             date={dateRange}
                                             setDate={setDateRange}
                                             importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                            onExport={isAvailableJobs ? handleExportAvailableJobs : () => { }}
+                                            onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
                                             showFilterButton={false}
                                             showFilters={showFilters}
                                             setShowFilters={setShowFilters}
@@ -1847,7 +1892,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     allRowsSelected={allActiveBidRowsSelected}
                                     onAllRowsSelectedChange={setAllActiveBidRowsSelected}
                                     handleMultiDelete={handleDeleteArchivedBids}
-                                    onViewDetails={(item) => {
+                                    onViewDetails={handleActiveBidViewDetails}
+                                    onRowClick={handleActiveBidViewDetails}
+                                    onEdit={(item) => {
                                         const params = new URLSearchParams;
                                         params.append('bidId', item.id.toString());
                                         params.append('tuckSidebar', 'true');
@@ -1855,20 +1902,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         params.append('defaultEditable', 'false');
                                         router.push(`/active-bid/view?${params.toString()}`)
                                     }}
-                                    onRowClick={(item) => {
-                                        // if(!selectedActiveBid) return;
-                                        const params = new URLSearchParams;
-                                        params.append('bidId', item.id.toString());
-                                        params.append('tuckSidebar', 'true');
-                                        params.append('fullscreen', 'true');
-                                        params.append('defaultEditable', 'false');
-                                        router.push(`/active-bid/view?${params.toString()}`)
-                                    }}
-                                    // onEdit={(item) => {
-                                    //     if ('lettingDate' in item) {
-                                    //         handleActiveBidEdit(item as ActiveBid);
-                                    //     }
-                                    // }}
                                     onUpdateStatus={(item, status) => {
                                         if ('lettingDate' in item) {
                                             const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
@@ -1876,6 +1909,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         }
                                     }}
                                     // Pagination props
+                                    viewBidSummaryOpen={viewBidSummaryOpen}
+                                    onViewBidSummary={handleViewBidSummary}
                                     pageCount={activeBidsPageCount}
                                     pageIndex={activeBidsPageIndex}
                                     pageSize={activeBidsPageSize}
@@ -1967,22 +2002,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             {isActiveBids && selectedActiveBid && (
                                 <>
                                     <ActiveBidDetailsSheet
-                                        open={activeBidDetailsSheetOpen}
+                                        open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
                                         onOpenChange={setActiveBidDetailsSheetOpen}
                                         bid={selectedActiveBid}
-                                        onEdit={handleActiveBidEdit}
+                                        onEdit={(item) => {
+                                            const params = new URLSearchParams;
+                                            params.append('bidId', item.id.toString());
+                                            params.append('tuckSidebar', 'true');
+                                            params.append('fullscreen', 'true');
+                                            params.append('defaultEditable', 'false');
+                                            router.push(`/active-bid/view?${params.toString()}`)
+                                        }}
                                         onNavigate={handleActiveBidNavigation}
                                         onRefresh={loadActiveBids}
                                     />
-                                    <EditActiveBidSheet
-                                        open={editActiveBidSheetOpen}
-                                        onOpenChange={setEditActiveBidSheetOpen}
-                                        bid={selectedActiveBid}
-                                        onSuccess={() => {
-                                            setEditActiveBidSheetOpen(false);
-                                            loadActiveBids();
-                                        }}
-                                    />
+
+                                    <EstimateProvider>
+                                        <BidSummaryDrawer defaultBid={allActiveBidsDetailed.find(abd => abd.id === selectedActiveBid.id)} open={viewBidSummaryOpen} onOpenChange={setViewBidSummaryOpen} />
+                                    </EstimateProvider>
+
                                 </>
                             )}
 

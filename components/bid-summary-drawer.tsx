@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useEffect } from "react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer"
 import { X } from "lucide-react"
 import DiscountChecks from "./pages/active-bid/steps/discount-checks"
@@ -13,13 +13,32 @@ import BidSummaryByItem from "./sheets/BidSummaryByItem"
 import EquipmentSummary from "./sheets/EquipmentSummary"
 import SaleItemsSummary from "./sheets/SaleItemsSummary"
 import SaleItemsRevenueAndProfit from "./sheets/SaleItemsRevenueAndProfit"
+import { EstimateData } from "@/lib/exportBidsToExcel"
+import { useEstimate } from "@/contexts/EstimateContext"
+import { AdminData } from "@/types/TAdminData"
+import { MPTRentalEstimating } from "@/types/MPTEquipment"
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject"
 
 interface BidSummaryDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  defaultBid?: EstimateData
 }
 
-export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenChange }: BidSummaryDrawerProps) {
+export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenChange, defaultBid }: BidSummaryDrawerProps) {
+
+  const { dispatch } = useEstimate();
+
+  useEffect(() => {
+    if(!defaultBid) return;
+    //copy functions handle databse to frontend conversions automatically
+    dispatch({ type: 'COPY_ADMIN_DATA', payload: defaultBid.admin_data as AdminData})
+    dispatch({ type: 'COPY_MPT_RENTAL', payload: defaultBid.mpt_rental as MPTRentalEstimating})
+    dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: defaultBid.equipment_rental ?? []})
+    dispatch({ type: 'COPY_FLAGGING', payload: defaultBid.flagging ?? defaultFlaggingObject})
+    dispatch({ type: 'COPY_SERVICE_WORK', payload: defaultBid.service_work ?? defaultFlaggingObject})
+    dispatch({ type: 'COPY_SALE_ITEMS', payload: defaultBid.sale_items ?? []})
+  }, [defaultBid])
 
   return (
     <Drawer open={open} onDrag={() => {}} onOpenChange={onOpenChange} direction="right">
@@ -69,7 +88,7 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                 {/* Top row - Discount Checks and Bid Summary */}
                 <div className="flex space-x-2">
                   <div className="flex-1 min-w-0">
-                    <DiscountChecks />
+                    <DiscountChecks editableDiscounts={!defaultBid}/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <BidSummaryByItem />
