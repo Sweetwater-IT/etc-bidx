@@ -63,7 +63,7 @@ const formatDateForExcel = (date: Date | null | undefined): string => {
 const getCustomItems = (data: EstimateData[]) => {
     const customItems = new Set<string>();
     data.forEach(row => {
-        row?.mpt_rental?.phases ? row?.mpt_rental?.phases.forEach(phase => {
+        row.mpt_rental?.phases ? row.mpt_rental?.phases.forEach(phase => {
             if (phase.customLightAndDrumItems) {
                 phase.customLightAndDrumItems.forEach((item : CustomLightAndDrumItem) => {
                     if (item.id) customItems.add(item.id);
