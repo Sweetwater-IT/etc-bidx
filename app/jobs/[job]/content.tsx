@@ -585,7 +585,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 location: job.location,
                 county: (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.countyJson.name, secondary: job.countyJson.branch },
                 countyJson: job.countyJson,
-                branch: job.branch,
+                branch: job.countyJson.branch,
                 contractor: job.contractor,
                 startDate: job.startDate,
                 endDate: job.endDate,
@@ -1926,7 +1926,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onPageChange={setActiveBidsPageIndex}
                                     onPageSizeChange={setActiveBidsPageSize}
                                     totalCount={activeBidsTotalCount}
-
                                     // Sorting props
                                     sortBy={sortBy}
                                     sortOrder={sortOrder}
@@ -2025,6 +2024,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         }}
                                         onNavigate={handleActiveBidNavigation}
                                         onRefresh={loadActiveBids}
+                                        onViewBidSummary={handleViewBidSummary}
+                                        onUpdateStatus={handleUpdateActiveBidStatus}
                                     />
 
                                     <EstimateProvider>

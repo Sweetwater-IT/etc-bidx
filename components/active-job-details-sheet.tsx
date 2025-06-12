@@ -105,8 +105,8 @@ export function ActiveJobDetailsSheet({
         </SheetHeader>
 
         {job && (
-          <div className="flex flex-col h-full relative">
-            <div className="flex-1 overflow-y-auto p-6 pt-2 pb-24">
+          <div className="flex flex-col h-full overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-6 pt-2">
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1 w-full">
@@ -244,9 +244,7 @@ export function ActiveJobDetailsSheet({
                 )}
               </div>
             </div>
-
-            <SheetFooter className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10">
-              <div className="flex justify-between gap-4">
+            <div className="flex justify-end p-6 pt-0 gap-4">
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -258,7 +256,6 @@ export function ActiveJobDetailsSheet({
                   Edit
                 </Button>
               </div>
-            </SheetFooter>
           </div>
         )}
       </SheetContent>

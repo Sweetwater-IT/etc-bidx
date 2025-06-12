@@ -9,7 +9,6 @@ import { AlertCircle } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
-import { formatDate } from "@/lib/formatUTCDate";
 
 interface EditActiveJobSheetProps {
   open: boolean;
@@ -247,10 +246,25 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
                 <div className="space-y-2 w-full">
                   <Label>Branch</Label>
                   <div className="relative">
-                    <Input
-                      value={formData.branch || ''}
-                      onChange={(e) => handleInputChange('branch', e.target.value)}
-                    />
+                    <Select value={formData.branch} onValueChange={(e) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        countyJson: {
+                          ...prev.countyJson,
+                          branch: e
+                        } as any,
+                        branch: e
+                      }))
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Hatfield">Hatfield</SelectItem>
+                        <SelectItem value='Turbotville'>Turbotville</SelectItem>
+                        <SelectItem value='Bedford'>Bedford</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
