@@ -399,13 +399,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     status: job.status || 'Unset',
                     requestor: requestorValue,
                     owner: ownerValue,
-                    // Ensure dates are properly formatted and consistent
-                    // Keep the original ISO date strings from the database to avoid timezone issues
                     lettingDate: job.letting_date || '',
                     dueDate: job.due_date || '',
-                    // Add debug info to trace date issues
-                    _debug_raw_letting_date: job.letting_date,
-                    _debug_raw_due_date: job.due_date,
                     county: {
                         main: countyValue,
                         secondary: branchValue
@@ -579,18 +574,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             const { data, pagination } = result;
 
-            console.log("Fetched active jobs:", data);
-            console.log("Pagination:", pagination);
-
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
                 jobNumber: job.jobNumber,
-                bidNumber: job.bidNumber || "",  // This field might not exist in the API response
+                bidNumber: job.bidNumber,
                 projectStatus: job.projectStatus,
                 billingStatus: job.billingStatus,
                 contractNumber: job.contractNumber,
+                cpr: job.cpr,
                 location: job.location,
-                county: (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.county, secondary: job.branch },
+                county: (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.countyJson.name, secondary: job.countyJson.branch },
                 countyJson: job.countyJson,
                 branch: job.branch,
                 contractor: job.contractor,
@@ -896,10 +889,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "contractNumber", title: "Contract Number", className: 'truncate whitespace-nowrap max-w-40' },
         { key: "location", title: "Location", className: 'truncate whitespace-nowrap max-w-30' },
         { key: "county", title: "County" },
-        { key: "branch", title: "Branch" },
         { key: "contractor", title: "Contractor" },
         { key: "startDate", title: "Start Date", className: 'whitespace-nowrap' },
         { key: "endDate", title: "End Date", className: 'whitespace-nowrap' },
+        { key: 'cpr', title: 'CPR'},
         { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
     ];
 

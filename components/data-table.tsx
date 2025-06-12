@@ -249,7 +249,7 @@ function formatCellValue(value: any, key: string) {
   if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
     try {
       // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(formatDate(value))
+      const utcDate = key === 'createdAt' ? new Date(value) : new Date(formatDate(value))
 
       // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
