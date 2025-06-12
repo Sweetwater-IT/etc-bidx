@@ -128,10 +128,10 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
       <div className="flex items-center mb-4 justify-between">
       <h3 className="text-lg font-medium mb-2">MPT Discounting</h3>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleClearDiscountRates}>Clear</Button>
-          <Button variant="default" size="sm" onClick={() => setDiscounts('swing')}>Swing</Button>
-          <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setDiscounts('target')}>Target</Button>
-          <Button variant="destructive" size="sm" onClick={() => setDiscounts('breakeven')}>Breakeven</Button>
+          <Button disabled={!editableDiscounts} variant="outline" size="sm" onClick={handleClearDiscountRates}>Clear</Button>
+          <Button disabled={!editableDiscounts} variant="default" size="sm" onClick={() => setDiscounts('swing')}>Swing</Button>
+          <Button disabled={!editableDiscounts} variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setDiscounts('target')}>Target</Button>
+          <Button disabled={!editableDiscounts} variant="destructive" size="sm" onClick={() => setDiscounts('breakeven')}>Breakeven</Button>
         </div>
       </div>
         <div className="grid items-baseline grid-cols-5 gap-2 border-b pb-2">
