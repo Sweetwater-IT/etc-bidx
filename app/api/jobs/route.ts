@@ -8,6 +8,19 @@ export async function GET(request: NextRequest) {
     const branch = url.searchParams.get('branch');
     const status = url.searchParams.get('status');
     const counts = url.searchParams.get('counts');
+    const filters = url.searchParams.get('filters');
+    const sortBy = url.searchParams.get('sortBy');
+    const sortOrder = url.searchParams.get('sortOrder');
+
+    // Parse filters if they exist
+    let parsedFilters: Record<string, string[]> = {};
+    if (filters) {
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch (error) {
+        console.error('Error parsing filters:', error);
+      }
+    }
 
     if (counts) {
       try {
@@ -79,8 +92,7 @@ export async function GET(request: NextRequest) {
         flagging,
         service_work,
         sale_items
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' });
 
     // Apply filters
     if (branch && branch !== 'all') {
@@ -103,9 +115,65 @@ export async function GET(request: NextRequest) {
       query = query.eq('project_status', status);
     }
 
+    // Apply additional filters from parsedFilters
+    if (Object.keys(parsedFilters).length > 0) {
+      Object.entries(parsedFilters).forEach(([field, values]) => {
+        if (values && values.length > 0) {
+          switch (field) {
+            case 'projectStatus':
+              query = query.in('project_status', values);
+              break;
+            case 'billingStatus':
+              query = query.in('billing_status', values);
+              break;
+            case 'contractor':
+              query = query.in('contractor_name', values);
+              break;
+            case 'county':
+              // Handle county filter through admin_data
+              query = query.filter('admin_data->county->>name', 'in', `(${values.join(',')})`);
+              break;
+            case 'branch':
+              // Handle branch filter through admin_data
+              query = query.filter('admin_data->county->>branch', 'in', `(${values.join(',')})`);
+              break;
+          }
+        }
+      });
+    }
+
+    // Apply sorting if specified
+    if (sortBy) {
+      const ascending = sortOrder === 'asc';
+      
+      // Map frontend column names to database column names
+      const sortColumnMap: Record<string, string> = {
+        'jobNumber': 'job_number',
+        'bidNumber': 'bid_number',
+        'projectStatus': 'project_status',
+        'billingStatus': 'billing_status',
+        'contractNumber': 'admin_data->>contractNumber',
+        'location': 'admin_data->>location',
+        'county': 'admin_data->county->>name',
+        'contractor': 'contractor_name',
+        'branch': 'admin_data->county->>branch',
+        'startDate': 'admin_data->>startDate',
+        'endDate': 'admin_data->>endDate',
+        'createdAt': 'created_at'
+      };
+
+      const dbColumn = sortColumnMap[sortBy];
+      if (dbColumn) {
+        query = query.order(dbColumn, { ascending });
+      }
+    } else {
+      // Default sorting
+      query = query.order('created_at', { ascending: false });
+    }
+
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
-
+    console.error(query);
     // Execute query
     const { data, count, error } = await query;
 

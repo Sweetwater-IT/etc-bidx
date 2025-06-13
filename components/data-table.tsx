@@ -143,6 +143,9 @@ export interface DataTableProps<TData extends object> {
   ownerOptions?: { label: string; value: string }[];
   countyOptions?: { label: string; value: string }[];
   estimatorOptions?: { label: string; value: string }[];
+  contractorOptions?: { label: string; value: string }[];
+  projectStatusOptions?: { label: string; value: string }[];
+  billingStatusOptions?: { label: string; value: string }[];
   activeFilters?: Record<string, any>;
   onFilterChange?: (filters: Record<string, any>) => void;
   onReset?: () => void;
@@ -344,6 +347,9 @@ export function DataTable<TData extends object>({
   ownerOptions,
   countyOptions,
   estimatorOptions,
+  contractorOptions,
+  projectStatusOptions,
+  billingStatusOptions,
   activeFilters,
   onFilterChange,
   onReset,
@@ -835,6 +841,9 @@ export function DataTable<TData extends object>({
             ownerOptions={ownerOptions || []}
             countyOptions={countyOptions || []}
             estimatorOptions={estimatorOptions || []}
+            contractorOptions={contractorOptions || []}
+            projectStatusOptions={projectStatusOptions || []}
+            billingStatusOptions={billingStatusOptions || []}
             onFilterChange={onFilterChange}
             activeFilters={activeFilters}
           />

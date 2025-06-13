@@ -49,6 +49,16 @@ export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
     const router = useRouter();
+    const { customers, getCustomers } = useCustomers();
+
+    if (!["available", "active-bids", "active-jobs"].includes(job)) {
+        notFound();
+    }
+
+    const isAvailableJobs = job === "available";
+    const isActiveBids = job === "active-bids";
+    const isActiveJobs = job === "active-jobs";
+
     const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false);
     const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
     const [nextJobNumber, setNextJobNumber] = useState<string>("");
@@ -91,15 +101,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
         owners: { id: number; name: string }[];
         branches: { id: number; name: string; code: string }[];
         estimators: { id: number; name: string }[];
+        contractors: { id: number; name: string }[];
     }>({
         counties: [],
         owners: [],
         branches: [],
         estimators: [],
+        contractors: [],
     });
 
     // Define filter options for the Available Jobs table
     const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
+
+    useEffect(() => {
+        getCustomers();
+    }, [getCustomers])
 
     // Fetch reference data for filters
     useEffect(() => {
@@ -121,11 +137,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 const estimatorsResponse = await fetch('/api/reference-data?type=estimators');
                 const estimatorsData = await estimatorsResponse.json();
 
+                // Fetch contractors
+                const contractorsResponse = await fetch('/api/reference-data?type=contractors');
+                const contractorsData = await contractorsResponse.json();
+
                 setReferenceData({
                     counties: countiesData.data || [],
                     owners: ownersData.data || [],
                     branches: branchesData.data || [],
                     estimators: estimatorsData.data || [],
+                    contractors: contractorsData.data || [],
                 });
             } catch (error) {
                 console.error('Error fetching reference data:', error);
@@ -138,7 +159,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     // Initialize filter options when reference data is loaded
     useEffect(() => {
         if (referenceData.counties.length > 0 || referenceData.owners.length > 0 || referenceData.branches.length > 0) {
-            const options: FilterOption[] = [
+            const options: FilterOption[] = isAvailableJobs ? [
                 {
                     label: 'County',
                     field: 'county',
@@ -180,34 +201,99 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         { label: 'Unset', value: 'Unset' }
                     ]
                 }
+            ] : isActiveBids ? [
+                {
+                    label: 'County',
+                    field: 'county',
+                    options: referenceData.counties.map(county => ({
+                        label: county.name,
+                        value: county.name
+                    }))
+                },
+                {
+                    label: 'Owner',
+                    field: 'owner',
+                    options: referenceData.owners.map(owner => ({
+                        label: owner.name,
+                        value: owner.name
+                    }))
+                },
+                {
+                    label: 'Branch',
+                    field: 'branch',
+                    options: referenceData.branches.map(branch => ({
+                        label: branch.name,
+                        value: branch.code
+                    }))
+                },
+                {
+                    label: 'Status',
+                    field: 'status',
+                    options: [
+                        { label: 'Won', value: 'Won' },
+                        { label: 'Pending', value: 'Pending' },
+                        { label: 'Lost', value: 'Lost' },
+                        { label: 'Draft', value: 'Draft' },
+                        { label: 'Won - Pending', value: 'Won - Pending' }
+                    ]
+                }
+            ] : [
+                {
+                    label: 'Contractor',
+                    field: 'contractor',
+                    options: referenceData.contractors.map(contractor => ({
+                        label: contractor.name,
+                        value: contractor.name
+                    }))
+                },
+                {
+                    label: 'Project Status',
+                    field: 'projectStatus',
+                    options: [
+                        { label: 'NOT STARTED', value: 'NOT_STARTED' },
+                        { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
+                        { label: 'COMPLETE', value: 'COMPLETE' }
+                    ]
+                },
+                {
+                    label: 'Billing Status',
+                    field: 'billingStatus',
+                    options: [
+                        { label: 'NOT STARTED', value: 'NOT_STARTED' },
+                        { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
+                        { label: 'COMPLETE', value: 'COMPLETE' }
+                    ]
+                },
+                {
+                    label: 'County',
+                    field: 'county',
+                    options: referenceData.counties.map(county => ({
+                        label: county.name,
+                        value: county.name
+                    }))
+                },
+                {
+                    label: 'Branch',
+                    field: 'branch',
+                    options: referenceData.branches.map(branch => ({
+                        label: branch.name,
+                        value: branch.code
+                    }))
+                }
             ];
             setFilterOptions(options);
         }
-    }, [referenceData]);
+    }, [referenceData, isAvailableJobs, isActiveBids, customers]);
 
-    // Branch options for filter dialog
-    const branchOptions = referenceData.branches.map(branch => ({
-        label: branch.name || '',
-        value: branch.name || ''
-    }));
+    // Extract filter options from filterOptions state
+    const branchOptions = filterOptions?.find(opt => opt.field === 'branch')?.options || [];
+    const ownerOptions = filterOptions?.find(opt => opt.field === 'owner')?.options || [];
+    const countyOptions = filterOptions?.find(opt => opt.field === 'county')?.options || [];
+    const estimatorOptions = filterOptions?.find(opt => opt.field === 'requestor')?.options || [];
+    const contractorOptions = filterOptions?.find(opt => opt.field === 'contractor')?.options || [];
+    const projectStatusOptions = filterOptions?.find(opt => opt.field === 'projectStatus')?.options || [];
+    const billingStatusOptions = filterOptions?.find(opt => opt.field === 'billingStatus')?.options || [];
 
-    // Owner options for filter dialog
-    const ownerOptions = referenceData.owners.map(owner => ({
-        label: owner.name,
-        value: owner.name
-    }));
-
-    // County options for filter dialog (searchable)
-    const countyOptions = referenceData.counties.map(county => ({
-        label: county.name,
-        value: county.name
-    }));
-
-    // Estimator options for filter dialog
-    const estimatorOptions = referenceData.estimators.map(estimator => ({
-        label: estimator.name || '',
-        value: estimator.id.toString()
-    }));
     //THESE ARE ESTIMATES
     const [activeBids, setActiveBids] = useState<ActiveBid[]>([]);
     const [activeBidsPageIndex, setActiveBidsPageIndex] = useState(0);
@@ -268,16 +354,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const { startLoading, stopLoading } = useLoading();
-
-    if (!["available", "active-bids", "active-jobs"].includes(job)) {
-        notFound();
-    }
-
-    const isAvailableJobs = job === "available";
-    const isActiveBids = job === "active-bids";
-    const isActiveJobs = job === "active-jobs";
-
-
 
     const handleSegmentChange = (value: string) => {
         console.log("Segment changed to:", value);
@@ -451,12 +527,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(availableJobs[nextIndex])
     }
 
-    const { customers, getCustomers } = useCustomers();
-
-    useEffect(() => {
-        getCustomers();
-    }, [getCustomers])
-
     const loadActiveBids = useCallback(async () => {
         try {
             startLoading();
@@ -550,6 +620,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 options.branch = activeSegment;
             }
 
+            // Add filter parameters if any are active
+            if (Object.keys(activeFilters).length > 0) {
+                options.filters = JSON.stringify(activeFilters);
+                console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
+            }
+
+            // Add sorting parameters if available
+            if (sortBy) {
+                options.sortBy = sortBy;
+                options.sortOrder = sortOrder;
+                console.log(`Adding sort: ${sortBy} ${sortOrder}`);
+            }
+
             const response = await fetch(`/api/jobs?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active jobs');
@@ -563,7 +646,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
                 jobNumber: job.jobNumber,
-                bidNumber: job.bidNumber || "",  // This field might not exist in the API response
+                bidNumber: job.bidNumber || "",
                 projectStatus: job.projectStatus,
                 billingStatus: job.billingStatus,
                 contractNumber: job.contractNumber,
@@ -587,7 +670,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading]);
+    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading, activeFilters, sortBy, sortOrder]);
     const fetchNextJobNumber = useCallback(async () => {
         try {
             const response = await fetch('/api/jobs/next-job-number');
@@ -778,20 +861,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchActiveJobCounts();
             fetchNextJobNumber();
             setCardData([{
-                title: 'Current Jobs',
-                value: '12'
+                title: 'Total Active Jobs',
+                value: '42'
             },
             {
-                title: 'Completion Rate',
-                value: '94%'
+                title: 'Total Jobs Pending Billing',
+                value: `70%`
             },
             {
-                title: 'Total Value',
-                value: '$1.2M'
-            },
-            {
-                title: 'Client Rating',
-                value: '4.8/5'
+                title: 'Total Jobs Over Days',
+                value: '2'
             }
             ])
         }
@@ -883,7 +962,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "contractNumber", title: "Contract Number", className: 'truncate whitespace-nowrap max-w-40' },
         { key: "location", title: "Location", className: 'truncate whitespace-nowrap max-w-30' },
         { key: "county", title: "County" },
-        { key: "branch", title: "Branch" },
         { key: "contractor", title: "Contractor" },
         { key: "startDate", title: "Start Date", className: 'whitespace-nowrap' },
         { key: "endDate", title: "End Date", className: 'whitespace-nowrap' },
@@ -1952,6 +2030,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onPageChange={setActiveJobsPageIndex}
                                     onPageSizeChange={setActiveJobsPageSize}
                                     totalCount={activeJobsTotalCount}
+                                    // Sorting props
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    onSortChange={handleSortChange}
+                                    // Filtering props
+                                    filterOptions={filterOptions}
+                                    branchOptions={branchOptions}
+                                    countyOptions={countyOptions}
+                                    contractorOptions={contractorOptions}
+                                    projectStatusOptions={projectStatusOptions}
+                                    billingStatusOptions={billingStatusOptions}
+                                    activeFilters={activeFilters}
+                                    onFilterChange={handleFilterChange}
+                                    onReset={handleResetControls}
+                                    showFilters={showFilters}
+                                    setShowFilters={setShowFilters}
+                                    hideDropdown={true}
                                 />
                             )}
 
