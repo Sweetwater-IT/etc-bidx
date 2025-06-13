@@ -64,8 +64,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useCallback, useState } from "react";
-import { Popover, PopoverContent } from "./ui/popover";
-import { PopoverTrigger } from "@radix-ui/react-popover";
 import { Separator } from "./ui/separator";
 import { formatDate } from "@/lib/formatUTCDate";
 
@@ -117,7 +115,7 @@ export interface DataTableProps<TData extends object> {
   onAddClick?: () => void;
   onSegmentChange?: (value: string) => void;
   stickyLastColumn?: boolean;
-  onArchiveSelected?: (selectedRows:  TData[]) => void;
+  onArchiveSelected?: (selectedRows: TData[]) => void;
   onDeleteSelected?: (selectedRows: TData[]) => void;
   tableRef?: React.RefObject<{
     resetRowSelection: () => void;
@@ -157,6 +155,8 @@ export interface DataTableProps<TData extends object> {
   onAllRowsSelectedChange?: React.Dispatch<React.SetStateAction<boolean>>
   allRowsSelected?: boolean
   handleMultiDelete?: () => void
+  viewBidSummaryOpen?: boolean
+  onViewBidSummary?: (item: TData) => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -252,7 +252,7 @@ function formatCellValue(value: any, key: string) {
   if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
     try {
       // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(formatDate(value))
+      const utcDate = key === 'createdAt' ? new Date(value) : new Date(formatDate(value))
 
       // Use local methods instead of UTC methods to get the date in user's timezone
       const monthNames = [
@@ -360,7 +360,9 @@ export function DataTable<TData extends object>({
   setSelectedRows,
   onAllRowsSelectedChange,
   allRowsSelected,
-  handleMultiDelete
+  handleMultiDelete,
+  viewBidSummaryOpen,
+  onViewBidSummary
 }: DataTableProps<TData>) {
 
   const columns = React.useMemo(() => {
@@ -618,6 +620,17 @@ export function DataTable<TData extends object>({
                       View Job Summary
                     </DropdownMenuItem>
                   )}
+                  {onViewBidSummary && viewBidSummaryOpen !== undefined &&
+                    <DropdownMenuItem
+                      onClick={e => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onViewBidSummary(row.original);
+                      }}
+                    >
+                      View Bid Summary
+                    </DropdownMenuItem>
+                  }
 
                   {onEdit && (
                     <DropdownMenuItem

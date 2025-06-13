@@ -72,7 +72,9 @@ export async function GET(request: NextRequest) {
         owner_type,
         created_at,
         project_status,
+        bid_number,
         billing_status,
+        certified_payroll,
         admin_data,
         contractor_name,
         customer_contract_number,
@@ -321,7 +323,7 @@ export async function GET(request: NextRequest) {
         return {
           id: job.id,
           jobNumber: job.job_number || '',
-          bidNumber: adminData?.bidNumber || '',
+          bidNumber: job.bid_number || '',
           projectStatus: job.project_status || 'In Progress',
           billingStatus: job.billing_status || 'Current',
           contractNumber: contractNum,
@@ -333,6 +335,7 @@ export async function GET(request: NextRequest) {
           endDate: adminData?.endDate || '',
           laborRate: adminData?.laborRate || 0,
           fringeRate: adminData?.fringeRate || 0,
+          cpr: job.certified_payroll,
           mpt: Boolean(job.mpt_rental),
           rental: Boolean(job.equipment_rental),
           permSigns: Boolean(adminData?.permSigns),
@@ -389,9 +392,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    //manually transform the branch from the frontend brnach input
+    const transformedCountJson = {
+      ...formData.countyJson,
+      branch: formData.branch
+    }
+
     const { data: adminDataResult, error: adminDataError } = await supabase
       .from('admin_data_entries')
-      .update({'county' : formData.countyJson, 'location' : formData.location, 'contract_number': formData.contractNumber,
+      .update({'county' : transformedCountJson, 'location' : formData.location, 'contract_number': formData.contractNumber,
         'start_date': formData.startDate, 'end_date': formData.endDate})
       .eq('job_id', formData.id)
 
