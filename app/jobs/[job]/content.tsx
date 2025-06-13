@@ -191,7 +191,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     field: 'branch',
                     options: referenceData.branches.map(branch => ({
                         label: branch.name,
-                        value: branch.code
+                        value: branch.name
                     }))
                 },
                 {
@@ -225,7 +225,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     field: 'branch',
                     options: referenceData.branches.map(branch => ({
                         label: branch.name,
-                        value: branch.code
+                        value: branch.name
                     }))
                 },
                 {
@@ -279,7 +279,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     field: 'branch',
                     options: referenceData.branches.map(branch => ({
                         label: branch.name,
-                        value: branch.code
+                        value: branch.name
                     }))
                 }
             ];
