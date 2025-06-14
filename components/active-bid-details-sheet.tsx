@@ -32,6 +32,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 import { Customer } from "@/types/Customer";
@@ -46,6 +53,8 @@ interface ActiveBidDetailsSheetProps {
   onEdit?: (item: ActiveBid) => void;
   onNavigate?: (direction: "up" | "down") => void;
   onRefresh?: () => void; // Callback to refresh the data table
+  onViewBidSummary: (item : ActiveBid) => void;
+  onUpdateStatus?: (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => void;
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -61,6 +70,13 @@ const SUBCONTRACTOR_OPTIONS = [
   { name: "OTHER", id: 6 },
 ];
 
+const STATUS_OPTIONS = [
+  { label: "Won", value: "WON" },
+  { label: "Pending", value: "PENDING" },
+  { label: "Lost", value: "LOST" },
+  { label: "Draft", value: "DRAFT" },
+];
+
 export function ActiveBidDetailsSheet({
   open,
   onOpenChange,
@@ -68,6 +84,8 @@ export function ActiveBidDetailsSheet({
   onEdit,
   onNavigate,
   onRefresh,
+  onViewBidSummary,
+  onUpdateStatus
 }: ActiveBidDetailsSheetProps) {
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -79,6 +97,8 @@ export function ActiveBidDetailsSheet({
   const [selectedSubcontractor, setSelectedSubcontractor] = useState<{ name: string, id: number }>();
   const [originalContractor, setOriginalContractor] = useState<Customer>();
   const [originalSubcontractor, setOriginalSubcontractor] = useState<{ name: string, id: number }>();
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [originalStatus, setOriginalStatus] = useState<string>("");
   const [hasChanges, setHasChanges] = useState(false);
   const [openStates, setOpenStates] = useState({
     contractor: false,
@@ -212,6 +232,13 @@ export function ActiveBidDetailsSheet({
         console.error("Invalid end date format:", bid.endDate);
         setEndDate(undefined);
       }
+
+      // Set status
+      if (bid.status) {
+        const normalizedStatus = bid.status.replace(' - ', '-').toUpperCase();
+        setSelectedStatus(normalizedStatus);
+        setOriginalStatus(normalizedStatus);
+      }
     };
 
     if (bid && customers.length > 0) {
@@ -224,6 +251,8 @@ export function ActiveBidDetailsSheet({
       setSelectedSubcontractor(undefined);
       setOriginalContractor(undefined);
       setOriginalSubcontractor(undefined);
+      setSelectedStatus("");
+      setOriginalStatus("");
     }
   }, [bid, customers]);
 
@@ -241,19 +270,28 @@ export function ActiveBidDetailsSheet({
   const handleContractorSelect = (name: string) => {
     const contractor = customers.find(c => c.name === name);
     setSelectedContractor(contractor);
-    setHasChanges(
-      !originalContractor ? !!contractor : contractor?.id !== originalContractor.id
-    );
+    checkForChanges(contractor, selectedSubcontractor, selectedStatus);
     setOpenStates(prev => ({ ...prev, contractor: false }));
   };
 
   const handleSubcontractorSelect = (name: string) => {
     const subcontractor = SUBCONTRACTOR_OPTIONS.find(sub => sub.name === name);
     setSelectedSubcontractor(subcontractor);
-    setHasChanges(
-      !originalSubcontractor ? !!subcontractor : subcontractor?.id !== originalSubcontractor.id
-    );
+    checkForChanges(selectedContractor, subcontractor, selectedStatus);
     setOpenStates(prev => ({ ...prev, subContractor: false }));
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setSelectedStatus(newStatus);
+    checkForChanges(selectedContractor, selectedSubcontractor, newStatus);
+  };
+
+  const checkForChanges = (contractor?: Customer, subcontractor?: { name: string, id: number }, status?: string) => {
+    const contractorChanged = !originalContractor ? !!contractor : contractor?.id !== originalContractor.id;
+    const subcontractorChanged = !originalSubcontractor ? !!subcontractor : subcontractor?.id !== originalSubcontractor.id;
+    const statusChanged = originalStatus !== (status || selectedStatus);
+    
+    setHasChanges(contractorChanged || subcontractorChanged || statusChanged);
   };
 
   const saveChanges = async () => {
@@ -261,35 +299,51 @@ export function ActiveBidDetailsSheet({
 
     setSaving(true);
     try {
-      const body: any = {};
-      if (selectedContractor) body.contractor_id = selectedContractor.id;
-      if (selectedSubcontractor) body.subcontractor_id = selectedSubcontractor.id;
+      const promises : any[] = [];
 
-      const response = await fetch('/api/active-bids/update-contractors/' + bid.id, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      });
+      // Update contractors if changed
+      const contractorChanged = !originalContractor ? !!selectedContractor : selectedContractor?.id !== originalContractor.id;
+      const subcontractorChanged = !originalSubcontractor ? !!selectedSubcontractor : selectedSubcontractor?.id !== originalSubcontractor.id;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Failed to save contractors');
-      } else {
-        const result = await response.json();
-        toast.success(result.message || 'Successfully updated contractors');
-        setOriginalContractor(selectedContractor);
-        setOriginalSubcontractor(selectedSubcontractor);
-        setHasChanges(false);
+      if (contractorChanged || subcontractorChanged) {
+        const body: any = {};
+        if (selectedContractor) body.contractor_id = selectedContractor.id;
+        if (selectedSubcontractor) body.subcontractor_id = selectedSubcontractor.id;
 
-        // Refresh the data table before closing the drawer
-        if (onRefresh) {
-          onRefresh();
-        }
-
-        onOpenChange(false); // Close the drawer after saving
+        const contractorPromise = fetch('/api/active-bids/update-contractors/' + bid.id, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body)
+        });
+        promises.push(contractorPromise);
       }
+
+      // Update status if changed
+      const statusChanged = originalStatus !== selectedStatus;
+      if (statusChanged && onUpdateStatus) {
+        const statusPromise = new Promise((resolve) => {
+          onUpdateStatus(bid, selectedStatus as 'WON' | 'PENDING' | 'LOST' | 'DRAFT');
+          resolve(true);
+        });
+        promises.push(statusPromise);
+      }
+
+      await Promise.all(promises);
+
+      toast.success('Successfully updated bid details');
+      setOriginalContractor(selectedContractor);
+      setOriginalSubcontractor(selectedSubcontractor);
+      setOriginalStatus(selectedStatus);
+      setHasChanges(false);
+
+      // Refresh the data table before closing the drawer
+      if (onRefresh) {
+        onRefresh();
+      }
+
+      onOpenChange(false); // Close the drawer after saving
     } catch (error) {
       console.error("Error saving changes:", error);
       toast.error("Failed to save changes");
@@ -342,7 +396,7 @@ export function ActiveBidDetailsSheet({
                   ? `: ${bid.originalContractNumber}`
                   : ""}
               </SheetTitle>
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap">
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer" onClick={() => bid ? onViewBidSummary(bid): ''}>
                 View bid summary <EyeIcon className="h-3 w-3" />
               </span>
             </div>
@@ -371,6 +425,23 @@ export function ActiveBidDetailsSheet({
                     {lettingDate ? format(lettingDate, "MM/dd/yyyy") : "-"}
                   </div>
                 </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1 w-full">
+                <Label className="font-semibold">Status</Label>
+                <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Contractor & Subcontractor */}
@@ -468,13 +539,24 @@ export function ActiveBidDetailsSheet({
                 </div>
               </div>
 
-              {/* Owner */}
-              <div className="space-y-1 w-full">
-                <Label className="font-semibold">
-                  Owner
-                </Label>
-                <div className="text-muted-foreground">
-                  {formatValue(bid?.owner) || "-"}
+              {/* Owner & Division */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Owner
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatValue(bid?.owner) || "-"}
+                  </div>
+                </div>
+
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Division
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatValue(bid?.division) || "-"}
+                  </div>
                 </div>
               </div>
 
@@ -499,34 +581,13 @@ export function ActiveBidDetailsSheet({
                 </div>
               </div>
 
-              {/* Estimator & Status */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1 w-full">
-                  <Label className="font-semibold">
-                    Estimator
-                  </Label>
-                  <div className="text-muted-foreground">
-                    {formatValue(bid?.estimator) || "-"}
-                  </div>
-                </div>
-
-                <div className="space-y-1 w-full">
-                  <Label className="font-semibold">
-                    Status
-                  </Label>
-                  <div className="text-muted-foreground">
-                    {formatValue(bid?.status) || "-"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Division */}
+              {/* Estimator */}
               <div className="space-y-1 w-full">
                 <Label className="font-semibold">
-                  Division
+                  Estimator
                 </Label>
                 <div className="text-muted-foreground">
-                  {formatValue(bid?.division) || "-"}
+                  {formatValue(bid?.estimator) || "-"}
                 </div>
               </div>
 
@@ -617,9 +678,7 @@ export function ActiveBidDetailsSheet({
               <Button onClick={handleEdit} disabled={saving} className="flex-1">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {hasChanges
-                  ? originalContractor || originalSubcontractor
-                    ? "Update"
-                    : "Save"
+                  ? "Update"
                   : "Edit"}
               </Button>
             </div>
