@@ -173,7 +173,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
 
     const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
         const previousSign = { ...localSign };
-        let updatedSign = { ...localSign, [field]: value };
+        const updatedSign = { ...localSign, [field]: value };
 
         // Special handling for equipment-related fields (only for primary signs)
         if (!isSecondary) {
