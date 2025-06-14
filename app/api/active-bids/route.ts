@@ -638,6 +638,7 @@ export async function POST(request: NextRequest) {
             designation: sign.designation,
             description: sign.description,
             associated_structure: sign.associatedStructure,
+            display_structure: sign.displayStructure,
             b_lights: sign.bLights,
             covers: sign.cover ? sign.quantity : 0
           };

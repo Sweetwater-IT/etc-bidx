@@ -122,6 +122,7 @@ const AddSignControl = ({ currentPhase }: AddSignControlProps) => {
       sheeting: selectedDesignation.sheeting,
       quantity: 0,
       associatedStructure: "none",
+      displayStructure: 'LOOSE',
       bLights: 0,
       cover: false,
       isCustom: false,

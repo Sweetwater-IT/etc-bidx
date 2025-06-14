@@ -1,0 +1,1 @@
+ALTER TABLE mpt_primary_signs ADD COLUMN display_structure VARCHAR(255);

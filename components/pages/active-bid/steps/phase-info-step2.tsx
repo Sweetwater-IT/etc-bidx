@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { safeNumber } from "@/lib/safe-number";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 const step: Step = {
     id: "step-2",
@@ -41,7 +43,7 @@ const PhaseInfoStep2 = ({
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
     currentPhase: number;
 }) => {
-    const { mptRental, dispatch } = useEstimate();
+    const { mptRental, dispatch, adminData } = useEstimate();
 
     // Update phase dates in context
     const handleDateChange = (value: Date | undefined, name: 'startDate' | 'endDate') => {
@@ -54,8 +56,8 @@ const PhaseInfoStep2 = ({
         });
 
         if (mptRental.phases[currentPhase].startDate && (mptRental.phases[currentPhase].endDate || (name === 'endDate' && !!value))) {
-            const days = name === 'startDate' ? calculateDays(value, mptRental.phases[currentPhase].endDate!) : 
-            calculateDays(mptRental.phases[currentPhase].startDate, value)
+            const days = name === 'startDate' ? calculateDays(value, mptRental.phases[currentPhase].endDate!) :
+                calculateDays(mptRental.phases[currentPhase].startDate, value)
 
             dispatch({
                 type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
@@ -77,7 +79,7 @@ const PhaseInfoStep2 = ({
     };
 
     const setEndDateFromDays = (days: number) => {
-        if (!mptRental.phases[currentPhase].startDate ) return;
+        if (!mptRental.phases[currentPhase].startDate) return;
 
         const startDate = mptRental.phases[currentPhase].startDate
         // Calculate new end date
@@ -95,6 +97,26 @@ const PhaseInfoStep2 = ({
             payload: { key: 'days', value: days, phase: currentPhase },
         });
     };
+
+    const handleUseAdminDates = (useAdminDates: boolean) => {
+        if (useAdminDates && (!adminData.startDate || !adminData.endDate)) {
+            toast.error('Project start and end dates are not set')
+            return;
+        } else if (useAdminDates) {
+            dispatch({
+                type: 'UPDATE_MPT_PHASE_START_END',
+                payload: { key: 'startDate', value: adminData.startDate!, phase: currentPhase }
+            })
+            dispatch({
+                type: 'UPDATE_MPT_PHASE_START_END',
+                payload: { key: 'endDate', value: adminData.endDate!, phase: currentPhase }
+            })
+            dispatch({
+                type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+                payload: { key: 'days', value: calculateDays(adminData.startDate!, adminData.endDate!), phase: currentPhase },
+            });
+        } else return;
+    }
 
     return (
         <div>
@@ -128,6 +150,14 @@ const PhaseInfoStep2 = ({
                 {currentStep === 2 && mptRental.phases.length > 0 && (
                     <div className="mt-2 mb-6 ml-12">
                         <div className="space-y-6">
+                            <div className="flex items-center gap-x-2">
+                                <Checkbox
+                                    checked={mptRental.phases[currentPhase].startDate === adminData.startDate && mptRental.phases[currentPhase].endDate === adminData.endDate}
+                                    aria-label="Use same start and end dates as admin data"
+                                    onCheckedChange={handleUseAdminDates}
+                                />
+                                <div className="text-muted-foreground text-sm">Use same start and end dates as admin data</div>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {/* Start Date */}
                                 <div className="space-y-2">

@@ -107,8 +107,9 @@ export async function fetchBids(options?: {
 /**
  * Fetch a specific bid by ID
  */
-export async function fetchBidById(id: number): Promise<any> {
-  const response = await fetch(`/api/active-bids/${id}`);
+export async function fetchBidById(id: number, isAvailableJob?: boolean): Promise<any> {
+  const url = `/api/active-bids/${id}${isAvailableJob ? '?type=available-job' : ''}`
+  const response = await fetch(url);
 
   if (!response.ok) {
     const errorData = await response.json();
