@@ -163,7 +163,7 @@ const PrimarySignForm = ({
   };
 
   const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
-    let updatedSign = { ...localSign, [field]: value };
+    const updatedSign = { ...localSign, [field]: value };
 
     // Special handling for equipment-related fields
     if (field === 'displayStructure') { 
