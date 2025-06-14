@@ -1,10 +1,14 @@
 import { DataTable } from '@/components/data-table'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
+import { AssociatedStructures, DisplayStructures, PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 import React from 'react'
 
+interface Props {
+    phaseNumber?: number
+}
+
 //displaying designation, description, dimensions (width and heigh in one cell so 12' x 24'), sheeting, structure, blights, covers
-const SignsViewOnly = () => {
+const SignsViewOnly = ({ phaseNumber }: Props) => {
 
     const { mptRental } = useEstimate();
 
@@ -30,7 +34,7 @@ const SignsViewOnly = () => {
             title: 'Sheeting'
         },
         {
-            key: 'associatedStructure',
+            key: 'displayStructure',
             title: 'Structure'
         },
         {
@@ -47,14 +51,36 @@ const SignsViewOnly = () => {
         dimensions: string
     }
 
+    function getDisplayFromStructure (structure : AssociatedStructures) : DisplayStructures {
+        if(structure === 'fourFootTypeIII'){
+            return '4\' T-III LEFT'
+        } else if (structure === 'hStand') {
+            return 'H-FOOT'
+        } else if (structure === 'post') {
+            return '12\' POST'
+        } else return 'LOOSE'
+    }
+
     return (
         <>
-            {mptRental && mptRental.phases.map((phase, index) =>
+            {mptRental && phaseNumber ? (
+                <div>
+                    <div className="text-sm font-semibold mb-2 pl-6">Phase {phaseNumber + 1} {mptRental.phases[phaseNumber].name.trim() !== '' && ''} {mptRental.phases[phaseNumber].name}</div>
+                    <DataTable<ExtendedSign>
+                        data={mptRental.phases[phaseNumber].signs.length === 0 ? [{ description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-' } as any] :
+                            mptRental.phases[phaseNumber].signs.map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}` } as ExtendedSign))}
+                        columns={SIGN_COLUMNS}
+                        hideDropdown
+                    />
+                </div>
+            ) : mptRental.phases.map((phase, index) =>
                 <div key={index} >
                     <div className="text-sm font-semibold mb-2 pl-6">Phase {index + 1} {phase.name.trim() !== '' && ''} {phase.name}</div>
                     <DataTable<ExtendedSign>
-                        data={phase.signs.length === 0 ? [{description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-'} as any] : 
-                        phase.signs.map(sign => ({...sign, dimensions: `${sign.width} x ${sign.height}`} as ExtendedSign))}
+                        data={phase.signs.length === 0 ? [{ description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-' } as any] :
+                            phase.signs.map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}`, 
+                            //for historical data where displayStructure does not exist
+                            displayStructure: Object.hasOwn(sign, 'associatedStructure') ? (sign as PrimarySign).displayStructure ? (sign as PrimarySign).displayStructure : getDisplayFromStructure((sign as PrimarySign).associatedStructure)  : '' } as ExtendedSign))}
                         columns={SIGN_COLUMNS}
                         hideDropdown
                     />

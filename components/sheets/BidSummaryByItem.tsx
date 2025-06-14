@@ -166,7 +166,7 @@ const BidSummaryByItem = () => {
       
       {/* Discount Summary */}
       <div className="mt-8">
-        <div className="grid grid-cols-2 mb-2">
+        <div className="grid grid-cols-3 mb-2">
           <div className="px-3 font-medium">
             {/* <Tooltip>
               <TooltipTrigger> */}
@@ -194,7 +194,7 @@ const BidSummaryByItem = () => {
         {discountSummary.map((row, index) => (
           <div 
             key={index} 
-            className={`grid grid-cols-2 border-t border-gray-300 ${index === discountSummary.length - 1 ? 'bg-green-50' : ''}`}
+            className={`grid grid-cols-3 border-t border-gray-300 ${index === discountSummary.length - 1 ? 'bg-green-50' : ''}`}
           >
             <div className="px-3 py-1 text-sm">{row.item}</div>
             <div className="px-3 py-1 text-sm">
@@ -212,8 +212,6 @@ const BidSummaryByItem = () => {
           </div>
         ))}
       </div>
-      
-      {/* SignSquareFootageTotals would be added here once implemented */}
     </div>
   )
 }

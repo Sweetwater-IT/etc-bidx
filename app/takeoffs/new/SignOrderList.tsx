@@ -10,7 +10,6 @@ import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-s
 import { returnSignTotalsSquareFootage } from "@/lib/mptRentalHelperFunctions";
 import { DataTable } from "@/components/data-table";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
-import PrimarySignItem from "@/components/pages/active-bid/signs/primary-sign-item";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -46,7 +45,7 @@ const SIGN_COLUMNS = [
         title: 'Substrate'
     },
     {
-        key: 'associatedStructure',
+        key: 'displayStructure',
         title: 'Structure'
     },
     {
@@ -99,6 +98,7 @@ export function SignOrderList() {
             sheeting: 'DG',
             quantity: 0,
             associatedStructure: "none",
+            displayStructure: 'LOOSE',
             bLights: 0,
             cover: false,
             isCustom: false,

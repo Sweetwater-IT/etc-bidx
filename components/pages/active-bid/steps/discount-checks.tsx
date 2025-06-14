@@ -156,7 +156,7 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
                   <Input
                     type="number"
                     className="h-9"
-                    value={safeNumber(mptRental?.staticEquipmentInfo[row.item]?.discountRate) || ""}
+                    value={safeNumber(mptRental?.staticEquipmentInfo[row.item]?.discountRate) || 0}
                     onChange={(e) => handleDiscountRateChange(safeNumber(Number(e.target.value)), row.item)}
                     disabled={!editableDiscounts}
                   />

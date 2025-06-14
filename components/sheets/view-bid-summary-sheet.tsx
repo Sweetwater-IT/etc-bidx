@@ -275,15 +275,15 @@ export function ViewBidSummarySheet({
             </div>
 
             {/* BID TOTAL */}
-            <div className="rounded-lg border mt-4">
+            {/* <div className="rounded-lg border mt-4">
               <div className={`grid grid-cols-5 gap-4 p-4 bg-muted font-medium`}>
                 <div>BID TOTAL</div>
                 <div>{formatCurrency(allTotals?.totalRevenue || 0)}</div>
                 <div>{formatCurrency(allTotals?.totalCost || 0)}</div>
                 <div>{formatCurrency(allTotals?.totalGrossProfit || 0)}</div>
-                <div>{((allTotals?.totalGrossProfit || 0) / (allTotals?.totalRevenue || 1) * 100).toFixed(2)}%</div>
+                <div>{(((allTotals?.totalGrossProfit || 0) / (allTotals?.totalRevenue || 1)) / 100).toFixed(2)}%</div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Sale Items */}

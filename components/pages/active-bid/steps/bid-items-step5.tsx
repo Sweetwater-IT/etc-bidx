@@ -642,7 +642,7 @@ const BidItemsStep5 = ({
                           <div key={equipmentKey} className="p-2 rounded-md">
                             <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
                             <div className="text-muted-foreground">Quantity: {sandbagQuantity}</div>
-                            <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                            {/* <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
                           </div>
                         ) : (
                           <div key={equipmentKey} className="p-4 rounded-md">
@@ -660,11 +660,9 @@ const BidItemsStep5 = ({
                                   'quantity'
                                 )}
                                 className="w-full"
-
-
                               />
                             </div>
-                            <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
+                            {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
                           </div>
                         )
                       ))}
@@ -708,12 +706,10 @@ const BidItemsStep5 = ({
                                 'quantity'
                               )}
                               className="w-full"
-
-
                             />
                           </div>
-                          <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div>
-                          <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div>
+                          {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
+                          {/* <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div> */}
                           {adminData?.emergencyJob && (
                             <div className="flex flex-col w-1/3 gap-2 mt-2">
                               <Label htmlFor={`emergency-${equipmentKey}`} className="text-muted-foreground">Emergency Rate:</Label>

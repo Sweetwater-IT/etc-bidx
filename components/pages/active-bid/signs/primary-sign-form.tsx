@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SheetingType, EquipmentType, SecondarySign, structureMap, StructureKey } from "@/types/MPTEquipment";
+import { PrimarySign, SheetingType, EquipmentType, SecondarySign, structureMap, AssociatedStructures, DisplayStructures } from "@/types/MPTEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,11 +108,6 @@ const PrimarySignForm = ({
     });
   };
 
-  // Helper to get base equipment type from structure key
-  const getBaseEquipmentType = (structureKey: StructureKey): EquipmentType | 'none' => {
-    return structureMap[structureKey]?.baseEquipmentType || 'none';
-  };
-
   // Fetch all sign designations and dimensions at once
   useEffect(() => {
     const loadSignData = async () => {
@@ -168,35 +163,32 @@ const PrimarySignForm = ({
   };
 
   const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
-    const updatedSign = { ...localSign, [field]: value };
-    setLocalSign(updatedSign);
-  
+    let updatedSign = { ...localSign, [field]: value };
+
     // Special handling for equipment-related fields
-    if (field === "associatedStructure") {
-      handleStructureChange(value, localSign.associatedStructure);
+    if (field === 'displayStructure') { 
+      updatedSign.associatedStructure = structureMap[value];
+      handleStructureChange(structureMap[value], updatedSign.associatedStructure);
     } else if (field === "bLights") {
       handleBLightsChange(value);
     } else if (field === "quantity") {
       handleQuantityChange(value);
     }
-    // Removed the "cover" case to prevent recursion
+
+    setLocalSign(updatedSign);
   };
 
   const handleStructureChange = (
-    newStructure: StructureKey,
-    oldStructure: StructureKey
+    newStructure: AssociatedStructures,
+    oldStructure: AssociatedStructures
   ) => {
-    // Get the base equipment types for old and new structures
-    const oldEquipmentType = getBaseEquipmentType(oldStructure);
-    const newEquipmentType = getBaseEquipmentType(newStructure);
-
     // Remove old structure equipment if it was a valid equipment type
-    if (oldEquipmentType !== 'none') {
+    if (oldStructure !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
-          equipmentType: oldEquipmentType,
+          equipmentType: oldStructure,
           equipmentProperty: "quantity",
           value: 0, // Remove old structure
         },
@@ -204,12 +196,12 @@ const PrimarySignForm = ({
     }
 
     // Add new structure equipment if it's a valid equipment type
-    if (newEquipmentType !== 'none') {
+    if (newStructure !== 'none') {
       dispatch({
         type: "ADD_MPT_ITEM_NOT_SIGN",
         payload: {
           phaseNumber: currentPhase,
-          equipmentType: newEquipmentType,
+          equipmentType: newStructure,
           equipmentProperty: "quantity",
           value: localSign.quantity, // Set quantity to match the sign
         },
@@ -230,13 +222,12 @@ const PrimarySignForm = ({
   };
 
   const handleCoversChange = (checked: boolean) => {
-    // Update the local sign state directly (don't call handleSignUpdate to avoid recursion)
     const updatedSign = { ...localSign, cover: checked };
     setLocalSign(updatedSign);
-  
+
     // Set covers quantity based on whether it's checked and the sign quantity
     const coversQuantity = checked ? localSign.quantity : 0;
-  
+
     dispatch({
       type: "ADD_MPT_ITEM_NOT_SIGN",
       payload: {
@@ -250,7 +241,7 @@ const PrimarySignForm = ({
 
   const handleQuantityChange = (newValue: number) => {
     // Update equipment quantities for the new quantity
-    const equipmentType = getBaseEquipmentType(localSign.associatedStructure);
+    const equipmentType = sign.associatedStructure
 
     if (equipmentType !== 'none') {
       dispatch({
@@ -651,25 +642,23 @@ const PrimarySignForm = ({
         <div className="flex-2">
           <Label className="text-sm font-medium mb-2 block">Structure</Label>
           <Select
-            value={localSign.associatedStructure || "none"}
-            onValueChange={(value) =>
-              handleSignUpdate("associatedStructure", value as StructureKey)
-            }
+            value={localSign.displayStructure}
+            onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="None" />
+              <SelectValue placeholder="LOOSE" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fourFootTypeIII_right">{`4'`} T-III RIGHT</SelectItem>
-              <SelectItem value="fourFootTypeIII_left">{`4'`} T-III LEFT</SelectItem>
-              <SelectItem value="sixFootTypeIII_right">{`6'`} T-III RIGHT</SelectItem>
-              <SelectItem value="sixFootTypeIII_left">{`6'`} T-III LEFT</SelectItem>
-              <SelectItem value="hStand">H-FOOT</SelectItem>
-              <SelectItem value="post_8ft">{`8'`} POST</SelectItem>
-              <SelectItem value="post_10ft">{`10'`} POST</SelectItem>
-              <SelectItem value="post_12ft">{`12'`} POST</SelectItem>
-              <SelectItem value="post_14ft">{`14'`} POST</SelectItem>
-              <SelectItem value="none">LOOSE</SelectItem>
+              <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
+              <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
+              <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
+              <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+              <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+              <SelectItem value="8' POST">{`8'`} POST</SelectItem>
+              <SelectItem value="10' POST">{`10'`} POST</SelectItem>
+              <SelectItem value="12' POST">{`12'`} POST</SelectItem>
+              <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+              <SelectItem value="LOOSE">LOOSE</SelectItem>
             </SelectContent>
           </Select>
         </div>

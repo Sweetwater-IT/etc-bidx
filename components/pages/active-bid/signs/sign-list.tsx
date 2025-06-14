@@ -5,6 +5,8 @@ import { PrimarySign, SecondarySign, EquipmentType } from "@/types/MPTEquipment"
 import PrimarySignItem from "./primary-sign-item";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import SignsViewOnly from "../steps/signs-view-only";
+import { SignOrderList } from "@/app/takeoffs/new/SignOrderList";
 
 interface SignListProps {
   currentPhase: number;
@@ -51,7 +53,9 @@ const SignList = ({ currentPhase, isTakeoff = false }: SignListProps) => {
 
   return (
     <div className="space-y-6">
-      {primarySigns.map((sign) => (
+      {/* <SignsViewOnly phaseNumber={currentPhase}/> */}
+      <SignOrderList/>
+      {/* {primarySigns.map((sign) => (
         <PrimarySignItem 
           key={sign.id}
           primarySign={sign}
@@ -59,7 +63,7 @@ const SignList = ({ currentPhase, isTakeoff = false }: SignListProps) => {
           currentPhase={currentPhase}
           isTakeoff={isTakeoff}
         />
-      ))}
+      ))} */}
     </div>
   );
 };
