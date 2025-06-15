@@ -11,7 +11,7 @@ export interface QuoteGridView {
   point_of_contact_email: string;
   total_items: number;
   county: string;
-  created_at: string;
+  // created_at: string;
   updated_at: string;
   has_attachments: boolean;
   estimate_contract_number?: string;
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
-    const orderBy = searchParams.get('orderBy') || 'quote_created_at';
+    const orderBy = searchParams.get('orderBy') || 'date_sent';
     const ascending = searchParams.get('ascending') === 'true';
     const counts = searchParams.get('counts') === 'true';
     const nextNumber = searchParams.get('nextNumber') === 'true';
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (counts) {
       try {
         const { data: allQuotes, error: countError } = await supabase
-          .from('quotes_complete')
+          .from('quotes')
           .select('quote_id, status');
         
         if (countError || !allQuotes) {
@@ -107,10 +107,12 @@ export async function GET(request: NextRequest) {
     if (detailed) {
       // For detailed view, get everything
       let query = supabase
-        .from('quotes_complete')
+        .from('quotes')
         .select('*')
         .order(orderBy, { ascending })
         .range(offset, offset + limit - 1);
+
+      console.log(query)
 
       // Apply status filter if provided
       if (status && status !== 'all') {
@@ -128,7 +130,7 @@ export async function GET(request: NextRequest) {
 
       // Get count for pagination
       const { count } = await supabase
-        .from('quotes_complete')
+        .from('quotes')
         .select('quote_id', { count: 'exact', head: true });
       
       return NextResponse.json({
@@ -144,7 +146,7 @@ export async function GET(request: NextRequest) {
     } else {
       // For grid view, select and transform specific fields
       let query = supabase
-        .from('quotes_complete')
+        .from('quotes')
         .select(`
           quote_id,
           quote_number,
@@ -154,8 +156,7 @@ export async function GET(request: NextRequest) {
           point_of_contact,
           quote_items,
           county,
-          quote_created_at,
-          quote_updated_at,
+          date_sent,
           attached_files,
           estimate_contract_number,
           job_number
@@ -203,7 +204,6 @@ export async function GET(request: NextRequest) {
           point_of_contact_email: poc.email || '',
           total_items: itemCount,
           county: row.county || '',
-          created_at: row.quote_created_at,
           updated_at: row.quote_updated_at,
           has_attachments: hasAttachments,
           estimate_contract_number: row.estimate_contract_number || undefined,
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
 
       // Get count for pagination
       const { count } = await supabase
-        .from('quotes_complete')
+        .from('quotes')
         .select('quote_id', { count: 'exact', head: true });
       
       return NextResponse.json({

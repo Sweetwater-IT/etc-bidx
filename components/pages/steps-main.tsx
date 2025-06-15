@@ -6,7 +6,6 @@ import BidSummaryAccordion from "./active-bid/bid-summary-accordion/bid-summary-
 import SignSummaryAccordion from "./active-bid/sign-summary-accordion/sign-summary-accordion";
 import Steps from "./active-bid/steps/steps";
 import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-accordion/trip-and-labor-summary-accordion";
-import { EstimateProvider, useEstimate } from "@/contexts/EstimateContext";
 import { Button } from "../ui/button";
 import PhaseSummaryAccordion from "./active-bid/phase-summary-accordion/phase-summary-accordion";
 import AddPhaseButton from "./active-bid/steps/add-phase-button";
@@ -19,6 +18,8 @@ import MUTCDSignsStep3 from "./active-bid/steps/mutcd-signs-step3";
 import TripAndLaborStep4 from "./active-bid/steps/trip-and-labor-step4";
 import BidItemsStep5 from "./active-bid/steps/bid-items-step5";
 import { useSidebar } from "../ui/sidebar";
+import { Textarea } from "../ui/textarea";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   return (
@@ -43,6 +44,8 @@ const renderStepWithoutNavigation = (stepElement: ReactElement) => {
 };
 
 const StepsMain = () => {
+
+  const { notes, dispatch } = useEstimate()
   const searchParams = useSearchParams();
   const initialStepParam = searchParams?.get("initialStep");
   const tuckedSidebar = searchParams?.get('tuckSidebar')
@@ -69,83 +72,83 @@ const StepsMain = () => {
   }, [])
 
   return (
-      <div
-        className={`relative min-h-screen ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
-          }`}
-        style={{ transition: "all 0.3s ease-in-out" }}
-      >
-        {!isFullscreen && (
-          <div className="absolute top-0 right-0 z-50">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="h-10 w-10 bg-white/50 backdrop-blur-sm"
-                >
-                  <Expand className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter Fullscreen Mode - Show All Sections</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
+    <div
+      className={`relative min-h-screen ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
+        }`}
+      style={{ transition: "all 0.3s ease-in-out" }}
+    >
+      {!isFullscreen && (
+        <div className="absolute top-0 right-0 z-50">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="h-10 w-10 bg-white/50 backdrop-blur-sm"
+              >
+                <Expand className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Enter Fullscreen Mode - Show All Sections</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      )}
 
-        {isFullscreen ? (
-          <div className="w-full flex">
-            <div
-              className={`${isSidebarVisible ? "w-3/4 pr-6" : "w-full"
-                } transition-all duration-300`}
-            >
-              <div className="mb-4 flex justify-between items-center">
-                <div></div>
-                <div className="flex items-center gap-4">
+      {isFullscreen ? (
+        <div className="w-full flex">
+          <div
+            className={`${isSidebarVisible ? "w-3/4 pr-6" : "w-full"
+              } transition-all duration-300`}
+          >
+            <div className="mb-4 flex justify-between items-center">
+              <div></div>
+              <div className="flex items-center gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      {/* Reduced width for better proportions */}
+                      <AddPhaseButton
+                        setCurrentPhase={setCurrentPhase}
+                        setCurrentStep={setCurrentStep}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add a New Phase to the Bid</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="flex items-center gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div>
-                        {/* Reduced width for better proportions */}
-                        <AddPhaseButton
-                          setCurrentPhase={setCurrentPhase}
-                          setCurrentStep={setCurrentStep}
-                        />
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+                        className={`backdrop-blur-sm ${isSidebarVisible
+                          ? "bg-slate-200/80 border-slate-300"
+                          : "bg-white/50"
+                          }`}
+                      >
+                        {isSidebarVisible ? (
+                          <PanelLeftClose className="h-4 w-4" />
+                        ) : (
+                          <PanelRight className="h-4 w-4" />
+                        )}
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Add a New Phase to the Bid</p>
+                      <p>
+                        {isSidebarVisible
+                          ? "Hide Summary Sidebar"
+                          : "Show Summary Sidebar"}
+                      </p>
                     </TooltipContent>
                   </Tooltip>
-                  <div className="flex items-center gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-                          className={`backdrop-blur-sm ${isSidebarVisible
-                              ? "bg-slate-200/80 border-slate-300"
-                              : "bg-white/50"
-                            }`}
-                        >
-                          {isSidebarVisible ? (
-                            <PanelLeftClose className="h-4 w-4" />
-                          ) : (
-                            <PanelRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          {isSidebarVisible
-                            ? "Hide Summary Sidebar"
-                            : "Show Summary Sidebar"}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
 
-                    {/* <Tooltip>
+                  {/* <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant="outline"
@@ -160,129 +163,80 @@ const StepsMain = () => {
                         <p>Exit Fullscreen Mode - Return to Step View</p>
                       </TooltipContent>
                     </Tooltip> */}
-                  </div>
                 </div>
               </div>
-              <div className="space-y-10">
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    Admin Information
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <AdminInformationStep1
-                      currentStep={1}
-                      setCurrentStep={setCurrentStep}
-                    />
-                  )}
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    Phase Information
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <PhaseInfoStep2
-                      currentStep={2}
-                      setCurrentStep={setCurrentStep}
-                      currentPhase={currentPhase}
-                    />
-                  )}
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    MUTCD Signs
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <MUTCDSignsStep3
-                      currentStep={3}
-                      setCurrentStep={setCurrentStep}
-                      currentPhase={currentPhase}
-                    />
-                  )}
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    Trip and Labor
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <TripAndLaborStep4
-                      currentStep={4}
-                      setCurrentStep={setCurrentStep}
-                      currentPhase={currentPhase}
-                    />
-                  )}
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                    Bid Items
-                  </h3>
-                  {renderStepWithoutNavigation(
-                    <BidItemsStep5
-                      currentStep={5}
-                      setCurrentStep={setCurrentStep}
-                      currentPhase={currentPhase}
-                      setIsViewSummaryOpen={setIsViewSummaryOpen}
-                    />
-                  )}
-                </section>
-              </div>
             </div>
+            <div className="space-y-10">
+              <section>
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Admin Information
+                </h3>
+                {renderStepWithoutNavigation(
+                  <AdminInformationStep1
+                    currentStep={1}
+                    setCurrentStep={setCurrentStep}
+                  />
+                )}
+              </section>
 
-            {/* Sidebar */}
-            {isSidebarVisible && (
-              <div className="w-1/4 space-y-4 sticky max-h-[80vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
-                <AdminInformationAccordion currentStep={currentStep} />
-                <PhaseSummaryAccordion
-                  currentStep={currentStep}
-                  setCurrentPhase={setCurrentPhase}
-                  currentPhase={currentPhase}
-                  setCurrentStep={setCurrentStep}
-                />
-                <SignSummaryAccordion
-                  currentStep={currentStep}
-                  currentPhase={currentPhase}
-                />
-                <TripAndLaborSummaryAccordion
-                  currentStep={currentStep}
-                  currentPhase={currentPhase}
-                />
-                <BidSummaryAccordion
-                  currentStep={currentStep}
-                  setIsViewSummaryOpen={setIsViewSummaryOpen}
-                  isViewSummaryOpen={isViewSummaryOpen}
-                />
-              </div>
-            )}
+              <section>
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Phase Information
+                </h3>
+                {renderStepWithoutNavigation(
+                  <PhaseInfoStep2
+                    currentStep={2}
+                    setCurrentStep={setCurrentStep}
+                    currentPhase={currentPhase}
+                  />
+                )}
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  MUTCD Signs
+                </h3>
+                {renderStepWithoutNavigation(
+                  <MUTCDSignsStep3
+                    currentStep={3}
+                    setCurrentStep={setCurrentStep}
+                    currentPhase={currentPhase}
+                  />
+                )}
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Trip and Labor
+                </h3>
+                {renderStepWithoutNavigation(
+                  <TripAndLaborStep4
+                    currentStep={4}
+                    setCurrentStep={setCurrentStep}
+                    currentPhase={currentPhase}
+                  />
+                )}
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Bid Items
+                </h3>
+                {renderStepWithoutNavigation(
+                  <BidItemsStep5
+                    currentStep={5}
+                    setCurrentStep={setCurrentStep}
+                    currentPhase={currentPhase}
+                    setIsViewSummaryOpen={setIsViewSummaryOpen}
+                  />
+                )}
+              </section>
+            </div>
           </div>
-        ) : (
-          <>
-            <div className="flex-1 max-w-[44vw]">
-              <Steps
-                isViewSummaryOpen={isViewSummaryOpen}
-                setIsViewSummaryOpen={setIsViewSummaryOpen}
-                currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
-                currentPhase={currentPhase}
-              />
-            </div>
 
-            {/* Preview Cards */}
-            <div
-              className="summary-section w-80 space-y-4"
-              style={{
-                position: "sticky",
-                top: "2.5rem",
-                maxHeight: "calc(82vh - 2.5rem)",
-                overflowY: "auto",
-              }}
-            >
-              <AddPhaseButton
-                setCurrentPhase={setCurrentPhase}
-                setCurrentStep={setCurrentStep}
-              />
+          {/* Sidebar */}
+          {isSidebarVisible && (
+            <div className="w-1/4 space-y-4 sticky max-h-[80vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
               <AdminInformationAccordion currentStep={currentStep} />
               <PhaseSummaryAccordion
                 currentStep={currentStep}
@@ -303,10 +257,81 @@ const StepsMain = () => {
                 setIsViewSummaryOpen={setIsViewSummaryOpen}
                 isViewSummaryOpen={isViewSummaryOpen}
               />
+              <div className="shadow-md rounded-lg border p-4">
+                <h2 className="mb-2 text-sm font-semibold">Notes</h2>
+                <div className="space-y-4">
+                  <Textarea
+                    placeholder="Add notes here..."
+                    rows={5}
+                    value={notes}
+                    onChange={(e) => dispatch({ type: 'UPDATE_NOTES', payload: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 max-w-[44vw]">
+            <Steps
+              isViewSummaryOpen={isViewSummaryOpen}
+              setIsViewSummaryOpen={setIsViewSummaryOpen}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              currentPhase={currentPhase}
+            />
+          </div>
+
+          {/* Preview Cards */}
+          <div
+            className="summary-section w-80 space-y-4"
+            style={{
+              position: "sticky",
+              top: "2.5rem",
+              maxHeight: "calc(82vh - 2.5rem)",
+              overflowY: "auto",
+            }}
+          >
+            <AddPhaseButton
+              setCurrentPhase={setCurrentPhase}
+              setCurrentStep={setCurrentStep}
+            />
+            <AdminInformationAccordion currentStep={currentStep} />
+            <PhaseSummaryAccordion
+              currentStep={currentStep}
+              setCurrentPhase={setCurrentPhase}
+              currentPhase={currentPhase}
+              setCurrentStep={setCurrentStep}
+            />
+            <SignSummaryAccordion
+              currentStep={currentStep}
+              currentPhase={currentPhase}
+            />
+            <TripAndLaborSummaryAccordion
+              currentStep={currentStep}
+              currentPhase={currentPhase}
+            />
+            <BidSummaryAccordion
+              currentStep={currentStep}
+              setIsViewSummaryOpen={setIsViewSummaryOpen}
+              isViewSummaryOpen={isViewSummaryOpen}
+            />
+            <div className="shadow-sm rounded-lg border p-4">
+              <h2 className="mb-2 text-sm font-semibold">Notes</h2>
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Add notes here..."
+                  rows={5}
+                  value={notes}
+                  onChange={(e) => dispatch({ type: 'UPDATE_NOTES', payload: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 

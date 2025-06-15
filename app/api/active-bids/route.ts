@@ -420,7 +420,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status } = body.data as {
+    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status, notes } = body.data as {
       id: number | undefined
       adminData: AdminData;
       mptRental: MPTRentalEstimating;
@@ -428,7 +428,8 @@ export async function POST(request: NextRequest) {
       flagging: Flagging;
       serviceWork: Flagging;
       saleItems: SaleItem[];
-      status: 'PENDING' | 'DRAFT'
+      status: 'PENDING' | 'DRAFT';
+      notes: string;
     };
 
     // Calculate totals
@@ -467,6 +468,7 @@ export async function POST(request: NextRequest) {
         .from('bid_estimates')
         .insert({
           contract_number: adminData.contractNumber, // Add this to track unique bids
+          notes: notes,
           status: status,
           total_revenue: allTotals.totalRevenue,
           total_cost: allTotals.totalCost,

@@ -1,24 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-// Define result types for better TypeScript support
-interface FileUploadSuccess {
-  filename: string;
-  success: true;
-  fileId: string | number;
-  id?: string | number;
-  file_type?: string;
-  upload_date?: string;
-  file_size?: number;
-}
-
-interface FileUploadError {
-  filename: string;
-  success: false;
-  error: string;
-}
-
-type FileUploadResult = FileUploadSuccess | FileUploadError;
+import { FileUploadResult } from '@/types/FileTypes';
 
 export async function POST(req: NextRequest) {
   try {
