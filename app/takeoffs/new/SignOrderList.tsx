@@ -57,7 +57,7 @@ const SIGN_COLUMNS = [
         title: 'B Lights'
     },
     {
-        key: 'covers',
+        key: 'cover',
         title: 'Covers'
     },
     {
@@ -102,6 +102,7 @@ export function SignOrderList() {
             bLights: 0,
             cover: false,
             isCustom: false,
+            bLightsColor: undefined,
             description: '',
             substrate: 'Aluminum'
         }
@@ -112,6 +113,48 @@ export function SignOrderList() {
             }
         })
         setLocalSign(defaultSign)
+    }
+
+    const formatColumnValue = (sign: PrimarySign | SecondarySign, column: keyof PrimarySign) => {
+        const isPrimary = !Object.hasOwn(sign, 'primarySignId')
+
+        let valueToReturn: any;
+
+        switch (column) {
+            case 'stiffener':
+                if (!isPrimary) {
+                    valueToReturn = '-'
+                } else {
+                    valueToReturn = (sign as PrimarySign).stiffener ? 'Yes' : 'No'
+                }
+                break;
+            case 'cover':
+                if (!isPrimary) {
+                    valueToReturn = '-'
+                } else {
+                    valueToReturn = (sign as PrimarySign).cover ? sign.quantity : 0
+                }
+                break;
+            case 'displayStructure':
+                if (!isPrimary) {
+                    valueToReturn = '-'
+                } else {
+                    valueToReturn = sign[column]
+                }
+                break;
+            case 'bLights':
+                if (!isPrimary) {
+                    valueToReturn = '-'
+                } else {
+                    valueToReturn = sign[column]
+                }
+                break;
+            default:
+                valueToReturn = sign[column]
+                break;
+        }
+
+        return valueToReturn;
     }
 
     return (
@@ -141,7 +184,7 @@ export function SignOrderList() {
                                     <TableCell key={sc.key}>
                                         <div className="flex items-center">
                                             {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
-                                            {sc.key === 'stiffener' ? sign.stiffener ? 'Yes' : 'No' : sc.key === 'actions' ? (<DropdownMenu>
+                                            {sc.key === 'actions' ? (<DropdownMenu>
                                                 <DropdownMenuTrigger
                                                     asChild
                                                     className="flex items-center justify-center"
@@ -198,7 +241,7 @@ export function SignOrderList() {
                                                         Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
-                                            </DropdownMenu>) : sign[sc.key]}
+                                            </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
                                         </div>
                                     </TableCell>
                                 ))}
