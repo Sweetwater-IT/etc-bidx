@@ -13,7 +13,7 @@ const ContractUploadSection: React.FC<Props> = ({ setFiles, jobId, maxFiles = 10
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles, // Allow multiple files to be uploaded
-        jobId : jobId,
+        uniqueIdentifier : jobId,
         apiEndpoint: '/api/files/contract-management',
         accept: {
             'application/pdf': ['.pdf'],
