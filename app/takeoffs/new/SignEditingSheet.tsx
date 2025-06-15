@@ -643,14 +643,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 {isTakeoff && (localSign as PrimarySign).bLights > 0 && (
                                     <div>
                                         <Label className="text-sm font-medium mb-2 block">B Light Color</Label>
-                                        <Select>
+                                        <Select value={localSign.bLightsColor} onValueChange={(value) => handleSignUpdate('bLightsColor', value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Choose color" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="red">Red</SelectItem>
-                                                <SelectItem value="yellow">Yellow</SelectItem>
-                                                <SelectItem value="white">White</SelectItem>
+                                                <SelectItem value="Red">Red</SelectItem>
+                                                <SelectItem value="Yellow">Yellow</SelectItem>
+                                                <SelectItem value="White">White</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

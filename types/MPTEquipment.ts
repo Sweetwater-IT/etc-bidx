@@ -110,6 +110,7 @@ export interface DynamicSignInfo {
   isCustom: boolean;
   designation: string;
   description: string;
+  bLightsColor?: 'Yellow' | 'Red' | 'White'
   substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'
   stiffener?: boolean;
 }
