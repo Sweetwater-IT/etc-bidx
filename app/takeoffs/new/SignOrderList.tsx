@@ -118,32 +118,32 @@ export function SignOrderList() {
     const formatColumnValue = (sign: PrimarySign | SecondarySign, column: keyof PrimarySign) => {
         const isPrimary = !Object.hasOwn(sign, 'primarySignId')
 
-        let valueToReturn : any;
+        let valueToReturn: any;
 
         switch (column) {
             case 'stiffener':
-                if(!isPrimary){
+                if (!isPrimary) {
                     valueToReturn = '-'
                 } else {
-                    (sign as PrimarySign).stiffener ? valueToReturn = 'Yes' : valueToReturn = 'No'
+                    valueToReturn = (sign as PrimarySign).stiffener ? 'Yes' : 'No'
                 }
                 break;
             case 'cover':
-                if(!isPrimary){
+                if (!isPrimary) {
                     valueToReturn = '-'
                 } else {
-                    (sign as PrimarySign).cover ? valueToReturn = sign.quantity : valueToReturn = 0
+                    valueToReturn = (sign as PrimarySign).cover ? sign.quantity : 0
                 }
                 break;
             case 'displayStructure':
-                if(!isPrimary){
+                if (!isPrimary) {
                     valueToReturn = '-'
                 } else {
                     valueToReturn = sign[column]
                 }
                 break;
             case 'bLights':
-                if(!isPrimary){
+                if (!isPrimary) {
                     valueToReturn = '-'
                 } else {
                     valueToReturn = sign[column]
@@ -185,63 +185,63 @@ export function SignOrderList() {
                                         <div className="flex items-center">
                                             {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
                                             {sc.key === 'actions' ? (<DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                        className="flex items-center justify-center"
+                                                <DropdownMenuTrigger
+                                                    asChild
+                                                    className="flex items-center justify-center"
+                                                >
+                                                    <Button variant="ghost" size="sm" className="!p-[2px]">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setLocalSign(sign)
+                                                            setOpen(true)
+                                                            setMode('edit')
+                                                        }}
                                                     >
-                                                        <Button variant="ghost" size="sm" className="!p-[2px]">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setLocalSign(sign)
-                                                                setOpen(true)
-                                                                setMode('edit')
-                                                            }}
-                                                        >
-                                                            <Pencil className="h-4 w-4 mr-2" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                const defaultSecondary: SecondarySign = {
-                                                                    id: generateUniqueId(),
-                                                                    primarySignId: sign.id,
-                                                                    designation: "", // Empty designation
-                                                                    width: 0,
-                                                                    height: 0,
-                                                                    quantity: sign.quantity, // Only inherit quantity
-                                                                    sheeting: "HI", // Default sheeting
-                                                                    isCustom: false,
-                                                                    description: "",
-                                                                    substrate: "Aluminum",
-                                                                };
-                                                                dispatch({
-                                                                    type: 'ADD_MPT_SIGN',
-                                                                    payload: {
-                                                                        phaseNumber: 0,
-                                                                        sign: defaultSecondary
-                                                                    }
-                                                                })
-                                                                setLocalSign(defaultSecondary)
-                                                                setOpen(true)
-                                                                setMode('create')
-                                                            }}
-                                                        >
-                                                            <Plus className="h-4 w-4 mr-2" />
-                                                            Add Secondary Sign
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => dispatch({
-                                                            type: 'DELETE_MPT_SIGN',
-                                                            payload: sign.id
-                                                        })}>
-                                                            <Trash2 className="h-4 w-4 mr-2" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                                        <Pencil className="h-4 w-4 mr-2" />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            const defaultSecondary: SecondarySign = {
+                                                                id: generateUniqueId(),
+                                                                primarySignId: sign.id,
+                                                                designation: "", // Empty designation
+                                                                width: 0,
+                                                                height: 0,
+                                                                quantity: sign.quantity, // Only inherit quantity
+                                                                sheeting: "HI", // Default sheeting
+                                                                isCustom: false,
+                                                                description: "",
+                                                                substrate: "Aluminum",
+                                                            };
+                                                            dispatch({
+                                                                type: 'ADD_MPT_SIGN',
+                                                                payload: {
+                                                                    phaseNumber: 0,
+                                                                    sign: defaultSecondary
+                                                                }
+                                                            })
+                                                            setLocalSign(defaultSecondary)
+                                                            setOpen(true)
+                                                            setMode('create')
+                                                        }}
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-2" />
+                                                        Add Secondary Sign
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => dispatch({
+                                                        type: 'DELETE_MPT_SIGN',
+                                                        payload: sign.id
+                                                    })}>
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
                                         </div>
                                     </TableCell>
                                 ))}
