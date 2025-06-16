@@ -17,20 +17,20 @@ export async function PATCH(
 
   try {
     const updates = await request.json()
-    const { name, market, flagging_base_rate, flagging_fringe_rate, flagging_rate } = updates
+    const { name, market, flagging_base_rate, flagging_fringe_rate, flagging_rate, district, branch, labor_rate, fringe_rate, insurance, fuel } = updates
 
     // Validate required fields
-    if (!name || !market) {
+    if (!name || !market || !district || !branch) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, message: 'Missing required fields (name, market, district, branch)' },
         { status: 400 }
       )
     }
 
     // Validate numeric fields
-    if (isNaN(flagging_base_rate) || isNaN(flagging_fringe_rate) || isNaN(flagging_rate)) {
+    if (isNaN(flagging_base_rate) || isNaN(flagging_fringe_rate) || isNaN(flagging_rate) || isNaN(district) || isNaN(branch) || isNaN(labor_rate) || isNaN(fringe_rate) || isNaN(insurance) || isNaN(fuel)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid rate values' },
+        { success: false, message: 'Invalid numeric values for rates, district, branch, insurance or fuel' },
         { status: 400 }
       )
     }
@@ -68,7 +68,6 @@ export async function PATCH(
       .from('counties')
       .update({
         ...updates,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
@@ -122,20 +121,17 @@ export async function DELETE(
     // Instead of deleting, we'll soft delete by updating a deleted_at timestamp
     const { error } = await supabase
       .from('counties')
-      .update({ 
-        deleted_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .delete()
       .eq('id', id)
 
     if (error) {
       return NextResponse.json(
-        { success: false, message: 'Failed to archive county', error: error.message },
+        { success: false, message: 'Failed to delete county', error: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true, message: 'County archived successfully' })
+    return NextResponse.json({ success: true, message: 'County deleted successfully' })
   } catch (error) {
     return NextResponse.json(
       { success: false, message: 'Unexpected error', error: String(error) },

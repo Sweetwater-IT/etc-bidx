@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const query = supabase
       .from('counties')
-      .select('id,name,state,market,flagging_base_rate,flagging_fringe_rate,flagging_rate', { count: 'exact' })
+      .select('id,name,market,flagging_base_rate,flagging_fringe_rate,flagging_rate,district,branch,labor_rate,fringe_rate,insurance,fuel,flagging_non_rated_target_gm,flagging_rated_target_gm', { count: 'exact' })
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1)
 
@@ -54,53 +54,83 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, state, market, flagging_base_rate, flagging_fringe_rate, flagging_rate } = body
+    const {
+      name,
+      market,
+      flagging_base_rate,
+      flagging_fringe_rate,
+      flagging_rate,
+      district,
+      branch,
+      labor_rate,
+      fringe_rate,
+      insurance,
+      fuel,
+      flagging_non_rated_target_gm,
+      flagging_rated_target_gm,
+    } = await request.json()
 
     // Validate required fields
-    if (!name || !state || !market) {
+    if (!name || !market || !district || !branch) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, message: 'Missing required fields (name, market, district, branch)' },
         { status: 400 }
       )
     }
 
     // Validate numeric fields
-    if (isNaN(flagging_base_rate) || isNaN(flagging_fringe_rate) || isNaN(flagging_rate)) {
+    if (
+      isNaN(flagging_base_rate) ||
+      isNaN(flagging_fringe_rate) ||
+      isNaN(flagging_rate) ||
+      isNaN(district) ||
+      isNaN(branch) ||
+      isNaN(labor_rate) ||
+      isNaN(fringe_rate) ||
+      isNaN(insurance) ||
+      isNaN(fuel) ||
+      isNaN(flagging_non_rated_target_gm) ||
+      isNaN(flagging_rated_target_gm)
+    ) {
       return NextResponse.json(
-        { success: false, message: 'Invalid rate values' },
+        { success: false, message: 'Invalid numeric values for rates, district, branch, insurance or fuel' },
         { status: 400 }
       )
     }
 
-    // Check if county with same name and state already exists
+    // Check if a county with the same name already exists
     const { data: existingCounty } = await supabase
       .from('counties')
       .select('id')
       .eq('name', name)
-      .eq('state', state)
       .single()
 
     if (existingCounty) {
       return NextResponse.json(
-        { success: false, message: 'County with this name and state already exists' },
+        { success: false, message: 'A county with this name already exists.' },
         { status: 409 }
       )
     }
 
     const { data, error } = await supabase
       .from('counties')
-      .insert([
-        {
-          name,
-          state,
-          market,
-          flagging_base_rate,
-          flagging_fringe_rate,
-          flagging_rate,
-        },
-      ])
+      .insert({
+        name,
+        market,
+        flagging_base_rate,
+        flagging_fringe_rate,
+        flagging_rate,
+        district,
+        branch,
+        labor_rate,
+        fringe_rate,
+        insurance,
+        fuel,
+        flagging_non_rated_target_gm,
+        flagging_rated_target_gm,
+      })
       .select()
+      .single()
 
     if (error) {
       console.error('Database error:', error)

@@ -24,13 +24,20 @@ type Branch = {
 }
 
 type County = {
-    id: number;
+    id: string;
     name: string;
-    state: string;
     market: string;
     flagging_base_rate: number;
     flagging_fringe_rate: number;
     flagging_rate: number;
+    district: number;
+    branch: number;
+    labor_rate: number;
+    fringe_rate: number;
+    insurance: number;
+    fuel: number;
+    flagging_non_rated_target_gm: number;
+    flagging_rated_target_gm: number;
 }
 
 type FlagRate = {
@@ -108,11 +115,18 @@ export function PortalPageContent({ page: Page }) {
 
     const COUNTIES_COLUMNS: Column[] = [
         { key: "name", title: "Name" },
-        { key: "state", title: "State" },
+        { key: "district", title: "District" },
+        { key: "branch", title: "Branch" },
+        { key: "labor_rate", title: "Labor Rate" },
+        { key: "fringe_rate", title: "Fringe Rate" },
         { key: "market", title: "Market" },
-        { key: "flagging_base_rate", title: "Base Rate" },
-        { key: "flagging_fringe_rate", title: "Fringe Rate" },
         { key: "flagging_rate", title: "Flagging Rate" },
+        { key: "insurance", title: "Insurance" },
+        { key: "fuel", title: "Fuel" },
+        { key: "flagging_non_rated_target_gm", title: "Flagging Non-Rated Target GM" },
+        { key: "flagging_rated_target_gm", title: "Flagging Rated Target GM" },
+        { key: "flagging_base_rate", title: "Flagging Base Rate" },
+        { key: "flagging_fringe_rate", title: "Flagging Fringe Rate" },
     ];
 
     const FLAGGING_COLUMNS: Column[] = [
@@ -528,8 +542,8 @@ export function PortalPageContent({ page: Page }) {
                                 <EditCountySheet
                                     open={showEditCountyDialog}
                                     onOpenChange={setShowEditCountyDialog}
+                                    county={selectedCounty ? selectedCounty : null}
                                     onSuccess={loadCounties}
-                                    county={selectedCounty}
                                 />
                                 <ConfirmArchiveDialog
                                     isOpen={openConfirmArchiveCountyDialog}
