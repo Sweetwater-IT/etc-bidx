@@ -29,7 +29,7 @@ interface Props {
 
 const StepperSaveButtons = ({ mode, status }: Props) => {
 
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged } = useEstimate();
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged, notes } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
@@ -51,7 +51,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
         try {
             startLoading();
             const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
-            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', idToUse);
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes, idToUse);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
             const params = new URLSearchParams();

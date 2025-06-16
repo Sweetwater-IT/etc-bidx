@@ -17,4 +17,5 @@ export type Estimate = {
     totalCost? : number;
     totalGrossProfit? : number;
     ratesAcknowledged: boolean;
+    notes: string
 }

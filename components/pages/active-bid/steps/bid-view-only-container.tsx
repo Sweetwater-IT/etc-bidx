@@ -20,6 +20,9 @@ import { Check, ChevronsUpDown, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { DialogTitle } from '@radix-ui/react-dialog'
+import FileViewingContainer from '@/components/file-viewing-container'
+import { fetchFileMetadataByFolder, fetchFilesByAssociation } from '@/lib/api-client'
+import { FileMetadata } from '@/types/FileTypes'
 
 const SUBCONTRACTOR_OPTIONS = [
     { name: "ETC", id: 1 },
@@ -34,10 +37,12 @@ const BidViewOnlyContainer = () => {
 
     const searchParams = useSearchParams();
     const bidId = searchParams?.get('bidId')
-
-    const [localNotes, setLocalNotes] = useState<string>()
+    const [localNotes, setLocalNotes] = useState<string>('')
+    const [savedNotes, setSavedNotes] = useState<string>('')
+    const [isSavingNotes, setIsSavingNotes] = useState<boolean>(false)
     const [contractor, setContractor] = useState<Customer>();
-    const [subcontractor, setSubcontractor] = useState<{name: string, id: number}>()
+    const [files, setFiles] = useState<FileMetadata[]>([])
+    const [subcontractor, setSubcontractor] = useState<{ name: string, id: number }>()
     const [selectedContractor, setSelectedContractor] = useState<Customer>();
     const [selectedSubcontractor, setSelectedSubcontractor] = useState<{ name: string, id: number }>()
     const [openStates, setOpenStates] = useState({
@@ -52,11 +57,73 @@ const BidViewOnlyContainer = () => {
         getCustomers();
     }, [getCustomers])
 
+    const getFiles = async () => {
+        const fileResponse = await fetchFileMetadataByFolder(Number(bidId), 'bid_estimates');
+        if (fileResponse.success) {
+            setFiles(fileResponse.files)
+        } else {
+            toast.error("Couldn't fetch files for this bid: " + fileResponse.error)
+        }
+    }
+
+    // Fetch bid data including notes
+    useEffect(() => {
+        const fetchBidData = async () => {
+            if (!bidId) return;
+
+            try {
+                const response = await fetch(`/api/active-bids/${bidId}`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        const notes = result.data.notes || '';
+                        setLocalNotes(notes);
+                        setSavedNotes(notes);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching bid data:', error);
+            }
+        };
+
+        fetchBidData();
+    }, [bidId]);
+
+    const handleSaveNotes = async () => {
+        if (!bidId) return;
+
+        setIsSavingNotes(true);
+        try {
+            const response = await fetch(`/api/active-bids/${bidId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ notes: localNotes })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                toast.error(errorData.message || 'Failed to save notes');
+            } else {
+                const result = await response.json();
+                toast.success('Notes saved successfully');
+                setSavedNotes(localNotes);
+            }
+        } catch (error) {
+            console.error('Error saving notes:', error);
+            toast.error('Failed to save notes');
+        } finally {
+            setIsSavingNotes(false);
+        }
+    };
+
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles: 5, // Allow multiple files to be uploaded
-        jobId: bidId ? Number(bidId) : undefined,
-        apiEndpoint: '/api/files/contract-management',
+        uniqueIdentifier: bidId ? Number(bidId) : undefined,
+        folder: 'bid_estimates',
+        apiEndpoint: '/api/files',
         accept: {
             'application/pdf': ['.pdf'],
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -67,8 +134,13 @@ const BidViewOnlyContainer = () => {
             'application/zip': ['.zip'],
             'text/plain': ['.txt'],
             'text/csv': ['.csv']
-        }
+        },
+        onSuccess: getFiles
     });
+
+    useEffect(() => {
+        getFiles();
+    }, [])
 
     useEffect(() => {
         const fetchContractors = async () => {
@@ -141,6 +213,9 @@ const BidViewOnlyContainer = () => {
         }
     }
 
+    // Check if notes have changed
+    const hasUnsavedChanges = localNotes !== savedNotes;
+
     return (
         <>
             <Dialog open={contractorsModalOpen} onOpenChange={setContractorsModalOpen}>
@@ -179,7 +254,7 @@ const BidViewOnlyContainer = () => {
                                                     value={customer.name}
                                                     onSelect={(e) => {
                                                         setSelectedContractor(customers.find(c => c.name === e))
-                                                        setOpenStates(prev => ({ ...prev, contractor: false}))
+                                                        setOpenStates(prev => ({ ...prev, contractor: false }))
                                                     }}
                                                 >
                                                     <Check
@@ -224,7 +299,7 @@ const BidViewOnlyContainer = () => {
                                                     value={option.name}
                                                     onSelect={(name) => {
                                                         setSelectedSubcontractor(SUBCONTRACTOR_OPTIONS.find(sub => sub.name === name))
-                                                        setOpenStates(prev => ({...prev, subContractor: false}))
+                                                        setOpenStates(prev => ({ ...prev, subContractor: false }))
                                                     }}
                                                 >
                                                     <Check
@@ -295,22 +370,32 @@ const BidViewOnlyContainer = () => {
                     <div className="rounded-lg border p-6">
                         <h2 className="mb-4 text-lg font-semibold">Notes</h2>
                         <div className="space-y-4">
-                            <div className="text-sm text-muted-foreground">
-                                {/* {notes === '' ? 'No notes for this quote' : notes} */} No notes for this bid
+                            <div className="text-sm text-wrap wrap-break-word text-muted-foreground">
+                                {savedNotes === '' ? 'No notes for this bid' : 'Current notes:'}
                             </div>
+                            {savedNotes && (
+                                <div className="text-sm p-3 bg-muted rounded border">
+                                    {savedNotes}
+                                </div>
+                            )}
                             <Textarea
                                 placeholder="Add notes here..."
                                 rows={5}
                                 value={localNotes}
                                 onChange={(e) => setLocalNotes(e.target.value)}
                             />
-                            <Button className="w-full" onClick={() => { }}>
-                                Save Notes
+                            <Button 
+                                className="w-full" 
+                                onClick={handleSaveNotes}
+                                disabled={isSavingNotes || !hasUnsavedChanges}
+                            >
+                                {isSavingNotes ? 'Saving...' : hasUnsavedChanges ? 'Save Notes' : 'No Changes'}
                             </Button>
                         </div>
                     </div>
                     <div className="rounded-lg border p-6">
                         <h2 className="mb-4 text-lg font-semibold">Files</h2>
+                        <FileViewingContainer files={files} onFilesChange={setFiles} />
                         <Dropzone
                             {...fileUploadProps}
                         >

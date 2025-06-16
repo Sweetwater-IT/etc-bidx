@@ -19,6 +19,7 @@ import WorkerProtectionCertification from './WorkersProtection';
 import { GenerateEmploymentVerificationForm } from './EmploymentVerification';
 import { formatDecimal } from '@/lib/formatDecimals';
 import { handleNextDigits } from '@/lib/handleNextDigits';
+import { FileMetadata } from '@/types/FileTypes';
 
 interface SenderInfo {
     name: string;
@@ -47,7 +48,7 @@ interface ContractFileManagementProps {
     setCustomer: Dispatch<SetStateAction<Customer | null>>
     allCustomers: Customer[]
     jobId: number | undefined
-    setFiles: Dispatch<SetStateAction<File[]>>
+    setFiles: Dispatch<SetStateAction<FileMetadata[]>>
 }
 
 const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
@@ -181,12 +182,13 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
 
     const handleDocSave = async (type: 'fringe-benefits' | 'employment-verification' | 'workers-protection') => {
         if (!jobId) {
-            toast.error('Job id is not set yet, plase wait');
+            toast.error('Job id is not set yet, please wait');
             return;
         }
         setSaving(true)
         let blob: Blob;
         let filename: string;
+        
         if (type === 'fringe-benefits') {
             blob = await ReactPDF.pdf(<FringeBenefitsStatement laborGroup={laborGroup} sender={sender} adminData={adminData} />).toBlob();
             filename = 'Fringe Benefits Letter'
@@ -197,28 +199,69 @@ const ContractFileManagement: React.FC<ContractFileManagementProps> = ({
             blob = await ReactPDF.pdf(<GenerateEmploymentVerificationForm user={sender} description={evDescription} adminData={adminData} />).toBlob();
             filename = 'Employment Verification Form'
         }
-
+        
         const file = new File([blob], filename, { type: 'application/pdf' })
-
         const formData = new FormData();
         formData.append('file', file)
-        formData.append('jobId', jobId.toString())
-
-        const fileResponse = await fetch('/api/files/contract-management', {
-            method: 'POST',
-            body: formData
-        })
-
-        if (!fileResponse.ok) {
-            const fileError = await fileResponse.json();
-            toast.error("Couldn't save files: " + fileError.message)
+        formData.append('uniqueIdentifier', jobId.toString())
+        
+        try {
+            const fileResponse = await fetch('/api/files/contract-management', {
+                method: 'POST',
+                body: formData
+            })
+            
+            if (!fileResponse.ok) {
+                const fileError = await fileResponse.json();
+                toast.error("Couldn't save files: " + fileError.message)
+                setSaving(false)
+                return;
+            }
+            
+            const result = await fileResponse.json();
+            
+            if (result.success && result.results && result.results.length > 0) {
+                // Get the successful upload result
+                const successfulUpload = result.results.find((r: any) => r.success);
+                
+                if (successfulUpload) {
+                    // Create FileMetadata object from the upload response
+                    const newFileMetadata: FileMetadata = {
+                        id: successfulUpload.fileId,
+                        filename: successfulUpload.filename,
+                        file_type: successfulUpload.file_type,
+                        file_size: successfulUpload.file_size,
+                        file_url: successfulUpload.fileUrl,
+                        file_path: '', // This might be available in the response if needed
+                        upload_date: successfulUpload.upload_date,
+                        associatedId: jobId
+                    };
+                    
+                    // Add the new file metadata to the files state
+                    setFiles(prevState => [...prevState, newFileMetadata]);
+                    toast.success('Successfully saved and uploaded file');
+                } else {
+                    toast.error('File upload failed');
+                }
+            } else {
+                // Fallback: refresh the file list to get the latest files
+                try {
+                    const refreshResponse = await fetch(`/api/files/contract-management?job_id=${jobId}`);
+                    if (refreshResponse.ok) {
+                        const refreshResult = await refreshResponse.json();
+                        setFiles(refreshResult.data || []);
+                        toast.success('Successfully saved file');
+                    }
+                } catch (refreshError) {
+                    console.error('Error refreshing file list:', refreshError);
+                    toast.success('File saved, but list may not be current');
+                }
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            toast.error("Network error while uploading file");
         }
-        else {
-            toast.success('Successfully saved files')
-        }
-
-        setFiles(prevState => [...prevState, file])
-
+        
         setSaving(false)
     }
 

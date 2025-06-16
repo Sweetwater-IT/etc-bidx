@@ -23,7 +23,7 @@ interface Props {
 
 const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
-  const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork } = useEstimate()
+  const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork, notes } = useEstimate()
 
   const params = useSearchParams();
   const bidId = params?.get('bidId')
@@ -42,7 +42,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         startLoading();
         const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
         const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
-        await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, idToUse);
+        await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, idToUse);
         toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
         router.replace('/jobs/active-bids')
       } catch (error) {

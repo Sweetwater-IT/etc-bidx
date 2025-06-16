@@ -623,7 +623,8 @@ export const estimateReducer = (
 				mptRental: defaultMPTObject,
 				flagging: defaultFlaggingObject,
 				equipmentRental: [],
-				ratesAcknowledged: false
+				ratesAcknowledged: false,
+				notes: ''
 				// permanentSigns: defaultPermanentSignsObject, 
 			};
 
@@ -701,11 +702,22 @@ export const estimateReducer = (
 				...state,
 				saleItems: action.payload
 			}
+
+		case 'COPY_NOTES':
+			return {
+				...state,
+				notes: action.payload
+			}
 		
 		case 'SET_RATES_ACKNOWLEDGED':
 			return {
 				...state,
 				ratesAcknowledged: action.payload
+			}
+		case 'UPDATE_NOTES':
+			return {
+				...state,
+				notes: action.payload
 			}
 
 		default:

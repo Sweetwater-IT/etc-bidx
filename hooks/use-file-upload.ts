@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone, type Accept, type FileRejection } from 'react-dropzone'
-
-interface FileWithPreview extends File {
-  preview: string
-  errors: { code: string; message: string }[]
-}
+import { FileWithPreview } from '@/types/FileTypes'
 
 interface UseFileUploadOptions {
   /**
@@ -24,19 +20,23 @@ interface UseFileUploadOptions {
   /**
    * The job ID to associate the files with
    */
-  jobId?: number
+  uniqueIdentifier?: number | string
+  folder?: string
   /**
    * The API endpoint to upload files to
    */
   apiEndpoint?: string
+  onSuccess?: () => void
 }
 
 export function useFileUpload({
   maxFileSize = Number.POSITIVE_INFINITY,
   maxFiles = Number.POSITIVE_INFINITY,
   accept = undefined,
-  jobId,
-  apiEndpoint = '/api/files/contract-management'
+  uniqueIdentifier,
+  folder,
+  apiEndpoint = '/api/files',
+  onSuccess
 }: UseFileUploadOptions = {}) {
   const [files, setFiles] = useState<FileWithPreview[]>([])
   const [loading, setLoading] = useState<boolean>(false)
@@ -104,8 +104,8 @@ export function useFileUpload({
   })
 
   const onUpload = useCallback(async () => {
-    if (!jobId) {
-      setErrors([{ name: 'job', message: 'Job ID is required to upload files' }])
+    if (!uniqueIdentifier) {
+      setErrors([{ name: 'identifier', message: 'Unique identifier needs to be present to save files' }])
       return
     }
 
@@ -132,9 +132,8 @@ export function useFileUpload({
         formData.append('file', file)
       })
       
-      // Add the jobId
-      formData.append('jobId', jobId.toString())
-      
+      formData.append('uniqueIdentifier', typeof uniqueIdentifier === 'number' ? uniqueIdentifier.toString() : uniqueIdentifier)
+      formData.append('folder', folder ?? 'jobs');
       // Make API request
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -169,11 +168,13 @@ export function useFileUpload({
         // Set overall success if all files were uploaded
         if (newSuccesses.length === filesToUpload.length) {
           setIsSuccess(true)
+          onSuccess?.();
         }
       } else {
         // Handle older API response format
         setSuccesses(files.map(file => file.name))
         setIsSuccess(true)
+        onSuccess?.();
       }
     } catch (error) {
       console.error('Upload error:', error)
@@ -181,7 +182,7 @@ export function useFileUpload({
     } finally {
       setLoading(false)
     }
-  }, [files, jobId, successes, apiEndpoint])
+  }, [files, uniqueIdentifier, successes, apiEndpoint])
 
   // Remove "too many files" errors when files are removed
   useEffect(() => {

@@ -62,6 +62,7 @@ export default function QuotesPage() {
       params.append("limit", limit.toString());
       params.append("orderBy", "quote_created_at");
       params.append("ascending", "false");
+      params.append('detailed', "true");
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
