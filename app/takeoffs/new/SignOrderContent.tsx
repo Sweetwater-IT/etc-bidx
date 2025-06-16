@@ -161,8 +161,9 @@ export default function SignFormContent({ orderId }: SignFormContentProps) {
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
         maxFiles: 10, // Allow multiple files to be uploaded
+        folder: 'sign_orders',
         uniqueIdentifier: 100000,
-        apiEndpoint: '/api/files/sign-orders',
+        apiEndpoint: '/api/files',
         accept: {
             'application/pdf': ['.pdf'],
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],

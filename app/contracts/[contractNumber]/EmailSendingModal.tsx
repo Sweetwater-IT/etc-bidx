@@ -1,5 +1,5 @@
+// Updated EmailSendingModal component
 'use client'
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
@@ -7,13 +7,14 @@ import { TagsInput } from '../../../components/ui/tags-input';
 import { Customer } from '../../../types/Customer';
 import { User } from '../../../types/User';
 import { toast } from 'sonner';
+import { FileMetadata } from '@/types/FileTypes';
 
 interface EmailSendingModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     customer: Customer | null;
     contractNumber: string;
-    files: File[];
+    files: FileMetadata[];
     sender: User;
     jobId?: number;
 }
@@ -38,8 +39,8 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
     useEffect(() => {
         if (files.length > 0) {
             const initialSelectedFiles: Record<string, boolean> = {};
-            files.forEach((file, index) => {
-                initialSelectedFiles[`file-${index}`] = true;
+            files.forEach((file) => {
+                initialSelectedFiles[file.id.toString()] = true;
             });
             setSelectedFileIds(initialSelectedFiles);
         }
@@ -58,6 +59,14 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
         }));
     };
 
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
     // Handle email submission
     const handleSubmit = async () => {
         if (selectedEmails.length === 0) {
@@ -66,7 +75,7 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
         }
 
         // Get selected files
-        const selectedFiles = files.filter((_, index) => selectedFileIds[`file-${index}`]);
+        const selectedFiles = files.filter((file) => selectedFileIds[file.id.toString()]);
 
         if (selectedFiles.length === 0) {
             toast.error("Please select at least one file to attach");
@@ -76,39 +85,32 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
         setIsSending(true);
 
         try {
-            // Create FormData to send files
-            const formData = new FormData();
+            // Create request body with file metadata instead of actual files
+            const emailData = {
+                subject,
+                emailBody: body,
+                htmlContent: body.replace(/\n/g, '<br>'),
+                recipients: selectedEmails,
+                fromEmail: sender.email,
+                fromName: sender.name,
+                contractNumber,
+                jobId: jobId?.toString(),
+                fileMetadata: selectedFiles.map(file => ({
+                    id: file.id,
+                    filename: file.filename,
+                    file_url: file.file_url,
+                    file_type: file.file_type,
+                    file_size: file.file_size
+                }))
+            };
             
-            // Add email data
-            formData.append('subject', subject);
-            formData.append('emailBody', body);
-            
-            // Add HTML version of the email body
-            const htmlBody = body.replace(/\n/g, '<br>');
-            formData.append('htmlContent', htmlBody);
-            
-            // Add recipients
-            selectedEmails.forEach(email => {
-                formData.append('to', email);
-            });
-            
-            // Add sender info
-            formData.append('fromEmail', sender.email);
-            formData.append('fromName', sender.name);
-            
-            // Add contract info
-            formData.append('contractNumber', contractNumber);
-            if (jobId) formData.append('jobId', jobId.toString());
-            
-            // Add files
-            selectedFiles.forEach(file => {
-                formData.append('files', file);
-            });
-            
-            // Send email
+            // Send email with file metadata
             const response = await fetch('/api/jobs/contract-management/send', {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(emailData),
             });
             
             if (!response.ok) {
@@ -196,8 +198,8 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
                             </div>
                         ) : (
                             <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
-                                {files.map((file, index) => {
-                                    const fileId = `file-${index}`;
+                                {files.map((file) => {
+                                    const fileId = file.id.toString();
                                     return (
                                         <div key={fileId} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md">
                                             <input
@@ -208,10 +210,10 @@ const EmailSendingModal: React.FC<EmailSendingModalProps> = ({
                                                 onChange={() => toggleFileSelection(fileId)}
                                             />
                                             <label htmlFor={fileId} className="flex-grow text-sm cursor-pointer truncate">
-                                                {file.name}
+                                                {file.filename}
                                             </label>
                                             <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                {Math.round(file.size / 1024)} KB
+                                                {formatFileSize(file.file_size)}
                                             </span>
                                         </div>
                                     );

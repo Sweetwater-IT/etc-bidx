@@ -9,10 +9,11 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { Label } from '../../../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { PDFDocument } from 'pdf-lib';
+import { FileMetadata } from '@/types/FileTypes';
 
 interface FileManagerSectionProps {
-    files: File[];
-    onFilesChange: (files: File[]) => void;
+    files: FileMetadata[];
+    onFilesChange: (files: FileMetadata[]) => void;
     jobId?: number;
     open: Dispatch<SetStateAction<boolean>>
 }
@@ -40,42 +41,69 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
         };
     }, [mergedPdfUrl]);
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newFiles = event.target.files;
-        if (newFiles && newFiles.length > 0) {
-            onFilesChange([...files, ...Array.from(newFiles)]);
-        }
-        // Reset input value so the same file can be selected again
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+    const refreshFileList = async () => {
+        if (!jobId) return;
+        
+        try {
+            const response = await fetch(`/api/files/contract-management?job_id=${jobId}`);
+            if (response.ok) {
+                const result = await response.json();
+                onFilesChange(result.data || []);
+            }
+        } catch (error) {
+            console.error('Error refreshing file list:', error);
         }
     };
     
-    const handleDeleteFile = (index: number) => {
-        const newFiles = [...files];
-        newFiles.splice(index, 1);
-        onFilesChange(newFiles);
-        
-        // Update selected files if in combining mode
-        if (isCombining) {
-            setSelectedFiles(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+    const handleDeleteFile = async (index: number, fileId: number, filename: string) => {
+        try {
+            // Delete from server using the general files API
+            const response = await fetch(`/api/files?fileId=${fileId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                toast.error(`Failed to delete ${filename}: ${errorData.error}`);
+                return;
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Remove from local state after successful deletion
+                const newFiles = [...files];
+                newFiles.splice(index, 1);
+                onFilesChange(newFiles);
+                toast.success(`Successfully deleted ${filename}`);
+                
+                // Update selected files if in combining mode
+                if (isCombining) {
+                    setSelectedFiles(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+                }
+            } else {
+                toast.error(`Failed to delete ${filename}: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to delete file:', error);
+            toast.error(`Failed to delete ${filename}`);
         }
     };
 
-    const handleDownloadFile = (file: File, index: number) => {
-        const url = URL.createObjectURL(file);
+    const handleDownloadFile = (fileMetadata: FileMetadata) => {
+        // Use the file_url from metadata for direct download
         const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
+        a.href = fileMetadata.file_url;
+        a.download = fileMetadata.filename;
+        a.target = '_blank'; // Fallback to open in new tab
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     };
 
     const toggleFileSelection = (index: number) => {
         // Only allow PDF files to be selected for combining
-        if (!files[index].type.includes('pdf')) {
+        if (!files[index].file_type.includes('pdf')) {
             toast.warning('Only PDF files can be combined');
             return;
         }
@@ -101,6 +129,20 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
         setMergedPdfFile(null);
     };
 
+    // Convert FileMetadata to File object for PDF operations
+    const fetchFileAsFile = async (fileMetadata: FileMetadata): Promise<File | null> => {
+        try {
+            const response = await fetch(fileMetadata.file_url);
+            if (!response.ok) return null;
+            
+            const blob = await response.blob();
+            return new File([blob], fileMetadata.filename, { type: fileMetadata.file_type });
+        } catch (error) {
+            console.error(`Error fetching file ${fileMetadata.filename}:`, error);
+            return null;
+        }
+    };
+
     const createMergedPDF = async () => {
         if (selectedFiles.length === 0) {
             toast.warning('Please select PDF files to merge');
@@ -112,12 +154,19 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
             const mergedPdf = await PDFDocument.create();
             
             // Sort selected files by their order in the selectedFiles array
-            const sortedFiles = [...selectedFiles].sort((a, b) => selectedFiles.indexOf(a) - selectedFiles.indexOf(b))
+            const sortedFileMetadata = [...selectedFiles].sort((a, b) => selectedFiles.indexOf(a) - selectedFiles.indexOf(b))
                 .map(index => files[index]);
             
             // Process each selected PDF file
-            for (const file of sortedFiles) {
+            for (const fileMetadata of sortedFileMetadata) {
                 try {
+                    // Fetch the file content from URL
+                    const file = await fetchFileAsFile(fileMetadata);
+                    if (!file) {
+                        toast.error(`Could not fetch file: ${fileMetadata.filename}`);
+                        continue;
+                    }
+                    
                     // Convert File to ArrayBuffer
                     const fileArrayBuffer = await file.arrayBuffer();
                     
@@ -133,8 +182,8 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                         mergedPdf.addPage(page);
                     });
                 } catch (fileError) {
-                    console.error(`Error processing file ${file.name}:`, fileError);
-                    toast.error(`Could not process file: ${file.name}`);
+                    console.error(`Error processing file ${fileMetadata.filename}:`, fileError);
+                    toast.error(`Could not process file: ${fileMetadata.filename}`);
                 }
             }
             
@@ -145,7 +194,6 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
             const mergedFileName = `combined_${new Date().toISOString().split('T')[0]}.pdf`;
             
             // Create a new Blob from the Uint8Array
-            // TypeScript fix: explicitly convert to Uint8Array first, then pass to Blob constructor
             const uint8Array = new Uint8Array(mergedPdfBytes);
             const blob = new Blob([uint8Array], { type: 'application/pdf' });
             
@@ -203,7 +251,7 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
             // Create FormData
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('jobId', jobId.toString());
+            formData.append('uniqueIdentifier', jobId.toString());
             
             // Upload to server
             const response = await fetch('/api/files/contract-management', {
@@ -217,6 +265,7 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
             }
             
             const result = await response.json();
+            toast.success(`Successfully uploaded ${file.name}`);
             return true;
         } catch (error) {
             console.error('Error uploading file:', error);
@@ -242,8 +291,8 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                 const success = await uploadFileToServer(fileToSave);
                 
                 if (success) {
-                    // Add to local files state
-                    onFilesChange([...files, fileToSave]);
+                    // Refresh the file list to show the new file
+                    await refreshFileList();
                     toast.success('Merged PDF uploaded and saved successfully');
                     
                     // Reset the UI state
@@ -252,12 +301,7 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                     toast.error('Failed to upload merged PDF to server');
                 }
             } else {
-                // Just add to local files state if no jobId
-                onFilesChange([...files, fileToSave]);
-                toast.success('Merged PDF saved to local files');
-                
-                // Reset the UI state
-                resetCombiningMode();
+                toast.error('Job ID is required to save files');
             }
         } catch (error) {
             console.error("Error saving merged PDF:", error);
@@ -265,6 +309,18 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString();
     };
 
     return (
@@ -287,13 +343,6 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                             >
                                 Send Email
                             </Button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
                         </div>
                     </div>
                     {isCombining && (
@@ -308,7 +357,7 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                         <div className="space-y-2 max-h-[500px] overflow-y-auto">
                             {files.map((file, index) => (
                                 <div 
-                                    key={`${file.name}-${index}`} 
+                                    key={`${file.filename}-${file.id}`} 
                                     className="flex items-center gap-4 p-3 border rounded-md hover:bg-muted/50"
                                 >
                                     {isCombining && (
@@ -317,7 +366,7 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                                                 id={`select-${index}`}
                                                 checked={selectedFiles.includes(index)}
                                                 onCheckedChange={() => toggleFileSelection(index)}
-                                                disabled={!file.type.includes('pdf')}
+                                                disabled={!file.file_type.includes('pdf')}
                                             />
                                             {selectedFiles.includes(index) && (
                                                 <span className="text-xs font-medium">
@@ -332,26 +381,31 @@ const FileManagerSection: React.FC<FileManagerSectionProps> = ({
                                     </div>
                                     
                                     <div className="grow overflow-hidden">
-                                        <p className="text-sm font-medium truncate" title={file.name}>
-                                            {file.name}
+                                        <p className="text-sm font-medium truncate" title={file.filename}>
+                                            {file.filename}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {Math.round(file.size / 1024)} KB
-                                        </p>
+                                        <div className="flex gap-2 text-xs text-muted-foreground">
+                                            <span>{formatFileSize(file.file_size)}</span>
+                                            <span>•</span>
+                                            <span>{formatDate(file.upload_date)}</span>
+                                        </div>
                                     </div>
                                     
                                     <div className="flex gap-2">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => handleDownloadFile(file, index)}
+                                            onClick={() => handleDownloadFile(file)}
+                                            title="Download file"
                                         >
                                             <Download size={16} />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => handleDeleteFile(index)}
+                                            onClick={() => handleDeleteFile(index, file.id, file.filename)}
+                                            title="Delete file"
+                                            className="text-destructive hover:text-destructive"
                                         >
                                             <Trash2 size={16} />
                                         </Button>

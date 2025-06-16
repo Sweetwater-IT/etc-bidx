@@ -370,7 +370,7 @@ const BidViewOnlyContainer = () => {
                     <div className="rounded-lg border p-6">
                         <h2 className="mb-4 text-lg font-semibold">Notes</h2>
                         <div className="space-y-4">
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-wrap wrap-break-word text-muted-foreground">
                                 {savedNotes === '' ? 'No notes for this bid' : 'Current notes:'}
                             </div>
                             {savedNotes && (

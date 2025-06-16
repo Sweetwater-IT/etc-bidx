@@ -30,7 +30,7 @@ export default async function ContractPage({ params, searchParams }: PageProps) 
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="flex items-center justify-between border-b px-6 py-3">
-            <div className="flex items-start gap-2 flex-col">
+            <div className="flex items-start w-full gap-2 flex-col">
               <div className="text-sm text-muted-foreground">
                 Dashboard
                 <span className="mx-2">/</span>
