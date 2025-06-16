@@ -25,6 +25,7 @@ import { useLoading } from '../../../hooks/use-loading';
 import { TagsInput } from '../../../components/ui/tags-input';
 import EmailSendingModal from './EmailSendingModal';
 import CreateJobModal from './CreateJobModal';
+import { FileMetadata } from '@/types/FileTypes';
 
 interface Props {
     contractNumber: string;
@@ -87,7 +88,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         'Avenue of Appeals': false
     });
 
-    const [files, setFiles] = useState<File[]>([]);
+    const [files, setFiles] = useState<FileMetadata[]>([]);
     const [cpr, setCpr] = useState<CertifiedPayrollType>('STATE');
     const [laborGroup, setLaborGroup] = useState('Labor Group 3');
 
@@ -178,81 +179,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
                 // Fetch files for this job
                 if (response.job_id) {
                     setJobId(response.job_id)
-                    try {
-                        const filesResponse = await fetch(`/api/files?job_id=${response.job_id}`);
-                        if (filesResponse.ok) {
-                            const filesData = await filesResponse.json();
-                            if (filesData.success && filesData.data) {
-                                // Create extended File type to include API properties
-                                interface ExtendedFile extends File {
-                                    id: number;
-                                    contract_number: string;
-                                    job_id: number;
-                                }
-
-                                // Convert the API response to File objects with actual content
-                                const fetchedFiles = await Promise.all(filesData.data.map(async (fileData: any) => {
-                                    try {
-                                        // Convert the hex data to a proper Blob
-                                        let fileBlob;
-
-                                        if (fileData.file_data) {
-                                            // Handle hex string (bytes) by converting to Uint8Array
-                                            // This assumes file_data is a hex string representing binary data
-                                            // Remove '\\x' prefix if present and convert to array of bytes
-                                            const hexString = fileData.file_data.startsWith('\\x')
-                                                ? fileData.file_data.substring(2).replace(/\\x/g, '')
-                                                : fileData.file_data;
-
-                                            // Convert hex string to byte array
-                                            const byteArray = new Uint8Array(
-                                                hexString.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
-                                            );
-
-                                            fileBlob = new Blob([byteArray], { type: fileData.file_type });
-                                        } else {
-                                            // Fallback to empty blob if no data
-                                            fileBlob = new Blob([], { type: fileData.file_type });
-                                        }
-
-                                        // Create a complete File object with the content
-                                        const file = new File(
-                                            [fileBlob],
-                                            fileData.filename,
-                                            {
-                                                type: fileData.file_type,
-                                                lastModified: new Date(fileData.upload_date).getTime()
-                                            }
-                                        ) as ExtendedFile;
-
-                                        // Add additional properties
-                                        file.id = fileData.id;
-                                        // file.size = fileData.file_size || fileBlob.size;
-                                        file.contract_number = fileData.contract_number;
-                                        file.job_id = fileData.job_id;
-
-                                        return file;
-                                    } catch (error) {
-                                        console.error(`Error creating File object for ${fileData.filename}:`, error);
-                                        // Return a placeholder file in case of error
-                                        const placeholder = new File(
-                                            [new Blob([], { type: fileData.file_type })],
-                                            fileData.filename,
-                                            { type: fileData.file_type }
-                                        ) as ExtendedFile;
-                                        placeholder.id = fileData.id;
-                                        return placeholder;
-                                    }
-                                }));
-
-                                setFiles(fetchedFiles);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error fetching files:', error);
-                    }
                 }
-
             } catch (error) {
                 console.error('Error fetching contract data:', error);
                 toast(`Failed to fetch contract data: ${error}`);
@@ -264,8 +191,25 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         fetchData();
     }, [contractNumber, customers, isLoadingCustomers]);
 
+    const fetchFiles = async () => {
+        if(!jobId) return;
+        try {
+            const filesResponse = await fetch(`/api/files/contract-management?job_id=${jobId}`);
+            if (filesResponse.ok) {
+                const filesData = await filesResponse.json();
+                setFiles(filesData.data)
+            }
+        } catch (error) {
+            console.error('Error fetching files:', error);
+        }
+    }
+
+    useEffect(() => {
+        fetchFiles();
+    }, [jobId])
+
     return (
-        <div className="flex gap-6 py-6">
+        <div className="flex flex-grow w-full gap-6 py-6">
             {/* PDF Modals */}
             <Dialog open={isOpenFringeBenefits} onOpenChange={setIsOpenFringeBenefits}>
                 <DialogContent className="max-w-4xl h-fit w-fit">
@@ -323,7 +267,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
             />
 
             {/* Main Content (2/3) */}
-            <div className="flex-[2] space-y-6">
+            <div className="w-2/3 space-y-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">
                         Contract #{contractNumber}
@@ -346,7 +290,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
                 />
 
                 {/* Contract Upload */}
-                <ContractUploadSection setFiles={setFiles} jobId={jobId} />
+                <ContractUploadSection onSuccess={fetchFiles} jobId={jobId} />
 
                 {/* Prevailing Wages */}
                 <PrevailingWagesSection
@@ -381,16 +325,18 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
                     addedFiles={addedFiles}
                     onAddedFilesChange={setAddedFiles}
                     setFiles={setFiles}
+                    jobId={jobId}
                 />
             </div>
 
             {/* Right Column (1/3) */}
-            <div className="flex-1 space-y-6">
+            <div className="w-1/3 space-y-6">
                 {/* File Manager */}
                 <FileManagerSection
                     files={files}
                     onFilesChange={setFiles}
                     open={setIsOpenEmailSending}
+                    jobId={jobId}
                 />
 
                 {/* Admin Information */}

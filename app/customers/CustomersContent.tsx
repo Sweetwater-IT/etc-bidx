@@ -26,7 +26,7 @@ const COLUMNS: Column[] = [
 
 const SEGMENTS = [
   { label: "All", value: "all" },
-  { label: "1%10 NET 30", value: "1%10 NET 30" },
+  { label: "1%10", value: "1%10" },
   { label: "COD", value: "COD" },
   { label: "CC", value: "CC" },
   { label: "NET15", value: "NET15" },

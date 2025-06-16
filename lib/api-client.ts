@@ -5,6 +5,7 @@ import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
 import { EstimateCompleteView } from '@/types/estimate-view';
+import { ExtendedFile, FileMetadata } from '@/types/FileTypes';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating } from '@/types/MPTEquipment';
@@ -263,6 +264,7 @@ export async function createActiveBid(
   serviceWork: Flagging | null,
   saleItems: SaleItem[],
   status: 'PENDING' | 'DRAFT',
+  notes: string,
   id?: number,
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
@@ -287,7 +289,8 @@ export async function createActiveBid(
         flagging,
         serviceWork,
         saleItems,
-        status
+        status,
+        notes
       }
     }),
   });
@@ -917,5 +920,166 @@ export async function sendQuoteEmail(
   } catch (error) {
     console.error('Error sending quote email:', error);
     return false;
+  }
+}
+
+/**
+ * Fetches files associated with a given ID and type
+ * @param id - The ID to fetch files for
+ * @param type - The type of association ('job_id', 'bid_id', or 'quote_id')
+ * @returns Promise resolving to either success with files array or error
+ */
+export async function fetchFilesByAssociation(
+  id: number, 
+  folder: string
+): Promise<{
+  success: true;
+  files: ExtendedFile[];
+} | {
+  success: false;
+  error: string;
+}> {
+  try {
+      const response = await fetch(`/api/files?folder=${folder}&id=${id}`);
+      
+      if (!response.ok) {
+          return {
+              success: false,
+              error: `HTTP error! status: ${response.status}`
+          };
+      }
+
+      const filesData = await response.json();
+      
+      if (!filesData.success || !filesData.data) {
+          return {
+              success: false,
+              error: filesData.message || 'No files data received'
+          };
+      }
+
+      // Convert the API response to File objects with actual content
+      const fetchedFiles = await Promise.all(
+          filesData.data.map(async (fileData: any): Promise<ExtendedFile> => {
+              try {
+                  // Convert the hex data to a proper Blob
+                  let fileBlob: Blob;
+
+                  if (fileData.file_data) {
+                      // Handle hex string (bytes) by converting to Uint8Array
+                      // Remove '\\x' prefix if present and convert to array of bytes
+                      const hexString = fileData.file_data.startsWith('\\x')
+                          ? fileData.file_data.substring(2).replace(/\\x/g, '')
+                          : fileData.file_data;
+
+                      // Convert hex string to byte array
+                      const byteArray = new Uint8Array(
+                          hexString.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
+                      );
+
+                      fileBlob = new Blob([byteArray], { type: fileData.file_type });
+                  } else {
+                      // Fallback to empty blob if no data
+                      fileBlob = new Blob([], { type: fileData.file_type });
+                  }
+
+                  // Create a complete File object with the content
+                  const file = new File(
+                      [fileBlob],
+                      fileData.filename,
+                      {
+                          type: fileData.file_type,
+                          lastModified: new Date(fileData.upload_date).getTime()
+                      }
+                  ) as ExtendedFile;
+
+                  // Add additional properties
+                  file.id = fileData.id;
+                  file.associatedId = fileData.associatedId
+
+                  return file;
+              } catch (error) {
+                  console.error(`Error creating File object for ${fileData.filename}:`, error);
+                  
+                  // Return a placeholder file in case of error
+                  const placeholder = new File(
+                      [new Blob([], { type: fileData.file_type })],
+                      fileData.filename,
+                      { type: fileData.file_type }
+                  ) as ExtendedFile;
+                  
+                  placeholder.id = fileData.id;
+                  
+                  return placeholder;
+              }
+          })
+      );
+
+      return {
+          success: true,
+          files: fetchedFiles
+      };
+
+  } catch (error) {
+      console.error('Error fetching files:', error);
+      return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+  }
+}
+
+export async function fetchFileMetadataByFolder(
+  id: number, 
+  folder: string
+): Promise<{
+  success: true;
+  files: FileMetadata[];
+} | {
+  success: false;
+  error: string;
+}> {
+  try {
+    const response = await fetch(`/api/files?folder=${folder}&id=${id}`);
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP error! status: ${response.status}`
+      };
+    }
+
+    const filesData = await response.json();
+    
+    if (!filesData.success || !filesData.data) {
+      return {
+        success: false,
+        error: filesData.message || 'No files data received'
+      };
+    }
+
+    // Return just the metadata without downloading file content
+    const files = filesData.data.map((fileData: any) => ({
+      id: fileData.id,
+      filename: fileData.filename,
+      file_type: fileData.file_type,
+      file_size: fileData.file_size,
+      file_url: fileData.file_url,
+      file_path: fileData.file_path,
+      upload_date: fileData.upload_date,
+      associatedId: fileData.job_id || fileData.bid_estimate_id || fileData.quote_id
+    }));
+
+    return {
+      success: true,
+      files
+    };
+
+  } catch (error) {
+    console.error('Error fetching file metadata:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
   }
 }

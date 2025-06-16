@@ -106,7 +106,7 @@ const BidItemsStep5 = ({
   currentPhase: number;
   setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
+  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems, notes } = useEstimate();
   const [activeTab, setActiveTab] = useState("mpt");
   const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
   const [newCustomItem, setNewCustomItem] = useState<Omit<CustomLightAndDrumItem, 'id'>>({
@@ -446,7 +446,7 @@ const BidItemsStep5 = ({
       setError(null);
 
       await createActiveBid(adminData, mptRental, equipmentRental,
-        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING');
+        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes);
       toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
       if (!initialSubmission) {
         setInitialSubmission(true);

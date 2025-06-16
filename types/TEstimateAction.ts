@@ -208,3 +208,5 @@ export type EstimateAction =
 	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
+	| { type: 'UPDATE_NOTES', payload: string}
+	| { type: 'COPY_NOTES', payload: string}

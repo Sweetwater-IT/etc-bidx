@@ -256,7 +256,8 @@ const AdminInformationStep1 = ({
         dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any });
         dispatch({ type: 'COPY_FLAGGING', payload: data.flagging as any });
         dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
-        dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any })
+        dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
+        dispatch({ type: 'COPY_NOTES', payload: data.notes});
         console.log(data);
       }
       stopLoading();
