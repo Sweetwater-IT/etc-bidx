@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: any
 ) {
+  const resolvedParams = await params
+  const id = parseInt(resolvedParams.id)
+  
+  if (isNaN(id)) {
+    return NextResponse.json(
+      { success: false, message: 'Invalid ID parameter' },
+      { status: 400 }
+    )
+  }
+
   try {
-    const body = await request.json()
-    const { name, state, market, flagging_base_rate, flagging_fringe_rate, flagging_rate } = body
+    const updates = await request.json()
+    const { name, market, flagging_base_rate, flagging_fringe_rate, flagging_rate } = updates
 
     // Validate required fields
-    if (!name || !state || !market) {
+    if (!name || !market) {
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
@@ -29,7 +39,7 @@ export async function PUT(
     const { data: existingCounty, error: fetchError } = await supabase
       .from('counties')
       .select('id')
-      .eq('id', context.params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !existingCounty) {
@@ -39,18 +49,17 @@ export async function PUT(
       )
     }
 
-    // Check if another county with same name and state exists
+    // Check if another county with same name exists
     const { data: duplicateCounty } = await supabase
       .from('counties')
       .select('id')
       .eq('name', name)
-      .eq('state', state)
-      .neq('id', context.params.id)
+      .neq('id', id)
       .single()
 
     if (duplicateCounty) {
       return NextResponse.json(
-        { success: false, message: 'Another county with this name and state already exists' },
+        { success: false, message: 'Another county with this name already exists' },
         { status: 409 }
       )
     }
@@ -58,32 +67,22 @@ export async function PUT(
     const { data, error } = await supabase
       .from('counties')
       .update({
-        name,
-        state,
-        market,
-        flagging_base_rate,
-        flagging_fringe_rate,
-        flagging_rate,
+        ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', context.params.id)
+      .eq('id', id)
       .select()
+      .single()
 
     if (error) {
-      console.error('Database error:', error)
       return NextResponse.json(
         { success: false, message: 'Failed to update county', error: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'County updated successfully',
-      data 
-    })
+    return NextResponse.json({ success: true, data })
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json(
       { success: false, message: 'Unexpected error', error: String(error) },
       { status: 500 }
@@ -92,15 +91,25 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } }
+  _request: NextRequest,
+  { params }: any
 ) {
+  const resolvedParams = await params
+  const id = parseInt(resolvedParams.id)
+  
+  if (isNaN(id)) {
+    return NextResponse.json(
+      { success: false, message: 'Invalid ID parameter' },
+      { status: 400 }
+    )
+  }
+
   try {
     // Check if county exists
     const { data: existingCounty, error: fetchError } = await supabase
       .from('counties')
       .select('id')
-      .eq('id', context.params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !existingCounty) {
@@ -117,22 +126,17 @@ export async function DELETE(
         deleted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', context.params.id)
+      .eq('id', id)
 
     if (error) {
-      console.error('Database error:', error)
       return NextResponse.json(
         { success: false, message: 'Failed to archive county', error: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'County archived successfully' 
-    })
+    return NextResponse.json({ success: true, message: 'County archived successfully' })
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json(
       { success: false, message: 'Unexpected error', error: String(error) },
       { status: 500 }
