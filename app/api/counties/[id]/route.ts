@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const body = await request.json()
@@ -29,7 +29,7 @@ export async function PUT(
     const { data: existingCounty, error: fetchError } = await supabase
       .from('counties')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', context.params.id)
       .single()
 
     if (fetchError || !existingCounty) {
@@ -45,7 +45,7 @@ export async function PUT(
       .select('id')
       .eq('name', name)
       .eq('state', state)
-      .neq('id', params.id)
+      .neq('id', context.params.id)
       .single()
 
     if (duplicateCounty) {
@@ -66,7 +66,7 @@ export async function PUT(
         flagging_rate,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', context.params.id)
       .select()
 
     if (error) {
@@ -93,14 +93,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Check if county exists
     const { data: existingCounty, error: fetchError } = await supabase
       .from('counties')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', context.params.id)
       .single()
 
     if (fetchError || !existingCounty) {
@@ -117,7 +117,7 @@ export async function DELETE(
         deleted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', context.params.id)
 
     if (error) {
       console.error('Database error:', error)
