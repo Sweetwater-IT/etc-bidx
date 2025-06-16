@@ -9,9 +9,11 @@ import { useLoading } from "@/hooks/use-loading";
 import { useCallback, useState, useRef, useEffect } from "react"
 import { toast } from "sonner";
 import { CreateBranchSheet } from '@/components/create-branch-sheet';
+import { CreateCountySheet } from '@/components/create-county-sheet';
 import { CreateFlagRateSheet } from '@/components/create-flag-rate-sheet';
 import { EditFlagRateSheet } from "@/components/edit-flag-rate-sheet";
 import { EditBranchSheet } from "@/components/edit-branch-sheet";
+import { EditCountySheet } from "@/components/edit-county-sheet";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 
 type Branch = {
@@ -19,6 +21,23 @@ type Branch = {
     name: string;
     address: string;
     shop_rate: number;
+}
+
+type County = {
+    id: string;
+    name: string;
+    market: string;
+    flagging_base_rate: number;
+    flagging_fringe_rate: number;
+    flagging_rate: number;
+    district: number;
+    branch: number;
+    labor_rate: number;
+    fringe_rate: number;
+    insurance: number;
+    fuel: number;
+    flagging_non_rated_target_gm: number;
+    flagging_rated_target_gm: number;
 }
 
 type FlagRate = {
@@ -53,6 +72,20 @@ export function PortalPageContent({ page: Page }) {
     const [selectedBranchesToArchive, setSelectedBranchesToArchive] = useState<Branch[]>([]);
     const branchesTableRef = useRef<{ resetRowSelection: () => void }>(null);
 
+    // COUNTIES
+    const [counties, setCounties] = useState<County[]>([]);
+    const [countiesPageCount, setCountiesPageCount] = useState(0);
+    const [countiesPageIndex, setCountiesPageIndex] = useState(0);
+    const [countiesPageSize, setCountiesPageSize] = useState(25);
+    const [countiesTotalCount, setCountiesTotalCount] = useState(0);
+
+    const [showCreateCountyDialog, setShowCreateCountyDialog] = useState(false);
+    const [showEditCountyDialog, setShowEditCountyDialog] = useState(false);
+    const [openConfirmArchiveCountyDialog, setShowConfirmArchiveCountyDialog] = useState(false);
+    const [selectedCounty, setSelectedCounty] = useState<County | undefined>(undefined);
+    const [selectedCountiesToArchive, setSelectedCountiesToArchive] = useState<County[]>([]);
+    const countiesTableRef = useRef<{ resetRowSelection: () => void }>(null);
+
     // FRAGGING RATES
     const [flagRates, setFlagRates] = useState<FlagRate[]>([]);
     const [flagRatesPageCount, setFlagRatesPageCount] = useState(0);
@@ -80,40 +113,62 @@ export function PortalPageContent({ page: Page }) {
         { key: "shop_rate", title: "Shop Rate" },
     ];
 
-      const FLAGGING_COLUMNS: Column[] = [
+    const COUNTIES_COLUMNS: Column[] = [
+        { key: "name", title: "Name" },
+        { key: "district", title: "District" },
+        { key: "branch", title: "Branch" },
+        { key: "labor_rate", title: "Labor Rate" },
+        { key: "fringe_rate", title: "Fringe Rate" },
+        { key: "market", title: "Market" },
+        { key: "flagging_rate", title: "Flagging Rate" },
+        { key: "insurance", title: "Insurance" },
+        { key: "fuel", title: "Fuel" },
+        { key: "flagging_non_rated_target_gm", title: "Flagging Non-Rated Target GM" },
+        { key: "flagging_rated_target_gm", title: "Flagging Rated Target GM" },
+        { key: "flagging_base_rate", title: "Flagging Base Rate" },
+        { key: "flagging_fringe_rate", title: "Flagging Fringe Rate" },
+    ];
+
+    const FLAGGING_COLUMNS: Column[] = [
         { key: "fuel_economy_mpg", title: "Fuel economy mpg" },
         { key: "truck_dispatch_fee", title: "Truck Dispatch fee" },
         { key: "worker_comp", title: "Worker Company" },
         { key: "general_liability", title: "General Liability" }
     ];
 
-
     // CLICK HANDLERS
     const handleCreateClick = useCallback(() => {
         if (isBranches) {
             setShowCreateBranchDialog(true);
+        } else if (isCounties) {
+            setShowCreateCountyDialog(true);
         } else if (isFlaggingRates) {
             setShowCreateFlagRateDialog(true)
         }
-    }, [isBranches, isFlaggingRates]);
+    }, [isBranches, isCounties, isFlaggingRates]);
 
     const handleEditClick = useCallback((selected: any) => {
         if (isBranches) {
             setSelectedBranch(selected)
             setShowEditBranchDialog(true)
+        } else if (isCounties) {
+            setSelectedCounty(selected)
+            setShowEditCountyDialog(true)
         } else if (isFlaggingRates) {
             setSelectedFlagRate(selected)
             setShowEditFlagRateDialog(true)
         }
-    }, [isBranches, isFlaggingRates]);
+    }, [isBranches, isCounties, isFlaggingRates]);
 
     const handleArchieveClick = useCallback((selected: any) => {
         if (isBranches) {
             setSelectedBranch(selected)
             setShowConfirmArchiveDialog(true)
-        } 
-    }, [isBranches]);
-
+        } else if (isCounties) {
+            setSelectedCounty(selected)
+            setShowConfirmArchiveCountyDialog(true)
+        }
+    }, [isBranches, isCounties]);
 
     // ACTION HANDLERS
     const handleArchiveBranches = async (branch: Branch) => {
@@ -126,6 +181,19 @@ export function PortalPageContent({ page: Page }) {
 
         } catch (err: any) {
             toast.error(err?.message || 'Error archiving branch')
+        } 
+    }
+
+    const handleArchiveCounties = async (county: County) => {
+        try {
+            const res = await fetch(`/api/counties/${county.id}`, { method: 'DELETE' })
+            if (!res.ok) throw await res.json()
+
+            loadCounties()
+            toast.success('County archived')
+
+        } catch (err: any) {
+            toast.error(err?.message || 'Error archiving county')
         } 
     }
 
@@ -142,18 +210,20 @@ export function PortalPageContent({ page: Page }) {
         } 
     }
 
-
-
     const initiateArchiveBranch = (selectedBranches: Branch[]) => {
         setSelectedBranchesToArchive(selectedBranches);
         setShowConfirmArchiveDialog(true);
+    }
+
+    const initiateArchiveCounty = (selectedCounties: County[]) => {
+        setSelectedCountiesToArchive(selectedCounties);
+        setShowConfirmArchiveCountyDialog(true);
     }
 
     const initiateArchiveFlagRate = (selectedFlagRates: FlagRate[]) => {
         setSelectedFlagRatesToArchive(selectedFlagRates);
         setShowConfirmArchiveFlagRateDialog(true);
     }
-
 
     // LOADERS
     const loadBranches = useCallback(async () => {
@@ -198,7 +268,47 @@ export function PortalPageContent({ page: Page }) {
 
     }, [])
 
-    
+    const loadCounties = useCallback(async () => {
+        try {
+            console.log("Loading counties...");
+            startLoading();
+
+            const options: any = {
+                limit: countiesPageSize,
+                page: countiesPageIndex + 1
+            };
+
+            const params = new URLSearchParams();
+            params.append("page", options.page);
+            params.append("limit", options.limit);
+
+            const response = await fetch(`/api/counties?${params}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch counties");
+            }
+
+            const result = await response.json();
+            const { pagination, data } = result;
+
+            setCounties(data);
+            setCountiesPageCount(pagination.pageCount);
+            setCountiesTotalCount(pagination.totalCount);
+
+        } catch (error) {
+            console.error("Error loading counties: ", error);
+            toast.error("Failed to load counties, please try again!");
+            
+        } finally {
+            stopLoading();
+        }
+    }, [countiesPageSize, countiesPageIndex])
+
     const loadFlagRates = useCallback(async () => {
         try {
             console.log("Loading flagging rates...");
@@ -242,15 +352,15 @@ export function PortalPageContent({ page: Page }) {
 
     }, [])
 
-
     useEffect(() => {
         if (isBranches) {
             loadBranches();
+        } else if (isCounties) {
+            loadCounties();
         } else if (isFlaggingRates) {
             loadFlagRates()
         }
-    }
-    , [loadBranches, isBranches, isFlaggingRates, loadFlagRates]);
+    }, [loadBranches, loadCounties, isBranches, isCounties, isFlaggingRates, loadFlagRates]);
 
     const createButtonLabel: string =
         isBranches ? "Create Branch" :
@@ -260,7 +370,7 @@ export function PortalPageContent({ page: Page }) {
         isFlaggingRates ? "Create Rate" : 
         "Create Payback Calculation";
 
-    const data = branches
+    const data = isBranches ? branches : isCounties ? counties : flagRates;
     const { startLoading, stopLoading } = useLoading();
 
     return (
@@ -328,6 +438,37 @@ export function PortalPageContent({ page: Page }) {
                                 </>
                             ) }
 
+                            { isCounties && (
+                                <>
+                                <DataTable<County>
+                                    data={data as County[]}
+                                    columns={COUNTIES_COLUMNS}
+                                    stickyLastColumn
+                                    onArchiveSelected={initiateArchiveCounty}
+                                    tableRef={countiesTableRef}
+                                    selectedItem={
+                                        selectedCounty ? selectedCounty : undefined
+                                    }
+                                    onEdit={(item) => {
+                                        handleEditClick(item as County);
+                                    }}
+                                    onArchive={(item) => {
+                                        handleArchieveClick(item);
+                                    }}
+                                    pageCount={countiesPageCount}
+                                    pageIndex={countiesPageIndex}
+                                    pageSize={countiesPageSize}
+                                    onPageChange={setCountiesPageIndex}
+                                    onPageSizeChange={setCountiesPageSize}
+                                    totalCount={countiesTotalCount}
+                                />
+                                <CreateCountySheet
+                                    open={showCreateCountyDialog}
+                                    onOpenChange={setShowCreateCountyDialog}
+                                    onSuccess={loadCounties}
+                                />
+                                </>
+                            ) }
 
                             { isFlaggingRates && (
                                 <>
@@ -392,6 +533,26 @@ export function PortalPageContent({ page: Page }) {
                                     }}
                                     itemCount={selectedBranchesToArchive.length}
                                     itemType="branch"
+                                />
+                                </>
+                            ) }
+
+                            { selectedCounty && (
+                                <>
+                                <EditCountySheet
+                                    open={showEditCountyDialog}
+                                    onOpenChange={setShowEditCountyDialog}
+                                    county={selectedCounty ? selectedCounty : null}
+                                    onSuccess={loadCounties}
+                                />
+                                <ConfirmArchiveDialog
+                                    isOpen={openConfirmArchiveCountyDialog}
+                                    onClose={() =>  setShowConfirmArchiveCountyDialog(false)}
+                                    onConfirm={() => {
+                                        handleArchiveCounties(selectedCounty)
+                                    }}
+                                    itemCount={selectedCountiesToArchive.length}
+                                    itemType="county"
                                 />
                                 </>
                             ) }
