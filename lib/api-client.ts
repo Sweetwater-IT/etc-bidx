@@ -595,8 +595,8 @@ export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number
  */
 export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
 try {
-  const response = await fetch('/api/archived-active-bids/delete', {
-    method: 'POST',
+  const response = await fetch('/api/active-bids/archive', {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },

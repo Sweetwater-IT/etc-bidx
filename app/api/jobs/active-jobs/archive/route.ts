@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const { ids } = await request.json();
-    
+  
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
         { success: false, message: 'No job numbers provided for archiving' },
@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
     // Update the status field of the jobs to 'Archived'
     const { data: updatedJobs, error: updateError } = await supabase
       .from('jobs')
-      .update({ status: 'Archived' })
-      .in('job_number', ids)
+      .update({ archived: true })
+      .in('id', ids)
       .select();
     
     if (updateError) {
@@ -57,7 +57,7 @@ export async function DELETE(request: NextRequest) {
       
       if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json(
-          { success: false, message: 'No job numbers provided for archiving' },
+          { success: false, message: 'No job numbers provided for deleting' },
           { status: 400 }
         );
       }
@@ -65,13 +65,14 @@ export async function DELETE(request: NextRequest) {
       // Update the status field of the jobs to 'Archived'
       const { data: updatedJobs, error: updateError } = await supabase
         .from('jobs')
-        .delete()
-        .in('job_number', ids)
+        .update({deleted: true})
+        .in('id', ids)
         .select();
       
       if (updateError) {
+        console.error(updateError)
         return NextResponse.json(
-          { success: false, message: 'Failed to archive jobs', error: updateError.message },
+          { success: false, message: 'Failed to delete jobs', error: updateError.message },
           { status: 500 }
         );
       }
