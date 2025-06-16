@@ -387,7 +387,8 @@ const MPTViewOnly = () => {
                                             {formatLabel(equipmentKey)}
                                         </label>
                                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                            Qty: {quantity} | Cost: {formatCurrency(price)}
+                                            Qty: {quantity} 
+                                            {/* | Cost: {formatCurrency(price)} */}
                                         </div>
                                     </div>
                                 );
@@ -418,7 +419,8 @@ const MPTViewOnly = () => {
                                             {formatLabel(equipmentKey)}
                                         </label>
                                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                            Qty: {quantity} | Cost: {formatCurrency(price)}
+                                            Qty: {quantity} 
+                                            {/* | Cost: {formatCurrency(price)} */}
                                         </div>
                                         {adminData?.emergencyJob && emergencyRate && (
                                             <div className="pr-3 py-1 select-text cursor-default text-sm text-red-600">

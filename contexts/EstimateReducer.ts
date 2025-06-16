@@ -3,7 +3,7 @@ import { EstimateAction } from "@/types/TEstimateAction";
 import { defaultMPTObject, defaultPhaseObject } from "@/types/default-objects/defaultMPTObject";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { MPTRentalEstimating, Phase, structureMap, StructureKey } from "@/types/MPTEquipment";
+import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
 import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
 import { SetStateAction } from "react";
@@ -12,11 +12,6 @@ import { SetStateAction } from "react";
 export interface EstimateContextType extends Estimate {
 	dispatch: React.Dispatch<EstimateAction>;
 }
-
-// Helper function to get base equipment type from structure key
-const getBaseEquipmentType = (structureKey: StructureKey) => {
-	return structureMap[structureKey]?.baseEquipmentType;
-};
 
 // Reducer Function
 export const estimateReducer = (

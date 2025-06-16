@@ -622,7 +622,8 @@ export async function POST(request: NextRequest) {
             sheeting: sign.sheeting,
             is_custom: sign.isCustom,
             designation: sign.designation,
-            description: sign.description
+            description: sign.description,
+            substrate: sign.substrate
           };
         } else {
           // Primary sign
@@ -638,6 +639,10 @@ export async function POST(request: NextRequest) {
             designation: sign.designation,
             description: sign.description,
             associated_structure: sign.associatedStructure,
+            display_structure: sign.displayStructure,
+            substrate: sign.substrate,
+            b_lights_color: sign.bLightsColor,
+            stiffer: sign.stiffener,
             b_lights: sign.bLights,
             covers: sign.cover ? sign.quantity : 0
           };

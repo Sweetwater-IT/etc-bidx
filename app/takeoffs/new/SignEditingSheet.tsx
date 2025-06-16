@@ -26,11 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, StructureKey } from '@/types/MPTEquipment';
+import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures } from '@/types/MPTEquipment';
 import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
 
 interface Props {
@@ -56,7 +55,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const isSecondary = isSecondarySign(sign);
     
@@ -64,29 +62,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     const primarySign = isSecondary 
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
         : null;
-
-    // Get all available structure options from structureMap
-    const getStructureOptions = () => {
-        return Object.entries(structureMap).map(([key, value]) => ({
-            value: key as StructureKey,
-            label: value.displayName,
-            baseEquipmentType: value.baseEquipmentType
-        }));
-    };
-
-    // Helper function to get base equipment type from structure key
-    const getBaseEquipmentType = (structureKey: StructureKey): EquipmentType | 'none' => {
-        return structureMap[structureKey]?.baseEquipmentType || 'none';
-    };
-
-    // Handler for image upload
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            setImagePreview(url);
-        }
-    };
 
     // Helper to get all secondary signs for a primary sign
     const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
@@ -113,6 +88,25 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                     value: newQuantity,
                 },
             });
+        });
+    };
+
+    // Helper to get current equipment quantity for a specific type
+    const getCurrentEquipmentQuantity = (equipmentType: EquipmentType): number => {
+        const currentPhaseData = mptRental.phases[currentPhase];
+        return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0;
+    };
+
+    // Helper to update equipment quantity
+    const updateEquipmentQuantity = (equipmentType: EquipmentType, newQuantity: number) => {        
+        dispatch({
+            type: "ADD_MPT_ITEM_NOT_SIGN",
+            payload: {
+                phaseNumber: currentPhase,
+                equipmentType: equipmentType,
+                equipmentProperty: "quantity",
+                value: newQuantity,
+            },
         });
     };
 
@@ -177,129 +171,81 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         }
     };
 
-    //this could be eventually moved to keyof PrimarySign | SecondarySign
-    const handleSignUpdate = (field: string, value: any) => {
+    const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
+        const previousSign = { ...localSign };
         const updatedSign = { ...localSign, [field]: value };
+
+        // Special handling for equipment-related fields (only for primary signs)
+        if (!isSecondary) {
+            if (field === 'displayStructure') { 
+                const newStructure = structureMap[value];
+                (updatedSign as PrimarySign).associatedStructure = newStructure;
+                handleStructureChange(newStructure, (previousSign as PrimarySign).associatedStructure, updatedSign.quantity);
+            } else if (field === "bLights") {
+                handleBLightsChange(value, updatedSign.quantity);
+            } else if (field === "quantity") {
+                handleQuantityChange(value, (previousSign as PrimarySign).quantity, updatedSign as PrimarySign);
+            } else if (field === "cover") {
+                handleCoversChange(value, updatedSign.quantity);
+            }
+        }
+
         setLocalSign(updatedSign);
+    };
 
-        // Special handling for primary sign equipment-related fields
-        if (!isSecondary && field === "associatedStructure") {
-            handleStructureChange(value, (localSign as PrimarySign).associatedStructure);
-        } else if (!isSecondary && field === "bLights") {
-            handleBLightsChange(value);
-        } else if (!isSecondary && field === "cover") {
-            handleCoversChange(value);
-        } else if (!isSecondary && field === "quantity") {
-            handleQuantityChange(value);
+    const handleStructureChange = (
+        newStructure: AssociatedStructures,
+        oldStructure: AssociatedStructures,
+        signQuantity: number
+    ) => {
+        // Handle old structure: decrement by the sign quantity
+        if (oldStructure !== 'none') {
+            const currentOldQuantity = getCurrentEquipmentQuantity(oldStructure);
+            const newOldQuantity = Math.max(0, currentOldQuantity - signQuantity);
+            updateEquipmentQuantity(oldStructure, newOldQuantity);
+        }
+
+        // Handle new structure: increment by the sign quantity
+        if (newStructure !== 'none') {
+            const currentNewQuantity = getCurrentEquipmentQuantity(newStructure);
+            const newNewQuantity = currentNewQuantity + signQuantity;
+            updateEquipmentQuantity(newStructure, newNewQuantity);
         }
     };
 
-    const handleStructureChange = (newStructure: StructureKey, oldStructure: StructureKey) => {
-        if (isSecondary) return;
-
-        // Get base equipment types for old and new structures
-        const oldBaseType = getBaseEquipmentType(oldStructure);
-        const newBaseType = getBaseEquipmentType(newStructure);
-
-        // Update equipment quantities in the context
-        if (oldBaseType !== "none") {
-            dispatch({
-                type: "ADD_MPT_ITEM_NOT_SIGN",
-                payload: {
-                    phaseNumber: currentPhase,
-                    equipmentType: oldBaseType as EquipmentType,
-                    equipmentProperty: "quantity",
-                    value: 0, // Remove old structure
-                },
-            });
-        }
-
-        if (newBaseType !== "none") {
-            dispatch({
-                type: "ADD_MPT_ITEM_NOT_SIGN",
-                payload: {
-                    phaseNumber: currentPhase,
-                    equipmentType: newBaseType as EquipmentType,
-                    equipmentProperty: "quantity",
-                    value: (localSign as PrimarySign).quantity, // Set quantity to match the sign
-                },
-            });
-        }
+    const handleBLightsChange = (newBLightsPerSign: number, signQuantity: number) => {
+        const totalBLights = newBLightsPerSign * signQuantity;
+        updateEquipmentQuantity("BLights" as EquipmentType, totalBLights);
     };
 
-    const handleBLightsChange = (newValue: number) => {
-        if (isSecondary) return;
-
-        dispatch({
-            type: "ADD_MPT_ITEM_NOT_SIGN",
-            payload: {
-                phaseNumber: currentPhase,
-                equipmentType: "BLights" as EquipmentType,
-                equipmentProperty: "quantity",
-                value: newValue * (localSign as PrimarySign).quantity,
-            },
-        });
+    const handleCoversChange = (checked: boolean, signQuantity: number) => {
+        const coversQuantity = checked ? signQuantity : 0;
+        updateEquipmentQuantity("covers" as EquipmentType, coversQuantity);
     };
 
-    const handleCoversChange = (checked: boolean) => {
-        if (isSecondary) return;
+    const handleQuantityChange = (newQuantity: number, oldQuantity: number, updatedSign: PrimarySign) => {
+        const quantityDiff = newQuantity - oldQuantity;
 
-        dispatch({
-            type: "ADD_MPT_ITEM_NOT_SIGN",
-            payload: {
-                phaseNumber: currentPhase,
-                equipmentType: "covers" as EquipmentType,
-                equipmentProperty: "quantity",
-                value: checked ? (localSign as PrimarySign).quantity : 0,
-            },
-        });
-    };
-
-    const handleQuantityChange = (newValue: number) => {
-        if (isSecondary) return;
-
-        const primarySign = localSign as PrimarySign;
-        const baseEquipmentType = getBaseEquipmentType(primarySign.associatedStructure);
-
-        // Update equipment quantities for the new quantity
-        if (baseEquipmentType !== "none") {
-            dispatch({
-                type: "ADD_MPT_ITEM_NOT_SIGN",
-                payload: {
-                    phaseNumber: currentPhase,
-                    equipmentType: baseEquipmentType as EquipmentType,
-                    equipmentProperty: "quantity",
-                    value: newValue,
-                },
-            });
+        // Update associated structure quantities
+        if (updatedSign.associatedStructure !== 'none') {
+            const currentStructureQuantity = getCurrentEquipmentQuantity(updatedSign.associatedStructure);
+            const newStructureQuantity = currentStructureQuantity + quantityDiff;
+            updateEquipmentQuantity(updatedSign.associatedStructure, Math.max(0, newStructureQuantity));
         }
 
-        if (primarySign.bLights > 0) {
-            dispatch({
-                type: "ADD_MPT_ITEM_NOT_SIGN",
-                payload: {
-                    phaseNumber: currentPhase,
-                    equipmentType: "BLights" as EquipmentType,
-                    equipmentProperty: "quantity",
-                    value: newValue * primarySign.bLights,
-                },
-            });
+        // Update B-Lights quantities
+        if (updatedSign.bLights > 0) {
+            const totalBLights = updatedSign.bLights * newQuantity;
+            updateEquipmentQuantity("BLights" as EquipmentType, totalBLights);
         }
 
-        if (primarySign.cover) {
-            dispatch({
-                type: "ADD_MPT_ITEM_NOT_SIGN",
-                payload: {
-                    phaseNumber: currentPhase,
-                    equipmentType: "covers" as EquipmentType,
-                    equipmentProperty: "quantity",
-                    value: newValue,
-                },
-            });
+        // Update covers quantities
+        if (updatedSign.cover) {
+            updateEquipmentQuantity("covers" as EquipmentType, newQuantity);
         }
 
         // Update all secondary sign quantities to match the new primary sign quantity
-        updateSecondarySignQuantities(sign.id, newValue);
+        updateSecondarySignQuantities(sign.id, newQuantity);
     };
 
     const handleDimensionSelect = (value: string) => {
@@ -443,133 +389,97 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                         </div>
 
                         {/* Designation Section */}
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                                <Label className="text-base font-semibold mb-2.5 block">
-                                    Designation
-                                </Label>
-                                {isCustom ? (
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div>
-                                            <Label className="text-sm font-medium mb-2 block">
-                                                Designation Code
-                                            </Label>
-                                            <Input
-                                                value={localSign.designation || ""}
-                                                onChange={(e) =>
-                                                    handleSignUpdate("designation", e.target.value)
-                                                }
-                                                placeholder="Enter custom designation"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label className="text-sm font-medium mb-2 block">
-                                                Description
-                                            </Label>
-                                            <Input
-                                                value={localSign.description || ""}
-                                                onChange={(e) =>
-                                                    handleSignUpdate("description", e.target.value)
-                                                }
-                                                placeholder="Enter description"
-                                            />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className="w-full justify-between"
-                                            >
-                                                <span className="truncate">
-                                                    {localSign.designation || "Select designation..."}
-                                                </span>
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[300px] p-0" align="start">
-                                            <Command shouldFilter={false}>
-                                                <CommandInput
-                                                    placeholder="Search designation..."
-                                                    onValueChange={filterDesignations}
-                                                />
-                                                <CommandEmpty>No designation found.</CommandEmpty>
-                                                <CommandList>
-                                                    <CommandGroup>
-                                                        {filteredDesignations.map((item) => (
-                                                            <CommandItem
-                                                                key={item.designation}
-                                                                value={item.designation}
-                                                                onSelect={() => {
-                                                                    handleDesignationSelect(item.designation);
-                                                                    setDesignationOpen(false);
-                                                                }}
-                                                            >
-                                                                <div className="flex items-center w-full">
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            localSign.designation === item.designation
-                                                                                ? "opacity-100"
-                                                                                : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">
-                                                                            {item.designation}
-                                                                        </span>
-                                                                        {item.description && (
-                                                                            <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                                {item.description}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                            </div>
-
-                            {/* Image Upload */}
-                            <label
-                                className="w-24 h-24 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer bg-gray-50 group shrink-0"
-                                title="Upload image"
-                            >
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    tabIndex={-1}
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                />
-                                {imagePreview ? (
-                                    <Image
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover rounded"
-                                        width={80}
-                                        height={80}
-                                    />
-                                ) : (
-                                    <>
-                                        <Image
-                                            src="/image_placeholder.svg"
-                                            alt="No image"
-                                            width={40}
-                                            height={40}
-                                            className="w-10 h-10 opacity-80 group-hover:opacity-100"
+                        <div>
+                            <Label className="text-base font-semibold mb-2.5 block">
+                                Designation
+                            </Label>
+                            {isCustom ? (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Designation Code
+                                        </Label>
+                                        <Input
+                                            value={localSign.designation || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("designation", e.target.value)
+                                            }
+                                            placeholder="Enter custom designation"
                                         />
-                                        <span className="text-xs text-gray-500">Upload</span>
-                                    </>
-                                )}
-                            </label>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Description
+                                        </Label>
+                                        <Input
+                                            value={localSign.description || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("description", e.target.value)
+                                            }
+                                            placeholder="Enter description"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className="w-full justify-between"
+                                        >
+                                            <span className="truncate">
+                                                {localSign.designation || "Select designation..."}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0" align="start">
+                                        <Command shouldFilter={false}>
+                                            <CommandInput
+                                                placeholder="Search designation..."
+                                                onValueChange={filterDesignations}
+                                            />
+                                            <CommandEmpty>No designation found.</CommandEmpty>
+                                            <CommandList>
+                                                <CommandGroup>
+                                                    {filteredDesignations.map((item) => (
+                                                        <CommandItem
+                                                            key={item.designation}
+                                                            value={item.designation}
+                                                            onSelect={() => {
+                                                                handleDesignationSelect(item.designation);
+                                                                setDesignationOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center w-full">
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        localSign.designation === item.designation
+                                                                            ? "opacity-100"
+                                                                            : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">
+                                                                        {item.designation}
+                                                                    </span>
+                                                                    {item.description && (
+                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                            {item.description}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
 
                         {/* Substrate (only for takeoff mode) */}
@@ -692,20 +602,23 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                     <div>
                                         <Label className="text-sm font-medium mb-2 block">Structure</Label>
                                         <Select
-                                            value={(localSign as PrimarySign).associatedStructure || undefined}
-                                            onValueChange={(value) =>
-                                                handleSignUpdate("associatedStructure", value as StructureKey)
-                                            }
+                                            value={(localSign as PrimarySign).displayStructure}
+                                            onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select structure type" />
+                                                <SelectValue placeholder="LOOSE" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {getStructureOptions().map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
+                                                <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
+                                                <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
+                                                <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
+                                                <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+                                                <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                                <SelectItem value="8' POST">{`8'`} POST</SelectItem>
+                                                <SelectItem value="10' POST">{`10'`} POST</SelectItem>
+                                                <SelectItem value="12' POST">{`12'`} POST</SelectItem>
+                                                <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+                                                <SelectItem value="LOOSE">LOOSE</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -730,14 +643,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 {isTakeoff && (localSign as PrimarySign).bLights > 0 && (
                                     <div>
                                         <Label className="text-sm font-medium mb-2 block">B Light Color</Label>
-                                        <Select>
+                                        <Select value={localSign.bLightsColor} onValueChange={(value) => handleSignUpdate('bLightsColor', value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Choose color" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="red">Red</SelectItem>
-                                                <SelectItem value="yellow">Yellow</SelectItem>
-                                                <SelectItem value="white">White</SelectItem>
+                                                <SelectItem value="Red">Red</SelectItem>
+                                                <SelectItem value="Yellow">Yellow</SelectItem>
+                                                <SelectItem value="White">White</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -745,51 +658,33 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
 
                                 {/* Covers and Stiffener */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    {isTakeoff ? (
-                                        <>
-                                            <div className="flex items-center gap-2">
-                                                <Checkbox
-                                                    onCheckedChange={(checked) =>
-                                                        handleSignUpdate("cover", checked)
-                                                    }
-                                                    checked={(localSign as PrimarySign).cover || false}
-                                                    id="cover-checkbox"
-                                                />
-                                                <Label
-                                                    htmlFor="cover-checkbox"
-                                                    className="text-sm font-medium"
-                                                >
-                                                    Include cover
-                                                </Label>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Checkbox
-                                                    onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
-                                                    checked={localSign.stiffener || false}
-                                                    id="stiffener-checkbox"
-                                                />
-                                                <Label
-                                                    htmlFor="stiffener-checkbox"
-                                                    className="text-sm font-medium"
-                                                >
-                                                    Include stiffener
-                                                </Label>
-                                            </div>
-                                        </>
-                                    ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            onCheckedChange={(checked) =>
+                                                handleSignUpdate("cover", checked)
+                                            }
+                                            checked={(localSign as PrimarySign).cover || false}
+                                            id="cover-checkbox"
+                                        />
+                                        <Label
+                                            htmlFor="cover-checkbox"
+                                            className="text-sm font-medium"
+                                        >
+                                            Include cover
+                                        </Label>
+                                    </div>
+                                    {isTakeoff && (
                                         <div className="flex items-center gap-2">
                                             <Checkbox
-                                                onCheckedChange={(checked) =>
-                                                    handleSignUpdate("cover", checked)
-                                                }
-                                                checked={(localSign as PrimarySign).cover || false}
-                                                id="cover-checkbox-regular"
+                                                onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+                                                checked={localSign.stiffener || false}
+                                                id="stiffener-checkbox"
                                             />
                                             <Label
-                                                htmlFor="cover-checkbox-regular"
+                                                htmlFor="stiffener-checkbox"
                                                 className="text-sm font-medium"
                                             >
-                                                Include cover
+                                                Include stiffener
                                             </Label>
                                         </div>
                                     )}

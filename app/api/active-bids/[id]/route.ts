@@ -3,20 +3,16 @@ import { supabase } from '@/lib/supabase';
 
 // GET: Fetch a specific active bid by ID
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: any
 ) {
   try {
     const resolvedParams = await params;
-    // First try to fetch from bid_estimates (for existing bids)
-    let { data, error } = await supabase
-      .from('estimate_complete')
-      .select('*')
-      .eq('id', resolvedParams.id)
-      .single();
+    const type = request.nextUrl.searchParams.get('type')
     
-    // If not found in bid_estimates, try to fetch from available_jobs (for new bids from jobs)
-    if (error && error.code === 'PGRST116') {
+    let data : any;
+    let error: any;
+    if (type === 'available-job') {
       const { data: jobData, error: jobError } = await supabase
         .from('available_jobs')
         .select('*')
@@ -27,11 +23,22 @@ export async function GET(
         data = jobData;
         error = null;
       }
+    } else {
+      const { data: estimateData, error: estimateError } = await supabase
+      .from('estimate_complete')
+      .select('*')
+      .eq('id', resolvedParams.id)
+      .single();
+
+      if (!estimateError) {
+        data = estimateData;
+        error = null;
+      }
     }
     
     if (error) {
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch active bid', error: error.message },
+        { success: false, message: 'Failed to fetch active bid or available bid', error: error.message },
         { status: error.code === 'PGRST116' ? 404 : 500 }
       );
     }

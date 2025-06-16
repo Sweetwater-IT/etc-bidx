@@ -24,6 +24,8 @@ import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
 import { Customer } from "@/types/Customer";
 import { useCustomers } from "@/hooks/use-customers";
+import { Badge } from "@/components/ui/badge";
+import { safeNumber } from "@/lib/safe-number";
 
 
 const step: Step = {
@@ -63,7 +65,7 @@ const AdminInformationStep1 = ({
 
   const { adminData, dispatch, ratesAcknowledged } = useEstimate();
 
-  const { customers, getCustomers} = useCustomers();
+  const { customers, getCustomers } = useCustomers();
 
   useEffect(() => {
     getCustomers();
@@ -133,20 +135,34 @@ const AdminInformationStep1 = ({
       toggleStates.shopRate
     );
   };
-  
+
+  const setProjectEndDateFromDays = (days: number) => {
+    if (!adminData.startDate) return;
+
+    const startDate = adminData.startDate;
+    // Calculate new end date
+    const newEndDate = new Date(startDate.getTime() + (days * 24 * 60 * 60 * 1000));
+
+    // Update context
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: { key: 'endDate', value: newEndDate }
+    });
+  };
+
   useEffect(() => {
-    if(bidId && bidId !== '')
-    setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true}))
+    if (bidId && bidId !== '')
+      setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true }))
   }, [bidId])
 
   useEffect(() => {
     const allRatesAcknowledged = toggleStates.laborRate && toggleStates.fringeRate && toggleStates.shopRate;
-    
+
     // Only dispatch if the value actually needs to change
     if (allRatesAcknowledged !== ratesAcknowledged) {
-      dispatch({ 
-        type: 'SET_RATES_ACKNOWLEDGED', 
-        payload: allRatesAcknowledged 
+      dispatch({
+        type: 'SET_RATES_ACKNOWLEDGED',
+        payload: allRatesAcknowledged
       });
     }
   }, [toggleStates.laborRate, toggleStates.fringeRate, toggleStates.shopRate, dispatch])
@@ -210,11 +226,13 @@ const AdminInformationStep1 = ({
 
       if (availableJobId && source && source === 'available-jobs') {
         try {
-          const data = await fetchBidById(parseInt(availableJobId));
+          const data = await fetchBidById(parseInt(availableJobId), true);
 
           dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'contractNumber', value: data.contract_number } });
           dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'dbe', value: data.dbe_percentage ? Number(data.dbe_percentage) : 0 } });
-          dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'lettingDate', value: new Date(data.letting_date) } });
+          if (!!data.letting_date) {
+            dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'lettingDate', value: new Date(data.letting_date) } });
+          }
           dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'location', value: data.location } });
           dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'srRoute', value: data.state_route } });
           const associatedCounty = countiesData.find(c => c.name === data.county)
@@ -468,6 +486,44 @@ const AdminInformationStep1 = ({
         {currentStep === 1 && (
           <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
+            {adminData.startDate && (
+                  <div className="bg-muted w-fit px-4 py-2 rounded-md">
+                    <div className="flex flex-col gap-4">
+                      <div className="text-sm font-medium">
+                        Set project end date as number of days out from start date:
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          className="px-3 py-1 cursor-pointer hover:bg-primary"
+                          onClick={() => setProjectEndDateFromDays(30)}
+                        >
+                          30
+                        </Badge>
+                        <Badge
+                          className="px-3 py-1 cursor-pointer hover:bg-primary"
+                          onClick={() => setProjectEndDateFromDays(60)}
+                        >
+                          60
+                        </Badge>
+                        <Badge
+                          className="px-3 py-1 cursor-pointer hover:bg-primary"
+                          onClick={() => setProjectEndDateFromDays(90)}
+                        >
+                          90
+                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-20"
+                            onChange={(e) => setProjectEndDateFromDays(safeNumber(parseInt(e.target.value)))}
+                            placeholder="Days"
+                            type="number"
+                            min="1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               <div className="max-w-xl grid grid-cols-2 gap-6">
                 {step.fields.map((field) => (
                   <div key={field.name} className="space-y-2.5">

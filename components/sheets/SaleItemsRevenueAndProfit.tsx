@@ -157,7 +157,7 @@ const SaleItemsRevenueAndProfit = () => {
               ${allTotals?.totalGrossProfit?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
             </div>
             <div className="text-sm font-medium">
-              {(safeNumber(allTotals?.totalGrossMargin || 0) * 100).toFixed(2)}%
+              {(safeNumber(allTotals?.totalGrossMargin || 0)).toFixed(2)}%
             </div>
           </div>
         </>

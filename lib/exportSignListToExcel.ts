@@ -15,7 +15,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
     { header: 'Height (in)', key: 'height', width: 12 },
     { header: 'Quantity', key: 'quantity', width: 10 },
     { header: 'Sheeting', key: 'sheeting', width: 30 }, // Wider for totals text
-    { header: 'Structure', key: 'structure', width: 20 }, // Wider for totals text
+    { header: 'Structure', key: 'displayStructure', width: 20 }, // Wider for totals text
     { header: 'B Lights', key: 'bLights', width: 10 },
     { header: 'Covers', key: 'covers', width: 10 }
   ];
@@ -56,7 +56,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
         height: Number(primarySign.height),
         quantity: primarySign.quantity,
         sheeting: primarySign.sheeting,
-        structure: structureMapping[primarySign.associatedStructure],
+        displayStructure: primarySign.displayStructure,
         bLights: primarySign.bLights,
         covers: primarySign.cover ? primarySign.quantity : 0
       });

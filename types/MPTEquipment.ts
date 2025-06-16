@@ -14,64 +14,27 @@ export type EquipmentType =
   | 'ACLights'
   | 'sharps';
 
-export type StructureKey =
-  | 'fourFootTypeIII_right'
-  | 'fourFootTypeIII_left'
-  | 'sixFootTypeIII_right'
-  | 'sixFootTypeIII_left'
-  | 'hStand'
-  | 'post_8ft'
-  | 'post_10ft'
-  | 'post_12ft'
-  | 'post_14ft'
-  | 'none';
+export type AssociatedStructures = 'fourFootTypeIII' | 'hStand' | 'post' | 'none'
+
+export type DisplayStructures = "4' T-III RIGHT" | "4' T-III LEFT" | "6' T-III RIGHT" | "6' T-III LEFT" | 'H-FOOT'
+| "8' POST" | "10' POST" | "12' POST" | "14' POST" | 'LOOSE'
 
 export interface StructureMapping {
   displayName: string;
-  baseEquipmentType: EquipmentType | 'none';
+  baseEquipmentType: AssociatedStructures;
 }
 
-export const structureMap: Record<StructureKey, StructureMapping> = {
-  'fourFootTypeIII_right': {
-    displayName: "4' T-III RIGHT",
-    baseEquipmentType: 'fourFootTypeIII'
-  },
-  'fourFootTypeIII_left': {
-    displayName: "4' T-III LEFT",
-    baseEquipmentType: 'fourFootTypeIII'
-  },
-  'sixFootTypeIII_right': {
-    displayName: "6' T-III RIGHT",
-    baseEquipmentType: 'fourFootTypeIII' // Same base equipment
-  },
-  'sixFootTypeIII_left': {
-    displayName: "6' T-III LEFT",
-    baseEquipmentType: 'fourFootTypeIII'
-  },
-  'hStand': {
-    displayName: 'H-FOOT',
-    baseEquipmentType: 'hStand'
-  },
-  'post_8ft': {
-    displayName: "8' POST",
-    baseEquipmentType: 'post'
-  },
-  'post_10ft': {
-    displayName: "10' POST",
-    baseEquipmentType: 'post'
-  },
-  'post_12ft': {
-    displayName: "12' POST",
-    baseEquipmentType: 'post'
-  },
-  'post_14ft': {
-    displayName: "14' POST",
-    baseEquipmentType: 'post'
-  },
-  'none': {
-    displayName: 'LOOSE',
-    baseEquipmentType: 'none'
-  }
+export const structureMap: Record<DisplayStructures, AssociatedStructures> = {
+  "4' T-III RIGHT" : 'fourFootTypeIII',
+  "4' T-III LEFT" : 'fourFootTypeIII',
+  "6' T-III RIGHT" : 'fourFootTypeIII',
+  "6' T-III LEFT" : 'fourFootTypeIII',
+  "10' POST": 'post',
+  "12' POST" : 'post',
+  "14' POST" : 'post',
+  "8' POST": 'post',
+  "H-FOOT": 'hStand',
+  'LOOSE': 'none'
 };
 
 export type SheetingType = 'HI' | 'DG' | 'Special';
@@ -147,11 +110,13 @@ export interface DynamicSignInfo {
   isCustom: boolean;
   designation: string;
   description: string;
+  bLightsColor?: 'Yellow' | 'Red' | 'White'
   substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'
   stiffener?: boolean;
 }
 export interface PrimarySign extends DynamicSignInfo {
-  associatedStructure: StructureKey;
+  associatedStructure: AssociatedStructures
+  displayStructure: DisplayStructures
   bLights: number;
   // aLights : number;
   cover: boolean;

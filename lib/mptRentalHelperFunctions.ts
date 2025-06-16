@@ -1,4 +1,4 @@
-import { Phase, StructureKey, structureMap } from "@/types/MPTEquipment";
+import { DisplayStructures, Phase, structureMap } from "@/types/MPTEquipment";
 import { MPTRentalEstimating } from "@/types/MPTEquipment";
 import { EquipmentType } from "@/types/MPTEquipment";
 import { SheetingType } from "@/types/MPTEquipment";
@@ -195,9 +195,6 @@ interface AssociatedSignTotals {
   bLights: number,
   acLights: number
 }
-const getBaseEquipmentType = (structureKey: StructureKey) => {
-  return structureMap[structureKey]?.baseEquipmentType;
-};
 
 export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
   //loop through array an find Primary Signs by looking for associatedStructure property, then adding a number of that structure equal to the quantity
@@ -211,11 +208,8 @@ export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
       // acc.acLights += (sign.aLights * sign.quantity);
       acc.bLights += (sign.bLights * sign.quantity);
       
-      // Get the base equipment type from the structure key
-      const baseEquipmentType = getBaseEquipmentType(sign.associatedStructure);
-      
       // Map base equipment types to the totals object
-      switch (baseEquipmentType) {
+      switch (sign.associatedStructure) {
         case 'fourFootTypeIII':
           acc.type3 += sign.quantity;
           break;
@@ -230,7 +224,7 @@ export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
           break;
         default:
           // Handle any unexpected equipment types
-          console.warn(`Unknown base equipment type: ${baseEquipmentType} for structure: ${sign.associatedStructure}`);
+          console.warn(`Unknown base equipment type: ${sign.associatedStructure} for structure: ${sign.associatedStructure}`);
           break;
       }
     }
