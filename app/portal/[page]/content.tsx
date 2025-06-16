@@ -42,18 +42,20 @@ type County = {
 
 type FlagRate = {
     id: number;
+    year: number;
     fuel_economy_mpg: number;
     truck_dispatch_fee: number;
     worker_comp: number;
     general_liability: number;
 }
 
-type Page = "branches" | "counties" | "bid-items" | "users" | "fragging-rates" |  "payback-calculations"
+type Page = "branches" | "counties" | "bid-items" | "users" | "fragging-rates" | "payback-calculations"
 
 interface Column {
-  key: string,
-  title: string,
-  className?: string
+    key: string,
+    title: string,
+    className?: string,
+    format?: string
 }
 
 export function PortalPageContent({ page: Page }) {
@@ -67,7 +69,7 @@ export function PortalPageContent({ page: Page }) {
 
     const [showCreateBranchDialog, setShowCreateBranchDialog] = useState(false);
     const [showEditBranchDialog, setShowEditBranchDialog] = useState(false);
-    const [openConfirmArchiveDialog,  setShowConfirmArchiveDialog] = useState(false);
+    const [openConfirmArchiveDialog, setShowConfirmArchiveDialog] = useState(false);
     const [selectedBranch, setSelectedBranch] = useState<Branch | undefined>(undefined);
     const [selectedBranchesToArchive, setSelectedBranchesToArchive] = useState<Branch[]>([]);
     const branchesTableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -117,22 +119,23 @@ export function PortalPageContent({ page: Page }) {
         { key: "name", title: "Name" },
         { key: "district", title: "District" },
         { key: "branch", title: "Branch" },
-        { key: "labor_rate", title: "Labor Rate" },
-        { key: "fringe_rate", title: "Fringe Rate" },
+        { key: "labor_rate", title: "Labor Rate", className: "text-right" },
+        { key: "fringe_rate", title: "Fringe Rate", className: "text-right" },
         { key: "market", title: "Market" },
-        { key: "flagging_rate", title: "Flagging Rate" },
-        { key: "insurance", title: "Insurance" },
-        { key: "fuel", title: "Fuel" },
-        { key: "flagging_non_rated_target_gm", title: "Flagging Non-Rated Target GM" },
-        { key: "flagging_rated_target_gm", title: "Flagging Rated Target GM" },
-        { key: "flagging_base_rate", title: "Flagging Base Rate" },
-        { key: "flagging_fringe_rate", title: "Flagging Fringe Rate" },
+        { key: "flagging_rate", title: "Flagging Rate", className: "text-right" },
+        { key: "insurance", title: "Insurance", className: "text-right" },
+        { key: "fuel", title: "Fuel", className: "text-right" },
+        { key: "flagging_non_rated_target_gm", title: "Flagging Non-Rated Target GM", className: "text-right" },
+        { key: "flagging_rated_target_gm", title: "Flagging Rated Target GM", className: "text-right" },
+        { key: "flagging_base_rate", title: "Flagging Base Rate", className: "text-right" },
+        { key: "flagging_fringe_rate", title: "Flagging Fringe Rate", className: "text-right" },
     ];
 
     const FLAGGING_COLUMNS: Column[] = [
-        { key: "fuel_economy_mpg", title: "Fuel economy mpg" },
-        { key: "truck_dispatch_fee", title: "Truck Dispatch fee" },
-        { key: "worker_comp", title: "Worker Company" },
+        { key: "year", title: "Year" },
+        { key: "fuel_economy_mpg", title: "Fuel Economy" },
+        { key: "truck_dispatch_fee", title: "Truck Dispatch" },
+        { key: "worker_comp", title: "Workers' Compensation" },
         { key: "general_liability", title: "General Liability" }
     ];
 
@@ -181,7 +184,7 @@ export function PortalPageContent({ page: Page }) {
 
         } catch (err: any) {
             toast.error(err?.message || 'Error archiving branch')
-        } 
+        }
     }
 
     const handleArchiveCounties = async (county: County) => {
@@ -194,7 +197,7 @@ export function PortalPageContent({ page: Page }) {
 
         } catch (err: any) {
             toast.error(err?.message || 'Error archiving county')
-        } 
+        }
     }
 
     const handleArchiveFlagRates = async (fRate: FlagRate) => {
@@ -207,7 +210,7 @@ export function PortalPageContent({ page: Page }) {
 
         } catch (err: any) {
             toast.error(err?.message || 'Error archiving rate')
-        } 
+        }
     }
 
     const initiateArchiveBranch = (selectedBranches: Branch[]) => {
@@ -261,7 +264,7 @@ export function PortalPageContent({ page: Page }) {
         } catch (error) {
             console.error("Error loading branches: ", error);
             toast.error("Failed to load branches, please try again!");
-            
+
         } finally {
             stopLoading();
         }
@@ -303,7 +306,7 @@ export function PortalPageContent({ page: Page }) {
         } catch (error) {
             console.error("Error loading counties: ", error);
             toast.error("Failed to load counties, please try again!");
-            
+
         } finally {
             stopLoading();
         }
@@ -338,14 +341,24 @@ export function PortalPageContent({ page: Page }) {
             const result = await response.json();
             const { pagination, data } = result;
 
-            setFlagRates(data);
+            // Add year to each flag rate
+            const dataWithYear = data.map((rate: FlagRate) => ({
+                ...rate,
+                fuel_economy_mpg: `$${rate.fuel_economy_mpg}`,
+                truck_dispatch_fee: `$${rate.truck_dispatch_fee}`,
+                worker_comp: `$${rate.worker_comp}`,
+                general_liability: `$${rate.general_liability}`,
+                year: 2025
+            }));
+
+            setFlagRates(dataWithYear);
             setFlagRatesPageCount(pagination.pageCount);
             setFlagRatesTotalCount(pagination.totalCount);
 
         } catch (error) {
             console.error("Error loading branches: ", error);
             toast.error("Failed to load branches, please try again!");
-            
+
         } finally {
             stopLoading();
         }
@@ -364,11 +377,11 @@ export function PortalPageContent({ page: Page }) {
 
     const createButtonLabel: string =
         isBranches ? "Create Branch" :
-        isCounties ? "Create County" :
-        isBidItems ? "Create Bid Item" :
-        isUsers ? "Create User" :
-        isFlaggingRates ? "Create Rate" : 
-        "Create Payback Calculation";
+            isCounties ? "Create County" :
+                isBidItems ? "Create Bid Item" :
+                    isUsers ? "Create User" :
+                        isFlaggingRates ? "Create Rate" :
+                            "Create Payback Calculation";
 
     const data = isBranches ? branches : isCounties ? counties : flagRates;
     const { startLoading, stopLoading } = useLoading();
@@ -387,177 +400,187 @@ export function PortalPageContent({ page: Page }) {
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
                     <div className="@container/main flex flex-1 flex-col gap-2">
+                        {isFlaggingRates && (
+                            <span style={{fontSize: '30px', fontWeight: "bold", marginLeft: "25px", marginTop: "-20px"}} >Flagging</span>
+                        )}
+                        {isCounties && (
+                            <span style={{fontSize: '30px', fontWeight: "bold", marginLeft: "25px", marginTop: "-20px"}} >Counties</span>
+                        )}
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                             <div className="flex flex-col gap-2">
                                 <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between mt-2">
                                         <CardActions
-                                                createButtonLabel={createButtonLabel}
-                                                hideCalendar
-                                                goUpActions
-                                                onCreateClick={
-                                                    handleCreateClick
-                                                }
-                                            />
+                                            createButtonLabel={createButtonLabel}
+                                            hideCalendar
+                                            goUpActions
+                                            onCreateClick={
+                                                handleCreateClick
+                                            }
+                                        />
                                     </div>
                                 </div>
                             </div>
 
-                            { isBranches && (
+                            {isBranches && (
                                 <>
-                                <DataTable<Branch>
-                                    data={data as Branch[]}
-                                    columns={BRANCHES_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveBranch}
-                                    tableRef={branchesTableRef}
-                                    selectedItem={
-                                       selectedBranch
-                                            ? selectedBranch
-                                            : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as Branch);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchieveClick(item)
-                                    }}
-                                    pageCount={branchesPageCount}
-                                    pageIndex={branchesPageIndex}
-                                    pageSize={branchesPageSize}
-                                    onPageChange={setBranchesPageIndex}
-                                    onPageSizeChange={setBranchesPageSize}
-                                    totalCount={branchesTotalCount}
-                                />
+                                    <DataTable<Branch>
+                                        data={data as Branch[]}
+                                        columns={BRANCHES_COLUMNS}
+                                        stickyLastColumn
+                                        onArchiveSelected={initiateArchiveBranch}
+                                        tableRef={branchesTableRef}
+                                        selectedItem={
+                                            selectedBranch
+                                                ? selectedBranch
+                                                : undefined
+                                        }
+                                        onEdit={(item) => {
+                                            handleEditClick(item as Branch);
+                                        }}
+                                        onArchive={(item) => {
+                                            handleArchieveClick(item)
+                                        }}
+                                        pageCount={branchesPageCount}
+                                        pageIndex={branchesPageIndex}
+                                        pageSize={branchesPageSize}
+                                        onPageChange={setBranchesPageIndex}
+                                        onPageSizeChange={setBranchesPageSize}
+                                        totalCount={branchesTotalCount}
+                                    />
 
-                                <CreateBranchSheet
-                                    open={showCreateBranchDialog}
-                                    onOpenChange={setShowCreateBranchDialog}
-                                    onSuccess={loadBranches}
-                                />
+                                    <CreateBranchSheet
+                                        open={showCreateBranchDialog}
+                                        onOpenChange={setShowCreateBranchDialog}
+                                        onSuccess={loadBranches}
+                                    />
                                 </>
-                            ) }
+                            )}
 
-                            { isCounties && (
+                            {isCounties && (
                                 <>
-                                <DataTable<County>
-                                    data={data as County[]}
-                                    columns={COUNTIES_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveCounty}
-                                    tableRef={countiesTableRef}
-                                    selectedItem={
-                                        selectedCounty ? selectedCounty : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as County);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchieveClick(item);
-                                    }}
-                                    pageCount={countiesPageCount}
-                                    pageIndex={countiesPageIndex}
-                                    pageSize={countiesPageSize}
-                                    onPageChange={setCountiesPageIndex}
-                                    onPageSizeChange={setCountiesPageSize}
-                                    totalCount={countiesTotalCount}
-                                />
-                                <CreateCountySheet
-                                    open={showCreateCountyDialog}
-                                    onOpenChange={setShowCreateCountyDialog}
-                                    onSuccess={loadCounties}
-                                />
+                                    <DataTable<County>
+                                        data={data as County[]}
+                                        columns={COUNTIES_COLUMNS}
+                                        stickyLastColumn
+                                        onArchiveSelected={initiateArchiveCounty}
+                                        tableRef={countiesTableRef}
+                                        selectedItem={
+                                            selectedCounty ? selectedCounty : undefined
+                                        }
+                                        onEdit={(item) => {
+                                            handleEditClick(item as County);
+                                        }}
+                                        onArchive={(item) => {
+                                            handleArchieveClick(item);
+                                        }}
+                                        onRowClick={(item) => {
+                                            setSelectedCounty(item as County);
+                                            setShowEditCountyDialog(true);
+                                        }}
+                                        pageCount={countiesPageCount}
+                                        pageIndex={countiesPageIndex}
+                                        pageSize={countiesPageSize}
+                                        onPageChange={setCountiesPageIndex}
+                                        onPageSizeChange={setCountiesPageSize}
+                                        totalCount={countiesTotalCount}
+                                    />
+                                    <CreateCountySheet
+                                        open={showCreateCountyDialog}
+                                        onOpenChange={setShowCreateCountyDialog}
+                                        onSuccess={loadCounties}
+                                    />
                                 </>
-                            ) }
+                            )}
 
-                            { isFlaggingRates && (
+                            {isFlaggingRates && (
                                 <>
-                                <DataTable<FlagRate>
-                                    data={flagRates as FlagRate[]}
-                                    columns={FLAGGING_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveFlagRate}
-                                    tableRef={flagRatesTableRef}
-                                    selectedItem={
-                                        selectedFlagRate ? selectedFlagRate : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as FlagRate);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchiveFlagRates(item);
-                                    }}
-                                    pageCount={flagRatesPageCount}
-                                    pageIndex={flagRatesPageIndex}
-                                    pageSize={flagRatesPageSize}
-                                    onPageChange={setFlagRatesPageIndex}
-                                    onPageSizeChange={setFlagRatesPageSize}
-                                    totalCount={flagRatesTotalCount}
-                                />
-                                <CreateFlagRateSheet
-                                    open={showCreateFlagRateDialog}
-                                    onOpenChange={setShowCreateFlagRateDialog}
-                                    onSuccess={() => {
-                                        loadFlagRates()
-                                    }}
-                                />
-                                
-                                {selectedFlagRate && (
-                                    <EditFlagRateSheet
-                                    open={showEditFlagRateDialog}
-                                    onOpenChange={setShowEditFlagRateDialog}
-                                    onSuccess={() => {
-                                        loadFlagRates()
-                                    }}
-                                    rate={selectedFlagRate}
-                                />
-                                )}
+                                    <DataTable<FlagRate>
+                                        data={flagRates as FlagRate[]}
+                                        columns={FLAGGING_COLUMNS}
+                                        stickyLastColumn
+                                        onArchiveSelected={initiateArchiveFlagRate}
+                                        tableRef={flagRatesTableRef}
+                                        selectedItem={
+                                            selectedFlagRate ? selectedFlagRate : undefined
+                                        }
+                                        onEdit={(item) => {
+                                            handleEditClick(item as FlagRate);
+                                        }}
+                                        onArchive={(item) => {
+                                            handleArchiveFlagRates(item);
+                                        }}
+                                        pageCount={flagRatesPageCount}
+                                        pageIndex={flagRatesPageIndex}
+                                        pageSize={flagRatesPageSize}
+                                        onPageChange={setFlagRatesPageIndex}
+                                        onPageSizeChange={setFlagRatesPageSize}
+                                        totalCount={flagRatesTotalCount}
+                                    />
+                                    <CreateFlagRateSheet
+                                        open={showCreateFlagRateDialog}
+                                        onOpenChange={setShowCreateFlagRateDialog}
+                                        onSuccess={() => {
+                                            loadFlagRates()
+                                        }}
+                                    />
+
+                                    {selectedFlagRate && (
+                                        <EditFlagRateSheet
+                                            open={showEditFlagRateDialog}
+                                            onOpenChange={setShowEditFlagRateDialog}
+                                            onSuccess={() => {
+                                                loadFlagRates()
+                                            }}
+                                            rate={selectedFlagRate}
+                                        />
+                                    )}
                                 </>
 
-                            ) }
+                            )}
 
 
-                            { selectedBranch && (
+                            {selectedBranch && (
                                 <>
-                                <EditBranchSheet
-                                    open={showEditBranchDialog}
-                                    onOpenChange={setShowEditBranchDialog}
-                                    onSuccess={loadBranches}
-                                    branch={selectedBranch}
-                                />
-                                <ConfirmArchiveDialog
-                                    isOpen={openConfirmArchiveDialog}
-                                    onClose={() =>  setShowConfirmArchiveDialog(false)}
-                                    onConfirm={() => {
-                                        handleArchiveBranches(selectedBranch)
-                                    }}
-                                    itemCount={selectedBranchesToArchive.length}
-                                    itemType="branch"
-                                />
+                                    <EditBranchSheet
+                                        open={showEditBranchDialog}
+                                        onOpenChange={setShowEditBranchDialog}
+                                        onSuccess={loadBranches}
+                                        branch={selectedBranch}
+                                    />
+                                    <ConfirmArchiveDialog
+                                        isOpen={openConfirmArchiveDialog}
+                                        onClose={() => setShowConfirmArchiveDialog(false)}
+                                        onConfirm={() => {
+                                            handleArchiveBranches(selectedBranch)
+                                        }}
+                                        itemCount={selectedBranchesToArchive.length}
+                                        itemType="branch"
+                                    />
                                 </>
-                            ) }
+                            )}
 
-                            { selectedCounty && (
+                            {selectedCounty && (
                                 <>
-                                <EditCountySheet
-                                    open={showEditCountyDialog}
-                                    onOpenChange={setShowEditCountyDialog}
-                                    county={selectedCounty ? selectedCounty : null}
-                                    onSuccess={loadCounties}
-                                />
-                                <ConfirmArchiveDialog
-                                    isOpen={openConfirmArchiveCountyDialog}
-                                    onClose={() =>  setShowConfirmArchiveCountyDialog(false)}
-                                    onConfirm={() => {
-                                        handleArchiveCounties(selectedCounty)
-                                    }}
-                                    itemCount={selectedCountiesToArchive.length}
-                                    itemType="county"
-                                />
+                                    <EditCountySheet
+                                        open={showEditCountyDialog}
+                                        onOpenChange={setShowEditCountyDialog}
+                                        county={selectedCounty ? selectedCounty : null}
+                                        onSuccess={loadCounties}
+                                    />
+                                    <ConfirmArchiveDialog
+                                        isOpen={openConfirmArchiveCountyDialog}
+                                        onClose={() => setShowConfirmArchiveCountyDialog(false)}
+                                        onConfirm={() => {
+                                            handleArchiveCounties(selectedCounty)
+                                        }}
+                                        itemCount={selectedCountiesToArchive.length}
+                                        itemType="county"
+                                    />
                                 </>
-                            ) }
+                            )}
 
-                            
+
                         </div>
                     </div>
                 </div>

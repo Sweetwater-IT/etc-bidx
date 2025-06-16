@@ -188,8 +188,20 @@ function formatCellValue(value: any, key: string) {
     }
   }
 
-  // Format currency for total column and mptValue
-  if (key === "total" || key === "mptValue") {
+  // Format currency for monetary columns
+  if (
+    key === "total" || 
+    key === "mptValue" || 
+    key === "labor_rate" ||
+    key === "fringe_rate" ||
+    key === "flagging_rate" ||
+    key === "insurance" ||
+    key === "fuel" ||
+    key === "flagging_non_rated_target_gm" ||
+    key === "flagging_rated_target_gm" ||
+    key === "flagging_base_rate" ||
+    key === "flagging_fringe_rate"
+  ) {
     // Handle if value is already formatted with $ (string)
     if (typeof value === "string" && value.startsWith("$")) {
       return value;

@@ -152,7 +152,7 @@ export const data = {
           url: "/portal/users",
         },
         {
-          title: "Flagging Rates",
+          title: "Flagging",
           url: "/portal/flagging-rates",
         },
         {
