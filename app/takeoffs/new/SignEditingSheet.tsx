@@ -699,7 +699,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                 {localSign.quantity < 1 && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
                     <AlertCircle size={14} />
                     <span>
-                        Sign's quantity is less than 1.
+                        {`Sign's`} quantity is less than 1.
                     </span>
                 </div>}
                 <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
