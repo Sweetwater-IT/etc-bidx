@@ -62,6 +62,33 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Calculate stats for all non-archived, non-deleted jobs
+    const { data: allJobsForStats, error: allJobsError } = await supabase
+      .from('jobs_complete')
+      .select('id, project_status, billing_status, overdays, archived, deleted')
+      .eq('deleted', false)
+      .or('archived.is.null,archived.eq.false'); // Exclude archived jobs
+
+    if (allJobsError || !allJobsForStats) {
+      return NextResponse.json(
+        { error: 'Failed to fetch jobs for stats', details: allJobsError?.message },
+        { status: 500 }
+      );
+    }
+
+    // Calculate actual counts for stats
+    const totalActive = allJobsForStats.filter(job => job.project_status === 'IN_PROGRESS').length;
+    const totalPendingBilling = allJobsForStats.filter(job => 
+      job.billing_status === 'NOT_STARTED' || job.billing_status === 'IN_PROGRESS'
+    ).length;
+    const overdaysCount = allJobsForStats.filter(job => job.overdays > 0).length;
+
+    const stats = {
+      totalActive,
+      totalPendingBilling,
+      overdays: overdaysCount
+    };
+
     // Get pagination parameters
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 25;
     const page = url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : 1;
@@ -377,7 +404,8 @@ export async function GET(request: NextRequest) {
           pageSize: limit,
           pageCount: Math.ceil((count || 0) / limit),
           totalCount: count || 0
-        }
+        },
+        stats
       });
     } catch (error) {
       console.error('Error processing jobs:', error);
