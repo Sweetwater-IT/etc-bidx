@@ -34,6 +34,7 @@ import { exportAvailableJobsToExcel } from "@/lib/exportAvailableJobsToExcel";
 import { EstimateData, exportBidsToExcel } from "@/lib/exportBidsToExcel";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
+import { safeNumber } from "@/lib/safe-number";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -595,7 +596,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }
             const result = await response.json();
             //raw data has all the info we need
-            const { data, pagination } = result;
+            const { data, stats, pagination } = result;
     
             const transformedData = data.map(e => ({
                 id: e.id,
@@ -629,6 +630,23 @@ export function JobPageContent({ job }: JobPageContentProps) {
             setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);
+            setCardData([{
+                title: 'Win / Loss Ratio',
+                value: stats.winLossRatio + '%'
+            },
+            {
+                title: 'Draft Bids',
+                value: stats.draft
+            },
+            {
+                title: 'Pending Bids',
+                value: stats.pending
+            },
+            {
+                title: 'Won Jobs Pending Creation',
+                value: stats.wonPending
+            }
+            ])
         } catch (error) {
             console.error("Error loading active bids:", error);
             toast.error("Failed to load active bids. Please try again.");
@@ -680,7 +698,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 throw new Error('Failed to fetch active jobs');
             }
             const result = await response.json();
-            const { data, pagination } = result;
+            const { data, stats, pagination } = result;
     
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
@@ -705,6 +723,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
             setActiveJobs(uiJobs);
             setActiveJobsPageCount(pagination.pageCount);
             setActiveJobsTotalCount(pagination.totalCount);
+            setCardData([{
+                title: 'Total Active Jobs',
+                value: stats.totalActive
+            },
+            {
+                title: 'Total Jobs Pending Billing',
+                value: stats.totalPendingBilling
+            },
+            {
+                title: 'Total Jobs Over Days',
+                value: stats.overdays
+            }
+            ])
         } catch (error) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
@@ -881,41 +912,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchAvailableJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
-            setCardData([{
-                title: 'Win / Loss Ratio',
-                value: '65%'
-            },
-            {
-                title: 'Draft Bids',
-                value: '12'
-            },
-            {
-                title: 'Pending Bids',
-                value: '8'
-            },
-            {
-                title: 'Won Jobs Pending Creation',
-                value: '3'
-            }
-            ])
             fetchActiveBidCounts();
         } else if (isActiveJobs) {
             loadActiveJobs();
             fetchActiveJobCounts();
             fetchNextJobNumber();
-            setCardData([{
-                title: 'Total Active Jobs',
-                value: '42'
-            },
-            {
-                title: 'Total Jobs Pending Billing',
-                value: `70%`
-            },
-            {
-                title: 'Total Jobs Over Days',
-                value: '2'
-            }
-            ])
         }
     }, [
         isAvailableJobs,

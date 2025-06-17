@@ -109,6 +109,43 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Calculate stats for all non-archived, non-deleted bids
+    const { data: allBidsForStats, error: allBidsError } = await supabase
+      .from('estimate_complete')
+      .select('id, status, archived, admin_data')
+      .eq('deleted', false)
+      .or('archived.is.null,archived.eq.false'); // Exclude archived bids
+
+    if (allBidsError || !allBidsForStats) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch bids for stats', error: allBidsError?.message },
+        { status: 500 }
+      );
+    }
+
+    // Get job data for won bids to determine won-pending status
+    const wonBidIdsForStats = allBidsForStats.filter(bid => bid.status === 'WON').map(bid => bid.id);
+    const jobsDataForStats = await getJobsDataForBids(wonBidIdsForStats);
+
+    // Calculate actual counts for stats
+    const pendingCount = allBidsForStats.filter(bid => bid.status === 'PENDING').length;
+    const wonCount = allBidsForStats.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsDataForStats) === 'won').length;
+    const wonPendingCount = allBidsForStats.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsDataForStats) === 'won-pending').length;
+    const draftCount = allBidsForStats.filter(bid => bid.status === 'DRAFT').length;
+    const lostCount = allBidsForStats.filter(bid => bid.status === 'LOST').length;
+
+    // Calculate win-loss ratio: (won + won-pending) / (all bids excluding drafts) * 100
+    const totalNonDraftBids = allBidsForStats.length - draftCount;
+    const totalWonBids = wonCount + wonPendingCount;
+    const winLossRatio = totalNonDraftBids > 0 ? (totalWonBids / totalNonDraftBids) * 100 : 0;
+
+    let stats = {
+      winLossRatio: parseFloat(winLossRatio.toFixed(2)),
+      draft: draftCount,
+      pending: pendingCount,
+      wonPending: wonPendingCount
+    };
+
     // First, build a query to get all bids that match our filters (for counting)
     let countQuery = supabase
       .from('estimate_complete')
@@ -429,7 +466,8 @@ export async function GET(request: NextRequest) {
         pageSize: limit,
         pageCount: Math.ceil(actualTotalCount / limit),
         totalCount: actualTotalCount
-      }
+      },
+      stats
     });
   } catch (error) {
     console.error('Unexpected error:', error);
