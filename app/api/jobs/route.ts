@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     const sortBy = url.searchParams.get('sortBy');
     const sortOrder = url.searchParams.get('sortOrder');
 
+    const archived = url.searchParams.get('archived');
+    const isArchivedFilter = archived === 'true';
+    const excludeArchived = archived === 'false';
+
     // Parse filters if they exist
     let parsedFilters: Record<string, string[]> = {};
     if (filters) {
@@ -26,7 +30,8 @@ export async function GET(request: NextRequest) {
       try {
         const { data: allJobs, error: allJobsError } = await supabase
           .from('jobs')
-          .select('id, admin_data_entries(county), archived');
+          .select('id, admin_data_entries(county), archived, deleted')
+          .eq('deleted', false)
 
         if (allJobsError) {
           return NextResponse.json(
@@ -36,12 +41,14 @@ export async function GET(request: NextRequest) {
         }
 
         const filteredCountiesJobs = allJobs.filter(job => !!job.admin_data_entries && !!(job.admin_data_entries as any).county)
+        const nonArchivedJobs = allJobs.filter(job => job.archived !== true);
+        const nonArchivedFilteredJobs = filteredCountiesJobs.filter(job => job.archived !== true);
 
         const countData = {
-          all: allJobs.length,
-          west: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Bedford' || (job.admin_data_entries as any).county.branch === 'WEST').length,
-          turbotville: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Turbotville').length,
-          hatfield: filteredCountiesJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Hatfield').length,
+          all: nonArchivedJobs.length,
+          west: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Bedford' || (job.admin_data_entries as any).county.branch === 'WEST').length,
+          turbotville: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Turbotville').length,
+          hatfield: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Hatfield').length,
           archived: allJobs.filter(job => !!job.archived).length
         };
 
@@ -93,13 +100,25 @@ export async function GET(request: NextRequest) {
         mpt_rental,
         flagging,
         service_work,
-        sale_items
-      `, { count: 'exact' });
+        sale_items,
+        archived,
+        deleted
+      `, { count: 'exact' })
+      .eq('deleted', false);
 
-    // Apply filters
+    if (isArchivedFilter) {
+      query = query.eq('archived', true);
+    } else if (excludeArchived) {
+    }
+
+    // Apply branch filters
     if (branch && branch !== 'all') {
       if (branch === 'archived') {
-        query = query.eq('project_status', 'Archived');
+        // Handle legacy archived branch parameter
+        // Only apply if archived parameter wasn't already set
+        if (!isArchivedFilter && !excludeArchived) {
+          query = query.eq('archived', true);
+        }
       } else {
         const branchCodeMap: Record<string, string> = {
           'hatfield': '10',
@@ -147,7 +166,7 @@ export async function GET(request: NextRequest) {
     // Apply sorting if specified
     if (sortBy) {
       const ascending = sortOrder === 'asc';
-      
+
       // Map frontend column names to database column names
       const sortColumnMap: Record<string, string> = {
         'jobNumber': 'job_number',
@@ -175,12 +194,13 @@ export async function GET(request: NextRequest) {
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
-    console.error(query);
+    
     // Execute query
     const { data, count, error } = await query;
 
     // Handle errors
     if (error) {
+      console.error(error)
       return NextResponse.json(
         { error: 'Failed to fetch jobs', details: error.message },
         { status: 500 }
@@ -210,7 +230,7 @@ export async function GET(request: NextRequest) {
     try {
       // Get all job IDs that don't have contractor names for batch lookup
       const jobsWithoutContractors = data?.filter(job => !job.contractor_name).map(job => job.id) || [];
-      
+
       // Batch lookup contractor names for jobs missing them
       const contractorLookups = new Map();
       if (jobsWithoutContractors.length > 0) {
@@ -234,7 +254,7 @@ export async function GET(request: NextRequest) {
       // Fetch won bid items for all jobs
       const jobIds = data?.map(job => job.id) || [];
       const wonBidItemsMap = new Map();
-      
+
       if (jobIds.length > 0) {
         const { data: wonBidItems, error: wonItemError } = await supabase
           .from('won_bid_items')
@@ -253,7 +273,7 @@ export async function GET(request: NextRequest) {
             if (!wonBidItemsMap.has(item.job_id)) {
               wonBidItemsMap.set(item.job_id, []);
             }
-            
+
             // Concatenate item_number and description with a space
             const bidItemNumbers = item.bid_item_numbers as any;
             if (bidItemNumbers && bidItemNumbers.item_number && bidItemNumbers.description) {
@@ -281,7 +301,7 @@ export async function GET(request: NextRequest) {
             adminData = {};
           }
         }
-        
+
         let countyName = '';
         let countyJson = {};
         if (job.county && typeof job.county === 'object' && job.county.name) {
@@ -295,14 +315,14 @@ export async function GET(request: NextRequest) {
             countyJson = adminData.county;
           }
         }
-        
+
         let branchName = '';
         if (job.branch_code) {
           branchName = branchNameMap[job.branch_code] || '';
         } else if (adminData && adminData.county && adminData.county.branch) {
           branchName = adminData.county.branch;
         }
-        
+
         let contractNum = '';
         if (job.customer_contract_number) {
           contractNum = adminData.contractNumber;
@@ -345,7 +365,8 @@ export async function GET(request: NextRequest) {
           countyJson,
           createdAt: job.created_at || '',
           status: job.project_status || 'In Progress',
-          wonBidItems: wonBidItems
+          wonBidItems: wonBidItems,
+          archived: job.archived
         };
       }) || [];
 
@@ -400,17 +421,19 @@ export async function PATCH(request: NextRequest) {
 
     const { data: adminDataResult, error: adminDataError } = await supabase
       .from('admin_data_entries')
-      .update({'county' : transformedCountJson, 'location' : formData.location, 'contract_number': formData.contractNumber,
-        'start_date': formData.startDate, 'end_date': formData.endDate})
+      .update({
+        'county': transformedCountJson, 'location': formData.location, 'contract_number': formData.contractNumber,
+        'start_date': formData.startDate, 'end_date': formData.endDate
+      })
       .eq('job_id', formData.id)
 
-      if (adminDataError) {
-        console.error('Supabase error:', adminDataError);
-        return NextResponse.json(
-          { message: 'Failed to update job status', error: adminDataError.message },
-          { status: 500 }
-        );
-      }
+    if (adminDataError) {
+      console.error('Supabase error:', adminDataError);
+      return NextResponse.json(
+        { message: 'Failed to update job status', error: adminDataError.message },
+        { status: 500 }
+      );
+    }
 
     // Now update the job status using the job_number_id
     const { data, error } = await supabase
@@ -427,7 +450,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'Job status updated successfully', data: {data, adminDataResult} },
+      { message: 'Job status updated successfully', data: { data, adminDataResult } },
       { status: 200 }
     );
 
@@ -476,7 +499,7 @@ export async function POST(req: NextRequest) {
 
     while (!isUnique && attempts < maxAttempts) {
       jobNumber = generatePendingJobNumber();
-      
+
       // Check if job number already exists
       const { data: existingJobNumber } = await supabase
         .from('job_numbers')

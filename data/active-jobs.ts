@@ -1,6 +1,7 @@
 import { County } from "@/types/TCounty"
 
 export type ActiveJob = {
+  id: number
   jobNumber: string
   bidNumber: string
   projectStatus: string
