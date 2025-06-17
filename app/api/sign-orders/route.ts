@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from('sign_orders')
         .update({
-          requestor: signOrderData.requestor,
+          requestor: signOrderData.requestor.name,
           contractor_id: signOrderData.contractor_id,
           contract_number: signOrderData.contract_number,
           order_date: signOrderData.order_date,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('sign_orders')
       .insert({
-        requestor: signOrderData.requestor,
+        requestor: signOrderData.requestor.name,
         contractor_id: signOrderData.contractor_id,
         contract_number: signOrderData.contract_number,
         order_date: signOrderData.order_date,

@@ -124,7 +124,7 @@ export default function SignOrderContentSimple() {
             // Prepare data for submission
             const signOrderData = {
                 requestor: adminInfo.requestor ? adminInfo.requestor : '',
-                contractor_id: adminInfo.customer ? adminInfo.customer : undefined,
+                contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
                 contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
                 need_date: new Date(adminInfo.needDate).toISOString(),
