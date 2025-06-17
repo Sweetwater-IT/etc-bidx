@@ -226,7 +226,7 @@ export default function SignFormContent({ orderId }: SignFormContentProps) {
             // Prepare data for submission
             const signOrderData = {
                 requestor: adminInfo.requestor ? adminInfo.requestor.name : '',
-                contractor_id: adminInfo.customer ? adminInfo.customer: 1,
+                contractor_id: adminInfo.customer?.id ? adminInfo.customer.id : null,
                 contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
                 need_date: new Date(adminInfo.needDate).toISOString(),
