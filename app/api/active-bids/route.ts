@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     const totalWonBids = wonCount + wonPendingCount;
     const winLossRatio = totalNonDraftBids > 0 ? (totalWonBids / totalNonDraftBids) * 100 : 0;
 
-    let stats = {
+    const stats = {
       winLossRatio: parseFloat(winLossRatio.toFixed(2)),
       draft: draftCount,
       pending: pendingCount,
