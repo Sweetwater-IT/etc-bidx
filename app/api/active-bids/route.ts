@@ -693,7 +693,6 @@ export async function POST(request: NextRequest) {
           return {
             phase_id: phaseEntry.id,
             sign_id: sign.id,
-            phase_index: i,
             width: sign.width,
             height: sign.height,
             quantity: sign.quantity,
@@ -705,7 +704,7 @@ export async function POST(request: NextRequest) {
             display_structure: sign.displayStructure,
             substrate: sign.substrate,
             b_lights_color: sign.bLightsColor,
-            stiffer: sign.stiffener,
+            stiffener: sign.stiffener,
             b_lights: sign.bLights,
             covers: sign.cover ? sign.quantity : 0
           };
