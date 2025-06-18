@@ -70,7 +70,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
       hasServiceWorkChanged ||
       hasSaleItemsChanged
 
-    if (!adminData.contractNumber || adminData.contractNumber.trim() === '' || !hasAnyStateChanged || !id || !firstSaveTimestamp) return;
+    if (!adminData.contractNumber || adminData.contractNumber.trim() === '' || !hasAnyStateChanged || !id || (mode === 'new' && !firstSaveTimestamp)) return;
     else {
       //clear timeout if there is one
       if (saveTimeoutRef.current) {
@@ -201,7 +201,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
           className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
       </div>
       <div className='flex gap-x-2 items-center'>
-        <div className="text-sm text-muted-foreground">{getSaveStatusMessage()}</div>
+        {mode !== 'view' && <div className="text-sm text-muted-foreground">{getSaveStatusMessage()}</div>}
         <StepperSaveButtons key={status} mode={mode} status={status} />
       </div>
     </div>
