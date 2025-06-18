@@ -1087,6 +1087,7 @@ export async function fetchFileMetadataByFolder(
 }
 
 export const saveSignOrder = async (signOrderData: {
+  id?: number, // Add optional ID field
   requestor: User | undefined,
   contractor_id: number | undefined,
   contract_number: string,
@@ -1096,7 +1097,7 @@ export const saveSignOrder = async (signOrderData: {
   end_date: string,
   order_type: OrderTypes[],
   job_number: string,
-  signs: (PrimarySign | SecondarySign)[], // Access the signs from mptRental context
+  signs: (PrimarySign | SecondarySign)[],
   status: 'DRAFT' | 'SUBMITTED'
 }) => {
   const response = await fetch('/api/sign-orders', {
@@ -1107,5 +1108,16 @@ export const saveSignOrder = async (signOrderData: {
     body: JSON.stringify(signOrderData),
   });
 
-  return response
-} 
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to save sign order');
+  }
+
+  // Return the ID instead of the response object
+  return { id: data.id };
+}

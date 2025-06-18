@@ -52,16 +52,17 @@ export default function SignOrderContentSimple() {
     const [localFiles, setLocalFiles] = useState<File[]>([]);
     const [localNotes, setLocalNotes] = useState<string>();
     const [savedNotes, setSavedNotes] = useState<string>();
+    const [signOrderId, setSignOrderId] = useState<number | null>(null);
 
     // Autosave states
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [currentTime, setCurrentTime] = useState<number>(Date.now());
     const [firstSaveTimestamp, setFirstSaveTimestamp] = useState<Date | null>(null);
-    
+
     const saveTimeoutRef = useRef<number | null>(null);
     const updateTimeoutRef = useRef<number | null>(null);
     const lastSavedTime = useRef<number | null>(null);
-    
+
     const prevStateRef = useRef({
         adminInfo,
         mptRental
@@ -128,7 +129,7 @@ export default function SignOrderContentSimple() {
 
     const autosave = async () => {
         setIsSaving(true);
-        
+
         // Update the previous state reference
         prevStateRef.current = {
             adminInfo,
@@ -217,6 +218,7 @@ export default function SignOrderContentSimple() {
             }
 
             const signOrderData = {
+                id: signOrderId || undefined, // Include ID if we have one
                 requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
                 contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
                 contract_number: adminInfo.contractNumber,
@@ -226,16 +228,16 @@ export default function SignOrderContentSimple() {
                 end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
                 order_type: adminInfo.orderType,
                 job_number: adminInfo.jobNumber,
-                signs: mptRental.phases[0].signs || {}, // Access the signs from mptRental context
+                signs: mptRental.phases[0].signs || [],
                 status
             };
 
             // Submit data to the API
-            const response = await saveSignOrder(signOrderData);
-            const data = await response.json();
+            const result = await saveSignOrder(signOrderData);
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to save sign order');
+            // Store the ID for future updates
+            if (result.id) {
+                setSignOrderId(result.id);
             }
 
             // Set first save timestamp if this is the first save
@@ -246,11 +248,8 @@ export default function SignOrderContentSimple() {
             // Show success message only for manual saves
             if (!isAutosave) {
                 toast.success("Sign order saved successfully");
-                
-                // Only redirect on submitted orders
-                if (status === 'SUBMITTED') {
-                    router.push('/takeoffs/load-sheet');
-                }
+
+                router.push('/takeoffs/load-sheet');
             }
 
         } catch (error) {
