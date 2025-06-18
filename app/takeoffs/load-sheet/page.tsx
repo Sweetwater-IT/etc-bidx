@@ -14,6 +14,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
 const SIGN_ORDER_COLUMNS = [
+  { key: "order_number", title: "Order Number"},
   { key: "requestor", title: "Requestor" },
   { key: "shop_status", title: "Shop Status", render: (row: any) => {
     let bgColor = 'bg-gray-100 text-gray-800';
@@ -45,10 +46,7 @@ const SIGN_ORDER_COLUMNS = [
   { key: "order_type", title: "Type" },
   { key: "assigned_to", title: "Assigned to" },
   { key: "contract_number", title: "Contract Number"},
-  { key: "order_number", title: "Order Number"},
   { key: "job_number", title: "Job Number" },
-  // Empty action column at the end
-  { key: "actions", title: "Actions", render: () => <div className="w-8"></div> },
 ];
 
 const SEGMENTS = [
@@ -92,12 +90,10 @@ export default function SignOrderPage() {
     customers: { id: number; name: string }[];
     requestors: { id: number; name: string }[];
     branches: { id: number; name: string; code: string }[];
-    types: { id: number; name: string }[];
   }>({
     customers: [],
     requestors: [],
-    branches: [],
-    types: []
+    branches: []
   });
 
   // Define filter options
@@ -120,28 +116,10 @@ export default function SignOrderPage() {
         const branchesResponse = await fetch('/api/reference-data?type=branches');
         const branchesData = await branchesResponse.json();
 
-        // Define default sign order types in case API fails
-        const defaultTypes = [
-          { id: 1, name: 'Standard' },
-          { id: 2, name: 'Custom' },
-          { id: 3, name: 'Emergency' }
-        ];
-        
-        let types = [];
-        try {
-          // Try to fetch sign order types, but don't break if it fails
-          const typesResponse = await fetch('/api/reference-data?type=sign-order-types');
-          const typesData = await typesResponse.json();
-          types = typesData.success ? typesData.data : defaultTypes;
-        } catch (error) {
-          console.log('Using default sign order types due to API error');
-        }
-
         setReferenceData({
           customers: customersData.data || [],
           requestors: [], // We'll populate this from sign orders data if needed
-          branches: branchesData.data || [],
-          types: types
+          branches: branchesData.data || []
         });
       } catch (error) {
         console.error('Error fetching reference data:', error);
@@ -169,14 +147,6 @@ export default function SignOrderPage() {
           options: referenceData.requestors.map(requestor => ({
             label: requestor.name,
             value: requestor.name
-          }))
-        },
-        {
-          label: 'Type',
-          field: 'type',
-          options: referenceData.types.map(type => ({
-            label: type.name,
-            value: type.name
           }))
         },
         {
@@ -229,8 +199,6 @@ export default function SignOrderPage() {
 
       const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
-      
-      console.log('API response:', data);
       
       if (data.success) {
         // Make sure we're using the correct field name from the API response
@@ -401,11 +369,6 @@ export default function SignOrderPage() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
-              
-              {/* No Status Tabs - Only showing Draft content */}
-              
-
-              
               <DataTable<SignOrderView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
@@ -415,6 +378,7 @@ export default function SignOrderPage() {
                 onSegmentChange={handleSegmentChange}
                 onRowClick={handleRowClick}
                 stickyLastColumn
+                onEdit={handleEdit}
                 // Selection props
                 onArchiveSelected={handleArchiveSelected}
                 onDeleteSelected={handleDeleteSelected}
