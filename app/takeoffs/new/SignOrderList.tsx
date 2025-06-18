@@ -104,7 +104,7 @@ export function SignOrderList() {
             isCustom: false,
             bLightsColor: undefined,
             description: '',
-            substrate: 'Aluminum'
+            substrate: undefined
         }
         dispatch({
             type: 'ADD_MPT_SIGN', payload: {

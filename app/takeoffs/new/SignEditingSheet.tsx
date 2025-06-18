@@ -57,6 +57,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
 
+    const [firstStructureSet, setFirstStructureSet] = useState<boolean>(false)
+
     const isSecondary = isSecondarySign(sign);
 
     // Get primary sign if this is a secondary sign
@@ -199,6 +201,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         oldStructure: AssociatedStructures,
         signQuantity: number
     ) => {
+        setFirstStructureSet(true);
         // Handle old structure: decrement by the sign quantity
         if (oldStructure !== 'none') {
             const currentOldQuantity = getCurrentEquipmentQuantity(oldStructure);
@@ -430,6 +433,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                         variant="outline"
                                         role="combobox"
                                         className="w-full justify-between"
+                                        disabled={Object.hasOwn(localSign, 'associatedStructure')}
                                     >
                                         <span className="truncate">
                                             {localSign.designation || "Select designation..."}
@@ -492,7 +496,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 Substrate
                             </Label>
                             <Select
-                                value={localSign.substrate || "Aluminum"}
+                                value={localSign.substrate}
                                 onValueChange={(value) => handleSignUpdate("substrate", value)}
                             >
                                 <SelectTrigger className="w-full">
@@ -543,14 +547,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
                                 <Select
                                     value={
-                                        localSign.width && localSign.height
+                                        (localSign.width && localSign.height && localSign.width > 0 && localSign.height > 0)
                                             ? `${localSign.width}x${localSign.height}`
                                             : undefined
                                     }
                                     onValueChange={handleDimensionSelect}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select dimensions" />
+                                        <SelectValue placeholder="Select dimensions"/>
                                     </SelectTrigger>
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
@@ -605,11 +609,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 <div>
                                     <Label className="text-sm font-medium mb-2 block">Structure</Label>
                                     <Select
-                                        value={(localSign as PrimarySign).displayStructure}
+                                        value={!firstStructureSet && mode === 'create' ? undefined : (localSign as PrimarySign).displayStructure}
                                         onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="LOOSE" />
+                                            <SelectValue placeholder="Choose structure" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
@@ -696,17 +700,17 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                     )}
                 </div>
                 {/* Action Buttons */}
-                {localSign.quantity < 1 && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
+                {(localSign.quantity < 1 || (mode ==='create' && (Object.hasOwn(localSign, 'associatedStructure') && !firstStructureSet)) || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
                     <AlertCircle size={14} />
                     <span>
-                        {`Sign's`} quantity is less than 1.
+                        Please fill out all necessary fields before saving.
                     </span>
                 </div>}
                 <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={localSign.quantity < 1}>
+                    <Button onClick={handleSave} disabled={(localSign.quantity < 1 || (mode ==='create' && (Object.hasOwn(localSign, 'associatedStructure') && !firstStructureSet)) || localSign.width < 1 || localSign.height < 1)}>
                         Save Sign
                     </Button>
                 </div>
