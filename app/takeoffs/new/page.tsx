@@ -1,8 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
-import SignFormContent from "./SignOrderContent";
 import { EstimateProvider } from "@/contexts/EstimateContext";
+import SignOrderContentSimple from "../sign-order/SignOrderContentSimple";
 
 // Function to extract the ID from the search params
 function getOrderId(searchParams: any) {
@@ -32,7 +32,7 @@ export default async function NewSignOrderPage({
                     <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order Number<span id="order-number">{/* Order number will be populated dynamically */}</span></h1>
                 </SiteHeader>
                     <EstimateProvider>
-                        <SignFormContent orderId={orderId} />
+                        <SignOrderContentSimple/>
                     </EstimateProvider>
             </SidebarInset>
         </SidebarProvider>
