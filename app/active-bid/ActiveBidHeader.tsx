@@ -1,11 +1,9 @@
 'use client'
 import { useEstimate } from '@/contexts/EstimateContext'
 import { Button, buttonVariants } from '../../components/ui/button'
-import { cn } from '../../lib/utils'
-import { MoveLeft, XIcon } from 'lucide-react'
-import Link from 'next/link'
+import { XIcon } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
 import { useLoading } from '@/hooks/use-loading'
 import { createActiveBid } from '@/lib/api-client'
@@ -14,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { Separator } from '@/components/ui/separator'
 import StepperSaveButtons from '@/components/pages/active-bid/steps/stepper-save-buttons'
 import { Badge } from '@/components/ui/badge'
+import isEqual from 'lodash/isEqual'
 
 interface Props {
   mode: 'edit' | 'view' | 'new'
@@ -23,14 +22,123 @@ interface Props {
 
 const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
-  const { adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork, notes } = useEstimate()
+  const { dispatch, adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork, notes, id, firstSaveTimestamp } = useEstimate()
 
+  const [isSaving, setIsSaving] = useState<boolean>(false)
   const params = useSearchParams();
   const bidId = params?.get('bidId')
 
   const { startLoading, stopLoading } = useLoading()
 
   const router = useRouter();
+
+  const saveTimeoutRef = useRef<number | null>(null)
+  const updateTimeoutRef = useRef<number | null>(null) //for rerendering the display text
+  const lastSavedTime = useRef<number | null>(null)
+  const [currentTime, setCurrentTime] = useState<number>(Date.now())
+
+  const prevStateRef = useRef({
+    adminData,
+    mptRental,
+    equipmentRental,
+    flagging,
+    serviceWork,
+    saleItems
+  })
+
+  useEffect(() => {
+    if (!bidId || isNaN(Number(bidId))) return;
+
+    dispatch({ type: 'SET_ID', payload: Number(bidId) })
+  }, [bidId])
+
+  useEffect(() => {
+    if (mode === 'view') return;
+    //before doing anything, check if there were any changes
+    const hasAdminDataChanged = !isEqual(adminData, prevStateRef.current.adminData)
+    const hasMptRentalChanged = !isEqual(mptRental, prevStateRef.current.mptRental)
+    const hasEquipmentRentalChanged = !isEqual(equipmentRental, prevStateRef.current.equipmentRental)
+    const hasFlaggingChanged = !isEqual(flagging, prevStateRef.current.flagging)
+    const hasServiceWorkChanged = !isEqual(serviceWork, prevStateRef.current.serviceWork)
+    const hasSaleItemsChanged = !isEqual(saleItems, prevStateRef.current.saleItems)
+
+    const hasAnyStateChanged =
+      hasAdminDataChanged ||
+      hasMptRentalChanged ||
+      hasEquipmentRentalChanged ||
+      hasFlaggingChanged ||
+      hasServiceWorkChanged ||
+      hasSaleItemsChanged
+
+    if (!adminData.contractNumber || adminData.contractNumber.trim() === '' || !hasAnyStateChanged || !id || !firstSaveTimestamp) return;
+    else {
+      //clear timeout if there is one
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+
+      saveTimeoutRef.current = window.setTimeout(() => {
+        autosave();
+      }, 5000)
+    }
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
+
+  const autosave = async () => {
+    if (!id) return;
+    setIsSaving(true)
+    prevStateRef.current = {
+      adminData,
+      mptRental,
+      equipmentRental,
+      flagging,
+      serviceWork,
+      saleItems
+    };
+
+    try {
+      const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
+      const createdId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, id);
+      if (!createdId.id) {
+        toast.error('Id was not properly set after saving bid')
+      } else {
+        dispatch({ type: 'SET_ID', payload: createdId.id })
+        lastSavedTime.current = Date.now()
+      }
+    }
+    catch (error) {
+      toast.error('Bid not successfully saved as draft: ' + error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    const updateTimer = () => {
+      setCurrentTime(Date.now())
+      updateTimeoutRef.current = window.setTimeout(updateTimer, 60000) // Update every minute
+    }
+
+    // Start the timer
+    updateTimer()
+
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleSubmit = async () => {
     if (!adminData.contractNumber || adminData.contractNumber.trim() === '') {
@@ -40,20 +148,41 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     else {
       try {
         startLoading();
-        const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
         const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
-        await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, idToUse);
+        await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
+        serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, id ?? undefined);
         toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
         router.replace('/jobs/active-bids')
       } catch (error) {
         console.error("Error creating bid:", error);
-        toast.error('Bid not succesfully saved as draft: ' + error)
+        toast.error('Bid not successfully saved as draft: ' + error)
       }
       finally {
         stopLoading();
       }
     }
   }
+
+  // Generate save status message
+  const getSaveStatusMessage = () => {
+    if (isSaving) return 'Saving...';
+
+    if (!lastSavedTime.current && !firstSaveTimestamp) return 'Draft has not been saved';
+
+    const saveTime = lastSavedTime.current || firstSaveTimestamp!.getTime()
+    const secondsAgo = Math.floor((currentTime - saveTime) / 1000); // Use currentTime state
+    const displayStatus = mode === 'new' ? 'Draft' : status;
+
+    if (secondsAgo < 60) {
+      return `Saved just now`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${displayStatus} saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+    } else {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${displayStatus} saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+    }
+  };
 
   return (
     <div className={`flex w-full bg-white z-50 items-center sticky top-0 justify-between px-6 gap-2 pb-4 mb-6 ${mode !== 'view' ? 'pt-6 mt-2 border-b-1' : ''}`}>
@@ -71,7 +200,10 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
           className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
       </div>
-      <StepperSaveButtons key={status} mode={mode} status={status} />
+      <div className='flex gap-x-2 items-center'>
+        <div className="text-sm text-muted-foreground">{getSaveStatusMessage()}</div>
+        <StepperSaveButtons key={status} mode={mode} status={status} />
+      </div>
     </div>
   )
 }

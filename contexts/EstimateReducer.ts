@@ -624,7 +624,9 @@ export const estimateReducer = (
 				flagging: defaultFlaggingObject,
 				equipmentRental: [],
 				ratesAcknowledged: false,
-				notes: ''
+				notes: '',
+				firstSaveTimestamp: null,
+				id: null
 				// permanentSigns: defaultPermanentSignsObject, 
 			};
 
@@ -718,6 +720,18 @@ export const estimateReducer = (
 			return {
 				...state,
 				notes: action.payload
+			}
+
+		case 'SET_FIRST_SAVE':
+			return {
+				...state,
+				firstSaveTimestamp: action.payload
+			}
+		
+		case 'SET_ID':
+			return {
+				...state,
+				id: action.payload
 			}
 
 		default:

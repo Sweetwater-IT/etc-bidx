@@ -29,7 +29,7 @@ interface Props {
 
 const StepperSaveButtons = ({ mode, status }: Props) => {
 
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged, notes } = useEstimate();
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged, notes, id } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
@@ -45,13 +45,15 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
 
     const params = useSearchParams();
 
-    const bidId = params?.get('bidId')
 
     const handleSubmit = async () => {
+        if(!id){
+            toast.error('Bid ID is not set')
+            return;
+        }
         try {
             startLoading();
-            const idToUse = (bidId && bidId.trim() !== '') ? Number(bidId) : undefined
-            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes, idToUse);
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes, id);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
             const params = new URLSearchParams();
@@ -135,7 +137,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                 </Button>}
                 {mode === 'view' && status !== 'WON' && status!== 'LOST' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
                 {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{(mode === 'new' || status === 'DRAFT') ? 'Create' : 'Update'} bid</Button>}
-                {mode === 'view' && <BidSummaryDrawer open={isViewSummaryOpen} onOpenChange={setIsViewSummaryOpen} />}
+                {mode === 'view' && <BidSummaryDrawer disableDiscounts={true} open={isViewSummaryOpen}  onOpenChange={setIsViewSummaryOpen} />}
             </div>
         </>
     )

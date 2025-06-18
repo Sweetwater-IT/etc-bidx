@@ -493,6 +493,8 @@ export async function POST(request: NextRequest) {
       notes: string;
     };
 
+    console.log(body.data)
+
     // Calculate totals
     const allTotals = getAllTotals(
       adminData, 
@@ -671,7 +673,7 @@ export async function POST(request: NextRequest) {
       if (phaseError) {
         throw new Error(`Failed to create phase ${i}: ${phaseError.message}`);
       }
-
+      console.log(phaseEntry)
       // Insert signs for this phase
       const signInserts = phase.signs.map(sign => {
         if ('primarySignId' in sign) {
@@ -725,6 +727,7 @@ export async function POST(request: NextRequest) {
 
       // Insert secondary signs
       const secondarySigns = signInserts.filter(sign => 'primary_sign_id' in sign);
+      console.log(secondarySigns)
       if (secondarySigns.length > 0) {
         const { error: secondarySignError } = await supabase
           .from('mpt_secondary_signs')

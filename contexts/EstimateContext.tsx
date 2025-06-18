@@ -14,7 +14,9 @@ const defaultBidState: EstimateContextType = {
   flagging: defaultFlaggingObject,
   saleItems: [],
   ratesAcknowledged: false,
-  notes: ''
+  notes: '',
+  firstSaveTimestamp: null,
+  id: null
 };
 
 const EstimateContext = createContext<EstimateContextType>(defaultBidState);

@@ -3,23 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { Plus } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
 import { format } from 'date-fns'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -90,35 +73,43 @@ export default function SignOrderTrackerPage () {
   const SIGN_COLUMNS = [
     {
       key: 'designation',
-      title: 'Designation'
+      title: 'Designation',
+      sortable: false
     },
     {
       key: 'description',
-      title: 'Description'
+      title: 'Description',
+      sortable: false
     },
     {
       key: 'dimensions',
-      title: 'Dimensions'
+      title: 'Dimensions',
+      sortable: false
     },
     {
       key: 'quantity',
-      title: 'Quantity'
+      title: 'Quantity',
+      sortable: false
     },
     {
       key: 'sheeting',
-      title: 'Sheeting'
+      title: 'Sheeting',
+      sortable: false
     },
     {
       key: 'structure',
-      title: 'Structure'
+      title: 'Structure',
+      sortable: false
     },
     {
       key: 'bLights',
-      title: 'B Lights'
+      title: 'B Lights',
+      sortable: false
     },
     {
       key: 'covers',
-      title: 'Covers'
+      title: 'Covers',
+      sortable: false
     }
   ]
 
