@@ -28,19 +28,14 @@ const step: Step = {
 
 // Calculate days between dates (abstracted function)
 const calculateDays = (start: Date, end: Date): number => {
-    console.log('running calculated days with start date:', start, end)
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Include both start and end date
     return diffDays;
 };
 
 const PhaseInfoStep2 = ({
-    currentStep,
-    setCurrentStep,
     currentPhase
 }: {
-    currentStep: number;
-    setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
     currentPhase: number;
 }) => {
     const { mptRental, dispatch, adminData } = useEstimate();
@@ -72,10 +67,6 @@ const PhaseInfoStep2 = ({
             type: 'UPDATE_PHASE_NAME',
             payload: { value: e.target.value.toUpperCase(), phase: currentPhase },
         });
-    };
-
-    const handleNext = () => {
-        setCurrentStep(3);
     };
 
     const setEndDateFromDays = (days: number) => {
@@ -121,34 +112,8 @@ const PhaseInfoStep2 = ({
     return (
         <div>
             <div className="relative">
-                <button
-                    onClick={() => setCurrentStep(2)}
-                    className={cn(
-                        "group flex w-full items-start gap-4 py-4 text-left",
-                        currentStep === 2 ? "text-foreground" : "text-muted-foreground"
-                    )}
-                >
-                    <div
-                        className={cn(
-                            "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm",
-                            2 <= currentStep
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-muted-foreground bg-background"
-                        )}
-                    >
-                        2
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <div className="text-base font-medium">{step.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                            {step.description}
-                        </div>
-                    </div>
-                </button>
-
-                {/* Collapsible Content */}
-                {currentStep === 2 && mptRental.phases.length > 0 && (
-                    <div className="mt-2 mb-6 ml-12">
+                {mptRental.phases.length > 0 && (
+                    <div className="mt-2 mb-6">
                         <div className="space-y-6">
                             <div className="flex items-center gap-x-2">
                                 <Checkbox
@@ -267,14 +232,6 @@ const PhaseInfoStep2 = ({
                                     </div>
                                 </div>
                             )}
-
-                            {/* Navigation Buttons */}
-                            <div className="flex justify-between pt-4">
-                                <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                                    Back
-                                </Button>
-                                <Button onClick={handleNext}>Next</Button>
-                            </div>
                         </div>
                     </div>
                 )}

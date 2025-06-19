@@ -13,25 +13,15 @@ import { Trash } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface AdminInformationAccordionProps {
-    currentStep: number;
-    setCurrentStep: Dispatch<SetStateAction<number>>
     setCurrentPhase: Dispatch<SetStateAction<number>>
     currentPhase: number
 }
 
-const PhaseSummaryAccordion = ({ currentStep, setCurrentPhase, setCurrentStep, currentPhase }: AdminInformationAccordionProps) => {
+const PhaseSummaryAccordion = ({ setCurrentPhase, currentPhase }: AdminInformationAccordionProps) => {
     const [value, setValue] = useState<string[]>([]);
     const { mptRental, dispatch } = useEstimate();
 
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
-
-    useEffect(() => {
-        if (currentStep === 2 || currentStep === 3 || currentStep === 4 || mptRental.phases.length > 1) {
-            setValue(["item-1"]);
-        } else {
-            setValue([]);
-        }
-    }, [currentStep]);
 
     return (
         <>
@@ -70,7 +60,6 @@ const PhaseSummaryAccordion = ({ currentStep, setCurrentPhase, setCurrentStep, c
                                         <div>
                                             <div className={`font-medium`} onClick={() => {
                                                 setCurrentPhase(index)
-                                                setCurrentStep(2)
                                             }}>
                                                 Phase {index + 1}: {phase.name ?? ''}
                                             </div>
