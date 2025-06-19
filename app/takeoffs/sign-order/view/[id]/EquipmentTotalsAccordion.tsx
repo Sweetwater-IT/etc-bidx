@@ -13,48 +13,23 @@ import {
     DropdownMenuItem,
   } from "@/components/ui/dropdown-menu";
   import { MoreHorizontal, MoreVertical, Pencil } from "lucide-react";
-  import { useMemo } from "react";
+  import { useMemo, useState } from "react";
   import { getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
+import { EquipmentType } from "@/types/MPTEquipment";
   
   interface EquipmentTotalsAccordionProps {
     signItems: any[];
   }
   
   const EquipmentTotalsAccordion = ({ signItems }: EquipmentTotalsAccordionProps) => {
-    
-    // Mock phase object to use with the helper function
-    const mockPhase = useMemo(() => ({
-      signs: signItems.map(item => ({
-        ...item,
-        associatedStructure: item.structure === 'LOOSE' ? 'none' : 
-                            item.structure?.includes("4' T-III") ? 'fourFootTypeIII' :
-                            item.structure?.includes("6' T-III") ? 'fourFootTypeIII' :
-                            item.structure?.includes('H-FOOT') ? 'hStand' :
-                            item.structure?.includes('POST') ? 'post' : 'none',
-        cover: item.covers > 0,
-        bLights: item.bLights || 0
-      }))
-    }), [signItems]);
-  
-    // Calculate equipment totals using the helper function
-    const equipmentTotals = useMemo(() => {
-      if (signItems.length === 0) {
-        return {
-          type3: 0,
-          hStand: 0,
-          post: 0,
-          cover: 0,
-          bLights: 0,
-          acLights: 0
-        };
-      }
-      return getAssociatedSignEquipment(mockPhase as any);
-    }, [mockPhase]);
-  
+
+    const [equipmentTotals, setEquipmentTotals] = useState<Record<EquipmentType, number>>();
+
     const handleEdit = () => {
       // Edit functionality will be implemented later
       console.log("Edit equipment totals");
     };
+
   
     return (
       <Card className="p-4">
@@ -86,51 +61,51 @@ import {
               <div className="space-y-2 text-sm mt-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{`4'`} Type III:</span>
-                  <span>{equipmentTotals.type3}</span>
+                  <span>{equipmentTotals?.fourFootTypeIII}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">H-Stands:</span>
-                  <span>{equipmentTotals.hStand}</span>
+                  <span>{equipmentTotals?.hStand}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Posts:</span>
-                  <span>{equipmentTotals.post}</span>
+                  <span>{equipmentTotals?.post}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Covers:</span>
-                  <span>{equipmentTotals.cover}</span>
+                  <span>{equipmentTotals?.covers}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">B Lights:</span>
-                  <span>{equipmentTotals.bLights}</span>
+                  <span>{equipmentTotals?.BLights}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">AC Lights:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.ACLights}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{`6'`} Wings:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.sixFootWings}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sandbags:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.sandbag}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Metal Stands:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.metalStands}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">HI Vertical Panels:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.HIVP}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type XI Vertical Panels:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.TypeXIVP}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sharps:</span>
-                  <span>0</span>
+                  <span>{equipmentTotals?.sharps}</span>
                 </div>
               </div>
             </AccordionContent>

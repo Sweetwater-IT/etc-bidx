@@ -23,9 +23,10 @@ interface BidSummaryDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultBid?: EstimateData
+  disableDiscounts?: boolean
 }
 
-export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenChange, defaultBid }: BidSummaryDrawerProps) {
+export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenChange, defaultBid, disableDiscounts }: BidSummaryDrawerProps) {
 
   const { dispatch } = useEstimate();
 
@@ -88,7 +89,7 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                 {/* Top row - Discount Checks and Bid Summary */}
                 <div className="flex space-x-2">
                   <div className="flex-1 min-w-0">
-                    <DiscountChecks editableDiscounts={!defaultBid}/>
+                    <DiscountChecks editableDiscounts={!defaultBid && !disableDiscounts}/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <BidSummaryByItem />

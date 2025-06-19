@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Step } from "@/types/IStep";
 import {
+  createActiveBid,
   fetchActiveBidById,
   fetchBidById,
   fetchReferenceData,
@@ -26,6 +27,8 @@ import { Customer } from "@/types/Customer";
 import { useCustomers } from "@/hooks/use-customers";
 import { Badge } from "@/components/ui/badge";
 import { safeNumber } from "@/lib/safe-number";
+import { formatDecimal } from "@/lib/formatDecimals";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 
 const step: Step = {
@@ -63,13 +66,8 @@ const AdminInformationStep1 = ({
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }) => {
 
-  const { adminData, dispatch, ratesAcknowledged } = useEstimate();
-
-  const { customers, getCustomers } = useCustomers();
-
-  useEffect(() => {
-    getCustomers();
-  }, [getCustomers])
+  const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental, 
+    flagging, serviceWork, saleItems, equipmentRental, notes } = useEstimate();
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
@@ -99,12 +97,6 @@ const AdminInformationStep1 = ({
     dieselCost: "000",
   });
 
-  const [editToggleSet, setEditToggleSet] = useState<boolean>(false)
-
-  function formatDecimal(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
-  }
-
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
@@ -115,15 +107,6 @@ const AdminInformationStep1 = ({
     county: false,
     estimator: false,
     owner: false,
-  });
-
-  // State for loading status
-  const [isLoading, setIsLoading] = useState({
-    counties: false,
-    branches: false,
-    estimators: false,
-    divisions: false,
-    owners: false,
   });
 
   // Function to check if all rates are acknowledged and have values
@@ -150,6 +133,7 @@ const AdminInformationStep1 = ({
     });
   };
 
+  //set toggle states to true when editing a bid
   useEffect(() => {
     if (bidId && bidId !== '')
       setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true }))
@@ -176,22 +160,16 @@ const AdminInformationStep1 = ({
       let ownersData: { id: string, name: string }[] = [];
       try {
         // Fetch counties
-        setIsLoading((prev) => ({ ...prev, counties: true }));
         countiesData = await fetchReferenceData("counties");
         setCounties(countiesData);
-        setIsLoading((prev) => ({ ...prev, counties: false }));
 
         // Fetch estimators (users)
-        setIsLoading((prev) => ({ ...prev, estimators: true }));
         const estimatorsData = await fetchReferenceData("users");
         setEstimators(estimatorsData);
-        setIsLoading((prev) => ({ ...prev, estimators: false }));
 
         // Fetch owners
-        setIsLoading((prev) => ({ ...prev, owners: true }));
         ownersData = await fetchReferenceData("owners");
         setOwners(ownersData);
-        setIsLoading((prev) => ({ ...prev, owners: false }));
 
         // If we have prefilled data, set the open states to show the selected values
         if (adminData) {
@@ -213,15 +191,7 @@ const AdminInformationStep1 = ({
           }));
         }
       } catch (error) {
-        console.error("Error fetching reference data:", error);
-        // Reset loading states
-        setIsLoading({
-          counties: false,
-          branches: false,
-          estimators: false,
-          divisions: false,
-          owners: false,
-        });
+        toast.error("Error fetching reference data:" + error);
       }
 
       if (availableJobId && source && source === 'available-jobs') {
@@ -776,6 +746,18 @@ const AdminInformationStep1 = ({
                                                     field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
                                                       ""
                           }
+                          onBlur={async () => {
+                            if(field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp){
+                              try{
+                                const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
+                                  serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT', notes);
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: new Date()})
+                                dispatch({ type: 'SET_ID', payload: createResponse.id })
+                              } catch(err){
+                                toast.error('Failed to save bid' + err)
+                              }
+                            }
+                          }}
                           onChange={(e) => {
                             const ev = e.nativeEvent as InputEvent;
                             const { inputType } = ev;
