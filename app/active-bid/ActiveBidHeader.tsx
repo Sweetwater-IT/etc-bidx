@@ -33,9 +33,22 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
   const router = useRouter();
 
   const saveTimeoutRef = useRef<number | null>(null)
-  const updateTimeoutRef = useRef<number | null>(null) //for rerendering the display text
-  const lastSavedTime = useRef<number | null>(null)
-  const [currentTime, setCurrentTime] = useState<number>(Date.now())
+
+  const [secondCounter, setSecondCounter] = useState<number>(0)
+
+  useEffect(() => {
+    if(firstSaveTimestamp){
+      setSecondCounter(1)
+    }
+  }, [firstSaveTimestamp])
+
+  useEffect(() => {
+      const intervalId = setInterval(() => {
+        setSecondCounter(prev => prev + 1)
+      }, 1000)
+
+      return () => clearInterval(intervalId)
+  }, [secondCounter])
 
   const prevStateRef = useRef({
     adminData,
@@ -102,7 +115,10 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         toast.error('Id was not properly set after saving bid')
       } else {
         dispatch({ type: 'SET_ID', payload: createdId.id })
-        lastSavedTime.current = Date.now()
+        setSecondCounter(1);
+        if(mode === 'edit'){
+          dispatch({type: 'SET_FIRST_SAVE', payload: 1})
+        }
       }
     }
     catch (error) {
@@ -112,30 +128,11 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     }
   }
 
-  useEffect(() => {
-    const updateTimer = () => {
-      setCurrentTime(Date.now())
-      updateTimeoutRef.current = window.setTimeout(updateTimer, 60000) // Update every minute
-    }
-
-    // Start the timer
-    updateTimer()
-
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
-      }
-    }
-  }, [])
-
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
-      }
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
       }
     }
   }, [])
@@ -166,20 +163,40 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
   // Generate save status message
   const getSaveStatusMessage = () => {
     if (isSaving) return 'Saving...';
+    const displayStatus = mode === 'new' ? 'Draft' : status === 'DRAFT' ? 'Draft' : 'Pending bid';
 
-    if (!lastSavedTime.current && !firstSaveTimestamp) return 'Draft has not been saved';
+    if (mode === 'edit' && firstSaveTimestamp && firstSaveTimestamp !== 1) {
+      // Convert the database timestamp string to a Date object, then to milliseconds
+      const timeDifference = new Date().getTime() - firstSaveTimestamp
+      
+      // Handle negative differences (clock skew, etc.)
+      if (timeDifference < 0) {
+        return 'Just saved'
+      }
+      
+      const secondsAgo = Math.floor(timeDifference / 1000)
+      
+      if (secondsAgo < 60) {
+        return `Last saved ${secondsAgo} second${secondsAgo !== 1 ? 's' : ''} ago`
+      } else if (secondsAgo < 3600) {
+        const minutesAgo = Math.floor(secondsAgo / 60)
+        return `Last saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      } else if (secondsAgo < 86400) {
+        const hoursAgo = Math.floor(secondsAgo / 3600)
+        return `Last saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      } else {
+        const daysAgo = Math.floor(secondsAgo / 86400)
+        return `Last saved ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago`
+      }
+    }
 
-    const saveTime = lastSavedTime.current || firstSaveTimestamp!.getTime()
-    const secondsAgo = Math.floor((currentTime - saveTime) / 1000); // Use currentTime state
-    const displayStatus = mode === 'new' ? 'Draft' : status;
-
-    if (secondsAgo < 60) {
-      return `Saved just now`;
-    } else if (secondsAgo < 3600) {
-      const minutesAgo = Math.floor(secondsAgo / 60);
+    if (secondCounter < 60) {
+      return `${displayStatus} saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+    } else if (secondCounter < 3600) {
+      const minutesAgo = Math.floor(secondCounter / 60);
       return `${displayStatus} saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
     } else {
-      const hoursAgo = Math.floor(secondsAgo / 3600);
+      const hoursAgo = Math.floor(secondCounter / 3600);
       return `${displayStatus} saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   };
@@ -201,7 +218,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
           className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
       </div>
       <div className='flex gap-x-2 items-center'>
-        {mode !== 'view' && <div className="text-sm text-muted-foreground">{getSaveStatusMessage()}</div>}
+        {mode !== 'view' && <div className="text-sm text-muted-foreground">{!firstSaveTimestamp ? '' : firstSaveTimestamp === 0 ? 'Saving...' : getSaveStatusMessage()}</div>}
         <StepperSaveButtons key={status} mode={mode} status={status} />
       </div>
     </div>
