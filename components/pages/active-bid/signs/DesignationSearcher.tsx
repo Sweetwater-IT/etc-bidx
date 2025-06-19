@@ -100,20 +100,13 @@ const DesignationSearcher = ({ localSign, setLocalSign }: Props) => {
           console.error("Selected designation not found");
           return;
         }
-    
-        // Get default dimension from the selected designation
-        const defaultDimension =
-          selectedDesignation.dimensions &&
-          selectedDesignation.dimensions.length > 0
-            ? selectedDesignation.dimensions[0]
-            : { width: 0, height: 0 };
-    
+
         // Update the local sign with designation-related fields
         setLocalSign(prev => ({
           ...prev,
           designation: designationValue,
-          width: defaultDimension.width,
-          height: defaultDimension.height,
+          width: 0,
+          height: 0,
           sheeting: selectedDesignation.sheeting,
           description: selectedDesignation.description,
         }));

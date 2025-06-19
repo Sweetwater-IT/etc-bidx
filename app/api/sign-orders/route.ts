@@ -2,16 +2,8 @@ import { supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Function to generate sign order number
-async function generateSignOrderNumber(orderType: string[], jobNumber: string): Promise<string> {
-  try {
-    // Extract branch code from job number (e.g., 30 from JOB30-123)
-    const branchCode = jobNumber.split('-')[0].replace(/\D/g, '');
-    
-    if (!branchCode) {
-      console.error('Could not extract branch code from job number:', jobNumber);
-      return ''; // Return empty if we can't extract branch code
-    }
-    
+async function generateSignOrderNumber(orderType: string[], branchCode: number): Promise<string> {
+  try {    
     // Determine order type code
     let typeCode = 'M'; // Default to Multiple
     
@@ -20,14 +12,10 @@ async function generateSignOrderNumber(orderType: string[], jobNumber: string): 
       else if (orderType.includes('rental')) typeCode = 'R';
       else if (orderType.includes('permanent signs')) typeCode = 'P';
     }
-    
-    // Get the current highest sequential number for this branch and type
+  
     const { data, error } = await supabase
       .from('sign_orders')
       .select('order_number')
-      .like('order_number', `SO${typeCode}${branchCode}-%`)
-      .order('order_number', { ascending: false })
-      .limit(1);
     
     if (error) {
       console.error('Error fetching existing order numbers:', error);
@@ -36,18 +24,14 @@ async function generateSignOrderNumber(orderType: string[], jobNumber: string): 
     
     let sequentialNumber = 1;
     
-    if (data && data.length > 0 && data[0].order_number) {
+    if (data && data.length > 0) {
       // Extract the sequential number from the last order number
-      const lastOrderNumber = data[0].order_number;
-      const lastSequentialNumber = parseInt(lastOrderNumber.split('-')[1], 10);
-      
-      if (!isNaN(lastSequentialNumber)) {
-        sequentialNumber = lastSequentialNumber + 1;
-      }
+      const validOrderNumbersSorted = data.filter(on => !!on.order_number && on.order_number.trim() !== '').map(on => on.order_number.split('-')[1]).sort((a, b) => b - a)
+      sequentialNumber = parseInt(validOrderNumbersSorted[0]) + 1
     }
     
     // Format the order number according to the convention
-    return `SO${typeCode}${branchCode}-${sequentialNumber}`;
+    return `SO${typeCode}${branchCode}-${sequentialNumber.toString().padStart(3, '0')}`;
   } catch (error) {
     console.error('Error generating sign order number:', error);
     return ''; // Return empty on error
@@ -67,7 +51,7 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from('sign_orders')
         .update({
-          requestor: signOrderData.requestor.name,
+          requestor: signOrderData.requestor?.name,
           contractor_id: signOrderData.contractor_id,
           contract_number: signOrderData.contract_number,
           order_date: signOrderData.order_date,
@@ -76,30 +60,38 @@ export async function POST(req: NextRequest) {
           end_date: signOrderData.end_date,
           sale: signOrderData.order_type?.includes('sale'),
           rental: signOrderData.order_type?.includes('rental'),
-          perm_signs: signOrderData.order_type?.includes('permanent'),
-          // status: signOrderData.status || 'in-process',
+          perm_signs: signOrderData.order_type?.includes('permanent signs'),
           job_number: signOrderData.job_number,
           signs: signOrderData.signs,
           order_status: signOrderData.status
         })
         .eq('id', signOrderData.id)
-        .select();
+        .select('id')
+        .single();
         
       if (error) {
         console.error('Error updating sign order:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
       
-      return NextResponse.json({ success: true, data });
+      // Return the ID for the updated record
+      return NextResponse.json({ success: true, id: data.id });
     }
     
-    // If no ID is provided, insert a new record
-    console.log('Creating new sign order');
+    let branchNumber = 10;
+    if(signOrderData.requestor && signOrderData.requestor.branches) {
+      if(signOrderData.requestor.branches.name === 'Turbotville'){
+        branchNumber = 20;
+      }
+      else if (signOrderData.requestor.branches.name === 'Bedford'){
+        branchNumber = 30;
+      }
+    }
     
     // Generate sign order number
     const orderNumber = await generateSignOrderNumber(
       signOrderData.order_type || [],
-      signOrderData.job_number || ''
+      branchNumber
     );
     
     console.log('Generated order number:', orderNumber);
@@ -107,7 +99,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('sign_orders')
       .insert({
-        requestor: signOrderData.requestor.name,
+        requestor: signOrderData.requestor?.name,
         contractor_id: signOrderData.contractor_id,
         contract_number: signOrderData.contract_number,
         order_date: signOrderData.order_date,
@@ -117,19 +109,21 @@ export async function POST(req: NextRequest) {
         sale: signOrderData.order_type?.includes('sale'),
         rental: signOrderData.order_type?.includes('rental'),
         perm_signs: signOrderData.order_type?.includes('permanent signs'),
-        // status: signOrderData.status || 'submitted', // Default status for new orders
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
-        order_number: orderNumber, // Save the generated order number
+        order_number: orderNumber,
         order_status: signOrderData.status
-      });
+      })
+      .select('id')
+      .single();
     
     if (error) {
       console.error('Error creating sign order:', error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
     
-    return NextResponse.json({ success: true, data });
+    // Return the ID of the newly created record
+    return NextResponse.json({ success: true, id: data.id });
   } catch (error: any) {
     console.error('Error in sign order creation:', error);
     return NextResponse.json({ success: false, error: error.message || 'An error occurred' }, { status: 500 });

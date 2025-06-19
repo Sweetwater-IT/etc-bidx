@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { fetchReferenceData } from "@/lib/api-client";
-import { SignOrderAdminInformation } from "./SignOrderContent";
+import { SignOrderAdminInformation } from "../sign-order/SignOrderContentSimple";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { IconBulb } from "@tabler/icons-react";
 import { MPTRentalEstimating } from "@/types/MPTEquipment";
