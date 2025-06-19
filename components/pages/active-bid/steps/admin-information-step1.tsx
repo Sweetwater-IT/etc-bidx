@@ -23,8 +23,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSearchParams } from "next/navigation";
 import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
-import { Customer } from "@/types/Customer";
-import { useCustomers } from "@/hooks/use-customers";
 import { Badge } from "@/components/ui/badge";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDecimal } from "@/lib/formatDecimals";
@@ -58,13 +56,7 @@ const step: Step = {
   ],
 };
 
-const AdminInformationStep1 = ({
-  currentStep,
-  setCurrentStep,
-}: {
-  currentStep: number;
-  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-}) => {
+const AdminInformationStep1 = () => {
 
   const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental, 
     flagging, serviceWork, saleItems, equipmentRental, notes } = useEstimate();
@@ -400,10 +392,6 @@ const AdminInformationStep1 = ({
     }));
   };
 
-  const handleNext = () => {
-    setCurrentStep(2);
-  };
-
   function handleNextDigits(current: string, inputType: string, data: string): string {
     let digits = current;
 
@@ -432,29 +420,7 @@ const AdminInformationStep1 = ({
   return (
     <div>
       <div className="relative">
-        <button
-          onClick={() => setCurrentStep(1)}
-          className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 1 ? "text-foreground" : "text-muted-foreground"
-            }`}
-        >
-          <div
-            className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${1 <= currentStep
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground bg-background"
-              }`}
-          >
-            1
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-base font-medium">{step.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {step.description}
-            </div>
-          </div>
-        </button>
-
         {/* Collapsible Content */}
-        {currentStep === 1 && (
           <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
             {adminData.startDate && (
@@ -818,18 +784,9 @@ const AdminInformationStep1 = ({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleNext}
-                    disabled={!areAllRatesAcknowledged()}
-                  >
-                    Next
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
-        )}
       </div>
     </div>
   );

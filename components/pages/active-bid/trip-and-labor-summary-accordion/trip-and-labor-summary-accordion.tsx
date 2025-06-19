@@ -14,24 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Phase } from "@/types/MPTEquipment";
 
 interface TripAndLaborSummaryAccordionProps {
-  currentStep: number;
   currentPhase: number;
 }
 
-const TripAndLaborSummaryAccordion = ({ currentStep, currentPhase }: TripAndLaborSummaryAccordionProps) => {
+const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
   const { mptRental, adminData, dispatch } = useEstimate();
   const [editing, setEditing] = useState(false);
   const [tempPersonnel, setTempPersonnel] = useState<number>();
   const [tempTrucks, setTempTrucks] = useState<number>();
-
-  useEffect(() => {
-    if (currentStep === 4) {
-      setValue(["item-1"]);
-    } else {
-      setValue([]);
-    }
-  }, [currentStep]);
 
   const getPhaseValue = (key: keyof Phase | 'trips' | 'nonRatedHours' | 'ratedHours'): number => {
     if(key === 'customLightAndDrumItems' || key === 'signs' || 

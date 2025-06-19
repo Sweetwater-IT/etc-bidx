@@ -20,11 +20,7 @@ import { cn } from "@/lib/utils";
 import { County } from "@/types/TCounty";
 import { fetchReferenceData } from "@/lib/api-client";
 
-interface AdminInformationAccordionProps {
-  currentStep: number;
-}
-
-const AdminInformationAccordion = ({ currentStep }: AdminInformationAccordionProps) => {
+const AdminInformationAccordion = () => {
   const [value, setValue] = useState<string[]>([]);
   const { adminData, dispatch } = useEstimate();
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -80,15 +76,6 @@ const AdminInformationAccordion = ({ currentStep }: AdminInformationAccordionPro
     }
     return 0;
   };
-
-  // Open accordion when currentStep is 1
-  useEffect(() => {
-    if (currentStep === 1) {
-      setValue(["item-1"]);
-    } else {
-      setValue([]);
-    }
-  }, [currentStep]);
 
   const handleEdit = () => {
     setIsEditing(true);
