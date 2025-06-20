@@ -1092,7 +1092,7 @@ export const saveSignOrder = async (signOrderData: {
   contractor_id: number | undefined,
   contract_number: string,
   order_date: string,
-  need_date: string,
+  need_date: string | undefined,
   start_date: string,
   end_date: string,
   order_type: OrderTypes[],

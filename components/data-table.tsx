@@ -85,6 +85,7 @@ const handleStatusVariant = (status: string) => {
       return "default";
     case "pending":
     case 'in_progress':
+    case 'in-progress':
       return "warning";
     case "urgent":
     case "no bid":
@@ -92,6 +93,7 @@ const handleStatusVariant = (status: string) => {
       return "destructive";
     case "bid":
     case "won":
+    case 'complete':
     case "won - pending":
       return "successful";
     case "unset":
@@ -222,7 +224,7 @@ function formatCellValue(value: any, key: string) {
   }
 
   // Handle status badges
-  if (key === "status" || key === 'projectStatus' || key === 'billingStatus') {
+  if (key === "status" || key === 'projectStatus' || key === 'billingStatus' || key === 'shop_status') {
     const variant = handleStatusVariant(value);
 
     return (
@@ -839,13 +841,7 @@ export function DataTable<TData extends object>({
         {onFilterChange && (
           <FilterDropdowns
             showFilters={!!showFilters}
-            branchOptions={branchOptions || []}
-            ownerOptions={ownerOptions || []}
-            countyOptions={countyOptions || []}
-            estimatorOptions={estimatorOptions || []}
-            contractorOptions={contractorOptions || []}
-            projectStatusOptions={projectStatusOptions || []}
-            billingStatusOptions={billingStatusOptions || []}
+            filterOptions={filterOptions || []}  // Pass the actual filterOptions
             onFilterChange={onFilterChange}
             activeFilters={activeFilters}
           />

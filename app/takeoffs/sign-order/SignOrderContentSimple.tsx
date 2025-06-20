@@ -22,7 +22,7 @@ export interface SignOrderAdminInformation {
     requestor: User | null
     customer: Customer | null
     orderDate: Date
-    needDate: Date
+    needDate: Date | null
     orderType: OrderTypes[]
     selectedBranch: string
     jobNumber: string
@@ -41,7 +41,7 @@ export default function SignOrderContentSimple() {
         requestor: null,
         customer: null,
         orderDate: new Date(),
-        needDate: new Date(),
+        needDate: null,
         orderType: [],
         selectedBranch: "All",
         jobNumber: "",
@@ -56,9 +56,9 @@ export default function SignOrderContentSimple() {
     
     // Autosave states - exactly like active bid header
     const [isSaving, setIsSaving] = useState<boolean>(false);
-    const [firstSaveTimestamp, setFirstSaveTimestamp] = useState<number>(0);
     const [secondCounter, setSecondCounter] = useState<number>(0);
     const saveTimeoutRef = useRef<number | null>(null);
+    const [firstSave, setFirstSave] = useState<boolean>(false)
     
     const prevStateRef = useRef({
         adminInfo,
@@ -70,13 +70,6 @@ export default function SignOrderContentSimple() {
         dispatch({ type: 'ADD_MPT_RENTAL' });
         dispatch({ type: 'ADD_MPT_PHASE' });
     }, [dispatch]);
-
-    // Second counter effect - like active bid header
-    useEffect(() => {
-        if(firstSaveTimestamp){
-            setSecondCounter(1)
-        }
-    }, [firstSaveTimestamp])
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -95,7 +88,7 @@ export default function SignOrderContentSimple() {
         const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged;
 
         // Don't autosave if no changes, no contract number, or if it's never been saved
-        if (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' || !hasAnyStateChanged || (!signOrderId && !firstSaveTimestamp)) return;
+        if (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' || !hasAnyStateChanged) return;
         else {
             // Clear timeout if there is one
             if (saveTimeoutRef.current) {
@@ -118,7 +111,6 @@ export default function SignOrderContentSimple() {
     }, []);
 
     const autosave = async () => {
-        if (!signOrderId && !firstSaveTimestamp) return;
         setIsSaving(true);
         
         // Update the previous state reference
@@ -133,8 +125,8 @@ export default function SignOrderContentSimple() {
                 requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
                 contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
                 contract_number: adminInfo.contractNumber,
-                order_date: new Date(adminInfo.orderDate).toISOString(),
-                need_date: new Date(adminInfo.needDate).toISOString(),
+                order_date: new Date(adminInfo?.orderDate).toISOString(),
+                need_date: adminInfo.needDate ? new Date(adminInfo?.needDate).toISOString() : undefined,
                 start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : '',
                 end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
                 order_type: adminInfo.orderType,
@@ -147,12 +139,13 @@ export default function SignOrderContentSimple() {
             
             if (result.id && !signOrderId) {
                 setSignOrderId(result.id);
+                setFirstSave(true)
             }
             
             setSecondCounter(1);
             
-            if (!firstSaveTimestamp) {
-                setFirstSaveTimestamp(1);
+            if (!firstSave) {
+                setFirstSave(true)
             }
         } catch (error) {
             toast.error('Sign order not successfully saved as draft: ' + error);
@@ -161,9 +154,9 @@ export default function SignOrderContentSimple() {
         }
     };
 
-    // Generate save status message - like active bid header but simplified
     const getSaveStatusMessage = () => {
-        if (isSaving) return 'Saving...';
+        if (isSaving && !firstSave) return 'Saving...';
+        if (!firstSave) return '';
 
         if (secondCounter < 60) {
             return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
@@ -229,7 +222,7 @@ export default function SignOrderContentSimple() {
                 contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
                 contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
-                need_date: new Date(adminInfo.needDate).toISOString(),
+                need_date: adminInfo.needDate ? new Date(adminInfo.needDate).toISOString() : undefined,
                 start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : '',
                 end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
                 order_type: adminInfo.orderType,
@@ -245,11 +238,7 @@ export default function SignOrderContentSimple() {
             if (result.id) {
                 setSignOrderId(result.id);
             }
-
-            // Set first save timestamp if this is the first save
-            if (!firstSaveTimestamp) {
-                setFirstSaveTimestamp(1);
-            }
+            setFirstSave(true)
 
             toast.success("Sign order saved successfully");
             router.push('/takeoffs/load-sheet');
@@ -270,7 +259,7 @@ export default function SignOrderContentSimple() {
                 saveButtons={
                     <div className="flex items-center gap-4">
                         <div className="text-sm text-muted-foreground">
-                            {!firstSaveTimestamp ? '' : getSaveStatusMessage()}
+                            {getSaveStatusMessage()}
                         </div>
                         <div className="flex items-center gap-2">
                             <Button

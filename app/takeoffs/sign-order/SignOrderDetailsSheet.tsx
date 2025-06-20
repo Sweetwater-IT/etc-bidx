@@ -10,22 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { AlertCircle, Check, ChevronsUpDown } from "lucide-react";
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -35,12 +35,13 @@ import { User } from "@/types/User";
 import { Customer } from "@/types/Customer";
 import { SignOrderAdminInformation, OrderTypes } from "./SignOrderContentSimple";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 const BRANCHES = [
-    { value: "All", label: "All" },
-    { value: "Turbotville", label: "Turbotville" },
-    { value: "Hatfield", label: "Hatfield" },
-    { value: "Bedford", label: "Bedford" },
+  { value: "All", label: "All" },
+  { value: "Turbotville", label: "Turbotville" },
+  { value: "Hatfield", label: "Hatfield" },
+  { value: "Bedford", label: "Bedford" },
 ];
 
 interface Job {
@@ -127,7 +128,7 @@ export function SignOrderDetailsSheet({
   }, [localRequestor]);
 
   // Remove the generateJobNumber function since we don't need it
-  
+
   const handleSave = async () => {
     if (mode === 'create') {
       // For new sign orders, validate required fields
@@ -140,7 +141,7 @@ export function SignOrderDetailsSheet({
         return;
       }
     }
-  
+
     // Update admin info regardless of mode
     setAdminInfo(prev => ({
       ...prev,
@@ -155,7 +156,7 @@ export function SignOrderDetailsSheet({
       startDate: localStartDate,
       endDate: localEndDate,
     }));
-  
+
     // If creating a new job, call the callback to update the job selector
     if (mode === 'create' && onJobCreated) {
       const newJob: Job = {
@@ -166,7 +167,7 @@ export function SignOrderDetailsSheet({
       };
       onJobCreated(newJob);
     }
-    
+
     onOpenChange(false);
   };
 
@@ -178,25 +179,31 @@ export function SignOrderDetailsSheet({
     }
   };
 
+  const areAllRequiredFieldsFilled = () => {
+    return (localContractNumber && localContractNumber !== '' && !!localRequestor && !!localCustomer && !!localNeedDate && localOrderType.length > 0)
+  }
+
   const isCreateMode = mode === 'create';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[500px] sm:max-w-[600px] pt-2">
-        <SheetHeader>
-          <SheetTitle className="text-2xl font-semibold">
-            {isCreateMode ? 'Create New Sign Order' : 'Edit Sign Order Details'}
-          </SheetTitle>
-        </SheetHeader>
-        <div className="border-b" />
-        
-        <div className="mt-4 space-y-6 px-4">
+      <SheetContent className="w-[500px] sm:max-w-[600px] p-0">
+        <div className="flex flex-col gap-2 relative z-10 bg-background">
+          <SheetHeader className="p-6 pb-4">
+            <SheetTitle>
+              {isCreateMode ? 'Create New Sign Order' : 'Edit Sign Order Details'}
+            </SheetTitle>
+          </SheetHeader>
+          <Separator className="w-full -mt-2" />
+        </div>
+
+        <div className="mt-4 space-y-6 px-6 h-full overflow-y-auto">
           {/* Job Information Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Job Information</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label>Job Number</Label>
                 <Input
                   type="text"
@@ -205,14 +212,14 @@ export function SignOrderDetailsSheet({
                   placeholder="Job number"
                   disabled={mode === 'create'}
                 />
-              </div>
+              </div> */}
 
               <div className="space-y-2">
-                <Label>Contract Number</Label>
+                <Label>Contract Number <span className="text-red-600">*</span></Label>
                 <Input
                   type="text"
                   value={localContractNumber}
-                  onChange={(e) => setLocalContractNumber(e.target.value)}
+                  onChange={(e) => setLocalContractNumber(e.target.value.toUpperCase())}
                   placeholder="Contract number"
                 />
               </div>
@@ -222,11 +229,11 @@ export function SignOrderDetailsSheet({
           {/* Order Details Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Order Details</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Requestor */}
               <div className="space-y-2">
-                <Label>Requestor</Label>
+                <Label>Requestor<span className="text-red-600">*</span></Label>
                 <Popover open={openRequestor} onOpenChange={setOpenRequestor}>
                   <PopoverTrigger asChild>
                     <Button
@@ -269,7 +276,7 @@ export function SignOrderDetailsSheet({
               </div>
 
               {/* Branch */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label>Branch {isCreateMode && <span className="text-red-500">*</span>}</Label>
                 <Select 
                   value={localSelectedBranch} 
@@ -287,11 +294,11 @@ export function SignOrderDetailsSheet({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
 
               {/* Customer */}
               <div className="space-y-2">
-                <Label>Customer {isCreateMode && <span className="text-red-500">*</span>}</Label>
+                <Label>Customer <span className="text-red-600">*</span></Label>
                 <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
                   <PopoverTrigger asChild>
                     <Button
@@ -336,10 +343,11 @@ export function SignOrderDetailsSheet({
               </div>
 
               {/* Order Date */}
-              <div className="space-y-2">
+              <div className="space-y-2 mt-auto">
                 <Label>Order Date</Label>
                 <Input
                   type="date"
+                  placeholder="Select a date"
                   value={localOrderDate.toISOString().split('T')[0]}
                   onChange={(e) => setLocalOrderDate(new Date(e.target.value))}
                 />
@@ -350,7 +358,7 @@ export function SignOrderDetailsSheet({
                 <Tooltip>
                   <TooltipTrigger>
                     <div className="flex gap-x-2">
-                      <Label>Need Date</Label>
+                      <Label>Need Date <span className="text-red-600">*</span></Label>
                       <IconBulb className="h-5" color="gray" />
                     </div>
                   </TooltipTrigger>
@@ -361,15 +369,16 @@ export function SignOrderDetailsSheet({
                 </Tooltip>
                 <Input
                   type="date"
-                  value={localNeedDate.toISOString().split('T')[0]}
+                  value={localNeedDate ? localNeedDate.toISOString().split('T')[0] : ''}
                   onChange={(e) => setLocalNeedDate(new Date(e.target.value))}
+                  placeholder="Select a date"
                 />
               </div>
             </div>
 
             {/* Order Type */}
             <div className="space-y-2">
-              <Label>Order Type</Label>
+              <Label>Order Type <span className="text-red-600">*</span></Label>
               <div className="flex flex-wrap gap-4 pt-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -422,10 +431,32 @@ export function SignOrderDetailsSheet({
           </div>
         </div>
 
-        <div className="flex justify-end mt-6 mr-4">
-          <Button onClick={handleSave} variant="default">
-            {isCreateMode ? 'Create Sign Order' : 'Save Changes'}
-          </Button>
+        <Separator />
+        <div className="flex flex-col gap-2 w-full">
+        {!areAllRequiredFieldsFilled() && (
+            <div className="flex items-center mt-2 px-6 text-sm gap-2 text-amber-500">
+              <AlertCircle size={14} />
+              <span>
+                Please fill in all required fields before proceeding.
+              </span>
+            </div>
+          )}
+        <div className="flex justify-end p-4 px-6">
+          <div className="flex justify-between items-center gap-2 h-full">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+            disabled={!areAllRequiredFieldsFilled()}
+            onClick={handleSave} variant="default">
+              {isCreateMode ? 'Create Sign Order' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
         </div>
       </SheetContent>
     </Sheet>
