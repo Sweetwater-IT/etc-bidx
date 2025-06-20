@@ -569,7 +569,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process the orders to add formatted fields and resolve references
-    let processedOrders = (orders || []).map((order: any) => {
+    const processedOrders = (orders || []).map((order: any) => {
       // Format dates for consistent display
       const orderDate = order.order_date ? new Date(order.order_date).toISOString().split('T')[0] : null;
       const needDate = order.need_date ? new Date(order.need_date).toISOString().split('T')[0] : null;
