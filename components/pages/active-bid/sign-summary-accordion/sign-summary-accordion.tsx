@@ -11,11 +11,10 @@ import { useEstimate } from "@/contexts/EstimateContext";
 import { sortSignsBySecondary } from "@/lib/sortSignsBySecondary";
 
 interface SignSummaryAccordionProps {
-  currentStep: number;
   currentPhase: number;
 }
 
-const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordionProps) => {
+const SignSummaryAccordion = ({ currentPhase }: SignSummaryAccordionProps) => {
   const { mptRental } = useEstimate();
   const [value, setValue] = useState<string[]>([]);
 
@@ -25,14 +24,6 @@ const SignSummaryAccordion = ({ currentStep, currentPhase }: SignSummaryAccordio
     mptRental.phases[currentPhase].signs 
       ? sortSignsBySecondary(mptRental.phases[currentPhase].signs)
       : [];
-
-  useEffect(() => {
-    if (currentStep === 3) {
-      setValue(["item-1"]);
-    } else {
-      setValue([]);
-    }
-  }, [currentStep]);
 
   // Function to display associated structure in a readable format
   const formatStructure = (structure: string): string => {

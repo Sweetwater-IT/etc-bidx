@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Step } from "@/types/IStep";
 import {
+  createActiveBid,
   fetchActiveBidById,
   fetchBidById,
   fetchReferenceData,
@@ -22,10 +23,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSearchParams } from "next/navigation";
 import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
-import { Customer } from "@/types/Customer";
-import { useCustomers } from "@/hooks/use-customers";
 import { Badge } from "@/components/ui/badge";
 import { safeNumber } from "@/lib/safe-number";
+import { formatDecimal } from "@/lib/formatDecimals";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 
 const step: Step = {
@@ -55,21 +56,10 @@ const step: Step = {
   ],
 };
 
-const AdminInformationStep1 = ({
-  currentStep,
-  setCurrentStep,
-}: {
-  currentStep: number;
-  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-}) => {
+const AdminInformationStep1 = () => {
 
-  const { adminData, dispatch, ratesAcknowledged } = useEstimate();
-
-  const { customers, getCustomers } = useCustomers();
-
-  useEffect(() => {
-    getCustomers();
-  }, [getCustomers])
+  const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental, 
+    flagging, serviceWork, saleItems, equipmentRental, notes } = useEstimate();
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
@@ -99,12 +89,6 @@ const AdminInformationStep1 = ({
     dieselCost: "000",
   });
 
-  const [editToggleSet, setEditToggleSet] = useState<boolean>(false)
-
-  function formatDecimal(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2)
-  }
-
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
@@ -115,15 +99,6 @@ const AdminInformationStep1 = ({
     county: false,
     estimator: false,
     owner: false,
-  });
-
-  // State for loading status
-  const [isLoading, setIsLoading] = useState({
-    counties: false,
-    branches: false,
-    estimators: false,
-    divisions: false,
-    owners: false,
   });
 
   // Function to check if all rates are acknowledged and have values
@@ -150,6 +125,7 @@ const AdminInformationStep1 = ({
     });
   };
 
+  //set toggle states to true when editing a bid
   useEffect(() => {
     if (bidId && bidId !== '')
       setToggleStates(prev => ({ ...prev, fringeRate: true, laborRate: true, shopRate: true }))
@@ -176,22 +152,16 @@ const AdminInformationStep1 = ({
       let ownersData: { id: string, name: string }[] = [];
       try {
         // Fetch counties
-        setIsLoading((prev) => ({ ...prev, counties: true }));
         countiesData = await fetchReferenceData("counties");
         setCounties(countiesData);
-        setIsLoading((prev) => ({ ...prev, counties: false }));
 
         // Fetch estimators (users)
-        setIsLoading((prev) => ({ ...prev, estimators: true }));
         const estimatorsData = await fetchReferenceData("users");
         setEstimators(estimatorsData);
-        setIsLoading((prev) => ({ ...prev, estimators: false }));
 
         // Fetch owners
-        setIsLoading((prev) => ({ ...prev, owners: true }));
         ownersData = await fetchReferenceData("owners");
         setOwners(ownersData);
-        setIsLoading((prev) => ({ ...prev, owners: false }));
 
         // If we have prefilled data, set the open states to show the selected values
         if (adminData) {
@@ -213,15 +183,7 @@ const AdminInformationStep1 = ({
           }));
         }
       } catch (error) {
-        console.error("Error fetching reference data:", error);
-        // Reset loading states
-        setIsLoading({
-          counties: false,
-          branches: false,
-          estimators: false,
-          divisions: false,
-          owners: false,
-        });
+        toast.error("Error fetching reference data:" + error);
       }
 
       if (availableJobId && source && source === 'available-jobs') {
@@ -258,7 +220,7 @@ const AdminInformationStep1 = ({
         dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
         dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
         dispatch({ type: 'COPY_NOTES', payload: data.notes});
-        console.log(data);
+        dispatch({ type: 'SET_FIRST_SAVE', payload: new Date(data.created_at).getTime()})
       }
       stopLoading();
     };
@@ -430,10 +392,6 @@ const AdminInformationStep1 = ({
     }));
   };
 
-  const handleNext = () => {
-    setCurrentStep(2);
-  };
-
   function handleNextDigits(current: string, inputType: string, data: string): string {
     let digits = current;
 
@@ -462,29 +420,7 @@ const AdminInformationStep1 = ({
   return (
     <div>
       <div className="relative">
-        <button
-          onClick={() => setCurrentStep(1)}
-          className={`group flex w-full items-start gap-4 py-4 text-left ${currentStep === 1 ? "text-foreground" : "text-muted-foreground"
-            }`}
-        >
-          <div
-            className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm ${1 <= currentStep
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground bg-background"
-              }`}
-          >
-            1
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-base font-medium">{step.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {step.description}
-            </div>
-          </div>
-        </button>
-
         {/* Collapsible Content */}
-        {currentStep === 1 && (
           <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
             <div className="space-y-8">
             {adminData.startDate && (
@@ -776,6 +712,20 @@ const AdminInformationStep1 = ({
                                                     field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
                                                       ""
                           }
+                          onBlur={async () => {
+                            if(field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp){
+                              try{
+                                // add 0 to simulate saving state
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 0})
+                                const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
+                                  serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT', notes);
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 1})
+                                dispatch({ type: 'SET_ID', payload: createResponse.id })
+                              } catch(err){
+                                toast.error('Failed to save bid' + err)
+                              }
+                            }
+                          }}
                           onChange={(e) => {
                             const ev = e.nativeEvent as InputEvent;
                             const { inputType } = ev;
@@ -836,18 +786,9 @@ const AdminInformationStep1 = ({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleNext}
-                    disabled={!areAllRatesAcknowledged()}
-                  >
-                    Next
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
-        )}
       </div>
     </div>
   );

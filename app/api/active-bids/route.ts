@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy');
     const sortOrder = searchParams.get('sortOrder');
     
+    // NEW: Handle archived parameter
+    const archived = searchParams.get('archived');
+    const isArchivedFilter = archived === 'true';
+    const excludeArchived = archived === 'false';
+    
     // Parse filters if they exist
     let parsedFilters: Record<string, string[]> = {};
     if (filters) {
@@ -44,7 +49,7 @@ export async function GET(request: NextRequest) {
           estimate_id,
           job_numbers!jobs_job_number_id_fkey(job_number)
         `)
-        .in('estimate_id', bidIds);
+        .in('estimate_id', bidIds)
         
       if (jobsError || !jobs) return [];
       return jobs;
@@ -67,7 +72,8 @@ export async function GET(request: NextRequest) {
         // Get all bids
         const { data: allBids, error: allBidsError } = await supabase
           .from('estimate_complete')
-          .select('id, status, archived, admin_data');
+          .select('id, status, archived, admin_data')
+          .eq('deleted', false);
         
         if (allBidsError || !allBids) {
           return NextResponse.json(
@@ -80,13 +86,16 @@ export async function GET(request: NextRequest) {
         const wonBidIds = allBids.filter(bid => bid.status === 'WON').map(bid => bid.id);
         const jobsData = await getJobsDataForBids(wonBidIds);
         
+        // FIXED: Only count non-archived items for main counts
+        const nonArchivedBids = allBids.filter(bid => bid.archived !== true);
+        
         const countData = {
-          all: allBids.length,
-          won: allBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won').length,
-          'won-pending': allBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won-pending').length,
-          pending: allBids.filter(bid => bid.status === 'PENDING').length,
-          lost: allBids.filter(bid => bid.status === 'LOST').length,
-          draft: allBids.filter(bid => bid.status === 'DRAFT').length,
+          all: nonArchivedBids.length,
+          won: nonArchivedBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won').length,
+          'won-pending': nonArchivedBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won-pending').length,
+          pending: nonArchivedBids.filter(bid => bid.status === 'PENDING').length,
+          lost: nonArchivedBids.filter(bid => bid.status === 'LOST').length,
+          draft: nonArchivedBids.filter(bid => bid.status === 'DRAFT').length,
           archived: allBids.filter(bid => bid.archived === true).length
         };
         
@@ -100,10 +109,55 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Calculate stats for all non-archived, non-deleted bids
+    const { data: allBidsForStats, error: allBidsError } = await supabase
+      .from('estimate_complete')
+      .select('id, status, archived, admin_data')
+      .eq('deleted', false)
+      .or('archived.is.null,archived.eq.false'); // Exclude archived bids
+
+    if (allBidsError || !allBidsForStats) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch bids for stats', error: allBidsError?.message },
+        { status: 500 }
+      );
+    }
+
+    // Get job data for won bids to determine won-pending status
+    const wonBidIdsForStats = allBidsForStats.filter(bid => bid.status === 'WON').map(bid => bid.id);
+    const jobsDataForStats = await getJobsDataForBids(wonBidIdsForStats);
+
+    // Calculate actual counts for stats
+    const pendingCount = allBidsForStats.filter(bid => bid.status === 'PENDING').length;
+    const wonCount = allBidsForStats.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsDataForStats) === 'won').length;
+    const wonPendingCount = allBidsForStats.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsDataForStats) === 'won-pending').length;
+    const draftCount = allBidsForStats.filter(bid => bid.status === 'DRAFT').length;
+    const lostCount = allBidsForStats.filter(bid => bid.status === 'LOST').length;
+
+    // Calculate win-loss ratio: (won + won-pending) / (all bids excluding drafts) * 100
+    const totalNonDraftBids = allBidsForStats.length - draftCount;
+    const totalWonBids = wonCount + wonPendingCount;
+    const winLossRatio = totalNonDraftBids > 0 ? (totalWonBids / totalNonDraftBids) * 100 : 0;
+
+    const stats = {
+      winLossRatio: parseFloat(winLossRatio.toFixed(2)),
+      draft: draftCount,
+      pending: pendingCount,
+      wonPending: wonPendingCount
+    };
+
     // First, build a query to get all bids that match our filters (for counting)
     let countQuery = supabase
       .from('estimate_complete')
-      .select('id, status, archived, admin_data', { count: 'exact', head: false });
+      .select('id, status, archived, deleted, admin_data', { count: 'exact', head: false })
+      .eq('deleted', false)
+
+    // FIXED: Apply archived filtering first
+    if (isArchivedFilter) {
+      countQuery = countQuery.eq('archived', true);
+    } else if (excludeArchived) {
+      countQuery = countQuery.or('archived.is.null,archived.eq.false');
+    }
 
     // Apply the same basic filters we'll use for the main query
     if (status) {
@@ -112,9 +166,8 @@ export async function GET(request: NextRequest) {
         countQuery = countQuery.eq('status', 'WON');
       } else if (upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
         countQuery = countQuery.eq('status', upperStatus);
-      } else if (upperStatus === 'ARCHIVED') {
-        countQuery = countQuery.eq('archived', true);
       }
+      // REMOVED: else if (upperStatus === 'ARCHIVED') - this is now handled by archived parameter
     }
 
     if (division && division !== 'all') {
@@ -203,7 +256,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('estimate_complete')
       .select(detailed ? '*' : `
-        id, status, total_revenue, total_cost, total_gross_profit, created_at, archived,
+        id, status, total_revenue, total_cost, total_gross_profit, created_at, archived, deleted,
         admin_data->>contractNumber as contract_number,
         admin_data->>estimator as estimator,
         admin_data->>division as division,
@@ -215,7 +268,15 @@ export async function GET(request: NextRequest) {
         total_phases, total_days, total_hours,
         mpt_rental->_summary->>revenue as mpt_revenue,
         mpt_rental->_summary->>grossProfit as mpt_gross_profit
-      `);
+      `)
+      .eq('deleted', false);
+
+    // FIXED: Apply archived filtering to main query
+    if (isArchivedFilter) {
+      query = query.eq('archived', true);
+    } else if (excludeArchived) {
+      query = query.or('archived.is.null,archived.eq.false');
+    }
 
     // Apply sorting
     if (sortBy) {
@@ -262,9 +323,8 @@ export async function GET(request: NextRequest) {
         query = query.eq('status', 'WON');
       } else if (upperStatus === 'PENDING' || upperStatus === 'LOST' || upperStatus === 'DRAFT') {
         query = query.eq('status', upperStatus);
-      } else if (upperStatus === 'ARCHIVED') {
-        query = query.eq('archived', true);
       }
+      // REMOVED: else if (upperStatus === 'ARCHIVED') - handled by archived parameter
     }
 
     if (division && division !== 'all') {
@@ -348,7 +408,7 @@ export async function GET(request: NextRequest) {
         return {
           ...bid,
           contractNumber: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.admin_data.contractNumber + '-DRAFT' : bid.admin_data.contractNumber,
-          status: actualStatus
+          status: actualStatus,
         };
       } else {
         return {
@@ -358,7 +418,7 @@ export async function GET(request: NextRequest) {
           total_cost: bid.total_cost,
           total_gross_profit: bid.total_gross_profit,
           created_at: bid.created_at,
-          archived: bid.archived,
+          archived: bid.archived, // FIXED: Include archived field
           contract_number: (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT')) ? bid.contract_number + '-DRAFT' : bid.contract_number,
           estimator: bid.estimator,
           division: bid.division,
@@ -406,7 +466,8 @@ export async function GET(request: NextRequest) {
         pageSize: limit,
         pageCount: Math.ceil(actualTotalCount / limit),
         totalCount: actualTotalCount
-      }
+      },
+      stats
     });
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -431,6 +492,8 @@ export async function POST(request: NextRequest) {
       status: 'PENDING' | 'DRAFT';
       notes: string;
     };
+
+    console.log(body.data)
 
     // Calculate totals
     const allTotals = getAllTotals(
@@ -610,7 +673,7 @@ export async function POST(request: NextRequest) {
       if (phaseError) {
         throw new Error(`Failed to create phase ${i}: ${phaseError.message}`);
       }
-
+      console.log(phaseEntry)
       // Insert signs for this phase
       const signInserts = phase.signs.map(sign => {
         if ('primarySignId' in sign) {
@@ -632,7 +695,6 @@ export async function POST(request: NextRequest) {
           return {
             phase_id: phaseEntry.id,
             sign_id: sign.id,
-            phase_index: i,
             width: sign.width,
             height: sign.height,
             quantity: sign.quantity,
@@ -644,7 +706,7 @@ export async function POST(request: NextRequest) {
             display_structure: sign.displayStructure,
             substrate: sign.substrate,
             b_lights_color: sign.bLightsColor,
-            stiffer: sign.stiffener,
+            stiffener: sign.stiffener,
             b_lights: sign.bLights,
             covers: sign.cover ? sign.quantity : 0
           };
@@ -665,6 +727,7 @@ export async function POST(request: NextRequest) {
 
       // Insert secondary signs
       const secondarySigns = signInserts.filter(sign => 'primary_sign_id' in sign);
+      console.log(secondarySigns)
       if (secondarySigns.length > 0) {
         const { error: secondarySignError } = await supabase
           .from('mpt_secondary_signs')

@@ -29,6 +29,9 @@ import ServiceWorkTab from "@/components/BidItems/service-work-tab";
 import PermanentSignsSummaryStep from "@/components/BidItems/permanent-signs-tab";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { toast } from "sonner";
+import PhaseInfoStep2 from "./phase-info-step2";
+import MutcdSignsStep3 from "./mutcd-signs-step3";
+import TripAndLaborStep4 from "./trip-and-labor-step4";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -96,13 +99,9 @@ const formatLabel = (key: string) => {
 };
 
 const BidItemsStep5 = ({
-  currentStep,
-  setCurrentStep,
   currentPhase,
   setIsViewSummaryOpen
 }: {
-  currentStep: number;
-  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   currentPhase: number;
   setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
@@ -555,148 +554,87 @@ const BidItemsStep5 = ({
   return (
     <div>
       <div className="relative">
-        <button
-          onClick={() => setCurrentStep(5)}
-          className={cn(
-            "group flex w-full items-start gap-4 py-4 text-left",
-            currentStep === 4 ? "text-foreground" : "text-muted-foreground"
-          )}
-        >
-          <div
-            className={cn(
-              "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm",
-              5 <= currentStep
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-muted-foreground bg-background"
-            )}
+        <div className="mt-2 mb-6 ml-12">
+          <Tabs
+            defaultValue="mpt"
+            className="w-full"
+            onValueChange={setActiveTab}
+            value={activeTab}
           >
-            5
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-base font-medium">{step.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {step.description}
-            </div>
-          </div>
-        </button>
+            <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
+              <TabsTrigger
+                value="mpt"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                MPT
+              </TabsTrigger>
+              <TabsTrigger
+                value="equipment"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Equipment Rental
+              </TabsTrigger>
+              <TabsTrigger
+                value="permanent"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Permanent Signs
+              </TabsTrigger>
+              <TabsTrigger
+                value="flagging"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Flagging
+              </TabsTrigger>
+              <TabsTrigger
+                value="sale"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Sale Items
+              </TabsTrigger>
+              <TabsTrigger
+                value="patterns"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Patterns
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Collapsible Content */}
-        {currentStep === 5 && (
-          <div className="mt-2 mb-6 ml-12">
-            <Tabs
-              defaultValue="mpt"
-              className="w-full"
-              onValueChange={setActiveTab}
-              value={activeTab}
-            >
-              <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
-                <TabsTrigger
-                  value="mpt"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  MPT
-                </TabsTrigger>
-                <TabsTrigger
-                  value="equipment"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Equipment Rental
-                </TabsTrigger>
-                <TabsTrigger
-                  value="permanent"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Permanent Signs
-                </TabsTrigger>
-                <TabsTrigger
-                  value="flagging"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Flagging
-                </TabsTrigger>
-                <TabsTrigger
-                  value="sale"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Sale Items
-                </TabsTrigger>
-                <TabsTrigger
-                  value="patterns"
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                >
-                  Patterns
-                </TabsTrigger>
-              </TabsList>
-
-              {/* MPT Equipment Tab (combined with Light & Drum) */}
-              <TabsContent value="mpt" className="mt-6">
-                <div className="space-y-8">
-                  {/* MPT Equipment Section */}
-                  <div>
-                    <h3 className="text-base font-semibold mb-4">
-                      MPT Equipment - Phase {currentPhase + 1}
-                    </h3>
-                    <div className="flex flex-col w-1/3 gap-0">
-                      {standardEquipmentList.map((equipmentKey) => (
-                        equipmentKey === 'sandbag' ? (
-                          <div key={equipmentKey} className="p-2 rounded-md">
-                            <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                            <div className="text-muted-foreground">Quantity: {sandbagQuantity}</div>
-                            {/* <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                          </div>
-                        ) : (
-                          <div key={equipmentKey} className="p-4 rounded-md">
-                            <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                            <div className="flex flex-col gap-2">
-                              <Label htmlFor={`quantity-${equipmentKey}`} className="flex text-muted-foreground">Quantity:</Label>
-                              <Input
-                                id={`quantity-${equipmentKey}`}
-                                type="number"
-                                min={getMinQuantity(equipmentKey)}
-                                value={getEquipmentQuantity(equipmentKey) || ''}
-                                onChange={(e) => handleStandardInputChange(
-                                  parseFloat(e.target.value) || 0,
-                                  equipmentKey,
-                                  'quantity'
-                                )}
-                                className="w-full"
-                              />
-                            </div>
-                            {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  {/* Light and Drum Rental Section */}
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-base font-semibold">
-                        Light and Drum Rental
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="emergency-job"
-                          checked={adminData?.emergencyJob || false}
-                          onCheckedChange={handleEmergencyJobChange}
-
-
-                        />
-                        <Label htmlFor="emergency-job">Emergency Job</Label>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col">
-                      {lightAndDrumList.map((equipmentKey) => (
+            {/* MPT Equipment Tab (combined with Light & Drum) */}
+            <TabsContent value="mpt" className="mt-6">
+              <div className="space-y-8">
+                {/* MPT Equipment Section */}
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Phase Information
+                </h3>
+                <PhaseInfoStep2 currentPhase={currentPhase} />
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  MUTCD Signs
+                </h3>
+                <MutcdSignsStep3 currentPhase={currentPhase} />
+                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+                  Trip and Labor
+                </h3>
+                <TripAndLaborStep4 currentPhase={currentPhase} />
+                <div>
+                  <h3 className="text-base font-semibold mb-4">
+                    MPT Equipment - Phase {currentPhase + 1}
+                  </h3>
+                  <div className="flex flex-col w-1/3 gap-0">
+                    {standardEquipmentList.map((equipmentKey) => (
+                      equipmentKey === 'sandbag' ? (
                         <div key={equipmentKey} className="p-2 rounded-md">
                           <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                          <div className="flex flex-col w-1/3 gap-2 mb-2">
-                            <Label htmlFor={`quantity-light-${equipmentKey}`} className="text-muted-foreground">Quantity:</Label>
+                          <div className="text-muted-foreground">Quantity: {sandbagQuantity}</div>
+                          {/* <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
+                        </div>
+                      ) : (
+                        <div key={equipmentKey} className="rounded-md">
+                          <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor={`quantity-${equipmentKey}`} className="flex text-muted-foreground">Quantity:</Label>
                             <Input
-                              id={`quantity-light-${equipmentKey}`}
+                              id={`quantity-${equipmentKey}`}
                               type="number"
                               min={getMinQuantity(equipmentKey)}
                               value={getEquipmentQuantity(equipmentKey) || ''}
@@ -709,241 +647,279 @@ const BidItemsStep5 = ({
                             />
                           </div>
                           {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                          {/* <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div> */}
-                          {adminData?.emergencyJob && (
-                            <div className="flex flex-col w-1/3 gap-2 mt-2">
-                              <Label htmlFor={`emergency-${equipmentKey}`} className="text-muted-foreground">Emergency Rate:</Label>
-                              <Input
-                                id={`emergency-${equipmentKey}`}
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || ''}
-                                onChange={(e) => dispatch({
-                                  type: 'UPDATE_ADMIN_DATA',
-                                  payload: {
-                                    key: 'emergencyFields',
-                                    value: {
-                                      ...adminData?.emergencyFields,
-                                      [`emergency${equipmentKey}`]: parseFloat(e.target.value) || 0
-                                    }
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Light and Drum Rental Section */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-base font-semibold">
+                      Light and Drum Rental
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="emergency-job"
+                        checked={adminData?.emergencyJob || false}
+                        onCheckedChange={handleEmergencyJobChange}
+
+
+                      />
+                      <Label htmlFor="emergency-job">Emergency Job</Label>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col">
+                    {lightAndDrumList.map((equipmentKey) => (
+                      <div key={equipmentKey} className="p-2 rounded-md">
+                        <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
+                        <div className="flex flex-col w-1/3 gap-2 mb-2">
+                          <Label htmlFor={`quantity-light-${equipmentKey}`} className="text-muted-foreground">Quantity:</Label>
+                          <Input
+                            id={`quantity-light-${equipmentKey}`}
+                            type="number"
+                            min={getMinQuantity(equipmentKey)}
+                            value={getEquipmentQuantity(equipmentKey) || ''}
+                            onChange={(e) => handleStandardInputChange(
+                              parseFloat(e.target.value) || 0,
+                              equipmentKey,
+                              'quantity'
+                            )}
+                            className="w-full"
+                          />
+                        </div>
+                        {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
+                        {/* <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div> */}
+                        {adminData?.emergencyJob && (
+                          <div className="flex flex-col w-1/3 gap-2 mt-2">
+                            <Label htmlFor={`emergency-${equipmentKey}`} className="text-muted-foreground">Emergency Rate:</Label>
+                            <Input
+                              id={`emergency-${equipmentKey}`}
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || ''}
+                              onChange={(e) => dispatch({
+                                type: 'UPDATE_ADMIN_DATA',
+                                payload: {
+                                  key: 'emergencyFields',
+                                  value: {
+                                    ...adminData?.emergencyFields,
+                                    [`emergency${equipmentKey}`]: parseFloat(e.target.value) || 0
                                   }
-                                })}
-                                className="w-full"
+                                }
+                              })}
+                              className="w-full"
 
 
-                              />
-                            </div>
-                          )}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Custom Equipment Section */}
+                <div>
+                  <h3 className="text-base font-semibold mb-4">
+                    Custom Equipment
+                  </h3>
+                  <div className="grid grid-cols-12 gap-4 mb-4">
+                    <div className="col-span-3">
+                      <Label className="mb-2" htmlFor="itemName">Item Name</Label>
+                      <Input
+                        id="itemName"
+                        value={itemName}
+                        onChange={(e) => setItemName(e.target.value)}
+                        placeholder="Enter item name"
+
+
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Label className="mb-2" htmlFor="quantity">Quantity</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min={0}
+                        value={newCustomItem.quantity || ''}
+                        onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
+                        placeholder=""
+
+
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Label className="mb-2" htmlFor="cost">Cost</Label>
+                      <Input
+                        id="cost"
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={newCustomItem.cost || ''}
+                        onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
+                        placeholder=""
+
+
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
+                      <Input
+                        id="usefulLife"
+                        type="number"
+                        min={0}
+                        value={newCustomItem.usefulLife || ''}
+                        onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
+                        placeholder=""
+
+
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleAddCustomItem}
+                    className="mt-2"
+                    disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                    aria-disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Custom Item
+                  </Button>
+                </div>
+
+                {/* Custom Items List */}
+                {mptRental?.phases?.[currentPhase]?.customLightAndDrumItems?.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-base font-semibold mb-4">
+                      Custom Items
+                    </h3>
+                    <div className="grid grid-cols-12 gap-4 mb-4">
+                      <div className="col-span-2 font-medium">Item Name</div>
+                      <div className="col-span-3 font-medium">Quantity</div>
+                      <div className="col-span-3 font-medium">Cost</div>
+                      <div className="col-span-2 font-medium">Useful Life</div>
+                      <div className="col-span-2 font-medium">Daily Price</div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {mptRental.phases[currentPhase].customLightAndDrumItems.map((item) => (
+                        <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                          <div className="col-span-2">{item.id}</div>
+                          <div className="col-span-3">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={item.quantity}
+                              onChange={(e) => dispatch({
+                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                payload: {
+                                  phaseNumber: currentPhase,
+                                  id: item.id,
+                                  key: 'quantity',
+                                  value: parseFloat(e.target.value) || 0
+                                }
+                              })}
+
+
+                            />
+                          </div>
+                          <div className="col-span-3">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={item.cost}
+                              onChange={(e) => dispatch({
+                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                payload: {
+                                  phaseNumber: currentPhase,
+                                  id: item.id,
+                                  key: 'cost',
+                                  value: parseFloat(e.target.value) || 0
+                                }
+                              })}
+
+
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={item.usefulLife}
+                              onChange={(e) => dispatch({
+                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                payload: {
+                                  phaseNumber: currentPhase,
+                                  id: item.id,
+                                  key: 'usefulLife',
+                                  value: parseFloat(e.target.value) || 0
+                                }
+                              })}
+
+
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            ${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
+                )}
+              </div>
+            </TabsContent>
 
-                  <Separator className="my-6" />
+            {/* Equipment Tab */}
+            <TabsContent value="equipment" className="mt-6">
+              <div className="text-center py-6 text-muted-foreground">
+                <EquipmentRentalTab />
+              </div>
+            </TabsContent>
 
-                  {/* Custom Equipment Section */}
-                  <div>
-                    <h3 className="text-base font-semibold mb-4">
-                      Custom Equipment
-                    </h3>
-                    <div className="grid grid-cols-12 gap-4 mb-4">
-                      <div className="col-span-3">
-                        <Label className="mb-2" htmlFor="itemName">Item Name</Label>
-                        <Input
-                          id="itemName"
-                          value={itemName}
-                          onChange={(e) => setItemName(e.target.value)}
-                          placeholder="Enter item name"
+            {/* Permanent Signs Tab */}
+            <TabsContent value="permanent" className="mt-6">
+              <div className="text-center py-6 text-muted-foreground">
+                <PermanentSignsSummaryStep />
+              </div>
+            </TabsContent>
 
+            {/* Flagging Tab */}
+            <TabsContent value="flagging" className="mt-6">
+              <div className="text-center py-6 text-muted-foreground">
+                <FlaggingServicesTab />
+              </div>
+            </TabsContent>
 
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="mb-2" htmlFor="quantity">Quantity</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min={0}
-                          value={newCustomItem.quantity || ''}
-                          onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
-                          placeholder=""
+            {/* Sale Items Tab */}
+            <TabsContent value="sale" className="mt-6">
+              <div className="text-center py-6 text-muted-foreground">
+                <SaleItemsStep />
+              </div>
+            </TabsContent>
 
-
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="mb-2" htmlFor="cost">Cost</Label>
-                        <Input
-                          id="cost"
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          value={newCustomItem.cost || ''}
-                          onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
-                          placeholder=""
-
-
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
-                        <Input
-                          id="usefulLife"
-                          type="number"
-                          min={0}
-                          value={newCustomItem.usefulLife || ''}
-                          onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
-                          placeholder=""
-
-
-                        />
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handleAddCustomItem}
-                      className="mt-2"
-                      disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
-                      aria-disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
-                    >
-                      <Plus className="mr-2 h-4 w-4" /> Add Custom Item
-                    </Button>
-                  </div>
-
-                  {/* Custom Items List */}
-                  {mptRental?.phases?.[currentPhase]?.customLightAndDrumItems?.length > 0 && (
-                    <div className="mt-6">
-                      <h3 className="text-base font-semibold mb-4">
-                        Custom Items
-                      </h3>
-                      <div className="grid grid-cols-12 gap-4 mb-4">
-                        <div className="col-span-2 font-medium">Item Name</div>
-                        <div className="col-span-3 font-medium">Quantity</div>
-                        <div className="col-span-3 font-medium">Cost</div>
-                        <div className="col-span-2 font-medium">Useful Life</div>
-                        <div className="col-span-2 font-medium">Daily Price</div>
-                      </div>
-
-                      <div className="space-y-4">
-                        {mptRental.phases[currentPhase].customLightAndDrumItems.map((item) => (
-                          <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-2">{item.id}</div>
-                            <div className="col-span-3">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={item.quantity}
-                                onChange={(e) => dispatch({
-                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                  payload: {
-                                    phaseNumber: currentPhase,
-                                    id: item.id,
-                                    key: 'quantity',
-                                    value: parseFloat(e.target.value) || 0
-                                  }
-                                })}
-
-
-                              />
-                            </div>
-                            <div className="col-span-3">
-                              <Input
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                value={item.cost}
-                                onChange={(e) => dispatch({
-                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                  payload: {
-                                    phaseNumber: currentPhase,
-                                    id: item.id,
-                                    key: 'cost',
-                                    value: parseFloat(e.target.value) || 0
-                                  }
-                                })}
-
-
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={item.usefulLife}
-                                onChange={(e) => dispatch({
-                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                  payload: {
-                                    phaseNumber: currentPhase,
-                                    id: item.id,
-                                    key: 'usefulLife',
-                                    value: parseFloat(e.target.value) || 0
-                                  }
-                                })}
-
-
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              ${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Equipment Tab */}
-              <TabsContent value="equipment" className="mt-6">
-                <div className="text-center py-6 text-muted-foreground">
-                  <EquipmentRentalTab />
-                </div>
-              </TabsContent>
-
-              {/* Permanent Signs Tab */}
-              <TabsContent value="permanent" className="mt-6">
-                <div className="text-center py-6 text-muted-foreground">
-                  <PermanentSignsSummaryStep />
-                </div>
-              </TabsContent>
-
-              {/* Flagging Tab */}
-              <TabsContent value="flagging" className="mt-6">
-                <div className="text-center py-6 text-muted-foreground">
-                  <FlaggingServicesTab />
-                </div>
-              </TabsContent>
-
-              {/* Sale Items Tab */}
-              <TabsContent value="sale" className="mt-6">
-                <div className="text-center py-6 text-muted-foreground">
-                  <SaleItemsStep />
-                </div>
-              </TabsContent>
-
-              {/* Patterns Tab */}
-              <TabsContent value="patterns" className="mt-6">
-                <div className="text-center py-6 text-muted-foreground">
-                  <ServiceWorkTab />
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <Button variant="outline" onClick={() => setCurrentStep(4)}>
-                Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {initialSubmission
-                  ? 'Update' : 'Done'
-                }
-              </Button>
-            </div>
-          </div>
-        )}
+            {/* Patterns Tab */}
+            <TabsContent value="patterns" className="mt-6">
+              <div className="text-center py-6 text-muted-foreground">
+                <ServiceWorkTab />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <Button className="mt-8 ml-auto block" onClick={handleSubmit} disabled={isSubmitting}>
+            {initialSubmission
+              ? 'Update' : 'Done'
+            }
+          </Button>
+        </div>
       </div>
     </div>
   );

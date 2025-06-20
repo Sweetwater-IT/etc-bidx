@@ -1,7 +1,6 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { exportSignListToExcel } from "@/lib/exportSignListToExcel";
 import { SignOrderList } from "../new/SignOrderList";
@@ -14,6 +13,8 @@ import { useFileUpload } from "@/hooks/use-file-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import PageHeaderWithSaving from "@/components/PageContainer/PageHeaderWithSaving";
+import { saveSignOrder } from "@/lib/api-client";
+import isEqual from 'lodash/isEqual';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -34,7 +35,7 @@ export interface SignOrderAdminInformation {
 export default function SignOrderContentSimple() {
     const { dispatch, mptRental } = useEstimate();
     const router = useRouter();
-
+    
     // Set up admin info state in the parent component
     const [adminInfo, setAdminInfo] = useState<SignOrderAdminInformation>({
         requestor: null,
@@ -47,15 +48,133 @@ export default function SignOrderContentSimple() {
         isSubmitting: false,
         contractNumber: ''
     });
+    
     const [localFiles, setLocalFiles] = useState<File[]>([]);
     const [localNotes, setLocalNotes] = useState<string>();
     const [savedNotes, setSavedNotes] = useState<string>();
+    const [signOrderId, setSignOrderId] = useState<number | null>(null);
+    
+    // Autosave states - exactly like active bid header
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+    const [firstSaveTimestamp, setFirstSaveTimestamp] = useState<number>(0);
+    const [secondCounter, setSecondCounter] = useState<number>(0);
+    const saveTimeoutRef = useRef<number | null>(null);
+    
+    const prevStateRef = useRef({
+        adminInfo,
+        mptRental
+    });
 
     // Initialize MPT rental data
     useEffect(() => {
         dispatch({ type: 'ADD_MPT_RENTAL' });
         dispatch({ type: 'ADD_MPT_PHASE' });
     }, [dispatch]);
+
+    // Second counter effect - like active bid header
+    useEffect(() => {
+        if(firstSaveTimestamp){
+            setSecondCounter(1)
+        }
+    }, [firstSaveTimestamp])
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setSecondCounter(prev => prev + 1)
+        }, 1000)
+
+        return () => clearInterval(intervalId)
+    }, [secondCounter])
+
+    // Autosave effect - exactly like active bid header
+    useEffect(() => {
+        // Check if there were any changes
+        const hasAdminInfoChanged = !isEqual(adminInfo, prevStateRef.current.adminInfo);
+        const hasMptRentalChanged = !isEqual(mptRental, prevStateRef.current.mptRental);
+
+        const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged;
+
+        // Don't autosave if no changes, no contract number, or if it's never been saved
+        if (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' || !hasAnyStateChanged || (!signOrderId && !firstSaveTimestamp)) return;
+        else {
+            // Clear timeout if there is one
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current)
+            }
+
+            saveTimeoutRef.current = window.setTimeout(() => {
+                autosave();
+            }, 5000)
+        }
+    }, [adminInfo, mptRental]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const autosave = async () => {
+        if (!signOrderId && !firstSaveTimestamp) return;
+        setIsSaving(true);
+        
+        // Update the previous state reference
+        prevStateRef.current = {
+            adminInfo,
+            mptRental
+        };
+
+        try {
+            const signOrderData = {
+                id: signOrderId || undefined,
+                requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
+                contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
+                contract_number: adminInfo.contractNumber,
+                order_date: new Date(adminInfo.orderDate).toISOString(),
+                need_date: new Date(adminInfo.needDate).toISOString(),
+                start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : '',
+                end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
+                order_type: adminInfo.orderType,
+                job_number: adminInfo.jobNumber,
+                signs: mptRental.phases[0].signs || [],
+                status: 'DRAFT' as const
+            };
+
+            const result = await saveSignOrder(signOrderData);
+            
+            if (result.id && !signOrderId) {
+                setSignOrderId(result.id);
+            }
+            
+            setSecondCounter(1);
+            
+            if (!firstSaveTimestamp) {
+                setFirstSaveTimestamp(1);
+            }
+        } catch (error) {
+            toast.error('Sign order not successfully saved as draft: ' + error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Generate save status message - like active bid header but simplified
+    const getSaveStatusMessage = () => {
+        if (isSaving) return 'Saving...';
+
+        if (secondCounter < 60) {
+            return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+        } else if (secondCounter < 3600) {
+            const minutesAgo = Math.floor(secondCounter / 60);
+            return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+        } else {
+            const hoursAgo = Math.floor(secondCounter / 3600);
+            return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
+        }
+    };
 
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
@@ -84,7 +203,6 @@ export default function SignOrderContentSimple() {
             const successfulFiles = files.filter(file =>
                 successes.includes(file.name)
             );
-
             if (successfulFiles.length > 0) {
                 setLocalFiles(prevFiles => {
                     // Filter out duplicates
@@ -105,26 +223,10 @@ export default function SignOrderContentSimple() {
         try {
             setAdminInfo(prev => ({ ...prev, isSubmitting: true }));
 
-            // Validate required fields
-            // if (!adminInfo.requestor) {
-            //     toast.error("Please select a requestor");
-            //     return;
-            // }
-
-            // if (!adminInfo.customer) {
-            //     toast.error("Please select a contractor");
-            //     return;
-            // }
-
-            // if (!adminInfo.orderType) {
-            //     toast.error("Please select a job type");
-            //     return;
-            // }
-
-            // Prepare data for submission
             const signOrderData = {
-                requestor: adminInfo.requestor ? adminInfo.requestor : '',
-                contractor_id: adminInfo.customer ? adminInfo.customer : undefined,
+                id: signOrderId || undefined, // Include ID if we have one
+                requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
+                contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
                 contract_number: adminInfo.contractNumber,
                 order_date: new Date(adminInfo.orderDate).toISOString(),
                 need_date: new Date(adminInfo.needDate).toISOString(),
@@ -132,31 +234,25 @@ export default function SignOrderContentSimple() {
                 end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
                 order_type: adminInfo.orderType,
                 job_number: adminInfo.jobNumber,
-                signs: mptRental.phases[0].signs || {}, // Access the signs from mptRental context
+                signs: mptRental.phases[0].signs || [],
                 status
             };
 
             // Submit data to the API
-            const response = await fetch('/api/sign-orders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(signOrderData),
-            });
+            const result = await saveSignOrder(signOrderData);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to save sign order');
+            // Store the ID for future updates
+            if (result.id) {
+                setSignOrderId(result.id);
             }
 
-            // Show success message
+            // Set first save timestamp if this is the first save
+            if (!firstSaveTimestamp) {
+                setFirstSaveTimestamp(1);
+            }
+
             toast.success("Sign order saved successfully");
-
-            // Redirect to sign order list page
             router.push('/takeoffs/load-sheet');
-
         } catch (error) {
             console.error('Error saving sign order:', error);
             toast.error(error as string || 'Failed to save sign order');
@@ -172,19 +268,21 @@ export default function SignOrderContentSimple() {
                 handleSubmit={() => handleSave('DRAFT')}
                 showX
                 saveButtons={
-                    <div className="flex items-center gap-2">
-                        {/**This should be a save and submit */}
-                        <Button
-                            onClick={() => handleSave('SUBMITTED')}
-                            disabled={adminInfo.isSubmitting || mptRental.phases[0].signs.length === 0}
-                        >
-                            {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
-                        </Button>
-                        {/* <Button variant="outline" onClick={() => exportSignListToExcel('', mptRental)}>Export</Button> */}
+                    <div className="flex items-center gap-4">
+                        <div className="text-sm text-muted-foreground">
+                            {!firstSaveTimestamp ? '' : getSaveStatusMessage()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={() => handleSave('SUBMITTED')}
+                                disabled={adminInfo.isSubmitting || mptRental.phases[0].signs.length === 0}
+                            >
+                                {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
+                            </Button>
+                        </div>
                     </div>
                 }
             />
-
             <div className="flex gap-6 p-6 max-w-full">
                 {/* Main Form Column (3/4) */}
                 <div className="w-3/4 space-y-6">
@@ -194,7 +292,6 @@ export default function SignOrderContentSimple() {
                     />
                     <SignOrderList />
                 </div>
-
                 {/* Right Column (1/4) */}
                 <div className="w-1/4 space-y-6">
                     <div className="border rounded-lg p-4">

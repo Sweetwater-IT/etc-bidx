@@ -34,6 +34,7 @@ import { exportAvailableJobsToExcel } from "@/lib/exportAvailableJobsToExcel";
 import { EstimateData, exportBidsToExcel } from "@/lib/exportBidsToExcel";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
+import { safeNumber } from "@/lib/safe-number";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -533,57 +534,70 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 page: 1,
                 detailed: true
             }
-
+    
             if (sortBy) {
                 ops.sortBy = sortBy
                 ops.sortOrder = sortOrder
             }
-
+    
             const res = await fetch(`/api/active-bids?${new URLSearchParams(ops).toString()}`);
             if (!res.ok) {
                 throw new Error('Failed to fetch active bids');
             }
-
+    
             const resu = await res.json()
             setAllActiveBidsDetailed(resu.data)
-
+    
             const options: any = {
                 limit: activeBidsPageSize,
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
                 detailed: true
             };
-
+    
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-
-            if (activeSegment !== "all") {
-                const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
-
+    
+            // Handle segment filtering
+            if (activeSegment === "archived") {
+                // For archived segment, filter by archived field
+                options.archived = true;
+                console.log("Using archived filter");
+            } else if (activeSegment !== "all") {
+                // For non-archived segments, exclude archived items and filter by status/division
+                options.archived = false; // Explicitly exclude archived items
+                
+                const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending'];
+    
                 if (statusValues.includes(activeSegment.toLowerCase())) {
                     options.status = activeSegment;
                 } else {
                     options.division = activeSegment;
                 }
+            } else {
+                // For "all" segment, explicitly exclude archived items
+                options.archived = false;
             }
-
+    
             // Add sorting parameters if available
             if (sortBy) {
                 options.sortBy = sortBy;
                 options.sortOrder = sortOrder;
                 console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-
+    
+            console.log("Active bids fetch options:", options);
+    
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bids');
             }
             const result = await response.json();
             //raw data has all the info we need
-            const { data, pagination } = result;
-
+            const { data, stats, pagination } = result;
+    
             const transformedData = data.map(e => ({
                 id: e.id,
                 contractNumber: e.contractNumber,
@@ -612,10 +626,27 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 createdAt: e.created_at ? e.created_at : "",
                 total: e.mpt_rental._summary.revenue || 0
             }));
-
+    
             setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);
+            setCardData([{
+                title: 'Win / Loss Ratio',
+                value: stats.winLossRatio + '%'
+            },
+            {
+                title: 'Draft Bids',
+                value: stats.draft
+            },
+            {
+                title: 'Pending Bids',
+                value: stats.pending
+            },
+            {
+                title: 'Won Jobs Pending Creation',
+                value: stats.wonPending
+            }
+            ])
         } catch (error) {
             console.error("Error loading active bids:", error);
             toast.error("Failed to load active bids. Please try again.");
@@ -627,36 +658,48 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const loadActiveJobs = useCallback(async () => {
         try {
             startLoading();
-
+    
             const options: any = {
                 limit: activeJobsPageSize,
                 page: activeJobsPageIndex + 1, // API uses 1-based indexing
             };
-
-            if (activeSegment !== "all") {
+    
+            // Handle segment filtering for archived jobs
+            if (activeSegment === "archived") {
+                // For archived segment, filter by archived field
+                options.archived = true;
+                console.log("Using archived filter for active jobs");
+            } else if (activeSegment !== "all") {
+                // For non-archived segments, exclude archived items and filter by branch
+                options.archived = false; // Explicitly exclude archived items
                 options.branch = activeSegment;
+            } else {
+                // For "all" segment, explicitly exclude archived items
+                options.archived = false;
             }
-
+    
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-
+    
             // Add sorting parameters if available
             if (sortBy) {
                 options.sortBy = sortBy;
                 options.sortOrder = sortOrder;
                 console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-
+    
+            console.log("Active jobs fetch options:", options);
+    
             const response = await fetch(`/api/jobs?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active jobs');
             }
             const result = await response.json();
-            const { data, pagination } = result;
-
+            const { data, stats, pagination } = result;
+    
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
                 jobNumber: job.jobNumber,
@@ -673,12 +716,26 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 startDate: job.startDate,
                 endDate: job.endDate,
                 createdAt: job.createdAt ? job.createdAt : "",
-                wonBidItems: job.wonBidItems
+                wonBidItems: job.wonBidItems,
+                archived: job.archived // Include archived status
             }));
-
+    
             setActiveJobs(uiJobs);
             setActiveJobsPageCount(pagination.pageCount);
             setActiveJobsTotalCount(pagination.totalCount);
+            setCardData([{
+                title: 'Total Active Jobs',
+                value: stats.totalActive
+            },
+            {
+                title: 'Total Jobs Pending Billing',
+                value: stats.totalPendingBilling
+            },
+            {
+                title: 'Total Jobs Over Days',
+                value: stats.overdays
+            }
+            ])
         } catch (error) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
@@ -686,6 +743,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
             stopLoading();
         }
     }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading, activeFilters, sortBy, sortOrder]);
+
+
     const fetchNextJobNumber = useCallback(async () => {
         try {
             const response = await fetch('/api/jobs/next-job-number');
@@ -853,41 +912,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
             fetchAvailableJobCounts();
         } else if (isActiveBids) {
             loadActiveBids();
-            setCardData([{
-                title: 'Win / Loss Ratio',
-                value: '65%'
-            },
-            {
-                title: 'Draft Bids',
-                value: '12'
-            },
-            {
-                title: 'Pending Bids',
-                value: '8'
-            },
-            {
-                title: 'Won Jobs Pending Creation',
-                value: '3'
-            }
-            ])
             fetchActiveBidCounts();
         } else if (isActiveJobs) {
             loadActiveJobs();
             fetchActiveJobCounts();
             fetchNextJobNumber();
-            setCardData([{
-                title: 'Total Active Jobs',
-                value: '42'
-            },
-            {
-                title: 'Total Jobs Pending Billing',
-                value: `70%`
-            },
-            {
-                title: 'Total Jobs Over Days',
-                value: '2'
-            }
-            ])
         }
     }, [
         isAvailableJobs,
@@ -1177,7 +1206,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleArchiveActiveJobs = async () => {
         try {
             startLoading();
-            const ids = selectedActiveJobsToArchive.map(job => job.jobNumber);
+            const ids = selectedActiveJobsToArchive.map(job => job.id.toString());
 
             await archiveActiveJobs(ids)
 
@@ -1208,7 +1237,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const handleDeleteActiveJobs = async () => {
         try {
             startLoading();
-            const ids = selectedActiveJobsToDelete.map(job => job.jobNumber);
+            const ids = selectedActiveJobsToDelete.map(job => job.id.toString());
 
             await deleteArchivedActiveJobs(ids)
 
@@ -1397,33 +1426,44 @@ export function JobPageContent({ job }: JobPageContentProps) {
             page: 1,
             detailed: true
         };
-
-        // Apply current segment filter
-        if (activeSegment !== "all") {
-            const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending', 'archived'];
+    
+        // Handle segment filtering
+        if (activeSegment === "archived") {
+            // For archived segment, filter by archived field
+            options.archived = true;
+        } else if (activeSegment !== "all") {
+            // For non-archived segments, exclude archived items and filter by status/division
+            options.archived = false;
+            
+            const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending'];
             if (statusValues.includes(activeSegment.toLowerCase())) {
                 options.status = activeSegment;
             } else {
                 options.division = activeSegment;
             }
+        } else {
+            // For "all" segment, explicitly exclude archived items
+            options.archived = false;
         }
-
+    
         // Apply current sorting if any
         if (sortBy) {
             options.sortBy = sortBy;
             options.sortOrder = sortOrder;
         }
-
+    
         // Apply current filters if any
         if (Object.keys(activeFilters).length > 0) {
             options.filters = JSON.stringify(activeFilters);
         }
-
+    
+        console.log("Fetch all filtered active bids options:", options);
+    
         const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
         if (!response.ok) {
             throw new Error('Failed to fetch all active bids');
         }
-
+    
         const result = await response.json();
         return result.data.map((e: any) => ({
             id: e.id,
@@ -1456,7 +1496,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
             total: e.mpt_rental._summary.revenue || 0
         }));
     };
-
 
     const handleDeleteArchivedBids = async () => {
         try {

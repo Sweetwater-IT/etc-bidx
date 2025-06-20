@@ -1,5 +1,6 @@
 import { createQuoteEmailHtml } from '@/app/quotes/create/ProposalHTML';
 import { AttachmentNames, QuoteStatus, TermsNames } from '@/app/quotes/create/QuoteFormProvider';
+import { OrderTypes } from '@/app/takeoffs/sign-order/SignOrderContentSimple';
 import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation';
 import { Customer } from '@/types/Customer';
 import { Database } from '@/types/database.types';
@@ -8,11 +9,12 @@ import { EstimateCompleteView } from '@/types/estimate-view';
 import { ExtendedFile, FileMetadata } from '@/types/FileTypes';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { QuoteItem } from '@/types/IQuoteItem';
-import { MPTRentalEstimating } from '@/types/MPTEquipment';
+import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
 import { Flagging } from '@/types/TFlagging';
 import { SaleItem } from '@/types/TSaleItem';
+import { User } from '@/types/User';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -33,9 +35,9 @@ export async function fetchBids(options: {
   startDate?: string;
   endDate?: string;
 }): Promise<{
-  data: AvailableJob[], 
-  counts: Record<'all' | 'unset' | 'bid' | 'archived' | 'no-bid', number>, 
-  stats: {title: string, value: string}[]
+  data: AvailableJob[],
+  counts: Record<'all' | 'unset' | 'bid' | 'archived' | 'no-bid', number>,
+  stats: { title: string, value: string }[]
 }>;
 
 export async function fetchBids(options?: {
@@ -274,7 +276,7 @@ export async function createActiveBid(
     owner: adminData.owner || 'PENNDOT', // Set default value if empty
     contractNumber: (adminData.contractNumber.endsWith('-DRAFT') && status !== 'DRAFT') ? adminData.contractNumber.slice(0, -6) : adminData.contractNumber
   };
-  
+
   const response = await fetch('/api/active-bids', {
     method: 'POST',
     headers: {
@@ -317,7 +319,7 @@ export async function updateActiveBid(id: number, data: any): Promise<BidEstimat
         data.adminData.owner = 'PENNDOT'; // Set default value if empty
       }
     }
-    
+
     const response = await fetch(`/api/active-bids/${id}`, {
       method: 'PATCH',
       headers: {
@@ -594,25 +596,25 @@ export async function deleteArchivedJobs(ids: number[]): Promise<{ count: number
  * Delete multiple archived active bids (soft delete)
  */
 export async function deleteArchivedActiveBids(ids: number[]): Promise<{ count: number }> {
-try {
-  const response = await fetch('/api/archived-active-bids/delete', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ ids }),
-  });
+  try {
+    const response = await fetch('/api/active-bids/archive', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ids }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to delete archived active bids');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete archived active bids');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting archived active bids:', error);
+    throw error;
   }
-
-  return await response.json();
-} catch (error) {
-  console.error('Error deleting archived active bids:', error);
-  throw error;
-}
 }
 
 /**
@@ -621,25 +623,25 @@ try {
  * @returns Promise resolving to the deleted contact data
  */
 export async function deleteCustomerContact(contactId: number): Promise<any> {
-try {
-  const response = await fetch(`/api/customer-contacts/${contactId}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(`/api/customer-contacts/${contactId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || `Failed to delete customer contact (${response.status})`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to delete customer contact (${response.status})`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error deleting customer contact:', error);
+    throw error;
   }
-
-  const result = await response.json();
-  return result;
-} catch (error) {
-  console.error('Error deleting customer contact:', error);
-  throw error;
-}
 }
 
 /**
@@ -654,26 +656,26 @@ export async function createCustomerContact(data: {
   email?: string;
   phone?: string;
 }): Promise<any> {
-try {
-  const response = await fetch('/api/customer-contacts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await fetch('/api/customer-contacts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || `Failed to create customer contact (${response.status})`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to create customer contact (${response.status})`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error creating customer contact:', error);
+    throw error;
   }
-
-  const result = await response.json();
-  return result;
-} catch (error) {
-  console.error('Error creating customer contact:', error);
-  throw error;
-}
 }
 
 /**
@@ -688,27 +690,27 @@ export async function updateCustomerContact(contactId: number, data: {
   email?: string;
   phone?: string;
 }): Promise<any> {
-try {
-  const response = await fetch(`/api/customer-contacts/${contactId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await fetch(`/api/customer-contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error(`API error (${response.status}):`, errorData);
-    throw new Error(errorData.error || `Failed to update customer contact (${response.status})`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`API error (${response.status}):`, errorData);
+      throw new Error(errorData.error || `Failed to update customer contact (${response.status})`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error updating customer contact:', error);
+    throw error;
   }
-
-  const result = await response.json();
-  return result;
-} catch (error) {
-  console.error('Error updating customer contact:', error);
-  throw error;
-}
 }
 
 /**
@@ -930,7 +932,7 @@ export async function sendQuoteEmail(
  * @returns Promise resolving to either success with files array or error
  */
 export async function fetchFilesByAssociation(
-  id: number, 
+  id: number,
   folder: string
 ): Promise<{
   success: true;
@@ -940,97 +942,97 @@ export async function fetchFilesByAssociation(
   error: string;
 }> {
   try {
-      const response = await fetch(`/api/files?folder=${folder}&id=${id}`);
-      
-      if (!response.ok) {
-          return {
-              success: false,
-              error: `HTTP error! status: ${response.status}`
-          };
-      }
+    const response = await fetch(`/api/files?folder=${folder}&id=${id}`);
 
-      const filesData = await response.json();
-      
-      if (!filesData.success || !filesData.data) {
-          return {
-              success: false,
-              error: filesData.message || 'No files data received'
-          };
-      }
-
-      // Convert the API response to File objects with actual content
-      const fetchedFiles = await Promise.all(
-          filesData.data.map(async (fileData: any): Promise<ExtendedFile> => {
-              try {
-                  // Convert the hex data to a proper Blob
-                  let fileBlob: Blob;
-
-                  if (fileData.file_data) {
-                      // Handle hex string (bytes) by converting to Uint8Array
-                      // Remove '\\x' prefix if present and convert to array of bytes
-                      const hexString = fileData.file_data.startsWith('\\x')
-                          ? fileData.file_data.substring(2).replace(/\\x/g, '')
-                          : fileData.file_data;
-
-                      // Convert hex string to byte array
-                      const byteArray = new Uint8Array(
-                          hexString.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
-                      );
-
-                      fileBlob = new Blob([byteArray], { type: fileData.file_type });
-                  } else {
-                      // Fallback to empty blob if no data
-                      fileBlob = new Blob([], { type: fileData.file_type });
-                  }
-
-                  // Create a complete File object with the content
-                  const file = new File(
-                      [fileBlob],
-                      fileData.filename,
-                      {
-                          type: fileData.file_type,
-                          lastModified: new Date(fileData.upload_date).getTime()
-                      }
-                  ) as ExtendedFile;
-
-                  // Add additional properties
-                  file.id = fileData.id;
-                  file.associatedId = fileData.associatedId
-
-                  return file;
-              } catch (error) {
-                  console.error(`Error creating File object for ${fileData.filename}:`, error);
-                  
-                  // Return a placeholder file in case of error
-                  const placeholder = new File(
-                      [new Blob([], { type: fileData.file_type })],
-                      fileData.filename,
-                      { type: fileData.file_type }
-                  ) as ExtendedFile;
-                  
-                  placeholder.id = fileData.id;
-                  
-                  return placeholder;
-              }
-          })
-      );
-
+    if (!response.ok) {
       return {
-          success: true,
-          files: fetchedFiles
+        success: false,
+        error: `HTTP error! status: ${response.status}`
       };
+    }
+
+    const filesData = await response.json();
+
+    if (!filesData.success || !filesData.data) {
+      return {
+        success: false,
+        error: filesData.message || 'No files data received'
+      };
+    }
+
+    // Convert the API response to File objects with actual content
+    const fetchedFiles = await Promise.all(
+      filesData.data.map(async (fileData: any): Promise<ExtendedFile> => {
+        try {
+          // Convert the hex data to a proper Blob
+          let fileBlob: Blob;
+
+          if (fileData.file_data) {
+            // Handle hex string (bytes) by converting to Uint8Array
+            // Remove '\\x' prefix if present and convert to array of bytes
+            const hexString = fileData.file_data.startsWith('\\x')
+              ? fileData.file_data.substring(2).replace(/\\x/g, '')
+              : fileData.file_data;
+
+            // Convert hex string to byte array
+            const byteArray = new Uint8Array(
+              hexString.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
+            );
+
+            fileBlob = new Blob([byteArray], { type: fileData.file_type });
+          } else {
+            // Fallback to empty blob if no data
+            fileBlob = new Blob([], { type: fileData.file_type });
+          }
+
+          // Create a complete File object with the content
+          const file = new File(
+            [fileBlob],
+            fileData.filename,
+            {
+              type: fileData.file_type,
+              lastModified: new Date(fileData.upload_date).getTime()
+            }
+          ) as ExtendedFile;
+
+          // Add additional properties
+          file.id = fileData.id;
+          file.associatedId = fileData.associatedId
+
+          return file;
+        } catch (error) {
+          console.error(`Error creating File object for ${fileData.filename}:`, error);
+
+          // Return a placeholder file in case of error
+          const placeholder = new File(
+            [new Blob([], { type: fileData.file_type })],
+            fileData.filename,
+            { type: fileData.file_type }
+          ) as ExtendedFile;
+
+          placeholder.id = fileData.id;
+
+          return placeholder;
+        }
+      })
+    );
+
+    return {
+      success: true,
+      files: fetchedFiles
+    };
 
   } catch (error) {
-      console.error('Error fetching files:', error);
-      return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+    console.error('Error fetching files:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
   }
 }
 
 export async function fetchFileMetadataByFolder(
-  id: number, 
+  id: number,
   folder: string
 ): Promise<{
   success: true;
@@ -1041,7 +1043,7 @@ export async function fetchFileMetadataByFolder(
 }> {
   try {
     const response = await fetch(`/api/files?folder=${folder}&id=${id}`);
-    
+
     if (!response.ok) {
       return {
         success: false,
@@ -1050,7 +1052,7 @@ export async function fetchFileMetadataByFolder(
     }
 
     const filesData = await response.json();
-    
+
     if (!filesData.success || !filesData.data) {
       return {
         success: false,
@@ -1082,4 +1084,40 @@ export async function fetchFileMetadataByFolder(
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
+}
+
+export const saveSignOrder = async (signOrderData: {
+  id?: number, // Add optional ID field
+  requestor: User | undefined,
+  contractor_id: number | undefined,
+  contract_number: string,
+  order_date: string,
+  need_date: string,
+  start_date: string,
+  end_date: string,
+  order_type: OrderTypes[],
+  job_number: string,
+  signs: (PrimarySign | SecondarySign)[],
+  status: 'DRAFT' | 'SUBMITTED'
+}) => {
+  const response = await fetch('/api/sign-orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(signOrderData),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to save sign order');
+  }
+
+  // Return the ID instead of the response object
+  return { id: data.id };
 }

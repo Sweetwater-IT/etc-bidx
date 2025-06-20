@@ -11,10 +11,8 @@ import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { WorksheetDialog } from "@/components/sheets/WorksheetDialog";
 
 interface BidSummaryAccordionProps {
-  currentStep: number;
   isViewSummaryOpen: boolean;
   setIsViewSummaryOpen: (value: boolean) => void;
 }
@@ -26,13 +24,7 @@ interface BidSummary {
   grossMargin: number
 }
 
-const DEFAULT_TOTALS = {
-  revenue: '',
-  grossProfit: '',
-  grossMargin: '',
-}
-
-const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryOpen }: BidSummaryAccordionProps) => {
+const BidSummaryAccordion = ({ isViewSummaryOpen, setIsViewSummaryOpen }: BidSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
 
   const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
@@ -54,16 +46,6 @@ const BidSummaryAccordion = ({ currentStep, isViewSummaryOpen, setIsViewSummaryO
       grossMargin: allTotals.totalGrossMargin
     })
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
-
-
-  useEffect(() => {
-    if (currentStep === 4 || currentStep === 5 || currentStep === 6) {
-      setValue(["item-1"]);
-    } else {
-      setValue([]);
-    }
-  }, [currentStep]);
-
 
   return (
     <>

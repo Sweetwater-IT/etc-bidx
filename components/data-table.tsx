@@ -409,24 +409,13 @@ export function DataTable<TData extends object>({
               e.preventDefault();
 
               if (segmentValue === "archived") {
-                setItemsToDelete([row.original as TData]);
+                setItemsToDelete(table.getSelectedRowModel().rows.map(row => row.original) as TData[]);
                 setDeleteDialogOpen(true);
               } else if (onDeleteSelected) {
                 console.log("Delete clicked for row:", row.original);
                 try {
-                  await onDeleteSelected([row.original as TData]);
-                  console.log("onDeleteSelected called successfully");
+                  setItemsToDelete(table.getSelectedRowModel().rows.map(row => row.original) as TData[]);
                   toast.success("Item deleted successfully");
-
-                  // Force a refresh of the current segment data and counts
-                  if (onSegmentChange && segmentValue) {
-                    setTimeout(() => {
-                      console.log(
-                        "Refreshing segment data after deletion via onDeleteSelected"
-                      );
-                      onSegmentChange(segmentValue);
-                    }, 100);
-                  }
                 } catch (error) {
                   console.error("Error calling onDeleteSelected:", error);
                   toast.error("An error occurred while deleting the item.");
@@ -656,7 +645,7 @@ export function DataTable<TData extends object>({
                     </DropdownMenuItem>
                   )}
 
-                  {segmentValue === "archived" && onDeleteSelected && (
+                  {/* {segmentValue === "archived" && onDeleteSelected && (
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={handleDelete}
@@ -672,7 +661,7 @@ export function DataTable<TData extends object>({
                     >
                       Archive
                     </DropdownMenuItem>
-                  )}
+                  )} */}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -873,7 +862,7 @@ export function DataTable<TData extends object>({
             activeFilters={activeFilters}
           />
         )}
-        {table.getSelectedRowModel().rows.length >= 2 && (
+        {table.getSelectedRowModel().rows.length >= 1 && (
           <div className="flex justify-end mt-3">
             {segmentValue === "archived" ? (
               <Button
@@ -889,6 +878,9 @@ export function DataTable<TData extends object>({
                       .getSelectedRowModel()
                       .rows.map((row) => row.original as TData);
                     setItemsToDelete(selectedRows);
+                    if(onDeleteSelected){
+                      onDeleteSelected(selectedRows)
+                    }
                     setDeleteDialogOpen(true);
                   }
                 }}
@@ -909,13 +901,7 @@ export function DataTable<TData extends object>({
                       const selectedRows = table
                         .getSelectedRowModel()
                         .rows.map((row) => row.original as TData);
-                      await onArchiveSelected(selectedRows);
-                    }
-
-                    table.toggleAllRowsSelected(false);
-
-                    if (onSegmentChange && segmentValue) {
-                      onSegmentChange(segmentValue);
+                      onArchiveSelected(selectedRows);
                     }
                   }}
                 >
@@ -1159,7 +1145,7 @@ export function DataTable<TData extends object>({
         <div />
       )}
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
@@ -1181,7 +1167,7 @@ export function DataTable<TData extends object>({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }

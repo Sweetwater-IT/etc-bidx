@@ -104,7 +104,7 @@ export function SignOrderList() {
             isCustom: false,
             bLightsColor: undefined,
             description: '',
-            substrate: 'Aluminum'
+            substrate: undefined
         }
         dispatch({
             type: 'ADD_MPT_SIGN', payload: {
@@ -204,7 +204,7 @@ export function SignOrderList() {
                                                         <Pencil className="h-4 w-4 mr-2" />
                                                         Edit
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
+                                                    {Object.hasOwn(sign, 'associatedStructure') && <DropdownMenuItem
                                                         onClick={() => {
                                                             const defaultSecondary: SecondarySign = {
                                                                 id: generateUniqueId(),
@@ -232,7 +232,7 @@ export function SignOrderList() {
                                                     >
                                                         <Plus className="h-4 w-4 mr-2" />
                                                         Add Secondary Sign
-                                                    </DropdownMenuItem>
+                                                    </DropdownMenuItem>}
                                                     <DropdownMenuItem onClick={() => dispatch({
                                                         type: 'DELETE_MPT_SIGN',
                                                         payload: sign.id

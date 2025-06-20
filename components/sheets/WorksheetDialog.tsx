@@ -12,11 +12,11 @@ interface WorksheetDialogProps {
   equipmentRental: any
   flagging: any
   adminData: any
-  mptTotals: any
-  allTotals: any
-  rentalTotals: any
-  saleTotals: any
-  flaggingTotals: any
+  // mptTotals: any
+  // allTotals: any
+  // rentalTotals: any
+  // saleTotals: any
+  // flaggingTotals: any
 }
 
 export function WorksheetDialog({
@@ -27,11 +27,11 @@ export function WorksheetDialog({
   equipmentRental,
   flagging,
   adminData,
-  mptTotals,
-  allTotals,
-  rentalTotals,
-  saleTotals,
-  flaggingTotals
+  // mptTotals,
+  // allTotals,
+  // rentalTotals,
+  // saleTotals,
+  // flaggingTotals
 }: WorksheetDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,16 +43,15 @@ export function WorksheetDialog({
           <div className="mt-4">
             <PDFViewer height={600} width={800}>
               <GenerateBidSummaryReactPDF
-                showFinancials={selectedPdfType === 'estimators'}
+                // showFinancials={selectedPdfType === 'estimators'}
                 mptRental={mptRental}
                 equipmentRental={equipmentRental}
                 flagging={flagging}
                 adminData={adminData}
-                mptTotals={mptTotals}
-                allTotals={allTotals}
-                rentalTotals={rentalTotals}
-                saleTotals={saleTotals}
-                flaggingTotals={flaggingTotals}
+                // mptTotals={mptTotals}
+                // allTotals={allTotals}
+                // rentalTotals={rentalTotals}
+                // saleTotals={saleTotals}
               />
             </PDFViewer>
           </div>

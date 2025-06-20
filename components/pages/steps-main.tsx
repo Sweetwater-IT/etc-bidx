@@ -4,7 +4,6 @@ import { useSearchParams } from "next/navigation";
 import AdminInformationAccordion from "./active-bid/admin-information-accordion/admin-information-accordion";
 import BidSummaryAccordion from "./active-bid/bid-summary-accordion/bid-summary-accordion";
 import SignSummaryAccordion from "./active-bid/sign-summary-accordion/sign-summary-accordion";
-import Steps from "./active-bid/steps/steps";
 import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-accordion/trip-and-labor-summary-accordion";
 import { Button } from "../ui/button";
 import PhaseSummaryAccordion from "./active-bid/phase-summary-accordion/phase-summary-accordion";
@@ -13,9 +12,6 @@ import { Expand, Minimize, PanelRight, PanelLeftClose } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 import AdminInformationStep1 from "./active-bid/steps/admin-information-step1";
-import PhaseInfoStep2 from "./active-bid/steps/phase-info-step2";
-import MUTCDSignsStep3 from "./active-bid/steps/mutcd-signs-step3";
-import TripAndLaborStep4 from "./active-bid/steps/trip-and-labor-step4";
 import BidItemsStep5 from "./active-bid/steps/bid-items-step5";
 import { useSidebar } from "../ui/sidebar";
 import { Textarea } from "../ui/textarea";
@@ -54,9 +50,6 @@ const StepsMain = () => {
   const { toggleSidebar } = useSidebar()
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
-  const [currentStep, setCurrentStep] = useState(
-    initialStepParam ? parseInt(initialStepParam) : 1
-  );
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isViewSummaryOpen, setIsViewSummaryOpen] = useState<boolean>(false);;
 
@@ -96,8 +89,6 @@ const StepsMain = () => {
           </Tooltip>
         </div>
       )}
-
-      {isFullscreen ? (
         <div className="w-full flex">
           <div
             className={`${isSidebarVisible ? "w-3/4 pr-6" : "w-full"
@@ -112,7 +103,6 @@ const StepsMain = () => {
                       {/* Reduced width for better proportions */}
                       <AddPhaseButton
                         setCurrentPhase={setCurrentPhase}
-                        setCurrentStep={setCurrentStep}
                       />
                     </div>
                   </TooltipTrigger>
@@ -173,59 +163,15 @@ const StepsMain = () => {
                 </h3>
                 {renderStepWithoutNavigation(
                   <AdminInformationStep1
-                    currentStep={1}
-                    setCurrentStep={setCurrentStep}
                   />
                 )}
               </section>
-
-              <section>
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  Phase Information
-                </h3>
-                {renderStepWithoutNavigation(
-                  <PhaseInfoStep2
-                    currentStep={2}
-                    setCurrentStep={setCurrentStep}
-                    currentPhase={currentPhase}
-                  />
-                )}
-              </section>
-
-              <section>
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  MUTCD Signs
-                </h3>
-                {renderStepWithoutNavigation(
-                  <MUTCDSignsStep3
-                    currentStep={3}
-                    setCurrentStep={setCurrentStep}
-                    currentPhase={currentPhase}
-                  />
-                )}
-              </section>
-
-              <section>
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  Trip and Labor
-                </h3>
-                {renderStepWithoutNavigation(
-                  <TripAndLaborStep4
-                    currentStep={4}
-                    setCurrentStep={setCurrentStep}
-                    currentPhase={currentPhase}
-                  />
-                )}
-              </section>
-
               <section>
                 <h3 className="text-xl font-semibold pb-2 border-b mb-6">
                   Bid Items
                 </h3>
                 {renderStepWithoutNavigation(
                   <BidItemsStep5
-                    currentStep={5}
-                    setCurrentStep={setCurrentStep}
                     currentPhase={currentPhase}
                     setIsViewSummaryOpen={setIsViewSummaryOpen}
                   />
@@ -237,23 +183,18 @@ const StepsMain = () => {
           {/* Sidebar */}
           {isSidebarVisible && (
             <div className="w-1/4 space-y-4 sticky max-h-[80vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
-              <AdminInformationAccordion currentStep={currentStep} />
+              <AdminInformationAccordion />
               <PhaseSummaryAccordion
-                currentStep={currentStep}
                 setCurrentPhase={setCurrentPhase}
                 currentPhase={currentPhase}
-                setCurrentStep={setCurrentStep}
               />
               <SignSummaryAccordion
-                currentStep={currentStep}
                 currentPhase={currentPhase}
               />
               <TripAndLaborSummaryAccordion
-                currentStep={currentStep}
                 currentPhase={currentPhase}
               />
               <BidSummaryAccordion
-                currentStep={currentStep}
                 setIsViewSummaryOpen={setIsViewSummaryOpen}
                 isViewSummaryOpen={isViewSummaryOpen}
               />
@@ -271,66 +212,6 @@ const StepsMain = () => {
             </div>
           )}
         </div>
-      ) : (
-        <>
-          <div className="flex-1 max-w-[44vw]">
-            <Steps
-              isViewSummaryOpen={isViewSummaryOpen}
-              setIsViewSummaryOpen={setIsViewSummaryOpen}
-              currentStep={currentStep}
-              setCurrentStep={setCurrentStep}
-              currentPhase={currentPhase}
-            />
-          </div>
-
-          {/* Preview Cards */}
-          <div
-            className="summary-section w-80 space-y-4"
-            style={{
-              position: "sticky",
-              top: "2.5rem",
-              maxHeight: "calc(82vh - 2.5rem)",
-              overflowY: "auto",
-            }}
-          >
-            <AddPhaseButton
-              setCurrentPhase={setCurrentPhase}
-              setCurrentStep={setCurrentStep}
-            />
-            <AdminInformationAccordion currentStep={currentStep} />
-            <PhaseSummaryAccordion
-              currentStep={currentStep}
-              setCurrentPhase={setCurrentPhase}
-              currentPhase={currentPhase}
-              setCurrentStep={setCurrentStep}
-            />
-            <SignSummaryAccordion
-              currentStep={currentStep}
-              currentPhase={currentPhase}
-            />
-            <TripAndLaborSummaryAccordion
-              currentStep={currentStep}
-              currentPhase={currentPhase}
-            />
-            <BidSummaryAccordion
-              currentStep={currentStep}
-              setIsViewSummaryOpen={setIsViewSummaryOpen}
-              isViewSummaryOpen={isViewSummaryOpen}
-            />
-            <div className="shadow-sm rounded-lg border p-4">
-              <h2 className="mb-2 text-sm font-semibold">Notes</h2>
-              <div className="space-y-4">
-                <Textarea
-                  placeholder="Add notes here..."
-                  rows={5}
-                  value={notes}
-                  onChange={(e) => dispatch({ type: 'UPDATE_NOTES', payload: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 };
