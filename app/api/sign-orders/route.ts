@@ -31,7 +31,7 @@ async function generateSignOrderNumber(orderType: string[], branchCode: number):
     }
     
     // Format the order number according to the convention
-    return `SO${typeCode}${branchCode}-${sequentialNumber.toString().padStart(3, '0')}`;
+    return `SO${typeCode}${branchCode}-${sequentialNumber.toString()}`;
   } catch (error) {
     console.error('Error generating sign order number:', error);
     return ''; // Return empty on error

@@ -32,16 +32,20 @@ export async function GET(request: NextRequest) {
         });
 
       } else {
-        // For sign-shop-orders page, only count submitted orders
-        statusValues = ['Submitted', 'submitted', 'SUBMITTED'];
-
+        // For sign-shop-orders page, count all orders (including those with null/empty status)
+        statusValues = []; // Empty array means no status filter
       }
 
-      // Since we don't have the RPC functions, use direct count queries
-      const { count: totalCount, error: countError } = await supabase
+      // Get total count with or without status filter
+      let countQuery = supabase
         .from('sign_orders')
-        .select('*', { count: 'exact', head: true })
-        .in('status', statusValues);
+        .select('*', { count: 'exact', head: true });
+      
+      if (statusValues.length > 0) {
+        countQuery = countQuery.in('status', statusValues);
+      }
+
+      const { count: totalCount, error: countError } = await countQuery;
 
       if (countError) {
         console.error('Error getting total count:', countError);
@@ -63,31 +67,43 @@ export async function GET(request: NextRequest) {
         return map;
       }, {});
       
-      // Get all orders with their requestors
-      const { data: allOrders, error: allOrdersError } = await supabase
+      // Get all orders with their requestors that match the status filter (or all if no filter)
+      let ordersQuery = supabase
         .from('sign_orders')
-        .select('requestor')
-        .in('status', statusValues);
+        .select('requestor');
+      
+      if (statusValues.length > 0) {
+        ordersQuery = ordersQuery.in('status', statusValues);
+      }
+      
+      const { data: allOrders, error: allOrdersError } = await ordersQuery;
         
       if (allOrdersError) {
         console.error('Error getting all orders:', allOrdersError);
       }
       
-      // Count orders by branch using the requestor's branch
+      // Initialize branch counts with proper naming convention
       const branchCounts: Record<string, number> = {
         all: totalCount || 0,
-        1: 0,
-        2: 0,
-        3: 0,
+        turbotville: 0,   // branch_id 1
+        hatfield: 0,      // branch_id 2
+        bedford: 0,       // branch_id 3
         archived: 0
       };
       
-      // Count orders by branch
+      // Map branch IDs to the expected frontend names (correct mapping)
+      const branchIdToNameMap: Record<number, string> = {
+        1: 'turbotville',
+        2: 'hatfield', 
+        3: 'bedford'
+      };
+      
+      // Count orders by branch using the requestor's branch
       (allOrders || []).forEach((order: any) => {
         const branchId = userBranchMap[order.requestor];
-        if (branchId) {
-          // Increment the count for this branch
-          branchCounts[branchId] = (branchCounts[branchId] || 0) + 1;
+        if (branchId && branchIdToNameMap[branchId]) {
+          const branchName = branchIdToNameMap[branchId];
+          branchCounts[branchName] = (branchCounts[branchName] || 0) + 1;
         }
       });
 
@@ -125,22 +141,22 @@ export async function GET(request: NextRequest) {
         statusValues.push(status, status.toLowerCase(), status.toUpperCase());
       });
       
-      // query = query.in('status', statusValues);
+      query = query.in('status', statusValues);
 
     } else {
-      // For sign-shop-orders page, only show submitted orders
+      // For sign-shop-orders page, show all orders (including those with null/empty status)
+      // Don't filter by status unless specifically requested
       // query = query.in('status', ['Submitted', 'submitted', 'SUBMITTED']);
-
     }
 
     // Apply branch filter if present
-    if (branch) {
-      // Map branch names to IDs
+    if (branch && branch !== 'all') {
+      // Map branch names to IDs (correct mapping)
       const branchNameToIdMap: Record<string, number> = {
-        'hatfield': 1,
-        'turbotville': 2,
+        'turbotville': 1,
+        'hatfield': 2,
         'bedford': 3,
-        'archived': -1
+        'archived': -1  // Special case for archived
       };
       
       // Get branch ID from name (case insensitive)
@@ -151,7 +167,7 @@ export async function GET(request: NextRequest) {
         branchId = branchNameToIdMap[lowerBranch];
       }
       
-      if (branchId !== null) {
+      if (branchId !== null && branchId !== -1) {
         // Get users from the specified branch
         const { data: branchUsers, error: branchUsersError } = await supabase
           .from('users')
@@ -167,6 +183,10 @@ export async function GET(request: NextRequest) {
           // Filter orders by requestor name
           query = query.in('requestor', userNames);
         }
+      } else if (branchId === -1) {
+        // Handle archived filter - you might want to add an archived field or different logic here
+        // For now, this will return no results since we don't have archived logic implemented
+        query = query.eq('status', 'Archived'); // This might need adjustment based on your archive strategy
       }
     }
 
@@ -196,16 +216,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute the query
-
-    
     const { data: orders, error: ordersError } = await query;
-
 
     if (ordersError) {
       console.error('Error fetching orders:', ordersError);
       return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 });
     }
-
 
     // Get contractor information for all orders
     const contractorIds = orders?.map(order => order.contractor_id).filter(Boolean) || [];
@@ -250,11 +266,11 @@ export async function GET(request: NextRequest) {
       return map;
     }, {});
     
-    // Map branch IDs to expected UI branch names
-    // The UI expects specific branch names like 'Hatfield', 'Turbotville', 'Bedford'
+    // Map branch IDs to expected UI branch names (correct mapping)
+    // The UI expects specific branch names like 'Turbotville', 'Hatfield', 'Bedford'
     const branchNameMap: Record<number, string> = {
-      1: 'Hatfield',
-      2: 'Turbotville',
+      1: 'Turbotville',
+      2: 'Hatfield',
       3: 'Bedford'
     };
     
@@ -274,7 +290,7 @@ export async function GET(request: NextRequest) {
       // Get customer name from the contractors map
       const customerName = order.contractor_id && contractorMap[order.contractor_id] 
         ? contractorMap[order.contractor_id] 
-        : `Customer #${order.contractor_id || 'Unknown'}`;
+        : '-';
       
       // Get branch name based on requestor
       let branchName = 'Unknown';
@@ -290,7 +306,7 @@ export async function GET(request: NextRequest) {
         customer: customerName,
         branch: branchName,
         assigned_to: order.assigned_to || 'Unassigned',
-        type: 'Standard',
+        type: '-',
         order_date: orderDate,
         need_date: needDate,
         shop_status: order.shop_status || 'not-started'
@@ -299,11 +315,22 @@ export async function GET(request: NextRequest) {
       return processedOrder;
     }) || [];
 
-
-    // Get total count for pagination
-    const { count: totalCount, error: countError } = await supabase
+    // Get total count for pagination (without status filter for sign-shop-orders)
+    let paginationCountQuery = supabase
       .from('sign_orders')
       .select('*', { count: 'exact', head: true });
+    
+    // Apply the same filters that were applied to the main query
+    if (statusParam && statusParam.includes('Draft')) {
+      const statuses = statusParam.split(',').map(s => s.trim());
+      const statusValues: string[] = [];
+      statuses.forEach(status => {
+        statusValues.push(status, status.toLowerCase(), status.toUpperCase());
+      });
+      paginationCountQuery = paginationCountQuery.in('status', statusValues);
+    }
+    
+    const { count: totalCount, error: countError } = await paginationCountQuery;
 
     if (countError) {
       console.error('Error fetching total count:', countError);

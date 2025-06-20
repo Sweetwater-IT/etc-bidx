@@ -85,6 +85,7 @@ const handleStatusVariant = (status: string) => {
       return "default";
     case "pending":
     case 'in_progress':
+    case 'in-progress':
       return "warning";
     case "urgent":
     case "no bid":
@@ -222,7 +223,7 @@ function formatCellValue(value: any, key: string) {
   }
 
   // Handle status badges
-  if (key === "status" || key === 'projectStatus' || key === 'billingStatus') {
+  if (key === "status" || key === 'projectStatus' || key === 'billingStatus' || key === 'shop_status') {
     const variant = handleStatusVariant(value);
 
     return (

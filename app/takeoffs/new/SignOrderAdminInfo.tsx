@@ -2,40 +2,15 @@
 "use client";
 
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useCustomers } from "@/hooks/use-customers";
-import { Customer } from "@/types/Customer";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList
-} from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { fetchReferenceData } from "@/lib/api-client";
 import { SignOrderAdminInformation } from "../sign-order/SignOrderContentSimple";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconBulb } from "@tabler/icons-react";
 import { MPTRentalEstimating } from "@/types/MPTEquipment";
 import { SignOrderJobSelector } from "./SignOrderJobSelector"; // Import the custom component
 import { SignOrderDetailsSheet } from "../sign-order/SignOrderDetailsSheet";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useCustomers } from "@/hooks/use-customers";
 
 interface Job {
     job_number: string;
@@ -202,7 +177,7 @@ export function SignOrderAdminInfo({
                 requestor={adminInfo.requestor?.name}
                 branch={adminInfo.selectedBranch}
                 orderDate={formatDateForDisplay(adminInfo.orderDate)}
-                needDate={formatDateForDisplay(adminInfo.needDate)}
+                needDate={adminInfo.needDate ? formatDateForDisplay(adminInfo.needDate): undefined}
                 startDate={adminInfo.startDate ? formatDateForDisplay(adminInfo.startDate) : undefined}
                 endDate={adminInfo.endDate ? formatDateForDisplay(adminInfo.endDate) : undefined}
                 orderType={adminInfo.orderType}

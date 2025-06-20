@@ -16,33 +16,11 @@ import { Button } from "@/components/ui/button";
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number"},
   { key: "requestor", title: "Requestor" },
-  { key: "shop_status", title: "Shop Status", render: (row: any) => {
-    let bgColor = 'bg-gray-100 text-gray-800';
-    if (row.shop_status === 'not-started') {
-      bgColor = 'bg-gray-100 text-gray-800';
-    } else if (row.shop_status === 'in-process') {
-      bgColor = 'bg-blue-100 text-blue-800';
-    } else if (row.shop_status === 'on-order') {
-      bgColor = 'bg-yellow-100 text-yellow-800';
-    } else if (row.shop_status === 'complete') {
-      bgColor = 'bg-green-100 text-green-800';
-    }
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs ${bgColor}`}>
-        {row.shop_status ? row.shop_status.replace(/-/g, ' ') : 'not started'}
-      </span>
-    );
-  }},
-  { key: "branch", title: "Branch", render: (row: any) => (
-    <span className="capitalize">{row.branch || 'N/A'}</span>
-  )},
+  { key: "shop_status", title: "Shop Status" },
+  { key: "branch", title: "Branch" },
   { key: "customer", title: "Customer" },
-  { key: "order_date", title: "Order date", render: (row: any) => (
-    <span>{row.order_date || 'N/A'}</span>
-  )},
-  { key: "need_date", title: "Need date", render: (row: any) => (
-    <span>{row.need_date || 'N/A'}</span>
-  )},
+  { key: "order_date", title: "Order date" },
+  { key: "need_date", title: "Need date" },
   { key: "order_type", title: "Type" },
   { key: "assigned_to", title: "Assigned to" },
   { key: "contract_number", title: "Contract Number"},
@@ -180,9 +158,6 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
       
-      // Add status parameter to show both Draft and Submitted orders
-      params.append("status", "Draft,Submitted");
-      
       // Add segment filter
       if (activeSegment !== "all") {
         if (activeSegment === "archived") {
@@ -209,17 +184,18 @@ export default function SignOrderPage() {
           const processedOrders = data.orders.map((order: any) => ({
             ...order,
             // Ensure these fields exist with default values if missing
-            customer: order.customer || 'N/A',
-            branch: order.branch || 'Unknown',
+            customer: order.customer || '-',
+            branch: order.branch || '-',
             assigned_to: order.assigned_to || 'Unassigned',
-            type: order.type || 'Standard',
+            type: order.type || '-',
+            shop_status: order.shop_status === 'not-started' ? 'Not Started' : order.shop_status,
             order_type: (() => {
               const typeCount = [order.rental, order.sale, order.perm_signs].filter(Boolean).length;
               if (typeCount > 1) return 'M';
               if (order.rental) return 'R';
               if (order.sale) return 'S';
               if (order.perm_signs) return 'P';
-              return '';
+              return '-';
             })(),
             order_number: order.order_number == null ? '' : order.order_number,
           }));
@@ -247,8 +223,7 @@ export default function SignOrderPage() {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      // Fetch segment counts filtered by status
-      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&status=Draft,Submitted`);
+      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true`);
       const segmentData = await segmentResponse.json();
       
       if (segmentData.success) {
