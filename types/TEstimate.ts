@@ -18,6 +18,6 @@ export type Estimate = {
     totalGrossProfit? : number;
     ratesAcknowledged: boolean;
     notes: string
-    firstSaveTimestamp: Date | null
+    firstSaveTimestamp: number | null
     id: number | null
 }

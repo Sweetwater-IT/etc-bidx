@@ -16,12 +16,11 @@ interface Props {
   mptRental: MPTRentalEstimating | undefined,
   equipmentRental: EquipmentRentalItem[] | undefined,
   flagging: Flagging | undefined,
-  mptTotals: BasicTotals,
-  allTotals: BasicTotals,
-  rentalTotals: BasicTotals,
-  flaggingTotals: BasicTotals,
-  saleTotals: BasicTotals
-  showFinancials: boolean
+  // mptTotals: BasicTotals,
+  // allTotals: BasicTotals,
+  // rentalTotals: BasicTotals,
+  // saleTotals: BasicTotals
+  // showFinancials: boolean
 }
 
 interface BasicTotals {
@@ -32,7 +31,8 @@ interface BasicTotals {
 
 //below the bottom black line: form number on bottom left, ETC Form 61, in the center the document version, v1.01 Jan/2025, page numbers on right,
 
-const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, flagging, mptTotals, allTotals, rentalTotals, flaggingTotals, saleTotals, showFinancials }: Props) => {
+//mptTotals, allTotals, rentalTotals, saleTotals, showFinancials
+const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, flagging, }: Props) => {
 
   const Title = () => (
     <View style={{ flexDirection: 'row' }} >
@@ -146,7 +146,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         </View>
       </View>
 
-      {showFinancials && <View style={styles.headerRow}>
+      {/* {showFinancials && <View style={styles.headerRow}>
         <View style={styles.headerCell}>
           <Text style={styles.label}>MPT VALUE:</Text>
           <Text style={styles.value}>$ {mptTotals.revenue}</Text>
@@ -169,7 +169,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             {allTotals.grossMargin}%
           </Text>
         </View>
-      </View>}
+      </View>} */}
     </View>
   );
 
@@ -362,98 +362,98 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
     )
   };
 
-  const JobSummary = () => {
+  // const JobSummary = () => {
 
-    return (
-      <View style={styles.container}>
-        <View>
-          <View style={styles.columnHeader}>
-            <Text style={styles.columnHeaderText}>LABOR SUMMARY</Text>
-          </View>
-          <View style={styles.summaryCell}>
-            <Text style={styles.cell}>RATED = {mptRental ? safeNumber(calculateLaborCostSummary(adminData, mptRental).ratedLaborHours).toFixed(1) : '-'}</Text>
-            <Text style={styles.cell}>SHOP = {mptRental ? safeNumber(calculateLaborCostSummary(adminData, mptRental).nonRatedLaborHours).toFixed(1) : '-'}</Text>
-            <Text style={styles.cell}>PERM. SIGNS = 0</Text>
-            <Text style={styles.summaryTotalRow}>TOTAL = {mptRental ? (safeNumber(calculateLaborCostSummary(adminData, mptRental).nonRatedLaborHours) + safeNumber(calculateLaborCostSummary(adminData, mptRental).ratedLaborHours)).toFixed(1) : '-'}</Text>
-          </View>
-        </View>
-        <View style={styles.jobSummaryTable}>
-          <View style={styles.columnHeader}>
-            <Text style={styles.columnHeaderText}>JOB SUMMARY</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>REVENUE</Text>
-            <Text style={styles.summaryCell}>GROSS PROFIT</Text>
-            <Text style={styles.summaryCellLast}>% MARGIN</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>
-              MPT REV = ${mptTotals.revenue}
-            </Text>
-            <Text style={styles.summaryCell}>
-              ${mptTotals.grossProfit}
-            </Text>
-            <Text style={styles.summaryCellLast}>
-              {mptTotals.grossMargin}%
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>
-              RENTAL REV = ${rentalTotals.revenue}
-            </Text>
-            <Text style={styles.summaryCell}>
-              ${rentalTotals.grossProfit}
-            </Text>
-            <Text style={styles.summaryCellLast}>
-              {rentalTotals.grossMargin}%
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>
-              PERM REV = $0
-            </Text>
-            <Text style={styles.summaryCell}>
-              $0
-            </Text>
-            <Text style={styles.summaryCellLast}>
-              0%
-            </Text>
-          </View>
-          <View style={styles.summaryTotalRow}>
-            <Text style={styles.summaryCell}>
-              TOTAL REV = ${allTotals.revenue}
-            </Text>
-            <Text style={styles.summaryCell}>
-              ${allTotals.grossProfit}
-            </Text>
-            <Text style={styles.summaryCell}>
-              {allTotals.grossMargin}%
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>
-              FLAGGING = {flagging && flagging?.personnel > 0 ? 'YES' : 'NO'}
-            </Text>
-            <Text style={styles.summaryCell}>
-            </Text>
-            <Text style={styles.summaryCellLast}>
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryCell}>
-              EQUIPMENT SALE REV = ${saleTotals.revenue}
-            </Text>
-            <Text style={styles.summaryCell}>
-              ${saleTotals.grossProfit}
-            </Text>
-            <Text style={styles.summaryCellLast}>
-              {saleTotals.grossMargin}%
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
+  //   return (
+  //     <View style={styles.container}>
+  //       <View>
+  //         <View style={styles.columnHeader}>
+  //           <Text style={styles.columnHeaderText}>LABOR SUMMARY</Text>
+  //         </View>
+  //         <View style={styles.summaryCell}>
+  //           <Text style={styles.cell}>RATED = {mptRental ? safeNumber(calculateLaborCostSummary(adminData, mptRental).ratedLaborHours).toFixed(1) : '-'}</Text>
+  //           <Text style={styles.cell}>SHOP = {mptRental ? safeNumber(calculateLaborCostSummary(adminData, mptRental).nonRatedLaborHours).toFixed(1) : '-'}</Text>
+  //           <Text style={styles.cell}>PERM. SIGNS = 0</Text>
+  //           <Text style={styles.summaryTotalRow}>TOTAL = {mptRental ? (safeNumber(calculateLaborCostSummary(adminData, mptRental).nonRatedLaborHours) + safeNumber(calculateLaborCostSummary(adminData, mptRental).ratedLaborHours)).toFixed(1) : '-'}</Text>
+  //         </View>
+  //       </View>
+  //       <View style={styles.jobSummaryTable}>
+  //         <View style={styles.columnHeader}>
+  //           <Text style={styles.columnHeaderText}>JOB SUMMARY</Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>REVENUE</Text>
+  //           <Text style={styles.summaryCell}>GROSS PROFIT</Text>
+  //           <Text style={styles.summaryCellLast}>% MARGIN</Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>
+  //             MPT REV = ${mptTotals.revenue}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             ${mptTotals.grossProfit}
+  //           </Text>
+  //           <Text style={styles.summaryCellLast}>
+  //             {mptTotals.grossMargin}%
+  //           </Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>
+  //             RENTAL REV = ${rentalTotals.revenue}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             ${rentalTotals.grossProfit}
+  //           </Text>
+  //           <Text style={styles.summaryCellLast}>
+  //             {rentalTotals.grossMargin}%
+  //           </Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>
+  //             PERM REV = $0
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             $0
+  //           </Text>
+  //           <Text style={styles.summaryCellLast}>
+  //             0%
+  //           </Text>
+  //         </View>
+  //         <View style={styles.summaryTotalRow}>
+  //           <Text style={styles.summaryCell}>
+  //             TOTAL REV = ${allTotals.revenue}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             ${allTotals.grossProfit}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             {allTotals.grossMargin}%
+  //           </Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>
+  //             FLAGGING = {flagging && flagging?.personnel > 0 ? 'YES' : 'NO'}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //           </Text>
+  //           <Text style={styles.summaryCellLast}>
+  //           </Text>
+  //         </View>
+  //         <View style={styles.summaryRow}>
+  //           <Text style={styles.summaryCell}>
+  //             EQUIPMENT SALE REV = ${saleTotals.revenue}
+  //           </Text>
+  //           <Text style={styles.summaryCell}>
+  //             ${saleTotals.grossProfit}
+  //           </Text>
+  //           <Text style={styles.summaryCellLast}>
+  //             {saleTotals.grossMargin}%
+  //           </Text>
+  //         </View>
+  //       </View>
+  //     </View>
+  //   );
+  // };
 
   const PhaseSummary = () => {
     const getTotals = () => {
@@ -819,7 +819,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
           <Spacer />
           <EquipmentSummary />
           <Spacer />
-          {showFinancials && <JobSummary />}
+          {/* {showFinancials && <JobSummary />} */}
           <Spacer />
           <PhaseSummary />
         </View>

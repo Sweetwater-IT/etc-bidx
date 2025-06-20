@@ -11,7 +11,6 @@ import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { WorksheetDialog } from "@/components/sheets/WorksheetDialog";
 
 interface BidSummaryAccordionProps {
   isViewSummaryOpen: boolean;

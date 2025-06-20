@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
@@ -36,7 +35,7 @@ export interface SignOrderAdminInformation {
 export default function SignOrderContentSimple() {
     const { dispatch, mptRental } = useEstimate();
     const router = useRouter();
-
+    
     // Set up admin info state in the parent component
     const [adminInfo, setAdminInfo] = useState<SignOrderAdminInformation>({
         requestor: null,
@@ -49,20 +48,18 @@ export default function SignOrderContentSimple() {
         isSubmitting: false,
         contractNumber: ''
     });
+    
     const [localFiles, setLocalFiles] = useState<File[]>([]);
     const [localNotes, setLocalNotes] = useState<string>();
     const [savedNotes, setSavedNotes] = useState<string>();
     const [signOrderId, setSignOrderId] = useState<number | null>(null);
-
-    // Autosave states
+    
+    // Autosave states - exactly like active bid header
     const [isSaving, setIsSaving] = useState<boolean>(false);
-    const [currentTime, setCurrentTime] = useState<number>(Date.now());
-    const [firstSaveTimestamp, setFirstSaveTimestamp] = useState<Date | null>(null);
-
+    const [firstSaveTimestamp, setFirstSaveTimestamp] = useState<number>(0);
+    const [secondCounter, setSecondCounter] = useState<number>(0);
     const saveTimeoutRef = useRef<number | null>(null);
-    const updateTimeoutRef = useRef<number | null>(null);
-    const lastSavedTime = useRef<number | null>(null);
-
+    
     const prevStateRef = useRef({
         adminInfo,
         mptRental
@@ -74,7 +71,22 @@ export default function SignOrderContentSimple() {
         dispatch({ type: 'ADD_MPT_PHASE' });
     }, [dispatch]);
 
-    // Autosave effect
+    // Second counter effect - like active bid header
+    useEffect(() => {
+        if(firstSaveTimestamp){
+            setSecondCounter(1)
+        }
+    }, [firstSaveTimestamp])
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setSecondCounter(prev => prev + 1)
+        }, 1000)
+
+        return () => clearInterval(intervalId)
+    }, [secondCounter])
+
+    // Autosave effect - exactly like active bid header
     useEffect(() => {
         // Check if there were any changes
         const hasAdminInfoChanged = !isEqual(adminInfo, prevStateRef.current.adminInfo);
@@ -82,54 +94,33 @@ export default function SignOrderContentSimple() {
 
         const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged;
 
-        // Don't autosave if no contract number, no changes, or if it's never been saved
-        if (!hasAnyStateChanged) {
-            return;
+        // Don't autosave if no changes, no contract number, or if it's never been saved
+        if (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' || !hasAnyStateChanged || (!signOrderId && !firstSaveTimestamp)) return;
+        else {
+            // Clear timeout if there is one
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current)
+            }
+
+            saveTimeoutRef.current = window.setTimeout(() => {
+                autosave();
+            }, 5000)
         }
-
-        // Clear existing timeout
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
-
-        // Set new timeout for autosave
-        saveTimeoutRef.current = window.setTimeout(() => {
-            autosave();
-        }, 5000);
-
     }, [adminInfo, mptRental]);
 
-    // Timer for updating display text
-    useEffect(() => {
-        const updateTimer = () => {
-            setCurrentTime(Date.now());
-            updateTimeoutRef.current = window.setTimeout(updateTimer, 60000); // Update every minute
-        };
-
-        updateTimer();
-
-        return () => {
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-            }
-        };
-    }, []);
-
-    // Cleanup timeouts
+    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-            }
         };
     }, []);
 
     const autosave = async () => {
+        if (!signOrderId && !firstSaveTimestamp) return;
         setIsSaving(true);
-
+        
         // Update the previous state reference
         prevStateRef.current = {
             adminInfo,
@@ -137,32 +128,50 @@ export default function SignOrderContentSimple() {
         };
 
         try {
-            await handleSave('DRAFT', true); // Pass true to indicate this is an autosave
-            lastSavedTime.current = Date.now();
+            const signOrderData = {
+                id: signOrderId || undefined,
+                requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
+                contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
+                contract_number: adminInfo.contractNumber,
+                order_date: new Date(adminInfo.orderDate).toISOString(),
+                need_date: new Date(adminInfo.needDate).toISOString(),
+                start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : '',
+                end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : '',
+                order_type: adminInfo.orderType,
+                job_number: adminInfo.jobNumber,
+                signs: mptRental.phases[0].signs || [],
+                status: 'DRAFT' as const
+            };
+
+            const result = await saveSignOrder(signOrderData);
+            
+            if (result.id && !signOrderId) {
+                setSignOrderId(result.id);
+            }
+            
+            setSecondCounter(1);
+            
+            if (!firstSaveTimestamp) {
+                setFirstSaveTimestamp(1);
+            }
         } catch (error) {
-            console.error('Autosave failed:', error);
-            // Don't show toast for autosave failures to avoid annoying the user
+            toast.error('Sign order not successfully saved as draft: ' + error);
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Generate save status message
+    // Generate save status message - like active bid header but simplified
     const getSaveStatusMessage = () => {
         if (isSaving) return 'Saving...';
 
-        if (!lastSavedTime.current && !firstSaveTimestamp) return 'Draft has not been saved';
-
-        const saveTime = lastSavedTime.current || firstSaveTimestamp!.getTime();
-        const secondsAgo = Math.floor((currentTime - saveTime) / 1000);
-
-        if (secondsAgo < 60) {
-            return `Saved just now`;
-        } else if (secondsAgo < 3600) {
-            const minutesAgo = Math.floor(secondsAgo / 60);
+        if (secondCounter < 60) {
+            return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+        } else if (secondCounter < 3600) {
+            const minutesAgo = Math.floor(secondCounter / 60);
             return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
         } else {
-            const hoursAgo = Math.floor(secondsAgo / 3600);
+            const hoursAgo = Math.floor(secondCounter / 3600);
             return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
         }
     };
@@ -194,7 +203,6 @@ export default function SignOrderContentSimple() {
             const successfulFiles = files.filter(file =>
                 successes.includes(file.name)
             );
-
             if (successfulFiles.length > 0) {
                 setLocalFiles(prevFiles => {
                     // Filter out duplicates
@@ -208,14 +216,12 @@ export default function SignOrderContentSimple() {
     }, [isSuccess, files, successes, setLocalFiles]);
 
     // Handle saving the sign order
-    const handleSave = async (status: 'DRAFT' | 'SUBMITTED', isAutosave = false) => {
+    const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
         // Prevent multiple submissions
-        if (adminInfo.isSubmitting && !isAutosave) return;
+        if (adminInfo.isSubmitting) return;
 
         try {
-            if (!isAutosave) {
-                setAdminInfo(prev => ({ ...prev, isSubmitting: true }));
-            }
+            setAdminInfo(prev => ({ ...prev, isSubmitting: true }));
 
             const signOrderData = {
                 id: signOrderId || undefined, // Include ID if we have one
@@ -242,26 +248,16 @@ export default function SignOrderContentSimple() {
 
             // Set first save timestamp if this is the first save
             if (!firstSaveTimestamp) {
-                setFirstSaveTimestamp(new Date());
+                setFirstSaveTimestamp(1);
             }
 
-            // Show success message only for manual saves
-            if (!isAutosave) {
-                toast.success("Sign order saved successfully");
-
-                router.push('/takeoffs/load-sheet');
-            }
-
+            toast.success("Sign order saved successfully");
+            router.push('/takeoffs/load-sheet');
         } catch (error) {
             console.error('Error saving sign order:', error);
-            if (!isAutosave) {
-                toast.error(error as string || 'Failed to save sign order');
-            }
-            throw error; // Re-throw for autosave error handling
+            toast.error(error as string || 'Failed to save sign order');
         } finally {
-            if (!isAutosave) {
-                setAdminInfo(prev => ({ ...prev, isSubmitting: false }));
-            }
+            setAdminInfo(prev => ({ ...prev, isSubmitting: false }));
         }
     };
 
@@ -274,7 +270,7 @@ export default function SignOrderContentSimple() {
                 saveButtons={
                     <div className="flex items-center gap-4">
                         <div className="text-sm text-muted-foreground">
-                            {getSaveStatusMessage()}
+                            {!firstSaveTimestamp ? '' : getSaveStatusMessage()}
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
@@ -283,12 +279,10 @@ export default function SignOrderContentSimple() {
                             >
                                 {adminInfo.isSubmitting ? "Saving..." : "Submit Order"}
                             </Button>
-                            {/* <Button variant="outline" onClick={() => exportSignListToExcel('', mptRental)}>Export</Button> */}
                         </div>
                     </div>
                 }
             />
-
             <div className="flex gap-6 p-6 max-w-full">
                 {/* Main Form Column (3/4) */}
                 <div className="w-3/4 space-y-6">
@@ -298,7 +292,6 @@ export default function SignOrderContentSimple() {
                     />
                     <SignOrderList />
                 </div>
-
                 {/* Right Column (1/4) */}
                 <div className="w-1/4 space-y-6">
                     <div className="border rounded-lg p-4">

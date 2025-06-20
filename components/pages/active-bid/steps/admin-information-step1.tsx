@@ -220,7 +220,7 @@ const AdminInformationStep1 = () => {
         dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
         dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
         dispatch({ type: 'COPY_NOTES', payload: data.notes});
-        console.log(data);
+        dispatch({ type: 'SET_FIRST_SAVE', payload: new Date(data.created_at).getTime()})
       }
       stopLoading();
     };
@@ -715,9 +715,11 @@ const AdminInformationStep1 = () => {
                           onBlur={async () => {
                             if(field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp){
                               try{
+                                // add 0 to simulate saving state
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 0})
                                 const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
                                   serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT', notes);
-                                dispatch({ type: 'SET_FIRST_SAVE', payload: new Date()})
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 1})
                                 dispatch({ type: 'SET_ID', payload: createResponse.id })
                               } catch(err){
                                 toast.error('Failed to save bid' + err)

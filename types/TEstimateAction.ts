@@ -210,5 +210,5 @@ export type EstimateAction =
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
 	| { type: 'UPDATE_NOTES', payload: string}
 	| { type: 'COPY_NOTES', payload: string}
-	| { type: 'SET_FIRST_SAVE', payload: Date}
+	| { type: 'SET_FIRST_SAVE', payload: number}
 	| { type: 'SET_ID', payload: number}
