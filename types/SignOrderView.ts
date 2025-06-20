@@ -16,4 +16,6 @@ export interface SignOrderView {
   branch?: string;
   assigned_to?: string;
   type?: string;
+  archived: boolean;
+  created_at: string;
 }

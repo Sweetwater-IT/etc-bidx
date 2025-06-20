@@ -93,6 +93,7 @@ const handleStatusVariant = (status: string) => {
       return "destructive";
     case "bid":
     case "won":
+    case 'complete':
     case "won - pending":
       return "successful";
     case "unset":
@@ -840,13 +841,7 @@ export function DataTable<TData extends object>({
         {onFilterChange && (
           <FilterDropdowns
             showFilters={!!showFilters}
-            branchOptions={branchOptions || []}
-            ownerOptions={ownerOptions || []}
-            countyOptions={countyOptions || []}
-            estimatorOptions={estimatorOptions || []}
-            contractorOptions={contractorOptions || []}
-            projectStatusOptions={projectStatusOptions || []}
-            billingStatusOptions={billingStatusOptions || []}
+            filterOptions={filterOptions || []}  // Pass the actual filterOptions
             onFilterChange={onFilterChange}
             activeFilters={activeFilters}
           />

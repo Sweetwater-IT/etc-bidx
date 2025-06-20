@@ -16,7 +16,7 @@ interface ConfirmArchiveDialogProps {
   onClose: () => void
   onConfirm: () => void
   itemCount: number
-  itemType: "job" | "bid" | "branch" | "user" | "county" | "bid item" | "payback calculation" 
+  itemType: "job" | "bid" | "branch" | "user" | "county" | "bid item" | "payback calculation" | 'sign order' 
 }
 
 export function ConfirmArchiveDialog({
