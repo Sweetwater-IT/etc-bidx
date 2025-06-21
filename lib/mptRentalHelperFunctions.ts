@@ -187,31 +187,30 @@ export function returnSignTotalsByPhase(phase: Phase): Record<SheetingType, Sign
   return signTotals
 }
 
+// Update the interface to match EquipmentType names
 interface AssociatedSignTotals {
-  type3: number,
+  fourFootTypeIII: number,
   hStand: number,
   post: number,
-  cover: number,
-  bLights: number,
-  acLights: number
+  covers: number,
+  BLights: number,
+  ACLights: number
 }
 
 export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
-  //loop through array an find Primary Signs by looking for associatedStructure property, then adding a number of that structure equal to the quantity
-  //then add the amount of acLights, bLights, and covers, each one multiplying the quantity of the lights * quantity of sign
   const structureCounts = phase.signs
   .filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0)
   .reduce((acc, sign) => {
     if ('associatedStructure' in sign) {
       // Add covers and lights (these are still simple multiplications)
-      acc.cover += (sign.cover ? sign.quantity : 0);
-      // acc.acLights += (sign.aLights * sign.quantity);
-      acc.bLights += (sign.bLights * sign.quantity);
+      acc.covers += (sign.cover ? sign.quantity : 0);
+      // acc.ACLights += (sign.aLights * sign.quantity);
+      acc.BLights += (sign.bLights * sign.quantity);
       
       // Map base equipment types to the totals object
       switch (sign.associatedStructure) {
         case 'fourFootTypeIII':
-          acc.type3 += sign.quantity;
+          acc.fourFootTypeIII += sign.quantity;
           break;
         case 'hStand':
           acc.hStand += sign.quantity;
@@ -229,18 +228,10 @@ export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
       }
     }
     return acc;
-  }, { type3: 0, hStand: 0, post: 0, cover: 0, bLights: 0, acLights: 0 });
+  }, { fourFootTypeIII: 0, hStand: 0, post: 0, covers: 0, BLights: 0, ACLights: 0 });
 
-  //destructure totals from reduce function's returned object
-  const { type3, hStand, post, cover, bLights, acLights } = structureCounts;
-  return {
-    type3,
-    hStand,
-    post,
-    cover,
-    bLights,
-    acLights
-  }
+  // Return the object with EquipmentType-compatible property names
+  return structureCounts;
 }
 
 // Function to calculate total sign cost summary

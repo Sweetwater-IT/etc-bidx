@@ -37,9 +37,11 @@ interface SignOrderJobSelectorProps {
   startDate?: string;
   endDate?: string;
   orderType?: string[];
+  contractNumber?: string
 }
 
 export function SignOrderJobSelector({
+  contractNumber,
   allJobs = [],
   selectedContractJob,
   onSelect,
@@ -91,7 +93,7 @@ export function SignOrderJobSelector({
 
       <div className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="md:col-span-2 col-span-1">
+          {(!contractNumber || contractNumber === '')  && <div className="md:col-span-2 col-span-1">
             <div className={`${selectedContractJob ? "" : "mb-2"} font-medium text-sm`}>
               Contract / Job Number
             </div>
@@ -155,7 +157,7 @@ export function SignOrderJobSelector({
                 </div>
               )}
             </div>
-          </div>
+          </div>}
           {/* Empty space for alignment */}
           <div className="hidden md:block" />
         </div>
@@ -225,7 +227,7 @@ export function SignOrderJobSelector({
               Order Type
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {orderType && orderType.length > 0 ? orderType.join(", ") : "-"}
+              {orderType && orderType.length > 0 ? orderType.join(", ").toUpperCase() : "-"}
             </div>
           </div>
 

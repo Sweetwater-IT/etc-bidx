@@ -355,18 +355,18 @@ export function SignOrderDetailsSheet({
 
               {/* Need Date */}
               <div className="space-y-2">
-                <Tooltip>
+                {/* <Tooltip>
                   <TooltipTrigger>
-                    <div className="flex gap-x-2">
+                    <div className="flex gap-x-2"> */}
                       <Label>Need Date <span className="text-red-600">*</span></Label>
-                      <IconBulb className="h-5" color="gray" />
-                    </div>
-                  </TooltipTrigger>
+                      {/* <IconBulb className="h-5" color="gray" />
+                    </div> */}
+                  {/* </TooltipTrigger>
                   <TooltipContent>
                     <div>Sale = date requested by customer</div>
                     <div>Rental = 1 week before job start</div>
                   </TooltipContent>
-                </Tooltip>
+                </Tooltip> */}
                 <Input
                   type="date"
                   value={localNeedDate ? localNeedDate.toISOString().split('T')[0] : ''}

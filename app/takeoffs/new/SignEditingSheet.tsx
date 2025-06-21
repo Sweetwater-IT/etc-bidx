@@ -36,7 +36,6 @@ import { Separator } from '@/components/ui/separator';
 interface Props {
     open: boolean;
     onOpenChange: Dispatch<SetStateAction<boolean>>;
-    setParentLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>
     mode: 'create' | 'edit';
     sign: PrimarySign | SecondarySign;
     currentPhase?: number;
@@ -48,7 +47,7 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
     return 'primarySignId' in sign;
 };
 
-const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, currentPhase = 0, isTakeoff = true }: Props) => {
+const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true }: Props) => {
     const { dispatch, mptRental } = useEstimate();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
@@ -56,8 +55,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
-
-    const [firstStructureSet, setFirstStructureSet] = useState<boolean>(false)
 
     const isSecondary = isSecondarySign(sign);
 
@@ -201,7 +198,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         oldStructure: AssociatedStructures,
         signQuantity: number
     ) => {
-        setFirstStructureSet(true);
         // Handle old structure: decrement by the sign quantity
         if (oldStructure !== 'none') {
             const currentOldQuantity = getCurrentEquipmentQuantity(oldStructure);
@@ -223,7 +219,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
     };
 
     const handleCoversChange = (checked: boolean, signQuantity: number) => {
-        const coversQuantity = checked ? signQuantity : 0;
+        const coversQuantity = checked ? getCurrentEquipmentQuantity('covers') + signQuantity : getCurrentEquipmentQuantity('covers') - signQuantity;
         updateEquipmentQuantity("covers" as EquipmentType, coversQuantity);
     };
 
@@ -285,12 +281,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
         }
 
         // Get default dimension from the selected designation
-        const defaultDimension =
-            selectedDesignation.dimensions &&
-                selectedDesignation.dimensions.length > 0
-                ? selectedDesignation.dimensions[0]
-                : { width: 0, height: 0 };
-
+        const shouldAutoSetDimensions = selectedDesignation.dimensions && selectedDesignation.dimensions.length === 1;
+    
+        const defaultDimension = shouldAutoSetDimensions
+            ? selectedDesignation.dimensions[0]
+            : { width: 0, height: 0 };
         // Update the local sign with designation-related fields
         setLocalSign((prev) => ({
             ...prev,
@@ -350,14 +345,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                 });
             }
         });
-        setParentLocalSign(undefined)
         onOpenChange(false);
     };
 
     const handleCancel = () => {
-        dispatch({ type: 'DELETE_MPT_SIGN', payload: sign.id})
         setIsCustom(sign.isCustom || false);
-        setParentLocalSign(undefined)
         onOpenChange(false);
     };
 
@@ -552,6 +544,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                             : undefined
                                     }
                                     onValueChange={handleDimensionSelect}
+                                    disabled={getAvailableDimensions().length === 1}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select dimensions"/>
@@ -609,7 +602,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                                 <div>
                                     <Label className="text-sm font-medium mb-2 block">Structure</Label>
                                     <Select
-                                        value={!firstStructureSet && mode === 'create' ? undefined : (localSign as PrimarySign).displayStructure}
+                                        value={(localSign as PrimarySign).displayStructure}
                                         onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
                                     >
                                         <SelectTrigger className="w-full">
@@ -700,7 +693,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                     )}
                 </div>
                 {/* Action Buttons */}
-                {(localSign.quantity < 1 || (mode ==='create' && (Object.hasOwn(localSign, 'associatedStructure') && !firstStructureSet)) || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
+                {(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
                     <AlertCircle size={14} />
                     <span>
                         Please fill out all necessary fields before saving.
@@ -710,7 +703,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, setParentLocalSign, 
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={(localSign.quantity < 1 || (mode ==='create' && (Object.hasOwn(localSign, 'associatedStructure') && !firstStructureSet)) || localSign.width < 1 || localSign.height < 1)}>
+                    <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
                         Save Sign
                     </Button>
                 </div>

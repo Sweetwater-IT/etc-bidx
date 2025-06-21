@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import PageHeaderWithSaving from "@/components/PageContainer/PageHeaderWithSaving";
 import { saveSignOrder } from "@/lib/api-client";
 import isEqual from 'lodash/isEqual';
+import EquipmentTotalsAccordion from "./view/[id]/EquipmentTotalsAccordion";
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -283,6 +284,7 @@ export default function SignOrderContentSimple() {
                 </div>
                 {/* Right Column (1/4) */}
                 <div className="w-1/4 space-y-6">
+                    <EquipmentTotalsAccordion/>
                     <div className="border rounded-lg p-4">
                         <h2 className="mb-2 text-lg font-semibold">Files</h2>
                         <Dropzone {...fileUploadProps} className="p-8 cursor-pointer space-y-4">

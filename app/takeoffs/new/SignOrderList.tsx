@@ -9,7 +9,7 @@ import { useEstimate } from "@/contexts/EstimateContext";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import { returnSignTotalsSquareFootage } from "@/lib/mptRentalHelperFunctions";
 import { DataTable } from "@/components/data-table";
-import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { EquipmentType, PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -66,8 +66,12 @@ const SIGN_COLUMNS = [
     }
 ]
 
+interface Props {
+    currentPhase?: number
+}
 
-export function SignOrderList() {
+
+export function SignOrderList({ currentPhase = 0 }: Props) {
 
     const { mptRental, dispatch } = useEstimate();
 
@@ -82,6 +86,67 @@ export function SignOrderList() {
             setOpen(true)
         }
     }, [localSign?.designation])
+
+
+    const handleClose = () => {
+        setLocalSign(undefined)
+        setOpen(false)
+    }
+
+    const getCurrentEquipmentQuantity = (equipmentType: EquipmentType): number => {
+        const currentPhaseData = mptRental.phases[currentPhase];
+        return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0;
+    };
+
+    const deleteAssociatedEquipmentInfo = (signId: string) => {
+        const deletedSign: PrimarySign | undefined = mptRental.phases[currentPhase].signs.
+            find(s => (Object.hasOwn(s, 'associatedStructure') && s.id === signId)) as PrimarySign | undefined
+
+        if (deletedSign && deletedSign.quantity > 0) {
+            if (deletedSign.cover) {
+                dispatch({
+                    type: 'ADD_MPT_ITEM_NOT_SIGN', payload: {
+                        phaseNumber: 0,
+                        equipmentType: 'covers',
+                        equipmentProperty: "quantity",
+                        value: getCurrentEquipmentQuantity('covers') - deletedSign.quantity,
+                    }
+                })
+            }
+            if (deletedSign.associatedStructure !== 'none') {
+                dispatch({
+                    type: 'ADD_MPT_ITEM_NOT_SIGN', payload: {
+                        phaseNumber: 0,
+                        equipmentType: deletedSign.associatedStructure,
+                        equipmentProperty: "quantity",
+                        value: getCurrentEquipmentQuantity(deletedSign.associatedStructure) - deletedSign.quantity,
+                    }
+                })
+            }
+            if (deletedSign.bLights > 0) {
+                dispatch({
+                    type: 'ADD_MPT_ITEM_NOT_SIGN', payload: {
+                        phaseNumber: 0,
+                        equipmentType: 'BLights',
+                        equipmentProperty: "quantity",
+                        value: getCurrentEquipmentQuantity('BLights') - (deletedSign.quantity * deletedSign.bLights),
+                    }
+                })
+            }
+        }
+    }
+
+    useEffect(() => {
+        if (!open) {
+            const invalidSigns = mptRental.phases[currentPhase].signs.filter(s =>
+                s.quantity < 1 || s.height < 1 || s.width < 1 || !s.designation
+            );
+            invalidSigns.forEach(s => {
+                dispatch({ type: 'DELETE_MPT_SIGN', payload: s.id });
+                deleteAssociatedEquipmentInfo(s.id)
+            });
+        }
+    }, [open])
 
     useEffect(() => {
         const signTotals = returnSignTotalsSquareFootage(mptRental)
@@ -146,7 +211,8 @@ export function SignOrderList() {
                 if (!isPrimary) {
                     valueToReturn = '-'
                 } else {
-                    valueToReturn = sign[column]
+                    const bLightColor = !sign.bLightsColor ? '' : (sign as PrimarySign).bLightsColor === 'Red' ? 'R' : (sign as PrimarySign).bLightsColor === 'White' ? 'W' : 'Y'
+                    valueToReturn = sign[column] + ' ' + bLightColor
                 }
                 break;
             default:
@@ -178,75 +244,113 @@ export function SignOrderList() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mptRental.phases[0].signs.filter(s => s.designation !== '').map(sign => (
-                            <TableRow key={sign.id}>
-                                {SIGN_COLUMNS.map((sc, index) => (
-                                    <TableCell key={sc.key}>
-                                        <div className="flex items-center">
-                                            {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
-                                            {sc.key === 'actions' ? (<DropdownMenu>
-                                                <DropdownMenuTrigger
-                                                    asChild
-                                                    className="flex items-center justify-center"
-                                                >
-                                                    <Button variant="ghost" size="sm" className="!p-[2px]">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setLocalSign(sign)
-                                                            setOpen(true)
-                                                            setMode('edit')
-                                                        }}
+                        {mptRental.phases[currentPhase].signs
+                            .filter(s => s.designation !== '')
+                            .reduce((acc: (PrimarySign | SecondarySign)[], sign) => {
+                                if ('primarySignId' in sign) {
+                                  // It's a secondary sign - find its primary and insert after it
+                                  const primaryIndex = acc.findIndex(s => s.id === sign.primarySignId);
+                                  if (primaryIndex !== -1) {
+                                    // Find where to insert (after primary and any existing secondaries)
+                                    let insertIndex = primaryIndex + 1;
+                                    while (insertIndex < acc.length && 'primarySignId' in acc[insertIndex] && 
+                                           (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId) {
+                                      insertIndex++;
+                                    }
+                                    acc.splice(insertIndex, 0, sign);
+                                  } else {
+                                    // Primary not found yet, add to end (will be sorted later)
+                                    acc.push(sign);
+                                  }
+                                } else {
+                                  // It's a primary sign - just add it
+                                  acc.push(sign);
+                                }
+                                return acc;
+                              }, [])
+                            .map(sign => (
+                                <TableRow key={sign.id}>
+                                    {SIGN_COLUMNS.map((sc, index) => (
+                                        <TableCell key={sc.key}>
+                                            <div className="flex items-center">
+                                                {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
+                                                {sc.key === 'actions' ? (<DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                        className="flex items-center justify-center"
                                                     >
-                                                        <Pencil className="h-4 w-4 mr-2" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    {Object.hasOwn(sign, 'associatedStructure') && <DropdownMenuItem
-                                                        onClick={() => {
-                                                            const defaultSecondary: SecondarySign = {
-                                                                id: generateUniqueId(),
-                                                                primarySignId: sign.id,
-                                                                designation: "", // Empty designation
-                                                                width: 0,
-                                                                height: 0,
-                                                                quantity: sign.quantity, // Only inherit quantity
-                                                                sheeting: "HI", // Default sheeting
-                                                                isCustom: false,
-                                                                description: "",
-                                                                substrate: "Aluminum",
-                                                            };
+                                                        <Button variant="ghost" size="sm" className="!p-[2px]">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setLocalSign(sign)
+                                                                setOpen(true)
+                                                                setMode('edit')
+                                                            }}
+                                                        >
+                                                            <Pencil className="h-4 w-4 mr-2" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        {Object.hasOwn(sign, 'associatedStructure') && <DropdownMenuItem
+                                                            onClick={() => {
+                                                                const defaultSecondary: SecondarySign = {
+                                                                    id: generateUniqueId(),
+                                                                    primarySignId: sign.id,
+                                                                    designation: "", // Empty designation
+                                                                    width: 0,
+                                                                    height: 0,
+                                                                    quantity: sign.quantity, // Only inherit quantity
+                                                                    sheeting: "HI", // Default sheeting
+                                                                    isCustom: false,
+                                                                    description: "",
+                                                                    substrate: undefined,
+                                                                };
+                                                                dispatch({
+                                                                    type: 'ADD_MPT_SIGN',
+                                                                    payload: {
+                                                                        phaseNumber: 0,
+                                                                        sign: defaultSecondary
+                                                                    }
+                                                                })
+                                                                setLocalSign(defaultSecondary)
+                                                                setOpen(true)
+                                                                setMode('create')
+                                                            }}
+                                                        >
+                                                            <Plus className="h-4 w-4 mr-2" />
+                                                            Add Secondary Sign
+                                                        </DropdownMenuItem>}
+                                                        <DropdownMenuItem onClick={() => {
+                                                            deleteAssociatedEquipmentInfo(sign.id)
                                                             dispatch({
-                                                                type: 'ADD_MPT_SIGN',
-                                                                payload: {
-                                                                    phaseNumber: 0,
-                                                                    sign: defaultSecondary
-                                                                }
+                                                                type: 'DELETE_MPT_SIGN',
+                                                                payload: sign.id
                                                             })
-                                                            setLocalSign(defaultSecondary)
-                                                            setOpen(true)
-                                                            setMode('create')
-                                                        }}
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-2" />
-                                                        Add Secondary Sign
-                                                    </DropdownMenuItem>}
-                                                    <DropdownMenuItem onClick={() => dispatch({
-                                                        type: 'DELETE_MPT_SIGN',
-                                                        payload: sign.id
-                                                    })}>
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
-                                        </div>
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
+                                                            if (Object.hasOwn(sign, 'associatedStructure')) {
+                                                                mptRental.phases[currentPhase].signs.forEach(s => {
+                                                                    if ('primarySignId' in s && s.primarySignId === sign.id) {
+                                                                        dispatch({
+                                                                            type: 'DELETE_MPT_SIGN',
+                                                                            payload: s.id
+                                                                        })
+                                                                    }
+                                                                })
+                                                            }
+                                                        }
+                                                        }>
+                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                            </div>
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))}
                     </TableBody>
                 </Table>
             </div>
@@ -254,7 +358,7 @@ export function SignOrderList() {
             <div className="space-y-4 mt-4">
                 {/* Add Custom Sign Form */}
                 {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
-                {localSign && <SignEditingSheet open={open} onOpenChange={setOpen} mode={mode} sign={localSign} setParentLocalSign={setLocalSign} />}
+                {localSign && <SignEditingSheet open={open} onOpenChange={handleClose} mode={mode} sign={localSign} />}
             </div>
             <div className="flex justify-start">
                 <Button
@@ -268,7 +372,7 @@ export function SignOrderList() {
             {/* Totals */}
             <div className="mt-6 flex justify-end space-y-1 text-sm">
                 <div className="text-right">
-                    <div>Total Signs: {mptRental.phases[0].signs.length}</div>
+                    <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
                     <div className="font-medium">
                         Total Square Footage: {squareFootageTotal.toFixed(2)}
                     </div>

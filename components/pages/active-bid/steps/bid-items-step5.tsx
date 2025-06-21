@@ -17,7 +17,11 @@ import {
   DynamicEquipmentInfo,
   CustomLightAndDrumItem,
   Phase,
-  SheetingType
+  SheetingType,
+  labelMapping,
+  signList,
+  lightAndDrumList,
+  standardEquipmentList
 } from "@/types/MPTEquipment";
 import { safeNumber } from "@/lib/safe-number";
 import { calculateLightDailyRateCosts, getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
@@ -45,54 +49,6 @@ const DEFAULT_DISPATCH_FEE = 75;
 const DEFAULT_ANNUAL_UTILIZATION = 0.75;
 const DEFAULT_TARGET_MOIC = 2;
 
-// Mapping for equipment labels
-const labelMapping: Record<string, string> = {
-  fourFootTypeIII: "Four Foot Type III",
-  hStand: "H Stand",
-  post: "Post",
-  sandbag: "Sandbags",
-  sixFootWings: "Six Foot Wings",
-  metalStands: "Metal Stands",
-  covers: "Covers",
-  HIVP: "HI Vertical Panels",
-  TypeXIVP: "Type XI Vertical Panels",
-  BLights: "B-Lights",
-  ACLights: "AC Lights",
-  sharps: "Sharps"
-};
-
-// Standard equipment list
-const standardEquipmentList: EquipmentType[] = [
-  "fourFootTypeIII",
-  "hStand",
-  "post",
-  "sixFootWings",
-  "metalStands",
-  "covers",
-  "sandbag"
-];
-
-// Light and drum list
-const lightAndDrumList: EquipmentType[] = [
-  "HIVP",
-  "TypeXIVP",
-  "BLights",
-  "ACLights",
-  "sharps"
-];
-
-// Sign mapping for database names and sheeting types
-interface SignMapping {
-  key: SheetingType;
-  label: string;
-  dbName: string;
-}
-
-const signList: SignMapping[] = [
-  { key: 'HI', label: 'HI', dbName: 'HI Signs' },
-  { key: 'DG', label: 'DG', dbName: 'DG Signs' },
-  { key: 'Special', label: 'Special', dbName: 'Special Signs' }
-];
 
 const formatLabel = (key: string) => {
   return labelMapping[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
@@ -537,15 +493,15 @@ const BidItemsStep5 = ({
 
     switch (equipmentKey) {
       case 'covers':
-        return associatedEquipment.cover;
+        return associatedEquipment.covers;
       case 'fourFootTypeIII':
-        return associatedEquipment.type3;
+        return associatedEquipment.fourFootTypeIII;
       case 'hStand':
         return associatedEquipment.hStand;
       case 'post':
         return associatedEquipment.post;
       case 'BLights':
-        return associatedEquipment.bLights;
+        return associatedEquipment.BLights;
       default:
         return 0;
     }

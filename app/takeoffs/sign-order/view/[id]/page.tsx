@@ -437,7 +437,7 @@ export default function SignOrderTrackerPage () {
                 </div>
 
                 {/* Upload Files - Takes 1/3 of the row */}
-               <EquipmentTotalsAccordion signItems={signItems}/>
+               <EquipmentTotalsAccordion/>
               </div>
             </div>
           </div>
