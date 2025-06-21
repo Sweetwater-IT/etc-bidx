@@ -99,15 +99,15 @@ const SignOrderSummary = ({ currentPhase }: SignSummaryAccordionProps) => {
 
         switch (equipmentKey) {
             case 'covers':
-                return associatedEquipment.cover;
+                return associatedEquipment.covers;
             case 'fourFootTypeIII':
-                return associatedEquipment.type3;
+                return associatedEquipment.fourFootTypeIII;
             case 'hStand':
                 return associatedEquipment.hStand;
             case 'post':
                 return associatedEquipment.post;
             case 'BLights':
-                return associatedEquipment.bLights;
+                return associatedEquipment.BLights;
             default:
                 return 0;
         }

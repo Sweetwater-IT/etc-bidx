@@ -54,7 +54,7 @@ const SignList = ({ currentPhase, isTakeoff = false }: SignListProps) => {
   return (
     <div className="space-y-6">
       {/* <SignsViewOnly phaseNumber={currentPhase}/> */}
-      <SignOrderList/>
+      <SignOrderList currentPhase={currentPhase}/>
       {/* {primarySigns.map((sign) => (
         <PrimarySignItem 
           key={sign.id}

@@ -96,8 +96,8 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
       phase: `Phase ${phaseIndex + 1} Totals`,
     });
     totalRow.getCell('sheeting').value = `HI: ${phaseTotals.HI.totalSquareFootage.toFixed(1)} sq.ft | DG: ${phaseTotals.DG.totalSquareFootage.toFixed(1)} sq.ft | Special: ${phaseTotals.Special.totalSquareFootage.toFixed(1)} sq.ft`;
-    totalRow.getCell('bLights').value = getAssociatedSignEquipment(phase).bLights;
-    totalRow.getCell('covers').value = getAssociatedSignEquipment(phase).cover;
+    totalRow.getCell('bLights').value = getAssociatedSignEquipment(phase).BLights;
+    totalRow.getCell('covers').value = getAssociatedSignEquipment(phase).covers;
     totalRow.font = { bold: true };
 
     // Add structure totals
@@ -105,7 +105,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
     const structureRow = worksheet.addRow({
       phase: `Phase ${phaseIndex + 1} Structure Totals`,
     });
-    structureRow.getCell('sheeting').value = `Four Foot Type III: ${structureTotals.type3} | Post: ${structureTotals.post} | H Stand: ${structureTotals.hStand}`;
+    structureRow.getCell('sheeting').value = `Four Foot Type III: ${structureTotals.fourFootTypeIII} | Post: ${structureTotals.post} | H Stand: ${structureTotals.hStand}`;
     structureRow.font = { bold: true };
 
     // Add spacing between phases

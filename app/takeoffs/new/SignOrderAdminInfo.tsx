@@ -124,6 +124,7 @@ export function SignOrderAdminInfo({
                     customer: associatedCustomer || null
                 }));
             }
+            setSheetOpen(true)
         } else {
             // Clear selection
             setAdminInfo(prev => ({
@@ -181,8 +182,8 @@ export function SignOrderAdminInfo({
                 startDate={adminInfo.startDate ? formatDateForDisplay(adminInfo.startDate) : undefined}
                 endDate={adminInfo.endDate ? formatDateForDisplay(adminInfo.endDate) : undefined}
                 orderType={adminInfo.orderType}
+                contractNumber={adminInfo.contractNumber}
                 // jobNumber={adminInfo.jobNumber}        // Add this
-                // contractNumber={adminInfo.contractNumber}  // Add this
             />
             <SignOrderDetailsSheet
                 open={sheetOpen}

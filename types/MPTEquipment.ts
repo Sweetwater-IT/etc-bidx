@@ -63,6 +63,53 @@ export interface SignDimension {
   height: number;
 }
 
+export const labelMapping: Record<string, string> = {
+  fourFootTypeIII: "Four Foot Type III",
+  hStand: "H Stand",
+  post: "Post",
+  sandbag: "Sandbags",
+  sixFootWings: "Six Foot Wings",
+  metalStands: "Metal Stands",
+  covers: "Covers",
+  HIVP: "HI Vertical Panels",
+  TypeXIVP: "Type XI Vertical Panels",
+  BLights: "B-Lights",
+  ACLights: "AC Lights",
+  sharps: "Sharps"
+};
+
+// Standard equipment list
+export const standardEquipmentList: EquipmentType[] = [
+  "fourFootTypeIII",
+  "hStand",
+  "post",
+  "sixFootWings",
+  "metalStands",
+  "covers",
+  "sandbag"
+];
+
+// Light and drum list
+export const lightAndDrumList: EquipmentType[] = [
+  "HIVP",
+  "TypeXIVP",
+  "BLights",
+  "ACLights",
+  "sharps"
+];
+
+export interface SignMapping {
+  key: SheetingType;
+  label: string;
+  dbName: string;
+}
+
+export const signList: SignMapping[] = [
+  { key: 'HI', label: 'HI', dbName: 'HI Signs' },
+  { key: 'DG', label: 'DG', dbName: 'DG Signs' },
+  { key: 'Special', label: 'Special', dbName: 'Special Signs' }
+];
+
 
 export const equipmentList: EquipmentMapping[] = [
   { key: 'fourFootTypeIII', label: "4' Ft Type III", dbName: "4' Ft Type III" },

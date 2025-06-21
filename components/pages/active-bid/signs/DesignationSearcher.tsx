@@ -105,8 +105,8 @@ const DesignationSearcher = ({ localSign, setLocalSign }: Props) => {
         setLocalSign(prev => ({
           ...prev,
           designation: designationValue,
-          width: 0,
-          height: 0,
+          width: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].width : 0,
+          height: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].height : 0,
           sheeting: selectedDesignation.sheeting,
           description: selectedDesignation.description,
         }));

@@ -766,13 +766,13 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     Special: {returnSignTotalsByPhase(phase).Special.totalSquareFootage.toFixed(1)} sq. ft
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]}>
-                    {getAssociatedSignEquipment(phase).bLights}
+                    {getAssociatedSignEquipment(phase).BLights}
                   </Text>
                   {/* <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]}>
                     {getAssociatedSignEquipment(phase).acLights}
                   </Text> */}
                   <Text style={[styles.phaseSummaryCell, { flex: 1 }]}>
-                    {getAssociatedSignEquipment(phase).cover}
+                    {getAssociatedSignEquipment(phase).covers}
                   </Text>
                 </View>
 
@@ -781,7 +781,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     Phase {phaseIndex + 1} Structure Totals
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
-                    Four Foot Type III: {getAssociatedSignEquipment(phase).type3} |
+                    Four Foot Type III: {getAssociatedSignEquipment(phase).fourFootTypeIII} |
                     Post: {getAssociatedSignEquipment(phase).post} |
                     H Stand: {getAssociatedSignEquipment(phase).hStand}
                   </Text>
