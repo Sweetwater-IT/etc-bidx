@@ -41,7 +41,7 @@ const TripAndLaborStep4 = ({
               {/* Personnel Section */}
               <div>
                 <div className="text-base font-semibold mb-4 text-muted-foreground">Personnel</div>
-                <div className="flex flex-col gap-4 w-1/3">
+                <div className="grid grid-cols-3  gap-4">
                   <div>
                     <Label className="flex items-center mb-2 text-muted-foreground">
                       Number of Personnel
@@ -76,12 +76,9 @@ const TripAndLaborStep4 = ({
                   </div>
                 </div>
               </div>
-
-              <Separator className="my-2" />
-
               <div>
                 <div className="text-base font-semibold mb-4 mt-5 text-muted-foreground">Additional Inputs</div>
-                <div className="flex flex-col gap-4 w-1/3">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label className="flex items-center mb-2 text-muted-foreground">
                       Additional Trips

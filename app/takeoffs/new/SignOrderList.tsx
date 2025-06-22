@@ -172,7 +172,7 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
             isCustom: false,
             bLightsColor: undefined,
             description: '',
-            substrate: undefined
+            substrate: 'Plastic'
         }
         dispatch({
             type: 'ADD_MPT_SIGN', payload: {
@@ -421,7 +421,7 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
                                                                         sheeting: "HI", // Default sheeting
                                                                         isCustom: false,
                                                                         description: "",
-                                                                        substrate: undefined,
+                                                                        substrate: 'Plastic',
                                                                     };
                                                                     dispatch({
                                                                         type: 'ADD_MPT_SIGN',

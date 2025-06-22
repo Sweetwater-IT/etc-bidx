@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import PhaseInfoStep2 from "./phase-info-step2";
 import MutcdSignsStep3 from "./mutcd-signs-step3";
 import TripAndLaborStep4 from "./trip-and-labor-step4";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import AddPhaseButton from "./add-phase-button";
 const step = {
   id: "step-5",
   name: "Bid Items",
@@ -56,10 +58,12 @@ const formatLabel = (key: string) => {
 
 const BidItemsStep5 = ({
   currentPhase,
-  setIsViewSummaryOpen
+  setIsViewSummaryOpen,
+  setCurrentPhase
 }: {
   currentPhase: number;
   setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setCurrentPhase: React.Dispatch<React.SetStateAction<number>>
 }) => {
   const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems, notes } = useEstimate();
   const [activeTab, setActiveTab] = useState("mpt");
@@ -560,23 +564,42 @@ const BidItemsStep5 = ({
             <TabsContent value="mpt" className="mt-6">
               <div className="space-y-8">
                 {/* MPT Equipment Section */}
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  Phase Information
-                </h3>
+                <div className="grid grid-cols-3">
+                  <h3 className="text-xl font-semibold pb-2">
+                    Phase Information
+                  </h3>
+                  <div></div>
+                  {/* <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div> */}
+                        {/* Reduced width for better proportions */}
+                        <div className="w-1/2 ml-auto">
+                        <AddPhaseButton
+                          setCurrentPhase={setCurrentPhase}
+                        />
+                        </div>
+                      {/* </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Add a New Phase to the Bid</p>
+                    </TooltipContent>
+                  </Tooltip> */}
+                </div>
+                <Separator/>
                 <PhaseInfoStep2 currentPhase={currentPhase} />
+                <h3 className="text-md font-normal pb-2 border-b mb-6">
+                  Trip and Labor
+                </h3>
+                <TripAndLaborStep4 currentPhase={currentPhase} />
                 <h3 className="text-xl font-semibold pb-2 border-b mb-6">
                   PENNDOT Signs
                 </h3>
                 <MutcdSignsStep3 currentPhase={currentPhase} />
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  Trip and Labor
-                </h3>
-                <TripAndLaborStep4 currentPhase={currentPhase} />
                 <div>
                   <h3 className="text-base font-semibold mb-4">
                     MPT Equipment - Phase {currentPhase + 1}
                   </h3>
-                  <div className="flex flex-col w-1/3 gap-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {standardEquipmentList.map((equipmentKey) => (
                       equipmentKey === 'sandbag' ? (
                         <div key={equipmentKey} className="p-2 rounded-md">
@@ -622,18 +645,16 @@ const BidItemsStep5 = ({
                         id="emergency-job"
                         checked={adminData?.emergencyJob || false}
                         onCheckedChange={handleEmergencyJobChange}
-
-
                       />
                       <Label htmlFor="emergency-job">Emergency Job</Label>
                     </div>
                   </div>
 
-                  <div className="flex flex-col">
+                  <div className="grid grid-cols-2 md:grid-cols-3">
                     {lightAndDrumList.map((equipmentKey) => (
                       <div key={equipmentKey} className="p-2 rounded-md">
                         <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                        <div className="flex flex-col w-1/3 gap-2 mb-2">
+                        <div className="flex flex-col gap-2 mb-2">
                           <Label htmlFor={`quantity-light-${equipmentKey}`} className="text-muted-foreground">Quantity:</Label>
                           <Input
                             id={`quantity-light-${equipmentKey}`}

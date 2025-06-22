@@ -231,15 +231,3 @@ export type EstimateAction =
 		  inStock?: number;
 		};
 	  }
-	| {
-		type: "CONVERT_TO_SHOP_SIGNS";
-		payload: {
-		  phaseNumber: number;
-		  signsData: Array<{
-			id: string;
-			make?: number;
-			order?: number;
-			inStock?: number;
-		  }>;
-		};
-	  };

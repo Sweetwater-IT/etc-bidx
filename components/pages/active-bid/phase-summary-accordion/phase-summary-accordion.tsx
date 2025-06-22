@@ -56,25 +56,37 @@ const PhaseSummaryAccordion = ({ setCurrentPhase, currentPhase }: AdminInformati
                         <AccordionContent>
                             <div className="grid grid-cols-2 md:grid-cols-1 gap-y-2 text-sm mt-4">
                                 {mptRental.phases.map((phase, index) => (
-                                    <div className={`${currentPhase === index ? 'bg-muted' : ''} p-2 items-center flex justify-between rounded-sm cursor-pointer hover:bg-muted`} key={index}>
-                                        <div>
-                                            <div className={`font-medium`} onClick={() => {
-                                                setCurrentPhase(index)
-                                            }}>
-                                                Phase {index + 1}: {phase.name ?? ''}
+                                    <div className={`${currentPhase === index ? 'bg-muted' : ''} p-2 items-start flex flex-col rounded-sm cursor-pointer hover:bg-muted`} key={index}>
+                                        <div className="flex w-full justify-between">
+                                            <div>
+                                                <div className={`font-medium`} onClick={() => {
+                                                    setCurrentPhase(index)
+                                                }}>
+                                                    Phase {index + 1}: {phase.name ?? ''}
+                                                </div>
+                                                <div className='ml-4 mt-1 text-muted-foreground space-x-2'>
+                                                    {formatDate(phase.startDate)} - {formatDate(phase.endDate)}
+                                                </div>
                                             </div>
-                                            <div className='ml-4 text-muted-foreground text-xs space-x-2'>
-                                                {formatDate(phase.startDate)} - {formatDate(phase.endDate)}
+                                            <Button variant='default' onClick={() => {
+                                                setDeleteConfirmOpen(true);
+                                                if (index !== 0) {
+                                                    setCurrentPhase(index - 1)
+                                                }
+                                            }}>
+                                                <Trash />
+                                            </Button>
+                                        </div>
+                                        <div className="w-full mt-2">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Personnel:</span>
+                                                <span className="text-muted-foreground">{phase.personnel}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Trucks:</span>
+                                                <span className="text-muted-foreground">{phase.numberTrucks}</span>
                                             </div>
                                         </div>
-                                        <Button variant='default' onClick={() => {
-                                            setDeleteConfirmOpen(true);
-                                            if (index !== 0) {
-                                                setCurrentPhase(index - 1)
-                                            }
-                                        }}>
-                                            <Trash />
-                                        </Button>
                                     </div>
                                 ))}
                             </div>
