@@ -565,7 +565,7 @@ const BidItemsStep5 = ({
                 </h3>
                 <PhaseInfoStep2 currentPhase={currentPhase} />
                 <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  MUTCD Signs
+                  PENNDOT Signs
                 </h3>
                 <MutcdSignsStep3 currentPhase={currentPhase} />
                 <h3 className="text-xl font-semibold pb-2 border-b mb-6">

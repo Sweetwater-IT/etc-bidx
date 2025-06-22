@@ -64,61 +64,61 @@ const SignShopContent = ({ id }: Props) => {
 
     const confirmSaveChanges = async () => {
         if (!signOrder) return
-    
+
         try {
-          startLoading();
-    
-          const shopSigns = getShopSigns();
-    
-          // Convert the sign items array to the expected signs object format
-          const signsObject = shopSigns.reduce((acc, item) => {
-            acc[item.id.toString()] = {
-              designation: item.designation,
-              description: item.description,
-              width: item.width,
-              height: item.height,
-              quantity: item.quantity,
-              sheeting: item.sheeting,
-              stiffener: 'stiffener' in item ? item.stiffener : undefined,
-              in_stock: item.inStock,
-              order: item.order,
-              make: item.make,
-              substrate: item.substrate,
-              cover: 'cover' in item ? item.cover : undefined
-            }
-            return acc
-          }, {})
-    
-          // Update the sign order in the database
-          const response = await fetch(`/api/sign-orders/${id}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              signs: signsObject,
-              shop_status: signOrder.shop_status || 'not-started'
+            startLoading();
+
+            const shopSigns = getShopSigns();
+
+            // Convert the sign items array to the expected signs object format
+            const signsObject = shopSigns.reduce((acc, item) => {
+                acc[item.id.toString()] = {
+                    designation: item.designation,
+                    description: item.description,
+                    width: item.width,
+                    height: item.height,
+                    quantity: item.quantity,
+                    sheeting: item.sheeting,
+                    stiffener: 'stiffener' in item ? item.stiffener : undefined,
+                    in_stock: item.inStock,
+                    order: item.order,
+                    make: item.make,
+                    substrate: item.substrate,
+                    cover: 'cover' in item ? item.cover : undefined
+                }
+                return acc
+            }, {})
+
+            // Update the sign order in the database
+            const response = await fetch(`/api/sign-orders/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    signs: signsObject,
+                    shop_status: signOrder.shop_status || 'not-started'
+                })
             })
-          })
-    
-          const result = await response.json()
-    
-          if (!result.success) {
-            throw new Error(result.message || 'Failed to update sign order')
-          }
-    
-          stopLoading()
-          setShowConfirmDialog(false)
-    
-          // Show success message
-          toast.success('Changes saved successfully!')
+
+            const result = await response.json()
+
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to update sign order')
+            }
+
+            stopLoading()
+            setShowConfirmDialog(false)
+
+            // Show success message
+            toast.success('Changes saved successfully!')
         } catch (error: any) {
-          console.error('Error updating sign order:', error)
-          stopLoading()
-          setShowConfirmDialog(false)
-          alert(`Failed to save changes: ${error?.message || 'Unknown error'}`)
+            console.error('Error updating sign order:', error)
+            stopLoading()
+            setShowConfirmDialog(false)
+            alert(`Failed to save changes: ${error?.message || 'Unknown error'}`)
         }
-      }
+    }
 
     // Helper function to update shop tracking values
     const updateShopTracking = (signId: string, field: 'make' | 'order' | 'inStock', value: number) => {
@@ -195,7 +195,7 @@ const SignShopContent = ({ id }: Props) => {
                         }));
 
                         console.log(signItemsArray)
-                        
+
                         // First copy the MPT rental with regular signs
                         dispatch({
                             type: 'COPY_MPT_RENTAL', payload: {
@@ -245,7 +245,7 @@ const SignShopContent = ({ id }: Props) => {
             description: '',
             width: 0,
             height: 0,
-            quantity: 1,
+            quantity: 0,
             sheeting: 'DG',
             displayStructure: 'LOOSE',
             associatedStructure: 'none',
@@ -259,7 +259,7 @@ const SignShopContent = ({ id }: Props) => {
         };
 
         dispatch({
-            type: 'ADD_MPT_SIGN', 
+            type: 'ADD_MPT_SIGN',
             payload: {
                 phaseNumber: 0,
                 sign: defaultSign
@@ -271,66 +271,66 @@ const SignShopContent = ({ id }: Props) => {
 
     return (
         <>
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Changes</DialogTitle>
-              <DialogDescription>
-                {signOrder && (
-                  <div className="space-y-4 mt-2">
-                    <div>
-                      Confirm you want to assign this order to <span>{signOrder.assigned_to}</span>
-                    </div>
+            <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Changes</DialogTitle>
+                        <div>
+                            {signOrder && (
+                                <div className="space-y-4 mt-2">
+                                    <div>
+                                        Confirm you want to assign this order to <span>{signOrder.assigned_to}</span>
+                                    </div>
 
-                    {shopSigns.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="font-medium">And confirm the following quantities:</p>
-                        <div className="max-h-60 overflow-y-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left py-2">Designation</th>
-                                <th className="text-center py-2">Order</th>
-                                <th className="text-center py-2">Make</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {shopSigns.map((item) => (
-                                (item.order > 0 || item.make > 0) && (
-                                  <tr key={item.id} className="border-b">
-                                    <td className="py-2">{item.designation}</td>
-                                    <td className="text-center py-2">{item.order || 0}</td>
-                                    <td className="text-center py-2">{item.make || 0}</td>
-                                  </tr>
-                                )
-                              ))}
-                              {shopSigns.every(item => (item.order === 0 || item.order === undefined) &&
-                                (item.make === 0 || item.make === undefined)) && (
-                                  <tr>
-                                    <td colSpan={3} className="text-center py-2 text-gray-500">
-                                      No items to order or make
-                                    </td>
-                                  </tr>
-                                )}
-                            </tbody>
-                          </table>
+                                    {shopSigns.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="font-medium">And confirm the following quantities:</p>
+                                            <div className="max-h-60 overflow-y-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr className="border-b">
+                                                            <th className="text-left py-2">Designation</th>
+                                                            <th className="text-center py-2">In stock</th>
+                                                            <th className="text-center py-2">Order</th>
+                                                            <th className="text-center py-2">Make</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {shopSigns.map((item) => (
+                                                            <tr key={item.id} className="border-b">
+                                                                <td className="py-2">{item.designation}</td>
+                                                                <td className="text-center py-2">{item.inStock || 0}</td>
+                                                                <td className="text-center py-2">{item.order || 0}</td>
+                                                                <td className="text-center py-2">{item.make || 0}</td>
+                                                            </tr>
+                                                        ))}
+                                                        {shopSigns.every(item => (item.order === 0 || item.order === undefined) &&
+                                                            (item.make === 0 || item.make === undefined)) && (
+                                                                <tr>
+                                                                    <td colSpan={3} className="text-center py-2 text-gray-500">
+                                                                        No items to order or make
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={confirmSaveChanges} disabled={isLoading}>
-                {isLoading ? 'Saving...' : 'Yes, Save Changes'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={confirmSaveChanges} disabled={isLoading}>
+                            {isLoading ? 'Saving...' : 'Yes, Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <SiteHeader>
                 <div className='flex items-center justify-between'>
                     <h1 className='text-3xl font-bold mt-2 ml-0'>
@@ -490,7 +490,9 @@ const SignShopContent = ({ id }: Props) => {
                                     </TableBody>
                                 </Table>
                             </div>
-                            <SignOrderList currentPhase={0} onlyTable={true} />
+                            <div className='max-w-full overflow-x-auto'>
+                                <SignOrderList currentPhase={0} onlyTable={true} />
+                            </div>
                         </div>}
                     </div>
                 </div>

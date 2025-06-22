@@ -9,8 +9,8 @@ import AddSignControl from "../signs/add-sign-control";
 
 const step: Step = {
   id: "step-3",
-  name: "MUTCD Signs",
-  description: "Select and configure MUTCD signs",
+  name: "PENNDOT Signs",
+  description: "Select and configure PENNDOT signs",
   fields: [],
 };
 

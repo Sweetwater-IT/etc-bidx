@@ -72,15 +72,15 @@ export const data = {
       icon: IconListDetails,
       items: [
         {
-          title: "Available Jobs",
+          title: "Bid Board",
           url: "/jobs/available",
         },
         {
-          title: "Active Bids",
+          title: "Bid List",
           url: "/jobs/active-bids",
         },
         {
-          title: "Active Jobs",
+          title: "Job List",
           url: "/jobs/active-jobs",
         },
       ],
