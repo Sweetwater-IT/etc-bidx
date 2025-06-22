@@ -205,3 +205,25 @@ export type MPTRentalEstimating = {
   equipmentCosts: Record<EquipmentType, { cost: number; price: number }>;
   phases: Phase[];
 };
+
+export interface ShopTrackingInfo {
+  make: number;
+  order: number;
+  inStock: number;
+}
+
+export interface ExtendedPrimarySign extends PrimarySign, ShopTrackingInfo {}
+
+export interface ExtendedSecondarySign extends SecondarySign, ShopTrackingInfo {}
+
+export const hasShopTracking = (sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign): sign is ExtendedPrimarySign | ExtendedSecondarySign => {
+  return 'make' in sign && 'order' in sign && 'inStock' in sign;
+};
+
+export const isPrimarySignWithShopTracking = (sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign): sign is ExtendedPrimarySign => {
+  return !('primarySignId' in sign) && hasShopTracking(sign);
+};
+
+export const isSecondarySignWithShopTracking = (sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign): sign is ExtendedSecondarySign => {
+  return 'primarySignId' in sign && hasShopTracking(sign);
+};
