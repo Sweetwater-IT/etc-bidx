@@ -68,10 +68,11 @@ const SIGN_COLUMNS = [
 
 interface Props {
     currentPhase?: number
+    onlyTable?: boolean
 }
 
 
-export function SignOrderList({ currentPhase = 0 }: Props) {
+export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
 
     const { mptRental, dispatch } = useEstimate();
 
@@ -180,6 +181,7 @@ export function SignOrderList({ currentPhase = 0 }: Props) {
         setLocalSign(defaultSign)
     }
 
+
     const formatColumnValue = (sign: PrimarySign | SecondarySign, column: keyof PrimarySign) => {
         const isPrimary = !Object.hasOwn(sign, 'primarySignId')
 
@@ -225,13 +227,13 @@ export function SignOrderList({ currentPhase = 0 }: Props) {
 
     return (
         <div>
-            <div className="mb-4 flex items-center justify-between">
+            {!onlyTable && <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Sign List</h2>
                 <Button onClick={handleSignAddition}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Sign
                 </Button>
-            </div>
+            </div>}
             <div className="border rounded-md">
                 <Table >
                     <TableHeader className="bg-muted/50">
@@ -272,7 +274,7 @@ export function SignOrderList({ currentPhase = 0 }: Props) {
                                 <TableRow key={sign.id}>
                                     {SIGN_COLUMNS.map((sc, index) => (
                                         <TableCell key={sc.key}>
-                                            <div className="flex items-center">
+                                            <div className="flex items-center text-nowrap truncate max-w-50">
                                                 {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
                                                 {sc.key === 'actions' ? (<DropdownMenu>
                                                     <DropdownMenuTrigger
@@ -355,7 +357,7 @@ export function SignOrderList({ currentPhase = 0 }: Props) {
                 </Table>
             </div>
 
-            <div className="space-y-4 mt-4">
+            {!onlyTable && <><div className="space-y-4 mt-4">
                 {/* Add Custom Sign Form */}
                 {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
                 {localSign && <SignEditingSheet open={open} onOpenChange={handleClose} mode={mode} sign={localSign} />}
@@ -377,7 +379,7 @@ export function SignOrderList({ currentPhase = 0 }: Props) {
                         Total Square Footage: {squareFootageTotal.toFixed(2)}
                     </div>
                 </div>
-            </div>
+            </div></>}
         </div>
     );
 }

@@ -524,7 +524,7 @@ export const estimateReducer = (
 						// permSignBolts
 					}
 					break;
-				case 'resetTypeF': 
+				case 'resetTypeF':
 					defaultObjectToBeAdded = {
 						...defaultPMSRemoveF,
 						name: '0945-0001',
@@ -532,7 +532,7 @@ export const estimateReducer = (
 						// permSignBolts
 					}
 					break;
-				case 'removeTypeB': 
+				case 'removeTypeB':
 					defaultObjectToBeAdded = {
 						...defaultPMSRemoveB,
 						id: newPMSId
@@ -544,10 +544,10 @@ export const estimateReducer = (
 						id: newPMSId
 					}
 					break;
-				default: 
+				default:
 					defaultObjectToBeAdded = undefined;
-				}
-			if(!defaultObjectToBeAdded) return state;
+			}
+			if (!defaultObjectToBeAdded) return state;
 			else return {
 				...state,
 				permanentSigns: {
@@ -555,35 +555,35 @@ export const estimateReducer = (
 					signItems: [...state.permanentSigns.signItems, defaultObjectToBeAdded]
 				}
 			}
-			case "UPDATE_PERMANENT_SIGNS_ITEM":
-				if (!state.permanentSigns) return state;
-				const { signId : permanentSignIdToUpdate, field, value: fieldValue } = action.payload;
-				
-				return {
-					...state,
-					permanentSigns: {
-						...state.permanentSigns,
-						signItems: state.permanentSigns.signItems.map(pmsItem => {
-							if(pmsItem.id !== permanentSignIdToUpdate) return pmsItem;
-							return {
-								...pmsItem,
-								[field] : fieldValue
-							}
-						})
-					}
-				};
-			
-			case "DELETE_PERMANENT_SIGNS_ITEM":
-				if (!state.permanentSigns) return state;
-				const { signId : permanentSignIdToDelete } = action.payload;
-				
-				return {
-					...state,
-					permanentSigns: {
-						...state.permanentSigns,
-						signItems: state.permanentSigns.signItems.filter(pmsItem => pmsItem.id !== permanentSignIdToDelete)
-					}
-				};
+		case "UPDATE_PERMANENT_SIGNS_ITEM":
+			if (!state.permanentSigns) return state;
+			const { signId: permanentSignIdToUpdate, field, value: fieldValue } = action.payload;
+
+			return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					signItems: state.permanentSigns.signItems.map(pmsItem => {
+						if (pmsItem.id !== permanentSignIdToUpdate) return pmsItem;
+						return {
+							...pmsItem,
+							[field]: fieldValue
+						}
+					})
+				}
+			};
+
+		case "DELETE_PERMANENT_SIGNS_ITEM":
+			if (!state.permanentSigns) return state;
+			const { signId: permanentSignIdToDelete } = action.payload;
+
+			return {
+				...state,
+				permanentSigns: {
+					...state.permanentSigns,
+					signItems: state.permanentSigns.signItems.filter(pmsItem => pmsItem.id !== permanentSignIdToDelete)
+				}
+			};
 
 		case "ADD_SALE_ITEM":
 			return {
@@ -651,7 +651,7 @@ export const estimateReducer = (
 			const primarySignMap: Record<string, number> = {};
 			action.payload.phases.forEach(p => {
 				p.signs.forEach(s => {
-					if('primarySignId' in s) return;
+					if ('primarySignId' in s) return;
 					else {
 						primarySignMap[s.id] = s.quantity;
 					}
@@ -666,7 +666,7 @@ export const estimateReducer = (
 					endDate: p.endDate ? new Date(p.endDate) : null,
 					signs: p.signs.map(s => {
 						//add quantity based on primary sign
-						if('primarySignId' in s){
+						if ('primarySignId' in s) {
 							return {
 								...s,
 								quantity: primarySignMap[s.primarySignId]
@@ -710,7 +710,7 @@ export const estimateReducer = (
 				...state,
 				notes: action.payload
 			}
-		
+
 		case 'SET_RATES_ACKNOWLEDGED':
 			return {
 				...state,
@@ -727,12 +727,117 @@ export const estimateReducer = (
 				...state,
 				firstSaveTimestamp: action.payload
 			}
-		
+
 		case 'SET_ID':
 			return {
 				...state,
 				id: action.payload
 			}
+
+		case "UPDATE_SIGN_SHOP_TRACKING":
+			if (!state.mptRental) return state;
+
+			const { phaseNumber: shopPhase, signId : signShopId, field : shopField, value: shopValue } = action.payload;
+
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) => {
+						if (index === shopPhase) {
+							return {
+								...phase,
+								signs: phase.signs.map((sign) => {
+									if (sign.id === signShopId) {
+										// Ensure the sign has shop tracking properties
+										const extendedSign = {
+											...sign,
+											make: 'make' in sign ? (sign as any).make : 0,
+											order: 'order' in sign ? (sign as any).order : 0,
+											inStock: 'inStock' in sign ? (sign as any).inStock : 0,
+										};
+										return {
+											...extendedSign,
+											[shopField]: shopValue,
+										};
+									}
+									return sign;
+								}),
+							};
+						}
+						return phase;
+					}),
+				},
+			};
+
+		case "INITIALIZE_SHOP_TRACKING":
+			if (!state.mptRental) return state;
+
+			const { phaseNumber: initPhase, signId: initSignId, make = 0, order = 0, inStock = 0 } = action.payload;
+
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) => {
+						if (index === initPhase) {
+							return {
+								...phase,
+								signs: phase.signs.map((sign) => {
+									if (sign.id === initSignId && !('make' in sign)) {
+										return {
+											...sign,
+											make,
+											order,
+											inStock,
+										};
+									}
+									return sign;
+								}),
+							};
+						}
+						return phase;
+					}),
+				},
+			};
+
+		case "CONVERT_TO_SHOP_SIGNS":
+			if (!state.mptRental) return state;
+
+			const { phaseNumber: convertPhase, signsData } = action.payload;
+
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) => {
+						if (index === convertPhase) {
+							return {
+								...phase,
+								signs: phase.signs.map((sign) => {
+									const signData = signsData.find(s => s.id === sign.id);
+									if (signData) {
+										return {
+											...sign,
+											make: signData.make ?? 0,
+											order: signData.order ?? 0,
+											inStock: signData.inStock ?? 0,
+										};
+									}
+									// Initialize with defaults if not found in signsData
+									return {
+										...sign,
+										make: 0,
+										order: 0,
+										inStock: 0,
+									};
+								}),
+							};
+						}
+						return phase;
+					}),
+				},
+			};
 
 		default:
 			return state;

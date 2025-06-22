@@ -212,3 +212,34 @@ export type EstimateAction =
 	| { type: 'COPY_NOTES', payload: string}
 	| { type: 'SET_FIRST_SAVE', payload: number}
 	| { type: 'SET_ID', payload: number}
+	| {
+		type: "UPDATE_SIGN_SHOP_TRACKING";
+		payload: {
+		  phaseNumber: number;
+		  signId: string;
+		  field: 'make' | 'order' | 'inStock';
+		  value: number;
+		};
+	  }
+	| {
+		type: "INITIALIZE_SHOP_TRACKING";
+		payload: {
+		  phaseNumber: number;
+		  signId: string;
+		  make?: number;
+		  order?: number;
+		  inStock?: number;
+		};
+	  }
+	| {
+		type: "CONVERT_TO_SHOP_SIGNS";
+		payload: {
+		  phaseNumber: number;
+		  signsData: Array<{
+			id: string;
+			make?: number;
+			order?: number;
+			inStock?: number;
+		  }>;
+		};
+	  };
