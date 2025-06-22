@@ -3,7 +3,7 @@ import { EstimateAction } from "@/types/TEstimateAction";
 import { defaultMPTObject, defaultPhaseObject } from "@/types/default-objects/defaultMPTObject";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
+import { ExtendedPrimarySign, MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
 import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
 import { SetStateAction } from "react";
@@ -666,12 +666,19 @@ export const estimateReducer = (
 					endDate: p.endDate ? new Date(p.endDate) : null,
 					signs: p.signs.map(s => {
 						//add quantity based on primary sign
+						let additionalProperties : any = {}
+						if ('make' in s){
+							additionalProperties.make = (s as ExtendedPrimarySign).make;
+							additionalProperties.inStock = (s as ExtendedPrimarySign).inStock;
+							additionalProperties.order = (s as ExtendedPrimarySign).order
+						}
 						if ('primarySignId' in s) {
 							return {
 								...s,
-								quantity: primarySignMap[s.primarySignId]
+								quantity: primarySignMap[s.primarySignId],
+								...additionalProperties
 							}
-						} else return s;
+						} else return {...s, ...additionalProperties};
 					})
 				}))
 			}
@@ -800,45 +807,7 @@ export const estimateReducer = (
 					}),
 				},
 			};
-
-		case "CONVERT_TO_SHOP_SIGNS":
-			if (!state.mptRental) return state;
-
-			const { phaseNumber: convertPhase, signsData } = action.payload;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase, index) => {
-						if (index === convertPhase) {
-							return {
-								...phase,
-								signs: phase.signs.map((sign) => {
-									const signData = signsData.find(s => s.id === sign.id);
-									if (signData) {
-										return {
-											...sign,
-											make: signData.make ?? 0,
-											order: signData.order ?? 0,
-											inStock: signData.inStock ?? 0,
-										};
-									}
-									// Initialize with defaults if not found in signsData
-									return {
-										...sign,
-										make: 0,
-										order: 0,
-										inStock: 0,
-									};
-								}),
-							};
-						}
-						return phase;
-					}),
-				},
-			};
-
+			
 		default:
 			return state;
 	}

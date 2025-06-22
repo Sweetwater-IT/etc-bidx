@@ -1,174 +1,131 @@
 import ExcelJS from 'exceljs';
+import { ExtendedPrimarySign, ExtendedSecondarySign } from '@/types/MPTEquipment';
+import { SignOrder } from '@/types/TSignOrder';
 
-interface SignItem {
-  id: number;
-  designation: string;
-  description: string;
-  width: number;
-  height: number;
-  quantity: number;
-  sheeting: string;
-  stiffner: string;
-  assigned_to: string;
-  in_stock: number;
-  order: number;
-  make: number;
-  structure: string;
-  bLights: number;
-  covers: number;
-  substrate?: string;
-  targetDate?: string;
-  includeCover?: boolean;
-  includeStiffener?: boolean;
-  isCustom?: boolean;
-}
-
-interface SignOrder {
-  id: number;
-  requestor: string;
-  contractor_id: number;
-  contractors?: { name: string };
-  branch?: string;
-  order_date: string;
-  need_date: string;
-  start_date: string;
-  end_date: string;
-  job_number: string;
-  contract_number: string;
-  sale: boolean;
-  rental: boolean;
-  perm_signs: boolean;
-  status: string;
-  shop_status?: string;
-  assigned_to?: string;
-}
-
-// Add this import to your main component file:
-// import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel';
-
-export const exportSignOrderToExcel = async (signOrder: SignOrder, signItems: SignItem[]) => {
+export const exportSignOrderToExcel = async (signOrder: SignOrder, signItems: (ExtendedPrimarySign | ExtendedSecondarySign)[]) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Sign Order Summary');
+  const worksheet = workbook.addWorksheet('Sign Shop Order');
 
-  // Define column widths to match the screenshot
+  // Define columns with adjusted widths
   worksheet.columns = [
-    { key: 'designation', width: 15 },
-    { key: 'description', width: 25 },
-    { key: 'dimensions', width: 15 },
-    { key: 'qty', width: 8 },
-    { key: 'sheeting', width: 15 },
-    { key: 'substrate', width: 15 },
-    { key: 'stiffener', width: 15 }
+    { header: 'Designation', key: 'designation', width: 15 },
+    { header: 'Description', key: 'description', width: 25 },
+    { header: 'Width (in)', key: 'width', width: 12 },
+    { header: 'Height (in)', key: 'height', width: 12 },
+    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Sheeting', key: 'sheeting', width: 15 },
+    { header: 'Substrate', key: 'substrate', width: 15 },
+    { header: 'In Stock', key: 'inStock', width: 10 },
+    { header: 'Order', key: 'order', width: 10 },
+    { header: 'Make', key: 'make', width: 10 }
   ];
 
-  let currentRow = 1;
-
-  // Add main title
-  const titleRow = worksheet.getRow(currentRow);
-  titleRow.getCell(1).value = 'SIGN ORDER SUMMARY';
-  titleRow.getCell(1).font = { bold: true, size: 14 };
-  titleRow.getCell(1).alignment = { horizontal: 'center' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 7);
-  
-  // Add border around title
-  for (let col = 1; col <= 7; col++) {
-    titleRow.getCell(col).border = {
-      top: { style: 'thick' },
-      bottom: { style: 'thick' },
-      left: col === 1 ? { style: 'thick' } : undefined,
-      right: col === 7 ? { style: 'thick' } : undefined
-    };
-  }
-  
-  currentRow += 2;
-
-  // Helper function to add a section
-  const addSection = (sectionTitle: string, items: SignItem[]) => {
-    // Section title row
-    const sectionRow = worksheet.getRow(currentRow);
-    sectionRow.getCell(1).value = sectionTitle;
-    sectionRow.getCell(1).font = { bold: true, size: 12 };
-    sectionRow.getCell(1).alignment = { horizontal: 'center' };
-    worksheet.mergeCells(currentRow, 1, currentRow, 7);
-    
-    // Add border around section title
-    for (let col = 1; col <= 7; col++) {
-      sectionRow.getCell(col).border = {
-        top: { style: 'medium' },
-        bottom: { style: 'medium' },
-        left: col === 1 ? { style: 'thick' } : { style: 'thin' },
-        right: col === 7 ? { style: 'thick' } : { style: 'thin' }
-      };
-    }
-    
-    currentRow++;
-
-    // Header row
-    const headerRow = worksheet.getRow(currentRow);
-    const headers = ['DESIGNATION', 'DESCRIPTION', 'DIMENSIONS', 'QTY', 'SHEETING', 'SUBSTRATE', 'STIFFENER'];
-    headers.forEach((header, index) => {
-      const cell = headerRow.getCell(index + 1);
-      cell.value = header;
-      cell.font = { bold: true, size: 10 };
-      cell.alignment = { horizontal: 'center' };
-      cell.border = {
-        top: { style: 'thin' },
-        bottom: { style: 'thin' },
-        left: index === 0 ? { style: 'thick' } : { style: 'thin' },
-        right: index === headers.length - 1 ? { style: 'thick' } : { style: 'thin' }
-      };
+  // Filter and sort signs: inStock descending, then order descending, then make descending
+  const sortedSigns = signItems
+    .filter(sign => sign.designation !== '' && sign.quantity > 0) // Only include valid signs
+    .sort((a, b) => {
+      // First sort by inStock (descending - highest first)
+      if ((b.inStock || 0) !== (a.inStock || 0)) {
+        return (b.inStock || 0) - (a.inStock || 0);
+      }
+      // Then by order (descending - highest first)
+      if ((b.order || 0) !== (a.order || 0)) {
+        return (b.order || 0) - (a.order || 0);
+      }
+      // Finally by make (descending - highest first)
+      return (b.make || 0) - (a.make || 0);
     });
-    
-    currentRow++;
 
-    // Add data rows (minimum 10 rows for each section)
-    const minRows = 10;
-    const maxRows = Math.max(minRows, items.length);
-    
-    for (let i = 0; i < maxRows; i++) {
-      const dataRow = worksheet.getRow(currentRow);
-      const item = items[i];
-      
-      if (item) {
-        // Format dimensions as "width x height"
-        const dimensions = item.width && item.height ? `${item.width} x ${item.height}` : '';
-        
-        dataRow.getCell(1).value = item.designation || '';
-        dataRow.getCell(2).value = item.description || '';
-        dataRow.getCell(3).value = dimensions;
-        dataRow.getCell(4).value = item.quantity || '';
-        dataRow.getCell(5).value = item.sheeting || '';
-        dataRow.getCell(6).value = item.substrate || '';
-        dataRow.getCell(7).value = item.stiffner || '';
-      }
-      
-      // Add borders to all cells in the row
-      for (let col = 1; col <= 7; col++) {
-        const cell = dataRow.getCell(col);
-        cell.border = {
-          top: { style: 'thin' },
-          bottom: { style: 'thin' },
-          left: col === 1 ? { style: 'thick' } : { style: 'thin' },
-          right: col === 7 ? { style: 'thick' } : { style: 'thin' }
-        };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      }
-      
-      currentRow++;
+  // Process each sign (both primary and secondary)
+  sortedSigns.forEach(sign => {
+    // Add sign row
+    const row = worksheet.addRow({
+      designation: sign.designation,
+      description: sign.description,
+      width: Number(sign.width),
+      height: Number(sign.height),
+      quantity: sign.quantity,
+      sheeting: sign.sheeting,
+      substrate: sign.substrate || '',
+      inStock: sign.inStock || 0,
+      order: sign.order || 0,
+      make: sign.make || 0
+    });
+
+    // If it's a secondary sign, indent the designation
+    if ('primarySignId' in sign) {
+      const designationCell = row.getCell('designation');
+      designationCell.alignment = { indent: 1 };
     }
-    
-    currentRow++; // Add space between sections
+  });
+
+  // Add totals row
+  const totals = sortedSigns.reduce((acc, sign) => ({
+    totalSigns: acc.totalSigns + 1,
+    totalQuantity: acc.totalQuantity + (sign.quantity || 0),
+    totalInStock: acc.totalInStock + (sign.inStock || 0),
+    totalOrder: acc.totalOrder + (sign.order || 0),
+    totalMake: acc.totalMake + (sign.make || 0)
+  }), { totalSigns: 0, totalQuantity: 0, totalInStock: 0, totalOrder: 0, totalMake: 0 });
+
+  // Add spacing before totals
+  worksheet.addRow({});
+
+  const totalRow = worksheet.addRow({
+    designation: 'TOTALS',
+    quantity: totals.totalQuantity,
+    inStock: totals.totalInStock,
+    order: totals.totalOrder,
+    make: totals.totalMake
+  });
+  totalRow.font = { bold: true };
+  totalRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE4E4E4' }
   };
 
-  // Filter items by category
-  const inStockItems = signItems.filter(item => item.in_stock > 0);
-  const manufactureItems = signItems.filter(item => item.make > 0);
-  const onOrderItems = signItems.filter(item => item.order > 0);
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF8F9FA' }
+  };
 
-  // Add sections
-  addSection('IN STOCK', inStockItems);
-  addSection('MANUFACTURE', manufactureItems);
-  addSection('ON ORDER', onOrderItems);
+  // Ensure numbers are displayed as numbers, not text
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) { // Skip header row
+      ['width', 'height', 'quantity', 'inStock', 'order', 'make'].forEach(key => {
+        const cell = row.getCell(key);
+        const value = cell.value;
+        
+        // Convert numeric strings to actual numbers
+        if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
+          cell.value = Number(value);
+        }
+      });
+    }
+  });
+
+  // Add borders to all cells
+  worksheet.eachRow((row, rowNumber) => {
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      
+      // Center align numeric columns
+      if (['width', 'height', 'quantity', 'inStock', 'order', 'make'].includes(worksheet.getColumn(colNumber).key as string)) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      } else {
+        cell.alignment = { vertical: 'middle' };
+      }
+    });
+  });
 
   // Set row heights for better appearance
   worksheet.eachRow((row) => {
@@ -178,22 +135,7 @@ export const exportSignOrderToExcel = async (signOrder: SignOrder, signItems: Si
   // Generate filename
   const jobNumber = signOrder.job_number || 'Unknown';
   const contractNumber = signOrder.contract_number || 'Unknown';
-  const filename = `${jobNumber}_${contractNumber}_sign_order_summary.xlsx`;
-
-  // Update your handleExport function in the main component:
-  const handleExport = async () => {
-    if (!signOrder) {
-      alert('No sign order data available for export');
-      return;
-    }
-    
-    try {
-      await exportSignOrderToExcel(signOrder, signItems);
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      alert('Failed to export Excel file');
-    }
-  };
+  const filename = `${jobNumber}_${contractNumber}_sign_shop_order.xlsx`;
 
   // Export the file
   const buffer = await workbook.xlsx.writeBuffer();

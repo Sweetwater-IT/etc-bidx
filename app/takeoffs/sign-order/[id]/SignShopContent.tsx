@@ -16,27 +16,7 @@ import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-
-const generateOrderMakeText = (items: (ExtendedPrimarySign | ExtendedSecondarySign)[]): string => {
-    const itemsWithQuantities = items.filter(item => item.order > 0 || item.make > 0)
-    if (itemsWithQuantities.length === 0) return ''
-
-    const parts: any[] = []
-
-    for (const item of itemsWithQuantities) {
-        if (item.order > 0) {
-            parts.push(`order ${item.order} ${item.designation}`)
-        }
-        if (item.make > 0) {
-            parts.push(`make ${item.make} ${item.designation}`)
-        }
-    }
-
-    if (parts.length === 1) return parts[0]
-
-    const lastPart = parts.pop()
-    return `${parts.join(', ')} and ${lastPart}`
-}
+import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
 
 interface Props {
     id: number
@@ -53,7 +33,18 @@ const SignShopContent = ({ id }: Props) => {
 
     // Get signs with shop tracking from context
     const getShopSigns = (): (ExtendedPrimarySign | ExtendedSecondarySign)[] => {
-        return mptRental.phases[0].signs.filter(hasShopTracking) as (ExtendedPrimarySign | ExtendedSecondarySign)[];
+        return mptRental.phases[0].signs.map(sign => {
+            // Ensure all signs have shop tracking properties
+            if (!hasShopTracking(sign)) {
+                return {
+                    ...sign,
+                    make: 0,
+                    order: 0,
+                    inStock: 0
+                } as ExtendedPrimarySign | ExtendedSecondarySign;
+            }
+            return sign as ExtendedPrimarySign | ExtendedSecondarySign;
+        });
     };
 
     // Function to show confirmation dialog before saving changes
@@ -62,63 +53,68 @@ const SignShopContent = ({ id }: Props) => {
         setShowConfirmDialog(true)
     }
 
+    const handleExport = () => {
+        if(!signOrder) return;
+        exportSignOrderToExcel(signOrder, mptRental.phases[0].signs as (ExtendedPrimarySign | ExtendedSecondarySign)[])
+    }
+
     const confirmSaveChanges = async () => {
         if (!signOrder) return
-
+    
         try {
-            startLoading();
-
-            const shopSigns = getShopSigns();
-
-            // Convert the sign items array to the expected signs object format
-            const signsObject = shopSigns.reduce((acc, item) => {
-                acc[item.id.toString()] = {
-                    designation: item.designation,
-                    description: item.description,
-                    width: item.width,
-                    height: item.height,
-                    quantity: item.quantity,
-                    sheeting: item.sheeting,
-                    stiffener: 'stiffener' in item ? item.stiffener : undefined,
-                    in_stock: item.inStock,
-                    order: item.order,
-                    make: item.make,
-                    substrate: item.substrate,
-                    cover: 'cover' in item ? item.cover : undefined
-                }
-                return acc
-            }, {})
-
-            // Update the sign order in the database
-            const response = await fetch(`/api/sign-orders/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    signs: signsObject,
-                    shop_status: signOrder.shop_status || 'not-started'
-                })
-            })
-
-            const result = await response.json()
-
-            if (!result.success) {
-                throw new Error(result.message || 'Failed to update sign order')
+          startLoading();
+    
+          const shopSigns = getShopSigns();
+    
+          // Convert the sign items array to the expected signs object format
+          const signsObject = shopSigns.reduce((acc, item) => {
+            acc[item.id.toString()] = {
+              designation: item.designation,
+              description: item.description,
+              width: item.width,
+              height: item.height,
+              quantity: item.quantity,
+              sheeting: item.sheeting,
+              stiffener: 'stiffener' in item ? item.stiffener : undefined,
+              in_stock: item.inStock,
+              order: item.order,
+              make: item.make,
+              substrate: item.substrate,
+              cover: 'cover' in item ? item.cover : undefined
             }
-
-            stopLoading()
-            setShowConfirmDialog(false)
-
-            // Show success message
-            toast.success('Changes saved successfully!')
+            return acc
+          }, {})
+    
+          // Update the sign order in the database
+          const response = await fetch(`/api/sign-orders/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              signs: signsObject,
+              shop_status: signOrder.shop_status || 'not-started'
+            })
+          })
+    
+          const result = await response.json()
+    
+          if (!result.success) {
+            throw new Error(result.message || 'Failed to update sign order')
+          }
+    
+          stopLoading()
+          setShowConfirmDialog(false)
+    
+          // Show success message
+          toast.success('Changes saved successfully!')
         } catch (error: any) {
-            console.error('Error updating sign order:', error)
-            stopLoading()
-            setShowConfirmDialog(false)
-            alert(`Failed to save changes: ${error?.message || 'Unknown error'}`)
+          console.error('Error updating sign order:', error)
+          stopLoading()
+          setShowConfirmDialog(false)
+          toast.error(`Failed to save changes: ${error?.message || 'Unknown error'}`)
         }
-    }
+      }
 
     // Helper function to update shop tracking values
     const updateShopTracking = (signId: string, field: 'make' | 'order' | 'inStock', value: number) => {
@@ -207,15 +203,6 @@ const SignShopContent = ({ id }: Props) => {
                             }
                         });
 
-                        // Then convert to shop signs with tracking properties
-                        dispatch({
-                            type: 'CONVERT_TO_SHOP_SIGNS',
-                            payload: {
-                                phaseNumber: 0,
-                                signsData: signsDataForShop
-                            }
-                        });
-
                     } catch (error) {
                         toast.error('Error parsing signs data:' + error)
                         console.error('Error parsing signs data:', error)
@@ -255,7 +242,7 @@ const SignShopContent = ({ id }: Props) => {
             make: 0,
             bLights: 0,
             cover: false,
-            substrate: 'Aluminum',
+            substrate: 'Plastic',
         };
 
         dispatch({
@@ -344,7 +331,7 @@ const SignShopContent = ({ id }: Props) => {
                             Submit Order
                         </Button>
                         <Button variant='outline'
-                        // onClick={handleExport}
+                        onClick={handleExport}
                         >
                             Export
                         </Button>

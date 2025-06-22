@@ -97,19 +97,6 @@ const StepsMain = () => {
             <div className="mb-4 flex justify-between items-center">
               <div></div>
               <div className="flex items-center gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      {/* Reduced width for better proportions */}
-                      <AddPhaseButton
-                        setCurrentPhase={setCurrentPhase}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add a New Phase to the Bid</p>
-                  </TooltipContent>
-                </Tooltip>
                 <div className="flex items-center gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -173,6 +160,7 @@ const StepsMain = () => {
                 {renderStepWithoutNavigation(
                   <BidItemsStep5
                     currentPhase={currentPhase}
+                    setCurrentPhase={setCurrentPhase}
                     setIsViewSummaryOpen={setIsViewSummaryOpen}
                   />
                 )}
