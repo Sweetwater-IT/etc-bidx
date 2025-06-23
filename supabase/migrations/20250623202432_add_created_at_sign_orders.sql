@@ -1,0 +1,1 @@
+ALTER TABLE sign_orders ADD COLUMN created_at TIMESTAMPZ DEFAULT NOW();
