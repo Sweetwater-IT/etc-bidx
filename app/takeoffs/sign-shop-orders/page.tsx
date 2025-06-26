@@ -27,7 +27,7 @@ const SIGN_ORDER_COLUMNS = [
   { key: "assigned_to", title: "Assigned to" },
   { key: "contract_number", title: "Contract Number" },
   { key: "job_number", title: "Job Number" },
-  { key: "shop_status", title: "Shop Status" },
+  { key: "shop_status", title: "Build Status" },
   { key: 'created_at', title: 'Created At'}
 ];
 
@@ -247,11 +247,7 @@ export default function SignOrderPage() {
             branch: order.branch || '-',
             assigned_to: order.assigned_to || 'Unassigned',
             type: order.type || '-',
-            shop_status: order.shop_status === 'not-started' ? 'Not Started' : 
-                        order.shop_status === 'in-progress' ? 'In Progress' : 
-                        order.shop_status === 'complete' ? 'Complete' : 
-                        order.shop_status === 'on-hold' ? 'On Hold' : 
-                        order.shop_status || 'Not Started',
+            shop_status: order.shop_status || 'not-started',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
           }));

@@ -20,7 +20,7 @@ import { fetchReferenceData } from "@/lib/api-client";
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
   { key: "requestor", title: "Requestor" },
-  { key: "shop_status", title: "Shop Status" },
+  { key: "shop_status", title: "Build Status" },
   { key: "branch", title: "Branch" }, // Computed field
   { key: "customer", title: "Customer" }, // Computed field
   { key: "order_date", title: "Order date" },
@@ -247,11 +247,7 @@ export default function SignOrderPage() {
             branch: order.branch || '-',
             assigned_to: order.assigned_to || 'Unassigned',
             type: order.type || '-',
-            shop_status: order.shop_status === 'not-started' ? 'Not Started' : 
-                        order.shop_status === 'in-progress' ? 'In Progress' : 
-                        order.shop_status === 'complete' ? 'Complete' : 
-                        order.shop_status === 'on-hold' ? 'On Hold' : 
-                        order.shop_status || 'Not Started',
+            shop_status: order.shop_status || 'not-started',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
           }));
@@ -604,6 +600,7 @@ export default function SignOrderPage() {
                 stickyLastColumn
                 onEdit={handleEdit}
                 onViewDetails={handleViewDetails}
+                onArchive={(row) => initiateArchiveOrders([row])}
                 // Selection props
                 onArchiveSelected={initiateArchiveOrders}
                 onDeleteSelected={initiateDeleteOrders}

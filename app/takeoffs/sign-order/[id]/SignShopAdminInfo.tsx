@@ -1,5 +1,5 @@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dropzone } from '@/components/ui/dropzone'
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectItem, SelectContent } from '@/components/ui/select'
@@ -157,7 +157,13 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
                                     Shop Status
                                 </div>
                                 <div className='text-base mt-1'>
-                                    {signOrder.shop_status?.replace('-', ' ').toUpperCase() ?? '-'}
+                                    {signOrder.shop_status === 'not-started' ? 'Not Started' : 
+                                     signOrder.shop_status === 'in-progress' ? 'In-Process' : 
+                                     signOrder.shop_status === 'in-process' ? 'In-Process' : 
+                                     signOrder.shop_status === 'complete' ? 'Complete' : 
+                                     signOrder.shop_status === 'on-hold' ? 'On Hold' : 
+                                     signOrder.shop_status === 'on-order' ? 'On Order' :
+                                     signOrder.shop_status || '-'}
                                 </div>
                             </div>
 
@@ -173,7 +179,10 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
                     </div>
 
                     {/* Upload Files - Takes 1/3 of the row */}
-                    <Dropzone {...fileUploadProps} />
+                    <Dropzone {...fileUploadProps}>
+                        <DropzoneEmptyState />
+                        <DropzoneContent />
+                    </Dropzone>
                 </div>
             </div>
 

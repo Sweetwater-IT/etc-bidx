@@ -23,7 +23,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
   const structureMapping = {
     hStand: 'H Stand',
     none: 'None',
-    fourFootTypeIII: 'Four Foot Type III',
+    fourFootTypeIII: '4\' Type III',
     post: 'Post'
   };
 
@@ -105,7 +105,7 @@ export const exportSignListToExcel = async (contractNumber: string, mptRental: M
     const structureRow = worksheet.addRow({
       phase: `Phase ${phaseIndex + 1} Structure Totals`,
     });
-    structureRow.getCell('sheeting').value = `Four Foot Type III: ${structureTotals.fourFootTypeIII} | Post: ${structureTotals.post} | H Stand: ${structureTotals.hStand}`;
+    structureRow.getCell('sheeting').value = `4' Type III: ${structureTotals.fourFootTypeIII} | Post: ${structureTotals.post} | H Stand: ${structureTotals.hStand}`;
     structureRow.font = { bold: true };
 
     // Add spacing between phases

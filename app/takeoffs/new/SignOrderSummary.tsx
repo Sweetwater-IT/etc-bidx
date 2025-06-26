@@ -34,7 +34,7 @@ const standardEquipmentList: EquipmentType[] = [
 ];
 
 const labelMapping: Record<string, string> = {
-    fourFootTypeIII: "Four Foot Type III",
+    fourFootTypeIII: "4' Type III",
     hStand: "H Stand",
     post: "Post",
     sandbag: "Sandbags",

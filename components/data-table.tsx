@@ -229,7 +229,16 @@ function formatCellValue(value: any, key: string) {
 
     return (
       <Badge variant={variant} className={`font-medium ${variant === 'warning' && 'text-black'}`}>
-        {(key === 'projectStatus' || key === 'billingStatus') ? value.replace('_', ' ') : value}
+        {(key === 'projectStatus' || key === 'billingStatus') ? value.replace('_', ' ') : 
+         key === 'shop_status' ? (
+           value === 'not-started' ? 'Not Started' :
+           value === 'in-progress' ? 'In-Process' :
+           value === 'in-process' ? 'In-Process' :
+           value === 'complete' ? 'Complete' :
+           value === 'on-hold' ? 'On Hold' :
+           value === 'on-order' ? 'On Order' :
+           value
+         ) : value}
       </Badge>
     );
   }
@@ -642,7 +651,7 @@ export function DataTable<TData extends object>({
                     >
                       Delete
                     </DropdownMenuItem>
-                  )}
+                  )} */}
 
                   {segmentValue !== "archived" && onArchiveSelected && (
                     <DropdownMenuItem
@@ -651,7 +660,7 @@ export function DataTable<TData extends object>({
                     >
                       Archive
                     </DropdownMenuItem>
-                  )} */}
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
