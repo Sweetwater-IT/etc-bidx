@@ -125,7 +125,7 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
                                                 Not Started
                                             </SelectItem>
                                             <SelectItem value='in-process'>
-                                                In Process
+                                                In-Process
                                             </SelectItem>
                                             <SelectItem value='on-order'>
                                                 On Order

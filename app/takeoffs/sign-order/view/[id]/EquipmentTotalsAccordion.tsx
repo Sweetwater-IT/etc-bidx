@@ -13,23 +13,54 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, MoreVertical, Pencil } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { EquipmentType, labelMapping, lightAndDrumList, standardEquipmentList } from "@/types/MPTEquipment";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
 import { safeNumber } from "@/lib/safe-number";
+
+interface AssociatedSignTotals {
+  fourFootTypeIII: number;
+  hStand: number;
+  post: number;
+  covers: number;
+  BLights: number;
+  ACLights: number;
+}
 
 const EquipmentTotalsAccordion = () => {
 
   const { mptRental, dispatch } = useEstimate();
 
   const [editingMode, setEditingMode] = useState<boolean>(false);
+  const [equipmentTotals, setEquipmentTotals] = useState<AssociatedSignTotals>({
+    fourFootTypeIII: 0,
+    hStand: 0,
+    post: 0,
+    covers: 0,
+    BLights: 0,
+    ACLights: 0
+  });
+  
+  // Calculate equipment totals whenever mptRental changes
+  useEffect(() => {
+    console.log('EquipmentTotalsAccordion useEffect - mptRental:', mptRental);
+    console.log('EquipmentTotalsAccordion useEffect - phases:', mptRental?.phases);
+    console.log('EquipmentTotalsAccordion useEffect - phase[0] signs:', mptRental?.phases?.[0]?.signs);
+    
+    if (mptRental?.phases?.[0]) {
+      const equipTotals = getAssociatedSignEquipment(mptRental.phases[0]);
+      console.log('EquipmentTotalsAccordion useEffect - calculated equipment totals:', equipTotals);
+      setEquipmentTotals(equipTotals);
+    }
+  }, [mptRental?.phases?.[0]?.signs]); // Re-run when signs change
 
   const handleEditClick = () => {
     setEditingMode(!editingMode)
   };
 
   const handleDecrement = (item: EquipmentType) => {
+    if (!mptRental?.phases?.[0]?.standardEquipment?.[item]) return;
     const currentQuantity = mptRental.phases[0].standardEquipment[item].quantity;
     
     // For sign-related equipment, check if we can decrement below minimum required
@@ -78,8 +109,7 @@ const EquipmentTotalsAccordion = () => {
 
   const getMin = (item: EquipmentType): number => {
     if (item === 'fourFootTypeIII' || item === 'hStand' || item === 'post' || item === 'covers' || item === 'BLights') {
-      const equipTotals = getAssociatedSignEquipment(mptRental.phases[0]);
-      return equipTotals[item] || 0;
+      return equipmentTotals[item as keyof AssociatedSignTotals] || 0;
     } 
     return 0;
   };
@@ -131,7 +161,7 @@ const EquipmentTotalsAccordion = () => {
                       <input
                         type="number"
                         min={getMin(item)}
-                        value={mptRental.phases[0].standardEquipment[item]?.quantity ?? 0}
+                        value={mptRental?.phases?.[0]?.standardEquipment?.[item]?.quantity ?? 0}
                         onChange={(e) => {
                           handleQuantityChange(item, safeNumber(parseInt(e.target.value)));
                         }}
@@ -142,6 +172,7 @@ const EquipmentTotalsAccordion = () => {
                         type="button"
                         className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
                         onClick={() => {
+                          if (!mptRental?.phases?.[0]?.standardEquipment?.[item]) return;
                           dispatch({
                             type: 'ADD_MPT_ITEM_NOT_SIGN',
                             payload: {
@@ -158,7 +189,12 @@ const EquipmentTotalsAccordion = () => {
                       </button>
                     </div>
                   </div>
-                    : <span>{mptRental.phases[0].standardEquipment[item].quantity}</span>}
+                    : <span>Qty: {
+                      // For equipment tied to signs, show the calculated minimum
+                      (item === 'fourFootTypeIII' || item === 'hStand' || item === 'post' || item === 'covers' || item === 'BLights') 
+                        ? Math.max(equipmentTotals[item as keyof AssociatedSignTotals] || 0, mptRental?.phases?.[0]?.standardEquipment?.[item]?.quantity ?? 0)
+                        : mptRental?.phases?.[0]?.standardEquipment?.[item]?.quantity ?? 0
+                    }</span>}
                 </div>
               )
               )}

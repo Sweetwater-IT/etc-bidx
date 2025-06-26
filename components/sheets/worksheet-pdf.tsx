@@ -640,7 +640,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
     const structureMapping = {
       hStand: 'H Stand',
       none: 'None',
-      fourFootTypeIII: 'Four Foot Type III',
+      fourFootTypeIII: '4\' Type III',
       post: 'Post'
     };
 
@@ -781,7 +781,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     Phase {phaseIndex + 1} Structure Totals
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
-                    Four Foot Type III: {getAssociatedSignEquipment(phase).fourFootTypeIII} |
+                    4&apos; Type III: {getAssociatedSignEquipment(phase).fourFootTypeIII} |
                     Post: {getAssociatedSignEquipment(phase).post} |
                     H Stand: {getAssociatedSignEquipment(phase).hStand}
                   </Text>

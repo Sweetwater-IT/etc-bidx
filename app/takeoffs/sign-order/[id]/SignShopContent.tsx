@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
+import { useRouter } from 'next/navigation'
+import '@/components/pages/active-bid/signs/no-spinner.css'
 
 interface Props {
     id: number
@@ -25,6 +27,7 @@ interface Props {
 const SignShopContent = ({ id }: Props) => {
 
     const { mptRental, dispatch } = useEstimate();
+    const router = useRouter();
 
     const [signOrder, setSignOrder] = useState<SignOrder>()
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -93,7 +96,9 @@ const SignShopContent = ({ id }: Props) => {
             },
             body: JSON.stringify({
               signs: signsObject,
-              shop_status: signOrder.shop_status || 'not-started'
+              shop_status: signOrder.shop_status || 'not-started',
+              assigned_to: signOrder.assigned_to,
+              target_date: signOrder.target_date
             })
           })
     
@@ -108,6 +113,9 @@ const SignShopContent = ({ id }: Props) => {
     
           // Show success message
           toast.success('Changes saved successfully!')
+          
+          // Redirect to view page
+          router.push(`/takeoffs/sign-order/view/${id}`)
         } catch (error: any) {
           console.error('Error updating sign order:', error)
           stopLoading()
@@ -364,122 +372,15 @@ const SignShopContent = ({ id }: Props) => {
                                 </Button>
                             </div>
                         </div>
-                        {shopSigns.length > 0 && <div className='max-w-full flex gap-x-2 overflow-x-scroll'>
-                            <div className='border rounded-md'>
-                                <Table className='rounded-md overflow-hidden'>
-                                    <TableHeader className='rounded-t-md'>
-                                        <TableRow className='bg-gray-50 text-sm font-medium text-gray-600'>
-                                            <TableHead className='border text-left'>Designation</TableHead>
-                                            <TableHead className='border text-left'>In Stock</TableHead>
-                                            <TableHead className='border text-left'>Order</TableHead>
-                                            <TableHead className='border text-left'>Make</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {shopSigns.map((item) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell className='border'>{item.designation}</TableCell>
-                                                <TableCell className='border'>
-                                                    <div className='flex items-center'>
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'inStock', -1)}
-                                                        >
-                                                            -
-                                                        </Button>
-                                                        <Input
-                                                            type='number'
-                                                            value={item.inStock || 0}
-                                                            onChange={e => {
-                                                                const value = parseInt(e.target.value)
-                                                                const newValue = isNaN(value) ? 0 : Math.max(0, value)
-                                                                updateShopTracking(item.id, 'inStock', newValue)
-                                                            }}
-                                                            className='h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs'
-                                                            min={0}
-                                                        />
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'inStock', 1)}
-                                                        >
-                                                            +
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className='border p-2'>
-                                                    <div className='flex items-center'>
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'order', -1)}
-                                                        >
-                                                            -
-                                                        </Button>
-                                                        <Input
-                                                            type='number'
-                                                            value={item.order || 0}
-                                                            onChange={e => {
-                                                                const value = parseInt(e.target.value)
-                                                                const newValue = isNaN(value) ? 0 : Math.max(0, value)
-                                                                updateShopTracking(item.id, 'order', newValue)
-                                                            }}
-                                                            className='h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs'
-                                                            min={0}
-                                                        />
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'order', 1)}
-                                                        >
-                                                            +
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className='border p-2'>
-                                                    <div className='flex items-center'>
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'make', -1)}
-                                                        >
-                                                            -
-                                                        </Button>
-                                                        <Input
-                                                            type='number'
-                                                            value={item.make || 0}
-                                                            onChange={e => {
-                                                                const value = parseInt(e.target.value)
-                                                                const newValue = isNaN(value) ? 0 : Math.max(0, value)
-                                                                updateShopTracking(item.id, 'make', newValue)
-                                                            }}
-                                                            className='h-8 rounded-none text-center w-12 min-w-[2rem] px-0 text-xs'
-                                                            min={0}
-                                                        />
-                                                        <Button
-                                                            type='button'
-                                                            variant='outline'
-                                                            className='h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200'
-                                                            onClick={() => adjustShopValue(item.id, 'make', 1)}
-                                                        >
-                                                            +
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                            <div className='max-w-full overflow-x-auto'>
-                                <SignOrderList currentPhase={0} onlyTable={true} />
-                            </div>
+                        {shopSigns.length > 0 && <div className='max-w-full overflow-x-auto'>
+                            <SignOrderList 
+                                currentPhase={0} 
+                                onlyTable={true} 
+                                shopMode={true}
+                                shopSigns={shopSigns}
+                                updateShopTracking={updateShopTracking}
+                                adjustShopValue={adjustShopValue}
+                            />
                         </div>}
                     </div>
                 </div>

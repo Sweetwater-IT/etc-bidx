@@ -1,25 +1,40 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChevronRight, MoreHorizontalIcon, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import AddSignControl from "@/components/pages/active-bid/signs/add-sign-control";
-import SignList from "@/components/pages/active-bid/signs/sign-list";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import { returnSignTotalsSquareFootage } from "@/lib/mptRentalHelperFunctions";
-import { DataTable } from "@/components/data-table";
-import { EquipmentType, PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { EquipmentType, PrimarySign, SecondarySign, ExtendedPrimarySign, ExtendedSecondarySign } from "@/types/MPTEquipment";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import SignEditingSheet from "./SignEditingSheet";
 import { safeNumber } from "@/lib/safe-number";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import '@/components/pages/active-bid/signs/no-spinner.css';
 
 const SIGN_COLUMNS = [
     {
         key: 'designation',
         title: 'Designation'
+    },
+    {
+        key: 'inStock',
+        title: 'In Stock',
+        shopOnly: true
+    },
+    {
+        key: 'order',
+        title: 'Order',
+        shopOnly: true
+    },
+    {
+        key: 'make',
+        title: 'Make',
+        shopOnly: true
     },
     {
         key: 'description',
@@ -35,7 +50,8 @@ const SIGN_COLUMNS = [
     },
     {
         key: 'quantity',
-        title: 'Quantity'
+        title: 'Quantity',
+        centered: true
     },
     {
         key: 'sheeting',
@@ -71,10 +87,21 @@ const SIGN_COLUMNS = [
 interface Props {
     currentPhase?: number
     onlyTable?: boolean
+    shopMode?: boolean
+    shopSigns?: (ExtendedPrimarySign | ExtendedSecondarySign)[]
+    updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void
+    adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void
 }
 
 
-export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
+export function SignOrderList({ 
+    currentPhase = 0, 
+    onlyTable = false, 
+    shopMode = false,
+    shopSigns,
+    updateShopTracking,
+    adjustShopValue
+}: Props) {
 
     const { mptRental, dispatch } = useEstimate();
 
@@ -266,7 +293,7 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
     }, [mptRental.phases[currentPhase].signs])
 
 
-    const formatColumnValue = (sign: PrimarySign | SecondarySign, column: keyof PrimarySign) => {
+    const formatColumnValue = (sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign, column: keyof PrimarySign) => {
         const isPrimary = !Object.hasOwn(sign, 'primarySignId')
 
         let valueToReturn: any;
@@ -322,17 +349,22 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
-                            {SIGN_COLUMNS.map(sc => (
-                                <TableHead key={sc.key}>
-                                    {sc.title}
-                                </TableHead>
-                            ))}
+                            {SIGN_COLUMNS
+                                .filter(sc => shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)
+                                .map(sc => (
+                                    <TableHead 
+                                        key={sc.key}
+                                        className={(sc.shopOnly || sc.centered) ? 'text-center' : ''}
+                                    >
+                                        {sc.title}
+                                    </TableHead>
+                                ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mptRental.phases[currentPhase].signs
+                        {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
                             .filter(s => s.designation !== '')
-                            .reduce((acc: (PrimarySign | SecondarySign)[], sign) => {
+                            .reduce((acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[], sign) => {
                                 if ('primarySignId' in sign) {
                                     // It's a secondary sign - find its primary and insert after it
                                     const primaryIndex = acc.findIndex(s => s.id === sign.primarySignId);
@@ -356,11 +388,52 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
                             }, [])
                             .map(sign => (
                                 <TableRow key={sign.id}>
-                                    {SIGN_COLUMNS.map((sc, index) => (
-                                        <TableCell className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''} key={sc.key}>
-                                            <div className="flex items-center text-nowrap truncate max-w-50">
-                                                {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
-                                                {sc.key === 'quantity' ? Object.hasOwn(sign, 'primarySignId') ? formatColumnValue(sign, 'quantity') :
+                                    {SIGN_COLUMNS
+                                        .filter(sc => shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)
+                                        .map((sc, index) => {
+                                            // Skip shop-only columns if not in shop mode
+                                            if (!shopMode && sc.shopOnly) return null;
+                                            
+                                            return (
+                                                <TableCell className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''} key={sc.key}>
+                                                    <div className="flex items-center text-nowrap truncate max-w-50">
+                                                        {Object.hasOwn(sign, 'primarySignId') && index === 0 && <ChevronRight className="inline h-6 text-muted-foreground" />}
+                                                        
+                                                        {/* Shop tracking columns */}
+                                                        {shopMode && (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
+                                                            <div className='flex items-center'>
+                                                                <Button
+                                                                    type='button'
+                                                                    variant='outline'
+                                                                    className='h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200'
+                                                                    onClick={() => adjustShopValue && adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', -1)}
+                                                                >
+                                                                    -
+                                                                </Button>
+                                                                <Input
+                                                                    type='number'
+                                                                    value={(sign as any)[sc.key] || 0}
+                                                                    onChange={e => {
+                                                                        const value = parseInt(e.target.value)
+                                                                        const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value))
+                                                                        if (updateShopTracking) {
+                                                                            updateShopTracking(sign.id, sc.key as 'inStock' | 'order' | 'make', newValue)
+                                                                        }
+                                                                    }}
+                                                                    className='h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner'
+                                                                    min={0}
+                                                                    max={999}
+                                                                />
+                                                                <Button
+                                                                    type='button'
+                                                                    variant='outline'
+                                                                    className='h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200'
+                                                                    onClick={() => adjustShopValue && adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', 1)}
+                                                                >
+                                                                    +
+                                                                </Button>
+                                                            </div>
+                                                        ) : sc.key === 'quantity' ? Object.hasOwn(sign, 'primarySignId') ? formatColumnValue(sign, 'quantity') :
                                                     <div className="inline-flex items-center">
                                                         <button
                                                             type="button"
@@ -373,12 +446,15 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
                                                         <input
                                                             type="number"
                                                             min={0}
+                                                            max={999}
                                                             value={sign.quantity}
                                                             onChange={(e) => {
-                                                                handleQuantityChange(sign.id, safeNumber(parseInt(e.target.value)));
+                                                                const value = parseInt(e.target.value);
+                                                                const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
+                                                                handleQuantityChange(sign.id, safeNumber(newValue));
                                                             }}
-                                                            className="no-spinner w-12 px-2 py-1 border rounded text-center bg-background !border-none"
-                                                            style={{ width: 48, height: 28 }}
+                                                            className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
+                                                            style={{ width: 40, height: 28 }}
                                                         />
                                                         <button
                                                             type="button"
@@ -460,10 +536,24 @@ export function SignOrderList({ currentPhase = 0, onlyTable = false }: Props) {
                                                                 Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
-                                                    </DropdownMenu>) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
-                                            </div>
-                                        </TableCell>
-                                    ))}
+                                                    </DropdownMenu>) : sc.key === 'description' ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className="cursor-pointer truncate block">
+                                                                        {formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="max-w-xs">{sign.description || 'No description'}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                                    </div>
+                                                </TableCell>
+                                            );
+                                        })}
                                 </TableRow>
                             ))}
                     </TableBody>
