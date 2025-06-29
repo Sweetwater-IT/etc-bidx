@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { fetchReferenceData } from "@/lib/api-client";
 import { isEquipmentType } from "@/lib/is-rental-equipment";
+import EmptyContainer from "./empty-container";
 
 interface StaticPriceData {
   usefulLife: number;
@@ -119,8 +120,12 @@ const EquipmentSummaryStep = () => {
 
   return (
     <div>
+      <h3 className="text-xl text-black font-semibold text-left pb-2 border-b mb-6">
+        Rental Equipment
+      </h3>
       <div className="relative">
         {/* Equipment List */}
+        {equipmentRental.length === 0 && <EmptyContainer topText="No rental items added yet" subtext="When you add rental items, they will appear here."/>}
         {equipmentRental.map((item, index) => {
           const isConfiguring = configuringIndex === index;
           return (
@@ -140,8 +145,8 @@ const EquipmentSummaryStep = () => {
                       onChange={(e) =>
                         handleEquipmentUpdate(index, "name", e.target.value)
                       }
-                      disabled={isEquipmentType(item.name) }
-                      aria-disabled={isEquipmentType(item.name) }
+                      disabled={isEquipmentType(item.name)}
+                      aria-disabled={isEquipmentType(item.name)}
                       className="w-[200px]"
                     />
                   </div>
@@ -176,8 +181,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-  
-                        
+
+
                       />
                     </div>
                     <div className="flex-1">
@@ -194,8 +199,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        
-                        
+
+
                       />
                     </div>
                     <div className="flex-1">
@@ -212,8 +217,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        
-                        
+
+
                       />
                     </div>
                     <div className="flex-1">
@@ -225,8 +230,8 @@ const EquipmentSummaryStep = () => {
                           onCheckedChange={(checked) =>
                             handleEquipmentUpdate(index, "reRentForCurrentJob", checked)
                           }
-                          
-                          
+
+
                         />
                       </div>
                     </div>
@@ -247,8 +252,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        
-                        
+
+
                       />
                     </div>
                     <div className="flex-1">
@@ -265,8 +270,8 @@ const EquipmentSummaryStep = () => {
                         }
                         min={0}
                         className="w-full"
-                        
-                        
+
+
                       />
                     </div>
                   </div>}
@@ -297,8 +302,8 @@ const EquipmentSummaryStep = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditEquipment(index)}
-                      
-                      
+
+
                     >
                       Edit
                     </Button>
@@ -306,8 +311,8 @@ const EquipmentSummaryStep = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEquipmentDelete(index)}
-                      
-                      
+
+
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -330,8 +335,8 @@ const EquipmentSummaryStep = () => {
                     setCustomName("");
                   }
                 }}
-                
-                
+
+
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose equipment type" />
@@ -346,8 +351,8 @@ const EquipmentSummaryStep = () => {
               </Select>
               <Button
                 onClick={handleItemNameSubmit}
-                disabled={!selectedType || (selectedType === "custom" && !customName.trim()) }
-                aria-disabled={!selectedType || (selectedType === "custom" && !customName.trim()) }
+                disabled={!selectedType || (selectedType === "custom" && !customName.trim())}
+                aria-disabled={!selectedType || (selectedType === "custom" && !customName.trim())}
               >
                 Add
               </Button>
@@ -374,8 +379,8 @@ const EquipmentSummaryStep = () => {
             variant="outline"
             onClick={() => setIsAddingEquipment(true)}
             className="w-full mt-4"
-            
-            
+
+
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Another Equipment

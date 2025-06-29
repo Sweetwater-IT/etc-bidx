@@ -16,15 +16,16 @@ import {
 } from "@/components/ui/select";
 import { PMSItemKeys } from "@/types/TEstimateAction";
 import { PMSRemoveB, PMSRemoveF, PMSResetB, PMSResetF, PMSTypeB, PMSTypeF } from "@/types/TPermanentSigns";
-import {v4 as uuidv4} from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+import EmptyContainer from "./empty-container";
 
 const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
-    'Type B Post Mount': 'pmsTypeB',
-    'Reset Type B': 'resetTypeB',
-    'Remove Type B': 'removeTypeB',
-    'Type F Post Mount': 'pmsTypeF',
-    'Reset Type F': 'resetTypeF',
-    'Remove Type F': 'removeTypeF'
+  'Type B Post Mount': 'pmsTypeB',
+  'Reset Type B': 'resetTypeB',
+  'Remove Type B': 'removeTypeB',
+  'Type F Post Mount': 'pmsTypeF',
+  'Reset Type F': 'resetTypeF',
+  'Remove Type F': 'removeTypeF'
 }
 
 // Helper function to determine the type based on properties
@@ -35,7 +36,7 @@ const determineItemType = (item: PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | P
   if ('antiTheftBolts' in item && !('signSqFt' in item)) {
     return 'resetTypeB';
   }
-  
+
   // For items with only basic properties (3-4 fields), check the name pattern
   const keys = Object.keys(item);
   if (keys.length <= 4) {
@@ -44,7 +45,7 @@ const determineItemType = (item: PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | P
     if (item.name?.includes('0971')) return 'removeTypeB';
     if (item.name?.includes('0975')) return 'removeTypeF';
   }
-  
+
   // Fallback - shouldn't happen with proper data
   return 'pmsTypeF';
 };
@@ -120,7 +121,7 @@ const PermanentSignsSummaryStep = () => {
 
   const renderItemConfiguration = (data: PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF) => {
     const itemType = determineItemType(data);
-    
+
     const renderFields = () => {
       // Always render numberInstalls and permSignBolts (common to all types)
       const commonFields = (
@@ -228,7 +229,7 @@ const PermanentSignsSummaryStep = () => {
     return (
       <div className="space-y-4 mt-4">
         <div className="text-lg font-medium">{getDisplayName(itemType)}</div>
-        
+
         {/* Name Input */}
         <div className="w-full max-w-xs">
           <Label className="text-sm font-medium mb-2 block">Item Name/Number</Label>
@@ -240,7 +241,7 @@ const PermanentSignsSummaryStep = () => {
             placeholder="Enter item name or number"
           />
         </div>
-        
+
         {renderFields()}
 
         {/* Action Buttons */}
@@ -261,12 +262,16 @@ const PermanentSignsSummaryStep = () => {
 
   return (
     <div>
+      <h3 className="text-xl text-black font-semibold text-left pb-2 border-b mb-6">
+        Permanent Signs
+      </h3>
       <div className="relative">
         {/* Permanent Signs List */}
+        {(!permanentSigns || permanentSigns.signItems.length === 0) && <EmptyContainer topText="No permanent signs added yet" subtext="When you add permanent signs, they will appear here."/>}
         {permanentSigns && permanentSigns.signItems.map(pmsItem => {
           const isConfiguring = configuringId === pmsItem.id;
           const itemType = determineItemType(pmsItem);
-          
+
           return (
             <div
               key={`sign-${pmsItem.id}`}
@@ -322,10 +327,10 @@ const PermanentSignsSummaryStep = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                      <SelectItem key={key} value={key}>
-                        {displayName}
-                      </SelectItem>
-                    ))}
+                    <SelectItem key={key} value={key}>
+                      {displayName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button

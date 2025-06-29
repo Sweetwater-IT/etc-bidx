@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
+import EmptyContainer from "@/components/BidItems/empty-container";
 
 const SaleItemsStep = () => {
   const { saleItems, dispatch } = useEstimate();
@@ -97,7 +98,11 @@ const SaleItemsStep = () => {
   return (
     <div>
       <div className="relative">
+      <h3 className="text-xl text-black font-semibold text-left pb-2 border-b mb-6">
+        Sale Items
+      </h3>
         {/* Sale Items List */}
+        {saleItems.length === 0 && <EmptyContainer topText="No sale items added yet" subtext="When you add sale items, they will appear here." />}
         {saleItems.map((item) => {
           const isConfiguring = configuringItemNumber === item.itemNumber;
           return (
