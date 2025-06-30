@@ -3,8 +3,15 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu'
+import { MoreVertical } from 'lucide-react'
 
-interface Note {
+export interface Note {
   text: string
   timestamp: number
 }
@@ -12,6 +19,8 @@ interface Note {
 interface QuoteNotesProps {
   notes: Note[]
   onSave: (note: Note) => void
+  onEdit: (index: number, updatedNote: Note) => void
+  onDelete: (index: number) => void
   loading?: boolean
 }
 
@@ -56,13 +65,24 @@ function NoteIcon () {
   )
 }
 
-export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
+export function QuoteNotes ({
+  notes,
+  onSave,
+  onEdit,
+  onDelete,
+  loading
+}: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleAddNote = () => {
     setIsAdding(true)
     setNewNote('')
+    setEditIndex(null)
   }
 
   const handleSaveNote = () => {
@@ -73,9 +93,36 @@ export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
     setNewNote('')
   }
 
-  const handleCancel = () => {
+  const handleEditNote = (idx: number) => {
+    setEditIndex(idx)
+    setEditValue(notes[idx].text)
     setIsAdding(false)
-    setNewNote('')
+  }
+
+  const handleUpdateNote = () => {
+    if (editIndex === null || editValue.trim() === '') return
+    const updatedNote = { ...notes[editIndex], text: editValue.trim() }
+    onEdit(editIndex, updatedNote)
+    setEditIndex(null)
+    setEditValue('')
+  }
+
+  const handleDeleteNote = (idx: number) => {
+    setDeleteIndex(idx)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = () => {
+    if (deleteIndex !== null) {
+      onDelete(deleteIndex)
+    }
+    setShowDeleteModal(false)
+    setDeleteIndex(null)
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false)
+    setDeleteIndex(null)
   }
 
   return (
@@ -107,12 +154,66 @@ export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
                     <NoteIcon />
                   </span>
                   <div className='bg-white px-4 w-full'>
-                    <div className='text-sm mb-1 flex items-center'>
-                      <span>{note.text}</span>
-                    </div>
-                    <div className='text-xs text-muted-foreground'>
-                      {formatDateTime(note.timestamp)} by kenneth.mack@live.com
-                    </div>
+                    {editIndex === idx ? (
+                      <div className='space-y-2'>
+                        <Textarea
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          className='min-h-[80px]'
+                          autoFocus
+                        />
+                        <div className='flex gap-2'>
+                          <Button
+                            onClick={handleUpdateNote}
+                            disabled={editValue.trim() === ''}
+                          >
+                            Update note
+                          </Button>
+                          <Button
+                            variant='outline'
+                            onClick={() => setEditIndex(null)}
+                            type='button'
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className='text-sm mb-1 flex items-center'>
+                          <span>{note.text}</span>
+                          {/* <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant='ghost'
+                                size='icon'
+                                className='ml-2'
+                              >
+                                <span className='sr-only'>Open options</span>
+                                <MoreVertical className='h-4 w-4' />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align='end' className='w-28'>
+                              <DropdownMenuItem
+                                onClick={() => handleEditNote(idx)}
+                              >
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteNote(idx)}
+                                variant='destructive'
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu> */}
+                        </div>
+                        <div className='text-xs text-muted-foreground'>
+                          {formatDateTime(note.timestamp)} by
+                          kenneth.mack@live.com
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -132,7 +233,11 @@ export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
               <Button onClick={handleSaveNote} disabled={newNote.trim() === ''}>
                 Add note
               </Button>
-              <Button variant='outline' onClick={handleCancel} type='button'>
+              <Button
+                variant='outline'
+                onClick={() => setIsAdding(false)}
+                type='button'
+              >
                 Cancel
               </Button>
             </div>
@@ -143,6 +248,23 @@ export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
           </Button>
         )}
       </div>
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30'>
+          <div className='bg-white rounded-lg p-6 shadow-lg w-80'>
+            <h3 className='text-lg font-semibold mb-4'>Delete Note</h3>
+            <p className='mb-6'>Are you sure you want to delete this note?</p>
+            <div className='flex justify-end gap-2'>
+              <Button variant='outline' onClick={cancelDelete}>
+                Cancel
+              </Button>
+              <Button variant='destructive' onClick={confirmDelete}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

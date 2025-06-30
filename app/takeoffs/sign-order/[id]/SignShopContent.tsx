@@ -323,6 +323,27 @@ const SignShopContent = ({ id }: Props) => {
     })
   }
 
+  // Add these handlers for edit and delete
+  const handleEditNote = async (index: number, updatedNote: Note) => {
+    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
+    setNotes(updatedNotes)
+    await fetch(`/api/sign-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: updatedNotes })
+    })
+  }
+
+  const handleDeleteNote = async (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index)
+    setNotes(updatedNotes)
+    await fetch(`/api/sign-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: updatedNotes })
+    })
+  }
+
   const shopSigns = getShopSigns()
 
   return (
@@ -468,6 +489,8 @@ const SignShopContent = ({ id }: Props) => {
               <QuoteNotes
                 notes={notes}
                 onSave={handleSaveNote}
+                onEdit={handleEditNote}
+                onDelete={handleDeleteNote}
                 loading={loadingNotes}
               />
             </div>
