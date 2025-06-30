@@ -93,7 +93,7 @@ export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
         ) : null}
         {notes.length > 0 && !loading && (
           <div className='relative'>
-            {[...notes].reverse().map((note, idx) => (
+            {notes.map((note, idx) => (
               <div
                 key={idx}
                 className='relative flex items-start mb-6 last:mb-0'
