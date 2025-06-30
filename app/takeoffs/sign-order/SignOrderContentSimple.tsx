@@ -20,7 +20,7 @@ import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSavin
 import { saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
 import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
-import { QuoteNotes } from '@/components/pages/quote-form/QuoteNotes'
+import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -70,6 +70,9 @@ export default function SignOrderContentSimple () {
     adminInfo,
     mptRental
   })
+
+  const [notes, setNotes] = useState<Note[]>([])
+  const [loadingNotes, setLoadingNotes] = useState(false)
 
   // Initialize MPT rental data
   useEffect(() => {
@@ -239,6 +242,60 @@ export default function SignOrderContentSimple () {
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
+  // Fetch notes for the sign order on mount (if editing an existing sign order)
+  useEffect(() => {
+    async function fetchNotes () {
+      setLoadingNotes(true)
+      try {
+        if (!signOrderId) return
+        const res = await fetch(`/api/sign-orders?id=${signOrderId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setNotes(Array.isArray(data.notes) ? data.notes : [])
+        }
+      } finally {
+        setLoadingNotes(false)
+      }
+    }
+    fetchNotes()
+  }, [signOrderId])
+
+  const handleSaveNote = async (note: Note) => {
+    const updatedNotes = [...notes, note]
+    setNotes(updatedNotes)
+    if (signOrderId) {
+      await fetch(`/api/sign-orders`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
+      })
+    }
+  }
+
+  const handleEditNote = async (index: number, updatedNote: Note) => {
+    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
+    setNotes(updatedNotes)
+    if (signOrderId) {
+      await fetch(`/api/sign-orders`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
+      })
+    }
+  }
+
+  const handleDeleteNote = async (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index)
+    setNotes(updatedNotes)
+    if (signOrderId) {
+      await fetch(`/api/sign-orders`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
+      })
+    }
+  }
+
   // Handle saving the sign order
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     // Prevent multiple submissions
@@ -334,7 +391,13 @@ export default function SignOrderContentSimple () {
               <DropzoneEmptyState />
             </Dropzone>
           </div>
-          <QuoteNotes />
+          <QuoteNotes
+            notes={notes}
+            onSave={handleSaveNote}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            loading={loadingNotes}
+          />
         </div>
       </div>
     </div>

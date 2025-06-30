@@ -45,7 +45,7 @@ import {
   fetchFilesByAssociation
 } from '@/lib/api-client'
 import { FileMetadata } from '@/types/FileTypes'
-import { QuoteNotes } from '@/components/pages/quote-form/QuoteNotes'
+import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 
 const SUBCONTRACTOR_OPTIONS = [
   { name: 'ETC', id: 1 },
@@ -79,6 +79,8 @@ const BidViewOnlyContainer = () => {
   })
   const [contractorsModalOpen, setContractorsModalOpen] =
     useState<boolean>(false)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [loadingNotes, setLoadingNotes] = useState(false)
 
   const { customers, getCustomers } = useCustomers()
 
@@ -259,6 +261,60 @@ const BidViewOnlyContainer = () => {
 
   // Check if notes have changed
   const hasUnsavedChanges = localNotes !== savedNotes
+
+  // Fetch notes for the bid on mount
+  useEffect(() => {
+    async function fetchNotes () {
+      setLoadingNotes(true)
+      try {
+        if (!bidId) return
+        const res = await fetch(`/api/active-bids/${bidId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setNotes(Array.isArray(data.notes) ? data.notes : [])
+        }
+      } finally {
+        setLoadingNotes(false)
+      }
+    }
+    fetchNotes()
+  }, [bidId])
+
+  const handleSaveNote = async (note: Note) => {
+    const updatedNotes = [...notes, note]
+    setNotes(updatedNotes)
+    if (bidId) {
+      await fetch(`/api/active-bids/${bidId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: updatedNotes })
+      })
+    }
+  }
+
+  const handleEditNote = async (index: number, updatedNote: Note) => {
+    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
+    setNotes(updatedNotes)
+    if (bidId) {
+      await fetch(`/api/active-bids/${bidId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: updatedNotes })
+      })
+    }
+  }
+
+  const handleDeleteNote = async (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index)
+    setNotes(updatedNotes)
+    if (bidId) {
+      await fetch(`/api/active-bids/${bidId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: updatedNotes })
+      })
+    }
+  }
 
   return (
     <>
@@ -446,7 +502,13 @@ const BidViewOnlyContainer = () => {
               </span>
             </div>
           </div>
-          <QuoteNotes />
+          <QuoteNotes
+            notes={notes}
+            onSave={handleSaveNote}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            loading={loadingNotes}
+          />
           <div className='rounded-lg border p-6'>
             <h2 className='mb-4 text-lg font-semibold'>Files</h2>
             <FileViewingContainer files={files} onFilesChange={setFiles} />

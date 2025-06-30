@@ -39,7 +39,7 @@ import {
 import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
 import { useRouter } from 'next/navigation'
 import '@/components/pages/active-bid/signs/no-spinner.css'
-import { QuoteNotes } from '@/components/pages/quote-form/QuoteNotes'
+import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 
 interface Props {
   id: number
@@ -51,6 +51,8 @@ const SignShopContent = ({ id }: Props) => {
 
   const [signOrder, setSignOrder] = useState<SignOrder>()
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [loadingNotes, setLoadingNotes] = useState(false)
 
   const { isLoading, startLoading, stopLoading } = useLoading()
 
@@ -190,6 +192,7 @@ const SignShopContent = ({ id }: Props) => {
       dispatch({ type: 'ADD_MPT_PHASE' })
       try {
         startLoading()
+        setLoadingNotes(true)
         console.log(`Fetching sign order with ID: ${id}`)
         const response = await fetch(`/api/sign-orders/${id}`)
         const data = await response.json()
@@ -260,9 +263,14 @@ const SignShopContent = ({ id }: Props) => {
         } else {
           console.log('No signs data found in the sign order')
         }
+
+        // Extract notes from the sign order
+        setNotes(Array.isArray(data.data?.notes) ? data.data.notes : [])
+        setLoadingNotes(false)
       } catch (error) {
         toast.error('Error fetching sign order:' + error)
         console.error('Error fetching sign order:', error)
+        setLoadingNotes(false)
       } finally {
         stopLoading()
       }
@@ -301,6 +309,38 @@ const SignShopContent = ({ id }: Props) => {
         phaseNumber: 0,
         sign: defaultSign
       }
+    })
+  }
+
+  // Handler to save a new note
+  const handleSaveNote = async (newNote: Note) => {
+    const updatedNotes = [...notes, newNote]
+    setNotes(updatedNotes)
+    await fetch(`/api/sign-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: updatedNotes })
+    })
+  }
+
+  // Add these handlers for edit and delete
+  const handleEditNote = async (index: number, updatedNote: Note) => {
+    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
+    setNotes(updatedNotes)
+    await fetch(`/api/sign-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: updatedNotes })
+    })
+  }
+
+  const handleDeleteNote = async (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index)
+    setNotes(updatedNotes)
+    await fetch(`/api/sign-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: updatedNotes })
     })
   }
 
@@ -446,7 +486,13 @@ const SignShopContent = ({ id }: Props) => {
               )}
             </div>
             <div className='w-full mt-4'>
-              <QuoteNotes />
+              <QuoteNotes
+                notes={notes}
+                onSave={handleSaveNote}
+                onEdit={handleEditNote}
+                onDelete={handleDeleteNote}
+                loading={loadingNotes}
+              />
             </div>
           </div>
         </div>
