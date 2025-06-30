@@ -9,6 +9,12 @@ interface Note {
   timestamp: number
 }
 
+interface QuoteNotesProps {
+  notes: Note[]
+  onSave: (note: Note) => void
+  loading?: boolean
+}
+
 function formatDateTime (ts: number) {
   return new Date(ts).toLocaleString('en-US', {
     month: 'short',
@@ -50,8 +56,7 @@ function NoteIcon () {
   )
 }
 
-export function QuoteNotes () {
-  const [notes, setNotes] = useState<Note[]>([])
+export function QuoteNotes ({ notes, onSave, loading }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
 
@@ -62,7 +67,8 @@ export function QuoteNotes () {
 
   const handleSaveNote = () => {
     if (newNote.trim() === '') return
-    setNotes([{ text: newNote.trim(), timestamp: Date.now() }, ...notes])
+    const noteObj = { text: newNote.trim(), timestamp: Date.now() }
+    onSave(noteObj)
     setIsAdding(false)
     setNewNote('')
   }
@@ -76,12 +82,16 @@ export function QuoteNotes () {
     <div className='rounded-lg border p-6'>
       <h2 className='mb-4 text-lg font-semibold'>Recent activity</h2>
       <div className='space-y-4'>
-        {notes.length === 0 && !isAdding && (
+        {loading ? (
+          <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
+            Loading activity...
+          </div>
+        ) : notes.length === 0 && !isAdding ? (
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
             No recent activity
           </div>
-        )}
-        {notes.length > 0 && (
+        ) : null}
+        {notes.length > 0 && !loading && (
           <div className='relative'>
             {[...notes].reverse().map((note, idx) => (
               <div
