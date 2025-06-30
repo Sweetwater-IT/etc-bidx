@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +7,22 @@ import { cn } from "@/lib/utils";
 import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import EmptyContainer from "@/components/BidItems/empty-container";
 
 const SaleItemsStep = () => {
   const { saleItems, dispatch } = useEstimate();
-  const [isAddingItem, setIsAddingItem] = useState(saleItems.length === 0);
-  const [newItemNumber, setNewItemNumber] = useState("");
-  const [configuringItemNumber, setConfiguringItemNumber] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingItemNumber, setEditingItemNumber] = useState<string | null>(null);
+  const [formData, setFormData] = useState<SaleItem | null>(null);
 
   const calculateMargin = (quotePrice: number, markupPercentage: number) => {
     if (!quotePrice || !markupPercentage) return 0;
@@ -21,59 +30,63 @@ const SaleItemsStep = () => {
     return ((sellingPrice - quotePrice) / sellingPrice) * 100;
   };
 
-  const handleItemNumberSubmit = () => {
-    if (newItemNumber.trim()) {
-      const newItem: SaleItem = {
-        itemNumber: newItemNumber.trim(),
-        name: "",
-        vendor: "",
-        quantity: 0,
-        quotePrice: 0,
-        markupPercentage: 0,
-      };
-      
+  const handleAddItem = () => {
+    setFormData({
+      itemNumber: "",
+      name: "",
+      vendor: "",
+      quantity: 0,
+      quotePrice: 0,
+      markupPercentage: 0,
+    });
+    setEditingItemNumber(null);
+    setDrawerOpen(true);
+  };
+
+  const handleEditItem = (itemNumber: string) => {
+    const item = saleItems.find(item => item.itemNumber === itemNumber);
+    if (item) {
+      setFormData({ ...item });
+      setEditingItemNumber(itemNumber);
+      setDrawerOpen(true);
+    }
+  };
+
+  const handleFormUpdate = (field: keyof SaleItem, value: any) => {
+    if (formData) {
+      setFormData({ ...formData, [field]: value });
+    }
+  };
+
+  const handleSave = () => {
+    if (!formData || !formData.itemNumber.trim()) return;
+
+    if (editingItemNumber) {
+      // Update existing item
+      dispatch({
+        type: 'UPDATE_SALE_ITEM',
+        payload: {
+          oldItemNumber: editingItemNumber,
+          item: formData,
+        },
+      });
+    } else {
+      // Add new item
       dispatch({
         type: 'ADD_SALE_ITEM',
-        payload: newItem,
+        payload: formData,
       });
-      
-      // Set the new item as configuring
-      setConfiguringItemNumber(newItemNumber.trim());
-      setNewItemNumber("");
-      setIsAddingItem(false);
     }
+
+    setDrawerOpen(false);
+    setFormData(null);
+    setEditingItemNumber(null);
   };
 
-  const handleItemUpdate = (
-    itemNumber: string,
-    field: keyof SaleItem,
-    value: any
-  ) => {
-    const item = saleItems.find(item => item.itemNumber === itemNumber);
-    if (!item) return;
-    
-    const updatedItem = { ...item, [field]: value };
-    
-    // Calculate margin if quote price or markupPercentage changes
-    if (field === "quotePrice" || field === "markupPercentage") {
-      calculateMargin(
-        field === "quotePrice" ? value : item.quotePrice,
-        field === "markupPercentage" ? value : item.markupPercentage
-      );
-    }
-    
-    dispatch({
-      type: 'UPDATE_SALE_ITEM',
-      payload: {
-        oldItemNumber: itemNumber,
-        item: updatedItem,
-      },
-    });
-  };
-
-  const handleItemSave = (itemNumber: string) => {
-    setConfiguringItemNumber(null);
-    setIsAddingItem(true);
+  const handleCancel = () => {
+    setDrawerOpen(false);
+    setFormData(null);
+    setEditingItemNumber(null);
   };
 
   const handleItemDelete = (itemNumber: string) => {
@@ -81,215 +94,170 @@ const SaleItemsStep = () => {
       type: 'DELETE_SALE_ITEM',
       payload: itemNumber,
     });
-    
-    setConfiguringItemNumber(null);
-    
-    if (saleItems.length === 1) {
-      setIsAddingItem(true);
-    }
-  };
-
-  const handleEditItem = (itemNumber: string) => {
-    setConfiguringItemNumber(itemNumber);
-    setIsAddingItem(false);
   };
 
   return (
     <div>
+      <div className="flex items-center justify-between pb-2 border-b mb-6">
+        <h3 className="text-xl text-black font-semibold">
+          Sale Items
+        </h3>
+        <Button onClick={handleAddItem}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Sale Item
+        </Button>
+      </div>
+
       <div className="relative">
         {/* Sale Items List */}
-        {saleItems.map((item) => {
-          const isConfiguring = configuringItemNumber === item.itemNumber;
-          return (
-            <div
-              key={item.itemNumber}
-              className={cn(
-                "rounded-lg border bg-card text-card-foreground shadow-sm mb-2 ",
-                isConfiguring ? "p-5" : "p-4"
-              )}
-            >
-              {isConfiguring ? (
-                <div className="space-y-4">
-                  {/* Item Number */}
-                  <div className="w-full">
-                    <Label className="text-base font-semibold mb-2.5 block">
-                      Item Number
-                    </Label>
-                    <Input
-                      value={item.itemNumber}
-                      onChange={(e) =>
-                        handleItemUpdate(item.itemNumber, "itemNumber", e.target.value)
-                      }
-                      className="w-[200px]"
-                    />
-                  </div>
-
-                  {/* Other Fields in a single line */}
-                  <div className="flex flex-row gap-4 w-full">
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Name
-                      </Label>
-                      <Input
-                        value={item.name}
-                        onChange={(e) =>
-                          handleItemUpdate(item.itemNumber, "name", e.target.value)
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Vendor
-                      </Label>
-                      <Input
-                        value={item.vendor}
-                        onChange={(e) =>
-                          handleItemUpdate(item.itemNumber, "vendor", e.target.value)
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Quantity
-                      </Label>
-                      <Input
-                        type="number"
-                        value={item.quantity || ""}
-                        onChange={(e) =>
-                          handleItemUpdate(
-                            item.itemNumber,
-                            "quantity",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        min={0}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Quote Price ($)
-                      </Label>
-                      <Input
-                        type="number"
-                        value={item.quotePrice || ""}
-                        onChange={(e) =>
-                          handleItemUpdate(
-                            item.itemNumber,
-                            "quotePrice",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        min={0}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Markup (%)
-                      </Label>
-                      <Input
-                        type="number"
-                        value={item.markupPercentage || ""}
-                        onChange={(e) =>
-                          handleItemUpdate(
-                            item.itemNumber,
-                            "markupPercentage",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        min={0}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Margin (%)
-                      </Label>
-                      <div className="h-10 flex items-center text-muted-foreground">
-                        {calculateMargin(item.quotePrice, item.markupPercentage).toFixed(2)}%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-start space-x-3 pt-6">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleItemDelete(item.itemNumber)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={() => handleItemSave(item.itemNumber)}>
-                      Save Item
-                    </Button>
-                  </div>
+        {saleItems.length === 0 && (
+          <EmptyContainer topText="No sale items added yet" subtext="When you add sale items, they will appear here." />
+        )}
+        {saleItems.map((item) => (
+          <div
+            key={item.itemNumber}
+            className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="font-medium">{item.itemNumber}</div>
+                <div className="text-sm text-muted-foreground">
+                  {item.name} • {item.vendor} • Qty: {item.quantity}
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="font-medium">{item.itemNumber}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {item.name} • {item.vendor} • Qty: {item.quantity}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditItem(item.itemNumber)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleItemDelete(item.itemNumber)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Add Sale Item Input or Button */}
-        {isAddingItem && (
-          <div className="w-full max-w-sm">
-            <Label className="text-sm font-medium mb-2 block">
-              Item Number
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                value={newItemNumber}
-                onChange={(e) => setNewItemNumber(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    handleItemNumberSubmit();
-                  }
-                }}
-                placeholder="Enter item number"
-              />
-              <Button onClick={handleItemNumberSubmit}>Add</Button>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditItem(item.itemNumber)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleItemDelete(item.itemNumber)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        )}
-
-        {!isAddingItem && saleItems.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={() => setIsAddingItem(true)}
-            className="w-full mt-4"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Another Item
-          </Button>
-        )}
+        ))}
       </div>
+
+      {/* Drawer for adding/editing sale items */}
+      <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
+              {editingItemNumber ? 'Edit Sale Item' : 'Add Sale Item'}
+            </DrawerTitle>
+            <DrawerDescription>
+              {editingItemNumber
+                ? 'Update the sale item details below.'
+                : 'Configure the details for your new sale item.'
+              }
+            </DrawerDescription>
+          </DrawerHeader>
+
+          {formData && (
+            <div className="px-4 space-y-4">
+              {/* Item Number - Full width */}
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Item Number</Label>
+                <Input
+                  value={formData.itemNumber}
+                  onChange={(e) => handleFormUpdate("itemNumber", e.target.value)}
+                  className="w-full"
+                  placeholder="Enter item number"
+                />
+              </div>
+
+              {/* Other fields in 2-column grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Name</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleFormUpdate("name", e.target.value)}
+                    className="w-full"
+                    placeholder="Enter item name"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Vendor</Label>
+                  <Input
+                    value={formData.vendor}
+                    onChange={(e) => handleFormUpdate("vendor", e.target.value)}
+                    className="w-full"
+                    placeholder="Enter vendor name"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                  <Input
+                    type="number"
+                    value={formData.quantity || ""}
+                    onChange={(e) => handleFormUpdate("quantity", parseInt(e.target.value) || 0)}
+                    min={0}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Quote Price ($)</Label>
+                  <Input
+                    type="number"
+                    value={formData.quotePrice || ""}
+                    onChange={(e) => handleFormUpdate("quotePrice", parseFloat(e.target.value) || 0)}
+                    min={0}
+                    step="0.01"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Markup (%)</Label>
+                  <Input
+                    type="number"
+                    value={formData.markupPercentage || ""}
+                    onChange={(e) => handleFormUpdate("markupPercentage", parseFloat(e.target.value) || 0)}
+                    min={0}
+                    step="0.01"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Margin (%)</Label>
+                  <div className="h-10 flex items-center text-muted-foreground bg-gray-50 px-3 rounded-md border">
+                    {calculateMargin(formData.quotePrice, formData.markupPercentage).toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DrawerFooter>
+            <div className="flex justify-end space-x-3 w-full">
+              <DrawerClose asChild>
+                <Button variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
+              </DrawerClose>
+              <Button 
+                onClick={handleSave}
+                disabled={!formData?.itemNumber.trim()}
+              >
+                {editingItemNumber ? 'Update Sale Item' : 'Save Sale Item'}
+              </Button>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

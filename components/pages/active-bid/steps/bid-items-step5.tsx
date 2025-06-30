@@ -515,53 +515,8 @@ const BidItemsStep5 = ({
     <div>
       <div className="relative">
         <div className="mt-2 mb-6 ml-12">
-          <Tabs
-            defaultValue="mpt"
-            className="w-full"
-            onValueChange={setActiveTab}
-            value={activeTab}
-          >
-            <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
-              <TabsTrigger
-                value="mpt"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                MPT
-              </TabsTrigger>
-              <TabsTrigger
-                value="equipment"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                Equipment Rental
-              </TabsTrigger>
-              <TabsTrigger
-                value="permanent"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                Permanent Signs
-              </TabsTrigger>
-              <TabsTrigger
-                value="flagging"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                Flagging
-              </TabsTrigger>
-              <TabsTrigger
-                value="sale"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                Sale Items
-              </TabsTrigger>
-              <TabsTrigger
-                value="patterns"
-                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-              >
-                Patterns
-              </TabsTrigger>
-            </TabsList>
 
             {/* MPT Equipment Tab (combined with Light & Drum) */}
-            <TabsContent value="mpt" className="mt-6">
               <div className="space-y-8">
                 {/* MPT Equipment Section */}
                 <div className="grid grid-cols-3">
@@ -756,12 +711,9 @@ const BidItemsStep5 = ({
                         value={newCustomItem.usefulLife || ''}
                         onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
                         placeholder=""
-
-
                       />
                     </div>
                   </div>
-
                   <Button
                     onClick={handleAddCustomItem}
                     className="mt-2"
@@ -771,7 +723,6 @@ const BidItemsStep5 = ({
                     <Plus className="mr-2 h-4 w-4" /> Add Custom Item
                   </Button>
                 </div>
-
                 {/* Custom Items List */}
                 {mptRental?.phases?.[currentPhase]?.customLightAndDrumItems?.length > 0 && (
                   <div className="mt-6">
@@ -785,7 +736,6 @@ const BidItemsStep5 = ({
                       <div className="col-span-2 font-medium">Useful Life</div>
                       <div className="col-span-2 font-medium">Daily Price</div>
                     </div>
-
                     <div className="space-y-4">
                       {mptRental.phases[currentPhase].customLightAndDrumItems.map((item) => (
                         <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
@@ -804,8 +754,6 @@ const BidItemsStep5 = ({
                                   value: parseFloat(e.target.value) || 0
                                 }
                               })}
-
-
                             />
                           </div>
                           <div className="col-span-3">
@@ -823,8 +771,6 @@ const BidItemsStep5 = ({
                                   value: parseFloat(e.target.value) || 0
                                 }
                               })}
-
-
                             />
                           </div>
                           <div className="col-span-2">
@@ -841,8 +787,6 @@ const BidItemsStep5 = ({
                                   value: parseFloat(e.target.value) || 0
                                 }
                               })}
-
-
                             />
                           </div>
                           <div className="col-span-2">
@@ -854,43 +798,21 @@ const BidItemsStep5 = ({
                   </div>
                 )}
               </div>
-            </TabsContent>
-
-            {/* Equipment Tab */}
-            <TabsContent value="equipment" className="mt-6">
               <div className="text-center py-6 text-muted-foreground">
                 <EquipmentRentalTab />
               </div>
-            </TabsContent>
-
-            {/* Permanent Signs Tab */}
-            <TabsContent value="permanent" className="mt-6">
               <div className="text-center py-6 text-muted-foreground">
                 <PermanentSignsSummaryStep />
               </div>
-            </TabsContent>
-
-            {/* Flagging Tab */}
-            <TabsContent value="flagging" className="mt-6">
               <div className="text-center py-6 text-muted-foreground">
                 <FlaggingServicesTab />
               </div>
-            </TabsContent>
-
-            {/* Sale Items Tab */}
-            <TabsContent value="sale" className="mt-6">
               <div className="text-center py-6 text-muted-foreground">
                 <SaleItemsStep />
               </div>
-            </TabsContent>
-
-            {/* Patterns Tab */}
-            <TabsContent value="patterns" className="mt-6">
               <div className="text-center py-6 text-muted-foreground">
                 <ServiceWorkTab />
               </div>
-            </TabsContent>
-          </Tabs>
           <Button className="mt-8 ml-auto block" onClick={handleSubmit} disabled={isSubmitting}>
             {initialSubmission
               ? 'Update' : 'Done'
