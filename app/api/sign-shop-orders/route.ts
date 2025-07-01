@@ -548,7 +548,7 @@ export async function GET(request: NextRequest) {
         type: '-',
         order_date: orderDate,
         need_date: needDate,
-        shop_status: order.shop_status || 'not-started',
+        shop_status: order.shop_status || '',
         order_type: (() => {
           const typeCount = [order.rental, order.sale, order.perm_signs].filter(Boolean).length;
           if (typeCount > 1) return 'M';
