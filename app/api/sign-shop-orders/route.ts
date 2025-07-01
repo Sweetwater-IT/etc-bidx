@@ -264,7 +264,13 @@ export async function GET(request: NextRequest) {
                     return status;
                 }
               });
-              query = query.in('shop_status', shopStatusValues);
+              // Special logic for 'not-started' to exclude other statuses
+              if (shopStatusValues.includes('not-started')) {
+                // Exclude 'on-order', 'in-process', 'complete'
+                query = query.not('shop_status', 'in', ['on-order', 'in-process', 'complete']);
+              } else {
+                query = query.in('shop_status', shopStatusValues);
+              }
               break;
             case 'status':
               query = query.in('status', values);
