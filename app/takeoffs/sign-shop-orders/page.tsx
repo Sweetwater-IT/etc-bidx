@@ -274,7 +274,7 @@ export default function SignOrderPage() {
           const d = await res.json();
           counts[status] = d.counts?.all || 0;
         }
-        setSegmentCounts(counts);
+        setSegmentCounts(counts as { all: number; "not-started": number; "in-process": number; "on-order": number; complete: number });
       }
     } catch (error) {
       console.error("Error fetching segment counts:", error);
