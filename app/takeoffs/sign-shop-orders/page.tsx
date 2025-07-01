@@ -33,23 +33,22 @@ const SIGN_ORDER_COLUMNS = [
 
 const SEGMENTS = [
   { label: "All", value: "all" },
-  { label: "Not started", value: "hatfield" },
-  { label: "In Process", value: "turbotville" },
-  { label: "On Order", value: "bedford" },
+  { label: "Not started", value: "not-started" },
+  { label: "In Process", value: "in-process" },
+  { label: "On Order", value: "on-order" },
   { label: "Complete", value: "complete" },
-  { label: "Archived", value: "archived" },
 ];
 
 export default function SignOrderPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<SignOrderView[]>([]);
   const [activeSegment, setActiveSegment] = useState("all");
-  const [branchCounts, setBranchCounts] = useState({
+  const [segmentCounts, setSegmentCounts] = useState({
     all: 0,
-    hatfield: 0,
-    turbotville: 0,
-    bedford: 0,
-    archived: 0
+    "not-started": 0,
+    "in-process": 0,
+    "on-order": 0,
+    complete: 0,
   });
 
   // Pagination state
@@ -213,21 +212,10 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
 
-      // FIXED: Add archived parameter handling like in active-bids
-      if (activeSegment === "archived") {
-        params.append("archived", "true");
-      } else {
-        // For non-archived segments, explicitly exclude archived items
-        params.append("archived", "false");
-
-        // Add segment filter for branches
-        if (activeSegment !== "all") {
-          params.append("branch", activeSegment);
-        }
-      }
-
-      // Add active filters
-      if (Object.keys(activeFilters).length > 0) {
+      // Add shop_status segment filter
+      if (activeSegment !== "all") {
+        params.append("filters", JSON.stringify({ ...activeFilters, shop_status: [activeSegment] }));
+      } else if (Object.keys(activeFilters).length > 0) {
         params.append("filters", JSON.stringify(activeFilters));
       }
 
@@ -235,14 +223,9 @@ export default function SignOrderPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Make sure we're using the correct field name from the API response
         if (data.orders && Array.isArray(data.orders)) {
-          console.log('Orders found in response:', data.orders.length);
-
-          // Map the orders to ensure they have all required fields
           const processedOrders = data.orders.map((order: any) => ({
             ...order,
-            // Ensure these fields exist with default values if missing
             customer: order.customer || '-',
             branch: order.branch || '-',
             assigned_to: order.assigned_to || 'Unassigned',
@@ -253,45 +236,48 @@ export default function SignOrderPage() {
           }));
 
           setQuotes(processedOrders);
-          console.log('Processed quotes:', processedOrders.length);
         } else {
-          console.warn('No orders array in response or empty array');
           setQuotes([]);
         }
 
         setTotalCount(data.pagination?.total || 0);
         setPageCount(data.pagination?.pages || 0);
       } else {
-        console.error("Error fetching sign orders:", data.error);
         toast.error("Failed to load sign orders");
       }
     } catch (error) {
-      console.error("Error fetching quotes:", error);
       toast.error("Failed to load sign orders");
     } finally {
       stopLoading();
     }
   }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading]);
 
-  // Fetch counts for each segment
+  // Fetch counts for each segment (shop_status)
   const fetchCounts = useCallback(async () => {
     try {
-      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
-      const segmentData = await segmentResponse.json();
+      // Get all counts for each shop_status
+      const statuses = ["not-started", "in-process", "on-order", "complete"];
+      const counts: Record<string, number> = { all: 0, "not-started": 0, "in-process": 0, "on-order": 0, complete: 0 };
 
-      if (segmentData.success) {
-        setBranchCounts({
-          all: segmentData.counts.all || 0,
-          hatfield: segmentData.counts.hatfield || 0,
-          turbotville: segmentData.counts.turbotville || 0,
-          bedford: segmentData.counts.bedford || 0,
-          archived: segmentData.counts.archived || 0
-        });
-      } else {
-        console.error("Error fetching segment counts:", segmentData.error);
+      // Fetch all orders (not archived)
+      const response = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
+      const data = await response.json();
+      if (data.success) {
+        // Fetch count for all
+        const allRes = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
+        const allData = await allRes.json();
+        counts.all = allData.counts?.all || 0;
+
+        // Fetch count for each shop_status
+        for (const status of statuses) {
+          const res = await fetch(`/api/sign-shop-orders?counts=true&archived=false&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
+          const d = await res.json();
+          counts[status] = d.counts?.all || 0;
+        }
+        setSegmentCounts(counts);
       }
     } catch (error) {
-      console.error("Error fetching counts:", error);
+      console.error("Error fetching segment counts:", error);
     }
   }, []);
 
@@ -311,56 +297,36 @@ export default function SignOrderPage() {
   const handleArchiveSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
-      
       let ordersToArchive: SignOrderView[] = [];
-
       if (allRowsSelected) {
-        // Fetch all filtered orders for archiving
         ordersToArchive = await fetchAllFilteredOrders();
-        // Filter out already archived orders
-        ordersToArchive = ordersToArchive.filter(order => 
-          !order.archived
-        );
+        ordersToArchive = ordersToArchive.filter(order => !order.archived);
       } else {
-        // Filter out already archived orders from selection
-        ordersToArchive = rows.filter(order => 
-          !order.archived
-        );
+        ordersToArchive = rows.filter(order => !order.archived);
       }
-
       if (ordersToArchive.length === 0) {
         toast.error('No orders to archive. All selected orders are already archived.');
         return false;
       }
-
       const ids = ordersToArchive.map(order => order.id);
-      
       const response = await fetch('/api/sign-orders/archive', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       });
-
       const result = await response.json();
-
       if (result.success) {
         toast.success(`Successfully archived ${ordersToArchive.length} sign order(s)`);
         await fetchQuotes();
         await fetchCounts();
-        
-        // Reset row selection after successful archive
         if (tableRef.current) {
           tableRef.current.resetRowSelection();
         }
-        
         return true;
       } else {
         throw new Error(result.message || 'Failed to archive sign orders');
       }
     } catch (error) {
-      console.error('Error archiving sign orders:', error);
       toast.error('Failed to archive sign orders. Please try again.');
       return false;
     } finally {
@@ -372,97 +338,63 @@ export default function SignOrderPage() {
   const handleDeleteSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
-      
       let ordersToDelete: SignOrderView[] = [];
-
       if (allRowsSelected) {
-        // Fetch all filtered orders for deletion
         const allOrders = await fetchAllFilteredOrders();
-        // For deletion, we only want archived orders
-        ordersToDelete = allOrders.filter(order =>
-          activeSegment === 'archived' || order.archived
-        );
+        ordersToDelete = allOrders.filter(order => order.archived);
       } else {
-        // Filter for archived orders from selection
-        if (activeSegment === 'archived') {
-          // If we're in archived segment, all selected orders can be deleted
-          ordersToDelete = rows;
-        } else {
-          // If we're not in archived segment, only delete actually archived orders
-          ordersToDelete = rows.filter(order => order.archived);
-        }
+        ordersToDelete = rows.filter(order => order.archived);
       }
-
       if (ordersToDelete.length === 0) {
         toast.error('No archived sign orders found to delete.');
         return false;
       }
-
       const ids = ordersToDelete.map(order => order.id);
-      
       const response = await fetch('/api/sign-orders/archive', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       });
-
       const result = await response.json();
-
       if (result.success) {
         toast.success(`Successfully deleted ${ordersToDelete.length} sign order(s)`);
         await fetchQuotes();
         await fetchCounts();
-        
-        // Reset row selection after successful deletion
         if (tableRef.current) {
           tableRef.current.resetRowSelection();
         }
-        
         return true;
       } else {
         throw new Error(result.message || 'Failed to delete sign orders');
       }
     } catch (error) {
-      console.error('Error deleting sign orders:', error);
       toast.error('Failed to delete sign orders. Please try again.');
       return false;
     } finally {
       stopLoading();
     }
-  }, [activeSegment, allRowsSelected, fetchQuotes, fetchCounts, startLoading, stopLoading]);
+  }, [allRowsSelected, fetchQuotes, fetchCounts, startLoading, stopLoading]);
 
   // Fetch all filtered orders (for bulk operations)
   const fetchAllFilteredOrders = async (): Promise<SignOrderView[]> => {
     const params = new URLSearchParams();
-    
-    // Get all records
     params.append("page", "1");
     params.append("limit", totalCount.toString() || "10000");
-
-    // Apply current filters
-    if (Object.keys(activeFilters).length > 0) {
-      params.append("filters", JSON.stringify(activeFilters));
+    // Apply current filters and segment
+    let filters = { ...activeFilters };
+    if (activeSegment !== "all") {
+      filters = { ...filters, shop_status: [activeSegment] };
     }
-
-    // Apply current segment filter
-    if (activeSegment === "archived") {
-      params.append("archived", "true");
-    } else if (activeSegment !== "all") {
-      params.append("archived", "false");
-      params.append("branch", activeSegment);
+    if (Object.keys(filters).length > 0) {
+      params.append("filters", JSON.stringify(filters));
     }
-
     // Apply current sorting
     if (sortBy) {
       params.append("orderBy", sortBy);
       params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
     }
-
     const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
     const data = await response.json();
-
     if (data.success && data.orders) {
       return data.orders.map((order: any) => ({
         ...order,
@@ -470,16 +402,15 @@ export default function SignOrderPage() {
         branch: order.branch || '-',
         assigned_to: order.assigned_to || 'Unassigned',
         type: order.type || '-',
-        shop_status: order.shop_status === 'not-started' ? 'Not Started' : 
-                    order.shop_status === 'in-progress' ? 'In Progress' : 
-                    order.shop_status === 'complete' ? 'Complete' : 
-                    order.shop_status === 'on-hold' ? 'On Hold' : 
+        shop_status: order.shop_status === 'not-started' ? 'Not Started' :
+                    order.shop_status === 'in-process' ? 'In Process' :
+                    order.shop_status === 'on-order' ? 'On Order' :
+                    order.shop_status === 'complete' ? 'Complete' :
                     order.shop_status || 'Not Started',
         order_type: order.order_type || '-',
         order_number: order.order_number == null ? '' : order.order_number,
       }));
     }
-    
     return [];
   };
 
@@ -534,7 +465,7 @@ export default function SignOrderPage() {
   // Update segments with counts
   const segmentsWithCounts = SEGMENTS.map(segment => ({
     ...segment,
-    label: `${segment.label.split(' (')[0]} (${branchCounts[segment.value as keyof typeof branchCounts] || 0})`
+    label: `${segment.label.split(' (')[0]} (${segmentCounts[segment.value as keyof typeof segmentCounts] || 0})`
   }));
 
   return (
@@ -589,7 +520,7 @@ export default function SignOrderPage() {
                 columns={SIGN_ORDER_COLUMNS}
                 segments={segmentsWithCounts}
                 segmentValue={activeSegment}
-                segmentCounts={branchCounts}
+                segmentCounts={segmentCounts}
                 onSegmentChange={handleSegmentChange}
                 onRowClick={handleRowClick}
                 stickyLastColumn
