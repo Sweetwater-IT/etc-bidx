@@ -246,14 +246,17 @@ export async function GET(request: NextRequest) {
               const shopStatusValues = values.map(status => {
                 switch (status.toLowerCase()) {
                   case 'not started':
+                    return 'not-started';
                   case 'not-started':
                     return 'not-started';
                   case 'in progress':
+                    return 'in-progress';
                   case 'in-progress':
                     return 'in-progress';
                   case 'complete':
                     return 'complete';
                   case 'on hold':
+                    return 'on-hold';
                   case 'on-hold':
                     return 'on-hold';
                   case 'in-process':
@@ -267,7 +270,10 @@ export async function GET(request: NextRequest) {
               // Special logic for 'not-started' to exclude other statuses
               if (shopStatusValues.includes('not-started')) {
                 // Exclude 'on-order', 'in-process', 'complete'
-                query = query.not('shop_status', 'in', ['on-order', 'in-process', 'complete']);
+                query = query
+                  .not('shop_status', 'eq', 'on-order')
+                  .not('shop_status', 'eq', 'in-process')
+                  .not('shop_status', 'eq', 'complete');
               } else {
                 query = query.in('shop_status', shopStatusValues);
               }
@@ -437,7 +443,15 @@ export async function GET(request: NextRequest) {
                     return status;
                 }
               });
-              paginationCountQuery = paginationCountQuery.in('shop_status', shopStatusValues);
+              if (shopStatusValues.includes('not-started')) {
+                // Exclude 'on-order', 'in-process', 'complete'
+                paginationCountQuery = paginationCountQuery
+                  .not('shop_status', 'eq', 'on-order')
+                  .not('shop_status', 'eq', 'in-process')
+                  .not('shop_status', 'eq', 'complete');
+              } else {
+                paginationCountQuery = paginationCountQuery.in('shop_status', shopStatusValues);
+              }
               break;
             case 'status':
               paginationCountQuery = paginationCountQuery.in('status', values);
