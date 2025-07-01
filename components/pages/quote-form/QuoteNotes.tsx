@@ -182,7 +182,7 @@ export function QuoteNotes ({
                       <>
                         <div className='text-sm mb-1 flex items-center'>
                           <span>{note.text}</span>
-                          {/* <DropdownMenu>
+                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant='ghost'
@@ -206,7 +206,7 @@ export function QuoteNotes ({
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
-                          </DropdownMenu> */}
+                          </DropdownMenu>
                         </div>
                         <div className='text-xs text-muted-foreground'>
                           {formatDateTime(note.timestamp)} by
