@@ -278,7 +278,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 {
                     label: 'Branch',
                     field: 'branch',
-                    options: referenceData.branches.map(branch => ({
+                    options: referenceData.branches.filter(branch => branch.name !== 'tes').map(branch => ({
                         label: branch.name,
                         value: branch.name
                     }))
