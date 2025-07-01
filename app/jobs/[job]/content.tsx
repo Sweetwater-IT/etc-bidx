@@ -1687,7 +1687,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     // Fetch total count for each branch with current filters (excluding branch filter)
     const fetchFilteredBranchCounts = useCallback(async () => {
         if (!isActiveJobs || !branchOptions.length) return;
-        const filtersWithoutBranch = getFiltersWithoutBranch();
+        // Remove 'branch' from filters for branch count API calls
+        const { branch, ...filtersWithoutBranch } = activeFilters;
         const counts: Record<string, number> = {};
         await Promise.all(
             branchOptions.map(async (opt) => {
@@ -1707,8 +1708,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 }
             })
         );
-        setFilteredBranchCounts(counts);
-    }, [isActiveJobs, branchOptions, getFiltersWithoutBranch, activeFilters, sortBy, sortOrder]);
+        // Also fetch 'All' count (no branch param, no branch in filters)
+        const allParams = new URLSearchParams();
+        allParams.set("limit", "1");
+        allParams.set("page", "1");
+        if (Object.keys(filtersWithoutBranch).length > 0) {
+            allParams.set("filters", JSON.stringify(filtersWithoutBranch));
+        }
+        const allRes = await fetch(`/api/jobs?${allParams.toString()}`);
+        let allCount = 0;
+        if (allRes.ok) {
+            const data = await allRes.json();
+            allCount = data.pagination?.totalCount || 0;
+        }
+        setFilteredBranchCounts({ ...counts, all: allCount });
+    }, [isActiveJobs, branchOptions, activeFilters, sortBy, sortOrder]);
 
     // Update branch counts when filters, sorting, or data reloads
     useEffect(() => {
@@ -1734,7 +1748,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 { label: `Archived (${activeBidCounts.archived || 0})`, value: "archived" }
             ]
             : [
-                { label: `All (${activeJobs.length})`, value: "all" },
+                { label: `All (${filteredBranchCounts.all ?? 0})`, value: "all" },
                 ...branchOptions.map(opt => ({
                     label: `${opt.label} (${filteredBranchCounts[opt.value] ?? 0})`,
                     value: opt.value
