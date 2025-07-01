@@ -256,6 +256,10 @@ export async function GET(request: NextRequest) {
                   case 'on hold':
                   case 'on-hold':
                     return 'on-hold';
+                  case 'in-process':
+                    return 'in-process';
+                  case 'on-order':
+                    return 'on-order';
                   default:
                     return status;
                 }

@@ -260,17 +260,17 @@ export default function SignOrderPage() {
       const counts: Record<string, number> = { all: 0, "not-started": 0, "in-process": 0, "on-order": 0, complete: 0 };
 
       // Fetch all orders (not archived)
-      const response = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
+      const response = await fetch(`/api/sign-shop-orders?counts=true`);
       const data = await response.json();
       if (data.success) {
         // Fetch count for all
-        const allRes = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
+        const allRes = await fetch(`/api/sign-shop-orders?counts=true`);
         const allData = await allRes.json();
         counts.all = allData.counts?.all || 0;
 
         // Fetch count for each shop_status
         for (const status of statuses) {
-          const res = await fetch(`/api/sign-shop-orders?counts=true&archived=false&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
+          const res = await fetch(`/api/sign-shop-orders?counts=true&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
           const d = await res.json();
           counts[status] = d.counts?.all || 0;
         }
