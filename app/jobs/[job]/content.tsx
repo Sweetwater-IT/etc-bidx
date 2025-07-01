@@ -360,8 +360,27 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const { startLoading, stopLoading } = useLoading();
 
     const handleSegmentChange = (value: string) => {
-        console.log("Segment changed to:", value);
-        setActiveSegment(value);
+        if (isActiveJobs) {
+            if (value === "all") {
+                setActiveSegment("all");
+                setActiveFilters(filters => {
+                    const { branch, ...rest } = filters;
+                    return rest;
+                });
+            } else if (value === "archived") {
+                setActiveSegment("archived");
+                setActiveFilters(filters => {
+                    const { branch, ...rest } = filters;
+                    return rest;
+                });
+            } else {
+                // It's a branch value
+                setActiveSegment("all"); // Keep segment as 'all' for filtering
+                setActiveFilters(filters => ({ ...filters, branch: [value] }));
+            }
+        } else {
+            setActiveSegment(value);
+        }
     };
 
     const loadAvailableJobs = useCallback(async () => {
@@ -1676,10 +1695,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             ]
             : [
                 { label: `All (${activeJobCounts.all || 0})`, value: "all" },
-                { label: `West (${activeJobCounts.west || 0})`, value: "west" },
-                { label: `Turbotville (${activeJobCounts.turbotville || 0})`, value: "turbotville" },
-                { label: `Hatfield (${activeJobCounts.hatfield || 0})`, value: "hatfield" },
-                { label: `Archived (${activeJobCounts.archived || 0})`, value: "archived" },
+                ...branchOptions.map(opt => ({
+                    label: `${opt.label} (${activeJobCounts[opt.value?.toLowerCase?.() || opt.value] || 0})`,
+                    value: opt.value
+                })),
             ];
 
     const handleCreateClick = () => {
