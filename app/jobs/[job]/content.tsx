@@ -1675,11 +1675,45 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setAvailableJobsPageIndex(0);
     };
 
-    // Compute filtered branch counts from the filtered activeJobs array
-    const filteredBranchCounts = isActiveJobs ? branchOptions.reduce((acc, opt) => {
-        acc[opt.value] = activeJobs.filter(job => job.branch === opt.value).length;
-        return acc;
-    }, {} as Record<string, number>) : {};
+    // State for filtered branch total counts
+    const [filteredBranchCounts, setFilteredBranchCounts] = useState<Record<string, number>>({});
+
+    // Helper to get filters without branch
+    const getFiltersWithoutBranch = useCallback(() => {
+        const { branch, ...rest } = activeFilters;
+        return rest;
+    }, [activeFilters]);
+
+    // Fetch total count for each branch with current filters (excluding branch filter)
+    const fetchFilteredBranchCounts = useCallback(async () => {
+        if (!isActiveJobs || !branchOptions.length) return;
+        const filtersWithoutBranch = getFiltersWithoutBranch();
+        const counts: Record<string, number> = {};
+        await Promise.all(
+            branchOptions.map(async (opt) => {
+                const params = new URLSearchParams();
+                params.set("limit", "1");
+                params.set("page", "1");
+                if (Object.keys(filtersWithoutBranch).length > 0) {
+                    params.set("filters", JSON.stringify(filtersWithoutBranch));
+                }
+                params.set("branch", opt.value);
+                const res = await fetch(`/api/jobs?${params.toString()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    counts[opt.value] = data.pagination?.totalCount || 0;
+                } else {
+                    counts[opt.value] = 0;
+                }
+            })
+        );
+        setFilteredBranchCounts(counts);
+    }, [isActiveJobs, branchOptions, getFiltersWithoutBranch, activeFilters, sortBy, sortOrder]);
+
+    // Update branch counts when filters, sorting, or data reloads
+    useEffect(() => {
+        fetchFilteredBranchCounts();
+    }, [fetchFilteredBranchCounts]);
 
     const segments = isAvailableJobs
         ? [
@@ -1702,7 +1736,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             : [
                 { label: `All (${activeJobs.length})`, value: "all" },
                 ...branchOptions.map(opt => ({
-                    label: `${opt.label} (${filteredBranchCounts[opt.value] || 0})`,
+                    label: `${opt.label} (${filteredBranchCounts[opt.value] ?? 0})`,
                     value: opt.value
                 })),
             ];
