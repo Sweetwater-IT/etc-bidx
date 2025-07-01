@@ -230,7 +230,7 @@ export default function SignOrderPage() {
             branch: order.branch || '-',
             assigned_to: order.assigned_to || 'Unassigned',
             type: order.type || '-',
-            shop_status: order.shop_status || 'not-started',
+            shop_status: order.shop_status || '',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
           }));
@@ -406,7 +406,7 @@ export default function SignOrderPage() {
                     order.shop_status === 'in-process' ? 'In Process' :
                     order.shop_status === 'on-order' ? 'On Order' :
                     order.shop_status === 'complete' ? 'Complete' :
-                    order.shop_status || 'Not Started',
+                    order.shop_status || '',
         order_type: order.order_type || '-',
         order_number: order.order_number == null ? '' : order.order_number,
       }));
