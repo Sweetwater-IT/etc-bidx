@@ -1695,9 +1695,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 const params = new URLSearchParams();
                 params.set("limit", "1");
                 params.set("page", "1");
-                if (Object.keys(filtersWithoutBranch).length > 0) {
-                    params.set("filters", JSON.stringify(filtersWithoutBranch));
-                }
+                params.set("archived", "false");
+                params.set("filters", JSON.stringify(filtersWithoutBranch));
                 params.set("branch", opt.value);
                 const res = await fetch(`/api/jobs?${params.toString()}`);
                 if (res.ok) {
