@@ -375,7 +375,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 });
             } else {
                 // It's a branch value
-                setActiveSegment("all"); // Keep segment as 'all' for filtering
+                setActiveSegment(value); // Set to branch value for highlighting
                 setActiveFilters(filters => ({ ...filters, branch: [value] }));
             }
         } else {
@@ -1675,6 +1675,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setAvailableJobsPageIndex(0);
     };
 
+    // Compute filtered branch counts from the filtered activeJobs array
+    const filteredBranchCounts = isActiveJobs ? branchOptions.reduce((acc, opt) => {
+        acc[opt.value] = activeJobs.filter(job => job.branch === opt.value).length;
+        return acc;
+    }, {} as Record<string, number>) : {};
+
     const segments = isAvailableJobs
         ? [
             { label: `All (${jobCounts.all || 0})`, value: "all" },
@@ -1694,9 +1700,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 { label: `Archived (${activeBidCounts.archived || 0})`, value: "archived" }
             ]
             : [
-                { label: `All (${activeJobCounts.all || 0})`, value: "all" },
+                { label: `All (${activeJobs.length})`, value: "all" },
                 ...branchOptions.map(opt => ({
-                    label: `${opt.label} (${activeJobCounts[opt.value?.toLowerCase?.() || opt.value] || 0})`,
+                    label: `${opt.label} (${filteredBranchCounts[opt.value] || 0})`,
                     value: opt.value
                 })),
             ];
