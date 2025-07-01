@@ -272,7 +272,7 @@ export default function SignOrderPage() {
         for (const status of statuses) {
           const res = await fetch(`/api/sign-shop-orders?counts=true&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
           const d = await res.json();
-          counts[status] = d.counts?.status || 0;
+          counts[status] = d.counts?.[status] || 0;
         }
         setSegmentCounts(counts as { all: number; "not-started": number; "in-process": number; "on-order": number; complete: number });
       }
