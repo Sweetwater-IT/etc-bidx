@@ -159,6 +159,7 @@ export interface DataTableProps<TData extends object> {
   handleMultiDelete?: () => void
   viewBidSummaryOpen?: boolean
   onViewBidSummary?: (item: TData) => void
+  onUnarchive?: (item: TData) => void
 }
 
 function formatCellValue(value: any, key: string) {
@@ -373,7 +374,8 @@ export function DataTable<TData extends object>({
   allRowsSelected,
   handleMultiDelete,
   viewBidSummaryOpen,
-  onViewBidSummary
+  onViewBidSummary,
+  onUnarchive
 }: DataTableProps<TData>) {
 
   const columns = React.useMemo(() => {
@@ -395,7 +397,8 @@ export function DataTable<TData extends object>({
       onEdit ||
       onArchive ||
       onMarkAsBidJob ||
-      onUpdateStatus
+      onUpdateStatus ||
+      onUnarchive
     ) {
       cols.push({
         id: "actions",
@@ -453,6 +456,17 @@ export function DataTable<TData extends object>({
 
               if (archiveSuccessful && onSegmentChange && segmentValue) {
                 onSegmentChange(segmentValue);
+              }
+            },
+            [row.original]
+          );
+
+          const handleUnarchive = useCallback(
+            async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              e.preventDefault();
+              if (onUnarchive) {
+                await onUnarchive(row.original as TData);
               }
             },
             [row.original]
@@ -661,6 +675,15 @@ export function DataTable<TData extends object>({
                       Archive
                     </DropdownMenuItem>
                   )}
+
+                  {onUnarchive && row.original && (row.original as any).archived === true && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={handleUnarchive}
+                    >
+                      Unarchive
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -752,6 +775,7 @@ export function DataTable<TData extends object>({
     segments,
     onSegmentChange,
     onViewJobSummary,
+    onUnarchive
   ]);
 
   // State for filter visibility
