@@ -25,6 +25,18 @@ export async function GET(request: NextRequest) {
     if (counts) {
       // For shop_status-based segments
       const shopStatuses = ["not-started", "in-process", "on-order", "complete"];
+      // If archived filter is active, return only archived count
+      if (isArchivedFilter) {
+        // Count all archived sign orders
+        const { count: archivedCount, error: archivedError } = await supabase
+          .from('sign_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('archived', true);
+        if (archivedError) {
+          return NextResponse.json({ success: false, error: 'Failed to get archived count' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, counts: { archived: archivedCount || 0 } });
+      }
       const countsResult: Record<string, number> = {
         all: 0,
         "not-started": 0,

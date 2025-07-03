@@ -37,6 +37,7 @@ const SEGMENTS = [
   { label: "In Process", value: "in-process" },
   { label: "On Order", value: "on-order" },
   { label: "Complete", value: "complete" },
+  { label: "Archived", value: "archived" },
 ];
 
 export default function SignOrderPage() {
@@ -213,7 +214,12 @@ export default function SignOrderPage() {
       }
 
       // Add shop_status segment filter
-      if (activeSegment !== "all") {
+      if (activeSegment === "archived") {
+        params.append("archived", "true");
+        if (Object.keys(activeFilters).length > 0) {
+          params.append("filters", JSON.stringify(activeFilters));
+        }
+      } else if (activeSegment !== "all") {
         params.append("filters", JSON.stringify({ ...activeFilters, shop_status: [activeSegment] }));
       } else if (Object.keys(activeFilters).length > 0) {
         params.append("filters", JSON.stringify(activeFilters));
@@ -257,25 +263,26 @@ export default function SignOrderPage() {
     try {
       // Get all counts for each shop_status
       const statuses = ["not-started", "in-process", "on-order", "complete"];
-      const counts: Record<string, number> = { all: 0, "not-started": 0, "in-process": 0, "on-order": 0, complete: 0 };
+      const counts: Record<string, number> = { all: 0, "not-started": 0, "in-process": 0, "on-order": 0, complete: 0, archived: 0 };
 
-      // Fetch all orders (not archived)
-      const response = await fetch(`/api/sign-shop-orders?counts=true`);
-      const data = await response.json();
-      if (data.success) {
-        // Fetch count for all
-        const allRes = await fetch(`/api/sign-shop-orders?counts=true`);
-        const allData = await allRes.json();
-        counts.all = allData.counts?.all || 0;
+      // Fetch count for all (non-archived)
+      const allRes = await fetch(`/api/sign-shop-orders?counts=true`);
+      const allData = await allRes.json();
+      counts.all = allData.counts?.all || 0;
 
-        // Fetch count for each shop_status
-        for (const status of statuses) {
-          const res = await fetch(`/api/sign-shop-orders?counts=true&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
-          const d = await res.json();
-          counts[status] = d.counts?.[status] || 0;
-        }
-        setSegmentCounts(counts as { all: number; "not-started": number; "in-process": number; "on-order": number; complete: number });
+      // Fetch count for each shop_status (non-archived)
+      for (const status of statuses) {
+        const res = await fetch(`/api/sign-shop-orders?counts=true&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
+        const d = await res.json();
+        counts[status] = d.counts?.[status] || 0;
       }
+
+      // Fetch count for archived
+      const archivedRes = await fetch(`/api/sign-shop-orders?counts=true&archived=true`);
+      const archivedData = await archivedRes.json();
+      counts.archived = archivedData.counts?.archived || archivedData.counts?.all || 0;
+
+      setSegmentCounts(counts as { all: number; "not-started": number; "in-process": number; "on-order": number; complete: number; archived: number });
     } catch (error) {
       console.error("Error fetching segment counts:", error);
     }
@@ -468,6 +475,26 @@ export default function SignOrderPage() {
     label: `${segment.label.split(' (')[0]} (${segmentCounts[segment.value as keyof typeof segmentCounts] || 0})`
   }));
 
+  const handleUnarchiveSignOrder = useCallback(async (item: SignOrderView) => {
+    try {
+      startLoading();
+      const response = await fetch('/api/sign-orders/unarchive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [item.id] }),
+      });
+      if (!response.ok) throw new Error('Failed to unarchive sign order');
+      toast.success('Sign order unarchived successfully');
+      await fetchQuotes();
+      await fetchCounts();
+    } catch (error) {
+      console.error('Error unarchiving sign order:', error);
+      toast.error('Failed to unarchive sign order');
+    } finally {
+      stopLoading();
+    }
+  }, [fetchQuotes, fetchCounts, startLoading, stopLoading]);
+
   return (
     <SidebarProvider
       style={
@@ -554,6 +581,7 @@ export default function SignOrderPage() {
                 hideDropdown={true}
                 showFilters={showFilters}
                 setShowFilters={setShowFilters}
+                onUnarchive={handleUnarchiveSignOrder}
               />
             </div>
           </div>
