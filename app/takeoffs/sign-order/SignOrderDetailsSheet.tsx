@@ -46,6 +46,9 @@ import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
 import { CustomerDrawer } from '@/components/customer-drawer'
 import { useCustomers } from '@/hooks/use-customers'
+import { CustomerProvider } from '@/contexts/customer-context'
+import { CustomerContactForm } from '@/components/customer-contact-form'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -124,9 +127,36 @@ export function SignOrderDetailsSheet ({
   // Add state for contact popover open/close
   const [openCustomerContact, setOpenCustomerContact] = useState(false)
 
+  // Add state for contact creation drawer
+  const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
+  const lastCreatedContactId = useRef<number | null>(null)
+
   // When localCustomer changes, reset localContact
   useEffect(() => {
     setLocalContact(null)
+  }, [localCustomer])
+
+  // After customer changes, if lastCreatedContactId is set, auto-select that contact
+  useEffect(() => {
+    if (
+      lastCreatedContactId.current &&
+      localCustomer &&
+      Array.isArray(localCustomer.contactIds)
+    ) {
+      const idx = localCustomer.contactIds.findIndex(
+        (id: number) => id === lastCreatedContactId.current
+      )
+      if (idx !== -1) {
+        setLocalContact({
+          id: localCustomer.contactIds[idx],
+          name: localCustomer.names[idx],
+          email: localCustomer.emails[idx],
+          phone: localCustomer.phones[idx],
+          role: localCustomer.roles[idx]
+        })
+        lastCreatedContactId.current = null
+      }
+    }
   }, [localCustomer])
 
   // Update local state when adminInfo changes or when sheet opens
@@ -242,6 +272,15 @@ export function SignOrderDetailsSheet ({
   }
 
   const isCreateMode = mode === 'create'
+
+  // Add this helper function inside the component
+  async function fetchCustomerById (id: number) {
+    const res = await fetch(`/api/customers/${id}`)
+    if (res.ok) {
+      return await res.json()
+    }
+    return null
+  }
 
   return (
     <>
@@ -578,6 +617,17 @@ export function SignOrderDetailsSheet ({
                           <CommandInput placeholder='Search contact...' />
                           <CommandEmpty>No contact found.</CommandEmpty>
                           <CommandGroup className='max-h-[200px] overflow-y-auto'>
+                            {/* Add new contact button */}
+                            <CommandItem
+                              onSelect={() => {
+                                setOpenCustomerContact(false)
+                                setContactDrawerOpen(true)
+                              }}
+                              value='__add_new_contact__'
+                              className='font-medium text-primary cursor-pointer'
+                            >
+                              + Add new contact
+                            </CommandItem>
                             {localCustomer.contactIds.map(
                               (id: number, idx: number) => (
                                 <CommandItem
@@ -674,6 +724,39 @@ export function SignOrderDetailsSheet ({
           }
         }}
       />
+      {/* Contact creation drawer */}
+      {localCustomer && (
+        <CustomerProvider initialCustomer={localCustomer}>
+          <Drawer
+            open={contactDrawerOpen}
+            onOpenChange={setContactDrawerOpen}
+            direction='right'
+          >
+            <DrawerContent>
+              <CustomerContactForm
+                customerId={localCustomer.id}
+                isOpen={contactDrawerOpen}
+                onClose={() => setContactDrawerOpen(false)}
+                onSuccess={async (newContactId?: number) => {
+                  setContactDrawerOpen(false)
+                  if (localCustomer?.id) {
+                    const updatedCustomer = await fetchCustomerById(
+                      localCustomer.id
+                    )
+                    if (updatedCustomer) {
+                      setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
+                      if (typeof newContactId === 'number') {
+                        lastCreatedContactId.current = newContactId
+                      }
+                    }
+                  }
+                }}
+                customer={localCustomer}
+              />
+            </DrawerContent>
+          </Drawer>
+        </CustomerProvider>
+      )}
     </>
   )
 }
