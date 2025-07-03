@@ -60,8 +60,6 @@ export default function SignOrderViewContent() {
   const [signOrder, setSignOrder] = useState<SignOrder | null>(null)
   const [signItems, setSignItems] = useState<SignItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [dataLoaded, setDataLoaded] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [orderDate, setOrderDate] = useState<Date | undefined>(undefined)
   const [needDate, setNeedDate] = useState<Date | undefined>(undefined)
 
@@ -218,11 +216,6 @@ export default function SignOrderViewContent() {
                     signs: formattedSigns
                   }
                 })
-                
-                console.log('Dispatched signs to context:', formattedSigns)
-                
-                // Mark data as loaded after dispatching
-                setDataLoaded(true)
               }, 100)
             }
 
@@ -273,83 +266,7 @@ export default function SignOrderViewContent() {
 
   const handleEditOrder = () => {
     // Navigate to the sign shop page for editing
-    router.push(`/takeoffs/sign-order/${params?.id}`)
-  }
-
-  const handleSubmitOrder = async () => {
-    if (!signOrder) return
-
-    try {
-      setLoading(true)
-
-      const response = await fetch(`/api/sign-orders/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: params?.id,
-          signs: signOrder.signs || {},
-          status: 'submitted',
-          submitted_at: new Date().toISOString(),
-          assigned_to: signOrder.assigned_to,
-          shop_status: signOrder.shop_status || 'not-started'
-        })
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to submit sign order')
-      }
-
-      setLoading(false)
-      toast.success('Order submitted successfully!')
-      router.push('/takeoffs/sign-shop-orders')
-    } catch (error: any) {
-      console.error('Error submitting sign order:', error)
-      setLoading(false)
-      toast.error(`Error: ${error.message || 'Failed to submit sign order'}`)
-    }
-  }
-
-  const handleSaveChanges = () => {
-    if (!signOrder) return
-    setShowConfirmDialog(true)
-  }
-
-  const confirmSaveChanges = async () => {
-    if (!signOrder) return
-
-    try {
-      setLoading(true)
-
-      const response = await fetch(`/api/sign-orders/${params?.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          assigned_to: signOrder.assigned_to,
-          shop_status: signOrder.shop_status || 'not-started'
-        })
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to update sign order')
-      }
-
-      setLoading(false)
-      setShowConfirmDialog(false)
-      toast.success('Changes saved successfully!')
-    } catch (error: any) {
-      console.error('Error updating sign order:', error)
-      setLoading(false)
-      setShowConfirmDialog(false)
-      toast.error(`Failed to save changes: ${error?.message || 'Unknown error'}`)
-    }
+    router.push(`/takeoffs/sign-order/edit/${params?.id}`)
   }
 
   if (loading) {

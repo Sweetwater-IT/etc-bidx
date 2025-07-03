@@ -88,7 +88,6 @@ interface Props {
     currentPhase?: number
     onlyTable?: boolean
     shopMode?: boolean
-    shopSigns?: (ExtendedPrimarySign | ExtendedSecondarySign)[]
     updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void
     adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void
 }
@@ -98,7 +97,6 @@ export function SignOrderList({
     currentPhase = 0, 
     onlyTable = false, 
     shopMode = false,
-    shopSigns,
     updateShopTracking,
     adjustShopValue
 }: Props) {
@@ -250,8 +248,7 @@ export function SignOrderList({
 
     const handleQuantityChange = (signId: string, quantity: number) => {
         const currentSign = mptRental.phases[currentPhase].signs.find(s => s.id === signId);
-
-        if (currentSign && Object.hasOwn(currentSign, 'associatedStructure')) {
+        if (currentSign && (Object.hasOwn(currentSign, 'associatedStructure') || Object.hasOwn(currentSign, 'make'))) {
             const qtyChange = quantity - currentSign.quantity; //if decrementing, will get -1, otherwise +1 or other change for input change
             // Update associated structure quantities
             if ((currentSign as PrimarySign).associatedStructure !== 'none') {
@@ -270,7 +267,6 @@ export function SignOrderList({
             if ((currentSign as PrimarySign).cover) {
                 updateEquipmentQuantity("covers" as EquipmentType, quantity);
             }
-
             // Update all secondary sign quantities to match the new primary sign quantity
             updateSecondarySignQuantities(currentSign.id, quantity)
             dispatch({
@@ -286,8 +282,9 @@ export function SignOrderList({
     }
 
     useEffect(() => {
+        if(mptRental.phases.length < 1) return;
         const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1]
-        if (onlyTable && latestSign.quantity === 0) {
+        if (onlyTable && latestSign && latestSign.quantity === 0) {
             setLocalSign(latestSign)
         }
     }, [mptRental.phases[currentPhase].signs])
@@ -362,7 +359,7 @@ export function SignOrderList({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
+                        {shopMode && mptRental.phases.length > 0 && mptRental.phases[currentPhase].signs
                             .filter(s => s.designation !== '')
                             .reduce((acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[], sign) => {
                                 if ('primarySignId' in sign) {

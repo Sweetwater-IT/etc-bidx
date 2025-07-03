@@ -38,7 +38,11 @@ export interface SignOrderAdminInformation {
   endDate?: Date
 }
 
-export default function SignOrderContentSimple () {
+interface Props {
+  signOrderId?: number
+}
+
+export default function SignOrderContentSimple ({ signOrderId : initialSignOrderId } : Props) {
   const { dispatch, mptRental } = useEstimate()
   const router = useRouter()
 
@@ -54,10 +58,6 @@ export default function SignOrderContentSimple () {
     isSubmitting: false,
     contractNumber: ''
   })
-
-  useEffect(() => {
-    dispatch({ type: 'ADD_MPT_PHASE'})
-  }, [dispatch])
 
   const [localFiles, setLocalFiles] = useState<File[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
@@ -81,7 +81,13 @@ export default function SignOrderContentSimple () {
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
-    dispatch({ type: 'ADD_MPT_PHASE' })
+    if(!initialSignOrderId){
+      dispatch({ type: 'ADD_MPT_PHASE' })
+      return;
+    }
+    else {
+      
+    }
   }, [dispatch])
 
   useEffect(() => {

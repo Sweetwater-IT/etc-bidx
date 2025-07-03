@@ -18,7 +18,7 @@ import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-s
 import { SignOrder } from '@/types/TSignOrder'
 import { toast } from 'sonner'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject'
+import { defaultMPTObject, defaultPhaseObject } from '@/types/default-objects/defaultMPTObject'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -53,12 +53,15 @@ const SignShopContent = ({ id }: Props) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  // const [shopSigns, setShopSigns] = useState<(ExtendedPrimarySign | ExtendedSecondarySign)[]>([])
 
   const { isLoading, startLoading, stopLoading } = useLoading()
 
   // Get signs with shop tracking from context
   const getShopSigns = (): (ExtendedPrimarySign | ExtendedSecondarySign)[] => {
-    return mptRental.phases[0].signs.map(sign => {
+    console.log(mptRental.phases);
+    if (mptRental.phases.length === 0) return [];
+    else return mptRental.phases[0].signs.map(sign => {
       // Ensure all signs have shop tracking properties
       if (!hasShopTracking(sign)) {
         return {
@@ -95,10 +98,8 @@ const SignShopContent = ({ id }: Props) => {
     try {
       startLoading()
 
-      const shopSigns = getShopSigns()
-
       // Convert the sign items array to the expected signs object format
-      const signsObject = shopSigns.reduce((acc, item) => {
+      const signsObject = mptRental.phases[0].signs.reduce((acc, item) => {
         acc[item.id.toString()] = {
           designation: item.designation,
           description: item.description,
@@ -107,9 +108,9 @@ const SignShopContent = ({ id }: Props) => {
           quantity: item.quantity,
           sheeting: item.sheeting,
           stiffener: 'stiffener' in item ? item.stiffener : undefined,
-          in_stock: item.inStock,
-          order: item.order,
-          make: item.make,
+          inStock: (item as ExtendedPrimarySign).inStock,
+          order: (item as ExtendedPrimarySign).order,
+          make: (item as ExtendedPrimarySign).make,
           substrate: item.substrate,
           cover: 'cover' in item ? item.cover : undefined
         }
@@ -171,6 +172,11 @@ const SignShopContent = ({ id }: Props) => {
     })
   }
 
+  useEffect(() => {
+    console.log('Phases and shop signs are:')
+    console.log(mptRental.phases)
+  }, [mptRental.phases])
+
   // Helper function to increment/decrement values
   const adjustShopValue = (
     signId: string,
@@ -187,9 +193,12 @@ const SignShopContent = ({ id }: Props) => {
   }
 
   useEffect(() => {
+    dispatch({ type: 'ADD_MPT_RENTAL' })
+    dispatch({ type: 'ADD_MPT_PHASE' })
+  }, [dispatch])
+
+  useEffect(() => {
     const fetchSignOrder = async () => {
-      dispatch({ type: 'ADD_MPT_RENTAL' })
-      dispatch({ type: 'ADD_MPT_PHASE' })
       try {
         startLoading()
         setLoadingNotes(true)
@@ -212,7 +221,6 @@ const SignShopContent = ({ id }: Props) => {
 
         const users = await fetchReferenceData('users')
 
-        // Add branch information based on ID ranges (temporary solution)
         const orderWithBranch = {
           ...data.data,
           branch:
@@ -234,26 +242,38 @@ const SignShopContent = ({ id }: Props) => {
                 bLights: s.bLights || 0
               }))
 
-            const signsDataForShop = Object.values(data.data.signs)
-              .filter((s: any) => s && typeof s === 'object')
-              .map((s: any) => ({
-                id: s.id ? s.id : generateUniqueId(),
-                make: 'make' in s ? s.make : 0,
-                inStock: 'in_stock' in s ? s.in_stock : 0,
-                order: 'order' in s ? s.order : 0
-              }))
+            // const signsDataForShop = Object.values(data.data.signs)
+            //   .filter((s: any) => s && typeof s === 'object')
+            //   .map((s: any) => ({
+            //     id: s.id ? s.id : generateUniqueId(),
+            //     make: 'make' in s ? s.make : 0,
+            //     inStock: 'inStock' in s ? s.inStock : 0,
+            //     order: 'order' in s ? s.order : 0
+            //   }))
 
-            console.log(signItemsArray)
+            // setShopSigns(signItemsArray.map(s => {
+            //   const associatedShopSign = signsDataForShop.find(shopSign => shopSign.id === s.id);
+            //   if (associatedShopSign) {
+            //     return {
+            //       ...s,
+            //       make: associatedShopSign.make,
+            //       inStock: associatedShopSign.inStock,
+            //       order: associatedShopSign.order
+            //     }
+            //   } else return {
+            //     ...s,
+            //     make: 0,
+            //     inStock: 0,
+            //     order: 0
+            //   }
+            // }))
 
             // First copy the MPT rental with regular signs
             dispatch({
               type: 'COPY_MPT_RENTAL',
               payload: {
                 ...defaultMPTObject,
-                phases: defaultMPTObject.phases.map(p => ({
-                  ...p,
-                  signs: signItemsArray
-                }))
+                phases: [{ ...defaultPhaseObject, signs: signItemsArray }]
               }
             })
           } catch (error) {
@@ -344,58 +364,55 @@ const SignShopContent = ({ id }: Props) => {
     })
   }
 
-  const shopSigns = getShopSigns()
+  return (<>
+    <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm Changes</DialogTitle>
+          <div>
+            {signOrder && (
+              <div className='space-y-4 mt-2'>
+                <div>
+                  Confirm you want to assign this order to{' '}
+                  <span>{signOrder.assigned_to}</span>
+                </div>
 
-  return (
-    <>
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Changes</DialogTitle>
-            <div>
-              {signOrder && (
-                <div className='space-y-4 mt-2'>
-                  <div>
-                    Confirm you want to assign this order to{' '}
-                    <span>{signOrder.assigned_to}</span>
-                  </div>
-
-                  {shopSigns.length > 0 && (
-                    <div className='space-y-2'>
-                      <p className='font-medium'>
-                        And confirm the following quantities:
-                      </p>
-                      <div className='max-h-60 overflow-y-auto'>
-                        <table className='w-full text-sm'>
-                          <thead>
-                            <tr className='border-b'>
-                              <th className='text-left py-2'>Designation</th>
-                              <th className='text-center py-2'>In stock</th>
-                              <th className='text-center py-2'>Order</th>
-                              <th className='text-center py-2'>Make</th>
+                {mptRental.phases.length > 0 && (
+                  <div className='space-y-2'>
+                    <p className='font-medium'>
+                      And confirm the following quantities:
+                    </p>
+                    <div className='max-h-60 overflow-y-auto'>
+                      <table className='w-full text-sm'>
+                        <thead>
+                          <tr className='border-b'>
+                            <th className='text-left py-2'>Designation</th>
+                            <th className='text-center py-2'>In stock</th>
+                            <th className='text-center py-2'>Order</th>
+                            <th className='text-center py-2'>Make</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mptRental.phases[0].signs.map(item => (
+                            <tr key={item.id} className='border-b'>
+                              <td className='py-2'>{item.designation}</td>
+                              <td className='text-center py-2'>
+                                {(item as ExtendedPrimarySign).inStock || 0}
+                              </td>
+                              <td className='text-center py-2'>
+                                {(item as ExtendedPrimarySign).order || 0}
+                              </td>
+                              <td className='text-center py-2'>
+                                {(item as ExtendedPrimarySign).make || 0}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {shopSigns.map(item => (
-                              <tr key={item.id} className='border-b'>
-                                <td className='py-2'>{item.designation}</td>
-                                <td className='text-center py-2'>
-                                  {item.inStock || 0}
-                                </td>
-                                <td className='text-center py-2'>
-                                  {item.order || 0}
-                                </td>
-                                <td className='text-center py-2'>
-                                  {item.make || 0}
-                                </td>
-                              </tr>
-                            ))}
-                            {shopSigns.every(
-                              item =>
-                                (item.order === 0 ||
-                                  item.order === undefined) &&
-                                (item.make === 0 || item.make === undefined)
-                            ) && (
+                          ))}
+                          {mptRental.phases[0].signs.every(
+                            item =>
+                              ((item as ExtendedPrimarySign).order === 0 ||
+                                (item as ExtendedPrimarySign).order === undefined) &&
+                              ((item as ExtendedPrimarySign).make === 0 || (item as ExtendedPrimarySign).make === undefined)
+                          ) && (
                               <tr>
                                 <td
                                   colSpan={3}
@@ -405,99 +422,99 @@ const SignShopContent = ({ id }: Props) => {
                                 </td>
                               </tr>
                             )}
-                          </tbody>
-                        </table>
-                      </div>
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowConfirmDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={confirmSaveChanges} disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Yes, Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <SiteHeader>
-        <div className='flex items-center justify-between'>
-          <h1 className='text-3xl font-bold mt-2 ml-0'>
-            Sign Shop Order Tracker
-          </h1>
-          <div className='flex gap-2'>
-            <Button
-              onClick={() => setShowConfirmDialog(true)}
-              className='bg-primary text-white hover:bg-primary/90'
-            >
-              Submit Order
-            </Button>
-            <Button variant='outline' onClick={handleExport}>
-              Export
-            </Button>
-          </div>
-        </div>
-      </SiteHeader>
-      {!isLoading && signOrder && (
-        <div className='w-full flex flex-1 flex-col'>
-          <div className='@container/main flex flex-1 flex-col gap-2'>
-            <SignShopAdminInfo
-              signOrder={signOrder}
-              setSignOrder={setSignOrder}
-              id={id}
-            />
-            <div className='w-full bg-white p-8 rounded-md shadow-sm border border-gray-100 mb-8'>
-              <div className='flex justify-between items-center mb-4'>
-                <h2 className='text-xl font-semibold'>Sign order</h2>
-                <div className='flex gap-2'>
-                  <Button
-                    onClick={handleAddNewSign}
-                    className='bg-primary text-white hover:bg-primary/90'
-                  >
-                    <Plus className='h-4 w-4 mr-2' />
-                    Add New Sign
-                  </Button>
-                  <Button
-                    onClick={handleSaveChanges}
-                    className='bg-green-600 text-white hover:bg-green-700'
-                  >
-                    Save Changes
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
-              {shopSigns.length > 0 && (
-                <div className='max-w-full overflow-x-auto'>
-                  <SignOrderList
-                    currentPhase={0}
-                    onlyTable={true}
-                    shopMode={true}
-                    shopSigns={shopSigns}
-                    updateShopTracking={updateShopTracking}
-                    adjustShopValue={adjustShopValue}
-                  />
-                </div>
-              )}
+            )}
+          </div>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant='outline'
+            onClick={() => setShowConfirmDialog(false)}
+          >
+            Cancel
+          </Button>
+          <Button onClick={confirmSaveChanges} disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Yes, Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <SiteHeader>
+      <div className='flex items-center justify-between'>
+        <h1 className='text-3xl font-bold mt-2 ml-0'>
+          Sign Shop Order Tracker
+        </h1>
+        <div className='flex gap-2'>
+          <Button
+            onClick={() => setShowConfirmDialog(true)}
+            className='bg-primary text-white hover:bg-primary/90'
+          >
+            Submit Order
+          </Button>
+          <Button variant='outline' onClick={handleExport}>
+            Export
+          </Button>
+        </div>
+      </div>
+    </SiteHeader>
+    {!isLoading && signOrder && (
+      <div className='w-full flex flex-1 flex-col'>
+        <div className='@container/main flex flex-1 flex-col gap-2'>
+          <SignShopAdminInfo
+            signOrder={signOrder}
+            setSignOrder={setSignOrder}
+            id={id}
+          />
+          <div className='w-full bg-white p-8 rounded-md shadow-sm border border-gray-100 mb-8'>
+            <div className='flex justify-between items-center mb-4'>
+              <h2 className='text-xl font-semibold'>Sign order</h2>
+              <div className='flex gap-2'>
+                <Button
+                  onClick={handleAddNewSign}
+                  className='bg-primary text-white hover:bg-primary/90'
+                >
+                  <Plus className='h-4 w-4 mr-2' />
+                  Add New Sign
+                </Button>
+                <Button
+                  onClick={handleSaveChanges}
+                  className='bg-green-600 text-white hover:bg-green-700'
+                >
+                  Save Changes
+                </Button>
+              </div>
             </div>
-            <div className='w-full mt-4'>
-              <QuoteNotes
-                notes={notes}
-                onSave={handleSaveNote}
-                onEdit={handleEditNote}
-                onDelete={handleDeleteNote}
-                loading={loadingNotes}
-              />
-            </div>
+            {mptRental.phases.length > 0 && (
+              <div className='max-w-full overflow-x-auto'>
+                <SignOrderList
+                  currentPhase={0}
+                  onlyTable={true}
+                  shopMode={true}
+                  // shopSigns={shopSigns}
+                  updateShopTracking={updateShopTracking}
+                  adjustShopValue={adjustShopValue}
+                />
+              </div>
+            )}
+          </div>
+          <div className='w-full mt-4'>
+            <QuoteNotes
+              notes={notes}
+              onSave={handleSaveNote}
+              onEdit={handleEditNote}
+              onDelete={handleDeleteNote}
+              loading={loadingNotes}
+            />
           </div>
         </div>
-      )}
-    </>
+      </div>
+    )}
+  </>
   )
 }
 
