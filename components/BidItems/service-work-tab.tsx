@@ -216,7 +216,7 @@ const ServiceWorkTab = () => {
   const handleSave = () => {
     if (!formData) return;
 
-    let finalFormData = { ...formData, markupRate: 50 };
+    const finalFormData = { ...formData, markupRate: 50 };
 
     // Dispatch to global state
     dispatch({
