@@ -754,6 +754,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             {
                 title: 'Total Jobs Over Days',
                 value: stats.overdays
+            },
+            {
+                title: '# of Jobs Pending Start',
+                value: '12'
             }
             ])
         } catch (error) {
