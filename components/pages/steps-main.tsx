@@ -161,7 +161,7 @@ const StepsMain = () => {
                   <BidItemsStep5
                     currentPhase={currentPhase}
                     setCurrentPhase={setCurrentPhase}
-                    setIsViewSummaryOpen={setIsViewSummaryOpen}
+                    // setIsViewSummaryOpen={setIsViewSummaryOpen}
                   />
                 )}
               </section>
@@ -172,7 +172,7 @@ const StepsMain = () => {
           {isSidebarVisible && (
             <div className="w-1/4 space-y-4 sticky max-h-[80vh] overflow-y-auto top-10 transition-all duration-300 pl-4 border-l">
               <AdminInformationAccordion />
-              <PhaseSummaryAccordion
+              {/* <PhaseSummaryAccordion
                 setCurrentPhase={setCurrentPhase}
                 currentPhase={currentPhase}
               />
@@ -181,7 +181,7 @@ const StepsMain = () => {
               />
               <TripAndLaborSummaryAccordion
                 currentPhase={currentPhase}
-              />
+              /> */}
               <BidSummaryAccordion
                 setIsViewSummaryOpen={setIsViewSummaryOpen}
                 isViewSummaryOpen={isViewSummaryOpen}
