@@ -23,120 +23,55 @@ export async function GET(request: NextRequest) {
 
     // If we're just getting counts
     if (counts) {
-      // Check if we're coming from the load-sheet page which needs both Draft and Submitted
-      // The load-sheet page sends status=Draft,Submitted in the request
-      let statusValues: string[] = [];
+      // For shop_status-based segments
+      const shopStatuses = ["not-started", "in-process", "on-order", "complete"];
+      const countsResult: Record<string, number> = {
+        all: 0,
+        "not-started": 0,
+        "in-process": 0,
+        "on-order": 0,
+        complete: 0,
+      };
+
+      // Build base count query (not archived)
+      let baseQuery = supabase
+        .from('sign_orders')
+        .select('*', { count: 'exact', head: true })
+        .or('archived.is.null,archived.eq.false');
+
+      // Add status filter if present (for load-sheet compatibility)
+      const statusValues: string[] = [];
       if (statusParam && statusParam.includes('Draft')) {
-        // Handle multiple statuses separated by commas for the load-sheet page
         const statuses = statusParam.split(',').map(s => s.trim());
-        
-        // Create an array with all case variations for each status
         statuses.forEach(status => {
           statusValues.push(status, status.toLowerCase(), status.toUpperCase());
         });
-
-      } else {
-        // For sign-shop-orders page, count all orders (including those with null/empty status)
-        statusValues = []; // Empty array means no status filter
+        baseQuery = baseQuery.in('status', statusValues);
       }
 
-      // Build count query with proper archived filtering
-      let countQuery = supabase
-        .from('sign_orders')
-        .select('*', { count: 'exact', head: true });
-      
-      // Apply archived filtering first (like in active-bids)
-      if (isArchivedFilter) {
-        countQuery = countQuery.eq('archived', true);
-      } else if (excludeArchived || (!isArchivedFilter && !statusParam?.includes('Draft'))) {
-        // For sign-shop-orders page, exclude archived by default unless specifically requesting archived
-        countQuery = countQuery.or('archived.is.null,archived.eq.false');
-      }
-      
-      if (statusValues.length > 0) {
-        countQuery = countQuery.in('status', statusValues);
-      }
-
-      const { count: totalCount, error: countError } = await countQuery;
-
-      if (countError) {
-        console.error('Error getting total count:', countError);
+      // Get total count (all)
+      const { count: allCount, error: allCountError } = await baseQuery;
+      if (allCountError) {
         return NextResponse.json({ success: false, error: 'Failed to get counts' }, { status: 500 });
       }
-      
-      // Get all users with their branch_ids
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('name, branch_id');
-        
-      if (usersError) {
-        console.error('Error getting users:', usersError);
-      }
-      
-      // Create a map of user names to branch_ids
-      const userBranchMap = (users || []).reduce((map: any, user: any) => {
-        map[user.name] = user.branch_id;
-        return map;
-      }, {});
-      
-      // Get all orders with proper archived filtering for branch counts
-      let ordersQuery = supabase
-        .from('sign_orders')
-        .select('requestor, archived');
-      
-      // Apply the same archived filtering for branch counts
-      if (isArchivedFilter) {
-        ordersQuery = ordersQuery.eq('archived', true);
-      } else if (excludeArchived || (!isArchivedFilter && !statusParam?.includes('Draft'))) {
-        ordersQuery = ordersQuery.or('archived.is.null,archived.eq.false');
-      }
-      
-      if (statusValues.length > 0) {
-        ordersQuery = ordersQuery.in('status', statusValues);
-      }
-      
-      const { data: allOrders, error: allOrdersError } = await ordersQuery;
-        
-      if (allOrdersError) {
-        console.error('Error getting all orders:', allOrdersError);
-      }
-      
-      // Initialize branch counts with proper naming convention
-      const branchCounts: Record<string, number> = {
-        all: totalCount || 0,
-        turbotville: 0,   // branch_id 1
-        hatfield: 0,      // branch_id 2
-        bedford: 0,       // branch_id 3
-        archived: 0
-      };
+      countsResult.all = allCount || 0;
 
-      // Get archived count separately (always get archived count regardless of current filter)
-      const { count: archivedCount, error: archivedCountError } = await supabase
-        .from('sign_orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('archived', true);
-        
-      if (!archivedCountError) {
-        branchCounts.archived = archivedCount || 0;
-      }
-      
-      // Map branch IDs to the expected frontend names (correct mapping)
-      const branchIdToNameMap: Record<number, string> = {
-        1: 'turbotville',
-        2: 'hatfield', 
-        3: 'bedford'
-      };
-      
-      // Count orders by branch using the requestor's branch
-      (allOrders || []).forEach((order: any) => {
-        const branchId = userBranchMap[order.requestor];
-        if (branchId && branchIdToNameMap[branchId]) {
-          const branchName = branchIdToNameMap[branchId];
-          branchCounts[branchName] = (branchCounts[branchName] || 0) + 1;
+      // Get count for each shop_status
+      for (const status of shopStatuses) {
+        let statusQuery = supabase
+          .from('sign_orders')
+          .select('*', { count: 'exact', head: true })
+          .or('archived.is.null,archived.eq.false')
+          .eq('shop_status', status);
+        if (statusValues.length > 0) {
+          statusQuery = statusQuery.in('status', statusValues);
         }
-      });
-
-      return NextResponse.json({ success: true, counts: branchCounts });
+        const { count: statusCount, error: statusError } = await statusQuery;
+        if (!statusError) {
+          countsResult[status] = statusCount || 0;
+        }
+      }
+      return NextResponse.json({ success: true, counts: countsResult });
     }
 
     // Get reference data for joins
@@ -311,21 +246,37 @@ export async function GET(request: NextRequest) {
               const shopStatusValues = values.map(status => {
                 switch (status.toLowerCase()) {
                   case 'not started':
+                    return 'not-started';
                   case 'not-started':
                     return 'not-started';
                   case 'in progress':
+                    return 'in-progress';
                   case 'in-progress':
                     return 'in-progress';
                   case 'complete':
                     return 'complete';
                   case 'on hold':
+                    return 'on-hold';
                   case 'on-hold':
                     return 'on-hold';
+                  case 'in-process':
+                    return 'in-process';
+                  case 'on-order':
+                    return 'on-order';
                   default:
                     return status;
                 }
               });
-              query = query.in('shop_status', shopStatusValues);
+              // Special logic for 'not-started' to exclude other statuses
+              if (shopStatusValues.includes('not-started')) {
+                // Exclude 'on-order', 'in-process', 'complete'
+                query = query
+                  .not('shop_status', 'eq', 'on-order')
+                  .not('shop_status', 'eq', 'in-process')
+                  .not('shop_status', 'eq', 'complete');
+              } else {
+                query = query.in('shop_status', shopStatusValues);
+              }
               break;
             case 'status':
               query = query.in('status', values);
@@ -492,7 +443,15 @@ export async function GET(request: NextRequest) {
                     return status;
                 }
               });
-              paginationCountQuery = paginationCountQuery.in('shop_status', shopStatusValues);
+              if (shopStatusValues.includes('not-started')) {
+                // Exclude 'on-order', 'in-process', 'complete'
+                paginationCountQuery = paginationCountQuery
+                  .not('shop_status', 'eq', 'on-order')
+                  .not('shop_status', 'eq', 'in-process')
+                  .not('shop_status', 'eq', 'complete');
+              } else {
+                paginationCountQuery = paginationCountQuery.in('shop_status', shopStatusValues);
+              }
               break;
             case 'status':
               paginationCountQuery = paginationCountQuery.in('status', values);
@@ -589,7 +548,7 @@ export async function GET(request: NextRequest) {
         type: '-',
         order_date: orderDate,
         need_date: needDate,
-        shop_status: order.shop_status || 'not-started',
+        shop_status: order.shop_status || '',
         order_type: (() => {
           const typeCount = [order.rental, order.sale, order.perm_signs].filter(Boolean).length;
           if (typeCount > 1) return 'M';

@@ -1752,6 +1752,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     label: `${opt.label} (${filteredBranchCounts[opt.value] ?? 0})`,
                     value: opt.value
                 })),
+                { label: `Archived (${activeJobCounts.archived ?? 0})`, value: "archived" }
             ];
 
     const handleCreateClick = () => {
@@ -1954,6 +1955,27 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } catch (error) {
             console.error('Error exporting bids:', error);
             toast.error('Failed to export bids. Please try again.');
+        } finally {
+            stopLoading();
+        }
+    };
+
+    const handleUnarchiveActiveJob = async (item: ActiveJob) => {
+        try {
+            startLoading();
+            // Use the new unarchive endpoint
+            const response = await fetch('/api/jobs/active-jobs/unarchive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [item.id] }),
+            });
+            if (!response.ok) throw new Error('Failed to unarchive job');
+            toast.success('Job unarchived successfully');
+            await loadActiveJobs();
+            await fetchActiveJobCounts();
+        } catch (error) {
+            console.error('Error unarchiving job:', error);
+            toast.error('Failed to unarchive job');
         } finally {
             stopLoading();
         }
@@ -2162,6 +2184,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         }
                                     }}
                                     onArchive={handleArchiveActiveJob}
+                                    onUnarchive={handleUnarchiveActiveJob}
                                     // Pagination props
                                     pageCount={activeJobsPageCount}
                                     pageIndex={activeJobsPageIndex}
