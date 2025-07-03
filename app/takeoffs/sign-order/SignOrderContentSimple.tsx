@@ -55,6 +55,10 @@ export default function SignOrderContentSimple () {
     contractNumber: ''
   })
 
+  useEffect(() => {
+    dispatch({ type: 'ADD_MPT_PHASE'})
+  }, [dispatch])
+
   const [localFiles, setLocalFiles] = useState<File[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
@@ -345,7 +349,7 @@ export default function SignOrderContentSimple () {
   }
 
   return (
-    <div className='flex flex-1 flex-col'>
+    mptRental.phases.length > 0 ? <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
         heading='Create Sign Order'
         handleSubmit={() => handleSave('DRAFT')}
@@ -400,6 +404,6 @@ export default function SignOrderContentSimple () {
           />
         </div>
       </div>
-    </div>
+    </div> : <></>
   )
 }

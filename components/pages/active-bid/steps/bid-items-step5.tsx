@@ -6,11 +6,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
   Plus,
-  Loader
+  Loader,
+  Edit,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import { useEstimate } from "@/contexts/EstimateContext";
 import {
   EquipmentType,
@@ -31,18 +52,11 @@ import SaleItemsStep from "./sale-items-step";
 import FlaggingServicesTab from "@/components/BidItems/flagging-tab";
 import ServiceWorkTab from "@/components/BidItems/service-work-tab";
 import PermanentSignsSummaryStep from "@/components/BidItems/permanent-signs-tab";
-import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { toast } from "sonner";
-import PhaseInfoStep2 from "./phase-info-step2";
-import MutcdSignsStep3 from "./mutcd-signs-step3";
-import TripAndLaborStep4 from "./trip-and-labor-step4";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import AddPhaseButton from "./add-phase-button";
-const step = {
-  id: "step-5",
-  name: "Bid Items",
-  description: "Configure bid items",
-};
+import { formatDecimal } from "@/lib/formatDecimals";
+import { handleNextDigits } from "@/lib/handleNextDigits";
+import EmptyContainer from "@/components/BidItems/empty-container";import MutcdSignsStep3 from "./mutcd-signs-step3";
+import PhaseActionButtons from "./phase-action-buttons";
+import PhaseInfoTable from "./phase-info-table";
 
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5; // 5 years
@@ -51,22 +65,48 @@ const DEFAULT_DISPATCH_FEE = 75;
 const DEFAULT_ANNUAL_UTILIZATION = 0.75;
 const DEFAULT_TARGET_MOIC = 2;
 
+//the key is an EquipmentType, the value is the EmergencyFields minus emergency in front
+const emergencyFieldKeyMap: Record<string, string> = {
+  'BLights': 'BLites',
+  'ACLights': 'ACLites',
+  'sharps': 'Sharps',
+  'HIVP': 'HIVerticalPanels',
+  'TypeXIVP': 'TypeXIVerticalPanels'
+};
 
 const formatLabel = (key: string) => {
   return labelMapping[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
 };
 
+// Calculate days between dates (abstracted function)
+const calculateDays = (start: Date, end: Date): number => {
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Include both start and end date
+  return diffDays;
+};
+
+interface PhaseDrawerData {
+  name: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  personnel: number;
+  days: number;
+  numberTrucks: number;
+  additionalRatedHours: number;
+  additionalNonRatedHours: number;
+  maintenanceTrips: number;
+}
+
 const BidItemsStep5 = ({
   currentPhase,
-  setIsViewSummaryOpen,
   setCurrentPhase
 }: {
   currentPhase: number;
-  setIsViewSummaryOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setCurrentPhase: React.Dispatch<React.SetStateAction<number>>
 }) => {
-  const { mptRental, adminData, dispatch, equipmentRental, flagging, serviceWork, saleItems, notes } = useEstimate();
-  const [activeTab, setActiveTab] = useState("mpt");
+  const { mptRental, adminData, dispatch } = useEstimate();
+  const [startDateOpen, setStartDateOpen] = useState<boolean>(false);
+  const [endDateOpen, setEndDateOpen] = useState<boolean>(false);
   const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
   const [newCustomItem, setNewCustomItem] = useState<Omit<CustomLightAndDrumItem, 'id'>>({
     quantity: 0,
@@ -74,10 +114,325 @@ const BidItemsStep5 = ({
     usefulLife: 0
   });
   const [itemName, setItemName] = useState('');
+  const [digits, setDigits] = useState<Record<string, string>>({});
+  
+  // Phase drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(null);
+  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [initialSubmission, setInitialSubmission] = useState<boolean>(false);
+  const handleRateChange = (formattedValue: string, fieldKey: string, equipmentKey: string) => {
+    const numValue = Number(formattedValue);
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'emergencyFields',
+        value: {
+          ...adminData?.emergencyFields,
+          [fieldKey]: numValue
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (adminData?.emergencyFields) {
+      const newDigits: Record<string, string> = {};
+      lightAndDrumList.forEach(equipmentKey => {
+        const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+        const fieldKey = `emergency${emergencyKey}`;
+        const currentValue = adminData.emergencyFields[fieldKey] || 0;
+        newDigits[equipmentKey] = Math.round(currentValue * 100).toString().padStart(3, "0");
+      });
+      setDigits(newDigits);
+    }
+  }, [adminData?.emergencyFields]);
+
+  // Helper function to get digits for specific equipment
+  const getDigitsForEquipment = (equipmentKey: string): string => {
+    return digits[equipmentKey] || "000";
+  };
+
+  const updateDigitsForEquipment = (equipmentKey: string, newDigits: string) => {
+    setDigits(prev => ({
+      ...prev,
+      [equipmentKey]: newDigits
+    }));
+  };
+
+  // Phase management functions
+  const handleAddPhase = () => {
+    setPhaseFormData({
+      name: '',
+      startDate: null,
+      endDate: null,
+      personnel: 0,
+      days: 0,
+      numberTrucks: 0,
+      additionalRatedHours: 0,
+      additionalNonRatedHours: 0,
+      maintenanceTrips: 0,
+    });
+    setEditingPhaseIndex(null);
+    setDrawerOpen(true);
+  };
+
+  const handleEditPhase = (phaseIndex: number) => {
+    const phase = mptRental.phases[phaseIndex];
+    setPhaseFormData({
+      name: phase.name,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+      personnel: phase.personnel,
+      days: phase.days,
+      numberTrucks: phase.numberTrucks,
+      additionalRatedHours: phase.additionalRatedHours,
+      additionalNonRatedHours: phase.additionalNonRatedHours,
+      maintenanceTrips: phase.maintenanceTrips,
+    });
+    setEditingPhaseIndex(phaseIndex);
+    setDrawerOpen(true);
+  };
+
+  const handleDeletePhase = (phaseIndex: number) => {
+    if (mptRental.phases.length > 1) {
+      dispatch({ type: 'DELETE_MPT_PHASE', payload: phaseIndex });
+      if (currentPhase >= phaseIndex && currentPhase > 0) {
+        setCurrentPhase(currentPhase - 1);
+      }
+    }
+  };
+
+  const handlePhaseFormUpdate = (field: keyof PhaseDrawerData, value: any) => {
+    if (phaseFormData) {
+      setPhaseFormData({ ...phaseFormData, [field]: value });
+    }
+  };
+
+  const handleDateChange = (value: Date | undefined, name: 'startDate' | 'endDate') => {
+    if (!value || !phaseFormData) return;
+
+    const updatedFormData = { ...phaseFormData, [name]: value };
+
+    if (updatedFormData.startDate && updatedFormData.endDate) {
+      const days = calculateDays(updatedFormData.startDate, updatedFormData.endDate);
+      updatedFormData.days = days;
+    }
+
+    setPhaseFormData(updatedFormData);
+    if(name === 'startDate'){
+      setStartDateOpen(false);
+    } else {
+      setEndDateOpen(false);
+    }
+  };
+
+  const setEndDateFromDays = (days: number) => {
+    if (!phaseFormData?.startDate) return;
+
+    const startDate = phaseFormData.startDate;
+    const newEndDate = new Date(startDate.getTime() + (days * 24 * 60 * 60 * 1000));
+
+    setPhaseFormData({
+      ...phaseFormData,
+      endDate: newEndDate,
+      days: days
+    });
+  };
+
+  const handleUseAdminDates = (useAdminDates: boolean) => {
+    if (!phaseFormData) return;
+
+    if (useAdminDates && (!adminData.startDate || !adminData.endDate)) {
+      toast.error('Project start and end dates are not set');
+      return;
+    } else if (useAdminDates) {
+      const days = calculateDays(adminData.startDate!, adminData.endDate!);
+      setPhaseFormData({
+        ...phaseFormData,
+        startDate: adminData.startDate!,
+        endDate: adminData.endDate!,
+        days: days
+      });
+    }
+  };
+
+  const handleSavePhase = () => {
+    if (!phaseFormData) return;
+
+    if (editingPhaseIndex !== null) {
+      // Update existing phase
+      dispatch({
+        type: 'UPDATE_PHASE_NAME',
+        payload: { value: phaseFormData.name.toUpperCase(), phase: editingPhaseIndex }
+      });
+
+      if (phaseFormData.startDate) {
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_START_END',
+          payload: { key: 'startDate', value: phaseFormData.startDate, phase: editingPhaseIndex }
+        });
+      }
+
+      if (phaseFormData.endDate) {
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_START_END',
+          payload: { key: 'endDate', value: phaseFormData.endDate, phase: editingPhaseIndex }
+        });
+      }
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'days', value: phaseFormData.days, phase: editingPhaseIndex }
+      });
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'personnel', value: phaseFormData.personnel, phase: editingPhaseIndex }
+      });
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'numberTrucks', value: phaseFormData.numberTrucks, phase: editingPhaseIndex }
+      });
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'additionalRatedHours', value: phaseFormData.additionalRatedHours, phase: editingPhaseIndex }
+      });
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'additionalNonRatedHours', value: phaseFormData.additionalNonRatedHours, phase: editingPhaseIndex }
+      });
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: { key: 'maintenanceTrips', value: phaseFormData.maintenanceTrips, phase: editingPhaseIndex }
+      });
+    } else {
+      // Add new phase
+      if (mptRental.phases.length === 1 && mptRental.phases[0].name === '' && !mptRental.phases[0].startDate) {
+        // This is the first phase being edited from default, update directly
+        dispatch({
+          type: 'UPDATE_PHASE_NAME',
+          payload: { value: phaseFormData.name.toUpperCase(), phase: 0 }
+        });
+
+        if (phaseFormData.startDate) {
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_START_END',
+            payload: { key: 'startDate', value: phaseFormData.startDate, phase: 0 }
+          });
+        }
+
+        if (phaseFormData.endDate) {
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_START_END',
+            payload: { key: 'endDate', value: phaseFormData.endDate, phase: 0 }
+          });
+        }
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'days', value: phaseFormData.days, phase: 0 }
+        });
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'personnel', value: phaseFormData.personnel, phase: 0 }
+        });
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'numberTrucks', value: phaseFormData.numberTrucks, phase: 0 }
+        });
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'additionalRatedHours', value: phaseFormData.additionalRatedHours, phase: 0 }
+        });
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'additionalNonRatedHours', value: phaseFormData.additionalNonRatedHours, phase: 0 }
+        });
+
+        dispatch({
+          type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+          payload: { key: 'maintenanceTrips', value: phaseFormData.maintenanceTrips, phase: 0 }
+        });
+
+        setCurrentPhase(0);
+      } else {
+        // Add a new phase
+        dispatch({ type: "ADD_MPT_PHASE" });
+        const newPhaseIndex = mptRental.phases.length;
+
+        // Update the new phase with form data
+        setTimeout(() => {
+          dispatch({
+            type: 'UPDATE_PHASE_NAME',
+            payload: { value: phaseFormData.name.toUpperCase(), phase: newPhaseIndex }
+          });
+
+          if (phaseFormData.startDate) {
+            dispatch({
+              type: 'UPDATE_MPT_PHASE_START_END',
+              payload: { key: 'startDate', value: phaseFormData.startDate, phase: newPhaseIndex }
+            });
+          }
+
+          if (phaseFormData.endDate) {
+            dispatch({
+              type: 'UPDATE_MPT_PHASE_START_END',
+              payload: { key: 'endDate', value: phaseFormData.endDate, phase: newPhaseIndex }
+            });
+          }
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'days', value: phaseFormData.days, phase: newPhaseIndex }
+          });
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'personnel', value: phaseFormData.personnel, phase: newPhaseIndex }
+          });
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'numberTrucks', value: phaseFormData.numberTrucks, phase: newPhaseIndex }
+          });
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'additionalRatedHours', value: phaseFormData.additionalRatedHours, phase: newPhaseIndex }
+          });
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'additionalNonRatedHours', value: phaseFormData.additionalNonRatedHours, phase: newPhaseIndex }
+          });
+
+          dispatch({
+            type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+            payload: { key: 'maintenanceTrips', value: phaseFormData.maintenanceTrips, phase: newPhaseIndex }
+          });
+        }, 0);
+
+        setCurrentPhase(newPhaseIndex);
+      }
+    }
+
+    handleCancelPhase();
+  };
+
+  const handleCancelPhase = () => {
+    setDrawerOpen(false);
+    setPhaseFormData(null);
+    setEditingPhaseIndex(null);
+  };
 
   // Fetch equipment data
   useEffect(() => {
@@ -398,26 +753,6 @@ const BidItemsStep5 = ({
     currentPhase
   ]);
 
-  const handleSubmit = useCallback(async () => {
-    try {
-      setIsViewSummaryOpen(true);
-      setIsSubmitting(true);
-      setError(null);
-
-      await createActiveBid(adminData, mptRental, equipmentRental,
-        flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes);
-      toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
-      if (!initialSubmission) {
-        setInitialSubmission(true);
-      }
-    } catch (error) {
-      console.error("Error creating bid:", error);
-      setError(error instanceof Error ? error.message : "An unknown error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, initialSubmission, setIsViewSummaryOpen]);
-
   // Handle equipment input changes
   const handleStandardInputChange = (
     value: number,
@@ -476,17 +811,9 @@ const BidItemsStep5 = ({
     });
   };
 
-
-  // Safely get equipment quantities
   const getEquipmentQuantity = (equipmentKey: EquipmentType): number | undefined => {
     if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
     return safeNumber(mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity);
-  };
-
-  // Safely get equipment price
-  const getEquipmentPrice = (equipmentKey: EquipmentType): number | undefined => {
-    if (!mptRental?.staticEquipmentInfo || !mptRental.staticEquipmentInfo[equipmentKey]) return undefined;
-    return safeNumber(mptRental.staticEquipmentInfo[equipmentKey]?.price);
   };
 
   // Get minimum allowed quantity for an equipment type
@@ -515,63 +842,123 @@ const BidItemsStep5 = ({
     <div>
       <div className="relative">
         <div className="mt-2 mb-6 ml-12">
+          {/* MPT Header */}
+          <div className="flex items-center justify-between pb-2 border-b mb-6">
+            <h3 className="text-xl text-black font-semibold">
+              MPT
+            </h3>
+            <Button onClick={handleAddPhase}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Phase
+            </Button>
+          </div>
 
-            {/* MPT Equipment Tab (combined with Light & Drum) */}
-              <div className="space-y-8">
-                {/* MPT Equipment Section */}
-                <div className="grid grid-cols-3">
-                  <h3 className="text-xl font-semibold pb-2">
-                    Phase Information
-                  </h3>
-                  <div></div>
-                  {/* <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div> */}
-                        {/* Reduced width for better proportions */}
-                        <div className="w-1/2 ml-auto">
-                        <AddPhaseButton
-                          setCurrentPhase={setCurrentPhase}
+          {/* Empty State or Phase Tabs */}
+          {mptRental.phases.length === 0 ? (
+            <EmptyContainer
+              topText="No phases configured yet"
+              subtext="When you add phases, they will appear here as tabs."
+            />
+          ) : (
+            <Tabs value={`phase-${currentPhase}`} onValueChange={(value) => {
+              const phaseIndex = parseInt(value.split('-')[1]);
+              setCurrentPhase(phaseIndex);
+            }}>
+              <TabsList style={{ gridTemplateColumns: `repeat(${mptRental.phases.length}, 1fr)` }}>
+                {mptRental.phases.map((phase, index) => (
+                  <TabsTrigger key={index} value={`phase-${index}`} className="relative group">
+                    <div className="flex items-center space-x-2">
+                      <span>
+                        Phase {index + 1} {phase.name.trim() !== '' && `(${phase.name})`}
+                      </span>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {mptRental.phases.map((phase, index) => (
+                <TabsContent key={index} value={`phase-${index}`} className="space-y-8">
+                  {/* Phase Information Display */}
+                  <div className='flex justify-end'>
+                  <PhaseActionButtons 
+                      onDelete={handleDeletePhase}
+                      onEdit={handleEditPhase}
+                      totalPhases={mptRental.phases.length}
+                      phaseIndex={index}
+                  />
+                  </div>
+                  <PhaseInfoTable
+                    phase={phase}
+                    index={index}
+                  />
+                  {/* Signs Display */}
+                  <MutcdSignsStep3 currentPhase={currentPhase}/>
+
+                  {/* MPT Equipment Section */}
+                  <div>
+                    <h3 className="text-base font-semibold mb-4">
+                      MPT Equipment
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {standardEquipmentList.map((equipmentKey) => (
+                        equipmentKey === 'sandbag' ? (
+                          <div key={equipmentKey} className="p-2 rounded-md">
+                            <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
+                            <div className="text-muted-foreground">Quantity: {phase.standardEquipment.sandbag?.quantity || 0}</div>
+                          </div>
+                        ) : (
+                          <div key={equipmentKey} className="rounded-md">
+                            <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
+                            <div className="flex flex-col gap-2">
+                              <Label htmlFor={`quantity-${equipmentKey}-${index}`} className="flex text-muted-foreground">Quantity:</Label>
+                              <Input
+                                id={`quantity-${equipmentKey}-${index}`}
+                                type="number"
+                                min={getMinQuantity(equipmentKey)}
+                                value={phase.standardEquipment[equipmentKey]?.quantity || ''}
+                                onChange={(e) => handleStandardInputChange(
+                                  parseFloat(e.target.value) || 0,
+                                  equipmentKey,
+                                  'quantity'
+                                )}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* Light and Drum Rental Section */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-base font-semibold">
+                        Light and Drum Rental
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="emergency-job"
+                          checked={adminData?.emergencyJob || false}
+                          onCheckedChange={handleEmergencyJobChange}
                         />
-                        </div>
-                      {/* </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Add a New Phase to the Bid</p>
-                    </TooltipContent>
-                  </Tooltip> */}
-                </div>
-                <Separator/>
-                <PhaseInfoStep2 currentPhase={currentPhase} />
-                <h3 className="text-md font-normal pb-2 border-b mb-6">
-                  Trip and Labor
-                </h3>
-                <TripAndLaborStep4 currentPhase={currentPhase} />
-                <h3 className="text-xl font-semibold pb-2 border-b mb-6">
-                  PENNDOT Signs
-                </h3>
-                <MutcdSignsStep3 currentPhase={currentPhase} />
-                <div>
-                  <h3 className="text-base font-semibold mb-4">
-                    MPT Equipment - Phase {currentPhase + 1}
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {standardEquipmentList.map((equipmentKey) => (
-                      equipmentKey === 'sandbag' ? (
+                        <Label htmlFor="emergency-job">Emergency Job</Label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3">
+                      {lightAndDrumList.map((equipmentKey) => (
                         <div key={equipmentKey} className="p-2 rounded-md">
                           <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                          <div className="text-muted-foreground">Quantity: {sandbagQuantity}</div>
-                          {/* <div className="text-sm text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                        </div>
-                      ) : (
-                        <div key={equipmentKey} className="rounded-md">
-                          <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                          <div className="flex flex-col gap-2">
-                            <Label htmlFor={`quantity-${equipmentKey}`} className="flex text-muted-foreground">Quantity:</Label>
+                          <div className="flex flex-col gap-2 mb-2">
+                            <Label htmlFor={`quantity-light-${equipmentKey}-${index}`} className="text-muted-foreground">Quantity:</Label>
                             <Input
-                              id={`quantity-${equipmentKey}`}
+                              id={`quantity-light-${equipmentKey}-${index}`}
                               type="number"
                               min={getMinQuantity(equipmentKey)}
-                              value={getEquipmentQuantity(equipmentKey) || ''}
+                              value={phase.standardEquipment[equipmentKey]?.quantity || ''}
                               onChange={(e) => handleStandardInputChange(
                                 parseFloat(e.target.value) || 0,
                                 equipmentKey,
@@ -580,246 +967,421 @@ const BidItemsStep5 = ({
                               className="w-full"
                             />
                           </div>
-                          {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                        </div>
-                      )
-                    ))}
-                  </div>
-                </div>
+                          {adminData?.emergencyJob && (
+                            <div className="flex flex-col w-1/3 gap-2 mt-2">
+                              <Label htmlFor={`emergency-${equipmentKey}-${index}`} className="text-muted-foreground">Emergency Rate:</Label>
+                              <Input
+                                id={`emergency-${equipmentKey}-${index}`}
+                                inputMode="decimal"
+                                pattern="^\\d*(\\.\\d{0,2})?$"
+                                className="w-full"
+                                value={`$ ${formatDecimal(getDigitsForEquipment(equipmentKey))}`}
+                                onChange={(e) => {
+                                  const ev = e.nativeEvent as InputEvent;
+                                  const { inputType } = ev;
+                                  const data = (ev.data || "").replace(/\$/g, "");
 
-                <Separator className="my-6" />
+                                  const currentDigits = getDigitsForEquipment(equipmentKey);
+                                  const nextDigits = handleNextDigits(currentDigits, inputType, data);
+                                  updateDigitsForEquipment(equipmentKey, nextDigits);
 
-                {/* Light and Drum Rental Section */}
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-base font-semibold">
-                      Light and Drum Rental
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="emergency-job"
-                        checked={adminData?.emergencyJob || false}
-                        onCheckedChange={handleEmergencyJobChange}
-                      />
-                      <Label htmlFor="emergency-job">Emergency Job</Label>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3">
-                    {lightAndDrumList.map((equipmentKey) => (
-                      <div key={equipmentKey} className="p-2 rounded-md">
-                        <div className="font-medium mb-2">{formatLabel(equipmentKey)}</div>
-                        <div className="flex flex-col gap-2 mb-2">
-                          <Label htmlFor={`quantity-light-${equipmentKey}`} className="text-muted-foreground">Quantity:</Label>
-                          <Input
-                            id={`quantity-light-${equipmentKey}`}
-                            type="number"
-                            min={getMinQuantity(equipmentKey)}
-                            value={getEquipmentQuantity(equipmentKey) || ''}
-                            onChange={(e) => handleStandardInputChange(
-                              parseFloat(e.target.value) || 0,
-                              equipmentKey,
-                              'quantity'
-                            )}
-                            className="w-full"
-                          />
-                        </div>
-                        {/* <div className="text-xs text-muted-foreground mt-2">Cost: ${getEquipmentPrice(equipmentKey)?.toFixed(2) || ''}</div> */}
-                        {/* <div className="text-xs text-muted-foreground">Daily Price: ${calculateLightDailyRateCosts(mptRental, getEquipmentPrice(equipmentKey) || 0)?.toFixed(2) || ''}</div> */}
-                        {adminData?.emergencyJob && (
-                          <div className="flex flex-col w-1/3 gap-2 mt-2">
-                            <Label htmlFor={`emergency-${equipmentKey}`} className="text-muted-foreground">Emergency Rate:</Label>
-                            <Input
-                              id={`emergency-${equipmentKey}`}
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={adminData?.emergencyFields?.[`emergency${equipmentKey}`] || ''}
-                              onChange={(e) => dispatch({
-                                type: 'UPDATE_ADMIN_DATA',
-                                payload: {
-                                  key: 'emergencyFields',
-                                  value: {
-                                    ...adminData?.emergencyFields,
-                                    [`emergency${equipmentKey}`]: parseFloat(e.target.value) || 0
-                                  }
-                                }
-                              })}
-                              className="w-full"
-
-
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator className="my-6" />
-
-                {/* Custom Equipment Section */}
-                <div>
-                  <h3 className="text-base font-semibold mb-4">
-                    Custom Equipment
-                  </h3>
-                  <div className="grid grid-cols-12 gap-4 mb-4">
-                    <div className="col-span-3">
-                      <Label className="mb-2" htmlFor="itemName">Item Name</Label>
-                      <Input
-                        id="itemName"
-                        value={itemName}
-                        onChange={(e) => setItemName(e.target.value)}
-                        placeholder="Enter item name"
-
-
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label className="mb-2" htmlFor="quantity">Quantity</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min={0}
-                        value={newCustomItem.quantity || ''}
-                        onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
-                        placeholder=""
-
-
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label className="mb-2" htmlFor="cost">Cost</Label>
-                      <Input
-                        id="cost"
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={newCustomItem.cost || ''}
-                        onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
-                        placeholder=""
-
-
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
-                      <Input
-                        id="usefulLife"
-                        type="number"
-                        min={0}
-                        value={newCustomItem.usefulLife || ''}
-                        onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
-                        placeholder=""
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleAddCustomItem}
-                    className="mt-2"
-                    disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
-                    aria-disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add Custom Item
-                  </Button>
-                </div>
-                {/* Custom Items List */}
-                {mptRental?.phases?.[currentPhase]?.customLightAndDrumItems?.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-base font-semibold mb-4">
-                      Custom Items
-                    </h3>
-                    <div className="grid grid-cols-12 gap-4 mb-4">
-                      <div className="col-span-2 font-medium">Item Name</div>
-                      <div className="col-span-3 font-medium">Quantity</div>
-                      <div className="col-span-3 font-medium">Cost</div>
-                      <div className="col-span-2 font-medium">Useful Life</div>
-                      <div className="col-span-2 font-medium">Daily Price</div>
-                    </div>
-                    <div className="space-y-4">
-                      {mptRental.phases[currentPhase].customLightAndDrumItems.map((item) => (
-                        <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
-                          <div className="col-span-2">{item.id}</div>
-                          <div className="col-span-3">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={item.quantity}
-                              onChange={(e) => dispatch({
-                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                payload: {
-                                  phaseNumber: currentPhase,
-                                  id: item.id,
-                                  key: 'quantity',
-                                  value: parseFloat(e.target.value) || 0
-                                }
-                              })}
-                            />
-                          </div>
-                          <div className="col-span-3">
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={item.cost}
-                              onChange={(e) => dispatch({
-                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                payload: {
-                                  phaseNumber: currentPhase,
-                                  id: item.id,
-                                  key: 'cost',
-                                  value: parseFloat(e.target.value) || 0
-                                }
-                              })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={item.usefulLife}
-                              onChange={(e) => dispatch({
-                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                payload: {
-                                  phaseNumber: currentPhase,
-                                  id: item.id,
-                                  key: 'usefulLife',
-                                  value: parseFloat(e.target.value) || 0
-                                }
-                              })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            ${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}
-                          </div>
+                                  const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                                  const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+                                  const fieldKey = `emergency${emergencyKey}`;
+                                  handleRateChange(formatted, fieldKey, equipmentKey);
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
-              <div className="text-center py-6 text-muted-foreground">
-                <EquipmentRentalTab />
-              </div>
-              <div className="text-center py-6 text-muted-foreground">
-                <PermanentSignsSummaryStep />
-              </div>
-              <div className="text-center py-6 text-muted-foreground">
-                <FlaggingServicesTab />
-              </div>
-              <div className="text-center py-6 text-muted-foreground">
-                <SaleItemsStep />
-              </div>
-              <div className="text-center py-6 text-muted-foreground">
-                <ServiceWorkTab />
-              </div>
-          <Button className="mt-8 ml-auto block" onClick={handleSubmit} disabled={isSubmitting}>
-            {initialSubmission
-              ? 'Update' : 'Done'
-            }
-          </Button>
+
+                  <Separator className="my-6" />
+
+                  {/* Custom Equipment Section */}
+                  <div>
+                    <h3 className="text-base font-semibold mb-4">
+                      Custom Equipment
+                    </h3>
+                    <div className="grid grid-cols-12 gap-4 mb-4">
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="itemName">Item Name</Label>
+                        <Input
+                          id="itemName"
+                          value={itemName}
+                          onChange={(e) => setItemName(e.target.value)}
+                          placeholder="Enter item name"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min={0}
+                          value={newCustomItem.quantity || ''}
+                          onChange={(e) => handleNewItemInputChange('quantity', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="cost">Cost</Label>
+                        <Input
+                          id="cost"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={newCustomItem.cost || ''}
+                          onChange={(e) => handleNewItemInputChange('cost', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="mb-2" htmlFor="usefulLife">Useful Life (days)</Label>
+                        <Input
+                          id="usefulLife"
+                          type="number"
+                          min={0}
+                          value={newCustomItem.usefulLife || ''}
+                          onChange={(e) => handleNewItemInputChange('usefulLife', parseFloat(e.target.value) || 0)}
+                          placeholder=""
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleAddCustomItem}
+                      className="mt-2"
+                      disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                      aria-disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Custom Item
+                    </Button>
+                  </div>
+
+                  {/* Custom Items List */}
+                  {phase.customLightAndDrumItems?.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-base font-semibold mb-4">
+                        Custom Items
+                      </h3>
+                      <div className="grid grid-cols-12 gap-4 mb-4">
+                        <div className="col-span-2 font-medium">Item Name</div>
+                        <div className="col-span-3 font-medium">Quantity</div>
+                        <div className="col-span-3 font-medium">Cost</div>
+                        <div className="col-span-2 font-medium">Useful Life</div>
+                        <div className="col-span-2 font-medium">Daily Price</div>
+                      </div>
+                      <div className="space-y-4">
+                        {phase.customLightAndDrumItems.map((item) => (
+                          <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                            <div className="col-span-2">{item.id}</div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.quantity}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: index,
+                                    id: item.id,
+                                    key: 'quantity',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={item.cost}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: index,
+                                    id: item.id,
+                                    key: 'cost',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.usefulLife}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                  payload: {
+                                    phaseNumber: index,
+                                    id: item.id,
+                                    key: 'usefulLife',
+                                    value: parseFloat(e.target.value) || 0
+                                  }
+                                })}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              ${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
+
+          {/* Other bid items sections */}
+          <div className="text-center py-6 text-muted-foreground">
+            <EquipmentRentalTab />
+          </div>
+          <div className="text-center py-6 text-muted-foreground">
+            <PermanentSignsSummaryStep />
+          </div>
+          <div className="text-center py-6 text-muted-foreground">
+            <FlaggingServicesTab />
+          </div>
+          <div className="text-center py-6 text-muted-foreground">
+            <SaleItemsStep />
+          </div>
+          <div className="text-center py-6 text-muted-foreground">
+            <ServiceWorkTab />
+          </div>
         </div>
       </div>
+
+      {/* Phase Drawer */}
+      <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
+        <DrawerContent className="min-w-lg">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DrawerHeader>
+              <DrawerTitle>
+                {editingPhaseIndex !== null ? `Edit Phase ${editingPhaseIndex + 1}` : 'Add Phase'}
+              </DrawerTitle>
+            </DrawerHeader>
+            <Separator className="w-full -mt-2" />
+          </div>
+
+          {phaseFormData && (
+            <div className="px-4 space-y-6 mt-4 overflow-y-auto h-full">
+              {/* Phase Information Section */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Phase Information</h4>
+                
+                <div className="flex items-center gap-x-2">
+                  <Checkbox
+                    checked={phaseFormData.startDate === adminData.startDate && phaseFormData.endDate === adminData.endDate}
+                    aria-label="Use same start and end dates as admin data"
+                    onCheckedChange={handleUseAdminDates}
+                  />
+                  <div className="text-muted-foreground text-sm">Use same start and end dates as admin data</div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label className='mb-2' htmlFor="phase-name">Phase Name (Optional)</Label>
+                    <Input
+                      id="phase-name"
+                      value={phaseFormData.name}
+                      onChange={(e) => handlePhaseFormUpdate('name', e.target.value)}
+                      placeholder={`Phase ${(editingPhaseIndex ?? mptRental.phases.length) + 1}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Start Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date</Label>
+                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen} modal={true}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {phaseFormData.startDate ? (
+                              format(phaseFormData.startDate, "PPP")
+                            ) : (
+                              <span>Select start date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={phaseFormData.startDate ?? undefined}
+                            onSelect={(date) => handleDateChange(date, 'startDate')}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* End Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date</Label>
+                      <Popover open={endDateOpen} onOpenChange={setEndDateOpen} modal={true}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {phaseFormData.endDate ? (
+                              format(phaseFormData.endDate, "PPP")
+                            ) : (
+                              <span>Select end date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={phaseFormData.endDate ?? undefined}
+                            onSelect={(date) => handleDateChange(date, 'endDate')}
+                            initialFocus
+                            disabled={(date) =>
+                              phaseFormData.startDate ? date < phaseFormData.startDate : false
+                            }
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {phaseFormData.startDate && (
+                    <div className="bg-muted p-4 rounded-md">
+                      <div className="flex flex-col gap-4">
+                        <div className="text-sm font-medium">
+                          Set end date as number of days out from start date:
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
+                            onClick={() => setEndDateFromDays(30)}
+                          >
+                            30
+                          </Badge>
+                          <Badge
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
+                            onClick={() => setEndDateFromDays(60)}
+                          >
+                            60
+                          </Badge>
+                          <Badge
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
+                            onClick={() => setEndDateFromDays(90)}
+                          >
+                            90
+                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              className="w-20"
+                              onChange={(e) => setEndDateFromDays(safeNumber(parseInt(e.target.value)))}
+                              placeholder="Days"
+                              type="number"
+                              min="1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Trip and Labor Section */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Trip and Labor</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className='mb-2' htmlFor="personnel">Number of Personnel</Label>
+                    <Input
+                      id="personnel"
+                      type="number"
+                      min={0}
+                      value={phaseFormData.personnel || ''}
+                      onChange={(e) => handlePhaseFormUpdate('personnel', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label className='mb-2' htmlFor="trucks">Number of Trucks</Label>
+                    <Input
+                      id="trucks"
+                      type="number"
+                      min={0}
+                      value={phaseFormData.numberTrucks || ''}
+                      onChange={(e) => handlePhaseFormUpdate('numberTrucks', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label className='mb-2' htmlFor="maintenance-trips">Additional Trips</Label>
+                    <Input
+                      id="maintenance-trips"
+                      type="number"
+                      min={0}
+                      value={phaseFormData.maintenanceTrips || ''}
+                      onChange={(e) => handlePhaseFormUpdate('maintenanceTrips', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label className='mb-2' htmlFor="rated-hours">Additional Rated Hours</Label>
+                    <Input
+                      id="rated-hours"
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={phaseFormData.additionalRatedHours || ''}
+                      onChange={(e) => handlePhaseFormUpdate('additionalRatedHours', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label className='mb-2' htmlFor="non-rated-hours">Additional Non-Rated Hours</Label>
+                    <Input
+                      id="non-rated-hours"
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={phaseFormData.additionalNonRatedHours || ''}
+                      onChange={(e) => handlePhaseFormUpdate('additionalNonRatedHours', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DrawerFooter>
+            <div className="flex justify-end space-x-3 w-full">
+              <DrawerClose asChild>
+                <Button variant="outline" onClick={handleCancelPhase}>
+                  Cancel
+                </Button>
+              </DrawerClose>
+              <Button
+                onClick={handleSavePhase}
+                disabled={!phaseFormData}
+              >
+                {editingPhaseIndex !== null ? 'Update Phase' : 'Save Phase'}
+              </Button>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

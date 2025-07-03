@@ -68,7 +68,5 @@ export const defaultMPTObject: MPTRentalEstimating = {
         DG: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
         Special: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
     },
-    phases: [
-        defaultPhaseObject
-    ],
+    phases: [],
 };

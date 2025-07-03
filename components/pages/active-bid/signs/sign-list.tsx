@@ -2,18 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { PrimarySign, SecondarySign, EquipmentType } from "@/types/MPTEquipment";
-import PrimarySignItem from "./primary-sign-item";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import SignsViewOnly from "../steps/signs-view-only";
 import { SignOrderList } from "@/app/takeoffs/new/SignOrderList";
 
 interface SignListProps {
   currentPhase: number;
-  isTakeoff? : boolean
 }
 
-const SignList = ({ currentPhase, isTakeoff = false }: SignListProps) => {
+const SignList = ({ currentPhase }: SignListProps) => {
   const { mptRental } = useEstimate();
   const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>([]);
 
@@ -53,17 +48,7 @@ const SignList = ({ currentPhase, isTakeoff = false }: SignListProps) => {
 
   return (
     <div className="space-y-6">
-      {/* <SignsViewOnly phaseNumber={currentPhase}/> */}
       <SignOrderList currentPhase={currentPhase}/>
-      {/* {primarySigns.map((sign) => (
-        <PrimarySignItem 
-          key={sign.id}
-          primarySign={sign}
-          secondarySigns={getSecondarySignsForPrimary(sign.id)}
-          currentPhase={currentPhase}
-          isTakeoff={isTakeoff}
-        />
-      ))} */}
     </div>
   );
 };
