@@ -776,6 +776,20 @@ export const estimateReducer = (
 					}),
 				},
 			};
+		
+		case "DELETE_SERVICE_WORK":
+			if (!state.mptRental) return state;
+			return {
+				...state,
+				serviceWork: defaultFlaggingObject
+			}
+		
+		case "DELETE_FLAGGING":
+			if(!state.mptRental) return state;
+			return {
+				...state,
+				flagging: defaultFlaggingObject
+			}
 
 		case "INITIALIZE_SHOP_TRACKING":
 			if (!state.mptRental) return state;

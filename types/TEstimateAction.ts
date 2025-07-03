@@ -208,26 +208,32 @@ export type EstimateAction =
 	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
-	| { type: 'UPDATE_NOTES', payload: string}
-	| { type: 'COPY_NOTES', payload: string}
-	| { type: 'SET_FIRST_SAVE', payload: number}
-	| { type: 'SET_ID', payload: number}
+	| { type: 'UPDATE_NOTES', payload: string }
+	| { type: 'COPY_NOTES', payload: string }
+	| { type: 'SET_FIRST_SAVE', payload: number }
+	| { type: 'SET_ID', payload: number }
 	| {
 		type: "UPDATE_SIGN_SHOP_TRACKING";
 		payload: {
-		  phaseNumber: number;
-		  signId: string;
-		  field: 'make' | 'order' | 'inStock';
-		  value: number;
+			phaseNumber: number;
+			signId: string;
+			field: 'make' | 'order' | 'inStock';
+			value: number;
 		};
-	  }
+	}
 	| {
 		type: "INITIALIZE_SHOP_TRACKING";
 		payload: {
-		  phaseNumber: number;
-		  signId: string;
-		  make?: number;
-		  order?: number;
-		  inStock?: number;
+			phaseNumber: number;
+			signId: string;
+			make?: number;
+			order?: number;
+			inStock?: number;
 		};
-	  }
+	}
+	| {
+		type: 'DELETE_SERVICE_WORK'
+	}
+	| {
+		type: 'DELETE_FLAGGING'
+	}

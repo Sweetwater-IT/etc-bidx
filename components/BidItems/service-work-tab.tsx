@@ -192,6 +192,7 @@ const ServiceWorkTab = () => {
   const handleDeleteServiceWork = (index: number) => {
     const newItems = serviceWorkItems.filter((_, i) => i !== index);
     setServiceWorkItems(newItems);
+    dispatch({type: 'DELETE_SERVICE_WORK'})
   };
 
   const handleFormUpdate = (field: keyof ServiceWorkItem, value: any) => {
@@ -424,13 +425,13 @@ const ServiceWorkTab = () => {
                   >
                     Edit
                   </Button>
-                  {/* <Button
-                    variant="ghost"
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => handleDeleteServiceWork(index)}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button> */}
+                  </Button>
                 </div>
               </div>
 

@@ -190,6 +190,7 @@ const FlaggingServicesTab = () => {
   const handleDeleteFlagging = (index: number) => {
     const newItems = flaggingItems.filter((_, i) => i !== index);
     setFlaggingItems(newItems);
+    dispatch({ type: 'DELETE_FLAGGING'})
   };
 
   const handleFormUpdate = (field: keyof FlaggingItem, value: any) => {
@@ -538,19 +539,19 @@ const FlaggingServicesTab = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
-                    variant="default"
+                    variant='outline'
                     size="sm"
                     onClick={() => handleEditFlagging(index)}
                   >
                     Edit
                   </Button>
-                  {/* <Button
+                  <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeleteFlagging(index)}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button> */}
+                  </Button>
                 </div>
               </div>
 
