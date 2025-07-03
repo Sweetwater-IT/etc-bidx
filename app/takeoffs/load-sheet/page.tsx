@@ -542,6 +542,26 @@ export default function SignOrderPage() {
     label: `${segment.label.split(' (')[0]} (${branchCounts[segment.value as keyof typeof branchCounts] || 0})`
   }));
 
+  const handleUnarchiveSignOrder = useCallback(async (item: SignOrderView) => {
+    try {
+      startLoading();
+      const response = await fetch('/api/sign-orders/unarchive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [item.id] }),
+      });
+      if (!response.ok) throw new Error('Failed to unarchive sign order');
+      toast.success('Sign order unarchived successfully');
+      await fetchQuotes();
+      await fetchCounts();
+    } catch (error) {
+      console.error('Error unarchiving sign order:', error);
+      toast.error('Failed to unarchive sign order');
+    } finally {
+      stopLoading();
+    }
+  }, [fetchQuotes, fetchCounts, startLoading, stopLoading]);
+
   return (
     <SidebarProvider
       style={
@@ -630,6 +650,7 @@ export default function SignOrderPage() {
                 hideDropdown={true}
                 showFilters={showFilters}
                 setShowFilters={setShowFilters}
+                onUnarchive={handleUnarchiveSignOrder}
               />
             </div>
           </div>

@@ -676,7 +676,7 @@ export function DataTable<TData extends object>({
                     </DropdownMenuItem>
                   )}
 
-                  {onUnarchive && row.original && (row.original as any).archived === true && (
+                  {onUnarchive && (segmentValue === "archived") && (
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={handleUnarchive}

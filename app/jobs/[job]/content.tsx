@@ -510,7 +510,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     noBidReason,
                     stateRoute,
                     services,
-                    alreadyBid: job.alreadyBid || false
+                    alreadyBid: job.alreadyBid || false,
+                    archived: job.archived === true
                 };
             });
 
@@ -1166,7 +1167,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     'Perm Signs': job.perm_signs || false,
                     'Other': job.other || false
                 },
-                alreadyBid: job.alreadyBid || false
+                alreadyBid: job.alreadyBid || false,
+                archived: job.archived === true
             };
         });
     };
@@ -1981,6 +1983,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const handleUnarchiveAvailableJob = async (item: AvailableJob) => {
+        try {
+            startLoading();
+            const response = await fetch('/api/bids/unarchive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [item.id] }),
+            });
+            if (!response.ok) throw new Error('Failed to unarchive job');
+            toast.success('Job unarchived successfully');
+            await loadAvailableJobs();
+            await fetchAvailableJobCounts();
+        } catch (error) {
+            console.error('Error unarchiving job:', error);
+            toast.error('Failed to unarchive job');
+        } finally {
+            stopLoading();
+        }
+    };
+
+    const handleUnarchiveActiveBid = async (item: ActiveBid) => {
+        try {
+            startLoading();
+            const response = await fetch('/api/active-bids/unarchive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [item.id] }),
+            });
+            if (!response.ok) throw new Error('Failed to unarchive bid');
+            toast.success('Bid unarchived successfully');
+            await loadActiveBids();
+            await fetchActiveBidCounts();
+        } catch (error) {
+            console.error('Error unarchiving bid:', error);
+            toast.error('Failed to unarchive bid');
+        } finally {
+            stopLoading();
+        }
+    };
+
     return (
         <SidebarProvider
             style={
@@ -2095,6 +2137,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
                                     hideDropdown={true}
+                                    onUnarchive={handleUnarchiveAvailableJob}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
@@ -2154,6 +2197,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
                                     hideDropdown={true}
+                                    onUnarchive={handleUnarchiveActiveBid}
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
