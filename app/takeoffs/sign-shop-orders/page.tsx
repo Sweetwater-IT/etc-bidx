@@ -16,6 +16,7 @@ import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
+import { SectionCards } from "@/components/section-cards";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "requestor", title: "Requestor" },
@@ -542,6 +543,12 @@ export default function SignOrderPage() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
+              {/* Static summary cards for sign shop orders */}
+              <SectionCards data={[
+                { title: "Orders not started", value: "12" },
+                { title: "Orders due in next 7 days", value: "7" },
+                { title: "Sq. ft due in next 7 days", value: "1,250" },
+              ]} />
               <DataTable<SignOrderView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
