@@ -503,7 +503,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
                   || isOrderInvalid()
                 }
               >
-                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Done' : 'Submit Order'}
+                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Submit Order' : 'Done'}
               </Button>
             </div>
           </div>
