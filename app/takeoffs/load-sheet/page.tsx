@@ -207,6 +207,7 @@ export default function SignOrderPage() {
       // Add pagination
       params.append("page", (pageIndex + 1).toString());
       params.append("limit", pageSize.toString());
+      params.append('includeDrafts', 'true')
 
       // Add sorting
       if (sortBy) {

@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const orderBy = searchParams.get('orderBy') || 'created_at';
     const ascending = searchParams.get('ascending') === 'true';
     const counts = searchParams.get('counts') === 'true';
+    const includeDrafts = searchParams.get('includeDrafts') === 'true'
     const branch = searchParams.get('branch');
     const filtersJson = searchParams.get('filters');
     const statusParam = searchParams.get('status');
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         const { count: archivedCount, error: archivedError } = await supabase
           .from('sign_orders')
           .select('*', { count: 'exact', head: true })
+          .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'])
           .eq('archived', true);
         if (archivedError) {
           return NextResponse.json({ success: false, error: 'Failed to get archived count' }, { status: 500 });
@@ -49,7 +51,8 @@ export async function GET(request: NextRequest) {
       let baseQuery = supabase
         .from('sign_orders')
         .select('*', { count: 'exact', head: true })
-        .or('archived.is.null,archived.eq.false');
+        .or('archived.is.null,archived.eq.false')
+        .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'])
 
       // Add status filter if present (for load-sheet compatibility)
       const statusValues: string[] = [];
@@ -74,6 +77,7 @@ export async function GET(request: NextRequest) {
           .from('sign_orders')
           .select('*', { count: 'exact', head: true })
           .or('archived.is.null,archived.eq.false')
+          .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'])
           .eq('shop_status', status);
         if (statusValues.length > 0) {
           statusQuery = statusQuery.in('status', statusValues);
@@ -140,7 +144,8 @@ export async function GET(request: NextRequest) {
         archived,
         assigned_to,
         created_at
-      `);
+      `)
+      .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED']);
     
     // Apply archived filtering first (like in active-bids)
     if (isArchivedFilter) {
@@ -189,6 +194,7 @@ export async function GET(request: NextRequest) {
             assigned_to,
             created_at
           `)
+          .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'])
           .eq('archived', true);
       } else {
         // Map branch names to IDs (correct mapping)
@@ -340,8 +346,8 @@ export async function GET(request: NextRequest) {
 
     let paginationCountQuery = supabase
     .from('sign_orders')
-    .select('*', { count: 'exact', head: true });
-  
+    .select('*', { count: 'exact', head: true })
+    .in('order_status', includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED']);
 
     // Apply the same date filtering for pagination count
     if (filters.dateField && filters.dateField[0] === 'created_at') {

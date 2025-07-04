@@ -76,7 +76,7 @@ export function SignOrderJobSelector({
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <div className="text-xl font-semibold">Job Information</div>
-        {selectedContractJob && (
+        {(selectedContractJob || showInitialAdminState) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded hover:bg-muted focus:outline-none">

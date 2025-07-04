@@ -68,6 +68,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   const [localFiles, setLocalFiles] = useState<File[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
+  const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
   const [signOrderId, setSignOrderId] = useState<number | null>(initialSignOrderId ?? null)
 
   // Autosave states - exactly like active bid header
@@ -167,6 +168,10 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
         isSubmitting: false,
         orderType: ordersData
       })
+
+      if(data.data.order_status === 'SUBMITTED'){
+        setAlreadySubmitted(true)
+      }
 
       // Extract sign items from the signs JSON field
       if (data.data.signs) {
@@ -323,17 +328,17 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `Draft saved ${secondCounter} second${
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'} saved ${secondCounter} second${
         secondCounter !== 1 ? 's' : ''
       } ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `Draft saved ${minutesAgo} minute${
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'} saved ${minutesAgo} minute${
         minutesAgo !== 1 ? 's' : ''
       } ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order ' : 'Draft'} saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
@@ -487,7 +492,10 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     mptRental.phases.length > 0 ? <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
         heading='Create Sign Order'
-        handleSubmit={() => handleSave('DRAFT')}
+        handleSubmit={() => {
+          handleSave('DRAFT')
+          router.push('/takeoffs/load-sheet')
+        }}
         showX
         saveButtons={
           <div className='flex items-center gap-4'>
@@ -496,14 +504,14 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
             </div>
             <div className='flex items-center gap-2'>
               <Button
-                onClick={() => handleSave(initialSignOrderId ? 'SUBMITTED' : 'DRAFT')}
+                onClick={() => handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')}
                 disabled={
                   adminInfo.isSubmitting ||
                   mptRental.phases[0].signs.length === 0
                   || isOrderInvalid()
                 }
               >
-                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Submit Order' : 'Done'}
+                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Update order' : 'Done'}
               </Button>
             </div>
           </div>
