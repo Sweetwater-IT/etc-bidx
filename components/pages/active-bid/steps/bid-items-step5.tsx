@@ -1057,9 +1057,13 @@ const BidItemsStep5 = ({
                     <PhaseInfoTable phase={phase} index={index} />
                     <MutcdSignsStep3 currentPhase={currentPhase} />
                     <div>
-                      <h3 className='text-base font-semibold mb-4'>
-                        MPT Equipment
-                      </h3>
+                      <div className='flex items-center my-8'>
+                        <div className='flex-grow border-t border-black'></div>
+                        <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                          MPT Equipment
+                        </h3>
+                        <div className='flex-grow border-t border-black'></div>
+                      </div>
                       <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
                         {standardEquipmentList.map(equipmentKey =>
                           equipmentKey === 'sandbag' ? (
@@ -1109,18 +1113,12 @@ const BidItemsStep5 = ({
                     </div>
                     <Separator className='my-6' />
                     <div>
-                      <div className='flex justify-between items-center mb-4'>
-                        <h3 className='text-base font-semibold'>
+                      <div className='flex items-center my-8'>
+                        <div className='flex-grow border-t border-black'></div>
+                        <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
                           Light and Drum Rental
                         </h3>
-                        <div className='flex items-center gap-2'>
-                          <Switch
-                            id='emergency-job'
-                            checked={adminData?.emergencyJob || false}
-                            onCheckedChange={handleEmergencyJobChange}
-                          />
-                          <Label htmlFor='emergency-job'>Emergency Job</Label>
-                        </div>
+                        <div className='flex-grow border-t border-black'></div>
                       </div>
                       <div className='grid grid-cols-2 md:grid-cols-3'>
                         {lightAndDrumList.map(equipmentKey => (
