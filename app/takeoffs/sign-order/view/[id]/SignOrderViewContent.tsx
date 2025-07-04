@@ -9,6 +9,28 @@ import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table'
 import EquipmentTotalsAccordion from './EquipmentTotalsAccordion'
 import { useEstimate } from '@/contexts/EstimateContext'
+import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { formatDate } from '@/lib/formatUTCDate'
+import { User } from '@/types/User'
+import { Customer } from '@/types/Customer'
+import { defaultMPTObject, defaultPhaseObject } from '@/types/default-objects/defaultMPTObject'
+import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
+
+export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
+
+export interface SignOrderAdminInformation {
+  requestor: User | null
+  customer: Customer | null
+  orderDate: Date
+  needDate: Date | null
+  orderType: OrderTypes[]
+  selectedBranch: string
+  jobNumber: string
+  isSubmitting: boolean
+  contractNumber: string
+  startDate?: Date
+  endDate?: Date
+}
 
 interface SignOrder {
   id: number
@@ -56,7 +78,7 @@ const determineBranch = (id: number): string => {
 export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
-  const { dispatch } = useEstimate()
+  const { dispatch, mptRental } = useEstimate()
   const [signOrder, setSignOrder] = useState<SignOrder | null>(null)
   const [signItems, setSignItems] = useState<SignItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +89,19 @@ export default function SignOrderViewContent() {
   const [isSale, setIsSale] = useState(false)
   const [isRental, setIsRental] = useState(false)
   const [isPermanent, setIsPermanent] = useState(false)
+
+  // Admin info state for submission (similar to SignOrderContentSimple)
+  const [adminInfo, setAdminInfo] = useState<SignOrderAdminInformation>({
+    requestor: null,
+    customer: null,
+    orderDate: new Date(),
+    needDate: null,
+    orderType: [],
+    selectedBranch: 'All',
+    jobNumber: '',
+    isSubmitting: false,
+    contractNumber: ''
+  })
 
   const SIGN_COLUMNS = [
     {
@@ -111,6 +146,14 @@ export default function SignOrderViewContent() {
     }
   ]
 
+  // Validation function (same as SignOrderContentSimple)
+  const isOrderInvalid = (): boolean => {
+    return (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' ||
+      !adminInfo.customer || !adminInfo.requestor || adminInfo.orderType.length === 0 || 
+      !adminInfo.orderDate || !adminInfo.needDate
+    )
+  }
+
   useEffect(() => {
     // Initialize MPT rental data structure
     dispatch({ type: 'ADD_MPT_RENTAL' })
@@ -142,26 +185,75 @@ export default function SignOrderViewContent() {
           throw new Error('Invalid API response format')
         }
 
+        // Fetch users for branch information
+        const users = await fetchReferenceData('users')
+
         // Add branch information based on ID ranges (temporary solution)
         const orderWithBranch = {
           ...data.data,
-          branch: determineBranch(data.data.id)
+          branch: users.find(u => u.name === data.data.requestor)?.branches?.name || determineBranch(data.data.id)
         }
 
         setSignOrder(orderWithBranch)
 
         // Set dates if available
         if (data.data.order_date) {
-          setOrderDate(new Date(data.data.order_date))
+          const parsedOrderDate = new Date(formatDate(data.data.order_date))
+          setOrderDate(parsedOrderDate)
         }
         if (data.data.need_date) {
-          setNeedDate(new Date(data.data.need_date))
+          const parsedNeedDate = new Date(formatDate(data.data.need_date))
+          setNeedDate(parsedNeedDate)
         }
 
         // Set order type checkboxes based on data
         if (data.data.sale) setIsSale(true)
         if (data.data.rental) setIsRental(true)
         if (data.data.perm_signs) setIsPermanent(true)
+
+        // Build order types array for adminInfo
+        const ordersData: OrderTypes[] = []
+        if(data.data.perm_signs) ordersData.push('permanent signs')
+        if(data.data.sale) ordersData.push('sale')
+        if(data.data.rental) ordersData.push('rental')
+
+        // Set adminInfo with complete data for submission
+        setAdminInfo({
+          contractNumber: data.data.contract_number || '',
+          requestor: {
+            name: data.data.requestor || '',
+            email: '',
+            role: ''
+          },
+          orderDate: data.data.order_date ? new Date(formatDate(data.data.order_date)) : new Date(),
+          needDate: data.data.need_date ? new Date(formatDate(data.data.need_date)) : null,
+          jobNumber: data.data.job_number || '',
+          startDate: data.data.start_date ? new Date(formatDate(data.data.start_date)) : undefined,
+          endDate: data.data.end_date ? new Date(formatDate(data.data.end_date)) : undefined,
+          selectedBranch: orderWithBranch.branch,
+          customer: {
+            id: data.data.contractor_id,
+            name: data.data.contractors?.name || '',
+            displayName: data.data.contractors?.name || '',
+            emails: [],
+            address: '',
+            phones: [],
+            paymentTerms: '',
+            mainPhone: '',
+            zip: '',
+            roles: [],
+            names: [],
+            contactIds: [],
+            url:'',
+            created: '',
+            updated: '',
+            city: '',
+            state: '',
+            customerNumber: data.data.contractor_id || 1
+          },
+          isSubmitting: false,
+          orderType: ordersData
+        })
 
         // Process signs data from the JSONB field
         if (data.data.signs) {
@@ -192,6 +284,7 @@ export default function SignOrderViewContent() {
                 
                 const formattedSign = {
                   ...sign,
+                  id: sign.id || generateUniqueId(),
                   // Ensure required fields exist
                   associatedStructure: sign.associatedStructure || associatedStructure,
                   displayStructure: sign.displayStructure || displayStructure,
@@ -206,17 +299,14 @@ export default function SignOrderViewContent() {
                 return formattedSign
               })
               
-              // Use batch update to set all signs at once
-              // Small delay to ensure context is ready
-              setTimeout(() => {
-                dispatch({
-                  type: 'ADD_BATCH_MPT_SIGNS',
-                  payload: {
-                    phaseNumber: 0,
-                    signs: formattedSigns
-                  }
-                })
-              }, 100)
+              // Use copy MPT rental to set all signs at once
+              dispatch({
+                type: 'COPY_MPT_RENTAL',
+                payload: {
+                  ...defaultMPTObject,
+                  phases: [{ ...defaultPhaseObject, signs: formattedSigns }]
+                }
+              })
             }
 
             const signItemsArray: SignItem[] = Object.entries(signsData).map(
@@ -260,6 +350,55 @@ export default function SignOrderViewContent() {
     }
   }, [params, dispatch])
 
+  // Handle saving/submitting the sign order (same logic as SignOrderContentSimple)
+  const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
+    // Prevent multiple submissions
+    if (adminInfo.isSubmitting) return
+    if (isOrderInvalid()) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setAdminInfo(prev => ({ ...prev, isSubmitting: true }))
+
+      const signOrderData = {
+        id: signOrder?.id, // Include ID for update
+        requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
+        contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
+        contract_number: adminInfo.contractNumber,
+        order_date: new Date(adminInfo.orderDate).toISOString(),
+        need_date: adminInfo.needDate
+          ? new Date(adminInfo.needDate).toISOString()
+          : undefined,
+        start_date: adminInfo.startDate
+          ? new Date(adminInfo.startDate).toISOString()
+          : '',
+        end_date: adminInfo.endDate
+          ? new Date(adminInfo.endDate).toISOString()
+          : '',
+        order_type: adminInfo.orderType,
+        job_number: adminInfo.jobNumber,
+        signs: mptRental.phases[0]?.signs || [],
+        status
+      }
+
+      // Submit data to the API
+      const result = await saveSignOrder(signOrderData)
+
+      toast.success(`Sign order ${status === 'SUBMITTED' ? 'submitted' : 'saved'} successfully`)
+      
+      if (status === 'SUBMITTED') {
+        router.push('/takeoffs/load-sheet')
+      }
+    } catch (error) {
+      console.error('Error saving sign order:', error)
+      toast.error((error as string) || 'Failed to save sign order')
+    } finally {
+      setAdminInfo(prev => ({ ...prev, isSubmitting: false }))
+    }
+  }
+
   const handleExport = () => {
     alert('Export functionality not implemented yet')
   }
@@ -301,6 +440,16 @@ export default function SignOrderViewContent() {
             </Button>
             <Button variant='outline' onClick={handleExport}>
               Export
+            </Button>
+            <Button
+              onClick={() => handleSave('SUBMITTED')}
+              disabled={
+                adminInfo.isSubmitting ||
+                mptRental.phases[0]?.signs?.length === 0 ||
+                isOrderInvalid()
+              }
+            >
+              {adminInfo.isSubmitting ? 'Submitting...' : 'Submit order'}
             </Button>
           </div>
         </div>

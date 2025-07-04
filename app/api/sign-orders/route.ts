@@ -42,11 +42,26 @@ export async function POST(req: NextRequest) {
   try {
     // Parse the request body
     const signOrderData = await req.json();
+
+    let orderNumber: string | undefined;
+    let branchNumber = 10;
+    if(signOrderData.requestor && signOrderData.requestor.branches) {
+      if(signOrderData.requestor.branches.name === 'Turbotville'){
+        branchNumber = 20;
+      }
+      else if (signOrderData.requestor.branches.name === 'Bedford'){
+        branchNumber = 30;
+      }
+    }
     
     // Check if an ID is provided - if so, update instead of insert
-    if (signOrderData.id) {
-      console.log(`Updating existing sign order with ID: ${signOrderData.id}`);
-      
+    if (signOrderData.id ) {
+      if(signOrderData.status === 'SUBMITTED'){
+        orderNumber = await generateSignOrderNumber(
+          signOrderData.order_type || [],
+          branchNumber
+        );
+      }
       // Update the existing record
       const { data, error } = await supabase
         .from('sign_orders')
@@ -63,7 +78,8 @@ export async function POST(req: NextRequest) {
           perm_signs: signOrderData.order_type?.includes('permanent signs'),
           job_number: signOrderData.job_number,
           signs: signOrderData.signs,
-          order_status: signOrderData.status
+          order_status: signOrderData.status,
+          order_number: orderNumber
         })
         .eq('id', signOrderData.id)
         .select('id')
@@ -77,26 +93,15 @@ export async function POST(req: NextRequest) {
       // Return the ID for the updated record
       return NextResponse.json({ success: true, id: data.id });
     }
-    
-    let branchNumber = 10;
-    if(signOrderData.requestor && signOrderData.requestor.branches) {
-      if(signOrderData.requestor.branches.name === 'Turbotville'){
-        branchNumber = 20;
-      }
-      else if (signOrderData.requestor.branches.name === 'Bedford'){
-        branchNumber = 30;
-      }
-    }
-    
+      
     // Generate sign order number
-    let orderNumber: string | undefined;
     if(signOrderData.status === 'SUBMITTED'){
       orderNumber = await generateSignOrderNumber(
         signOrderData.order_type || [],
         branchNumber
       );
     }
-    
+    console.log(signOrderData.status)
     console.log('Generated order number:', orderNumber);
     
     const { data, error } = await supabase
