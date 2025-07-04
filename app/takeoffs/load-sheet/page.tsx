@@ -19,6 +19,7 @@ import { fetchReferenceData } from "@/lib/api-client";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
+  { key: 'order_status', title: "Order Status"},
   { key: "requestor", title: "Requestor" },
   { key: "shop_status", title: "Build Status" },
   { key: "branch", title: "Branch" }, // Computed field
@@ -250,6 +251,7 @@ export default function SignOrderPage() {
             shop_status: order.shop_status || 'not-started',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
+            order_status: order.order_number == null ? 'DRAFT': 'SUBMITTED'
           }));
 
           setQuotes(processedOrders);
@@ -470,6 +472,7 @@ export default function SignOrderPage() {
         branch: order.branch || '-',
         assigned_to: order.assigned_to || 'Unassigned',
         type: order.type || '-',
+        order_status: order.order_number == null ? 'DRAFT' : 'SUBMITTED',
         shop_status: order.shop_status === 'not-started' ? 'Not Started' : 
                     order.shop_status === 'in-progress' ? 'In Progress' : 
                     order.shop_status === 'complete' ? 'Complete' : 

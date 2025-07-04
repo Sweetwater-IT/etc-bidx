@@ -28,8 +28,9 @@ interface Estimate {
 
 export function SignOrderAdminInfo({
     adminInfo,
-    setAdminInfo
-}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>> }) {
+    setAdminInfo,
+    showInitialAdminState
+}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>, showInitialAdminState: boolean }) {
     const { customers, getCustomers, isLoading } = useCustomers();
 
     // State for local UI management
@@ -183,6 +184,7 @@ export function SignOrderAdminInfo({
                 endDate={adminInfo.endDate ? formatDateForDisplay(adminInfo.endDate) : undefined}
                 orderType={adminInfo.orderType}
                 contractNumber={adminInfo.contractNumber}
+                showInitialAdminState={showInitialAdminState}
                 // jobNumber={adminInfo.jobNumber}        // Add this
             />
             <SignOrderDetailsSheet

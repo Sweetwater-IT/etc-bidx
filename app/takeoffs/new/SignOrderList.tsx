@@ -359,7 +359,7 @@ export function SignOrderList({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {shopMode && mptRental.phases.length > 0 && mptRental.phases[currentPhase].signs
+                        {mptRental.phases.length > 0 && mptRental.phases[currentPhase].signs
                             .filter(s => s.designation !== '')
                             .reduce((acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[], sign) => {
                                 if ('primarySignId' in sign) {

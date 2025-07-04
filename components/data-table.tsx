@@ -95,6 +95,7 @@ const handleStatusVariant = (status: string) => {
     case "won":
     case 'complete':
     case "won - pending":
+    case 'submitted':
       return "successful";
     case "unset":
     case "draft":
@@ -225,7 +226,7 @@ function formatCellValue(value: any, key: string) {
   }
 
   // Handle status badges
-  if (key === "status" || key === 'projectStatus' || key === 'billingStatus' || key === 'shop_status') {
+  if (key === "status" || key === 'projectStatus' || key === 'billingStatus' || key === 'shop_status' || key === 'order_status') {
     const variant = handleStatusVariant(value);
 
     return (

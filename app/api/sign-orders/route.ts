@@ -89,10 +89,13 @@ export async function POST(req: NextRequest) {
     }
     
     // Generate sign order number
-    const orderNumber = await generateSignOrderNumber(
-      signOrderData.order_type || [],
-      branchNumber
-    );
+    let orderNumber: string | undefined;
+    if(signOrderData.status === 'SUBMITTED'){
+      orderNumber = await generateSignOrderNumber(
+        signOrderData.order_type || [],
+        branchNumber
+      );
+    }
     
     console.log('Generated order number:', orderNumber);
     
