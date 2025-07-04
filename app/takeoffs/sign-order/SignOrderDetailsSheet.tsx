@@ -131,32 +131,18 @@ export function SignOrderDetailsSheet ({
   const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
   const lastCreatedContactId = useRef<number | null>(null)
 
-  // When localCustomer changes, reset localContact
-  useEffect(() => {
-    setLocalContact(null)
-  }, [localCustomer])
-
-  // After customer changes, if lastCreatedContactId is set, auto-select that contact
+  // Add this smarter effect instead:
   useEffect(() => {
     if (
-      lastCreatedContactId.current &&
       localCustomer &&
-      Array.isArray(localCustomer.contactIds)
+      localContact &&
+      Array.isArray(localCustomer.contactIds) &&
+      !localCustomer.contactIds.includes(localContact.id)
     ) {
-      const idx = localCustomer.contactIds.findIndex(
-        (id: number) => id === lastCreatedContactId.current
-      )
-      if (idx !== -1) {
-        setLocalContact({
-          id: localCustomer.contactIds[idx],
-          name: localCustomer.names[idx],
-          email: localCustomer.emails[idx],
-          phone: localCustomer.phones[idx],
-          role: localCustomer.roles[idx]
-        })
-        lastCreatedContactId.current = null
-      }
+      // If the selected contact is no longer in the list, reset
+      setLocalContact(null)
     }
+    // Otherwise, do nothing (preserve selection)
   }, [localCustomer])
 
   // Update local state when adminInfo changes or when sheet opens
