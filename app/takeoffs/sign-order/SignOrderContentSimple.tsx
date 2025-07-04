@@ -17,10 +17,14 @@ import { useFileUpload } from '@/hooks/use-file-upload'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
-import { saveSignOrder } from '@/lib/api-client'
+import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
 import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
+import { defaultMPTObject, defaultPhaseObject } from '@/types/default-objects/defaultMPTObject'
+import { useLoading } from '@/hooks/use-loading'
+import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
+import { formatDate } from '@/lib/formatUTCDate'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -59,10 +63,12 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     contractNumber: ''
   })
 
+  const { startLoading, stopLoading } = useLoading();
+
   const [localFiles, setLocalFiles] = useState<File[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
-  const [signOrderId, setSignOrderId] = useState<number | null>(null)
+  const [signOrderId, setSignOrderId] = useState<number | null>(initialSignOrderId ?? null)
 
   // Autosave states - exactly like active bid header
   const [isSaving, setIsSaving] = useState<boolean>(false)
@@ -78,6 +84,125 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
 
+  const isOrderInvalid = (): boolean => {
+    return (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' ||
+      !adminInfo.customer || !adminInfo.requestor || adminInfo.orderType.length === 0 || !adminInfo.orderDate
+      || !adminInfo.needDate
+    )
+  } 
+
+  const fetchSignOrder = async () => {
+    try {
+      startLoading()
+      setLoadingNotes(true)
+      console.log(`Fetching sign order with ID: ${initialSignOrderId}`)
+      const response = await fetch(`/api/sign-orders/${initialSignOrderId}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('API response not OK:', response.status, data)
+        throw new Error(
+          `Failed to fetch sign order: ${data.message || response.statusText}`
+        )
+      }
+
+      console.log('Sign order data:', data)
+      if (!data.success || !data.data) {
+        console.error('Invalid API response format:', data)
+        throw new Error('Invalid API response format')
+      }
+
+      const users = await fetchReferenceData('users')
+
+      const orderWithBranch = {
+        ...data.data,
+        branch:
+          users.find(u => u.name === data.data.requestor)?.branches?.name || ''
+      }
+
+      const ordersData: OrderTypes[] = []
+      if(data.data.perm_signs){
+        ordersData.push('permanent signs')
+      }
+      if(data.data.sale){
+        ordersData.push('sale')
+      }
+      if(data.data.rental){
+        ordersData.push('rental')
+      }
+
+      setAdminInfo({
+        contractNumber: data.data.contract_number,
+        requestor: {
+          name: data.data.requestor,
+          email: '',
+          role: ''
+        },
+        orderDate: (data.data.order_date && data.data.order_date !== '') ? new Date(formatDate(data.data.order_date)) : new Date(),
+        needDate: (data.data.need_date && data.data.need_date !== '') ? new Date(formatDate(data.data.need_date)) : new Date(),
+        jobNumber: data.data.job_number,
+        startDate: (data.data.start_date && data.data.start_date !== '') ? new Date(formatDate(data.data.start_date)) : undefined,
+        endDate: (data.data.end_date && data.data.end_date !== '') ? new Date(formatDate(data.data.end_date)) : undefined,
+        selectedBranch: orderWithBranch.branch,
+        customer: {
+          id: data.data.contractor_id,
+          name: data.data.contractors?.name,
+          displayName: data.data.contractors?.name,
+          emails: [],
+          address: '',
+          phones: [],
+          paymentTerms: '',
+          mainPhone: '',
+          zip: '',
+          roles: [],
+          names: [],
+          contactIds: [],
+          url:'',
+          created: '',
+          updated: '',
+          city: '',
+          state: '',
+          customerNumber: 1
+        },
+        isSubmitting: false,
+        orderType: ordersData
+      })
+
+      // Extract sign items from the signs JSON field
+      if (data.data.signs) {
+        try {
+          // Convert the signs object to an array and prepare for shop tracking
+          const signItemsArray = Object.values(data.data.signs)
+            .filter((s: any) => s && typeof s === 'object')
+            .map((s: any) => ({
+              ...s,
+              id: s.id ? s.id : generateUniqueId(),
+              bLights: s.bLights || 0
+            }))
+
+          dispatch({
+            type: 'COPY_MPT_RENTAL',
+            payload: {
+              ...defaultMPTObject,
+              phases: [{ ...defaultPhaseObject, signs: signItemsArray }]
+            }
+          })
+        } catch (error) {
+          toast.error('Error parsing signs data:' + error)
+          console.error('Error parsing signs data:', error)
+        }
+      } else {
+        console.log('No signs data found in the sign order')
+      }
+    } catch (error) {
+      toast.error('Error fetching sign order:' + error)
+      console.error('Error fetching sign order:', error)
+      setLoadingNotes(false)
+    } finally {
+      stopLoading()
+    }
+  }
+
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
@@ -86,7 +211,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
       return;
     }
     else {
-      
+      fetchSignOrder()
     }
   }, [dispatch])
 
@@ -114,8 +239,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
 
     // Don't autosave if no changes, no contract number, or if it's never been saved
     if (
-      !adminInfo.contractNumber ||
-      adminInfo.contractNumber.trim() === '' ||
+      isOrderInvalid() ||
       !hasAnyStateChanged
     )
       return
@@ -142,6 +266,10 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
 
   const autosave = async () => {
     setIsSaving(true)
+
+    if(isOrderInvalid()){
+      return
+    }
 
     // Update the previous state reference
     prevStateRef.current = {
@@ -310,6 +438,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     // Prevent multiple submissions
     if (adminInfo.isSubmitting) return
+    if (isOrderInvalid()) return
 
     try {
       setAdminInfo(prev => ({ ...prev, isSubmitting: true }))
@@ -367,13 +496,14 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
             </div>
             <div className='flex items-center gap-2'>
               <Button
-                onClick={() => handleSave('SUBMITTED')}
+                onClick={() => handleSave(initialSignOrderId ? 'SUBMITTED' : 'DRAFT')}
                 disabled={
                   adminInfo.isSubmitting ||
                   mptRental.phases[0].signs.length === 0
+                  || isOrderInvalid()
                 }
               >
-                {adminInfo.isSubmitting ? 'Saving...' : 'Submit Order'}
+                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Done' : 'Submit Order'}
               </Button>
             </div>
           </div>
@@ -385,6 +515,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
+            showInitialAdminState={!!initialSignOrderId}
           />
           <SignOrderList />
         </div>

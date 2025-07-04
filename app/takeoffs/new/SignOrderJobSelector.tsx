@@ -38,6 +38,7 @@ interface SignOrderJobSelectorProps {
   endDate?: string;
   orderType?: string[];
   contractNumber?: string
+  showInitialAdminState: boolean
 }
 
 export function SignOrderJobSelector({
@@ -57,6 +58,7 @@ export function SignOrderJobSelector({
   startDate,
   endDate,
   orderType,
+  showInitialAdminState
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const inputRef = useRef(null);
@@ -163,7 +165,7 @@ export function SignOrderJobSelector({
         </div>
       </div>
 
-      {selectedContractJob && (
+      {(selectedContractJob || showInitialAdminState) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4">
           <div className="flex flex-col">
             <label className="text-sm font-semibold">
@@ -179,7 +181,7 @@ export function SignOrderJobSelector({
               Branch
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {branch && branch !== "All" ? branch : selectedContractJob.branch || "-"}
+              {branch && branch !== "All" ? branch : selectedContractJob ? selectedContractJob.branch : "-"}
             </div>
           </div>
 
@@ -188,9 +190,9 @@ export function SignOrderJobSelector({
               Contract Number
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {"contract_number" in selectedContractJob 
-                ? selectedContractJob.contract_number 
-                : selectedContractJob.contractNumber || "-"}
+              {!selectedContractJob ? contractNumber : "contract_number" in selectedContractJob 
+                ? selectedContractJob.contract_number : 'contractNumber' in selectedContractJob ?
+                selectedContractJob.contractNumber : "-"}
             </div>
           </div>
 

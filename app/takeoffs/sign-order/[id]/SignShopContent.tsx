@@ -59,7 +59,6 @@ const SignShopContent = ({ id }: Props) => {
 
   // Get signs with shop tracking from context
   const getShopSigns = (): (ExtendedPrimarySign | ExtendedSecondarySign)[] => {
-    console.log(mptRental.phases);
     if (mptRental.phases.length === 0) return [];
     else return mptRental.phases[0].signs.map(sign => {
       // Ensure all signs have shop tracking properties
@@ -171,11 +170,6 @@ const SignShopContent = ({ id }: Props) => {
       }
     })
   }
-
-  useEffect(() => {
-    console.log('Phases and shop signs are:')
-    console.log(mptRental.phases)
-  }, [mptRental.phases])
 
   // Helper function to increment/decrement values
   const adjustShopValue = (

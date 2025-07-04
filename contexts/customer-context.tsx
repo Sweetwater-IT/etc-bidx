@@ -29,7 +29,6 @@ export function CustomerProvider({ children, initialCustomer = null }: {
   children: ReactNode;
   initialCustomer?: Customer | null;
 }) {
-  console.log('CustomerProvider initialized with:', initialCustomer);
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
   const [isLoading, setIsLoading] = useState(false);
   
