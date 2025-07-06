@@ -987,476 +987,478 @@ const BidItemsStep5 = ({
     }
   }
 
+
   return (
     <div>
-      <div className='flex border-b border-gray-200 mb-6'>
-        <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'mpt'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('mpt')}
-          type='button'
-        >
-          MPT
-        </button>
-        <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'equipment'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('equipment')}
-          type='button'
-        >
-          Equipment Rental
-        </button>
-        <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'permanent'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('permanent')}
-          type='button'
-        >
-          Permanent Signs
-        </button>
-                <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'flagging'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('flagging')}
-          type='button'
-        >
-          Flagging
-        </button>
-                <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'sale'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('sale')}
-          type='button'
-        >
-          Sale Items
-        </button>
-                <button
-          className={cn(
-            'px-4 py-2 font-semibold text-base focus:outline-none',
-            activeTab === 'patterns'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500'
-          )}
-          onClick={() => setActiveTab('patterns')}
-          type='button'
-        >
-          Patterns/Service Work
-        </button>
-      </div>
-      {activeTab === 'mpt' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <div className='mt-2 mb-6 ml-12'>
-            <div className='flex items-center justify-between pb-2 border-b mb-6'>
-              <h3 className='text-xl text-black font-semibold'>MPT</h3>
-              <Button onClick={handleAddPhase}>
-                <Plus className='mr-2 h-4 w-4' />
-                Add Phase
-              </Button>
-            </div>
-            {mptRental.phases.length === 0 ? (
-              <EmptyContainer
-                topText='No phases configured yet'
-                subtext='When you add phases, they will appear here as tabs.'
-              />
-            ) : (
-              <div>
-                {mptRental.phases.map((phase, index) => (
-                  <div key={index}>
-                    <div className='flex justify-end'>
-                      <PhaseActionButtons
-                        onDelete={handleDeletePhase}
-                        onEdit={handleEditPhase}
-                        totalPhases={mptRental.phases.length}
-                        phaseIndex={index}
-                      />
-                    </div>
-                    <PhaseInfoTable phase={phase} index={index} />
-                    <MutcdSignsStep3 currentPhase={currentPhase} />
-                    <div>
-                      <div className='flex items-center my-8'>
-                        <div className='flex-grow border-t border-black'></div>
-                        <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
-                          MPT Equipment
-                        </h3>
-                        <div className='flex-grow border-t border-black'></div>
-                      </div>
-                      <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                        {standardEquipmentList.map(equipmentKey =>
-                          equipmentKey === 'sandbag' ? (
-                            <div key={equipmentKey} className='p-2 rounded-md'>
-                              <div className='font-medium mb-2'>
-                                {formatLabel(equipmentKey)}
-                              </div>
-                              <div className='text-muted-foreground'>
-                                Quantity:{' '}
-                                {phase.standardEquipment.sandbag?.quantity || 0}
-                              </div>
-                            </div>
-                          ) : (
-                            <div key={equipmentKey} className='rounded-md'>
-                              <div className='font-medium mb-2'>
-                                {formatLabel(equipmentKey)}
-                              </div>
-                              <div className='flex flex-col gap-2'>
-                                <Label
-                                  htmlFor={`quantity-${equipmentKey}-${index}`}
-                                  className='flex text-muted-foreground'
-                                >
-                                  Quantity:
-                                </Label>
-                                <Input
-                                  id={`quantity-${equipmentKey}-${index}`}
-                                  type='number'
-                                  min={getMinQuantity(equipmentKey)}
-                                  value={
-                                    phase.standardEquipment[equipmentKey]
-                                      ?.quantity || ''
-                                  }
-                                  onChange={e =>
-                                    handleStandardInputChange(
-                                      parseFloat(e.target.value) || 0,
-                                      equipmentKey,
-                                      'quantity'
-                                    )
-                                  }
-                                  className='w-full'
-                                />
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                    <Separator className='my-6' />
-                    <div>
-                      <div className='flex items-center my-8'>
-                        <div className='flex-grow border-t border-black'></div>
-                        <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
-                          Light and Drum Rental
-                        </h3>
-                        <div className='flex-grow border-t border-black'></div>
-                      </div>
-                      <div className='grid grid-cols-2 md:grid-cols-3'>
-                        {lightAndDrumList.map(equipmentKey => (
-                          <div key={equipmentKey} className='p-2 rounded-md'>
-                            <div className='font-medium mb-2'>
-                              {formatLabel(equipmentKey)}
-                            </div>
-                            <div className='flex flex-col gap-2 mb-2'>
-                              <Label
-                                htmlFor={`quantity-light-${equipmentKey}-${index}`}
-                                className='text-muted-foreground'
-                              >
-                                Quantity:
-                              </Label>
-                              <Input
-                                id={`quantity-light-${equipmentKey}-${index}`}
-                                type='number'
-                                min={getMinQuantity(equipmentKey)}
-                                value={
-                                  phase.standardEquipment[equipmentKey]
-                                    ?.quantity || ''
-                                }
-                                onChange={e =>
-                                  handleStandardInputChange(
-                                    parseFloat(e.target.value) || 0,
-                                    equipmentKey,
-                                    'quantity'
-                                  )
-                                }
-                                className='w-full'
-                              />
-                            </div>
-                            {adminData?.emergencyJob && (
-                              <div className='flex flex-col w-1/3 gap-2 mt-2'>
-                                <Label
-                                  htmlFor={`emergency-${equipmentKey}-${index}`}
-                                  className='text-muted-foreground'
-                                >
-                                  Emergency Rate:
-                                </Label>
-                                <Input
-                                  id={`emergency-${equipmentKey}-${index}`}
-                                  inputMode='decimal'
-                                  pattern='^\\d*(\\.\\d{0,2})?$'
-                                  className='w-full'
-                                  value={`$ ${formatDecimal(
-                                    getDigitsForEquipment(equipmentKey)
-                                  )}`}
-                                  onChange={e => {
-                                    const ev = e.nativeEvent as InputEvent
-                                    const { inputType } = ev
-                                    const data = (ev.data || '').replace(
-                                      /\$/g,
-                                      ''
-                                    )
+      <div className="relative">
+        <div className="mt-2 mb-6 ml-12">
+          <Tabs
+            defaultValue="mpt"
+            className="w-full"
+            onValueChange={setActiveTab}
+            value={activeTab}
+          >
+            <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
+              <TabsTrigger
+                value="mpt"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                MPT
+              </TabsTrigger>
+              <TabsTrigger
+                value="equipment"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Equipment Rental
+              </TabsTrigger>
+              <TabsTrigger
+                value="permanent"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Permanent Signs
+              </TabsTrigger>
+              <TabsTrigger
+                value="flagging"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Flagging
+              </TabsTrigger>
+              <TabsTrigger
+                value="sale"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Sale Items
+              </TabsTrigger>
+              <TabsTrigger
+                value="patterns"
+                className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
+              >
+                Patterns/Service Work
+              </TabsTrigger>
+            </TabsList>
 
-                                    const currentDigits =
-                                      getDigitsForEquipment(equipmentKey)
-                                    const nextDigits = handleNextDigits(
-                                      currentDigits,
-                                      inputType,
-                                      data
-                                    )
-                                    updateDigitsForEquipment(
-                                      equipmentKey,
-                                      nextDigits
-                                    )
-
-                                    const formatted = (
-                                      parseInt(nextDigits, 10) / 100
-                                    ).toFixed(2)
-                                    const emergencyKey =
-                                      emergencyFieldKeyMap[equipmentKey] ||
-                                      equipmentKey
-                                    const fieldKey = `emergency${emergencyKey}`
-                                    handleRateChange(
-                                      formatted,
-                                      fieldKey,
-                                      equipmentKey
-                                    )
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <Separator className='my-6' />
+            {/* MPT Tab */}
+            <TabsContent value="mpt" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <div className="mt-2 mb-6 ml-12">
+                  <div className="flex items-center justify-between pb-2 border-b mb-6">
+                    <h3 className="text-xl text-black font-semibold">MPT</h3>
+                    <Button onClick={handleAddPhase}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Phase
+                    </Button>
+                  </div>
+                  {mptRental.phases.length === 0 ? (
+                    <EmptyContainer
+                      topText="No phases configured yet"
+                      subtext="When you add phases, they will appear here as tabs."
+                    />
+                  ) : (
                     <div>
-                      <h3 className='text-base font-semibold mb-4'>
-                        Custom Equipment
-                      </h3>
-                      <div className='grid grid-cols-12 gap-4 mb-4'>
-                        <div className='col-span-3'>
-                          <Label className='mb-2' htmlFor='itemName'>
-                            Item Name
-                          </Label>
-                          <Input
-                            id='itemName'
-                            value={itemName}
-                            onChange={e => setItemName(e.target.value)}
-                            placeholder='Enter item name'
-                          />
-                        </div>
-                        <div className='col-span-3'>
-                          <Label className='mb-2' htmlFor='quantity'>
-                            Quantity
-                          </Label>
-                          <Input
-                            id='quantity'
-                            type='number'
-                            min={0}
-                            value={newCustomItem.quantity || ''}
-                            onChange={e =>
-                              handleNewItemInputChange(
-                                'quantity',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder=''
-                          />
-                        </div>
-                        <div className='col-span-3'>
-                          <Label className='mb-2' htmlFor='cost'>
-                            Cost
-                          </Label>
-                          <Input
-                            id='cost'
-                            type='number'
-                            min={0}
-                            step={0.01}
-                            value={newCustomItem.cost || ''}
-                            onChange={e =>
-                              handleNewItemInputChange(
-                                'cost',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder=''
-                          />
-                        </div>
-                        <div className='col-span-3'>
-                          <Label className='mb-2' htmlFor='usefulLife'>
-                            Useful Life (days)
-                          </Label>
-                          <Input
-                            id='usefulLife'
-                            type='number'
-                            min={0}
-                            value={newCustomItem.usefulLife || ''}
-                            onChange={e =>
-                              handleNewItemInputChange(
-                                'usefulLife',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder=''
-                          />
-                        </div>
-                      </div>
-                      <Button
-                        onClick={handleAddCustomItem}
-                        className='mt-2'
-                        disabled={
-                          !itemName ||
-                          newCustomItem.quantity <= 0 ||
-                          newCustomItem.cost <= 0
-                        }
-                        aria-disabled={
-                          !itemName ||
-                          newCustomItem.quantity <= 0 ||
-                          newCustomItem.cost <= 0
-                        }
-                      >
-                        <Plus className='mr-2 h-4 w-4' /> Add Custom Item
-                      </Button>
-                    </div>
-                    {phase.customLightAndDrumItems?.length > 0 && (
-                      <div className='mt-6'>
-                        <h3 className='text-base font-semibold mb-4'>
-                          Custom Items
-                        </h3>
-                        <div className='grid grid-cols-12 gap-4 mb-4'>
-                          <div className='col-span-2 font-medium'>
-                            Item Name
+                      {mptRental.phases.map((phase, index) => (
+                        <div key={index}>
+                          <div className="flex justify-end">
+                            <PhaseActionButtons
+                              onDelete={handleDeletePhase}
+                              onEdit={handleEditPhase}
+                              totalPhases={mptRental.phases.length}
+                              phaseIndex={index}
+                            />
                           </div>
-                          <div className='col-span-3 font-medium'>Quantity</div>
-                          <div className='col-span-3 font-medium'>Cost</div>
-                          <div className='col-span-2 font-medium'>
-                            Useful Life
+                          <PhaseInfoTable phase={phase} index={index} />
+                          <MutcdSignsStep3 currentPhase={currentPhase} />
+                          <div>
+                            <div className="flex items-center my-8">
+                              <div className="flex-grow border-t border-black"></div>
+                              <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
+                                MPT Equipment
+                              </h3>
+                              <div className="flex-grow border-t border-black"></div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {standardEquipmentList.map((equipmentKey) =>
+                                equipmentKey === 'sandbag' ? (
+                                  <div
+                                    key={equipmentKey}
+                                    className="p-2 rounded-md"
+                                  >
+                                    <div className="font-medium mb-2">
+                                      {formatLabel(equipmentKey)}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      Quantity:{' '}
+                                      {phase.standardEquipment.sandbag
+                                        ?.quantity || 0}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div key={equipmentKey} className="rounded-md">
+                                    <div className="font-medium mb-2">
+                                      {formatLabel(equipmentKey)}
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                      <Label
+                                        htmlFor={`quantity-${equipmentKey}-${index}`}
+                                        className="flex text-muted-foreground"
+                                      >
+                                        Quantity:
+                                      </Label>
+                                      <Input
+                                        id={`quantity-${equipmentKey}-${index}`}
+                                        type="number"
+                                        min={getMinQuantity(equipmentKey)}
+                                        value={
+                                          phase.standardEquipment[equipmentKey]
+                                            ?.quantity || ''
+                                        }
+                                        onChange={(e) =>
+                                          handleStandardInputChange(
+                                            parseFloat(e.target.value) || 0,
+                                            equipmentKey,
+                                            'quantity'
+                                          )
+                                        }
+                                        className="w-full"
+                                      />
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </div>
-                          <div className='col-span-2 font-medium'>
-                            Daily Price
-                          </div>
-                        </div>
-                        <div className='space-y-4'>
-                          {phase.customLightAndDrumItems.map(item => (
-                            <div
-                              key={item.id}
-                              className='grid grid-cols-12 gap-4 items-center'
-                            >
-                              <div className='col-span-2'>{item.id}</div>
-                              <div className='col-span-3'>
-                                <Input
-                                  type='number'
-                                  min={0}
-                                  value={item.quantity}
-                                  onChange={e =>
-                                    dispatch({
-                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                      payload: {
-                                        phaseNumber: index,
-                                        id: item.id,
-                                        key: 'quantity',
-                                        value: parseFloat(e.target.value) || 0
+                          <Separator className="my-6" />
+                          <div>
+                            <div className="flex items-center my-8">
+                              <div className="flex-grow border-t border-black"></div>
+                              <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
+                                Light and Drum Rental
+                              </h3>
+                              <div className="flex-grow border-t border-black"></div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3">
+                              {lightAndDrumList.map((equipmentKey) => (
+                                <div
+                                  key={equipmentKey}
+                                  className="p-2 rounded-md"
+                                >
+                                  <div className="font-medium mb-2">
+                                    {formatLabel(equipmentKey)}
+                                  </div>
+                                  <div className="flex flex-col gap-2 mb-2">
+                                    <Label
+                                      htmlFor={`quantity-light-${equipmentKey}-${index}`}
+                                      className="text-muted-foreground"
+                                    >
+                                      Quantity:
+                                    </Label>
+                                    <Input
+                                      id={`quantity-light-${equipmentKey}-${index}`}
+                                      type="number"
+                                      min={getMinQuantity(equipmentKey)}
+                                      value={
+                                        phase.standardEquipment[equipmentKey]
+                                          ?.quantity || ''
                                       }
-                                    })
-                                  }
+                                      onChange={(e) =>
+                                        handleStandardInputChange(
+                                          parseFloat(e.target.value) || 0,
+                                          equipmentKey,
+                                          'quantity'
+                                        )
+                                      }
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  {adminData?.emergencyJob && (
+                                    <div className="flex flex-col w-1/3 gap-2 mt-2">
+                                      <Label
+                                        htmlFor={`emergency-${equipmentKey}-${index}`}
+                                        className="text-muted-foreground"
+                                      >
+                                        Emergency Rate:
+                                      </Label>
+                                      <Input
+                                        id={`emergency-${equipmentKey}-${index}`}
+                                        inputMode="decimal"
+                                        pattern="^\d*(\.\d{0,2})?$"
+                                        className="w-full"
+                                        value={`$ ${formatDecimal(
+                                          getDigitsForEquipment(equipmentKey)
+                                        )}`}
+                                        onChange={(e) => {
+                                          const ev = e.nativeEvent as InputEvent;
+                                          const { inputType } = ev;
+                                          const data = (ev.data || '').replace(
+                                            /\$/g,
+                                            ''
+                                          );
+
+                                          const currentDigits =
+                                            getDigitsForEquipment(equipmentKey);
+                                          const nextDigits = handleNextDigits(
+                                            currentDigits,
+                                            inputType,
+                                            data
+                                          );
+                                          updateDigitsForEquipment(
+                                            equipmentKey,
+                                            nextDigits
+                                          );
+
+                                          const formatted = (
+                                            parseInt(nextDigits, 10) / 100
+                                          ).toFixed(2);
+                                          const emergencyKey =
+                                            emergencyFieldKeyMap[equipmentKey] ||
+                                            equipmentKey;
+                                          const fieldKey = `emergency${emergencyKey}`;
+                                          handleRateChange(
+                                            formatted,
+                                            fieldKey,
+                                            equipmentKey
+                                          );
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <Separator className="my-6" />
+                          <div>
+                            <h3 className="text-base font-semibold mb-4">
+                              Custom Equipment
+                            </h3>
+                            <div className="grid grid-cols-12 gap-4 mb-4">
+                              <div className="col-span-3">
+                                <Label className="mb-2" htmlFor="itemName">
+                                  Item Name
+                                </Label>
+                                <Input
+                                  id="itemName"
+                                  value={itemName}
+                                  onChange={(e) => setItemName(e.target.value)}
+                                  placeholder="Enter item name"
                                 />
                               </div>
-                              <div className='col-span-3'>
+                              <div className="col-span-3">
+                                <Label className="mb-2" htmlFor="quantity">
+                                  Quantity
+                                </Label>
                                 <Input
-                                  type='number'
+                                  id="quantity"
+                                  type="number"
+                                  min={0}
+                                  value={newCustomItem.quantity || ''}
+                                  onChange={(e) =>
+                                    handleNewItemInputChange(
+                                      'quantity',
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  placeholder=""
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Label className="mb-2" htmlFor="cost">
+                                  Cost
+                                </Label>
+                                <Input
+                                  id="cost"
+                                  type="number"
                                   min={0}
                                   step={0.01}
-                                  value={item.cost}
-                                  onChange={e =>
-                                    dispatch({
-                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                      payload: {
-                                        phaseNumber: index,
-                                        id: item.id,
-                                        key: 'cost',
-                                        value: parseFloat(e.target.value) || 0
-                                      }
-                                    })
+                                  value={newCustomItem.cost || ''}
+                                  onChange={(e) =>
+                                    handleNewItemInputChange(
+                                      'cost',
+                                      parseFloat(e.target.value) || 0
+                                    )
                                   }
+                                  placeholder=""
                                 />
                               </div>
-                              <div className='col-span-2'>
+                              <div className="col-span-3">
+                                <Label className="mb-2" htmlFor="usefulLife">
+                                  Useful Life (days)
+                                </Label>
                                 <Input
-                                  type='number'
+                                  id="usefulLife"
+                                  type="number"
                                   min={0}
-                                  value={item.usefulLife}
-                                  onChange={e =>
-                                    dispatch({
-                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                      payload: {
-                                        phaseNumber: index,
-                                        id: item.id,
-                                        key: 'usefulLife',
-                                        value: parseFloat(e.target.value) || 0
-                                      }
-                                    })
+                                  value={newCustomItem.usefulLife || ''}
+                                  onChange={(e) =>
+                                    handleNewItemInputChange(
+                                      'usefulLife',
+                                      parseFloat(e.target.value) || 0
+                                    )
                                   }
+                                  placeholder=""
                                 />
-                              </div>
-                              <div className='col-span-2'>
-                                $
-                                {calculateLightDailyRateCosts(
-                                  mptRental,
-                                  item.cost
-                                ).toFixed(2)}
                               </div>
                             </div>
-                          ))}
+                            <Button
+                              onClick={handleAddCustomItem}
+                              className="mt-2"
+                              disabled={
+                                !itemName ||
+                                newCustomItem.quantity <= 0 ||
+                                newCustomItem.cost <= 0
+                              }
+                              aria-disabled={
+                                !itemName ||
+                                newCustomItem.quantity <= 0 ||
+                                newCustomItem.cost <= 0
+                              }
+                            >
+                              <Plus className="mr-2 h-4 w-4" /> Add Custom Item
+                            </Button>
+                          </div>
+                          {phase.customLightAndDrumItems?.length > 0 && (
+                            <div className="mt-6">
+                              <h3 className="text-base font-semibold mb-4">
+                                Custom Items
+                              </h3>
+                              <div className="grid grid-cols-12 gap-4 mb-4">
+                                <div className="col-span-2 font-medium">
+                                  Item Name
+                                </div>
+                                <div className="col-span-3 font-medium">
+                                  Quantity
+                                </div>
+                                <div className="col-span-3 font-medium">
+                                  Cost
+                                </div>
+                                <div className="col-span-2 font-medium">
+                                  Useful Life
+                                </div>
+                                <div className="col-span-2 font-medium">
+                                  Daily Price
+                                </div>
+                              </div>
+                              <div className="space-y-4">
+                                {phase.customLightAndDrumItems.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="grid grid-cols-12 gap-4 items-center"
+                                  >
+                                    <div className="col-span-2">{item.id}</div>
+                                    <div className="col-span-3">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={item.quantity}
+                                        onChange={(e) =>
+                                          dispatch({
+                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                            payload: {
+                                              phaseNumber: index,
+                                              id: item.id,
+                                              key: 'quantity',
+                                              value:
+                                                parseFloat(e.target.value) || 0,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="col-span-3">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        step={0.01}
+                                        value={item.cost}
+                                        onChange={(e) =>
+                                          dispatch({
+                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                            payload: {
+                                              phaseNumber: index,
+                                              id: item.id,
+                                              key: 'cost',
+                                              value:
+                                                parseFloat(e.target.value) || 0,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="col-span-2">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={item.usefulLife}
+                                        onChange={(e) =>
+                                          dispatch({
+                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                            payload: {
+                                              phaseNumber: index,
+                                              id: item.id,
+                                              key: 'usefulLife',
+                                              value:
+                                                parseFloat(e.target.value) || 0,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <div className="col-span-2">
+                                      $
+                                      {calculateLightDailyRateCosts(
+                                        mptRental,
+                                        item.cost
+                                      ).toFixed(2)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </TabsContent>
+
+            {/* Equipment Tab */}
+            <TabsContent value="equipment" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <EquipmentRentalTab />
+              </div>
+            </TabsContent>
+
+            {/* Permanent Signs Tab */}
+            <TabsContent value="permanent" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <PermanentSignsSummaryStep />
+              </div>
+            </TabsContent>
+
+            {/* Flagging Tab */}
+            <TabsContent value="flagging" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <FlaggingServicesTab />
+              </div>
+            </TabsContent>
+
+            {/* Sale Items Tab */}
+            <TabsContent value="sale" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <SaleItemsStep />
+              </div>
+            </TabsContent>
+
+            {/* Patterns Tab */}
+            <TabsContent value="patterns" className="mt-6">
+              <div className="bg-white rounded-b-lg p-6">
+                <ServiceWorkTab />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      )}
-      {activeTab === 'equipment' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <EquipmentRentalTab />
-        </div>
-      )}
-      {activeTab === 'permanent' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <PermanentSignsSummaryStep />
-        </div>
-      )}
-      {activeTab === 'flagging' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <FlaggingServicesTab />
-        </div>
-      )}      
-      {activeTab === 'sale' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <SaleItemsStep />
-        </div>
-      )}
-      {activeTab === 'patterns' && (
-        <div className='bg-white rounded-b-lg p-6'>
-          <ServiceWorkTab />
-        </div>
-      )}      
+      </div>
       
       {/* Phase Drawer */}
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
