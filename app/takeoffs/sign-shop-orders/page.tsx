@@ -19,6 +19,7 @@ import { fetchReferenceData } from "@/lib/api-client";
 import { SectionCards } from "@/components/section-cards";
 
 const SIGN_ORDER_COLUMNS = [
+  { key: "order_number", title: "Order Number" },
   { key: "requestor", title: "Requestor" },
   { key: "branch", title: "Branch" },
   { key: "customer", title: "Customer" },
