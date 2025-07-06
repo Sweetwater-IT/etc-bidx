@@ -1091,6 +1091,13 @@ const BidItemsStep5 = ({
                       />
                     </div>
                     <PhaseInfoTable phase={phase} index={index} />
+                      <div className='flex items-center my-8'>
+                        <div className='flex-grow border-t border-black'></div>
+                        <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                          PENNDOT Signs
+                        </h3>
+                        <div className='flex-grow border-t border-black'></div>
+                      </div>                    
                     <MutcdSignsStep3 currentPhase={currentPhase} />
                     <div>
                       <div className='flex items-center my-8'>
