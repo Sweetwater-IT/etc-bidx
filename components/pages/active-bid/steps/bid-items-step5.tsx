@@ -1291,7 +1291,13 @@ const BidItemsStep5 = ({
 
                               {/* Trip and Labor Summary */}
                               <div className="border-none p-4">
-                                <h4 className="font-semibold mb-4">Trip and Labor Summary</h4>
+                              <div className='flex items-center my-8'>
+                                <div className='flex-grow border-t border-black'></div>
+                                <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                                  Trip and Labor
+                                </h3>
+                                <div className='flex-grow border-t border-black'></div>
+                              </div>                                
                                 <TripAndLaborSummary
                                   phase={phase}
                                   phaseIndex={index}
@@ -1371,7 +1377,6 @@ const BidItemsStep5 = ({
                                 </div>
                               </div>
 
-                              <Separator className="my-6" />
 
                               {/* Light and Drum Rental Section */}
                               <div>
@@ -1473,13 +1478,15 @@ const BidItemsStep5 = ({
                                 </div>
                               </div>
 
-                              <Separator className="my-6" />
-
                               {/* Custom Equipment Section */}
                               <div>
-                                <h3 className="text-base font-semibold mb-4">
+                              <div className='flex items-center my-8'>
+                                <div className='flex-grow border-t border-black'></div>
+                                <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
                                   Custom Equipment
                                 </h3>
+                                <div className='flex-grow border-t border-black'></div>
+                              </div>
                                 <div className="grid grid-cols-12 gap-4 mb-4">
                                   <div className="col-span-3">
                                     <Label className="mb-2" htmlFor="itemName">
