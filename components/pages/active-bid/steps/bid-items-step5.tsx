@@ -1,9 +1,9 @@
-'use client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
+'use client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import {
   Drawer,
   DrawerClose,
@@ -11,22 +11,22 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerTitle
-} from '@/components/ui/drawer'
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Loader, Edit, Calendar as CalendarIcon } from 'lucide-react'
-import React, { useState, useEffect, useCallback } from 'react'
-import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-import { toast } from 'sonner'
-import { useEstimate } from '@/contexts/EstimateContext'
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Loader, Edit, Calendar as CalendarIcon } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { useEstimate } from '@/contexts/EstimateContext';
 import {
   EquipmentType,
   DynamicEquipmentInfo,
@@ -36,147 +36,140 @@ import {
   labelMapping,
   signList,
   lightAndDrumList,
-  standardEquipmentList
-} from '@/types/MPTEquipment'
-import { safeNumber } from '@/lib/safe-number'
+  standardEquipmentList,
+} from '@/types/MPTEquipment';
+import { safeNumber } from '@/lib/safe-number';
 import {
   calculateLightDailyRateCosts,
-  getAssociatedSignEquipment
-} from '@/lib/mptRentalHelperFunctions'
-import { createActiveBid, fetchReferenceData } from '@/lib/api-client'
-import EquipmentRentalTab from '@/components/BidItems/equipment-rental-tab'
-import SaleItemsStep from './sale-items-step'
-import FlaggingServicesTab from '@/components/BidItems/flagging-tab'
-import ServiceWorkTab from '@/components/BidItems/service-work-tab'
-import PermanentSignsSummaryStep from '@/components/BidItems/permanent-signs-tab'
-import { formatDecimal } from '@/lib/formatDecimals'
-import { handleNextDigits } from '@/lib/handleNextDigits'
-import EmptyContainer from '@/components/BidItems/empty-container'
-import MutcdSignsStep3 from './mutcd-signs-step3'
-import PhaseActionButtons from './phase-action-buttons'
-import PhaseInfoTable from './phase-info-table'
+  getAssociatedSignEquipment,
+} from '@/lib/mptRentalHelperFunctions';
+import { createActiveBid, fetchReferenceData } from '@/lib/api-client';
+import EquipmentRentalTab from '@/components/BidItems/equipment-rental-tab';
+import SaleItemsStep from './sale-items-step';
+import FlaggingServicesTab from '@/components/BidItems/flagging-tab';
+import ServiceWorkTab from '@/components/BidItems/service-work-tab';
+import PermanentSignsSummaryStep from '@/components/BidItems/permanent-signs-tab';
+import { formatDecimal } from '@/lib/formatDecimals';
+import { handleNextDigits } from '@/lib/handleNextDigits';
+import EmptyContainer from '@/components/BidItems/empty-container';
+import MutcdSignsStep3 from './mutcd-signs-step3';
+import PhaseActionButtons from './phase-action-buttons';
+import PhaseInfoTable from './phase-info-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Default values for payback calculations and truck/fuel data
-const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
-const DEFAULT_MPG_PER_TRUCK = 8
-const DEFAULT_DISPATCH_FEE = 75
-const DEFAULT_ANNUAL_UTILIZATION = 0.75
-const DEFAULT_TARGET_MOIC = 2
+const DEFAULT_PAYBACK_PERIOD = 5; // 5 years
+const DEFAULT_MPG_PER_TRUCK = 8;
+const DEFAULT_DISPATCH_FEE = 75;
+const DEFAULT_ANNUAL_UTILIZATION = 0.75;
+const DEFAULT_TARGET_MOIC = 2;
 
-//the key is an EquipmentType, the value is the EmergencyFields minus emergency in front
+// The key is an EquipmentType, the value is the EmergencyFields minus emergency in front
 const emergencyFieldKeyMap: Record<string, string> = {
   BLights: 'BLites',
   ACLights: 'ACLites',
   sharps: 'Sharps',
   HIVP: 'HIVerticalPanels',
-  TypeXIVP: 'TypeXIVerticalPanels'
-}
+  TypeXIVP: 'TypeXIVerticalPanels',
+};
 
 const formatLabel = (key: string) => {
   return (
     labelMapping[key] ||
-    key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-  )
-}
+    key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())
+  );
+};
 
 // Calculate days between dates (abstracted function)
 const calculateDays = (start: Date, end: Date): number => {
-  const diffTime = Math.abs(end.getTime() - start.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) // Include both start and end date
-  return diffDays
-}
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Include both start and end date
+  return diffDays;
+};
 
 interface PhaseDrawerData {
-  name: string
-  startDate: Date | null
-  endDate: Date | null
-  personnel: number
-  days: number
-  numberTrucks: number
-  additionalRatedHours: number
-  additionalNonRatedHours: number
-  maintenanceTrips: number
+  name: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  personnel: number;
+  days: number;
+  numberTrucks: number;
+  additionalRatedHours: number;
+  additionalNonRatedHours: number;
+  maintenanceTrips: number;
 }
 
 const BidItemsStep5 = ({
   currentPhase,
-  setCurrentPhase
+  setCurrentPhase,
 }: {
-  currentPhase: number
-  setCurrentPhase: React.Dispatch<React.SetStateAction<number>>
+  currentPhase: number;
+  setCurrentPhase: React.Dispatch<React.SetStateAction<number>>;
 }) => {
-  const { mptRental, adminData, dispatch } = useEstimate()
-  const [startDateOpen, setStartDateOpen] = useState<boolean>(false)
-  const [endDateOpen, setEndDateOpen] = useState<boolean>(false)
-  const [sandbagQuantity, setSandbagQuantity] = useState<number>(0)
+  const { mptRental, adminData, dispatch } = useEstimate();
+  const [startDateOpen, setStartDateOpen] = useState<boolean>(false);
+  const [endDateOpen, setEndDateOpen] = useState<boolean>(false);
+  const [sandbagQuantity, setSandbagQuantity] = useState<number>(0);
   const [newCustomItem, setNewCustomItem] = useState<
     Omit<CustomLightAndDrumItem, 'id'>
   >({
     quantity: 0,
     cost: 0,
-    usefulLife: 0
-  })
-  const [itemName, setItemName] = useState('')
-  const [digits, setDigits] = useState<Record<string, string>>({})
+    usefulLife: 0,
+  });
+  const [itemName, setItemName] = useState('');
+  const [digits, setDigits] = useState<Record<string, string>>({});
 
   // Phase drawer state
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(
-    null
-  )
-  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(
-    null
-  )
-
-  const [activeTab, setActiveTab] = useState('mpt')
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(null);
+  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(null);
+  const [activeTab, setActiveTab] = useState('mpt');
 
   const handleRateChange = (
     formattedValue: string,
     fieldKey: string,
     equipmentKey: string
   ) => {
-    const numValue = Number(formattedValue)
+    const numValue = Number(formattedValue);
     dispatch({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
         key: 'emergencyFields',
         value: {
           ...adminData?.emergencyFields,
-          [fieldKey]: numValue
-        }
-      }
-    })
-  }
+          [fieldKey]: numValue,
+        },
+      },
+    });
+  };
 
   useEffect(() => {
     if (adminData?.emergencyFields) {
-      const newDigits: Record<string, string> = {}
-      lightAndDrumList.forEach(equipmentKey => {
-        const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey
-        const fieldKey = `emergency${emergencyKey}`
-        const currentValue = adminData.emergencyFields[fieldKey] || 0
+      const newDigits: Record<string, string> = {};
+      lightAndDrumList.forEach((equipmentKey) => {
+        const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+        const fieldKey = `emergency${emergencyKey}`;
+        const currentValue = adminData.emergencyFields[fieldKey] || 0;
         newDigits[equipmentKey] = Math.round(currentValue * 100)
           .toString()
-          .padStart(3, '0')
-      })
-      setDigits(newDigits)
+          .padStart(3, '0');
+      });
+      setDigits(newDigits);
     }
-  }, [adminData?.emergencyFields])
+  }, [adminData?.emergencyFields]);
 
   // Helper function to get digits for specific equipment
   const getDigitsForEquipment = (equipmentKey: string): string => {
-    return digits[equipmentKey] || '000'
-  }
+    return digits[equipmentKey] || '000';
+  };
 
-  const updateDigitsForEquipment = (
-    equipmentKey: string,
-    newDigits: string
-  ) => {
-    setDigits(prev => ({
+  const updateDigitsForEquipment = (equipmentKey: string, newDigits: string) => {
+    setDigits((prev) => ({
       ...prev,
-      [equipmentKey]: newDigits
-    }))
-  }
+      [equipmentKey]: newDigits,
+    }));
+  };
 
   // Phase management functions
   const handleAddPhase = () => {
@@ -189,14 +182,14 @@ const BidItemsStep5 = ({
       numberTrucks: 0,
       additionalRatedHours: 0,
       additionalNonRatedHours: 0,
-      maintenanceTrips: 0
-    })
-    setEditingPhaseIndex(null)
-    setDrawerOpen(true)
-  }
+      maintenanceTrips: 0,
+    });
+    setEditingPhaseIndex(null);
+    setDrawerOpen(true);
+  };
 
   const handleEditPhase = (phaseIndex: number) => {
-    const phase = mptRental.phases[phaseIndex]
+    const phase = mptRental.phases[phaseIndex];
     setPhaseFormData({
       name: phase.name,
       startDate: phase.startDate,
@@ -206,85 +199,80 @@ const BidItemsStep5 = ({
       numberTrucks: phase.numberTrucks,
       additionalRatedHours: phase.additionalRatedHours,
       additionalNonRatedHours: phase.additionalNonRatedHours,
-      maintenanceTrips: phase.maintenanceTrips
-    })
-    setEditingPhaseIndex(phaseIndex)
-    setDrawerOpen(true)
-  }
+      maintenanceTrips: phase.maintenanceTrips,
+    });
+    setEditingPhaseIndex(phaseIndex);
+    setDrawerOpen(true);
+  };
 
   const handleDeletePhase = (phaseIndex: number) => {
     if (mptRental.phases.length > 1) {
-      dispatch({ type: 'DELETE_MPT_PHASE', payload: phaseIndex })
+      dispatch({ type: 'DELETE_MPT_PHASE', payload: phaseIndex });
       if (currentPhase >= phaseIndex && currentPhase > 0) {
-        setCurrentPhase(currentPhase - 1)
+        setCurrentPhase(currentPhase - 1);
       }
     }
-  }
+  };
 
   const handlePhaseFormUpdate = (field: keyof PhaseDrawerData, value: any) => {
     if (phaseFormData) {
-      setPhaseFormData({ ...phaseFormData, [field]: value })
+      setPhaseFormData({ ...phaseFormData, [field]: value });
     }
-  }
+  };
 
   const handleDateChange = (
     value: Date | undefined,
     name: 'startDate' | 'endDate'
   ) => {
-    if (!value || !phaseFormData) return
+    if (!value || !phaseFormData) return;
 
-    const updatedFormData = { ...phaseFormData, [name]: value }
+    const updatedFormData = { ...phaseFormData, [name]: value };
 
     if (updatedFormData.startDate && updatedFormData.endDate) {
-      const days = calculateDays(
-        updatedFormData.startDate,
-        updatedFormData.endDate
-      )
-      updatedFormData.days = days
+      const days = calculateDays(updatedFormData.startDate, updatedFormData.endDate);
+      updatedFormData.days = days;
     }
 
-    setPhaseFormData(updatedFormData)
+    setPhaseFormData(updatedFormData);
     if (name === 'startDate') {
-      setStartDateOpen(false)
+      setStartDateOpen(false);
     } else {
-      setEndDateOpen(false)
+      setEndDateOpen(false);
     }
-  }
+  };
 
   const setEndDateFromDays = (days: number) => {
-    if (!phaseFormData?.startDate) return
+    if (!phaseFormData?.startDate) return;
 
-    const startDate = phaseFormData.startDate
-    const newEndDate = new Date(
-      startDate.getTime() + days * 24 * 60 * 60 * 1000
-    )
+    const startDate = phaseFormData.startDate;
+    const newEndDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
 
     setPhaseFormData({
       ...phaseFormData,
       endDate: newEndDate,
-      days: days
-    })
-  }
+      days: days,
+    });
+  };
 
   const handleUseAdminDates = (useAdminDates: boolean) => {
-    if (!phaseFormData) return
+    if (!phaseFormData) return;
 
     if (useAdminDates && (!adminData.startDate || !adminData.endDate)) {
-      toast.error('Project start and end dates are not set')
-      return
+      toast.error('Project start and end dates are not set');
+      return;
     } else if (useAdminDates) {
-      const days = calculateDays(adminData.startDate!, adminData.endDate!)
+      const days = calculateDays(adminData.startDate!, adminData.endDate!);
       setPhaseFormData({
         ...phaseFormData,
         startDate: adminData.startDate!,
         endDate: adminData.endDate!,
-        days: days
-      })
+        days: days,
+      });
     }
-  }
+  };
 
   const handleSavePhase = () => {
-    if (!phaseFormData) return
+    if (!phaseFormData) return;
 
     if (editingPhaseIndex !== null) {
       // Update existing phase
@@ -292,9 +280,9 @@ const BidItemsStep5 = ({
         type: 'UPDATE_PHASE_NAME',
         payload: {
           value: phaseFormData.name.toUpperCase(),
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       if (phaseFormData.startDate) {
         dispatch({
@@ -302,9 +290,9 @@ const BidItemsStep5 = ({
           payload: {
             key: 'startDate',
             value: phaseFormData.startDate,
-            phase: editingPhaseIndex
-          }
-        })
+            phase: editingPhaseIndex,
+          },
+        });
       }
 
       if (phaseFormData.endDate) {
@@ -313,9 +301,9 @@ const BidItemsStep5 = ({
           payload: {
             key: 'endDate',
             value: phaseFormData.endDate,
-            phase: editingPhaseIndex
-          }
-        })
+            phase: editingPhaseIndex,
+          },
+        });
       }
 
       dispatch({
@@ -323,54 +311,54 @@ const BidItemsStep5 = ({
         payload: {
           key: 'days',
           value: phaseFormData.days,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
         payload: {
           key: 'personnel',
           value: phaseFormData.personnel,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
         payload: {
           key: 'numberTrucks',
           value: phaseFormData.numberTrucks,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
         payload: {
           key: 'additionalRatedHours',
           value: phaseFormData.additionalRatedHours,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
         payload: {
           key: 'additionalNonRatedHours',
           value: phaseFormData.additionalNonRatedHours,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
         payload: {
           key: 'maintenanceTrips',
           value: phaseFormData.maintenanceTrips,
-          phase: editingPhaseIndex
-        }
-      })
+          phase: editingPhaseIndex,
+        },
+      });
     } else {
       // Add new phase
       if (
@@ -381,8 +369,8 @@ const BidItemsStep5 = ({
         // This is the first phase being edited from default, update directly
         dispatch({
           type: 'UPDATE_PHASE_NAME',
-          payload: { value: phaseFormData.name.toUpperCase(), phase: 0 }
-        })
+          payload: { value: phaseFormData.name.toUpperCase(), phase: 0 },
+        });
 
         if (phaseFormData.startDate) {
           dispatch({
@@ -390,73 +378,73 @@ const BidItemsStep5 = ({
             payload: {
               key: 'startDate',
               value: phaseFormData.startDate,
-              phase: 0
-            }
-          })
+              phase: 0,
+            },
+          });
         }
 
         if (phaseFormData.endDate) {
           dispatch({
             type: 'UPDATE_MPT_PHASE_START_END',
-            payload: { key: 'endDate', value: phaseFormData.endDate, phase: 0 }
-          })
+            payload: { key: 'endDate', value: phaseFormData.endDate, phase: 0 },
+          });
         }
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
-          payload: { key: 'days', value: phaseFormData.days, phase: 0 }
-        })
+          payload: { key: 'days', value: phaseFormData.days, phase: 0 },
+        });
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
           payload: {
             key: 'personnel',
             value: phaseFormData.personnel,
-            phase: 0
-          }
-        })
+            phase: 0,
+          },
+        });
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
           payload: {
             key: 'numberTrucks',
             value: phaseFormData.numberTrucks,
-            phase: 0
-          }
-        })
+            phase: 0,
+          },
+        });
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
           payload: {
             key: 'additionalRatedHours',
             value: phaseFormData.additionalRatedHours,
-            phase: 0
-          }
-        })
+            phase: 0,
+          },
+        });
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
           payload: {
             key: 'additionalNonRatedHours',
             value: phaseFormData.additionalNonRatedHours,
-            phase: 0
-          }
-        })
+            phase: 0,
+          },
+        });
 
         dispatch({
           type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
           payload: {
             key: 'maintenanceTrips',
             value: phaseFormData.maintenanceTrips,
-            phase: 0
-          }
-        })
+            phase: 0,
+          },
+        });
 
-        setCurrentPhase(0)
+        setCurrentPhase(0);
       } else {
         // Add a new phase
-        dispatch({ type: 'ADD_MPT_PHASE' })
-        const newPhaseIndex = mptRental.phases.length
+        dispatch({ type: 'ADD_MPT_PHASE' });
+        const newPhaseIndex = mptRental.phases.length;
 
         // Update the new phase with form data
         setTimeout(() => {
@@ -464,9 +452,9 @@ const BidItemsStep5 = ({
             type: 'UPDATE_PHASE_NAME',
             payload: {
               value: phaseFormData.name.toUpperCase(),
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           if (phaseFormData.startDate) {
             dispatch({
@@ -474,9 +462,9 @@ const BidItemsStep5 = ({
               payload: {
                 key: 'startDate',
                 value: phaseFormData.startDate,
-                phase: newPhaseIndex
-              }
-            })
+                phase: newPhaseIndex,
+              },
+            });
           }
 
           if (phaseFormData.endDate) {
@@ -485,9 +473,9 @@ const BidItemsStep5 = ({
               payload: {
                 key: 'endDate',
                 value: phaseFormData.endDate,
-                phase: newPhaseIndex
-              }
-            })
+                phase: newPhaseIndex,
+              },
+            });
           }
 
           dispatch({
@@ -495,68 +483,68 @@ const BidItemsStep5 = ({
             payload: {
               key: 'days',
               value: phaseFormData.days,
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
             payload: {
               key: 'personnel',
               value: phaseFormData.personnel,
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
             payload: {
               key: 'numberTrucks',
               value: phaseFormData.numberTrucks,
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
             payload: {
               key: 'additionalRatedHours',
               value: phaseFormData.additionalRatedHours,
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
             payload: {
               key: 'additionalNonRatedHours',
               value: phaseFormData.additionalNonRatedHours,
-              phase: newPhaseIndex
-            }
-          })
+              phase: newPhaseIndex,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
             payload: {
               key: 'maintenanceTrips',
               value: phaseFormData.maintenanceTrips,
-              phase: newPhaseIndex
-            }
-          })
-        }, 0)
+              phase: newPhaseIndex,
+            },
+          });
+        }, 0);
 
-        setCurrentPhase(newPhaseIndex)
+        setCurrentPhase(newPhaseIndex);
       }
     }
 
-    handleCancelPhase()
-  }
+    handleCancelPhase();
+  };
 
   const handleCancelPhase = () => {
-    setDrawerOpen(false)
-    setPhaseFormData(null)
-    setEditingPhaseIndex(null)
-  }
+    setDrawerOpen(false);
+    setPhaseFormData(null);
+    setEditingPhaseIndex(null);
+  };
 
   // Fetch equipment data
   useEffect(() => {
@@ -565,44 +553,44 @@ const BidItemsStep5 = ({
         // Set default values for truck and fuel costs
         dispatch({
           type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
-          payload: { key: 'mpgPerTruck', value: DEFAULT_MPG_PER_TRUCK }
-        })
+          payload: { key: 'mpgPerTruck', value: DEFAULT_MPG_PER_TRUCK },
+        });
 
         dispatch({
           type: 'UPDATE_TRUCK_AND_FUEL_COSTS',
-          payload: { key: 'dispatchFee', value: DEFAULT_DISPATCH_FEE }
-        })
+          payload: { key: 'dispatchFee', value: DEFAULT_DISPATCH_FEE },
+        });
 
         // Set default values for payback calculations
         dispatch({
           type: 'UPDATE_PAYBACK_CALCULATIONS',
-          payload: { key: 'targetMOIC', value: DEFAULT_TARGET_MOIC }
-        })
+          payload: { key: 'targetMOIC', value: DEFAULT_TARGET_MOIC },
+        });
 
         dispatch({
           type: 'UPDATE_PAYBACK_CALCULATIONS',
-          payload: { key: 'paybackPeriod', value: DEFAULT_PAYBACK_PERIOD }
-        })
+          payload: { key: 'paybackPeriod', value: DEFAULT_PAYBACK_PERIOD },
+        });
 
         dispatch({
           type: 'UPDATE_PAYBACK_CALCULATIONS',
           payload: {
             key: 'annualUtilization',
-            value: DEFAULT_ANNUAL_UTILIZATION
-          }
-        })
+            value: DEFAULT_ANNUAL_UTILIZATION,
+          },
+        });
 
         // Fetch equipment data from API
-        const equipmentData = await fetchReferenceData('mpt equipment')
+        const equipmentData = await fetchReferenceData('mpt equipment');
 
         if (Array.isArray(equipmentData)) {
           // Process regular equipment data
-          equipmentData.forEach(item => {
-            if (!item) return
+          equipmentData.forEach((item) => {
+            if (!item) return;
 
             // Find matching equipment type
-            const equipmentType = getEquipmentTypeFromName(item.name)
-            if (!equipmentType) return
+            const equipmentType = getEquipmentTypeFromName(item.name);
+            if (!equipmentType) return;
 
             // Update price
             dispatch({
@@ -610,9 +598,9 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'price',
-                value: parseFloat(item.price) || 0
-              }
-            })
+                value: parseFloat(item.price) || 0,
+              },
+            });
 
             // Update useful life
             dispatch({
@@ -620,9 +608,9 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'usefulLife',
-                value: item.depreciation_rate_useful_life || 365
-              }
-            })
+                value: item.depreciation_rate_useful_life || 365,
+              },
+            });
 
             // Update payback period (using default if not available)
             dispatch({
@@ -630,9 +618,9 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'paybackPeriod',
-                value: item.payback_period || DEFAULT_PAYBACK_PERIOD
-              }
-            })
+                value: item.payback_period || DEFAULT_PAYBACK_PERIOD,
+              },
+            });
 
             // Update discount rate if available
             if (item.discount_rate !== undefined) {
@@ -641,19 +629,19 @@ const BidItemsStep5 = ({
                 payload: {
                   type: equipmentType,
                   property: 'discountRate',
-                  value: parseFloat(item.discount_rate) || 0
-                }
-              })
+                  value: parseFloat(item.discount_rate) || 0,
+                },
+              });
             }
-          })
+          });
 
           // Process sign data separately
-          signList.forEach(sign => {
+          signList.forEach((sign) => {
             const matchedItem = equipmentData.find(
               (item: any) => item.name === sign.dbName
-            )
+            );
             if (matchedItem) {
-              const price = parseFloat(matchedItem.price)
+              const price = parseFloat(matchedItem.price);
 
               // Update price
               dispatch({
@@ -661,9 +649,9 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'price',
-                  value: price
-                }
-              })
+                  value: price,
+                },
+              });
 
               // Update useful life
               dispatch({
@@ -671,9 +659,9 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'usefulLife',
-                  value: matchedItem.depreciation_rate_useful_life || 365
-                }
-              })
+                  value: matchedItem.depreciation_rate_useful_life || 365,
+                },
+              });
 
               // Update payback period
               dispatch({
@@ -681,9 +669,9 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'paybackPeriod',
-                  value: matchedItem.payback_period || DEFAULT_PAYBACK_PERIOD
-                }
-              })
+                  value: matchedItem.payback_period || DEFAULT_PAYBACK_PERIOD,
+                },
+              });
 
               // Update discount rate if available
               if (matchedItem.discount_rate) {
@@ -692,14 +680,14 @@ const BidItemsStep5 = ({
                   payload: {
                     type: sign.key,
                     property: 'discountRate',
-                    value: parseFloat(matchedItem.discount_rate) || 0
-                  }
-                })
+                    value: parseFloat(matchedItem.discount_rate) || 0,
+                  },
+                });
               }
             } else {
               console.warn(
                 `No matching sign data found for database name: ${sign.dbName}`
-              )
+              );
 
               // Set default values for signs if not found
               dispatch({
@@ -707,102 +695,100 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'price',
-                  value: getDefaultSignPrice(sign.key)
-                }
-              })
+                  value: getDefaultSignPrice(sign.key),
+                },
+              });
 
               dispatch({
                 type: 'UPDATE_STATIC_EQUIPMENT_INFO',
                 payload: {
                   type: sign.key,
                   property: 'usefulLife',
-                  value: 365 // 1 year default
-                }
-              })
+                  value: 365, // 1 year default
+                },
+              });
 
               dispatch({
                 type: 'UPDATE_STATIC_EQUIPMENT_INFO',
                 payload: {
                   type: sign.key,
                   property: 'paybackPeriod',
-                  value: DEFAULT_PAYBACK_PERIOD
-                }
-              })
+                  value: DEFAULT_PAYBACK_PERIOD,
+                },
+              });
             }
-          })
+          });
         }
       } catch (error) {
-        console.error('Error initializing equipment data:', error)
+        console.error('Error initializing equipment data:', error);
 
         // Set default values for all equipment types in case of error
-        ;[...standardEquipmentList, ...lightAndDrumList].forEach(
-          equipmentType => {
-            // Set default price (placeholder)
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'price',
-                value: getDefaultPrice(equipmentType)
-              }
-            })
+        [...standardEquipmentList, ...lightAndDrumList].forEach((equipmentType) => {
+          // Set default price (placeholder)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: {
+              type: equipmentType,
+              property: 'price',
+              value: getDefaultPrice(equipmentType),
+            },
+          });
 
-            // Set default useful life (365 days = 1 year)
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'usefulLife',
-                value: 365
-              }
-            })
+          // Set default useful life (365 days = 1 year)
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: {
+              type: equipmentType,
+              property: 'usefulLife',
+              value: 365,
+            },
+          });
 
-            // Set default payback period
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'paybackPeriod',
-                value: DEFAULT_PAYBACK_PERIOD
-              }
-            })
-          }
-        )
+          // Set default payback period
+          dispatch({
+            type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+            payload: {
+              type: equipmentType,
+              property: 'paybackPeriod',
+              value: DEFAULT_PAYBACK_PERIOD,
+            },
+          });
+        });
 
         // Set default values for signs
-        signList.forEach(sign => {
+        signList.forEach((sign) => {
           dispatch({
             type: 'UPDATE_STATIC_EQUIPMENT_INFO',
             payload: {
               type: sign.key,
               property: 'price',
-              value: getDefaultSignPrice(sign.key)
-            }
-          })
+              value: getDefaultSignPrice(sign.key),
+            },
+          });
 
           dispatch({
             type: 'UPDATE_STATIC_EQUIPMENT_INFO',
             payload: {
               type: sign.key,
               property: 'usefulLife',
-              value: 365
-            }
-          })
+              value: 365,
+            },
+          });
 
           dispatch({
             type: 'UPDATE_STATIC_EQUIPMENT_INFO',
             payload: {
               type: sign.key,
               property: 'paybackPeriod',
-              value: DEFAULT_PAYBACK_PERIOD
-            }
-          })
-        })
+              value: DEFAULT_PAYBACK_PERIOD,
+            },
+          });
+        });
       }
-    }
+    };
 
-    initializeEquipmentData()
-  }, [dispatch])
+    initializeEquipmentData();
+  }, [dispatch]);
 
   // Helper function to map API item name to equipment type
   const getEquipmentTypeFromName = (name: string): EquipmentType | null => {
@@ -819,11 +805,11 @@ const BidItemsStep5 = ({
       'Type XI Vertical Panels': 'TypeXIVP',
       'B-Lites': 'BLights',
       'A/C-Lites': 'ACLights',
-      Sharps: 'sharps'
-    }
+      Sharps: 'sharps',
+    };
 
-    return nameToType[name] || null
-  }
+    return nameToType[name] || null;
+  };
 
   // Helper function to get default price for equipment type (fallback values)
   const getDefaultPrice = (equipmentType: EquipmentType): number => {
@@ -839,37 +825,37 @@ const BidItemsStep5 = ({
       TypeXIVP: 90,
       BLights: 70,
       ACLights: 120,
-      sharps: 60
-    }
+      sharps: 60,
+    };
 
-    return defaultPrices[equipmentType] || 100
-  }
+    return defaultPrices[equipmentType] || 100;
+  };
 
   // Helper function to get default price for sign sheeting types
   const getDefaultSignPrice = (sheetingType: SheetingType): number => {
     const defaultSignPrices: Record<SheetingType, number> = {
       HI: 150,
       DG: 120,
-      Special: 200
-    }
+      Special: 200,
+    };
 
-    return defaultSignPrices[sheetingType] || 150
-  }
+    return defaultSignPrices[sheetingType] || 150;
+  };
 
   // Calculate sandbag quantity based on equipment
   useEffect(() => {
     if (mptRental?.phases && mptRental.phases[currentPhase]) {
-      const phase = mptRental.phases[currentPhase]
-      const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0
+      const phase = mptRental.phases[currentPhase];
+      const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
       const fourFootTypeIIIQuantity =
-        phase.standardEquipment.fourFootTypeIII?.quantity || 0
+        phase.standardEquipment.fourFootTypeIII?.quantity || 0;
       const sixFootWingsQuantity =
-        phase.standardEquipment.sixFootWings?.quantity || 0
+        phase.standardEquipment.sixFootWings?.quantity || 0;
 
       const calculatedSandbagQuantity =
         hStandQuantity * 6 +
         fourFootTypeIIIQuantity * 10 +
-        sixFootWingsQuantity * 4
+        sixFootWingsQuantity * 4;
 
       dispatch({
         type: 'ADD_MPT_ITEM_NOT_SIGN',
@@ -877,11 +863,11 @@ const BidItemsStep5 = ({
           phaseNumber: currentPhase,
           equipmentType: 'sandbag',
           equipmentProperty: 'quantity',
-          value: calculatedSandbagQuantity
-        }
-      })
+          value: calculatedSandbagQuantity,
+        },
+      });
 
-      setSandbagQuantity(calculatedSandbagQuantity)
+      setSandbagQuantity(calculatedSandbagQuantity);
     }
   }, [
     mptRental?.phases?.[currentPhase]?.standardEquipment?.fourFootTypeIII
@@ -890,8 +876,8 @@ const BidItemsStep5 = ({
     mptRental?.phases?.[currentPhase]?.standardEquipment?.sixFootWings
       ?.quantity,
     dispatch,
-    currentPhase
-  ])
+    currentPhase,
+  ]);
 
   // Handle equipment input changes
   const handleStandardInputChange = (
@@ -905,21 +891,21 @@ const BidItemsStep5 = ({
         phaseNumber: currentPhase,
         equipmentType: equipmentKey,
         equipmentProperty: property,
-        value: safeNumber(value)
-      }
-    })
-  }
+        value: safeNumber(value),
+      },
+    });
+  };
 
   // Handle custom item input changes
   const handleNewItemInputChange = (
     field: keyof Omit<CustomLightAndDrumItem, 'id'>,
     value: number
   ) => {
-    setNewCustomItem(prev => ({
+    setNewCustomItem((prev) => ({
       ...prev,
-      [field]: safeNumber(value)
-    }))
-  }
+      [field]: safeNumber(value),
+    }));
+  };
 
   // Add custom item to the list
   const handleAddCustomItem = () => {
@@ -930,18 +916,18 @@ const BidItemsStep5 = ({
           phaseNumber: currentPhase,
           item: {
             id: itemName,
-            ...newCustomItem
-          }
-        }
-      })
+            ...newCustomItem,
+          },
+        },
+      });
       setNewCustomItem({
         quantity: 0,
         cost: 0,
-        usefulLife: 0
-      })
-      setItemName('')
+        usefulLife: 0,
+      });
+      setItemName('');
     }
-  }
+  };
 
   // Handle emergency job toggle
   const handleEmergencyJobChange = (checked: boolean) => {
@@ -949,44 +935,43 @@ const BidItemsStep5 = ({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
         key: 'emergencyJob',
-        value: checked
-      }
-    })
-  }
+        value: checked,
+      },
+    });
+  };
 
   const getEquipmentQuantity = (
     equipmentKey: EquipmentType
   ): number | undefined => {
-    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
     return safeNumber(
       mptRental.phases[currentPhase].standardEquipment[equipmentKey]?.quantity
-    )
-  }
+    );
+  };
 
   // Get minimum allowed quantity for an equipment type
   const getMinQuantity = (equipmentKey: EquipmentType): number | undefined => {
-    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined
+    if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined;
 
     const associatedEquipment = getAssociatedSignEquipment(
       mptRental.phases[currentPhase]
-    )
+    );
 
     switch (equipmentKey) {
       case 'covers':
-        return associatedEquipment.covers
+        return associatedEquipment.covers;
       case 'fourFootTypeIII':
-        return associatedEquipment.fourFootTypeIII
+        return associatedEquipment.fourFootTypeIII;
       case 'hStand':
-        return associatedEquipment.hStand
+        return associatedEquipment.hStand;
       case 'post':
-        return associatedEquipment.post
+        return associatedEquipment.post;
       case 'BLights':
-        return associatedEquipment.BLights
+        return associatedEquipment.BLights;
       default:
-        return 0
+        return 0;
     }
-  }
-
+  };
 
   return (
     <div>
@@ -1459,11 +1444,15 @@ const BidItemsStep5 = ({
           </Tabs>
         </div>
       </div>
-      
+
       {/* Phase Drawer */}
-      <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
-        <DrawerContent className='min-w-lg'>
-          <div className='flex flex-col gap-2 relative z-10 bg-background'>
+      <Drawer
+        open={drawerOpen}
+        direction="right"
+        onOpenChange={setDrawerOpen}
+      >
+        <DrawerContent className="min-w-lg">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DrawerHeader>
               <DrawerTitle>
                 {editingPhaseIndex !== null
@@ -1471,37 +1460,37 @@ const BidItemsStep5 = ({
                   : 'Add Phase'}
               </DrawerTitle>
             </DrawerHeader>
-            <Separator className='w-full -mt-2' />
+            <Separator className="w-full -mt-2" />
           </div>
 
           {phaseFormData && (
-            <div className='px-4 space-y-6 mt-4 overflow-y-auto h-full'>
-              <div className='space-y-4'>
-                <h4 className='font-medium'>Phase Information</h4>
+            <div className="px-4 space-y-6 mt-4 overflow-y-auto h-full">
+              <div className="space-y-4">
+                <h4 className="font-medium">Phase Information</h4>
 
-                <div className='flex items-center gap-x-2'>
+                <div className="flex items-center gap-x-2">
                   <Checkbox
                     checked={
                       phaseFormData.startDate === adminData.startDate &&
                       phaseFormData.endDate === adminData.endDate
                     }
-                    aria-label='Use same start and end dates as admin data'
+                    aria-label="Use same start and end dates as admin data"
                     onCheckedChange={handleUseAdminDates}
                   />
-                  <div className='text-muted-foreground text-sm'>
+                  <div className="text-muted-foreground text-sm">
                     Use same start and end dates as admin data
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 gap-4'>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <Label className='mb-2' htmlFor='phase-name'>
+                    <Label className="mb-2" htmlFor="phase-name">
                       Phase Name (Optional)
                     </Label>
                     <Input
-                      id='phase-name'
+                      id="phase-name"
                       value={phaseFormData.name}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate('name', e.target.value)
                       }
                       placeholder={`Phase ${
@@ -1510,9 +1499,9 @@ const BidItemsStep5 = ({
                     />
                   </div>
 
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='startDate'>Start Date</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date</Label>
                       <Popover
                         open={startDateOpen}
                         onOpenChange={setStartDateOpen}
@@ -1520,10 +1509,10 @@ const BidItemsStep5 = ({
                       >
                         <PopoverTrigger asChild>
                           <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
                           >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
+                            <CalendarIcon className="mr-2 h-4 w-4" />
                             {phaseFormData.startDate ? (
                               format(phaseFormData.startDate, 'PPP')
                             ) : (
@@ -1531,21 +1520,19 @@ const BidItemsStep5 = ({
                             )}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
+                        <PopoverContent className="w-auto p-0">
                           <Calendar
-                            mode='single'
+                            mode="single"
                             selected={phaseFormData.startDate ?? undefined}
-                            onSelect={date =>
-                              handleDateChange(date, 'startDate')
-                            }
+                            onSelect={(date) => handleDateChange(date, 'startDate')}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
                     </div>
 
-                    <div className='space-y-2'>
-                      <Label htmlFor='endDate'>End Date</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date</Label>
                       <Popover
                         open={endDateOpen}
                         onOpenChange={setEndDateOpen}
@@ -1553,10 +1540,10 @@ const BidItemsStep5 = ({
                       >
                         <PopoverTrigger asChild>
                           <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
                           >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
+                            <CalendarIcon className="mr-2 h-4 w-4" />
                             {phaseFormData.endDate ? (
                               format(phaseFormData.endDate, 'PPP')
                             ) : (
@@ -1564,13 +1551,13 @@ const BidItemsStep5 = ({
                             )}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
+                        <PopoverContent className="w-auto p-0">
                           <Calendar
-                            mode='single'
+                            mode="single"
                             selected={phaseFormData.endDate ?? undefined}
-                            onSelect={date => handleDateChange(date, 'endDate')}
+                            onSelect={(date) => handleDateChange(date, 'endDate')}
                             initialFocus
-                            disabled={date =>
+                            disabled={(date) =>
                               phaseFormData.startDate
                                 ? date < phaseFormData.startDate
                                 : false
@@ -1582,41 +1569,41 @@ const BidItemsStep5 = ({
                   </div>
 
                   {phaseFormData.startDate && (
-                    <div className='bg-muted p-4 rounded-md'>
-                      <div className='flex flex-col gap-4'>
-                        <div className='text-sm font-medium'>
+                    <div className="bg-muted p-4 rounded-md">
+                      <div className="flex flex-col gap-4">
+                        <div className="text-sm font-medium">
                           Set end date as number of days out from start date:
                         </div>
-                        <div className='flex items-center gap-3'>
+                        <div className="flex items-center gap-3">
                           <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
                             onClick={() => setEndDateFromDays(30)}
                           >
                             30
                           </Badge>
                           <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
                             onClick={() => setEndDateFromDays(60)}
                           >
                             60
                           </Badge>
                           <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            className="px-3 py-1 cursor-pointer hover:bg-primary"
                             onClick={() => setEndDateFromDays(90)}
                           >
                             90
                           </Badge>
-                          <div className='flex items-center gap-2'>
+                          <div className="flex items-center gap-2">
                             <Input
-                              className='w-20'
-                              onChange={e =>
+                              className="w-20"
+                              onChange={(e) =>
                                 setEndDateFromDays(
                                   safeNumber(parseInt(e.target.value))
                                 )
                               }
-                              placeholder='Days'
-                              type='number'
-                              min='1'
+                              placeholder="Days"
+                              type="number"
+                              min="1"
                             />
                           </div>
                         </div>
@@ -1628,20 +1615,20 @@ const BidItemsStep5 = ({
 
               <Separator />
 
-              <div className='space-y-4'>
-                <h4 className='font-medium'>Trip and Labor</h4>
+              <div className="space-y-4">
+                <h4 className="font-medium">Trip and Labor</h4>
 
-                <div className='grid grid-cols-2 gap-4'>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className='mb-2' htmlFor='personnel'>
+                    <Label className="mb-2" htmlFor="personnel">
                       Number of Personnel
                     </Label>
                     <Input
-                      id='personnel'
-                      type='number'
+                      id="personnel"
+                      type="number"
                       min={0}
                       value={phaseFormData.personnel || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate(
                           'personnel',
                           parseFloat(e.target.value) || 0
@@ -1650,15 +1637,15 @@ const BidItemsStep5 = ({
                     />
                   </div>
                   <div>
-                    <Label className='mb-2' htmlFor='trucks'>
+                    <Label className="mb-2" htmlFor="trucks">
                       Number of Trucks
                     </Label>
                     <Input
-                      id='trucks'
-                      type='number'
+                      id="trucks"
+                      type="number"
                       min={0}
                       value={phaseFormData.numberTrucks || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate(
                           'numberTrucks',
                           parseFloat(e.target.value) || 0
@@ -1668,17 +1655,17 @@ const BidItemsStep5 = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 gap-4'>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <Label className='mb-2' htmlFor='maintenance-trips'>
+                    <Label className="mb-2" htmlFor="maintenance-trips">
                       Additional Trips
                     </Label>
                     <Input
-                      id='maintenance-trips'
-                      type='number'
+                      id="maintenance-trips"
+                      type="number"
                       min={0}
                       value={phaseFormData.maintenanceTrips || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate(
                           'maintenanceTrips',
                           parseFloat(e.target.value) || 0
@@ -1687,16 +1674,16 @@ const BidItemsStep5 = ({
                     />
                   </div>
                   <div>
-                    <Label className='mb-2' htmlFor='rated-hours'>
+                    <Label className="mb-2" htmlFor="rated-hours">
                       Additional Rated Hours
                     </Label>
                     <Input
-                      id='rated-hours'
-                      type='number'
+                      id="rated-hours"
+                      type="number"
                       min={0}
                       step={0.1}
                       value={phaseFormData.additionalRatedHours || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate(
                           'additionalRatedHours',
                           parseFloat(e.target.value) || 0
@@ -1705,16 +1692,16 @@ const BidItemsStep5 = ({
                     />
                   </div>
                   <div>
-                    <Label className='mb-2' htmlFor='non-rated-hours'>
+                    <Label className="mb-2" htmlFor="non-rated-hours">
                       Additional Non-Rated Hours
                     </Label>
                     <Input
-                      id='non-rated-hours'
-                      type='number'
+                      id="non-rated-hours"
+                      type="number"
                       min={0}
                       step={0.1}
                       value={phaseFormData.additionalNonRatedHours || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handlePhaseFormUpdate(
                           'additionalNonRatedHours',
                           parseFloat(e.target.value) || 0
@@ -1728,9 +1715,9 @@ const BidItemsStep5 = ({
           )}
 
           <DrawerFooter>
-            <div className='flex justify-end space-x-3 w-full'>
+            <div className="flex justify-end space-x-3 w-full">
               <DrawerClose asChild>
-                <Button variant='outline' onClick={handleCancelPhase}>
+                <Button variant="outline" onClick={handleCancelPhase}>
                   Cancel
                 </Button>
               </DrawerClose>
@@ -1742,7 +1729,7 @@ const BidItemsStep5 = ({
         </DrawerContent>
       </Drawer>
     </div>
-  )
-}
+  );
+};
 
-export default BidItemsStep5
+export default BidItemsStep5;
