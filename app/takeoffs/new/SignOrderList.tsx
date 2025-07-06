@@ -45,6 +45,15 @@ const SIGN_COLUMNS = [
     title: 'Designation'
   },
   {
+    key: 'description',
+    title: 'Description'
+  },
+  {
+    key: 'quantity',
+    title: 'Quantity',
+    centered: true
+  },  
+  {
     key: 'inStock',
     title: 'In Stock',
     shopOnly: true
@@ -60,21 +69,12 @@ const SIGN_COLUMNS = [
     shopOnly: true
   },
   {
-    key: 'description',
-    title: 'Description'
-  },
-  {
     key: 'width',
     title: 'Width'
   },
   {
     key: 'height',
     title: 'Height'
-  },
-  {
-    key: 'quantity',
-    title: 'Quantity',
-    centered: true
   },
   {
     key: 'sheeting',
