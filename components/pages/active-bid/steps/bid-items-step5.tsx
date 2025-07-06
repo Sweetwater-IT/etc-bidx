@@ -21,8 +21,15 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Loader, Edit, Calendar as CalendarIcon } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import { Card } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Plus, Loader, Edit, Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -42,6 +49,9 @@ import { safeNumber } from '@/lib/safe-number';
 import {
   calculateLightDailyRateCosts,
   getAssociatedSignEquipment,
+  getNonRatedHoursPerPhase,
+  getRatedHoursPerPhase,
+  getTotalTripsPerPhase,
 } from '@/lib/mptRentalHelperFunctions';
 import { createActiveBid, fetchReferenceData } from '@/lib/api-client';
 import EquipmentRentalTab from '@/components/BidItems/equipment-rental-tab';
@@ -53,8 +63,6 @@ import { formatDecimal } from '@/lib/formatDecimals';
 import { handleNextDigits } from '@/lib/handleNextDigits';
 import EmptyContainer from '@/components/BidItems/empty-container';
 import MutcdSignsStep3 from './mutcd-signs-step3';
-import PhaseActionButtons from './phase-action-buttons';
-import PhaseInfoTable from './phase-info-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Default values for payback calculations and truck/fuel data
@@ -99,6 +107,210 @@ interface PhaseDrawerData {
   maintenanceTrips: number;
 }
 
+// Phase Action Buttons Component
+const PhaseActionButtons = ({
+  onEdit,
+  onDelete,
+  phaseIndex,
+  totalPhases,
+}: {
+  onEdit: (index: number) => void;
+  onDelete: (index: number) => void;
+  phaseIndex: number;
+  totalPhases: number;
+}) => (
+  <div className="flex gap-2 mb-2">
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => onEdit(phaseIndex)}
+      className="h-8"
+    >
+      <Edit className="h-4 w-4 mr-1" />
+      Edit
+    </Button>
+    {totalPhases > 1 && (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => onDelete(phaseIndex)}
+        className="h-8 text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4 mr-1" />
+        Delete
+      </Button>
+    )}
+  </div>
+);
+
+// Trip and Labor Summary Component
+const TripAndLaborSummary = ({ phase, phaseIndex, adminData, mptRental }: {
+  phase: Phase;
+  phaseIndex: number;
+  adminData: any;
+  mptRental: any;
+}) => {
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || Number.isNaN(value)) {
+      return '$0.00';
+    }
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Memoize cost calculations
+  const { mobilizationCost, fuelCost, truckAndFuelCost, totalTrips, ratedHours, nonRatedHours } = useMemo(() => {
+    const trips = getTotalTripsPerPhase(phase);
+    const rated = getRatedHoursPerPhase(phase);
+    const nonRated = getNonRatedHoursPerPhase(adminData, phase);
+
+    const mobilization = (phase.numberTrucks || 0) * trips * (mptRental?.dispatchFee || 0);
+    const fuel = (((phase.numberTrucks || 0) * trips * 2 * (adminData?.owMileage ?? 0)) / (mptRental?.mpgPerTruck || 1)) * (adminData?.fuelCostPerGallon ?? 0);
+
+    return {
+      mobilizationCost: mobilization,
+      fuelCost: fuel,
+      truckAndFuelCost: mobilization + fuel,
+      totalTrips: trips,
+      ratedHours: rated,
+      nonRatedHours: nonRated
+    };
+  }, [phase, adminData, mptRental]);
+
+  return (
+    <div className="grid grid-cols-3 gap-4 text-sm">
+      {/* Row 1 */}
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Number of Days
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.days)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Number of Personnel
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.personnel)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Number of Trucks
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.numberTrucks)}
+        </div>
+      </div>
+
+      {/* Row 2 */}
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Total Trips
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(totalTrips + (safeNumber(phase.maintenanceTrips) * 2))}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Total Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(ratedHours + safeNumber(phase.additionalRatedHours)).toFixed(1)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Total Non-Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(nonRatedHours + safeNumber(phase.additionalNonRatedHours)).toFixed(1)}
+        </div>
+      </div>
+
+      {/* Row 3 */}
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Mobilization
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {formatCurrency(mobilizationCost)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Fuel Cost
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {formatCurrency(fuelCost)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Truck & Fuel Cost
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {formatCurrency(truckAndFuelCost)}
+        </div>
+      </div>
+
+      {/* Row 4 */}
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Additional Trips
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.maintenanceTrips)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Additional Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.additionalRatedHours).toFixed(1)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Additional Non-Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
+        </div>
+      </div>
+
+      {/* Row 5 */}
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Base Trips
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(totalTrips)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Base Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(ratedHours).toFixed(1)}
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <label className="text-sm font-semibold">
+          Base Non-Rated Hours
+        </label>
+        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+          {safeNumber(nonRatedHours).toFixed(1)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BidItemsStep5 = ({
   currentPhase,
   setCurrentPhase,
@@ -125,6 +337,21 @@ const BidItemsStep5 = ({
   const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(null);
   const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(null);
   const [activeTab, setActiveTab] = useState('mpt');
+
+  // Format phase title for accordion trigger
+  const formatPhaseTitle = (phase: Phase, index: number): string => {
+    let title = `Phase ${index + 1}`;
+
+    if (phase.startDate && phase.endDate) {
+      title += ` - ${format(phase.startDate, 'MMM dd, yyyy')} - ${format(phase.endDate, 'MMM dd, yyyy')}`;
+    }
+
+    if (phase.name && phase.name.trim()) {
+      title += ` - ${phase.name}`;
+    }
+
+    return title;
+  };
 
   const handleRateChange = (
     formattedValue: string,
@@ -360,7 +587,7 @@ const BidItemsStep5 = ({
         },
       });
     } else {
-      // Add new phase
+      // Add new phase logic (same as before)
       if (
         mptRental.phases.length === 1 &&
         mptRental.phases[0].name === '' &&
@@ -546,7 +773,7 @@ const BidItemsStep5 = ({
     setEditingPhaseIndex(null);
   };
 
-  // Fetch equipment data
+  // Fetch equipment data (keeping the same useEffect as before)
   useEffect(() => {
     const initializeEquipmentData = async () => {
       try {
@@ -1039,376 +1266,411 @@ const BidItemsStep5 = ({
                       subtext="When you add phases, they will appear here as tabs."
                     />
                   ) : (
-                    <div>
+                    <Accordion type="multiple" className="w-full space-y-4">
                       {mptRental.phases.map((phase, index) => (
-                        <div key={index}>
-                          <div className="flex justify-end">
-                            <PhaseActionButtons
-                              onDelete={handleDeletePhase}
-                              onEdit={handleEditPhase}
-                              totalPhases={mptRental.phases.length}
-                              phaseIndex={index}
-                            />
-                          </div>
-                          <PhaseInfoTable phase={phase} index={index} />
-                           <div className='flex items-center my-8'>
-                            <div className='flex-grow border-t border-black'></div>
-                            <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
-                              PENNDOT Signs
-                            </h3>
-                            <div className='flex-grow border-t border-black'></div>
-                           </div>                     
-                          <MutcdSignsStep3 currentPhase={currentPhase} />
-                          <div>
-                            <div className="flex items-center my-8">
-                              <div className="flex-grow border-t border-black"></div>
-                              <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
-                                MPT Equipment
-                              </h3>
-                              <div className="flex-grow border-t border-black"></div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                              {standardEquipmentList.map((equipmentKey) =>
-                                equipmentKey === 'sandbag' ? (
-                                  <div
-                                    key={equipmentKey}
-                                    className="p-2 rounded-md"
-                                  >
-                                    <div className="font-medium mb-2">
-                                      {formatLabel(equipmentKey)}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                      Quantity:{' '}
-                                      {phase.standardEquipment.sandbag
-                                        ?.quantity || 0}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div key={equipmentKey} className="rounded-md">
-                                    <div className="font-medium mb-2">
-                                      {formatLabel(equipmentKey)}
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                      <Label
-                                        htmlFor={`quantity-${equipmentKey}-${index}`}
-                                        className="flex text-muted-foreground"
-                                      >
-                                        Quantity:
-                                      </Label>
-                                      <Input
-                                        id={`quantity-${equipmentKey}-${index}`}
-                                        type="number"
-                                        min={getMinQuantity(equipmentKey)}
-                                        value={
-                                          phase.standardEquipment[equipmentKey]
-                                            ?.quantity || ''
-                                        }
-                                        onChange={(e) =>
-                                          handleStandardInputChange(
-                                            parseFloat(e.target.value) || 0,
-                                            equipmentKey,
-                                            'quantity'
-                                          )
-                                        }
-                                        className="w-full"
-                                      />
-                                    </div>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                          <Separator className="my-6" />
-                          <div>
-                            <div className="flex items-center my-8">
-                              <div className="flex-grow border-t border-black"></div>
-                              <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
-                                Light and Drum Rental
-                              </h3>
-                              <div className="flex-grow border-t border-black"></div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3">
-                              {lightAndDrumList.map((equipmentKey) => (
-                                <div
-                                  key={equipmentKey}
-                                  className="p-2 rounded-md"
-                                >
-                                  <div className="font-medium mb-2">
-                                    {formatLabel(equipmentKey)}
-                                  </div>
-                                  <div className="flex flex-col gap-2 mb-2">
-                                    <Label
-                                      htmlFor={`quantity-light-${equipmentKey}-${index}`}
-                                      className="text-muted-foreground"
-                                    >
-                                      Quantity:
-                                    </Label>
-                                    <Input
-                                      id={`quantity-light-${equipmentKey}-${index}`}
-                                      type="number"
-                                      min={getMinQuantity(equipmentKey)}
-                                      value={
-                                        phase.standardEquipment[equipmentKey]
-                                          ?.quantity || ''
-                                      }
-                                      onChange={(e) =>
-                                        handleStandardInputChange(
-                                          parseFloat(e.target.value) || 0,
-                                          equipmentKey,
-                                          'quantity'
-                                        )
-                                      }
-                                      className="w-full"
-                                    />
-                                  </div>
-                                  {adminData?.emergencyJob && (
-                                    <div className="flex flex-col w-1/3 gap-2 mt-2">
-                                      <Label
-                                        htmlFor={`emergency-${equipmentKey}-${index}`}
-                                        className="text-muted-foreground"
-                                      >
-                                        Emergency Rate:
-                                      </Label>
-                                      <Input
-                                        id={`emergency-${equipmentKey}-${index}`}
-                                        inputMode="decimal"
-                                        pattern="^\d*(\.\d{0,2})?$"
-                                        className="w-full"
-                                        value={`$ ${formatDecimal(
-                                          getDigitsForEquipment(equipmentKey)
-                                        )}`}
-                                        onChange={(e) => {
-                                          const ev = e.nativeEvent as InputEvent;
-                                          const { inputType } = ev;
-                                          const data = (ev.data || '').replace(
-                                            /\$/g,
-                                            ''
-                                          );
+                        <AccordionItem key={index} value={`phase-${index}`} className="!border-b rounded-lg">
+                          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                            <span className="text-left font-medium hover:no-underline">
+                              {formatPhaseTitle(phase, index)}
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4">
+                            <div className="space-y-6">
+                              {/* Action Buttons */}
+                              <div className="grid grid-cols-2">
+                                <div></div>
+                                <div className='ml-auto'>
+                                  <PhaseActionButtons
+                                    onDelete={handleDeletePhase}
+                                    onEdit={handleEditPhase}
+                                    totalPhases={mptRental.phases.length}
+                                    phaseIndex={index}
+                                  />
+                                </div>
+                              </div>
 
-                                          const currentDigits =
-                                            getDigitsForEquipment(equipmentKey);
-                                          const nextDigits = handleNextDigits(
-                                            currentDigits,
-                                            inputType,
-                                            data
-                                          );
-                                          updateDigitsForEquipment(
-                                            equipmentKey,
-                                            nextDigits
-                                          );
+                              {/* Trip and Labor Summary */}
+                              <div className="border-none p-4">
+                                <h4 className="font-semibold mb-4">Trip and Labor Summary</h4>
+                                <TripAndLaborSummary
+                                  phase={phase}
+                                  phaseIndex={index}
+                                  adminData={adminData}
+                                  mptRental={mptRental}
+                                />
+                              </div>
 
-                                          const formatted = (
-                                            parseInt(nextDigits, 10) / 100
-                                          ).toFixed(2);
-                                          const emergencyKey =
-                                            emergencyFieldKeyMap[equipmentKey] ||
-                                            equipmentKey;
-                                          const fieldKey = `emergency${emergencyKey}`;
-                                          handleRateChange(
-                                            formatted,
-                                            fieldKey,
-                                            equipmentKey
-                                          );
-                                        }}
-                                      />
-                                    </div>
+                              {/* PENNDOT Signs Section */}
+                              <div className='flex items-center my-8'>
+                                <div className='flex-grow border-t border-black'></div>
+                                <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                                  PENNDOT Signs
+                                </h3>
+                                <div className='flex-grow border-t border-black'></div>
+                              </div>
+                              <MutcdSignsStep3 currentPhase={index} />
+
+                              {/* MPT Equipment Section */}
+                              <div>
+                                <div className="flex items-center my-8">
+                                  <div className="flex-grow border-t border-black"></div>
+                                  <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
+                                    MPT Equipment
+                                  </h3>
+                                  <div className="flex-grow border-t border-black"></div>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                  {standardEquipmentList.map((equipmentKey) =>
+                                    equipmentKey === 'sandbag' ? (
+                                      <div
+                                        key={equipmentKey}
+                                        className="p-2 rounded-md"
+                                      >
+                                        <div className="font-medium mb-2">
+                                          {formatLabel(equipmentKey)}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          Quantity:{' '}
+                                          {phase.standardEquipment.sandbag
+                                            ?.quantity || 0}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div key={equipmentKey} className="rounded-md">
+                                        <div className="font-medium mb-2">
+                                          {formatLabel(equipmentKey)}
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                          <Label
+                                            htmlFor={`quantity-${equipmentKey}-${index}`}
+                                            className="flex text-muted-foreground"
+                                          >
+                                            Quantity:
+                                          </Label>
+                                          <Input
+                                            id={`quantity-${equipmentKey}-${index}`}
+                                            type="number"
+                                            min={getMinQuantity(equipmentKey)}
+                                            value={
+                                              phase.standardEquipment[equipmentKey]
+                                                ?.quantity || ''
+                                            }
+                                            onChange={(e) =>
+                                              handleStandardInputChange(
+                                                parseFloat(e.target.value) || 0,
+                                                equipmentKey,
+                                                'quantity'
+                                              )
+                                            }
+                                            className="w-full"
+                                          />
+                                        </div>
+                                      </div>
+                                    )
                                   )}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                          <Separator className="my-6" />
-                          <div>
-                            <h3 className="text-base font-semibold mb-4">
-                              Custom Equipment
-                            </h3>
-                            <div className="grid grid-cols-12 gap-4 mb-4">
-                              <div className="col-span-3">
-                                <Label className="mb-2" htmlFor="itemName">
-                                  Item Name
-                                </Label>
-                                <Input
-                                  id="itemName"
-                                  value={itemName}
-                                  onChange={(e) => setItemName(e.target.value)}
-                                  placeholder="Enter item name"
-                                />
                               </div>
-                              <div className="col-span-3">
-                                <Label className="mb-2" htmlFor="quantity">
-                                  Quantity
-                                </Label>
-                                <Input
-                                  id="quantity"
-                                  type="number"
-                                  min={0}
-                                  value={newCustomItem.quantity || ''}
-                                  onChange={(e) =>
-                                    handleNewItemInputChange(
-                                      'quantity',
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  placeholder=""
-                                />
-                              </div>
-                              <div className="col-span-3">
-                                <Label className="mb-2" htmlFor="cost">
-                                  Cost
-                                </Label>
-                                <Input
-                                  id="cost"
-                                  type="number"
-                                  min={0}
-                                  step={0.01}
-                                  value={newCustomItem.cost || ''}
-                                  onChange={(e) =>
-                                    handleNewItemInputChange(
-                                      'cost',
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  placeholder=""
-                                />
-                              </div>
-                              <div className="col-span-3">
-                                <Label className="mb-2" htmlFor="usefulLife">
-                                  Useful Life (days)
-                                </Label>
-                                <Input
-                                  id="usefulLife"
-                                  type="number"
-                                  min={0}
-                                  value={newCustomItem.usefulLife || ''}
-                                  onChange={(e) =>
-                                    handleNewItemInputChange(
-                                      'usefulLife',
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  placeholder=""
-                                />
-                              </div>
-                            </div>
-                            <Button
-                              onClick={handleAddCustomItem}
-                              className="mt-2"
-                              disabled={
-                                !itemName ||
-                                newCustomItem.quantity <= 0 ||
-                                newCustomItem.cost <= 0
-                              }
-                              aria-disabled={
-                                !itemName ||
-                                newCustomItem.quantity <= 0 ||
-                                newCustomItem.cost <= 0
-                              }
-                            >
-                              <Plus className="mr-2 h-4 w-4" /> Add Custom Item
-                            </Button>
-                          </div>
-                          {phase.customLightAndDrumItems?.length > 0 && (
-                            <div className="mt-6">
-                              <h3 className="text-base font-semibold mb-4">
-                                Custom Items
-                              </h3>
-                              <div className="grid grid-cols-12 gap-4 mb-4">
-                                <div className="col-span-2 font-medium">
-                                  Item Name
+
+                              <Separator className="my-6" />
+
+                              {/* Light and Drum Rental Section */}
+                              <div>
+                                <div className="flex items-center my-8">
+                                  <div className="flex-grow border-t border-black"></div>
+                                  <h3 className="mx-4 text-base font-semibold whitespace-nowrap">
+                                    Light and Drum Rental
+                                  </h3>
+                                  <div className="flex-grow border-t border-black"></div>
                                 </div>
-                                <div className="col-span-3 font-medium">
-                                  Quantity
-                                </div>
-                                <div className="col-span-3 font-medium">
-                                  Cost
-                                </div>
-                                <div className="col-span-2 font-medium">
-                                  Useful Life
-                                </div>
-                                <div className="col-span-2 font-medium">
-                                  Daily Price
-                                </div>
-                              </div>
-                              <div className="space-y-4">
-                                {phase.customLightAndDrumItems.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="grid grid-cols-12 gap-4 items-center"
-                                  >
-                                    <div className="col-span-2">{item.id}</div>
-                                    <div className="col-span-3">
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        value={item.quantity}
-                                        onChange={(e) =>
-                                          dispatch({
-                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                            payload: {
-                                              phaseNumber: index,
-                                              id: item.id,
-                                              key: 'quantity',
-                                              value:
-                                                parseFloat(e.target.value) || 0,
-                                            },
-                                          })
-                                        }
-                                      />
+                                <div className="grid grid-cols-2 md:grid-cols-3">
+                                  {lightAndDrumList.map((equipmentKey) => (
+                                    <div
+                                      key={equipmentKey}
+                                      className="p-2 rounded-md"
+                                    >
+                                      <div className="font-medium mb-2">
+                                        {formatLabel(equipmentKey)}
+                                      </div>
+                                      <div className="flex flex-col gap-2 mb-2">
+                                        <Label
+                                          htmlFor={`quantity-light-${equipmentKey}-${index}`}
+                                          className="text-muted-foreground"
+                                        >
+                                          Quantity:
+                                        </Label>
+                                        <Input
+                                          id={`quantity-light-${equipmentKey}-${index}`}
+                                          type="number"
+                                          min={getMinQuantity(equipmentKey)}
+                                          value={
+                                            phase.standardEquipment[equipmentKey]
+                                              ?.quantity || ''
+                                          }
+                                          onChange={(e) =>
+                                            handleStandardInputChange(
+                                              parseFloat(e.target.value) || 0,
+                                              equipmentKey,
+                                              'quantity'
+                                            )
+                                          }
+                                          className="w-full"
+                                        />
+                                      </div>
+                                      {adminData?.emergencyJob && (
+                                        <div className="flex flex-col w-1/3 gap-2 mt-2">
+                                          <Label
+                                            htmlFor={`emergency-${equipmentKey}-${index}`}
+                                            className="text-muted-foreground"
+                                          >
+                                            Emergency Rate:
+                                          </Label>
+                                          <Input
+                                            id={`emergency-${equipmentKey}-${index}`}
+                                            inputMode="decimal"
+                                            pattern="^\d*(\.\d{0,2})?$"
+                                            className="w-full"
+                                            value={`$ ${formatDecimal(
+                                              getDigitsForEquipment(equipmentKey)
+                                            )}`}
+                                            onChange={(e) => {
+                                              const ev = e.nativeEvent as InputEvent;
+                                              const { inputType } = ev;
+                                              const data = (ev.data || '').replace(
+                                                /\$/g,
+                                                ''
+                                              );
+
+                                              const currentDigits =
+                                                getDigitsForEquipment(equipmentKey);
+                                              const nextDigits = handleNextDigits(
+                                                currentDigits,
+                                                inputType,
+                                                data
+                                              );
+                                              updateDigitsForEquipment(
+                                                equipmentKey,
+                                                nextDigits
+                                              );
+
+                                              const formatted = (
+                                                parseInt(nextDigits, 10) / 100
+                                              ).toFixed(2);
+                                              const emergencyKey =
+                                                emergencyFieldKeyMap[equipmentKey] ||
+                                                equipmentKey;
+                                              const fieldKey = `emergency${emergencyKey}`;
+                                              handleRateChange(
+                                                formatted,
+                                                fieldKey,
+                                                equipmentKey
+                                              );
+                                            }}
+                                          />
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="col-span-3">
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        value={item.cost}
-                                        onChange={(e) =>
-                                          dispatch({
-                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                            payload: {
-                                              phaseNumber: index,
-                                              id: item.id,
-                                              key: 'cost',
-                                              value:
-                                                parseFloat(e.target.value) || 0,
-                                            },
-                                          })
-                                        }
-                                      />
+                                  ))}
+                                </div>
+                              </div>
+
+                              <Separator className="my-6" />
+
+                              {/* Custom Equipment Section */}
+                              <div>
+                                <h3 className="text-base font-semibold mb-4">
+                                  Custom Equipment
+                                </h3>
+                                <div className="grid grid-cols-12 gap-4 mb-4">
+                                  <div className="col-span-3">
+                                    <Label className="mb-2" htmlFor="itemName">
+                                      Item Name
+                                    </Label>
+                                    <Input
+                                      id="itemName"
+                                      value={itemName}
+                                      onChange={(e) => setItemName(e.target.value)}
+                                      placeholder="Enter item name"
+                                    />
+                                  </div>
+                                  <div className="col-span-3">
+                                    <Label className="mb-2" htmlFor="quantity">
+                                      Quantity
+                                    </Label>
+                                    <Input
+                                      id="quantity"
+                                      type="number"
+                                      min={0}
+                                      value={newCustomItem.quantity || ''}
+                                      onChange={(e) =>
+                                        handleNewItemInputChange(
+                                          'quantity',
+                                          parseFloat(e.target.value) || 0
+                                        )
+                                      }
+                                      placeholder=""
+                                    />
+                                  </div>
+                                  <div className="col-span-3">
+                                    <Label className="mb-2" htmlFor="cost">
+                                      Cost
+                                    </Label>
+                                    <Input
+                                      id="cost"
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={newCustomItem.cost || ''}
+                                      onChange={(e) =>
+                                        handleNewItemInputChange(
+                                          'cost',
+                                          parseFloat(e.target.value) || 0
+                                        )
+                                      }
+                                      placeholder=""
+                                    />
+                                  </div>
+                                  <div className="col-span-3">
+                                    <Label className="mb-2" htmlFor="usefulLife">
+                                      Useful Life (days)
+                                    </Label>
+                                    <Input
+                                      id="usefulLife"
+                                      type="number"
+                                      min={0}
+                                      value={newCustomItem.usefulLife || ''}
+                                      onChange={(e) =>
+                                        handleNewItemInputChange(
+                                          'usefulLife',
+                                          parseFloat(e.target.value) || 0
+                                        )
+                                      }
+                                      placeholder=""
+                                    />
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={handleAddCustomItem}
+                                  className="mt-2"
+                                  disabled={
+                                    !itemName ||
+                                    newCustomItem.quantity <= 0 ||
+                                    newCustomItem.cost <= 0
+                                  }
+                                  aria-disabled={
+                                    !itemName ||
+                                    newCustomItem.quantity <= 0 ||
+                                    newCustomItem.cost <= 0
+                                  }
+                                >
+                                  <Plus className="mr-2 h-4 w-4" /> Add Custom Item
+                                </Button>
+                              </div>
+
+                              {/* Custom Items Display */}
+                              {phase.customLightAndDrumItems?.length > 0 && (
+                                <div className="mt-6">
+                                  <h3 className="text-base font-semibold mb-4">
+                                    Custom Items
+                                  </h3>
+                                  <div className="grid grid-cols-12 gap-4 mb-4">
+                                    <div className="col-span-2 font-medium">
+                                      Item Name
                                     </div>
-                                    <div className="col-span-2">
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        value={item.usefulLife}
-                                        onChange={(e) =>
-                                          dispatch({
-                                            type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                            payload: {
-                                              phaseNumber: index,
-                                              id: item.id,
-                                              key: 'usefulLife',
-                                              value:
-                                                parseFloat(e.target.value) || 0,
-                                            },
-                                          })
-                                        }
-                                      />
+                                    <div className="col-span-3 font-medium">
+                                      Quantity
                                     </div>
-                                    <div className="col-span-2">
-                                      $
-                                      {calculateLightDailyRateCosts(
-                                        mptRental,
-                                        item.cost
-                                      ).toFixed(2)}
+                                    <div className="col-span-3 font-medium">
+                                      Cost
+                                    </div>
+                                    <div className="col-span-2 font-medium">
+                                      Useful Life
+                                    </div>
+                                    <div className="col-span-2 font-medium">
+                                      Daily Price
                                     </div>
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="space-y-4">
+                                    {phase.customLightAndDrumItems.map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="grid grid-cols-12 gap-4 items-center"
+                                      >
+                                        <div className="col-span-2">{item.id}</div>
+                                        <div className="col-span-3">
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            value={item.quantity}
+                                            onChange={(e) =>
+                                              dispatch({
+                                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                payload: {
+                                                  phaseNumber: index,
+                                                  id: item.id,
+                                                  key: 'quantity',
+                                                  value:
+                                                    parseFloat(e.target.value) || 0,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="col-span-3">
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            value={item.cost}
+                                            onChange={(e) =>
+                                              dispatch({
+                                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                payload: {
+                                                  phaseNumber: index,
+                                                  id: item.id,
+                                                  key: 'cost',
+                                                  value:
+                                                    parseFloat(e.target.value) || 0,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="col-span-2">
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            value={item.usefulLife}
+                                            onChange={(e) =>
+                                              dispatch({
+                                                type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                payload: {
+                                                  phaseNumber: index,
+                                                  id: item.id,
+                                                  key: 'usefulLife',
+                                                  value:
+                                                    parseFloat(e.target.value) || 0,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="col-span-2">
+                                          $
+                                          {calculateLightDailyRateCosts(
+                                            mptRental,
+                                            item.cost
+                                          ).toFixed(2)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       ))}
-                    </div>
+                    </Accordion>
                   )}
                 </div>
               </div>
@@ -1500,9 +1762,8 @@ const BidItemsStep5 = ({
                       onChange={(e) =>
                         handlePhaseFormUpdate('name', e.target.value)
                       }
-                      placeholder={`Phase ${
-                        (editingPhaseIndex ?? mptRental.phases.length) + 1
-                      }`}
+                      placeholder={`Phase ${(editingPhaseIndex ?? mptRental.phases.length) + 1
+                        }`}
                     />
                   </div>
 
