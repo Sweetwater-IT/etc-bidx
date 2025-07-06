@@ -448,7 +448,7 @@ const SignShopContent = ({ id }: Props) => {
             onClick={() => setShowConfirmDialog(true)}
             className='bg-primary text-white hover:bg-primary/90'
           >
-            Submit Order
+            Send to Production
           </Button>
           <Button variant='outline' onClick={handleExport}>
             Export
