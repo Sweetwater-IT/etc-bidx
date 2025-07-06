@@ -54,21 +54,6 @@ const SIGN_COLUMNS = [
     centered: true
   },  
   {
-    key: 'inStock',
-    title: 'In Stock',
-    shopOnly: true
-  },
-  {
-    key: 'order',
-    title: 'Order',
-    shopOnly: true
-  },
-  {
-    key: 'make',
-    title: 'Make',
-    shopOnly: true
-  },
-  {
     key: 'width',
     title: 'Width'
   },
@@ -88,6 +73,21 @@ const SIGN_COLUMNS = [
     key: 'stiffener',
     title: 'Stiffener'
   },
+  {
+    key: 'inStock',
+    title: 'In Stock',
+    shopOnly: true
+  },
+  {
+    key: 'order',
+    title: 'Order',
+    shopOnly: true
+  },
+  {
+    key: 'make',
+    title: 'Make',
+    shopOnly: true
+  },  
   {
     key: 'actions',
     title: '',
