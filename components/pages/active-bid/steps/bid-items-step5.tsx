@@ -1026,6 +1026,42 @@ const BidItemsStep5 = ({
         >
           Permanent Signs
         </button>
+                <button
+          className={cn(
+            'px-4 py-2 font-semibold text-base focus:outline-none',
+            activeTab === 'flagging'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500'
+          )}
+          onClick={() => setActiveTab('flagging')}
+          type='button'
+        >
+          Flagging
+        </button>
+                <button
+          className={cn(
+            'px-4 py-2 font-semibold text-base focus:outline-none',
+            activeTab === 'sale'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500'
+          )}
+          onClick={() => setActiveTab('sale')}
+          type='button'
+        >
+          Sale Items
+        </button>
+                <button
+          className={cn(
+            'px-4 py-2 font-semibold text-base focus:outline-none',
+            activeTab === 'patterns'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500'
+          )}
+          onClick={() => setActiveTab('patterns')}
+          type='button'
+        >
+          Patterns/Service Work
+        </button>
       </div>
       {activeTab === 'mpt' && (
         <div className='bg-white rounded-b-lg p-6'>
@@ -1406,7 +1442,22 @@ const BidItemsStep5 = ({
           <PermanentSignsSummaryStep />
         </div>
       )}
-
+      {activeTab === 'flagging' && (
+        <div className='bg-white rounded-b-lg p-6'>
+          <FlaggingServicesTab />
+        </div>
+      )}      
+      {activeTab === 'sale' && (
+        <div className='bg-white rounded-b-lg p-6'>
+          <SaleItemsStep />
+        </div>
+      )}
+      {activeTab === 'patterns' && (
+        <div className='bg-white rounded-b-lg p-6'>
+          <ServiceWorkTab />
+        </div>
+      )}      
+      
       {/* Phase Drawer */}
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
         <DrawerContent className='min-w-lg'>
