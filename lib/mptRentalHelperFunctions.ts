@@ -77,6 +77,8 @@ export function getWeightedAverageDays(mptRental: MPTRentalEstimating): Record<E
     sharps: 0,
     HI: 0,
     DG: 0,
+    FYG: 0,
+    TYPEXI: 0,
     Special: 0
   }
 
@@ -155,6 +157,8 @@ export function returnSignTotalsSquareFootage(mptRental: MPTRentalEstimating): R
   const signTotals: Record<SheetingType, SignTotals> = {
     HI: { totalSquareFootage: 0, daysRequired: 0 },
     DG: { totalSquareFootage: 0, daysRequired: 0 },
+    FYG: { totalSquareFootage: 0, daysRequired: 0 },
+    TYPEXI: { totalSquareFootage: 0, daysRequired: 0 },
     Special: { totalSquareFootage: 0, daysRequired: 0 },
   };
 
@@ -175,6 +179,8 @@ export function returnSignTotalsByPhase(phase: Phase): Record<SheetingType, Sign
   const signTotals: Record<SheetingType, SignTotals> = {
     HI: { totalSquareFootage: 0, daysRequired: 0 },
     DG: { totalSquareFootage: 0, daysRequired: 0 },
+    FYG: { totalSquareFootage: 0, daysRequired: 0 },
+    TYPEXI: { totalSquareFootage: 0, daysRequired: 0 },
     Special: { totalSquareFootage: 0, daysRequired: 0 },
   };
   phase.signs.filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0).forEach((sign) => {
@@ -240,12 +246,16 @@ export function calculateTotalSignCostSummary(equipmentRental: MPTRentalEstimati
   const weightedSignTotals = getWeightedAverageDays(equipmentRental)
 
   const HITotals = calculateCostMetrics(equipmentRental, { HI: { totalDaysRequired: weightedSignTotals.HI, totalQuantity: allSignTotals.HI.totalSquareFootage } });
-  const DGTotals = calculateCostMetrics(equipmentRental, { DG: { totalDaysRequired: weightedSignTotals.DG, totalQuantity: allSignTotals.DG.totalSquareFootage } });
+  const DGTotals = calculateCostMetrics(equipmentRental, { DG: { totalDaysRequired: weightedSignTotals.DG, totalQuantity: allSignTotals.DG.totalSquareFootage } }); 
+  const FYGTotals = calculateCostMetrics(equipmentRental, { FYG: { totalDaysRequired: weightedSignTotals.FYG, totalQuantity: allSignTotals.FYG.totalSquareFootage } });
+  const TYPEXITotals = calculateCostMetrics(equipmentRental, { TYPEXI: { totalDaysRequired: weightedSignTotals.TYPEXI, totalQuantity: allSignTotals.TYPEXI.totalSquareFootage } });
   const SpecialTotals = calculateCostMetrics(equipmentRental, { Special: { totalDaysRequired: weightedSignTotals.Special, totalQuantity: allSignTotals.Special.totalSquareFootage } });
 
   const totalSignCostSummary = {
     HI: HITotals,
     DG: DGTotals,
+    FYG: FYGTotals,
+    TYPEXI: TYPEXITotals,
     Special: SpecialTotals,
   };
 

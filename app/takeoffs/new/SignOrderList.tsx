@@ -209,8 +209,10 @@ export function SignOrderList ({
 
     setSquareFootageTotal(
       signTotals.HI.totalSquareFootage +
-        signTotals.DG.totalSquareFootage +
-        signTotals.Special.totalSquareFootage
+      signTotals.DG.totalSquareFootage +
+      signTotals.FYG.totalSquareFootage + 
+      signTotals.TYPEXI.totalSquareFootage +
+      signTotals.Special.totalSquareFootage
     )
   }, [mptRental])
 

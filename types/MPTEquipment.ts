@@ -37,7 +37,7 @@ export const structureMap: Record<DisplayStructures, AssociatedStructures> = {
   'LOOSE': 'none'
 };
 
-export type SheetingType = 'HI' | 'DG' | 'Special';
+export type SheetingType = 'HI' | 'DG' | 'FYG' | 'TYPEXI' | 'Special';
 
 interface EquipmentMapping {
   key: EquipmentType;
@@ -107,6 +107,8 @@ export interface SignMapping {
 export const signList: SignMapping[] = [
   { key: 'HI', label: 'HI', dbName: 'HI Signs' },
   { key: 'DG', label: 'DG', dbName: 'DG Signs' },
+  { key: 'FYG', label: 'FYG', dbName: 'FYG Signs' },
+  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },  
   { key: 'Special', label: 'Special', dbName: 'Special Signs' }
 ];
 
@@ -131,6 +133,8 @@ export const allEquipmentList: AllEquipmentMapping[] = [
   { key: 'sharps', label: 'Sharps', dbName: 'Sharps' },
   { key: 'HI', label: 'HI', dbName: 'HI Signs' },
   { key: 'DG', label: 'DG', dbName: 'DG Signs' },
+  { key: 'FYG', label: 'FYG', dbName: 'FYG Signs' }, 
+  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },  
   { key: 'Special', label: 'Special', dbName: 'Special Signs' }
 ]
 
