@@ -188,75 +188,114 @@ export async function POST(req: NextRequest) {
         }
       }
     
-    // Generate proper job number based on county and division
-    // Determine branch code from county
-    let branchCode = '20'; // Default to Turbotville
-    if (jobData.adminData.county && typeof jobData.adminData.county === 'object') {
-      const countyName = jobData.adminData.county.name || '';
-      if (countyName.toLowerCase().includes('bedford')) {
-        branchCode = '30'; // West
-      } else if (countyName.toLowerCase().includes('hatfield')) {
-        branchCode = '10'; // Hatfield
-      }
-    }
-    
-    // Determine owner type from division
-    const ownerTypeMap: Record<string, string> = {
-      'PUBLIC': '22',
-      'PRIVATE': '21'
-    };
-    const ownerTypeCode = ownerTypeMap[jobData.adminData.division?.toUpperCase()] || '22';
-    
-    const currentYear = new Date().getFullYear();
-    
-    // Get all job numbers that contain the current year to find the highest sequential number
-    const { data: existingJobNumbers, error: sequentialError } = await supabase
-      .from('job_numbers')
-      .select('job_number')
-      .like('job_number', `%-${currentYear}%`)
-      .not('job_number', 'like', 'P-%'); // Exclude pending job numbers
-    
-    if (sequentialError) {
-      console.error('Error finding existing job numbers:', sequentialError);
+    // Get the reserved job number from the jobs table
+    const { data: jobRow, error: jobRowError } = await supabase
+      .from('jobs')
+      .select('reserved_job_number, job_number_id')
+      .eq('id', jobId)
+      .single();
+    if (jobRowError) {
+      console.error('Error fetching reserved_job_number:', jobRowError);
       return NextResponse.json(
-        { error: 'Failed to generate job number', details: sequentialError.message },
+        { error: 'Failed to fetch reserved job number', details: jobRowError.message },
         { status: 500 }
       );
     }
-    
-    // Calculate the next sequential number by parsing existing job numbers
-    let nextSequentialNumber = 1;
-    if (existingJobNumbers && existingJobNumbers.length > 0) {
-      const sequentialNumbers: number[] = [];
-      
-      existingJobNumbers.forEach(jobNumberRecord => {
-        if (jobNumberRecord.job_number) {
-          const parts = jobNumberRecord.job_number.split('-');
-          if (parts.length === 3) {
-            const yearAndSequential = parts[2]; // e.g., "2025121"
-            const yearString = currentYear.toString(); // "2025"
-            
-            if (yearAndSequential.startsWith(yearString)) {
-              const sequentialPart = yearAndSequential.slice(yearString.length); // "121"
-              const sequentialNum = parseInt(sequentialPart, 10);
-              
-              if (!isNaN(sequentialNum)) {
-                sequentialNumbers.push(sequentialNum);
+    let newJobNumber = jobRow?.reserved_job_number;
+    let branchCode = '20';
+    let ownerTypeCode = '22';
+    let currentYear = new Date().getFullYear();
+    let nextSequentialNumber: number | undefined = 1;
+    if (!newJobNumber) {
+      // fallback to old logic if reserved_job_number is not present
+      if (jobData.adminData.county && typeof jobData.adminData.county === 'object') {
+        const countyName = jobData.adminData.county.name || '';
+        if (countyName.toLowerCase().includes('bedford')) {
+          branchCode = '30'; // West
+        } else if (countyName.toLowerCase().includes('hatfield')) {
+          branchCode = '10'; // Hatfield
+        }
+      }
+      const ownerTypeMap = { 'PUBLIC': '22', 'PRIVATE': '21' };
+      ownerTypeCode = ownerTypeMap[jobData.adminData.division?.toUpperCase()] || '22';
+      currentYear = new Date().getFullYear();
+      const { data: existingJobNumbers, error: sequentialError } = await supabase
+        .from('job_numbers')
+        .select('job_number')
+        .like('job_number', `%-${currentYear}%`)
+        .not('job_number', 'like', 'P-%');
+      if (sequentialError) {
+        console.error('Error finding existing job numbers:', sequentialError);
+        return NextResponse.json(
+          { error: 'Failed to generate job number', details: sequentialError.message },
+          { status: 500 }
+        );
+      }
+      if (existingJobNumbers && existingJobNumbers.length > 0) {
+        const sequentialNumbers: number[] = [];
+        existingJobNumbers.forEach(jobNumberRecord => {
+          if (jobNumberRecord.job_number) {
+            const parts = jobNumberRecord.job_number.split('-');
+            if (parts.length === 3) {
+              const yearAndSequential = parts[2];
+              const yearString = currentYear.toString();
+              if (yearAndSequential.startsWith(yearString)) {
+                const sequentialPart = yearAndSequential.slice(yearString.length);
+                const sequentialNum = parseInt(sequentialPart, 10);
+                if (!isNaN(sequentialNum)) {
+                  sequentialNumbers.push(sequentialNum);
+                }
               }
             }
           }
+        });
+        if (sequentialNumbers.length > 0) {
+          const maxSequential = Math.max(...sequentialNumbers);
+          nextSequentialNumber = maxSequential + 1;
         }
-      });
-      
-      if (sequentialNumbers.length > 0) {
-        const maxSequential = Math.max(...sequentialNumbers);
-        nextSequentialNumber = maxSequential + 1;
       }
+      newJobNumber = `${branchCode}-${ownerTypeCode}-${currentYear}${(nextSequentialNumber ?? 1).toString().padStart(3, '0')}`;
     }
-    
-    // Generate the new job number
-    const newJobNumber = `${branchCode}-${ownerTypeCode}-${currentYear}${nextSequentialNumber.toString().padStart(3, '0')}`;
-    
+    // Parse the reserved job number if present
+    let reservedJobNumberParts: string[] = [];
+    if (jobRow?.reserved_job_number) {
+      reservedJobNumberParts = jobRow.reserved_job_number.split('-');
+    }
+    let sequentialNumber: number | undefined = undefined;
+    if (reservedJobNumberParts.length === 3) {
+      // Extract sequential number from the reserved job number
+      const yearAndSequential = reservedJobNumberParts[2];
+      const year = yearAndSequential.substring(0, 4);
+      const seq = yearAndSequential.substring(4);
+      branchCode = reservedJobNumberParts[0];
+      ownerTypeCode = reservedJobNumberParts[1];
+      currentYear = parseInt(year, 10);
+      sequentialNumber = parseInt(seq, 10);
+      // Check for uniqueness in job_numbers table (excluding current job_number_id)
+      const { data: existing, error: checkError } = await supabase
+        .from('job_numbers')
+        .select('id')
+        .eq('branch_code', branchCode)
+        .eq('owner_type', ownerTypeCode)
+        .eq('year', currentYear)
+        .eq('sequential_number', sequentialNumber)
+        .neq('id', jobRow.job_number_id)
+        .single();
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 means no rows found, which is what we want
+        return NextResponse.json(
+          { error: 'Failed to check job number uniqueness', details: checkError.message },
+          { status: 500 }
+        );
+      }
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Job number already exists. Please choose another.' },
+          { status: 400 }
+        );
+      }
+      nextSequentialNumber = sequentialNumber;
+    }
     // Update the job_numbers table with the proper job number details
     const { error: jobNumberError } = await supabase
       .from('job_numbers')
@@ -268,8 +307,7 @@ export async function POST(req: NextRequest) {
         job_number: newJobNumber,
         is_assigned: true
       })
-      .eq('id', jobNumberId);
-    
+      .eq('id', jobRow.job_number_id);
     if (jobNumberError) {
       console.error('Error updating job number:', jobNumberError);
       return NextResponse.json(
@@ -277,6 +315,11 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+    // Optionally, clear reserved_job_number after assignment
+    await supabase
+      .from('jobs')
+      .update({ reserved_job_number: null })
+      .eq('id', jobId);
 
     return NextResponse.json({
       success: true,
