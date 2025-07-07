@@ -249,6 +249,7 @@ export async function POST(request: NextRequest) {
         emergencyFields: job.admin_data.emergencyFields || {},
       },
       job_id,
+      job_number: job.job_number,
       contractorName: finalContractorName || '',
       customerContractNumber: job.customer_contract_number || '',
       projectManager: job.project_manager || '',
