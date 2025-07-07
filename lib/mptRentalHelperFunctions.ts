@@ -252,6 +252,8 @@ export function calculateTotalSignCostSummary(equipmentRental: MPTRentalEstimati
   const totalSignCostSummary = {
     HI: HITotals,
     DG: DGTotals,
+    FYG: FYGTotals,
+    TYPEXI: TYPEXITotals,
     Special: SpecialTotals,
   };
 
