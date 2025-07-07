@@ -69,6 +69,7 @@ interface CreateJobModalProps {
   adminData: AdminData
   sender: User
   jobId: number | undefined
+  onJobCreated?: () => void
 }
 
 const CreateJobModal: React.FC<CreateJobModalProps> = ({
@@ -81,7 +82,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   pmEmail,
   pmPhone,
   adminData,
-  jobId
+  jobId,
+  onJobCreated
 }) => {
   // State for item numbers - will be fetched from API
   const [itemNumbers, setItemNumbers] = useState<ItemNumber[]>([])
@@ -449,6 +451,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       // Show success message
       toast.success(`Job created successfully for contract #${contractNumber}`)
       setJobCreated(true)
+      // Notify parent of job creation
+      if (onJobCreated) onJobCreated()
       // Close modal
       onOpenChange(false)
     } catch (error) {
