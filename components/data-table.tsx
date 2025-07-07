@@ -652,17 +652,6 @@ export function DataTable<TData extends object> ({
                     </DropdownMenu>
                   )}
 
-                  {onViewDetails && (
-                    <DropdownMenuItem
-                      onClick={e => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        onViewDetails(row.original as TData)
-                      }}
-                    >
-                      View details
-                    </DropdownMenuItem>
-                  )}
                   {onViewJobSummary && (
                     <DropdownMenuItem
                       onClick={e => {
