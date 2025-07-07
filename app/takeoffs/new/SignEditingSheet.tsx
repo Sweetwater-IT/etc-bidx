@@ -575,6 +575,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 <SelectContent>
                                     <SelectItem value="HI">HI</SelectItem>
                                     <SelectItem value="DG">DG</SelectItem>
+                                    <SelectItem value="FYG">FYG</SelectItem>
+                                    <SelectItem value="TYPEXI">Type XI</SelectItem>
                                     <SelectItem value="Special">Special</SelectItem>
                                 </SelectContent>
                             </Select>
