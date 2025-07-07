@@ -37,7 +37,7 @@ export const structureMap: Record<DisplayStructures, AssociatedStructures> = {
   'LOOSE': 'none'
 };
 
-export type SheetingType = 'HI' | 'DG' | 'Special';
+export type SheetingType = 'HI' | 'DG' | 'FYG' | 'TYPEXI' | 'Special';
 
 interface EquipmentMapping {
   key: EquipmentType;
