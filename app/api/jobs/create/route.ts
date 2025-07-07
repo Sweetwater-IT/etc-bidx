@@ -176,8 +176,10 @@ export async function POST(req: NextRequest) {
               job_id: jobId,
               bid_item_id: bidItemData.id, // Use the ID from bid_item_numbers
               quantity: item.quantity,
-              contract_value: item.contractValue,
-              aia_billing: item.aiaBilling
+              contract_value: (item.quantity ?? 0) * (item.unitPrice ?? 0),
+              aia_billing: item.aiaBilling,
+              backlog: item.backlog ?? false,
+              unit_price: item.unitPrice ?? null
             });
           
           if (itemError) {
