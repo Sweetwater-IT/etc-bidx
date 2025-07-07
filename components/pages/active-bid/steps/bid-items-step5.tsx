@@ -1063,6 +1063,8 @@ const BidItemsStep5 = ({
     const defaultSignPrices: Record<SheetingType, number> = {
       HI: 150,
       DG: 120,
+      FYG: 100,
+      TYPEXI: 100,
       Special: 200,
     };
 
