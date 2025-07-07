@@ -479,7 +479,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
       setFirstSave(true)
 
       toast.success('Sign order saved successfully')
-      router.push('/takeoffs/sign-order/view/${signOrderId || result.id || initialSignOrderId}')
+      router.push('/takeoffs/sign-order/view/${signOrderId}')
     } catch (error) {
       console.error('Error saving sign order:', error)
       toast.error((error as string) || 'Failed to save sign order')
