@@ -66,6 +66,8 @@ export const defaultMPTObject: MPTRentalEstimating = {
         sharps: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
         HI: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
         DG: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
+        FYG: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
+        TYPEXI: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
         Special: { price: 0, discountRate: 0, usefulLife: 0, paybackPeriod: 0},
     },
     phases: [],
