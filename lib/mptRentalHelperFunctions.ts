@@ -77,6 +77,8 @@ export function getWeightedAverageDays(mptRental: MPTRentalEstimating): Record<E
     sharps: 0,
     HI: 0,
     DG: 0,
+    FYG: 0,
+    TYPEXI: 0,
     Special: 0
   }
 
