@@ -10,11 +10,8 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('job_numbers')
       .select('*')
-      .eq('branch_code', branchCode)
-      .eq('owner_type', ownerTypeCode)
-      .eq('year', year)
-      .eq('sequential_number', sequentialNumber)
-      .single();
+      .eq('year', Number(year))
+      .eq('sequential_number', Number(sequentialNumber));
     
     if (error && error.code !== 'PGRST116') {
       // PGRST116 means no rows returned, which is what we want
@@ -24,8 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // If data exists, the job number is already taken
-    const isAvailable = !data;
+    // If any data exists, the job number is already taken
+    const isAvailable = !data || data.length === 0;
     
     return NextResponse.json({
       isAvailable,
