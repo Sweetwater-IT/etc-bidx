@@ -56,41 +56,41 @@ export async function POST(req: NextRequest) {
     
     // Check if an ID is provided - if so, update instead of insert
     if (signOrderData.id ) {
-      if(signOrderData.status === 'SUBMITTED'){
-        orderNumber = await generateSignOrderNumber(
+      // Prepare update fields
+      const updateFields: any = {
+        requestor: signOrderData.requestor?.name,
+        contractor_id: signOrderData.contractor_id,
+        contract_number: signOrderData.contract_number,
+        order_date: signOrderData.order_date,
+        need_date: signOrderData.need_date,
+        start_date: signOrderData.start_date,
+        end_date: signOrderData.end_date,
+        sale: signOrderData.order_type?.includes('sale'),
+        rental: signOrderData.order_type?.includes('rental'),
+        perm_signs: signOrderData.order_type?.includes('permanent signs'),
+        job_number: signOrderData.job_number,
+        signs: signOrderData.signs,
+        order_status: signOrderData.status
+      };
+      // Only generate a new SO number if status is SUBMITTED and order_number is not already set
+      if (signOrderData.status === 'SUBMITTED' && !signOrderData.order_number) {
+        updateFields.order_number = await generateSignOrderNumber(
           signOrderData.order_type || [],
           branchNumber
         );
+      } else if (signOrderData.order_number) {
+        updateFields.order_number = signOrderData.order_number;
       }
-      // Update the existing record
       const { data, error } = await supabase
         .from('sign_orders')
-        .update({
-          requestor: signOrderData.requestor?.name,
-          contractor_id: signOrderData.contractor_id,
-          contract_number: signOrderData.contract_number,
-          order_date: signOrderData.order_date,
-          need_date: signOrderData.need_date,
-          start_date: signOrderData.start_date,
-          end_date: signOrderData.end_date,
-          sale: signOrderData.order_type?.includes('sale'),
-          rental: signOrderData.order_type?.includes('rental'),
-          perm_signs: signOrderData.order_type?.includes('permanent signs'),
-          job_number: signOrderData.job_number,
-          signs: signOrderData.signs,
-          order_status: signOrderData.status,
-          order_number: orderNumber
-        })
+        .update(updateFields)
         .eq('id', signOrderData.id)
         .select('id')
         .single();
-        
       if (error) {
         console.error('Error updating sign order:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
-      
-      // Return the ID for the updated record
       return NextResponse.json({ success: true, id: data.id });
     }
       
