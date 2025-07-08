@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
         created_at,
         project_status,
         total_hours,
-        total_revenue
+        total_revenue,
+        estimate_status
       `, { count: 'exact' })
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
@@ -78,30 +79,40 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data for the frontend
-    const transformedData = (data || []).filter(job => !!job.admin_data).map(job => {
-      // Handle contractor name lookup
-      let contractorName = job.contractor_name || '';
-      if (!contractorName) {
-        // Check if we found a contractor name in the lookup
-        contractorName = contractorLookups.get(job.id) || '';
-      }
+    const transformedData = (data || [])
+      .filter(job => {
+        // If estimate_status is available, use it
+        if (job.estimate_status) {
+          return job.estimate_status === 'WON' || job.estimate_status === 'PENDING';
+        }
+        // Fallback: always include (should not happen)
+        return true;
+      })
+      .filter(job => !!job.admin_data)
+      .map(job => {
+        // Handle contractor name lookup
+        let contractorName = job.contractor_name || '';
+        if (!contractorName) {
+          // Check if we found a contractor name in the lookup
+          contractorName = contractorLookups.get(job.id) || '';
+        }
 
-      return {
-        id: job.id,
-        job_number: job.job_number,
-        letting_date: job.admin_data.lettingDate ? job.admin_data.lettingDate : '',
-        contract_number: job.admin_data.contractNumber || '',
-        contractor: contractorName,
-        status: job.job_number?.startsWith('P-') ? 'Won - Pending' : 'Won',
-        county: job.admin_data.county.name || '',
-        branch: job.admin_data.county.branch || '',
-        estimator: job.admin_data.estimator || '',
-        created_at: job.created_at,
-        project_status: job.project_status,
-        total_hours: job.total_hours,
-        total_revenue: job.total_revenue
-      };
-    });
+        return {
+          id: job.id,
+          job_number: job.job_number,
+          letting_date: job.admin_data.lettingDate ? job.admin_data.lettingDate : '',
+          contract_number: job.admin_data.contractNumber || '',
+          contractor: contractorName,
+          status: job.job_number?.startsWith('P-') ? 'Won - Pending' : 'Won',
+          county: job.admin_data.county.name || '',
+          branch: job.admin_data.county.branch || '',
+          estimator: job.admin_data.estimator || '',
+          created_at: job.created_at,
+          project_status: job.project_status,
+          total_hours: job.total_hours,
+          total_revenue: job.total_revenue
+        };
+      });
 
     // Get counts for different statuses
     let countData = {
