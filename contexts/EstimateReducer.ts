@@ -648,6 +648,16 @@ export const estimateReducer = (
 
 		case "COPY_MPT_RENTAL":
 			//signId, sign quantity
+			//null check to make sure if phases are not returned from the db or the phases array length is 0,
+			//to just return the default mpt state
+			/****FIX */
+			if(!action.payload.phases || action.payload.phases.length === 0){
+				return {
+					...state,
+					mptRental: defaultMPTObject
+				}
+			}
+			/******* */
 			const primarySignMap: Record<string, number> = {};
 			action.payload.phases.forEach(p => {
 				p.signs.forEach(s => {
