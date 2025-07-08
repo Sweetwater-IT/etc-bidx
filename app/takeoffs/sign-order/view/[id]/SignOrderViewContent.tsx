@@ -18,6 +18,7 @@ import {
   defaultPhaseObject
 } from '@/types/default-objects/defaultMPTObject'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
+import { Badge } from '@/components/ui/badge'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -502,8 +503,15 @@ export default function SignOrderViewContent () {
                     <div className='text-sm text-muted-foreground'>
                       Job Number
                     </div>
-                    <div className='text-base mt-1'>
+                    <div className='text-base mt-1 flex items-center gap-2'>
                       {signOrder.job_number || '-'}
+                      {signOrder.order_status &&
+                        signOrder.order_status.trim().toLowerCase() ===
+                          'submitted' && (
+                          <Badge className='bg-green-100 text-green-800 border-green-200'>
+                            Submitted
+                          </Badge>
+                        )}
                     </div>
                   </div>
 
