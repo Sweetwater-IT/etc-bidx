@@ -1,8 +1,8 @@
 'use client'
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { PDFViewer } from "@react-pdf/renderer"
-import GenerateBidSummaryReactPDF from "./worksheet-pdf"
-import { Dispatch, SetStateAction } from "react"
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { PDFViewer } from '@react-pdf/renderer'
+import GenerateBidSummaryReactPDF from './worksheet-pdf'
+import { Dispatch, SetStateAction, useMemo } from 'react'
 
 interface WorksheetDialogProps {
   open: boolean
@@ -19,41 +19,59 @@ interface WorksheetDialogProps {
   // flaggingTotals: any
 }
 
-export function WorksheetDialog({
+export function WorksheetDialog ({
   open,
   onOpenChange,
   selectedPdfType,
   mptRental,
   equipmentRental,
   flagging,
-  adminData,
-  // mptTotals,
-  // allTotals,
-  // rentalTotals,
-  // saleTotals,
-  // flaggingTotals
-}: WorksheetDialogProps) {
+  adminData
+}: // mptTotals,
+// allTotals,
+// rentalTotals,
+// saleTotals,
+// flaggingTotals
+WorksheetDialogProps) {
+  // Defensive: check if required data is present
+  const isDataReady = useMemo(() => {
+    if (!adminData || !adminData.contractNumber) return false
+    if (!adminData.county || typeof adminData.county !== 'object') return false
+    // mptRental and equipmentRental can be empty but should not be undefined
+    if (typeof mptRental !== 'object' || typeof equipmentRental === 'undefined')
+      return false
+    return true
+  }, [adminData, mptRental, equipmentRental])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-fit w-fit">
+      <DialogContent className='max-w-4xl h-fit w-fit'>
         <DialogTitle>
-          {selectedPdfType === 'estimators' ? 'Bid Summary - For Estimators' : 'Bid Summary - For Project Managers'}
+          {selectedPdfType === 'estimators'
+            ? 'Bid Summary - For Estimators'
+            : 'Bid Summary - For Project Managers'}
         </DialogTitle>
         {open && (
-          <div className="mt-4">
-            <PDFViewer height={600} width={800}>
-              <GenerateBidSummaryReactPDF
-                // showFinancials={selectedPdfType === 'estimators'}
-                mptRental={mptRental}
-                equipmentRental={equipmentRental}
-                flagging={flagging}
-                adminData={adminData}
-                // mptTotals={mptTotals}
-                // allTotals={allTotals}
-                // rentalTotals={rentalTotals}
-                // saleTotals={saleTotals}
-              />
-            </PDFViewer>
+          <div className='mt-4'>
+            {isDataReady ? (
+              <PDFViewer height={600} width={800}>
+                <GenerateBidSummaryReactPDF
+                  // showFinancials={selectedPdfType === 'estimators'}
+                  mptRental={mptRental}
+                  equipmentRental={equipmentRental}
+                  flagging={flagging}
+                  adminData={adminData}
+                  // mptTotals={mptTotals}
+                  // allTotals={allTotals}
+                  // rentalTotals={rentalTotals}
+                  // saleTotals={saleTotals}
+                />
+              </PDFViewer>
+            ) : (
+              <div className='flex items-center justify-center h-96 text-lg text-muted-foreground'>
+                Loading worksheet data or missing required information.
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
