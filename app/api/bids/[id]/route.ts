@@ -139,6 +139,25 @@ export async function PATCH(request: NextRequest, { params }: any) {
       );
     }
 
+    // After updating the bid, sync jobs table if status is not WON or WON-PENDING
+    const newStatus = (body.status || '').toUpperCase();
+    if (newStatus !== 'WON' && newStatus !== 'WON-PENDING') {
+      // Find the job linked to this bid (estimate_id)
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select('id, archived, estimate_id')
+        .eq('estimate_id', id)
+        .eq('archived', false)
+        .maybeSingle();
+      if (jobData && jobData.id) {
+        // Archive the job
+        await supabase
+          .from('jobs')
+          .update({ archived: true })
+          .eq('id', jobData.id);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Bid updated successfully",
