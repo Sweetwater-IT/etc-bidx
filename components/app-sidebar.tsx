@@ -120,10 +120,10 @@ export const data = {
       title: "Sign Shop Orders",
       url: "/takeoffs/sign-shop-orders",
     },
-    {
-      title: "Daily Tracker",
-      url: "/daily-tracker",
-    },
+   // {
+   //   title: "Daily Tracker",
+   //   url: "/daily-tracker",
+   // },
     // {
     //   title: "Takeoffs",
     //   url: "#",
@@ -268,17 +268,17 @@ export const data = {
 
 export const quickActions = [
   {
-    label: "Available Job",
+    label: "Bid Board Entry",
     icon: IconBriefcase,
     route: "/jobs/available",
   },
   {
-    label: "Active Bid",
+    label: "Bid",
     icon: IconClipboard,
     route: "/active-bid",
   },
   {
-    label: "Active Job",
+    label: "Job",
     icon: IconBuilding,
     route: "/jobs/active-jobs",
     withSeparator: true,
@@ -296,20 +296,20 @@ export const quickActions = [
     withSeparator: true,
   },
   {
-    label: "New Sign Order",
+    label: "Sign Order",
     icon: IconClipboard,
-    route: "/sign-orders/new",
+    route: "/takeoffs/sign-order",
   },
-  {
-    label: "Build Takeoff",
-    icon: IconBuilding,
-    route: "/sign-orders/build-takeoff",
-  },
-  {
-    label: "Load Sheet",
-    icon: IconFileText,
-    route: "/sign-orders/load-sheet",
-  },
+//  {
+ //   label: "Build Takeoff",
+  //  icon: IconBuilding,
+   // route: "/sign-orders/build-takeoff",
+  //},
+  //{
+   // label: "Load Sheet",
+    //icon: IconFileText,
+    //route: "/sign-orders/load-sheet",
+  //},
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
