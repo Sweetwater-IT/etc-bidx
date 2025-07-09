@@ -5,7 +5,8 @@ export function middleware(request: NextRequest) {
   // Correct way to check for Supabase session cookie
   const hasSupabaseSession = request.cookies.getAll().some((cookie) => cookie.name.startsWith('sb-'));
   const { pathname } = request.nextUrl;
-
+  console.log(hasSupabaseSession);
+  console.log(pathname);
   // Allow access to the password entry (now Google Auth) page, API routes, and static assets
   if (pathname.startsWith('/password-entry') || 
       pathname.startsWith('/api') || 
