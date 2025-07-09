@@ -81,15 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        setSession(session);
-        checkUserAuthorization(session.user.email!).then(setIsAuthorized);
-      }
-      setLoading(false);
-    });
+    // Removed initial session check here
 
     return () => subscription.unsubscribe();
   }, [router]);
