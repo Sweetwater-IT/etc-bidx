@@ -23,6 +23,7 @@ type ContractData = {
 const COLUMNS = [
   { key: 'letting_date', title: 'Letting Date', sortable: true },
   { key: 'contract_number', title: 'Contract #', sortable: true },
+  { key: 'job_number', title: 'Job Number' },  
   { key: 'contractor', title: 'Contractor' },
   { key: 'status', title: 'Status' },
   { key: 'county', title: 'County' },
