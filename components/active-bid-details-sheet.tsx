@@ -396,7 +396,15 @@ export function ActiveBidDetailsSheet({
                   ? `: ${bid.originalContractNumber}`
                   : ""}
               </SheetTitle>
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer" onClick={() => bid ? onViewBidSummary(bid): ''}>
+              <span 
+                className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (bid && onViewBidSummary) {
+                    onViewBidSummary(bid);
+                  }
+                }}>
                 View bid summary <EyeIcon className="h-3 w-3" />
               </span>
             </div>
