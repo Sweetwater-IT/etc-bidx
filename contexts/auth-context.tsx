@@ -68,7 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             // User authorized - redirect to dashboard
             toast.success('Welcome!');
-            router.push('/');
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
