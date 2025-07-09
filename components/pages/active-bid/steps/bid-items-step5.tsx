@@ -352,23 +352,16 @@ const BidItemsStep5 = ({
     null
   )
   const [activeTab, setActiveTab] = useState('mpt')
-  const [selectedBidItems, setSelectedBidItems] = useState<string[]>([])
 
   // Ensure activeTab is always a visible tab
   useEffect(() => {
-    if (!selectedBidItems.includes(activeTab)) {
-      setActiveTab(selectedBidItems[0] || '')
+    if (!activeTab) {
+      setActiveTab('mpt')
     }
-  }, [selectedBidItems])
+  }, [activeTab])
 
   const handleToggleBidItem = (value: string) => {
-    setSelectedBidItems(prev =>
-      prev.includes(value)
-        ? prev.length === 1
-          ? prev // Prevent hiding all
-          : prev.filter(v => v !== value)
-        : [...prev, value]
-    )
+    setActiveTab(value)
   }
 
   // Format phase title for accordion trigger
@@ -1250,31 +1243,7 @@ const BidItemsStep5 = ({
 
   return (
     <div>
-      {/* Which items do you want to bid? section */}
-      <div className='mb-6'>
-        <div className='font-semibold mb-2'>
-          Which items do you want to bid?
-        </div>
-        <div className='flex flex-wrap gap-2'>
-          {BID_ITEM_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              type='button'
-              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black
-                ${
-                  selectedBidItems.includes(opt.value)
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-black border-gray-300 hover:bg-gray-100'
-                }`}
-              onClick={() => handleToggleBidItem(opt.value)}
-              aria-pressed={selectedBidItems.includes(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <div className='mt-4 border-b border-gray-200' />
-      </div>
+      {/* Selection section hidden; all tabs shown by default */}
       <div className='relative'>
         <div className='mt-2 mb-6 ml-12'>
           <Tabs
@@ -1284,56 +1253,44 @@ const BidItemsStep5 = ({
             value={activeTab}
           >
             <TabsList className='w-full border-0 bg-transparent p-0 [&_>_*]:border-0'>
-              {selectedBidItems.includes('mpt') && (
-                <TabsTrigger
-                  value='mpt'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  MPT
-                </TabsTrigger>
-              )}
-              {selectedBidItems.includes('equipment') && (
-                <TabsTrigger
-                  value='equipment'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  Equipment Rental
-                </TabsTrigger>
-              )}
-              {selectedBidItems.includes('permanent') && (
-                <TabsTrigger
-                  value='permanent'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  Perm Signs
-                </TabsTrigger>
-              )}
-              {selectedBidItems.includes('flagging') && (
-                <TabsTrigger
-                  value='flagging'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  Flagging
-                </TabsTrigger>
-              )}
-              {selectedBidItems.includes('sale') && (
-                <TabsTrigger
-                  value='sale'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  Sale Items
-                </TabsTrigger>
-              )}
-              {selectedBidItems.includes('patterns') && (
-                <TabsTrigger
-                  value='patterns'
-                  className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
-                >
-                  Patterns / Service Work
-                </TabsTrigger>
-              )}
+              <TabsTrigger
+                value='mpt'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                MPT
+              </TabsTrigger>
+              <TabsTrigger
+                value='equipment'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                Equipment Rental
+              </TabsTrigger>
+              <TabsTrigger
+                value='permanent'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                Perm Signs
+              </TabsTrigger>
+              <TabsTrigger
+                value='flagging'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                Flagging
+              </TabsTrigger>
+              <TabsTrigger
+                value='sale'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                Sale Items
+              </TabsTrigger>
+              <TabsTrigger
+                value='patterns'
+                className='relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none'
+              >
+                Patterns / Service Work
+              </TabsTrigger>
             </TabsList>
-            {selectedBidItems.includes('mpt') && (
+            {activeTab === 'mpt' && (
               <TabsContent value='mpt' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <div className='mt-2 mb-6 ml-12'>
@@ -1804,35 +1761,35 @@ const BidItemsStep5 = ({
                 </div>
               </TabsContent>
             )}
-            {selectedBidItems.includes('equipment') && (
+            {activeTab === 'equipment' && (
               <TabsContent value='equipment' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <EquipmentRentalTab />
                 </div>
               </TabsContent>
             )}
-            {selectedBidItems.includes('permanent') && (
+            {activeTab === 'permanent' && (
               <TabsContent value='permanent' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <PermanentSignsSummaryStep />
                 </div>
               </TabsContent>
             )}
-            {selectedBidItems.includes('flagging') && (
+            {activeTab === 'flagging' && (
               <TabsContent value='flagging' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <FlaggingServicesTab />
                 </div>
               </TabsContent>
             )}
-            {selectedBidItems.includes('sale') && (
+            {activeTab === 'sale' && (
               <TabsContent value='sale' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <SaleItemsStep />
                 </div>
               </TabsContent>
             )}
-            {selectedBidItems.includes('patterns') && (
+            {activeTab === 'patterns' && (
               <TabsContent value='patterns' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <ServiceWorkTab />
