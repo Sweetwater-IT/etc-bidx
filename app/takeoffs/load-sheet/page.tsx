@@ -582,7 +582,7 @@ export default function SignOrderPage() {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Shop Orders</h1>
+            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
             <div className="flex gap-3">
               <div className="flex items-center gap-3">
                 <Button
