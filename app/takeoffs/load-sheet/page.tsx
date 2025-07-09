@@ -253,7 +253,7 @@ export default function SignOrderPage() {
             shop_status: order.shop_status || 'not-started',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
-            order_status: order.order_number == null ? 'DRAFT': 'SUBMITTED'
+            order_status: order.order_number == null ? 'DRAFT': 'SUBMITTED',
             target_date: order.target_date ? formatDate(order.target_date) : '-',
           }));
 
