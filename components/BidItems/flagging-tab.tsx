@@ -158,13 +158,13 @@ const FlaggingServicesTab = () => {
 
   // On mount or when global flagging changes, sync local flaggingItems to always show the saved flagging
   useEffect(() => {
-    // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
-    if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
-      setFlaggingItems([{ ...flagging, id: 'flagging' }])
-    } else {
-      setFlaggingItems([])
-    }
-  }, [flagging])
+  // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
+  if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
+    setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
+  } else {
+    setFlaggingItems([]);
+  }
+}, [flagging]);
 
   const handleAddFlagging = () => {
     setFormData({
