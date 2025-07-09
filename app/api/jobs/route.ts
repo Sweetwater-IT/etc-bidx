@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const filters = url.searchParams.get('filters');
     const sortBy = url.searchParams.get('sortBy');
     const sortOrder = url.searchParams.get('sortOrder');
+    const id = url.searchParams.get('id');
 
     const archived = url.searchParams.get('archived');
     const isArchivedFilter = archived === 'true';
@@ -509,7 +510,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Helper function to generate P- job number
+    // Always generate a P-XXXXXX job number
     function generatePendingJobNumber(): string {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let result = 'P-';
@@ -518,43 +519,35 @@ export async function POST(req: NextRequest) {
       }
       return result;
     }
-
     // Generate unique P- job number
-    let jobNumber: string;
+    let jobNumber = '';
     let isUnique = false;
     let attempts = 0;
     const maxAttempts = 10;
-
     while (!isUnique && attempts < maxAttempts) {
       jobNumber = generatePendingJobNumber();
-
-      // Check if job number already exists
       const { data: existingJobNumber } = await supabase
         .from('job_numbers')
         .select('id')
         .eq('job_number', jobNumber)
         .single();
-
       if (!existingJobNumber) {
         isUnique = true;
       }
       attempts++;
     }
-
     if (!isUnique) {
       return NextResponse.json(
         { error: 'Failed to generate unique job number after multiple attempts' },
         { status: 500 }
       );
     }
-
-    // Step 1: Insert job number and get ID
+    // Insert the generated job number
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
-      .insert({ job_number: jobNumber! })
+      .insert({ job_number: jobNumber })
       .select('id')
       .single();
-
     if (jobNumberError || !jobNumberData) {
       console.error('Error inserting job number:', jobNumberError);
       return NextResponse.json(
@@ -568,6 +561,7 @@ export async function POST(req: NextRequest) {
       .from('jobs')
       .insert({
         job_number_id: jobNumberData.id,
+        reserved_job_number: requestData.reserved_job_number || null
       })
       .select('id')
       .single();
@@ -651,7 +645,7 @@ export async function POST(req: NextRequest) {
     // Return success response
     return NextResponse.json({
       success: true,
-      job_number: jobNumber!,
+      job_number: jobNumber,
       job_id: jobData.id,
       message: 'Job created successfully'
     }, { status: 201 });

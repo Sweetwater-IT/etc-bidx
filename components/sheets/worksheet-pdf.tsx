@@ -1,21 +1,33 @@
 'use client'
-import React from 'react';
-import { Page, Text, View, Document } from '@react-pdf/renderer';
-import { AdminData } from '@/types/TAdminData';
-import { styles } from './styles/bidSummaryPDFStyle';
-import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
-import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
-import { Flagging } from '@/types/TFlagging';
-import { safeNumber } from '@/lib/safe-number';
-import { getAssociatedSignEquipment, calculateEquipmentCostSummary, calculateLaborCostSummary, calculateTotalSignCostSummary, getEquipmentTotalsPerPhase, returnPhaseTotals, returnSignTotalsByPhase, returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
-import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject';
-
+import React, { useEffect, useState } from 'react'
+import { Page, Text, View, Document } from '@react-pdf/renderer'
+import { AdminData } from '@/types/TAdminData'
+import { styles } from './styles/bidSummaryPDFStyle'
+import {
+  MPTRentalEstimating,
+  PrimarySign,
+  SecondarySign
+} from '@/types/MPTEquipment'
+import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem'
+import { Flagging } from '@/types/TFlagging'
+import { safeNumber } from '@/lib/safe-number'
+import {
+  getAssociatedSignEquipment,
+  calculateEquipmentCostSummary,
+  calculateLaborCostSummary,
+  calculateTotalSignCostSummary,
+  getEquipmentTotalsPerPhase,
+  returnPhaseTotals,
+  returnSignTotalsByPhase,
+  returnSignTotalsSquareFootage
+} from '@/lib/mptRentalHelperFunctions'
+import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject'
 
 interface Props {
-  adminData: AdminData,
-  mptRental: MPTRentalEstimating | undefined,
-  equipmentRental: EquipmentRentalItem[] | undefined,
-  flagging: Flagging | undefined,
+  adminData: AdminData
+  mptRental: MPTRentalEstimating | undefined
+  equipmentRental: EquipmentRentalItem[] | undefined
+  flagging: Flagging | undefined
   // mptTotals: BasicTotals,
   // allTotals: BasicTotals,
   // rentalTotals: BasicTotals,
@@ -24,28 +36,48 @@ interface Props {
 }
 
 interface BasicTotals {
-  revenue: string;
-  grossProfit: string;
-  grossMargin: string;
+  revenue: string
+  grossProfit: string
+  grossMargin: string
 }
 
 //below the bottom black line: form number on bottom left, ETC Form 61, in the center the document version, v1.01 Jan/2025, page numbers on right,
 
 //mptTotals, allTotals, rentalTotals, saleTotals, showFinancials
-const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, flagging, }: Props) => {
+const GenerateBidSummaryReactPDF = ({
+  adminData,
+  mptRental,
+  equipmentRental,
+  flagging
+}: Props) => {
+  // Defensive helpers
+  const safeDateString = (date: Date | null | undefined) =>
+    date instanceof Date && !isNaN(date.getTime())
+      ? date.toLocaleDateString()
+      : '-'
+  const safeNumberValue = (val: any, fallback = 0) =>
+    typeof val === 'number' && !isNaN(val) ? val : fallback
+
+  // Client-only: Submission date string
+  const [submissionDate, setSubmissionDate] = useState('-')
+  useEffect(() => {
+    setSubmissionDate(
+      new Date().toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      })
+    )
+  }, [])
 
   const Title = () => (
-    <View style={{ flexDirection: 'row' }} >
-      <View style={{ flex: .66, borderRight: '1px solid black' }}>
+    <View style={{ flexDirection: 'row' }}>
+      <View style={{ flex: 0.66, borderRight: '1px solid black' }}>
         <Text>ETC Bid Summary Worksheet</Text>
       </View>
-      <View style={{ padding: 4, flex: .33, flexDirection: 'column' }}>
+      <View style={{ padding: 4, flex: 0.33, flexDirection: 'column' }}>
         <Text style={{ fontSize: 10 }}>Submitter: {adminData.estimator}</Text>
-        <Text style={{ fontSize: 10 }}>Submission Date: {new Date().toLocaleDateString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric'
-        })}</Text>
+        <Text style={{ fontSize: 10 }}>Submission Date: {submissionDate}</Text>
       </View>
     </View>
   )
@@ -59,7 +91,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>COUNTY:</Text>
-          <Text style={styles.value}>{adminData?.county.name || '-'}</Text>
+          <Text style={styles.value}>{adminData?.county?.name || '-'}</Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>SR:</Text>
@@ -74,50 +106,66 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
       <View style={styles.headerRow}>
         <View style={styles.headerCell}>
           <Text style={styles.label}>WAGE RATE:</Text>
-          <Text style={styles.value}>$ {adminData?.county.laborRate || '0.00'}</Text>
+          <Text style={styles.value}>
+            $ {safeNumberValue(adminData?.county?.laborRate, 0).toFixed(2)}
+          </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>START DATE:</Text>
           <Text style={styles.value}>
-            {adminData?.startDate ? adminData.startDate.toLocaleDateString() : '-'}
+            {safeDateString(adminData?.startDate)}
           </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>COMPLETION DATE:</Text>
-          <Text style={styles.value}>
-            {adminData?.endDate ? adminData.endDate.toLocaleDateString() : '-'}
-          </Text>
+          <Text style={styles.value}>{safeDateString(adminData?.endDate)}</Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>BRANCH:</Text>
-          <Text style={styles.value}>
-            {adminData?.county.branch ?? ''}
-          </Text>
+          <Text style={styles.value}>{adminData?.county?.branch || ''}</Text>
         </View>
       </View>
 
       <View style={styles.headerRow}>
         <View style={styles.headerCell}>
           <Text style={styles.label}>FRINGE:</Text>
-          <Text style={styles.value}>$ {adminData?.county.fringeRate || '0.00'}</Text>
+          <Text style={styles.value}>
+            $ {safeNumberValue(adminData?.county?.fringeRate, 0).toFixed(2)}
+          </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>PROJECT DAYS:</Text>
           <Text style={styles.value}>
-            {adminData.startDate && adminData.endDate ? Math.ceil((adminData.endDate.getTime() - adminData.startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0}
+            {adminData?.startDate &&
+            adminData?.endDate &&
+            adminData.startDate instanceof Date &&
+            adminData.endDate instanceof Date
+              ? Math.ceil(
+                  (adminData.endDate.getTime() -
+                    adminData.startDate.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : 0}
           </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>W/S DAYS:</Text>
           <Text style={styles.value}>
-            {adminData?.winterStart && adminData?.winterEnd ? Math.ceil((adminData.winterEnd.getTime() - adminData.winterStart.getTime()) / (1000 * 60 * 60 * 24)) : '-'}
+            {adminData?.winterStart &&
+            adminData?.winterEnd &&
+            adminData.winterStart instanceof Date &&
+            adminData.winterEnd instanceof Date
+              ? Math.ceil(
+                  (adminData.winterEnd.getTime() -
+                    adminData.winterStart.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : '-'}
           </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>DBE %:</Text>
-          <Text style={styles.value}>
-            {adminData?.dbe ?? ''}%
-          </Text>
+          <Text style={styles.value}>{adminData?.dbe ?? ''}%</Text>
         </View>
       </View>
 
@@ -129,13 +177,13 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         <View style={styles.headerCell}>
           <Text style={styles.label}>MILES R/T:</Text>
           <Text style={styles.value}>
-            {safeNumber((adminData?.owMileage ?? 0) * 2)}
+            {safeNumberValue(adminData?.owMileage, 0) * 2}
           </Text>
         </View>
         <View style={styles.headerCell}>
           <Text style={styles.label}>TRAVEL TIME R/T:</Text>
           <Text style={styles.value}>
-            {safeNumber((adminData?.owTravelTimeMins ?? 0) * 2)}
+            {safeNumberValue(adminData?.owTravelTimeMins, 0) * 2}
           </Text>
         </View>
         <View style={styles.headerCell}>
@@ -171,16 +219,24 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         </View>
       </View>} */}
     </View>
-  );
+  )
 
   const EquipmentSummary = () => {
-    const mptTotals = calculateEquipmentCostSummary(mptRental ?? defaultMPTObject)
-    const signTotals = calculateTotalSignCostSummary(mptRental ?? defaultMPTObject)
+    const mptTotals = calculateEquipmentCostSummary(
+      mptRental ?? defaultMPTObject
+    )
+    const signTotals = calculateTotalSignCostSummary(
+      mptRental ?? defaultMPTObject
+    )
 
-    const mptDiscount = mptTotals.cost > 0 ? 1 - (mptTotals.revenue / mptTotals.cost) : 0
-    const signTotalRevenue = signTotals.HI.revenue + signTotals.DG.revenue + signTotals.Special.revenue
-    const signTotalCost = signTotals.HI.cost + signTotals.DG.cost + signTotals.Special.cost
-    const signDiscount = signTotalCost > 0 ? 1 - (signTotalRevenue / signTotalCost) : 0
+    const mptDiscount =
+      mptTotals.cost > 0 ? 1 - mptTotals.revenue / mptTotals.cost : 0
+    const signTotalRevenue =
+      signTotals.HI.revenue + signTotals.DG.revenue + signTotals.Special.revenue
+    const signTotalCost =
+      signTotals.HI.cost + signTotals.DG.cost + signTotals.Special.cost
+    const signDiscount =
+      signTotalCost > 0 ? 1 - signTotalRevenue / signTotalCost : 0
     return (
       <View style={{ flexDirection: 'column' }}>
         <Text style={styles.sectionTitle}>EQUIPMENT AND MATERIAL SUMMARY</Text>
@@ -192,45 +248,73 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             <View style={styles.row}>
               <Text style={styles.cell}>{`4'`} TYPE III =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII
+                      .totalQuantity
+                  )}
               </Text>
             </View>
-            <View
-              style={styles.row}>
+            <View style={styles.row}>
               <Text style={styles.cell}>H-STANDS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>{`V/P'S`} =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && (safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity) + safeNumber(getEquipmentTotalsPerPhase(mptRental).sharps.totalQuantity)
-                + safeNumber(getEquipmentTotalsPerPhase(mptRental).TypeXIVP.totalQuantity))}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity
+                  ) +
+                    safeNumber(
+                      getEquipmentTotalsPerPhase(mptRental).sharps.totalQuantity
+                    ) +
+                    safeNumber(
+                      getEquipmentTotalsPerPhase(mptRental).TypeXIVP
+                        .totalQuantity
+                    )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>B-LIGHTS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>SANDBAGS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>POSTS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).post.totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>{`6'`} WINGS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).sixFootWings
+                      .totalQuantity
+                  )}
               </Text>
             </View>
             {/* <View style={styles.row}>
@@ -242,17 +326,34 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             <View style={styles.row}>
               <Text style={styles.cell}>METAL STANDS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).metalStands.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).metalStands
+                      .totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>C-LIGHTS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity)}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.totalStructure}>
-              <Text style={styles.value}>STRUCTURES: {mptRental ? safeNumber((getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity + getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)) : '-'}</Text>
+              <Text style={styles.value}>
+                STRUCTURES:{' '}
+                {mptRental
+                  ? safeNumber(
+                      getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII
+                        .totalQuantity +
+                        getEquipmentTotalsPerPhase(mptRental).hStand
+                          .totalQuantity
+                    )
+                  : '-'}
+              </Text>
             </View>
           </View>
 
@@ -265,28 +366,33 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
               <Text style={styles.rentalHeader}>QUANTITY</Text>
               <Text style={styles.rentalHeader}>MONTHS</Text>
             </View>
-            {equipmentRental && Object.values(
-              equipmentRental.reduce((acc, item) => {
-                if (item.name === '') return acc;
+            {equipmentRental &&
+              Object.values(
+                equipmentRental.reduce((acc, item) => {
+                  if (item.name === '') return acc
 
-                if (!acc[item.name]) {
-                  acc[item.name] = {
-                    name: item.name,
-                    quantity: 0,
-                    months: 0
-                  };
-                }
-                acc[item.name].quantity += item.quantity;
-                acc[item.name].months += item.months;
-                return acc;
-              }, {} as Record<string, { name: string; quantity: number; months: number }>)
-            ).map((item, index) => (
-              <View style={styles.row} key={index}>
-                <Text style={styles.cell}>{item.name}</Text>
-                <Text style={styles.quantityCell}>{safeNumber(item.quantity)}</Text>
-                <Text style={styles.quantityCell}>{safeNumber(item.months)}</Text>
-              </View>
-            ))}
+                  if (!acc[item.name]) {
+                    acc[item.name] = {
+                      name: item.name,
+                      quantity: 0,
+                      months: 0
+                    }
+                  }
+                  acc[item.name].quantity += item.quantity
+                  acc[item.name].months += item.months
+                  return acc
+                }, {} as Record<string, { name: string; quantity: number; months: number }>)
+              ).map((item, index) => (
+                <View style={styles.row} key={index}>
+                  <Text style={styles.cell}>{item.name}</Text>
+                  <Text style={styles.quantityCell}>
+                    {safeNumber(item.quantity)}
+                  </Text>
+                  <Text style={styles.quantityCell}>
+                    {safeNumber(item.months)}
+                  </Text>
+                </View>
+              ))}
 
             <View style={styles.columnHeader}>
               <Text style={styles.columnHeaderText}>DISCOUNT RATES</Text>
@@ -297,11 +403,15 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
     const signDiscount = signTotalCost > 0 ? 1 - (signTotalRevenue / signTotalCost) : 0 */}
             <View style={styles.row}>
               <Text style={styles.cell}>MPT</Text>
-              <Text style={styles.quantityCell}>{safeNumber(mptDiscount * 100).toFixed(2)}%</Text>
+              <Text style={styles.quantityCell}>
+                {safeNumber(mptDiscount * 100).toFixed(2)}%
+              </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>SIGNS</Text>
-              <Text style={styles.quantityCell}>{safeNumber(signDiscount * 100).toFixed(2)}%</Text>
+              <Text style={styles.quantityCell}>
+                {safeNumber(signDiscount * 100).toFixed(2)}%
+              </Text>
             </View>
           </View>
 
@@ -312,19 +422,31 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             <View style={styles.row}>
               <Text style={styles.cell}>HI SIGNS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental ? returnSignTotalsSquareFootage(mptRental).HI.totalSquareFootage.toFixed(1) : '-'}
+                {mptRental
+                  ? returnSignTotalsSquareFootage(
+                      mptRental
+                    ).HI.totalSquareFootage.toFixed(1)
+                  : '-'}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>DG SIGNS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental ? returnSignTotalsSquareFootage(mptRental).DG.totalSquareFootage.toFixed(1) : '-'}
+                {mptRental
+                  ? returnSignTotalsSquareFootage(
+                      mptRental
+                    ).DG.totalSquareFootage.toFixed(1)
+                  : '-'}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.cell}>SPECIAL SIGNS =</Text>
               <Text style={styles.quantityCell}>
-                {mptRental ? returnSignTotalsSquareFootage(mptRental).Special.totalSquareFootage.toFixed(1) : '-'}
+                {mptRental
+                  ? returnSignTotalsSquareFootage(
+                      mptRental
+                    ).Special.totalSquareFootage.toFixed(1)
+                  : '-'}
               </Text>
             </View>
             <View style={styles.row}>
@@ -360,7 +482,7 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         </View>
       </View>
     )
-  };
+  }
 
   // const JobSummary = () => {
 
@@ -457,76 +579,99 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
 
   const PhaseSummary = () => {
     const getTotals = () => {
-      if (!mptRental?.phases) return {
-        days: 0,
-        vp: 0,
-        bLights: 0,
-        cLights: 0,
-        type3: 0,
-        sixFootWings: 0,
-        hStand: 0,
-        post: 0,
-        sandbag: 0,
-        wings: 0,
-        metalStands: 0,
-        hi: 0,
-        dg: 0,
-        special: 0
-      };
-
-      return mptRental.phases.reduce((acc, phase) => {
-        const signTotals = returnSignTotalsByPhase(phase)
-
+      if (!mptRental?.phases)
         return {
-          days: acc.days + safeNumber(phase.days),
-          vp: acc.vp + safeNumber(phase.standardEquipment.HIVP.quantity) + safeNumber(phase.standardEquipment.TypeXIVP.quantity) +
-          safeNumber(phase.standardEquipment.sharps.quantity),
-          bLights: acc.bLights + safeNumber(phase.standardEquipment.BLights.quantity),
-          cLights: acc.cLights + safeNumber(phase.standardEquipment.ACLights.quantity),
-          type3: acc.type3 + safeNumber(phase.standardEquipment.fourFootTypeIII.quantity),
-          hStand: acc.hStand + safeNumber(phase.standardEquipment.hStand.quantity),
-          post: acc.post + safeNumber(phase.standardEquipment.post.quantity),
-          sandbag: acc.sandbag + safeNumber(phase.standardEquipment.sandbag.quantity),
-          metalStands: acc.metalStands + safeNumber(phase.standardEquipment.metalStands.quantity),
-          sixFootWings: acc.sixFootWings + safeNumber(phase.standardEquipment.sixFootWings.quantity),
-          hi: signTotals.HI.totalSquareFootage,
-          dg: signTotals.DG.totalSquareFootage,
-          special: signTotals.Special.totalSquareFootage
-        };
-      }, {
-        days: 0,
-        vp: 0,
-        bLights: 0,
-        cLights: 0,
-        type3: 0,
-        hStand: 0,
-        post: 0,
-        sandbag: 0,
-        metalStands: 0,
-        sixFootWings: 0,
-        hi: 0,
-        dg: 0,
-        special: 0
-      });
-    };
+          days: 0,
+          vp: 0,
+          bLights: 0,
+          cLights: 0,
+          type3: 0,
+          sixFootWings: 0,
+          hStand: 0,
+          post: 0,
+          sandbag: 0,
+          wings: 0,
+          metalStands: 0,
+          hi: 0,
+          dg: 0,
+          special: 0
+        }
 
-    const rentalItemTotals = equipmentRental?.reduce((acc, item) => {
-      switch (item.name) {
-        case 'TMA':
-          acc.tma += item.quantity;
-          break;
-        case 'Message Board':
-          acc.messageBoard += item.quantity;
-          break;
-        case 'Arrow Board':
-          acc.arrowBoard += item.quantity;
-          break;
-        case 'Speed Trailer':
-          acc.speedTrailer += item.quantity;
-          break;
-      }
-      return acc;  // Need to return the accumulator
-    }, { tma: 0, messageBoard: 0, arrowBoard: 0, speedTrailer: 0 });
+      return mptRental.phases.reduce(
+        (acc, phase) => {
+          const signTotals = returnSignTotalsByPhase(phase)
+
+          return {
+            days: acc.days + safeNumber(phase.days),
+            vp:
+              acc.vp +
+              safeNumber(phase.standardEquipment.HIVP.quantity) +
+              safeNumber(phase.standardEquipment.TypeXIVP.quantity) +
+              safeNumber(phase.standardEquipment.sharps.quantity),
+            bLights:
+              acc.bLights +
+              safeNumber(phase.standardEquipment.BLights.quantity),
+            cLights:
+              acc.cLights +
+              safeNumber(phase.standardEquipment.ACLights.quantity),
+            type3:
+              acc.type3 +
+              safeNumber(phase.standardEquipment.fourFootTypeIII.quantity),
+            hStand:
+              acc.hStand + safeNumber(phase.standardEquipment.hStand.quantity),
+            post: acc.post + safeNumber(phase.standardEquipment.post.quantity),
+            sandbag:
+              acc.sandbag +
+              safeNumber(phase.standardEquipment.sandbag.quantity),
+            metalStands:
+              acc.metalStands +
+              safeNumber(phase.standardEquipment.metalStands.quantity),
+            sixFootWings:
+              acc.sixFootWings +
+              safeNumber(phase.standardEquipment.sixFootWings.quantity),
+            hi: signTotals.HI.totalSquareFootage,
+            dg: signTotals.DG.totalSquareFootage,
+            special: signTotals.Special.totalSquareFootage
+          }
+        },
+        {
+          days: 0,
+          vp: 0,
+          bLights: 0,
+          cLights: 0,
+          type3: 0,
+          hStand: 0,
+          post: 0,
+          sandbag: 0,
+          metalStands: 0,
+          sixFootWings: 0,
+          hi: 0,
+          dg: 0,
+          special: 0
+        }
+      )
+    }
+
+    const rentalItemTotals = equipmentRental?.reduce(
+      (acc, item) => {
+        switch (item.name) {
+          case 'TMA':
+            acc.tma += item.quantity
+            break
+          case 'Message Board':
+            acc.messageBoard += item.quantity
+            break
+          case 'Arrow Board':
+            acc.arrowBoard += item.quantity
+            break
+          case 'Speed Trailer':
+            acc.speedTrailer += item.quantity
+            break
+        }
+        return acc // Need to return the accumulator
+      },
+      { tma: 0, messageBoard: 0, arrowBoard: 0, speedTrailer: 0 }
+    )
     return (
       <View>
         <Text style={styles.sectionTitle}>PHASE SUMMARY</Text>
@@ -556,14 +701,18 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         {mptRental?.phases.map((phase, index) => (
           <View key={index} style={styles.summaryRow}>
             <Text style={styles.phaseSummaryFirstCell}>Phase {index + 1}</Text>
-            <Text style={styles.phaseSummaryCell}>{safeNumber(phase.days)}</Text>
             <Text style={styles.phaseSummaryCell}>
-              {safeNumber(phase.standardEquipment.HIVP.quantity) + safeNumber(phase.standardEquipment.TypeXIVP.quantity) + safeNumber(phase.standardEquipment.sixFootWings.quantity)}
+              {safeNumber(phase.days)}
             </Text>
-            <Text style={{ flex: .5, fontSize: 8 }}>
+            <Text style={styles.phaseSummaryCell}>
+              {safeNumber(phase.standardEquipment.HIVP.quantity) +
+                safeNumber(phase.standardEquipment.TypeXIVP.quantity) +
+                safeNumber(phase.standardEquipment.sixFootWings.quantity)}
+            </Text>
+            <Text style={{ flex: 0.5, fontSize: 8 }}>
               {safeNumber(phase.standardEquipment.BLights.quantity)}
             </Text>
-            <Text style={{ flex: .5, fontSize: 8 }}>
+            <Text style={{ flex: 0.5, fontSize: 8 }}>
               {safeNumber(phase.standardEquipment.ACLights.quantity)}
             </Text>
             <Text style={styles.phaseSummaryCell}>
@@ -584,10 +733,10 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             <Text style={styles.phaseSummaryCell}>
               {safeNumber(phase.standardEquipment.metalStands.quantity)}
             </Text>
-            
+
             {
-            //No longer display rental items by phase
-            /* <Text style={styles.phaseSummaryCell}>
+              //No longer display rental items by phase
+              /* <Text style={styles.phaseSummaryCell}>
               {equipmentRental?.filter(item => item.name === 'TMA' && item.phase === index + 1)
                 .reduce((acc, item) => acc + item.quantity, 0)}
             </Text>
@@ -599,18 +748,23 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             </Text>
             <Text style={styles.phaseSummaryCell}>
               {equipmentRental?.filter(item => item.name === 'Speed Trailer' && item.phase === index + 1).reduce((acc, item) => acc + item.quantity, 0)}
-            </Text> */}
+            </Text> */
+            }
           </View>
         ))}
 
         <View style={[styles.summaryTotalRow]}>
-          <Text style={[styles.phaseSummaryFirstCell, { fontWeight: 'bold' }]}>TOTALS</Text>
+          <Text style={[styles.phaseSummaryFirstCell, { fontWeight: 'bold' }]}>
+            TOTALS
+          </Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().days}</Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().vp}</Text>
-          <Text style={{ flex: .5, fontSize: 8 }}>{getTotals().bLights}</Text>
-          <Text style={{ flex: .5, fontSize: 8 }}>{getTotals().cLights}</Text>
+          <Text style={{ flex: 0.5, fontSize: 8 }}>{getTotals().bLights}</Text>
+          <Text style={{ flex: 0.5, fontSize: 8 }}>{getTotals().cLights}</Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().type3}</Text>
-          <Text style={styles.phaseSummaryCell}>{getTotals().sixFootWings}</Text>
+          <Text style={styles.phaseSummaryCell}>
+            {getTotals().sixFootWings}
+          </Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().hStand}</Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().post}</Text>
           <Text style={styles.phaseSummaryCell}>{getTotals().sandbag}</Text>
@@ -621,8 +775,8 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
           <Text style={styles.phaseSummaryCell}>{rentalItemTotals?.speedTrailer}</Text> */}
         </View>
       </View>
-    );
-  };
+    )
+  }
 
   const SignList = () => {
     const columns = [
@@ -635,32 +789,37 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
       { label: 'B Lights', flex: 1.5 },
       // { label: 'A/C Lights', flex: 1.5 },
       { label: 'Covers', flex: 1 }
-    ];
+    ]
 
     const structureMapping = {
       hStand: 'H Stand',
       none: 'None',
-      fourFootTypeIII: '4\' Type III',
+      fourFootTypeIII: "4' Type III",
       post: 'Post'
-    };
+    }
 
     // Helper function to group signs
     const groupSignsByPrimary = (signs: (PrimarySign | SecondarySign)[]) => {
-      const primarySigns = signs.filter(sign =>
-        !('primarySignId' in sign) && sign.quantity > 0 && sign.width > 0 && sign.height > 0
-      ) as PrimarySign[];
-
-      return primarySigns.map(primary => ({
-        primary,
-        secondaries: signs.filter(sign =>
-          'primarySignId' in sign &&
-          sign.primarySignId === primary.id &&
+      const primarySigns = signs.filter(
+        sign =>
+          !('primarySignId' in sign) &&
           sign.quantity > 0 &&
           sign.width > 0 &&
           sign.height > 0
+      ) as PrimarySign[]
+
+      return primarySigns.map(primary => ({
+        primary,
+        secondaries: signs.filter(
+          sign =>
+            'primarySignId' in sign &&
+            sign.primarySignId === primary.id &&
+            sign.quantity > 0 &&
+            sign.width > 0 &&
+            sign.height > 0
         ) as SecondarySign[]
-      }));
-    };
+      }))
+    }
 
     return (
       <View>
@@ -670,7 +829,10 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             {/* Header */}
             <View style={[styles.summaryRow, { backgroundColor: '#F8F9FA' }]}>
               {columns.map((col, index) => (
-                <Text key={index} style={[styles.phaseSummaryCell, { flex: col.flex }]}>
+                <Text
+                  key={index}
+                  style={[styles.phaseSummaryCell, { flex: col.flex }]}
+                >
                   {col.label}
                 </Text>
               ))}
@@ -680,7 +842,9 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
             {mptRental?.phases.map((phase, phaseIndex) => (
               <React.Fragment key={phaseIndex}>
                 {/* Phase Header */}
-                <View style={[styles.summaryRow, { backgroundColor: '#E4E4E4' }]}>
+                <View
+                  style={[styles.summaryRow, { backgroundColor: '#E4E4E4' }]}
+                >
                   <Text style={[styles.phaseSummaryCell, { flex: 12 }]}>
                     Phase {phaseIndex + 1}
                   </Text>
@@ -723,10 +887,22 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     {/* Secondary Signs */}
                     {group.secondaries.map((secondary, secondaryIndex) => (
                       <View key={secondaryIndex} style={[styles.summaryRow]}>
-                        <Text style={[styles.phaseSummaryCell, { flex: 1.5 }, { marginLeft: 20 }]}>
+                        <Text
+                          style={[
+                            styles.phaseSummaryCell,
+                            { flex: 1.5 },
+                            { marginLeft: 20 }
+                          ]}
+                        >
                           {secondary.designation}
                         </Text>
-                        <Text style={[styles.phaseSummaryCell, { flex: 1 }, { marginLeft: -20 }]}>
+                        <Text
+                          style={[
+                            styles.phaseSummaryCell,
+                            { flex: 1 },
+                            { marginLeft: -20 }
+                          ]}
+                        >
                           {Number(secondary.width).toFixed(1)} in.
                         </Text>
                         <Text style={[styles.phaseSummaryCell, { flex: 1 }]}>
@@ -761,9 +937,19 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     Phase {phaseIndex + 1} Totals
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
-                    HI: {returnSignTotalsByPhase(phase).HI.totalSquareFootage.toFixed(1)} sq. ft |
-                    DG: {returnSignTotalsByPhase(phase).DG.totalSquareFootage.toFixed(1)} sq. ft |
-                    Special: {returnSignTotalsByPhase(phase).Special.totalSquareFootage.toFixed(1)} sq. ft
+                    HI:{' '}
+                    {returnSignTotalsByPhase(
+                      phase
+                    ).HI.totalSquareFootage.toFixed(1)}{' '}
+                    sq. ft | DG:{' '}
+                    {returnSignTotalsByPhase(
+                      phase
+                    ).DG.totalSquareFootage.toFixed(1)}{' '}
+                    sq. ft | Special:{' '}
+                    {returnSignTotalsByPhase(
+                      phase
+                    ).Special.totalSquareFootage.toFixed(1)}{' '}
+                    sq. ft
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]}>
                     {getAssociatedSignEquipment(phase).BLights}
@@ -781,9 +967,10 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
                     Phase {phaseIndex + 1} Structure Totals
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
-                    4&apos; Type III: {getAssociatedSignEquipment(phase).fourFootTypeIII} |
-                    Post: {getAssociatedSignEquipment(phase).post} |
-                    H Stand: {getAssociatedSignEquipment(phase).hStand}
+                    4&apos; Type III:{' '}
+                    {getAssociatedSignEquipment(phase).fourFootTypeIII} | Post:{' '}
+                    {getAssociatedSignEquipment(phase).post} | H Stand:{' '}
+                    {getAssociatedSignEquipment(phase).hStand}
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]} />
                   <Text style={[styles.phaseSummaryCell, { flex: 1 }]} />
@@ -793,26 +980,47 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
           </View>
         </View>
       </View>
-    );
-  };
-
-  const Spacer = () => {
-    return <View style={{ height: 10, backgroundColor: '#00000080', borderTop: '1px solid black', borderBottom: '1px solid black' }}></View>
+    )
   }
 
-  const Footer = ({ pageNumber, totalPages }: { pageNumber: number, totalPages: number }) => (
-    <View style={[styles.container, { marginHorizontal: 10, marginTop: 'auto' }]}>
-      <Text style={{ flex: .33, textAlign: 'left', fontSize: 8 }}>ETC Form 61</Text>
-      <Text style={{ flex: .33, textAlign: 'center', fontSize: 8 }}>v1.01 Jan/2025</Text>
-      <Text style={{ flex: .33, textAlign: 'right', fontSize: 8 }}>
+  const Spacer = () => {
+    return (
+      <View
+        style={{
+          height: 10,
+          backgroundColor: '#00000080',
+          borderTop: '1px solid black',
+          borderBottom: '1px solid black'
+        }}
+      ></View>
+    )
+  }
+
+  const Footer = ({
+    pageNumber,
+    totalPages
+  }: {
+    pageNumber: number
+    totalPages: number
+  }) => (
+    <View
+      style={[styles.container, { marginHorizontal: 10, marginTop: 'auto' }]}
+    >
+      <Text style={{ flex: 0.33, textAlign: 'left', fontSize: 8 }}>
+        ETC Form 61
+      </Text>
+      <Text style={{ flex: 0.33, textAlign: 'center', fontSize: 8 }}>
+        v1.01 Jan/2025
+      </Text>
+      <Text style={{ flex: 0.33, textAlign: 'right', fontSize: 8 }}>
         Page {pageNumber} of {totalPages}
       </Text>
     </View>
-  );
+  )
 
   return (
     <Document title={`Bid Summary ${adminData.contractNumber}`}>
-      <Page size="A4" style={styles.page}>
+      <Page size='A4' style={styles.page}>
         <View style={styles.mainContainer}>
           <Title />
           <Header />
@@ -825,14 +1033,14 @@ const GenerateBidSummaryReactPDF = ({ adminData, mptRental, equipmentRental, fla
         </View>
         <Footer pageNumber={1} totalPages={2} />
       </Page>
-      <Page size="A4" style={styles.page}>
+      <Page size='A4' style={styles.page}>
         <View style={styles.mainContainer}>
           <SignList />
         </View>
         <Footer pageNumber={2} totalPages={2} />
       </Page>
     </Document>
-  );
-};
+  )
+}
 
-export default GenerateBidSummaryReactPDF;
+export default GenerateBidSummaryReactPDF

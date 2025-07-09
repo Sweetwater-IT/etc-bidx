@@ -13,8 +13,12 @@ import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import { formatDate } from '@/lib/formatUTCDate'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
-import { defaultMPTObject, defaultPhaseObject } from '@/types/default-objects/defaultMPTObject'
+import {
+  defaultMPTObject,
+  defaultPhaseObject
+} from '@/types/default-objects/defaultMPTObject'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
+import { Badge } from '@/components/ui/badge'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -48,6 +52,7 @@ interface SignOrder {
   rental: boolean
   perm_signs: boolean
   status: string
+  order_status?: string
   shop_status?: string
   assigned_to?: string
   signs?: any // The JSONB field containing sign data
@@ -75,7 +80,7 @@ const determineBranch = (id: number): string => {
   return 'Archived'
 }
 
-export default function SignOrderViewContent() {
+export default function SignOrderViewContent () {
   const params = useParams()
   const router = useRouter()
   const { dispatch, mptRental } = useEstimate()
@@ -148,9 +153,14 @@ export default function SignOrderViewContent() {
 
   // Validation function (same as SignOrderContentSimple)
   const isOrderInvalid = (): boolean => {
-    return (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' ||
-      !adminInfo.customer || !adminInfo.requestor || adminInfo.orderType.length === 0 || 
-      !adminInfo.orderDate || !adminInfo.needDate
+    return (
+      !adminInfo.contractNumber ||
+      adminInfo.contractNumber.trim() === '' ||
+      !adminInfo.customer ||
+      !adminInfo.requestor ||
+      adminInfo.orderType.length === 0 ||
+      !adminInfo.orderDate ||
+      !adminInfo.needDate
     )
   }
 
@@ -191,7 +201,9 @@ export default function SignOrderViewContent() {
         // Add branch information based on ID ranges (temporary solution)
         const orderWithBranch = {
           ...data.data,
-          branch: users.find(u => u.name === data.data.requestor)?.branches?.name || determineBranch(data.data.id)
+          branch:
+            users.find(u => u.name === data.data.requestor)?.branches?.name ||
+            determineBranch(data.data.id)
         }
 
         setSignOrder(orderWithBranch)
@@ -213,9 +225,9 @@ export default function SignOrderViewContent() {
 
         // Build order types array for adminInfo
         const ordersData: OrderTypes[] = []
-        if(data.data.perm_signs) ordersData.push('permanent signs')
-        if(data.data.sale) ordersData.push('sale')
-        if(data.data.rental) ordersData.push('rental')
+        if (data.data.perm_signs) ordersData.push('permanent signs')
+        if (data.data.sale) ordersData.push('sale')
+        if (data.data.rental) ordersData.push('rental')
 
         // Set adminInfo with complete data for submission
         setAdminInfo({
@@ -225,11 +237,19 @@ export default function SignOrderViewContent() {
             email: '',
             role: ''
           },
-          orderDate: data.data.order_date ? new Date(formatDate(data.data.order_date)) : new Date(),
-          needDate: data.data.need_date ? new Date(formatDate(data.data.need_date)) : null,
+          orderDate: data.data.order_date
+            ? new Date(formatDate(data.data.order_date))
+            : new Date(),
+          needDate: data.data.need_date
+            ? new Date(formatDate(data.data.need_date))
+            : null,
           jobNumber: data.data.job_number || '',
-          startDate: data.data.start_date ? new Date(formatDate(data.data.start_date)) : undefined,
-          endDate: data.data.end_date ? new Date(formatDate(data.data.end_date)) : undefined,
+          startDate: data.data.start_date
+            ? new Date(formatDate(data.data.start_date))
+            : undefined,
+          endDate: data.data.end_date
+            ? new Date(formatDate(data.data.end_date))
+            : undefined,
           selectedBranch: orderWithBranch.branch,
           customer: {
             id: data.data.contractor_id,
@@ -244,7 +264,7 @@ export default function SignOrderViewContent() {
             roles: [],
             names: [],
             contactIds: [],
-            url:'',
+            url: '',
             created: '',
             updated: '',
             city: '',
@@ -259,34 +279,41 @@ export default function SignOrderViewContent() {
         if (data.data.signs) {
           try {
             const signsData = data.data.signs
-            
+
             // Convert the signs data to the format expected by EstimateContext
-            const signsArray = Array.isArray(signsData) ? signsData : Object.values(signsData)
-            
+            const signsArray = Array.isArray(signsData)
+              ? signsData
+              : Object.values(signsData)
+
             // Dispatch signs to the EstimateContext
             if (signsArray.length > 0) {
               // Format signs for the context
               const formattedSigns = signsArray.map((sign: any) => {
                 // Debug log to see the sign structure
                 console.log('Original sign data:', sign)
-                
+
                 // Map structure values - handle "N/A" and other variations
-                let associatedStructure = 'none';
-                const displayStructure = 'LOOSE';
-                
+                let associatedStructure = 'none'
+                const displayStructure = 'LOOSE'
+
                 if (sign.structure && sign.structure !== 'N/A') {
                   // Check if it's already an associatedStructure value
-                  if (['fourFootTypeIII', 'hStand', 'post', 'none'].includes(sign.structure)) {
-                    associatedStructure = sign.structure;
+                  if (
+                    ['fourFootTypeIII', 'hStand', 'post', 'none'].includes(
+                      sign.structure
+                    )
+                  ) {
+                    associatedStructure = sign.structure
                   }
                   // Otherwise keep as 'none' for loose signs
                 }
-                
+
                 const formattedSign = {
                   ...sign,
                   id: sign.id || generateUniqueId(),
                   // Ensure required fields exist
-                  associatedStructure: sign.associatedStructure || associatedStructure,
+                  associatedStructure:
+                    sign.associatedStructure || associatedStructure,
                   displayStructure: sign.displayStructure || displayStructure,
                   bLights: Number(sign.bLights) || 0,
                   cover: sign.covers > 0 || sign.cover || false,
@@ -294,11 +321,11 @@ export default function SignOrderViewContent() {
                   width: Number(sign.width) || 0,
                   height: Number(sign.height) || 0
                 }
-                
+
                 console.log('Formatted sign:', formattedSign)
                 return formattedSign
               })
-              
+
               // Use copy MPT rental to set all signs at once
               dispatch({
                 type: 'COPY_MPT_RENTAL',
@@ -322,7 +349,9 @@ export default function SignOrderViewContent() {
                   structure: signData.structure || 'N/A',
                   bLights: Number(signData.bLights) || 0,
                   covers: Number(signData.covers) || 0,
-                  dimensions: `${signData.width || 0}" x ${signData.height || 0}"`
+                  dimensions: `${signData.width || 0}" x ${
+                    signData.height || 0
+                  }"`
                 }
               }
             )
@@ -386,8 +415,12 @@ export default function SignOrderViewContent() {
       // Submit data to the API
       const result = await saveSignOrder(signOrderData)
 
-      toast.success(`Sign order ${status === 'SUBMITTED' ? 'submitted' : 'saved'} successfully`)
-      
+      toast.success(
+        `Sign order ${
+          status === 'SUBMITTED' ? 'submitted' : 'saved'
+        } successfully`
+      )
+
       if (status === 'SUBMITTED') {
         router.push('/takeoffs/load-sheet')
       }
@@ -428,9 +461,7 @@ export default function SignOrderViewContent() {
     <>
       <SiteHeader>
         <div className='flex items-center justify-between'>
-          <h1 className='text-3xl font-bold mt-2 ml-0'>
-            View Sign Order
-          </h1>
+          <h1 className='text-3xl font-bold mt-2 ml-0'>View Sign Order</h1>
           <div className='flex gap-2'>
             <Button
               onClick={handleEditOrder}
@@ -446,7 +477,9 @@ export default function SignOrderViewContent() {
               disabled={
                 adminInfo.isSubmitting ||
                 mptRental.phases[0]?.signs?.length === 0 ||
-                isOrderInvalid()
+                isOrderInvalid() ||
+                (!!signOrder.order_status &&
+                  signOrder.order_status.trim().toLowerCase() === 'submitted')
               }
             >
               {adminInfo.isSubmitting ? 'Submitting...' : 'Submit order'}
@@ -470,8 +503,15 @@ export default function SignOrderViewContent() {
                     <div className='text-sm text-muted-foreground'>
                       Job Number
                     </div>
-                    <div className='text-base mt-1'>
+                    <div className='text-base mt-1 flex items-center gap-2'>
                       {signOrder.job_number || '-'}
+                      {signOrder.order_status &&
+                        signOrder.order_status.trim().toLowerCase() ===
+                          'submitted' && (
+                          <Badge className='bg-green-100 text-green-800 border-green-200'>
+                            Submitted
+                          </Badge>
+                        )}
                     </div>
                   </div>
 
@@ -494,9 +534,7 @@ export default function SignOrderViewContent() {
                   </div>
 
                   <div>
-                    <div className='text-sm text-muted-foreground'>
-                      Branch
-                    </div>
+                    <div className='text-sm text-muted-foreground'>Branch</div>
                     <div className='text-base mt-1'>
                       {signOrder.branch || '-'}
                     </div>
@@ -536,7 +574,11 @@ export default function SignOrderViewContent() {
                       Order Type
                     </div>
                     <div className='text-base mt-1'>
-                      {[isSale && 'Sale', isRental && 'Rental', isPermanent && 'Permanent Signs']
+                      {[
+                        isSale && 'Sale',
+                        isRental && 'Rental',
+                        isPermanent && 'Permanent Signs'
+                      ]
                         .filter(Boolean)
                         .join(', ') || '-'}
                     </div>
@@ -545,28 +587,29 @@ export default function SignOrderViewContent() {
               </div>
 
               {/* Equipment Totals - Takes 1/3 of the row */}
-              <EquipmentTotalsAccordion key={signItems.length}/>
+              <EquipmentTotalsAccordion key={signItems.length} />
             </div>
 
             {/* Sign Details Table - Full width below */}
             <div className='grid grid-cols-1 gap-8'>
               <div className='bg-white p-8 rounded-md shadow-sm border border-gray-100'>
-                <h2 className='text-xl font-semibold mb-4'>
-                  Sign Details
-                </h2>
+                <h2 className='text-xl font-semibold mb-4'>Sign Details</h2>
                 <DataTable
-                  data={signItems.length === 0 
-                    ? [{
-                        designation: '-',
-                        description: '-',
-                        dimensions: '-',
-                        quantity: '-',
-                        sheeting: '-',
-                        structure: '-',
-                        bLights: '-',
-                        covers: '-'
-                      } as any]
-                    : signItems
+                  data={
+                    signItems.length === 0
+                      ? [
+                          {
+                            designation: '-',
+                            description: '-',
+                            dimensions: '-',
+                            quantity: '-',
+                            sheeting: '-',
+                            structure: '-',
+                            bLights: '-',
+                            covers: '-'
+                          } as any
+                        ]
+                      : signItems
                   }
                   columns={SIGN_COLUMNS}
                   hideDropdown

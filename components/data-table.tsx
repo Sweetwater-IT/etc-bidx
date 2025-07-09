@@ -82,6 +82,7 @@ type ExtendedColumn<TData> = ColumnDef<TData, any> & {
 const handleStatusVariant = (status: string) => {
   // Normalize: lowercase, replace spaces and underscores with dashes
   const normalized = status.toLowerCase().replace(/\s|_/g, '-')
+  if (normalized === 'submitted') return 'successful'
   switch (normalized) {
     case 'in-progress':
     case 'in-process':
@@ -236,7 +237,8 @@ function formatCellValue (value: any, key: string) {
     key === 'status' ||
     key === 'projectStatus' ||
     key === 'billingStatus' ||
-    key === 'shop_status'
+    key === 'shop_status' ||
+    key === 'order_status'
   ) {
     const variant = handleStatusVariant(value)
 
@@ -261,6 +263,12 @@ function formatCellValue (value: any, key: string) {
             : value === 'on-order'
             ? 'On Order'
             : value
+          : key === 'order_status'
+          ? value === 'submitted' || value === 'SUBMITTED'
+            ? 'Submitted'
+            : value === 'draft' || value === 'DRAFT'
+            ? 'Draft'
+            : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
           : value}
       </Badge>
     )
@@ -652,17 +660,6 @@ export function DataTable<TData extends object> ({
                     </DropdownMenu>
                   )}
 
-                  {onViewDetails && (
-                    <DropdownMenuItem
-                      onClick={e => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        onViewDetails(row.original as TData)
-                      }}
-                    >
-                      View details
-                    </DropdownMenuItem>
-                  )}
                   {onViewJobSummary && (
                     <DropdownMenuItem
                       onClick={e => {

@@ -21,7 +21,10 @@ import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
 import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
-import { defaultMPTObject, defaultPhaseObject } from '@/types/default-objects/defaultMPTObject'
+import {
+  defaultMPTObject,
+  defaultPhaseObject
+} from '@/types/default-objects/defaultMPTObject'
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
@@ -38,6 +41,7 @@ export interface SignOrderAdminInformation {
   jobNumber: string
   isSubmitting: boolean
   contractNumber: string
+  orderNumber?: string
   startDate?: Date
   endDate?: Date
 }
@@ -46,7 +50,9 @@ interface Props {
   signOrderId?: number
 }
 
-export default function SignOrderContentSimple ({ signOrderId : initialSignOrderId } : Props) {
+export default function SignOrderContentSimple ({
+  signOrderId: initialSignOrderId
+}: Props) {
   const { dispatch, mptRental } = useEstimate()
   const router = useRouter()
 
@@ -60,16 +66,19 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     selectedBranch: 'All',
     jobNumber: '',
     isSubmitting: false,
-    contractNumber: ''
+    contractNumber: '',
+    orderNumber: undefined
   })
 
-  const { startLoading, stopLoading } = useLoading();
+  const { startLoading, stopLoading } = useLoading()
 
   const [localFiles, setLocalFiles] = useState<File[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
-  const [signOrderId, setSignOrderId] = useState<number | null>(initialSignOrderId ?? null)
+  const [signOrderId, setSignOrderId] = useState<number | null>(
+    initialSignOrderId ?? null
+  )
 
   // Autosave states - exactly like active bid header
   const [isSaving, setIsSaving] = useState<boolean>(false)
@@ -86,11 +95,16 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   const [loadingNotes, setLoadingNotes] = useState(false)
 
   const isOrderInvalid = (): boolean => {
-    return (!adminInfo.contractNumber || adminInfo.contractNumber.trim() === '' ||
-      !adminInfo.customer || !adminInfo.requestor || adminInfo.orderType.length === 0 || !adminInfo.orderDate
-      || !adminInfo.needDate
+    return (
+      !adminInfo.contractNumber ||
+      adminInfo.contractNumber.trim() === '' ||
+      !adminInfo.customer ||
+      !adminInfo.requestor ||
+      adminInfo.orderType.length === 0 ||
+      !adminInfo.orderDate ||
+      !adminInfo.needDate
     )
-  } 
+  }
 
   const fetchSignOrder = async () => {
     try {
@@ -122,13 +136,13 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
       }
 
       const ordersData: OrderTypes[] = []
-      if(data.data.perm_signs){
+      if (data.data.perm_signs) {
         ordersData.push('permanent signs')
       }
-      if(data.data.sale){
+      if (data.data.sale) {
         ordersData.push('sale')
       }
-      if(data.data.rental){
+      if (data.data.rental) {
         ordersData.push('rental')
       }
 
@@ -139,11 +153,23 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
           email: '',
           role: ''
         },
-        orderDate: (data.data.order_date && data.data.order_date !== '') ? new Date(formatDate(data.data.order_date)) : new Date(),
-        needDate: (data.data.need_date && data.data.need_date !== '') ? new Date(formatDate(data.data.need_date)) : new Date(),
+        orderDate:
+          data.data.order_date && data.data.order_date !== ''
+            ? new Date(formatDate(data.data.order_date))
+            : new Date(),
+        needDate:
+          data.data.need_date && data.data.need_date !== ''
+            ? new Date(formatDate(data.data.need_date))
+            : new Date(),
         jobNumber: data.data.job_number,
-        startDate: (data.data.start_date && data.data.start_date !== '') ? new Date(formatDate(data.data.start_date)) : undefined,
-        endDate: (data.data.end_date && data.data.end_date !== '') ? new Date(formatDate(data.data.end_date)) : undefined,
+        startDate:
+          data.data.start_date && data.data.start_date !== ''
+            ? new Date(formatDate(data.data.start_date))
+            : undefined,
+        endDate:
+          data.data.end_date && data.data.end_date !== ''
+            ? new Date(formatDate(data.data.end_date))
+            : undefined,
         selectedBranch: orderWithBranch.branch,
         customer: {
           id: data.data.contractor_id,
@@ -158,7 +184,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
           roles: [],
           names: [],
           contactIds: [],
-          url:'',
+          url: '',
           created: '',
           updated: '',
           city: '',
@@ -166,10 +192,11 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
           customerNumber: 1
         },
         isSubmitting: false,
-        orderType: ordersData
+        orderType: ordersData,
+        orderNumber: data.data.order_number || undefined
       })
 
-      if(data.data.order_status === 'SUBMITTED'){
+      if (data.data.order_status === 'SUBMITTED') {
         setAlreadySubmitted(true)
       }
 
@@ -211,11 +238,10 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
-    if(!initialSignOrderId){
+    if (!initialSignOrderId) {
       dispatch({ type: 'ADD_MPT_PHASE' })
-      return;
-    }
-    else {
+      return
+    } else {
       fetchSignOrder()
     }
   }, [dispatch])
@@ -243,11 +269,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged
 
     // Don't autosave if no changes, no contract number, or if it's never been saved
-    if (
-      isOrderInvalid() ||
-      !hasAnyStateChanged
-    )
-      return
+    if (isOrderInvalid() || !hasAnyStateChanged) return
     else {
       // Clear timeout if there is one
       if (saveTimeoutRef.current) {
@@ -272,7 +294,7 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
   const autosave = async () => {
     setIsSaving(true)
 
-    if(isOrderInvalid()){
+    if (isOrderInvalid()) {
       return
     }
 
@@ -301,7 +323,8 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
         order_type: adminInfo.orderType,
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
-        status: 'DRAFT' as const
+        status: 'DRAFT' as const,
+        order_number: adminInfo.orderNumber
       }
 
       const result = await saveSignOrder(signOrderData)
@@ -328,17 +351,19 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'} saved ${secondCounter} second${
-        secondCounter !== 1 ? 's' : ''
-      } ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'} saved ${minutesAgo} minute${
-        minutesAgo !== 1 ? 's' : ''
-      } ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `${alreadySubmitted ? 'Sign order ' : 'Draft'} saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order ' : 'Draft'
+      } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
@@ -466,7 +491,8 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
         order_type: adminInfo.orderType,
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
-        status
+        status,
+        order_number: adminInfo.orderNumber
       }
 
       // Submit data to the API
@@ -488,8 +514,8 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
     }
   }
 
-  return (
-    mptRental.phases.length > 0 ? <div className='flex flex-1 flex-col'>
+  return mptRental.phases.length > 0 ? (
+    <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
         heading='Create Sign Order'
         handleSubmit={() => {
@@ -504,14 +530,20 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
             </div>
             <div className='flex items-center gap-2'>
               <Button
-                onClick={() => handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')}
+                onClick={() =>
+                  handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')
+                }
                 disabled={
                   adminInfo.isSubmitting ||
-                  mptRental.phases[0].signs.length === 0
-                  || isOrderInvalid()
+                  mptRental.phases[0].signs.length === 0 ||
+                  isOrderInvalid()
                 }
               >
-                {adminInfo.isSubmitting ? 'Saving...' : initialSignOrderId ? 'Update order' : 'Done'}
+                {adminInfo.isSubmitting
+                  ? 'Saving...'
+                  : initialSignOrderId
+                  ? 'Update order'
+                  : 'Done'}
               </Button>
             </div>
           </div>
@@ -549,6 +581,8 @@ export default function SignOrderContentSimple ({ signOrderId : initialSignOrder
           />
         </div>
       </div>
-    </div> : <></>
+    </div>
+  ) : (
+    <></>
   )
 }
