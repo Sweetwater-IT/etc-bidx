@@ -16,20 +16,22 @@ import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
+import { formatDate } from "@/lib/formatUTCDate"; 
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
+  { key: "order_type", title: "Type" }, // Computed field  
+  { key: "requestor", title: "Requestor" },  
+  { key: "branch", title: "Branch" }, // Computed field  
   { key: 'order_status', title: "Order Status"},
-  { key: "requestor", title: "Requestor" },
   { key: "shop_status", title: "Build Status" },
-  { key: "branch", title: "Branch" }, // Computed field
-  { key: "customer", title: "Customer" }, // Computed field
-  { key: "order_date", title: "Order date" },
-  { key: "need_date", title: "Need date" },
-  { key: "order_type", title: "Type" }, // Computed field
   { key: "assigned_to", title: "Assigned to" },
+  { key: "customer", title: "Customer" }, // Computed field
   { key: "contract_number", title: "Contract Number" },
   { key: "job_number", title: "Job Number" },
+  { key: "order_date", title: "Order date" },  
+  { key: "need_date", title: "Need date" },
+  { key: 'target_date', title: 'Target Date' },
   { key: 'created_at', title: 'Created At'}
 ];
 
@@ -252,7 +254,8 @@ export default function SignOrderPage() {
             shop_status: order.shop_status || 'not-started',
             order_type: order.order_type || '-',
             order_number: order.order_number == null ? '' : order.order_number,
-            order_status: order.order_number == null ? 'DRAFT': 'SUBMITTED'
+            order_status: order.order_number == null ? 'DRAFT': 'SUBMITTED',
+            target_date: order.target_date ? formatDate(order.target_date) : '-',
           }));
 
           setQuotes(processedOrders);
