@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDecimal } from "@/lib/formatDecimals";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+import { useAuth } from "@/contexts/auth-context";
 
 
 const step: Step = {
@@ -66,6 +67,7 @@ const AdminInformationStep1 = () => {
   const source = searchParams?.get('source');
   const bidId = searchParams?.get('bidId')
   const { startLoading, stopLoading } = useLoading();
+  const { user } = useAuth();
 
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
@@ -257,6 +259,23 @@ const AdminInformationStep1 = () => {
       }));
     }
   }, [adminData.county]);
+
+  useEffect(() => {
+    // Set initial estimator to logged-in user if not already set
+    if (
+      estimators.length > 0 &&
+      user?.email &&
+      !adminData.estimator // only if not already set
+    ) {
+      const dbUser = estimators.find((u: any) => u.email === user.email);
+      if (dbUser) {
+        dispatch({
+          type: 'UPDATE_ADMIN_DATA',
+          payload: { key: 'estimator', value: dbUser.name }
+        });
+      }
+    }
+  }, [estimators, user, adminData.estimator, dispatch]);
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
     // Map the field names to the appropriate adminData structure
