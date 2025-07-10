@@ -268,22 +268,6 @@ const SignOrderBidSummaryPDF = ({
           </Text>
         </View>
       </View>
-      {/* Row 5: Delete (full width) */}
-      <View style={{ flexDirection: 'row' }}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: '#2563eb',
-            padding: 6,
-            border: '1px solid #fff',
-            alignItems: 'center'
-          }}
-        >
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>
-            Delete
-          </Text>
-        </View>
-      </View>
     </View>
   )
 
