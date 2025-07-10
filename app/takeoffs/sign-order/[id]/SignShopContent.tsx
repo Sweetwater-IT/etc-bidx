@@ -389,7 +389,6 @@ const SignShopContent = ({ id }: Props) => {
         endDate: signOrder?.need_date
           ? new Date(signOrder.need_date)
           : undefined
-        // Add more mappings as needed
       },
       mptRental: {
         ...defaultMPTObject,
