@@ -5,6 +5,7 @@ import { ChartPieRow } from "@/components/chart-pie-row";
 import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { TableAndScatter } from "@/components/table-and-scatter";
+import { DashboardGreeting } from "@/components/dashboard-greeting";
 import {
   Card,
   CardDescription,
@@ -41,24 +42,10 @@ export default async function DashboardPage({ searchParams }: Props) {
   // Fetch the estimate data with optional date filtering
   const estimateData = await getEstimateData(startDate, endDate);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning, Napoleon";
-    if (hour < 18) return "Good afternoon, Napoleon";
-    return "Good evening, Napoleon";
-  };
-
+  
   // Create summary cards data based on the fetched metrics
   const summaryCards = [
-    {
-      title: new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-      value: getGreeting(),
-    },
+    // Remove greeting card, handled by DashboardGreeting
     {
       title: "Total Bids",
       value: estimateData
@@ -115,17 +102,12 @@ export default async function DashboardPage({ searchParams }: Props) {
               <div className="px-6">
                 {/* Greeting Section - No Card */}
                 <div className="mb-6">
-                  <p className="text-muted-foreground text-sm">
-                    {summaryCards[0].title}
-                  </p>
-                  <h2 className="text-2xl font-semibold">
-                    {summaryCards[0].value}
-                  </h2>
+                  <DashboardGreeting />
                 </div>
 
                 {/* Metrics Table */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {summaryCards.slice(1).map((card, index) => (
+                  {summaryCards.map((card, index) => (
                     <Card key={index} className="h-full">
                       <CardHeader>
                         <CardDescription>{card.title}</CardDescription>
