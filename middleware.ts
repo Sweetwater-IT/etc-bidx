@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Correct way to check for Supabase session cookie
-  const hasSupabaseSession = request.cookies.getAll().some((cookie) => cookie.name.startsWith('sb-'));
+  // Check for the manually set Supabase auth cookie
+  const hasSupabaseToken = !!request.cookies.get('supabase_token');
   const { pathname } = request.nextUrl;
-  console.log(hasSupabaseSession);
+  console.log(hasSupabaseToken);
   console.log(pathname);
   // Allow access to the password entry (now Google Auth) page, API routes, and static assets
   if (pathname.startsWith('/password-entry') || 
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   }
 
   // If not authenticated, redirect to the Google Auth page
-  if (!hasSupabaseSession) {
+  if (!hasSupabaseToken) {
     const url = request.nextUrl.clone();
     url.pathname = '/password-entry';
     return NextResponse.redirect(url);

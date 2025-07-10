@@ -68,6 +68,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             // User authorized - redirect to dashboard
             toast.success('Welcome!');
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            
+            const access_token = session?.access_token;
+            await fetch('/api/set-cookie', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ token: access_token }),
+            });
+            router.push('/');
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
