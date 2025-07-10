@@ -171,14 +171,18 @@ export function CreateJobSheet ({
   }, [])
 
   useEffect(() => {
-    if (open && !formData.estimator && user) {
-      const userName =
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email ||
-        "";
-      setFormData(prev => ({ ...prev, estimator: userName }));
+    async function setInitialEstimator() {
+      if (open && !formData.estimator && user) {
+        let name = user.user_metadata?.full_name || user.user_metadata?.name || user.email || "";
+        try {
+          const usersDb = await fetchReferenceData("users");
+          const dbUser = usersDb.find((u: any) => u.email === user.email);
+          if (dbUser) name = dbUser.name;
+        } catch (err) {}
+        setFormData(prev => ({ ...prev, estimator: name }));
+      }
     }
+    setInitialEstimator();
   }, [open, user]);
 
   const handleInputChange = (field: string, value: string) => {
