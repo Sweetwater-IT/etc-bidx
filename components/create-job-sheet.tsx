@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils'
 import { fetchReferenceData } from '@/lib/api-client'
 import { County } from '@/types/TCounty'
 import { toast } from 'sonner'
+import { useAuth } from "@/contexts/auth-context";
 
 interface CreateJobSheetProps {
   open: boolean
@@ -108,6 +109,8 @@ export function CreateJobSheet ({
 
   const [openCounty, setOpenCounty] = useState(false)
 
+  const { user } = useAuth();
+
   // Format decimal function (from admin component)
   function formatDecimal (value: string): string {
     return (parseInt(value, 10) / 100).toFixed(2)
@@ -166,6 +169,21 @@ export function CreateJobSheet ({
 
     fetchData()
   }, [])
+
+  useEffect(() => {
+    async function setInitialEstimator() {
+      if (open && !formData.estimator && user) {
+        let name = user.user_metadata?.full_name || user.user_metadata?.name || user.email || "";
+        try {
+          const usersDb = await fetchReferenceData("users");
+          const dbUser = usersDb.find((u: any) => u.email === user.email);
+          if (dbUser) name = dbUser.name;
+        } catch (err) {}
+        setFormData(prev => ({ ...prev, estimator: name }));
+      }
+    }
+    setInitialEstimator();
+  }, [open, user]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))

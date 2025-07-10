@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { GlobalLoading } from "@/components/global-loading";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/contexts/auth-context";
 
 export const metadata: Metadata = {
   title: "ETC",
@@ -23,9 +24,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <AuthProvider>
             {children}
             <GlobalLoading />
             <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -58,6 +58,7 @@ import {
 } from "@/data/available-jobs";
 import { formatDate } from "@/lib/formatUTCDate";
 import { Separator } from "./ui/separator";
+import { useAuth } from "@/contexts/auth-context";
 
 interface OpenBidSheetProps {
   open: boolean;
@@ -114,6 +115,8 @@ export function OpenBidSheet({
     lettingDate: false,
     // dueDate: false,
   });
+
+  const { user } = useAuth();
 
   // Function to check if all required fields are filled
   const areAllRequiredFieldsFilled = () => {
@@ -251,6 +254,22 @@ export function OpenBidSheet({
       });
     }
   }, [job, open]);
+
+  useEffect(() => {
+    // Set initial requestor to logged-in user if not editing a job
+    async function setInitialRequestor() {
+      if (open && !job && user) {
+        let name = user.user_metadata?.full_name || user.user_metadata?.name || user.email || "";
+        try {
+          const usersDb = await fetchReferenceData("users");
+          const dbUser = usersDb.find((u: any) => u.email === user.email);
+          if (dbUser) name = dbUser.name;
+        } catch (err) {}
+        setRequestor(name);
+      }
+    }
+    setInitialRequestor();
+  }, [open, job, user]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

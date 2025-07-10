@@ -1,42 +1,51 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import Image from 'next/image';
 
-export default function PasswordEntryPage() {
-    const [password, setPassword] = useState('');
-    const router = useRouter();
+export default function GoogleAuthPage() {
+  const { signInWithGoogle, loading } = useAuth();
 
-    const handleLogin = () => {
-        if (password === '444') {
-            // Set a cookie to indicate authentication
-            document.cookie = 'isAuthenticated=true; path=/; max-age=3600'; // Expires in 1 hour
-            toast.success('Login successful!');
-            // Redirect to the original page or a default dashboard
-            router.push('/'); 
-        } else {
-            toast.error('Incorrect password. Please try again.');
-        }
-    };
-
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-            <div className="p-8 bg-white rounded shadow-md w-full max-w-sm">
-                <h1 className="text-2xl font-bold mb-6 text-center">Enter Password to Access</h1>
-                <Input
-                    type="password"
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mb-4"
-                />
-                <Button onClick={handleLogin} className="w-full">
-                    Submit
-                </Button>
-            </div>
-        </div>
-    );
+  return (
+    <div className="min-h-screen flex relative">
+      {/* Top Left Brand */}
+      <div className="absolute top-6 left-8 z-20 flex items-center gap-2">
+        <Image
+          src="/logo.jpg"
+          alt="ETC Logo"
+          width={90} // or your preferred size
+          height={32}
+          className="rounded"
+        />
+      </div>
+      {/* Left: Login Box */}
+      <div className="flex flex-col justify-center w-full max-w-md px-8 py-12 bg-white z-10 mx-auto">
+        <h1 className="text-2xl font-bold mb-2 text-center">Login to your account</h1>
+        <p className="mb-6 text-gray-500 text-center text-[13px]">Use your gmail to login to your account</p>
+        <form className="space-y-4">
+          <Button
+            onClick={signInWithGoogle}
+            className="w-full"
+            variant="outline"
+            disabled={loading}
+            type="button"
+          >
+            {loading ? 'Loading...' : 'Sign in with Google'}
+          </Button>
+        </form>
+      </div>
+      {/* Right: Truck Image */}
+      <div className="hidden md:block flex-1 relative bg-gray-100">
+        <Image
+          src="/etc-truck.jpg"
+          alt="ETC Truck"
+          layout="fill"
+          objectFit="cover"
+          className="rounded-r-lg"
+          priority
+        />
+      </div>
+    </div>
+  );
 } 
