@@ -43,6 +43,14 @@ import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
 import { useRouter } from 'next/navigation'
 import '@/components/pages/active-bid/signs/no-spinner.css'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
+import SignOrderBidSummaryPDF from '@/components/sheets/SignOrderBidSummaryPDF'
+import { PDFViewer } from '@react-pdf/renderer'
+import { Command, CommandGroup, CommandItem } from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover'
 
 interface Props {
   id: number
@@ -59,6 +67,9 @@ const SignShopContent = ({ id }: Props) => {
   // const [shopSigns, setShopSigns] = useState<(ExtendedPrimarySign | ExtendedSecondarySign)[]>([])
 
   const { isLoading, startLoading, stopLoading } = useLoading()
+
+  // Remove worksheet dropdown state
+  const [openPdfDialog, setOpenPdfDialog] = useState(false)
 
   // Get signs with shop tracking from context
   const getShopSigns = (): (ExtendedPrimarySign | ExtendedSecondarySign)[] => {
@@ -362,6 +373,36 @@ const SignShopContent = ({ id }: Props) => {
     })
   }
 
+  const mapSignOrderToBidSummaryProps = (signOrder, mptRental) => {
+    // Map signOrder fields to the expected adminData structure for the PDF
+    return {
+      adminData: {
+        contractNumber:
+          signOrder?.contract_number || signOrder?.contractNumber || '-',
+        estimator: signOrder?.requestor || '-',
+        county: { name: signOrder?.branch || '-' },
+        srRoute: '-',
+        location: '-',
+        startDate: signOrder?.order_date
+          ? new Date(signOrder.order_date)
+          : undefined,
+        endDate: signOrder?.need_date
+          ? new Date(signOrder.need_date)
+          : undefined
+        // Add more mappings as needed
+      },
+      mptRental: {
+        ...defaultMPTObject,
+        phases: [
+          {
+            ...((mptRental?.phases && mptRental.phases[0]) || {}),
+            signs: mptRental?.phases?.[0]?.signs || []
+          }
+        ]
+      }
+    }
+  }
+
   return (
     <>
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
@@ -446,6 +487,23 @@ const SignShopContent = ({ id }: Props) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Worksheet PDF Dialog */}
+      {openPdfDialog && (
+        <Dialog open={openPdfDialog} onOpenChange={setOpenPdfDialog}>
+          <DialogContent className='max-w-4xl h-fit w-fit'>
+            <DialogTitle>Sign Order Worksheet</DialogTitle>
+            <div className='mt-4'>
+              <PDFViewer height={600} width={800}>
+                <SignOrderBidSummaryPDF
+                  {...mapSignOrderToBidSummaryProps(signOrder, mptRental)}
+                  equipmentRental={[]}
+                  flagging={undefined}
+                />
+              </PDFViewer>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       <SiteHeader>
         <div className='flex items-center justify-between'>
           <h1 className='text-3xl font-bold mt-2 ml-0'>
