@@ -511,17 +511,16 @@ const SignShopContent = ({ id }: Props) => {
           </h1>
           <div className='flex gap-2'>
             <Button
+              onClick={handleSaveChanges}
+              className='bg-black text-white hover:bg-gray-900'
+            >
+              Save Changes
+            </Button>
+            <Button
               onClick={() => setShowConfirmDialog(true)}
               className='bg-primary text-white hover:bg-primary/90'
             >
               Send to Production
-            </Button>
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() => setOpenPdfDialog(true)}
-            >
-              View Worksheet
             </Button>
             <Button variant='outline' onClick={handleExport}>
               Export
@@ -547,12 +546,6 @@ const SignShopContent = ({ id }: Props) => {
                   >
                     <Plus className='h-4 w-4 mr-2' />
                     Add New Sign
-                  </Button>
-                  <Button
-                    onClick={handleSaveChanges}
-                    className='bg-green-600 text-white hover:bg-green-700'
-                  >
-                    Save Changes
                   </Button>
                 </div>
               </div>
