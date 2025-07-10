@@ -8,11 +8,13 @@ export function middleware(request: NextRequest) {
   console.log(hasSupabaseToken);
   console.log(pathname);
   // Allow access to the password entry (now Google Auth) page, API routes, and static assets
-  if (pathname.startsWith('/password-entry') || 
-      pathname.startsWith('/api') || 
-      pathname.startsWith('/_next/static') || 
-      pathname.startsWith('/_next/image') ||
-      pathname.startsWith('/favicon.ico')) {
+  if (
+    pathname.startsWith('/password-entry') || 
+    pathname.startsWith('/api') || 
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon.ico') ||
+    /\.(jpg|jpeg|png|svg|webp|ico)$/i.test(pathname) // allow images and favicon
+  ) {
     return NextResponse.next();
   }
 
