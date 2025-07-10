@@ -13,6 +13,7 @@ const step = {
   description: "Input trip and labor details",
 };
 
+
 const TripAndLaborStep4 = ({
   currentPhase
 }: {
