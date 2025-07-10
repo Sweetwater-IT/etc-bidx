@@ -211,7 +211,7 @@ export function QuoteNotes ({
                           </DropdownMenu>
                         </div>
                         <div className='text-xs text-muted-foreground'>
-                          {formatDateTime(note.timestamp)} by
+                          {formatDateTime(note.timestamp)} by{' '}
                           {user?.email || ''}
                         </div>
                       </>
