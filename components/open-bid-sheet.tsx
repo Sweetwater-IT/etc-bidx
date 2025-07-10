@@ -257,14 +257,18 @@ export function OpenBidSheet({
 
   useEffect(() => {
     // Set initial requestor to logged-in user if not editing a job
-    if (open && !job && user) {
-      const userName =
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email ||
-        "";
-      setRequestor(userName);
+    async function setInitialRequestor() {
+      if (open && !job && user) {
+        let name = user.user_metadata?.full_name || user.user_metadata?.name || user.email || "";
+        try {
+          const usersDb = await fetchReferenceData("users");
+          const dbUser = usersDb.find((u: any) => u.email === user.email);
+          if (dbUser) name = dbUser.name;
+        } catch (err) {}
+        setRequestor(name);
+      }
     }
+    setInitialRequestor();
   }, [open, job, user]);
 
   const handleOpenChange = (open: boolean) => {
