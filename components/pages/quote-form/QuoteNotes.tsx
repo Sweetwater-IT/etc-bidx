@@ -10,6 +10,7 @@ import {
   DropdownMenuItem
 } from '@/components/ui/dropdown-menu'
 import { MoreVertical } from 'lucide-react'
+import { useAuth } from "@/contexts/auth-context";
 
 export interface Note {
   text: string
@@ -78,6 +79,7 @@ export function QuoteNotes ({
   const [editValue, setEditValue] = useState('')
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const { user } = useAuth();
 
   const handleAddNote = () => {
     setIsAdding(true)
@@ -209,8 +211,8 @@ export function QuoteNotes ({
                           </DropdownMenu>
                         </div>
                         <div className='text-xs text-muted-foreground'>
-                          {formatDateTime(note.timestamp)} by
-                          kenneth.mack@live.com
+                          {formatDateTime(note.timestamp)} by{' '}
+                          {user?.email || ''}
                         </div>
                       </>
                     )}
