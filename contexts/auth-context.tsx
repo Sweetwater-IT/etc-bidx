@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               },
               body: JSON.stringify({ token: access_token }),
             });
-            window.location.href = '/';
+            // window.location.href = '/';
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
