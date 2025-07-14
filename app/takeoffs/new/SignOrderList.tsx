@@ -66,13 +66,13 @@ const SIGN_COLUMNS = [
     title: 'Sheeting',
   },
   {
-    key: 'structure',
-    title: 'Structure',
-    bidOnly: true,
-  },
-  {
     key: 'substrate',
     title: 'Substrate',
+  },
+  {
+    key: 'displayStructure',
+    title: 'Structure',
+    bidOnly: true,
   },
   {
     key: 'stiffener',
