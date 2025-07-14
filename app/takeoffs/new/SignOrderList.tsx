@@ -66,12 +66,22 @@ const SIGN_COLUMNS = [
     title: 'Sheeting'
   },
   {
+    key: 'structure',
+    title: 'Structure',
+    bidOnly: true
+  },
+  {
     key: 'substrate',
     title: 'Substrate'
   },
   {
     key: 'stiffener',
     title: 'Stiffener'
+  },
+  {
+    key: 'bLights',
+    title: 'B-Lights',
+    bidOnly: true
   },
   {
     key: 'inStock',
@@ -99,6 +109,7 @@ interface Props {
   currentPhase?: number
   onlyTable?: boolean
   shopMode?: boolean
+  bidMode?: boolean
   updateShopTracking?: (
     signId: string,
     field: 'make' | 'order' | 'inStock',
@@ -115,6 +126,7 @@ export function SignOrderList ({
   currentPhase = 0,
   onlyTable = false,
   shopMode = false,
+  bidMode = true,
   updateShopTracking,
   adjustShopValue
 }: Props) {
@@ -418,7 +430,8 @@ export function SignOrderList ({
           <TableHeader className='bg-muted/50'>
             <TableRow>
               {SIGN_COLUMNS.filter(sc =>
-                shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly
+                if (shopMode) return !sc.bidOnly || sc.shopOnly === true; // Show shop columns in shop mode
+                return !sc.shopOnly || sc.bidOnly === true; // Show bid columns in bid mode
               ).map(sc => (
                 <TableHead
                   key={sc.key}
