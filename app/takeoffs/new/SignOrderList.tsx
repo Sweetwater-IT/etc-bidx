@@ -1,155 +1,162 @@
-'use client'
+'use client';
 
-import { Button } from '@/components/ui/button'
-import { ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useEstimate } from '@/contexts/EstimateContext'
-import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
-import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions'
+import { Button } from '@/components/ui/button';
+import { ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useEstimate } from '@/contexts/EstimateContext';
+import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
+import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
 import {
   EquipmentType,
   PrimarySign,
   SecondarySign,
   ExtendedPrimarySign,
-  ExtendedSecondarySign
-} from '@/types/MPTEquipment'
+  ExtendedSecondarySign,
+} from '@/types/MPTEquipment';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import DesignationSearcher from '@/components/pages/active-bid/signs/DesignationSearcher'
+  TableRow,
+} from '@/components/ui/table';
+import DesignationSearcher from '@/components/pages/active-bid/signs/DesignationSearcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import SignEditingSheet from './SignEditingSheet'
-import { safeNumber } from '@/lib/safe-number'
-import { Input } from '@/components/ui/input'
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import SignEditingSheet from './SignEditingSheet';
+import { safeNumber } from '@/lib/safe-number';
+import { Input } from '@/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import '@/components/pages/active-bid/signs/no-spinner.css'
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import '@/components/pages/active-bid/signs/no-spinner.css';
 
 const SIGN_COLUMNS = [
   {
     key: 'designation',
-    title: 'Designation'
+    title: 'Designation',
   },
   {
     key: 'description',
-    title: 'Description'
+    title: 'Description',
   },
   {
     key: 'quantity',
     title: 'Quantity',
-    centered: true
-  },  
+    centered: true,
+  },
   {
     key: 'width',
-    title: 'Width'
+    title: 'Width',
   },
   {
     key: 'height',
-    title: 'Height'
+    title: 'Height',
   },
   {
     key: 'sheeting',
-    title: 'Sheeting'
+    title: 'Sheeting',
+  },
+  {
+    key: 'structure',
+    title: 'Structure',
+    bidOnly: true,
   },
   {
     key: 'substrate',
-    title: 'Substrate'
+    title: 'Substrate',
   },
   {
     key: 'stiffener',
-    title: 'Stiffener'
+    title: 'Stiffener',
+  },
+  {
+    key: 'bLights',
+    title: 'B-Lights',
+    bidOnly: true,
   },
   {
     key: 'inStock',
     title: 'In Stock',
-    shopOnly: true
+    shopOnly: true,
   },
   {
     key: 'order',
     title: 'Order',
-    shopOnly: true
+    shopOnly: true,
   },
   {
     key: 'make',
     title: 'Make',
-    shopOnly: true
-  },  
+    shopOnly: true,
+  },
   {
     key: 'actions',
     title: '',
-    sticky: true
-  }
-]
+    sticky: true,
+  },
+];
 
 interface Props {
-  currentPhase?: number
-  onlyTable?: boolean
-  shopMode?: boolean
+  currentPhase?: number;
+  onlyTable?: boolean;
+  shopMode?: boolean;
+  bidMode?: boolean;
   updateShopTracking?: (
     signId: string,
     field: 'make' | 'order' | 'inStock',
     value: number
-  ) => void
+  ) => void;
   adjustShopValue?: (
     signId: string,
     field: 'make' | 'order' | 'inStock',
     delta: number
-  ) => void
+  ) => void;
 }
 
-export function SignOrderList ({
+export function SignOrderList({
   currentPhase = 0,
   onlyTable = false,
   shopMode = false,
+  bidMode = true,
   updateShopTracking,
-  adjustShopValue
+  adjustShopValue,
 }: Props) {
-  const { mptRental, dispatch } = useEstimate()
+  const { mptRental, dispatch } = useEstimate();
 
-  const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0)
-
-  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>()
-  const [open, setOpen] = useState<boolean>(false)
-  const [mode, setMode] = useState<'create' | 'edit'>('create')
+  const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
+  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>();
+  const [open, setOpen] = useState<boolean>(false);
+  const [mode, setMode] = useState<'create' | 'edit'>('create');
 
   useEffect(() => {
     if (localSign && localSign.designation !== '') {
-      setOpen(true)
+      setOpen(true);
     }
-  }, [localSign?.designation])
+  }, [localSign?.designation]);
 
   const handleClose = () => {
-    setLocalSign(undefined)
-    setOpen(false)
-  }
+    setLocalSign(undefined);
+    setOpen(false);
+  };
 
-  const getCurrentEquipmentQuantity = (
-    equipmentType: EquipmentType
-  ): number => {
-    const currentPhaseData = mptRental.phases[currentPhase]
-    return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0
-  }
+  const getCurrentEquipmentQuantity = (equipmentType: EquipmentType): number => {
+    const currentPhaseData = mptRental.phases[currentPhase];
+    return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0;
+  };
 
   const deleteAssociatedEquipmentInfo = (signId: string) => {
-    const deletedSign: PrimarySign | undefined = mptRental.phases[
-      currentPhase
-    ].signs.find(
+    const deletedSign = mptRental.phases[currentPhase].signs.find(
       s => Object.hasOwn(s, 'associatedStructure') && s.id === signId
-    ) as PrimarySign | undefined
+    ) as PrimarySign | undefined;
 
     if (deletedSign && deletedSign.quantity > 0) {
       if (deletedSign.cover) {
@@ -159,9 +166,9 @@ export function SignOrderList ({
             phaseNumber: 0,
             equipmentType: 'covers',
             equipmentProperty: 'quantity',
-            value: getCurrentEquipmentQuantity('covers') - deletedSign.quantity
-          }
-        })
+            value: getCurrentEquipmentQuantity('covers') - deletedSign.quantity,
+          },
+        });
       }
       if (deletedSign.associatedStructure !== 'none') {
         dispatch({
@@ -172,9 +179,9 @@ export function SignOrderList ({
             equipmentProperty: 'quantity',
             value:
               getCurrentEquipmentQuantity(deletedSign.associatedStructure) -
-              deletedSign.quantity
-          }
-        })
+              deletedSign.quantity,
+          },
+        });
       }
       if (deletedSign.bLights > 0) {
         dispatch({
@@ -185,36 +192,35 @@ export function SignOrderList ({
             equipmentProperty: 'quantity',
             value:
               getCurrentEquipmentQuantity('BLights') -
-              deletedSign.quantity * deletedSign.bLights
-          }
-        })
+              deletedSign.quantity * deletedSign.bLights,
+          },
+        });
       }
     }
-  }
+  };
 
   useEffect(() => {
     if (!open) {
       const invalidSigns = mptRental.phases[currentPhase].signs.filter(
         s => s.quantity < 1 || s.height < 1 || s.width < 1 || !s.designation
-      )
+      );
       invalidSigns.forEach(s => {
-        dispatch({ type: 'DELETE_MPT_SIGN', payload: s.id })
-        deleteAssociatedEquipmentInfo(s.id)
-      })
+        dispatch({ type: 'DELETE_MPT_SIGN', payload: s.id });
+        deleteAssociatedEquipmentInfo(s.id);
+      });
     }
-  }, [open])
+  }, [open]);
 
   useEffect(() => {
-    const signTotals = returnSignTotalsSquareFootage(mptRental)
-
+    const signTotals = returnSignTotalsSquareFootage(mptRental);
     setSquareFootageTotal(
       signTotals.HI.totalSquareFootage +
       signTotals.DG.totalSquareFootage +
-      signTotals.FYG.totalSquareFootage + 
+      signTotals.FYG.totalSquareFootage +
       signTotals.TYPEXI.totalSquareFootage +
       signTotals.Special.totalSquareFootage
-    )
-  }, [mptRental])
+    );
+  }, [mptRental]);
 
   const handleSignAddition = () => {
     const defaultSign: PrimarySign = {
@@ -231,36 +237,29 @@ export function SignOrderList ({
       isCustom: false,
       bLightsColor: undefined,
       description: '',
-      substrate: 'Plastic'
-    }
+      substrate: 'Plastic',
+    };
     dispatch({
       type: 'ADD_MPT_SIGN',
       payload: {
         phaseNumber: 0,
-        sign: defaultSign
-      }
-    })
-    setLocalSign(defaultSign)
-  }
+        sign: defaultSign,
+      },
+    });
+    setLocalSign(defaultSign);
+  };
 
-  const getSecondarySignsForPrimary = (
-    primarySignId: string
-  ): SecondarySign[] => {
-    const desiredPhase = mptRental.phases[currentPhase]
-    if (!desiredPhase) return []
+  const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
+    const desiredPhase = mptRental.phases[currentPhase];
+    if (!desiredPhase) return [];
 
     return desiredPhase.signs.filter(
-      (s): s is SecondarySign =>
-        'primarySignId' in s && s.primarySignId === primarySignId
-    )
-  }
+      (s): s is SecondarySign => 'primarySignId' in s && s.primarySignId === primarySignId
+    );
+  };
 
-  const updateSecondarySignQuantities = (
-    primarySignId: string,
-    newQuantity: number
-  ) => {
-    const secondarySigns = getSecondarySignsForPrimary(primarySignId)
-
+  const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
+    const secondarySigns = getSecondarySignsForPrimary(primarySignId);
     secondarySigns.forEach(secondarySign => {
       dispatch({
         type: 'UPDATE_MPT_SIGN',
@@ -268,121 +267,94 @@ export function SignOrderList ({
           phase: currentPhase,
           signId: secondarySign.id,
           key: 'quantity',
-          value: newQuantity
-        }
-      })
-    })
-  }
+          value: newQuantity,
+        },
+      });
+    });
+  };
 
-  const updateEquipmentQuantity = (
-    equipmentType: EquipmentType,
-    newQuantity: number
-  ) => {
+  const updateEquipmentQuantity = (equipmentType: EquipmentType, newQuantity: number) => {
     dispatch({
       type: 'ADD_MPT_ITEM_NOT_SIGN',
       payload: {
         phaseNumber: currentPhase,
         equipmentType: equipmentType,
         equipmentProperty: 'quantity',
-        value: newQuantity
-      }
-    })
-  }
+        value: newQuantity,
+      },
+    });
+  };
 
   const handleQuantityChange = (signId: string, quantity: number) => {
-    const currentSign = mptRental.phases[currentPhase].signs.find(
-      s => s.id === signId
-    )
-    if (
-      currentSign &&
-      (Object.hasOwn(currentSign, 'associatedStructure') ||
-        Object.hasOwn(currentSign, 'make'))
-    ) {
-      const qtyChange = quantity - currentSign.quantity //if decrementing, will get -1, otherwise +1 or other change for input change
-      // Update associated structure quantities
+    const currentSign = mptRental.phases[currentPhase].signs.find(s => s.id === signId);
+    if (currentSign && (Object.hasOwn(currentSign, 'associatedStructure') || Object.hasOwn(currentSign, 'make'))) {
+      const qtyChange = quantity - currentSign.quantity;
       if ((currentSign as PrimarySign).associatedStructure !== 'none') {
-        const currentStructureQuantity = getCurrentEquipmentQuantity(
-          (currentSign as PrimarySign).associatedStructure as any
-        )
-        const newStructureQuantity = currentStructureQuantity + qtyChange
-        updateEquipmentQuantity(
-          (currentSign as PrimarySign).associatedStructure as any,
-          Math.max(0, newStructureQuantity)
-        )
+        const currentStructureQuantity = getCurrentEquipmentQuantity((currentSign as PrimarySign).associatedStructure as any);
+        const newStructureQuantity = currentStructureQuantity + qtyChange;
+        updateEquipmentQuantity((currentSign as PrimarySign).associatedStructure as any, Math.max(0, newStructureQuantity));
       }
-
-      // Update B-Lights quantities
       if ((currentSign as PrimarySign).bLights > 0) {
-        const totalBLights = (currentSign as PrimarySign).bLights * quantity
-        updateEquipmentQuantity('BLights' as EquipmentType, totalBLights)
+        const totalBLights = (currentSign as PrimarySign).bLights * quantity;
+        updateEquipmentQuantity('BLights' as EquipmentType, totalBLights);
       }
-
-      // Update covers quantities
       if ((currentSign as PrimarySign).cover) {
-        updateEquipmentQuantity('covers' as EquipmentType, quantity)
+        updateEquipmentQuantity('covers' as EquipmentType, quantity);
       }
-      // Update all secondary sign quantities to match the new primary sign quantity
-      updateSecondarySignQuantities(currentSign.id, quantity)
+      updateSecondarySignQuantities(currentSign.id, quantity);
       dispatch({
         type: 'UPDATE_MPT_SIGN',
         payload: {
           phase: currentPhase,
           signId: signId,
           key: 'quantity',
-          value: quantity
-        }
-      })
+          value: quantity,
+        },
+      });
     }
-  }
+  };
 
   useEffect(() => {
-    if (mptRental.phases.length < 1) return
-    const latestSign =
-      mptRental.phases[currentPhase].signs[
-        mptRental.phases[currentPhase].signs.length - 1
-      ]
+    if (mptRental.phases.length < 1) return;
+    const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
     if (onlyTable && latestSign && latestSign.quantity === 0) {
-      setLocalSign(latestSign)
+      setLocalSign(latestSign);
     }
-  }, [mptRental.phases[currentPhase].signs])
+  }, [mptRental.phases[currentPhase].signs]);
 
   const formatColumnValue = (
-    sign:
-      | PrimarySign
-      | SecondarySign
-      | ExtendedPrimarySign
-      | ExtendedSecondarySign,
+    sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign,
     column: keyof PrimarySign
   ) => {
-    const isPrimary = !Object.hasOwn(sign, 'primarySignId')
+    const isPrimary = !Object.hasOwn(sign, 'primarySignId');
 
-    let valueToReturn: any
+    let valueToReturn: any;
 
     switch (column) {
       case 'stiffener':
         if (!isPrimary) {
-          valueToReturn = '-'
+          valueToReturn = '-';
         } else {
-          valueToReturn = (sign as PrimarySign).stiffener ? 'Yes' : 'No'
+          valueToReturn = (sign as PrimarySign).stiffener ? 'Yes' : 'No';
         }
-        break
+        break;
       case 'cover':
         if (!isPrimary) {
-          valueToReturn = '-'
+          valueToReturn = '-';
         } else {
-          valueToReturn = (sign as PrimarySign).cover ? sign.quantity : 0
+          valueToReturn = (sign as PrimarySign).cover ? sign.quantity : 0;
         }
-        break
+        break;
       case 'displayStructure':
         if (!isPrimary) {
-          valueToReturn = '-'
+          valueToReturn = '-';
         } else {
-          valueToReturn = sign[column]
+          valueToReturn = sign[column];
         }
-        break
+        break;
       case 'bLights':
         if (!isPrimary) {
-          valueToReturn = '-'
+          valueToReturn = '-';
         } else {
           const bLightColor = !sign.bLightsColor
             ? ''
@@ -390,17 +362,24 @@ export function SignOrderList ({
             ? 'R'
             : (sign as PrimarySign).bLightsColor === 'White'
             ? 'W'
-            : 'Y'
-          valueToReturn = sign[column] + ' ' + bLightColor
+            : 'Y';
+          valueToReturn = sign[column] + ' ' + bLightColor;
         }
-        break
+        break;
+      case 'structure':
+        if (!isPrimary) {
+          valueToReturn = '-';
+        } else {
+          valueToReturn = (sign as PrimarySign).associatedStructure;
+        }
+        break;
       default:
-        valueToReturn = sign[column]
-        break
+        valueToReturn = sign[column];
+        break;
     }
 
-    return valueToReturn
-  }
+    return valueToReturn;
+  };
 
   return (
     <div>
@@ -417,9 +396,10 @@ export function SignOrderList ({
         <Table>
           <TableHeader className='bg-muted/50'>
             <TableRow>
-              {SIGN_COLUMNS.filter(sc =>
-                shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly
-              ).map(sc => (
+              {SIGN_COLUMNS.filter(sc => {
+                if (shopMode) return !sc.bidOnly || sc.shopOnly === true; // Show shop columns in shop mode
+                return !sc.shopOnly || sc.bidOnly === true; // Show bid columns in bid mode
+              }).map(sc => (
                 <TableHead
                   key={sc.key}
                   className={sc.shopOnly || sc.centered ? 'text-center' : ''}
@@ -444,62 +424,48 @@ export function SignOrderList ({
                     sign
                   ) => {
                     if ('primarySignId' in sign) {
-                      // It's a secondary sign - find its primary and insert after it
-                      const primaryIndex = acc.findIndex(
-                        s => s.id === sign.primarySignId
-                      )
+                      const primaryIndex = acc.findIndex(s => s.id === sign.primarySignId);
                       if (primaryIndex !== -1) {
-                        // Find where to insert (after primary and any existing secondaries)
-                        let insertIndex = primaryIndex + 1
+                        let insertIndex = primaryIndex + 1;
                         while (
                           insertIndex < acc.length &&
                           'primarySignId' in acc[insertIndex] &&
-                          (acc[insertIndex] as SecondarySign).primarySignId ===
-                            sign.primarySignId
+                          (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId
                         ) {
-                          insertIndex++
+                          insertIndex++;
                         }
-                        acc.splice(insertIndex, 0, sign)
+                        acc.splice(insertIndex, 0, sign);
                       } else {
-                        // Primary not found yet, add to end (will be sorted later)
-                        acc.push(sign)
+                        acc.push(sign);
                       }
                     } else {
-                      // It's a primary sign - just add it
-                      acc.push(sign)
+                      acc.push(sign);
                     }
-                    return acc
+                    return acc;
                   },
                   []
                 )
                 .map(sign => (
                   <TableRow key={sign.id}>
-                    {SIGN_COLUMNS.filter(sc =>
-                      shopMode
-                        ? !sc.shopOnly || sc.shopOnly === true
-                        : !sc.shopOnly
-                    ).map((sc, index) => {
-                      // Skip shop-only columns if not in shop mode
-                      if (!shopMode && sc.shopOnly) return null
+                    {SIGN_COLUMNS.filter(sc => {
+                      if (shopMode) return !sc.bidOnly || sc.shopOnly === true;
+                      return !sc.shopOnly || sc.bidOnly === true;
+                    }).map((sc, index) => {
+                      if (!shopMode && sc.shopOnly) return null;
+                      if (!bidMode && sc.bidOnly) return null;
 
                       return (
                         <TableCell
-                          className={
-                            sc.sticky ? 'sticky right-0 bg-white z-10' : ''
-                          }
+                          className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''}
                           key={sc.key}
                         >
                           <div className='flex items-center text-nowrap truncate max-w-50'>
-                            {Object.hasOwn(sign, 'primarySignId') &&
-                              index === 0 && (
-                                <ChevronRight className='inline h-6 text-muted-foreground' />
-                              )}
+                            {Object.hasOwn(sign, 'primarySignId') && index === 0 && (
+                              <ChevronRight className='inline h-6 text-muted-foreground' />
+                            )}
 
-                            {/* Shop tracking columns */}
                             {shopMode &&
-                            (sc.key === 'inStock' ||
-                              sc.key === 'order' ||
-                              sc.key === 'make') ? (
+                            (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
                               <div className='flex items-center'>
                                 <Button
                                   type='button'
@@ -520,16 +486,16 @@ export function SignOrderList ({
                                   type='number'
                                   value={(sign as any)[sc.key] || 0}
                                   onChange={e => {
-                                    const value = parseInt(e.target.value)
+                                    const value = parseInt(e.target.value);
                                     const newValue = isNaN(value)
                                       ? 0
-                                      : Math.max(0, Math.min(999, value))
+                                      : Math.max(0, Math.min(999, value));
                                     if (updateShopTracking) {
                                       updateShopTracking(
                                         sign.id,
                                         sc.key as 'inStock' | 'order' | 'make',
                                         newValue
-                                      )
+                                      );
                                     }
                                   }}
                                   className='h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner'
@@ -559,14 +525,11 @@ export function SignOrderList ({
                                 <div className='inline-flex items-center'>
                                   <button
                                     type='button'
-                                    className='w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent '
+                                    className='w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent'
                                     onClick={() =>
                                       sign.quantity === 0
                                         ? console.log('no')
-                                        : handleQuantityChange(
-                                            sign.id,
-                                            sign.quantity - 1
-                                          )
+                                        : handleQuantityChange(sign.id, sign.quantity - 1)
                                     }
                                     aria-label='Decrease quantity'
                                   >
@@ -578,14 +541,11 @@ export function SignOrderList ({
                                     max={999}
                                     value={sign.quantity}
                                     onChange={e => {
-                                      const value = parseInt(e.target.value)
+                                      const value = parseInt(e.target.value);
                                       const newValue = isNaN(value)
                                         ? 0
-                                        : Math.max(0, Math.min(999, value))
-                                      handleQuantityChange(
-                                        sign.id,
-                                        safeNumber(newValue)
-                                      )
+                                        : Math.max(0, Math.min(999, value));
+                                      handleQuantityChange(sign.id, safeNumber(newValue));
                                     }}
                                     className='no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none'
                                     style={{ width: 40, height: 28 }}
@@ -593,12 +553,7 @@ export function SignOrderList ({
                                   <button
                                     type='button'
                                     className='w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent'
-                                    onClick={() =>
-                                      handleQuantityChange(
-                                        sign.id,
-                                        sign.quantity + 1
-                                      )
-                                    }
+                                    onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
                                     aria-label='Increase quantity'
                                   >
                                     +
@@ -607,58 +562,47 @@ export function SignOrderList ({
                               )
                             ) : sc.key === 'actions' ? (
                               <DropdownMenu>
-                                <DropdownMenuTrigger
-                                  asChild
-                                  className='flex items-center justify-center'
-                                >
-                                  <Button
-                                    variant='ghost'
-                                    size='sm'
-                                    className='!p-[2px]'
-                                  >
+                                <DropdownMenuTrigger asChild className='flex items-center justify-center'>
+                                  <Button variant='ghost' size='sm' className='!p-[2px]'>
                                     <MoreVertical className='h-4 w-4' />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align='end'>
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setLocalSign(sign)
-                                      setOpen(true)
-                                      setMode('edit')
+                                      setLocalSign(sign);
+                                      setOpen(true);
+                                      setMode('edit');
                                     }}
                                   >
                                     <Pencil className='h-4 w-4 mr-2' />
                                     Edit
                                   </DropdownMenuItem>
-                                  {Object.hasOwn(
-                                    sign,
-                                    'associatedStructure'
-                                  ) && (
+                                  {Object.hasOwn(sign, 'associatedStructure') && (
                                     <DropdownMenuItem
                                       onClick={() => {
-                                        const defaultSecondary: SecondarySign =
-                                          {
-                                            id: generateUniqueId(),
-                                            primarySignId: sign.id,
-                                            designation: '', // Empty designation
-                                            width: 0,
-                                            height: 0,
-                                            quantity: sign.quantity, // Only inherit quantity
-                                            sheeting: 'HI', // Default sheeting
-                                            isCustom: false,
-                                            description: '',
-                                            substrate: 'Plastic'
-                                          }
+                                        const defaultSecondary: SecondarySign = {
+                                          id: generateUniqueId(),
+                                          primarySignId: sign.id,
+                                          designation: '',
+                                          width: 0,
+                                          height: 0,
+                                          quantity: sign.quantity,
+                                          sheeting: 'HI',
+                                          isCustom: false,
+                                          description: '',
+                                          substrate: 'Plastic',
+                                        };
                                         dispatch({
                                           type: 'ADD_MPT_SIGN',
                                           payload: {
                                             phaseNumber: 0,
-                                            sign: defaultSecondary
-                                          }
-                                        })
-                                        setLocalSign(defaultSecondary)
-                                        setOpen(true)
-                                        setMode('create')
+                                            sign: defaultSecondary,
+                                          },
+                                        });
+                                        setLocalSign(defaultSecondary);
+                                        setOpen(true);
+                                        setMode('create');
                                       }}
                                     >
                                       <Plus className='h-4 w-4 mr-2' />
@@ -667,30 +611,14 @@ export function SignOrderList ({
                                   )}
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      deleteAssociatedEquipmentInfo(sign.id)
-                                      dispatch({
-                                        type: 'DELETE_MPT_SIGN',
-                                        payload: sign.id
-                                      })
-                                      if (
-                                        Object.hasOwn(
-                                          sign,
-                                          'associatedStructure'
-                                        )
-                                      ) {
-                                        mptRental.phases[
-                                          currentPhase
-                                        ].signs.forEach(s => {
-                                          if (
-                                            'primarySignId' in s &&
-                                            s.primarySignId === sign.id
-                                          ) {
-                                            dispatch({
-                                              type: 'DELETE_MPT_SIGN',
-                                              payload: s.id
-                                            })
+                                      deleteAssociatedEquipmentInfo(sign.id);
+                                      dispatch({ type: 'DELETE_MPT_SIGN', payload: sign.id });
+                                      if (Object.hasOwn(sign, 'associatedStructure')) {
+                                        mptRental.phases[currentPhase].signs.forEach(s => {
+                                          if ('primarySignId' in s && s.primarySignId === sign.id) {
+                                            dispatch({ type: 'DELETE_MPT_SIGN', payload: s.id });
                                           }
-                                        })
+                                        });
                                       }
                                     }}
                                   >
@@ -704,28 +632,20 @@ export function SignOrderList ({
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <span className='cursor-pointer truncate block'>
-                                      {formatColumnValue(
-                                        sign,
-                                        sc.key as keyof PrimarySign
-                                      )}
+                                      {formatColumnValue(sign, sc.key as keyof PrimarySign)}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className='max-w-xs'>
-                                      {sign.description || 'No description'}
-                                    </p>
+                                    <p className='max-w-xs'>{sign.description || 'No description'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             ) : (
-                              formatColumnValue(
-                                sign,
-                                sc.key as keyof PrimarySign
-                              )
+                              formatColumnValue(sign, sc.key as keyof PrimarySign)
                             )}
                           </div>
                         </TableCell>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
@@ -733,21 +653,8 @@ export function SignOrderList ({
         </Table>
       </div>
       <div className='space-y-4 mt-4'>
-        {/* Add Custom Sign Form */}
-        {localSign && (
-          <DesignationSearcher
-            localSign={localSign}
-            setLocalSign={setLocalSign}
-          />
-        )}
-        {localSign && (
-          <SignEditingSheet
-            open={open}
-            onOpenChange={handleClose}
-            mode={mode}
-            sign={localSign}
-          />
-        )}
+        {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
+        {localSign && <SignEditingSheet open={open} onOpenChange={handleClose} mode={mode} sign={localSign} />}
       </div>
       {!onlyTable && (
         <>
@@ -760,12 +667,9 @@ export function SignOrderList ({
               + Add New Sign
             </Button>
           </div>
-          {/* Totals */}
           <div className='mt-6 flex justify-end space-y-1 text-sm'>
             <div className='text-right'>
-              <div>
-                Total Signs: {mptRental.phases[currentPhase].signs.length}
-              </div>
+              <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
               <div className='font-medium'>
                 Total Square Footage: {squareFootageTotal.toFixed(2)}
               </div>
@@ -774,5 +678,5 @@ export function SignOrderList ({
         </>
       )}
     </div>
-  )
+  );
 }
