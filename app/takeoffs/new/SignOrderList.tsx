@@ -353,7 +353,7 @@ export function SignOrderList({
           valueToReturn = sign[column] + ' ' + bLightColor;
         }
         break;
-      case 'structure': // Handle 'structure' by mapping to 'associatedStructure'
+      case 'associatedStructure': // Handle 'structure' by mapping to 'associatedStructure'
         if (!isPrimary) {
           valueToReturn = '-';
         } else {
