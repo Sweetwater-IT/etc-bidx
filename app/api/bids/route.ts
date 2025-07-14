@@ -353,7 +353,11 @@ export async function POST(request: NextRequest) {
       'platform', 'requestor', 'dbe_percentage', 'state_route'
     ];
 
-    const missingFields = requiredFields.filter(field => !body[field]);
+    const missingFields = requiredFields.filter(field => {
+      const value = body[field];
+      return value === null || value === undefined || value === '';
+    });
+
     if (missingFields.length > 0) {
       return NextResponse.json(
         {
