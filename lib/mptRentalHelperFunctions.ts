@@ -919,7 +919,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
 
   // Prevent division by zero for cost per hour
   const totalHours = onSiteJobHours + rtTravelTimeHours;
-  const totalCostPerHour = totalHours > 0 ? totalFlaggingCost / totalHours : 0;
+  const totalCostPerHour = totalHours > 0 && personnel > 0 ? totalFlaggingCost / (totalHours * personnel) : 0;
 
   const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost
   const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
