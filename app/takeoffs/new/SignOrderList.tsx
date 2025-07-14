@@ -85,7 +85,7 @@ const SIGN_COLUMNS = [
     title: 'Substrate',
   },
   {
-    key: 'structure', // Maps to associatedStructure in PrimarySign
+    key: 'displayStructure', // Maps to associatedStructure in PrimarySign
     title: 'Structure',
   },
   {
