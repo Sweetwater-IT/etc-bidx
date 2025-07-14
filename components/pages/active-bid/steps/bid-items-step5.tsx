@@ -226,17 +226,37 @@ const TripAndLaborSummary = ({
 
       {/* Row 2 */}
       <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Base Trips</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(totalTrips)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Additional Trips</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.maintenanceTrips)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Trips</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(totalTrips + safeNumber(phase.maintenanceTrips) * 2)}
         </div>
-      </div>
+      </div>      
+
+      {/* Row 3 */}
       <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Total Rated Hours</label>
+        <label className='text-sm font-semibold'>Base Non-Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(
-            ratedHours + safeNumber(phase.additionalRatedHours)
-          ).toFixed(1)}
+          {safeNumber(nonRatedHours).toFixed(1)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>
+          Additional Non-Rated Hours
+        </label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
         </div>
       </div>
       <div className='flex flex-col'>
@@ -246,9 +266,31 @@ const TripAndLaborSummary = ({
             nonRatedHours + safeNumber(phase.additionalNonRatedHours)
           ).toFixed(1)}
         </div>
-      </div>
+      </div>      
 
-      {/* Row 3 */}
+      {/* Row 4 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Base Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(ratedHours).toFixed(1)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Additional Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.additionalRatedHours).toFixed(1)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Total Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(
+            ratedHours + safeNumber(phase.additionalRatedHours)
+          ).toFixed(1)}
+        </div>
+      </div> 
+
+      {/* Row 5 */}
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Mobilization</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
@@ -265,48 +307,6 @@ const TripAndLaborSummary = ({
         <label className='text-sm font-semibold'>Truck & Fuel Cost</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {formatCurrency(truckAndFuelCost)}
-        </div>
-      </div>
-
-      {/* Row 4 */}
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Additional Trips</label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(phase.maintenanceTrips)}
-        </div>
-      </div>
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Additional Rated Hours</label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(phase.additionalRatedHours).toFixed(1)}
-        </div>
-      </div>
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>
-          Additional Non-Rated Hours
-        </label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
-        </div>
-      </div>
-
-      {/* Row 5 */}
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Base Trips</label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(totalTrips)}
-        </div>
-      </div>
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Base Rated Hours</label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(ratedHours).toFixed(1)}
-        </div>
-      </div>
-      <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Base Non-Rated Hours</label>
-        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(nonRatedHours).toFixed(1)}
         </div>
       </div>
     </div>
