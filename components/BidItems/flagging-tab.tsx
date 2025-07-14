@@ -1216,7 +1216,7 @@ const FlaggingServicesTab = () => {
                               parseInt(e.target.value) || 0
                             )
                           }
-                          placeholder='0'
+                          placeholder='400'
                         />
                         <div className='flex items-center gap-2 mt-2'>
                           <Checkbox
