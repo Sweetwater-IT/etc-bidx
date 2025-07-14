@@ -643,7 +643,7 @@ const FlaggingServicesTab = () => {
 
       {/* Drawer for editing flagging */}
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
-        <DrawerContent className='min-w-lg'>
+        <DrawerContent className='min-w-xl'>
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <DrawerHeader>
               <DrawerTitle>
