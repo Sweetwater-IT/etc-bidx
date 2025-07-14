@@ -45,45 +45,6 @@ const SIGN_COLUMNS = [
     title: 'Designation',
   },
   {
-    key: 'description',
-    title: 'Description',
-  },
-  {
-    key: 'quantity',
-    title: 'Quantity',
-    centered: true,
-  },
-  {
-    key: 'width',
-    title: 'Width',
-  },
-  {
-    key: 'height',
-    title: 'Height',
-  },
-  {
-    key: 'sheeting',
-    title: 'Sheeting',
-  },
-  {
-    key: 'structure',
-    title: 'Structure',
-    bidOnly: true,
-  },
-  {
-    key: 'substrate',
-    title: 'Substrate',
-  },
-  {
-    key: 'stiffener',
-    title: 'Stiffener',
-  },
-  {
-    key: 'bLights',
-    title: 'B-Lights',
-    bidOnly: true,
-  },
-  {
     key: 'inStock',
     title: 'In Stock',
     shopOnly: true,
@@ -99,6 +60,47 @@ const SIGN_COLUMNS = [
     shopOnly: true,
   },
   {
+    key: 'description',
+    title: 'Description',
+  },
+  {
+    key: 'width',
+    title: 'Width',
+  },
+  {
+    key: 'height',
+    title: 'Height',
+  },
+  {
+    key: 'quantity',
+    title: 'Quantity',
+    centered: true,
+  },
+  {
+    key: 'sheeting',
+    title: 'Sheeting',
+  },
+  {
+    key: 'substrate',
+    title: 'Substrate',
+  },
+  {
+    key: 'displayStructure', // Maps to associatedStructure in PrimarySign
+    title: 'Structure',
+  },
+  {
+    key: 'stiffener',
+    title: 'Stiffener',
+  },
+  {
+    key: 'bLights',
+    title: 'B Lights',
+  },
+  {
+    key: 'cover',
+    title: 'Covers',
+  },
+  {
     key: 'actions',
     title: '',
     sticky: true,
@@ -109,24 +111,16 @@ interface Props {
   currentPhase?: number;
   onlyTable?: boolean;
   shopMode?: boolean;
-  bidMode?: boolean;
-  updateShopTracking?: (
-    signId: string,
-    field: 'make' | 'order' | 'inStock',
-    value: number
-  ) => void;
-  adjustShopValue?: (
-    signId: string,
-    field: 'make' | 'order' | 'inStock',
-    delta: number
-  ) => void;
+  shopSigns?: (ExtendedPrimarySign | ExtendedSecondarySign)[];
+  updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void;
+  adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void;
 }
 
 export function SignOrderList({
   currentPhase = 0,
   onlyTable = false,
   shopMode = false,
-  bidMode = true,
+  shopSigns,
   updateShopTracking,
   adjustShopValue,
 }: Props) {
@@ -177,9 +171,7 @@ export function SignOrderList({
             phaseNumber: 0,
             equipmentType: deletedSign.associatedStructure,
             equipmentProperty: 'quantity',
-            value:
-              getCurrentEquipmentQuantity(deletedSign.associatedStructure) -
-              deletedSign.quantity,
+            value: getCurrentEquipmentQuantity(deletedSign.associatedStructure) - deletedSign.quantity,
           },
         });
       }
@@ -190,9 +182,7 @@ export function SignOrderList({
             phaseNumber: 0,
             equipmentType: 'BLights',
             equipmentProperty: 'quantity',
-            value:
-              getCurrentEquipmentQuantity('BLights') -
-              deletedSign.quantity * deletedSign.bLights,
+            value: getCurrentEquipmentQuantity('BLights') - (deletedSign.quantity * deletedSign.bLights),
           },
         });
       }
@@ -214,11 +204,7 @@ export function SignOrderList({
   useEffect(() => {
     const signTotals = returnSignTotalsSquareFootage(mptRental);
     setSquareFootageTotal(
-      signTotals.HI.totalSquareFootage +
-      signTotals.DG.totalSquareFootage +
-      signTotals.FYG.totalSquareFootage +
-      signTotals.TYPEXI.totalSquareFootage +
-      signTotals.Special.totalSquareFootage
+      signTotals.HI.totalSquareFootage + signTotals.DG.totalSquareFootage + signTotals.Special.totalSquareFootage
     );
   }, [mptRental]);
 
@@ -260,6 +246,7 @@ export function SignOrderList({
 
   const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
     const secondarySigns = getSecondarySignsForPrimary(primarySignId);
+
     secondarySigns.forEach(secondarySign => {
       dispatch({
         type: 'UPDATE_MPT_SIGN',
@@ -287,7 +274,8 @@ export function SignOrderList({
 
   const handleQuantityChange = (signId: string, quantity: number) => {
     const currentSign = mptRental.phases[currentPhase].signs.find(s => s.id === signId);
-    if (currentSign && (Object.hasOwn(currentSign, 'associatedStructure') || Object.hasOwn(currentSign, 'make'))) {
+
+    if (currentSign && Object.hasOwn(currentSign, 'associatedStructure')) {
       const qtyChange = quantity - currentSign.quantity;
       if ((currentSign as PrimarySign).associatedStructure !== 'none') {
         const currentStructureQuantity = getCurrentEquipmentQuantity((currentSign as PrimarySign).associatedStructure as any);
@@ -315,7 +303,6 @@ export function SignOrderList({
   };
 
   useEffect(() => {
-    if (mptRental.phases.length < 1) return;
     const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
     if (onlyTable && latestSign && latestSign.quantity === 0) {
       setLocalSign(latestSign);
@@ -366,7 +353,7 @@ export function SignOrderList({
           valueToReturn = sign[column] + ' ' + bLightColor;
         }
         break;
-      case 'structure':
+      case 'associatedStructure': // Handle 'structure' by mapping to 'associatedStructure'
         if (!isPrimary) {
           valueToReturn = '-';
         } else {
@@ -384,112 +371,93 @@ export function SignOrderList({
   return (
     <div>
       {!onlyTable && (
-        <div className='mb-4 flex items-center justify-between'>
-          <h2 className='text-lg font-semibold'>Sign List</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Sign List</h2>
           <Button onClick={handleSignAddition}>
-            <Plus className='h-4 w-4 mr-2' />
+            <Plus className="h-4 w-4 mr-2" />
             Add New Sign
           </Button>
         </div>
       )}
-      <div className='border rounded-md'>
+      <div className="border rounded-md">
         <Table>
-          <TableHeader className='bg-muted/50'>
+          <TableHeader className="bg-muted/50">
             <TableRow>
-              {SIGN_COLUMNS.filter(sc => {
-                if (shopMode) return !sc.bidOnly || sc.shopOnly === true; // Show shop columns in shop mode
-                return !sc.shopOnly || sc.bidOnly === true; // Show bid columns in bid mode
-              }).map(sc => (
-                <TableHead
-                  key={sc.key}
-                  className={sc.shopOnly || sc.centered ? 'text-center' : ''}
-                >
-                  {sc.title}
-                </TableHead>
-              ))}
+              {SIGN_COLUMNS
+                .filter(sc => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly))
+                .map(sc => (
+                  <TableHead
+                    key={sc.key}
+                    className={(sc.shopOnly || sc.centered) ? 'text-center' : ''}
+                  >
+                    {sc.title}
+                  </TableHead>
+                ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mptRental.phases.length > 0 &&
-              mptRental.phases[currentPhase].signs
-                .filter(s => s.designation !== '')
-                .reduce(
-                  (
-                    acc: (
-                      | PrimarySign
-                      | SecondarySign
-                      | ExtendedPrimarySign
-                      | ExtendedSecondarySign
-                    )[],
-                    sign
-                  ) => {
-                    if ('primarySignId' in sign) {
-                      const primaryIndex = acc.findIndex(s => s.id === sign.primarySignId);
-                      if (primaryIndex !== -1) {
-                        let insertIndex = primaryIndex + 1;
-                        while (
-                          insertIndex < acc.length &&
-                          'primarySignId' in acc[insertIndex] &&
-                          (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId
-                        ) {
-                          insertIndex++;
-                        }
-                        acc.splice(insertIndex, 0, sign);
-                      } else {
-                        acc.push(sign);
+            {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
+              .filter(s => s.designation !== '')
+              .reduce(
+                (
+                  acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[],
+                  sign
+                ) => {
+                  if ('primarySignId' in sign) {
+                    const primaryIndex = acc.findIndex(s => s.id === sign.primarySignId);
+                    if (primaryIndex !== -1) {
+                      let insertIndex = primaryIndex + 1;
+                      while (
+                        insertIndex < acc.length &&
+                        'primarySignId' in acc[insertIndex] &&
+                        (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId
+                      ) {
+                        insertIndex++;
                       }
+                      acc.splice(insertIndex, 0, sign);
                     } else {
                       acc.push(sign);
                     }
-                    return acc;
-                  },
-                  []
-                )
-                .map(sign => (
-                  <TableRow key={sign.id}>
-                    {SIGN_COLUMNS.filter(sc => {
-                      if (shopMode) return !sc.bidOnly || sc.shopOnly === true;
-                      return !sc.shopOnly || sc.bidOnly === true;
-                    }).map((sc, index) => {
+                  } else {
+                    acc.push(sign);
+                  }
+                  return acc;
+                },
+                []
+              )
+              .map(sign => (
+                <TableRow key={sign.id}>
+                  {SIGN_COLUMNS
+                    .filter(sc => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly))
+                    .map((sc, index) => {
                       if (!shopMode && sc.shopOnly) return null;
-                      if (!bidMode && sc.bidOnly) return null;
 
                       return (
-                        <TableCell
-                          className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''}
-                          key={sc.key}
-                        >
-                          <div className='flex items-center text-nowrap truncate max-w-50'>
+                        <TableCell className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''} key={sc.key}>
+                          <div className="flex items-center text-nowrap truncate max-w-50">
                             {Object.hasOwn(sign, 'primarySignId') && index === 0 && (
-                              <ChevronRight className='inline h-6 text-muted-foreground' />
+                              <ChevronRight className="inline h-6 text-muted-foreground" />
                             )}
 
-                            {shopMode &&
-                            (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
-                              <div className='flex items-center'>
+                            {shopMode && (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
+                              <div className="flex items-center">
                                 <Button
-                                  type='button'
-                                  variant='outline'
-                                  className='h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200'
+                                  type="button"
+                                  variant="outline"
+                                  className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
                                   onClick={() =>
                                     adjustShopValue &&
-                                    adjustShopValue(
-                                      sign.id,
-                                      sc.key as 'inStock' | 'order' | 'make',
-                                      -1
-                                    )
+                                    adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', -1)
                                   }
                                 >
                                   -
                                 </Button>
                                 <Input
-                                  type='number'
+                                  type="number"
                                   value={(sign as any)[sc.key] || 0}
                                   onChange={e => {
                                     const value = parseInt(e.target.value);
-                                    const newValue = isNaN(value)
-                                      ? 0
-                                      : Math.max(0, Math.min(999, value));
+                                    const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
                                     if (updateShopTracking) {
                                       updateShopTracking(
                                         sign.id,
@@ -498,21 +466,17 @@ export function SignOrderList({
                                       );
                                     }
                                   }}
-                                  className='h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner'
+                                  className="h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner"
                                   min={0}
                                   max={999}
                                 />
                                 <Button
-                                  type='button'
-                                  variant='outline'
-                                  className='h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200'
+                                  type="button"
+                                  variant="outline"
+                                  className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
                                   onClick={() =>
                                     adjustShopValue &&
-                                    adjustShopValue(
-                                      sign.id,
-                                      sc.key as 'inStock' | 'order' | 'make',
-                                      1
-                                    )
+                                    adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', 1)
                                   }
                                 >
                                   +
@@ -522,39 +486,37 @@ export function SignOrderList({
                               Object.hasOwn(sign, 'primarySignId') ? (
                                 formatColumnValue(sign, 'quantity')
                               ) : (
-                                <div className='inline-flex items-center'>
+                                <div className="inline-flex items-center">
                                   <button
-                                    type='button'
-                                    className='w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent'
+                                    type="button"
+                                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
                                     onClick={() =>
                                       sign.quantity === 0
                                         ? console.log('no')
                                         : handleQuantityChange(sign.id, sign.quantity - 1)
                                     }
-                                    aria-label='Decrease quantity'
+                                    aria-label="Decrease quantity"
                                   >
                                     -
                                   </button>
                                   <input
-                                    type='number'
+                                    type="number"
                                     min={0}
                                     max={999}
                                     value={sign.quantity}
                                     onChange={e => {
                                       const value = parseInt(e.target.value);
-                                      const newValue = isNaN(value)
-                                        ? 0
-                                        : Math.max(0, Math.min(999, value));
+                                      const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
                                       handleQuantityChange(sign.id, safeNumber(newValue));
                                     }}
-                                    className='no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none'
+                                    className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
                                     style={{ width: 40, height: 28 }}
                                   />
                                   <button
-                                    type='button'
-                                    className='w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent'
+                                    type="button"
+                                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
                                     onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
-                                    aria-label='Increase quantity'
+                                    aria-label="Increase quantity"
                                   >
                                     +
                                   </button>
@@ -562,12 +524,12 @@ export function SignOrderList({
                               )
                             ) : sc.key === 'actions' ? (
                               <DropdownMenu>
-                                <DropdownMenuTrigger asChild className='flex items-center justify-center'>
-                                  <Button variant='ghost' size='sm' className='!p-[2px]'>
-                                    <MoreVertical className='h-4 w-4' />
+                                <DropdownMenuTrigger asChild className="flex items-center justify-center">
+                                  <Button variant="ghost" size="sm" className="!p-[2px]">
+                                    <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align='end'>
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuItem
                                     onClick={() => {
                                       setLocalSign(sign);
@@ -575,7 +537,7 @@ export function SignOrderList({
                                       setMode('edit');
                                     }}
                                   >
-                                    <Pencil className='h-4 w-4 mr-2' />
+                                    <Pencil className="h-4 w-4 mr-2" />
                                     Edit
                                   </DropdownMenuItem>
                                   {Object.hasOwn(sign, 'associatedStructure') && (
@@ -605,7 +567,7 @@ export function SignOrderList({
                                         setMode('create');
                                       }}
                                     >
-                                      <Plus className='h-4 w-4 mr-2' />
+                                      <Plus className="h-4 w-4 mr-2" />
                                       Add Secondary Sign
                                     </DropdownMenuItem>
                                   )}
@@ -622,7 +584,7 @@ export function SignOrderList({
                                       }
                                     }}
                                   >
-                                    <Trash2 className='h-4 w-4 mr-2' />
+                                    <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -631,12 +593,12 @@ export function SignOrderList({
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span className='cursor-pointer truncate block'>
+                                    <span className="cursor-pointer truncate block">
                                       {formatColumnValue(sign, sc.key as keyof PrimarySign)}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className='max-w-xs'>{sign.description || 'No description'}</p>
+                                    <p className="max-w-xs">{sign.description || 'No description'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -652,25 +614,25 @@ export function SignOrderList({
           </TableBody>
         </Table>
       </div>
-      <div className='space-y-4 mt-4'>
+      <div className="space-y-4 mt-4">
         {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
         {localSign && <SignEditingSheet open={open} onOpenChange={handleClose} mode={mode} sign={localSign} />}
       </div>
       {!onlyTable && (
         <>
-          <div className='flex justify-start'>
+          <div className="flex justify-start">
             <Button
-              className='mt-4 border-none p-0 !bg-transparent shadow-none'
-              variant='outline'
+              className="mt-4 border-none p-0 !bg-transparent shadow-none"
+              variant="outline"
               onClick={handleSignAddition}
             >
               + Add New Sign
             </Button>
           </div>
-          <div className='mt-6 flex justify-end space-y-1 text-sm'>
-            <div className='text-right'>
+          <div className="mt-6 flex justify-end space-y-1 text-sm">
+            <div className="text-right">
               <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
-              <div className='font-medium'>
+              <div className="font-medium">
                 Total Square Footage: {squareFootageTotal.toFixed(2)}
               </div>
             </div>
