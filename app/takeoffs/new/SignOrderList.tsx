@@ -84,6 +84,10 @@ const SIGN_COLUMNS = [
     bidOnly: true,
   },
   {
+      key: 'cover',
+      title: 'Covers'
+  },  
+  {
     key: 'inStock',
     title: 'In Stock',
     shopOnly: true,
