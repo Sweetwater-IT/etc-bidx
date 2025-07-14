@@ -164,17 +164,17 @@ const ServiceWorkTab = () => {
       fuelCostPerGallon: 0,
       arrowBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 50,
         includeInLumpSum: false,
       },
       messageBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 100,
         includeInLumpSum: false,
       },
       TMA: {
         quantity: 0,
-        cost: 0,
+        cost: 400,
         includeInLumpSum: false,
       },
       additionalEquipmentCost: 0,
@@ -495,7 +495,7 @@ const ServiceWorkTab = () => {
 
       {/* Drawer for editing service work */}
       <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
-        <DrawerContent className="min-w-lg">
+        <DrawerContent className="min-w-xl">
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DrawerHeader>
               <DrawerTitle>
