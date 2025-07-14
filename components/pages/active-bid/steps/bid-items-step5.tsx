@@ -1436,6 +1436,14 @@ const BidItemsStep5 = ({
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
+                                    {/* Add switch here */}
+                                    <div className='flex items-center justify-between mb-4'>
+                                      <span className='text-sm font-medium'>Emergency Jobs</span>
+                                      <Switch
+                                        checked={adminData?.emergencyJob || false}
+                                        onCheckedChange={handleEmergencyJobChange}
+                                      />
+                                    </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
                                     {lightAndDrumList.map(equipmentKey => (
                                       <div
