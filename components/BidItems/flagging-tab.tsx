@@ -175,17 +175,17 @@ const FlaggingServicesTab = () => {
       fuelCostPerGallon: 0,
       arrowBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 50,
         includeInLumpSum: false
       },
       messageBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 100,
         includeInLumpSum: false
       },
       TMA: {
         quantity: 0,
-        cost: 0,
+        cost: 400,
         includeInLumpSum: false
       },
       additionalEquipmentCost: 0,
@@ -1216,7 +1216,7 @@ const FlaggingServicesTab = () => {
                               parseInt(e.target.value) || 0
                             )
                           }
-                          placeholder='400'
+                          placeholder='0'
                         />
                         <div className='flex items-center gap-2 mt-2'>
                           <Checkbox
