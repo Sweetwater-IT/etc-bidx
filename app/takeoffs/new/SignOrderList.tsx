@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ChevronRight, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEstimate } from '@/contexts/EstimateContext';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
@@ -130,6 +130,32 @@ export function SignOrderList({
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>();
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [selectedPhase, setSelectedPhase] = useState<string>("");
+  const [hasCopied, setHasCopied] = useState(false);
+
+  // Get phase options (exclude current phase)
+  const phaseOptions = mptRental.phases
+    ? mptRental.phases
+        .map((_, idx) => idx)
+        .filter(idx => idx !== currentPhase)
+    : [];
+
+  const handleCopySigns = () => {
+    if (selectedPhase === "" || Number(selectedPhase) === currentPhase) return;
+    const phaseIdx = Number(selectedPhase);
+    const signsToCopy = mptRental.phases[phaseIdx]?.signs || [];
+    signsToCopy.forEach(sign => {
+      // Clone the sign and assign a new unique ID
+      const newSign = { ...sign, id: generateUniqueId() };
+      dispatch({
+        type: "ADD_MPT_SIGN",
+        payload: {
+          phaseNumber: currentPhase,
+          sign: newSign,
+        },
+      });
+    });
+  };
 
   useEffect(() => {
     if (localSign && localSign.designation !== '') {
@@ -370,15 +396,49 @@ export function SignOrderList({
 
   return (
     <div>
-      {!onlyTable && (
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Sign List</h2>
-          <Button onClick={handleSignAddition}>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold mt-[35px]">Sign List</h2>
+        <div className="flex items-center gap-2">
+          {/* Copy from Phase UI */}
+          <div className="flex flex-col items-start mr-4">
+            <label className="text-[14px] font-medium mb-1 ml-1">Copy from Phase</label>
+            <div className="flex items-center gap-2">
+              <select
+                className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedPhase}
+                onChange={e => {
+                  setSelectedPhase(e.target.value);
+                  setHasCopied(false);
+                }}
+              >
+                <option value="">Select phase</option>
+                {phaseOptions.map(idx => (
+                  <option key={idx} value={idx}>
+                    Phase {idx + 1}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase !== "" && !hasCopied ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer" : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                disabled={selectedPhase === "" || hasCopied}
+                onClick={() => {
+                  handleCopySigns();
+                  setHasCopied(true);
+                }}
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Selected Phase&apos;s Signs
+              </button>
+            </div>
+          </div>
+          {/* Add New Sign Button */}
+          <Button onClick={handleSignAddition} className='mt-[22px] ml-[-10px]'>
             <Plus className="h-4 w-4 mr-2" />
             Add New Sign
           </Button>
         </div>
-      )}
+      </div>
       <div className="border rounded-md">
         <Table>
           <TableHeader className="bg-muted/50">
