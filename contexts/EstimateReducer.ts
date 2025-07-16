@@ -407,8 +407,8 @@ export const estimateReducer = (
 			
 		case "REFRESH_MPT_PHASE_SIGNS":
 		    if (!state.mptRental) return state;
-		    const phaseIndex = action.payload.phase;
-		    const phaseToRefresh = state.mptRental.phases[phaseIndex];
+		    const refreshPhaseIndex = action.payload.phase; // Changed from phaseIndex
+		    const phaseToRefresh = state.mptRental.phases[refreshPhaseIndex];
 		    if (!phaseToRefresh) return state;
 		    // Recalculate equipment quantities based on current signs
 		    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
@@ -434,7 +434,7 @@ export const estimateReducer = (
 		        mptRental: {
 		            ...state.mptRental,
 		            phases: state.mptRental.phases.map((phase, index) => {
-		                if (index === phaseIndex) {
+		                if (index === refreshPhaseIndex) { // Use renamed variable
 		                    const updatedStandardEquipment = { ...phase.standardEquipment };
 		                    Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
 		                        updatedStandardEquipment[equipmentType as EquipmentType] = {
