@@ -11,7 +11,6 @@ import {
   SecondarySign,
   ExtendedPrimarySign,
   ExtendedSecondarySign,
-  SheetingType,
 } from "@/types/MPTEquipment";
 import {
   Table,
@@ -168,9 +167,9 @@ export function SignOrderList({
           type: "ADD_MPT_ITEM_NOT_SIGN",
           payload: {
             phaseNumber: currentPhase,
-            equipmentType: 'covers',
-            equipmentProperty: 'quantity',
-            value: getCurrentEquipmentQuantity('covers') - deletedSign.quantity,
+            equipmentType: "covers",
+            equipmentProperty: "quantity",
+            value: newQuantity,
           },
         });
       }
@@ -198,9 +197,9 @@ export function SignOrderList({
           type: "ADD_MPT_ITEM_NOT_SIGN",
           payload: {
             phaseNumber: currentPhase,
-            equipmentType: 'BLights',
-            equipmentProperty: 'quantity',
-            value: getCurrentEquipmentQuantity('BLights') - (deletedSign.quantity * deletedSign.bLights),
+            equipmentType: "BLights",
+            equipmentProperty: "quantity",
+            value: newQuantity,
           },
         });
       }
@@ -375,318 +374,321 @@ export function SignOrderList({
     return valueToReturn;
   };
 
- return (
-  <div>
-    <div className="mb-4 flex items-center justify-between gap-4">
-      <h2 className="text-lg font-semibold mt-[35px]">Sign List</h2>
-      <div className="flex items-center gap-2">
-        <div className="flex flex-col items-start mr-4">
-          <label className="text-[14px] font-medium mb-1 ml-1">Copy from Phase</label>
-          <div className="flex items-center gap-2">
-            <select
-              className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedPhase}
-              onChange={(e) => {
-                setSelectedPhase(e.target.value);
-                setHasCopied(false);
-              }}
-            >
-              <option value="">Select phase</option>
-              {phaseOptions.map((idx) => (
-                <option key={idx} value={idx}>
-                  Phase {idx + 1}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${
-                selectedPhase !== "" && !hasCopied
-                  ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer"
-                  : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-              }`}
-              disabled={selectedPhase === "" || hasCopied}
-              onClick={() => {
-                handleCopySigns();
-                setHasCopied(true);
-              }}
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy Signs From Phase
-            </button>
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold mt-[35px]">Sign List</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start mr-4">
+            <label className="text-[14px] font-medium mb-1 ml-1">Copy from Phase</label>
+            <div className="flex items-center gap-2">
+              <select
+                className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedPhase}
+                onChange={(e) => {
+                  setSelectedPhase(e.target.value);
+                  setHasCopied(false);
+                }}
+              >
+                <option value="">Select phase</option>
+                {phaseOptions.map((idx) => (
+                  <option key={idx} value={idx}>
+                    Phase {idx + 1}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${
+                  selectedPhase !== "" && !hasCopied
+                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer"
+                    : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                }`}
+                disabled={selectedPhase === "" || hasCopied}
+                onClick={() => {
+                  handleCopySigns();
+                  setHasCopied(true);
+                }}
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Signs From Phase
+              </button>
+            </div>
           </div>
+          <Button onClick={handleSignAddition} className="mt-[22px] ml-[-10px]">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Sign
+          </Button>
         </div>
-        <Button onClick={handleSignAddition} className="mt-[22px] ml-[-10px]">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Sign
-        </Button>
       </div>
-    </div>
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader className="bg-muted/50">
-          <TableRow>
-            {SIGN_COLUMNS.filter((sc) => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)).map(
-              (sc) => (
-                <TableHead key={sc.key} className={(sc.shopOnly || sc.centered) ? "text-center" : ""}>
-                  {sc.title}
-                </TableHead>
-              )
-            )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
-            .filter((s) => s.designation !== "")
-            .reduce(
-              (
-                acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[],
-                sign
-              ) => {
-                if ("primarySignId" in sign) {
-                  const primaryIndex = acc.findIndex((s) => s.id === sign.primarySignId);
-                  if (primaryIndex !== -1) {
-                    let insertIndex = primaryIndex + 1;
-                    while (
-                      insertIndex < acc.length &&
-                      "primarySignId" in acc[insertIndex] &&
-                      (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId
-                    ) {
-                      insertIndex++;
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              {SIGN_COLUMNS.filter((sc) => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)).map(
+                (sc) => (
+                  <TableHead key={sc.key} className={(sc.shopOnly || sc.centered) ? "text-center" : ""}>
+                    {sc.title}
+                  </TableHead>
+                )
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
+              .filter((s) => s.designation !== "")
+              .reduce(
+                (
+                  acc: (PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign)[],
+                  sign
+                ) => {
+                  if ("primarySignId" in sign) {
+                    const primaryIndex = acc.findIndex((s) => s.id === sign.primarySignId);
+                    if (primaryIndex !== -1) {
+                      let insertIndex = primaryIndex + 1;
+                      while (
+                        insertIndex < acc.length &&
+                        "primarySignId" in acc[insertIndex] &&
+                        (acc[insertIndex] as SecondarySign).primarySignId === sign.primarySignId
+                      ) {
+                        insertIndex++;
+                      }
+                      acc.splice(insertIndex, 0, sign);
+                    } else {
+                      acc.push(sign);
                     }
-                    acc.splice(insertIndex, 0, sign);
                   } else {
                     acc.push(sign);
                   }
-                } else {
-                  acc.push(sign);
-                }
-                return acc;
-              },
-              []
-            )
-            .map((sign) => (
-              <TableRow key={sign.id}>
-                {SIGN_COLUMNS.filter((sc) => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)).map(
-                  (sc, index) => (
-                    <TableCell className={sc.sticky ? "sticky right-0 bg-white z-10" : ""} key={sc.key}>
-                      <div className="flex items-center text-nowrap truncate max-w-50">
-                        {Object.hasOwn(sign, "primarySignId") && index === 0 && (
-                          <ChevronRight className="inline h-6 text-muted-foreground" />
-                        )}
-                        {shopMode && (sc.key === "inStock" || sc.key === "order" || sc.key === "make") ? (
-                          <div className="flex items-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
-                              onClick={() =>
-                                adjustShopValue &&
-                                adjustShopValue(sign.id, sc.key as "inStock" | "order" | "make", -1)
-                              }
-                            >
-                              -
-                            </Button>
-                            <Input
-                              type="number"
-                              value={(sign as any)[sc.key] || 0}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value);
-                                const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
-                                if (updateShopTracking) {
-                                  updateShopTracking(
-                                    sign.id,
-                                    sc.key as "inStock" | "order" | "make",
-                                    newValue
-                                  );
-                                }
-                              }}
-                              className="h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner"
-                              min={0}
-                              max={999}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
-                              onClick={() =>
-                                adjustShopValue &&
-                                adjustShopValue(sign.id, sc.key as "inStock" | "order" | "make", 1)
-                              }
-                            >
-                              +
-                            </Button>
-                          </div>
-                        ) : sc.key === "quantity" ? (
-                          Object.hasOwn(sign, "primarySignId") ? (
-                            formatColumnValue(sign, "quantity")
-                          ) : (
-                            <div className="inline-flex items-center">
-                              <button
+                  return acc;
+                },
+                []
+              )
+              .map((sign) => (
+                <TableRow key={sign.id}>
+                  {SIGN_COLUMNS.filter((sc) => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly)).map(
+                    (sc, index) => (
+                      <TableCell className={sc.sticky ? "sticky right-0 bg-white z-10" : ""} key={sc.key}>
+                        <div className="flex items-center text-nowrap truncate max-w-50">
+                          {Object.hasOwn(sign, "primarySignId") && index === 0 && (
+                            <ChevronRight className="inline h-6 text-muted-foreground" />
+                          )}
+                          {shopMode && (sc.key === "inStock" || sc.key === "order" || sc.key === "make") ? (
+                            <div className="flex items-center">
+                              <Button
                                 type="button"
-                                className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                variant="outline"
+                                className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
                                 onClick={() =>
-                                  sign.quantity === 0
-                                    ? console.log("no")
-                                    : handleQuantityChange(sign.id, sign.quantity - 1)
+                                  adjustShopValue &&
+                                  adjustShopValue(sign.id, sc.key as "inStock" | "order" | "make", -1)
                                 }
-                                aria-label="Decrease quantity"
                               >
                                 -
-                              </button>
-                              <input
+                              </Button>
+                              <Input
                                 type="number"
-                                min={0}
-                                max={999}
-                                value={sign.quantity}
+                                value={(sign as any)[sc.key] || 0}
                                 onChange={(e) => {
                                   const value = parseInt(e.target.value);
                                   const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
-                                  handleQuantityChange(sign.id, safeNumber(newValue));
-                                }}
-                                className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
-                                style={{ width: 40, height: 28 }}
-                              />
-                              <button
-                                type="button"
-                                className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
-                                onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
-                                aria-label="Increase quantity"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )
-                        ) : sc.key === "actions" ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild className="flex items-center justify-center">
-                              <Button variant="ghost" size="sm" className="!p-[2px]">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setLocalSign({ ...sign }); // Create a copy to avoid mutation
-                                  setOpen(true);
-                                  setMode("edit");
-                                }}
-                              >
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              {Object.hasOwn(sign, "associatedStructure") && (
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    const defaultSecondary: SecondarySign = {
-                                      id: generateUniqueId(),
-                                      primarySignId: sign.id,
-                                      designation: "",
-                                      width: 0,
-                                      height: 0,
-                                      quantity: sign.quantity,
-                                      sheeting: "HI",
-                                      isCustom: false,
-                                      description: "",
-                                      substrate: "Plastic",
-                                    };
-                                    dispatch({
-                                      type: "ADD_MPT_SIGN",
-                                      payload: {
-                                        phaseNumber: currentPhase,
-                                        sign: defaultSecondary,
-                                      },
-                                    });
-                                    setLocalSign({ ...defaultSecondary });
-                                    setOpen(true);
-                                    setMode("create");
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Add Secondary Sign
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  deleteAssociatedEquipmentInfo(sign.id);
-                                  dispatch({
-                                    type: "DELETE_MPT_SIGN",
-                                    payload: { phaseNumber: currentPhase, signId: sign.id }
-                                  });
-                                  if (Object.hasOwn(sign, "associatedStructure")) {
-                                    mptRental.phases[currentPhase].signs.forEach((s) => {
-                                      if ("primarySignId" in s && s.primarySignId === sign.id) {
-                                        dispatch({
-                                          type: "DELETE_MPT_SIGN",
-                                          payload: { phaseNumber: currentPhase, signId: s.id }
-                                        });
-                                      }
-                                    });
+                                  if (updateShopTracking) {
+                                    updateShopTracking(
+                                      sign.id,
+                                      sc.key as "inStock" | "order" | "make",
+                                      newValue
+                                    );
                                   }
                                 }}
+                                className="h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner"
+                                min={0}
+                                max={999}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
+                                onClick={() =>
+                                  adjustShopValue &&
+                                  adjustShopValue(sign.id, sc.key as "inStock" | "order" | "make", 1)
+                                }
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : sc.key === "description" ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="cursor-pointer truncate block">
-                                  {formatColumnValue(sign, sc.key as keyof PrimarySign)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">{sign.description || "No description"}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
-                          formatColumnValue(sign, sc.key as keyof PrimarySign)
-                        )}
-                      </div>
-                    </TableCell>
-                  )
-                )}
-              </TableRow>
-            ))}
-        </TableBody>
-      </Table>
-    </div>
-    <div className="space-y-4 mt-4">
-      {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
-      {localSign && (
-        <SignEditingSheet
-          open={open}
-          onOpenChange={handleClose}
-          mode={mode}
-          sign={localSign}
-          currentPhase={currentPhase} // Pass currentPhase to ensure correct dispatching
-        />
-      )}
-    </div>
-    {!onlyTable && (
-      <>
-        <div className="flex justify-start">
-          <Button
-            className="mt-4 border-none p-0 !bg-transparent shadow-none"
-            variant="outline"
-            onClick={handleSignAddition}
-          >
-            + Add New Sign
-          </Button>
-        </div>
-        <div className="mt-6 flex justify-end space-y-1 text-sm">
-          <div className="text-right">
-            <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
-            <div className="font-medium">
-              Total Square Footage: {squareFootageTotal.toFixed(2)}
+                                +
+                              </Button>
+                            </div>
+                          ) : sc.key === "quantity" ? (
+                            Object.hasOwn(sign, "primarySignId") ? (
+                              formatColumnValue(sign, "quantity")
+                            ) : (
+                              <div className="inline-flex items-center">
+                                <button
+                                  type="button"
+                                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                  onClick={() =>
+                                    sign.quantity === 0
+                                      ? console.log("no")
+                                      : handleQuantityChange(sign.id, sign.quantity - 1)
+                                  }
+                                  aria-label="Decrease quantity"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={999}
+                                  value={sign.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
+                                    handleQuantityChange(sign.id, safeNumber(newValue));
+                                  }}
+                                  className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
+                                  style={{ width: 40, height: 28 }}
+                                />
+                                <button
+                                  type="button"
+                                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                  onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
+                                  aria-label="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )
+                          ) : sc.key === "actions" ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild className="flex items-center justify-center">
+                                <Button variant="ghost" size="sm" className="!p-[2px]">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setLocalSign({ ...sign });
+                                    setOpen(true);
+                                    setMode("edit");
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                {Object.hasOwn(sign, "associatedStructure") && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      const defaultSecondary: SecondarySign = {
+                                        id: generateUniqueId(),
+                                        primarySignId: sign.id,
+                                        designation: "",
+                                        width: 0,
+                                        height: 0,
+                                        quantity: sign.quantity,
+                                        sheeting: "HI",
+                                        isCustom: false,
+                                        description: "",
+                                        substrate: "Plastic",
+                                      };
+                                      dispatch({
+                                        type: "ADD_MPT_SIGN",
+                                        payload: {
+                                          phaseNumber: currentPhase,
+                                          sign: defaultSecondary,
+                                        },
+                                      });
+                                      setLocalSign({ ...defaultSecondary });
+                                      setOpen(true);
+                                      setMode("create");
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Secondary Sign
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    deleteAssociatedEquipmentInfo(sign.id);
+                                    dispatch({
+                                      type: "DELETE_MPT_SIGN",
+                                      payload: { phaseNumber: currentPhase, signId: sign.id }
+                                    });
+                                    if (Object.hasOwn(sign, "associatedStructure")) {
+                                      mptRental.phases[currentPhase].signs.forEach((s) => {
+                                        if ("primarySignId" in s && s.primarySignId === sign.id) {
+                                          dispatch({
+                                            type: "DELETE_MPT_SIGN",
+                                            payload: { phaseNumber: currentPhase, signId: s.id }
+                                          });
+                                        }
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : sc.key === "description" ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-pointer truncate block">
+                                    {formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">{sign.description || "No description"}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            formatColumnValue(sign, sc.key as keyof PrimarySign)
+                          )}
+                        </div>
+                      </TableCell>
+                    )
+                  )}
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="space-y-4 mt-4">
+        {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
+        {localSign && (
+          <SignEditingSheet
+            open={open}
+            onOpenChange={handleClose}
+            mode={mode}
+            sign={localSign}
+            currentPhase={currentPhase}
+          />
+        )}
+      </div>
+      {!onlyTable && (
+        <>
+          <div className="flex justify-start">
+            <Button
+              className="mt-4 border-none p-0 !bg-transparent shadow-none"
+              variant="outline"
+              onClick={handleSignAddition}
+            >
+              + Add New Sign
+            </Button>
+          </div>
+          <div className="mt-6 flex justify-end space-y-1 text-sm">
+            <div className="text-right">
+              <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
+              <div className="font-medium">
+                Total Square Footage: {squareFootageTotal.toFixed(2)}
+              </div>
             </div>
           </div>
-        </div>
-      </>
-    )}
-  </div>
-);
+        </>
+      )}
+    </div>
+  );
+}
+
+export default SignOrderList;
