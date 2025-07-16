@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const ascending = sortOrder === 'asc';
     const offset = (page - 1) * limit;
 
-    const tableName = 'available_jobs'; // Changed to const
+    const tableName = 'available_jobs';
     const status = searchParams.get('status');
     const archived = searchParams.get('archived') === 'true';
 
@@ -54,6 +54,12 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
+
+    // Default: Exclude archived jobs unless explicitly requested
+    if (!archived) {
+      dataQuery = dataQuery.eq('archived', false);
+      countQuery = countQuery.eq('archived', false);
+    }
 
     // Handle filter parameters
     const filtersParam = searchParams.get('filters');
@@ -208,10 +214,10 @@ export async function GET(request: NextRequest) {
 
     // Execute count queries if stats are requested
     if (includeStats) {
-      const allCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true });
-      const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset');
-      const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid');
-      const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid');
+      const allCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', false); // Exclude archived for 'all' count
+      const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false);
+      const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false);
+      const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false);
       const archivedCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', true);
 
       const today = new Date();
@@ -220,13 +226,14 @@ export async function GET(request: NextRequest) {
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
       sevenDaysFromNow.setHours(23, 59, 59, 999);
 
-      let filteredUnsetQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset');
-      let filteredBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid');
-      let filteredNoBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid');
+      let filteredUnsetQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false);
+      let filteredBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false);
+      let filteredNoBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false);
       let filteredDueSoonQuery = supabase
         .from('available_jobs')
         .select('id', { count: 'exact', head: true })
         .in('status', ['Unset', 'Bid'])
+        .eq('archived', false)
         .gte('due_date', today.toISOString())
         .lte('due_date', sevenDaysFromNow.toISOString());
 
