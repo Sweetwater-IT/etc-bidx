@@ -163,14 +163,11 @@ const TripAndLaborSummary = ({
   mptRental: any
 }) => {
   const formatCurrency = (value: number | undefined): string => {
-    if (value === undefined || Number.isNaN(value)) {
-      return '$0.00'
+    if (value === undefined || Number.isNaN(value) || value < 0) {
+        return "$0.00";
     }
-    return `$${value.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`
-  }
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
   // Memoize cost calculations
   const {
@@ -465,13 +462,10 @@ const BidItemsStep5 = ({
   }
 
   const handleDeletePhase = (phaseIndex: number) => {
-    if (mptRental.phases.length > 1) {
-      dispatch({ type: 'DELETE_MPT_PHASE', payload: phaseIndex })
-      if (currentPhase >= phaseIndex && currentPhase > 0) {
-        setCurrentPhase(currentPhase - 1)
-      }
-    }
-  }
+      if (phaseIndex === 0) return; // Prevent Phase 1 deletion
+      dispatch({ type: "DELETE_MPT_PHASE", payload: phaseIndex });
+      setOpenAccordionItems((prev) => prev.filter((index) => index !== phaseIndex));
+  };
 
   const handlePhaseFormUpdate = (field: keyof PhaseDrawerData, value: any) => {
     if (phaseFormData) {
