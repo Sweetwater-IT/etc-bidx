@@ -183,7 +183,7 @@ export function SignOrderList({
         dispatch({
           type: 'ADD_MPT_ITEM_NOT_SIGN',
           payload: {
-            phaseNumber: 0,
+            phaseNumber: currentPhase,
             equipmentType: 'covers',
             equipmentProperty: 'quantity',
             value: getCurrentEquipmentQuantity('covers') - deletedSign.quantity,
@@ -194,7 +194,7 @@ export function SignOrderList({
         dispatch({
           type: 'ADD_MPT_ITEM_NOT_SIGN',
           payload: {
-            phaseNumber: 0,
+            phaseNumber: currentPhase,
             equipmentType: deletedSign.associatedStructure,
             equipmentProperty: 'quantity',
             value: getCurrentEquipmentQuantity(deletedSign.associatedStructure) - deletedSign.quantity,
@@ -205,7 +205,7 @@ export function SignOrderList({
         dispatch({
           type: 'ADD_MPT_ITEM_NOT_SIGN',
           payload: {
-            phaseNumber: 0,
+            phaseNumber: currentPhase,
             equipmentType: 'BLights',
             equipmentProperty: 'quantity',
             value: getCurrentEquipmentQuantity('BLights') - (deletedSign.quantity * deletedSign.bLights),
@@ -254,7 +254,7 @@ export function SignOrderList({
     dispatch({
       type: 'ADD_MPT_SIGN',
       payload: {
-        phaseNumber: 0,
+        phaseNumber: currentPhase,
         sign: defaultSign,
       },
     });
@@ -619,7 +619,7 @@ export function SignOrderList({
                                         dispatch({
                                           type: 'ADD_MPT_SIGN',
                                           payload: {
-                                            phaseNumber: 0,
+                                            phaseNumber: currentPhase,
                                             sign: defaultSecondary,
                                           },
                                         });
