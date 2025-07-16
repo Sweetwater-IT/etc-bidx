@@ -654,8 +654,7 @@ export function SignOrderList({
       </div>
       <div className="space-y-4 mt-4">
         {localSign && (
-          <Designation шлях
-            DesignationSearcher
+          <DesignationSearcher
             localSign={localSign}
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
