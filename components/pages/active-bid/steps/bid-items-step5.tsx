@@ -103,16 +103,15 @@ const calculateDays = (start: Date, end: Date): number => {
 }
 
 interface PhaseDrawerData {
-  name: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  personnel: number;
-  days: number;
-  numberTrucks: number;
-  additionalRatedHours: number;
-  additionalNonRatedHours: number;
-  maintenanceTrips: number;
-  useAdminDates: boolean;
+  name: string
+  startDate: Date | null
+  endDate: Date | null
+  personnel: number
+  days: number
+  numberTrucks: number
+  additionalRatedHours: number
+  additionalNonRatedHours: number
+  maintenanceTrips: number
 }
 
 // Phase Action Buttons Component
@@ -125,7 +124,7 @@ const PhaseActionButtons = ({
   onEdit: (index: number) => void
   onDelete: (index: number) => void
   phaseIndex: number
-  totalPhases: number // Fixed typo from total1586Phases
+  totalPhases: number
 }) => (
   <div className='flex gap-2 mb-2'>
     <Button
@@ -164,11 +163,14 @@ const TripAndLaborSummary = ({
   mptRental: any
 }) => {
   const formatCurrency = (value: number | undefined): string => {
-    if (value === undefined || Number.isNaN(value) || value < 0) {
-      return "$0.00";
+    if (value === undefined || Number.isNaN(value)) {
+      return '$0.00'
     }
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+    return `$${value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`
+  }
 
   // Memoize cost calculations
   const {
@@ -250,7 +252,9 @@ const TripAndLaborSummary = ({
         </div>
       </div>      
       <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>Additional Non-Rated Hours</label>
+        <label className='text-sm font-semibold'>
+          Additional Non-Rated Hours
+        </label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
         </div>
@@ -258,7 +262,9 @@ const TripAndLaborSummary = ({
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Non-Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(nonRatedHours + safeNumber(phase.additionalNonRatedHours)).toFixed(1)}
+          {safeNumber(
+            nonRatedHours + safeNumber(phase.additionalNonRatedHours)
+          ).toFixed(1)}
         </div>
       </div>      
 
@@ -278,7 +284,9 @@ const TripAndLaborSummary = ({
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(ratedHours + safeNumber(phase.additionalRatedHours)).toFixed(1)}
+          {safeNumber(
+            ratedHours + safeNumber(phase.additionalRatedHours)
+          ).toFixed(1)}
         </div>
       </div> 
 
@@ -334,12 +342,15 @@ const BidItemsStep5 = ({
   })
   const [itemName, setItemName] = useState('')
   const [digits, setDigits] = useState<Record<string, string>>({})
-  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]) // Added for accordion control
 
   // Phase drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(null)
-  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(null)
+  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(
+    null
+  )
+  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(
+    null
+  )
   const [activeTab, setActiveTab] = useState('mpt')
 
   // Ensure activeTab is always a visible tab
@@ -355,16 +366,19 @@ const BidItemsStep5 = ({
 
   // Format phase title for accordion trigger
   const formatPhaseTitle = (phase: Phase, index: number): string => {
-    let title = `Phase ${index + 1}`;
+    let title = `Phase ${index + 1}`
+
     if (phase.startDate && phase.endDate) {
       title += ` - ${format(phase.startDate, 'MMM dd, yyyy')} - ${format(
         phase.endDate,
         'MMM dd, yyyy'
       )}`
     }
+
     if (phase.name && phase.name.trim()) {
       title += ` - ${phase.name}`
     }
+
     return title
   }
 
@@ -418,46 +432,46 @@ const BidItemsStep5 = ({
 
   // Phase management functions
   const handleAddPhase = () => {
-  setPhaseFormData({
-    name: '',
-    startDate: null,
-    endDate: null,
-    personnel: 0,
-    days: 0,
-    numberTrucks: 0,
-    additionalRatedHours: 0,
-    additionalNonRatedHours: 0,
-    maintenanceTrips: 0,
-    useAdminDates: false
-  });
-  setEditingPhaseIndex(null);
-  setDrawerOpen(true);
-};
+    setPhaseFormData({
+      name: '',
+      startDate: null,
+      endDate: null,
+      personnel: 0,
+      days: 0,
+      numberTrucks: 0,
+      additionalRatedHours: 0,
+      additionalNonRatedHours: 0,
+      maintenanceTrips: 0
+    })
+    setEditingPhaseIndex(null)
+    setDrawerOpen(true)
+  }
 
   const handleEditPhase = (phaseIndex: number) => {
-  const phase = mptRental.phases[phaseIndex];
-  setPhaseFormData({
-    name: phase.name,
-    startDate: phase.startDate,
-    endDate: phase.endDate,
-    personnel: phase.personnel,
-    days: phase.days,
-    numberTrucks: phase.numberTrucks,
-    additionalRatedHours: phase.additionalRatedHours,
-    additionalNonRatedHours: phase.additionalNonRatedHours,
-    maintenanceTrips: phase.maintenanceTrips,
-    useAdminDates:
-      phase.startDate?.getTime() === adminData.startDate?.getTime() &&
-      phase.endDate?.getTime() === adminData.endDate?.getTime()
-  });
-  setEditingPhaseIndex(phaseIndex);
-  setDrawerOpen(true);
+    const phase = mptRental.phases[phaseIndex]
+    setPhaseFormData({
+      name: phase.name,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+      personnel: phase.personnel,
+      days: phase.days,
+      numberTrucks: phase.numberTrucks,
+      additionalRatedHours: phase.additionalRatedHours,
+      additionalNonRatedHours: phase.additionalNonRatedHours,
+      maintenanceTrips: phase.maintenanceTrips
+    })
+    setEditingPhaseIndex(phaseIndex)
+    setDrawerOpen(true)
+  }
 
   const handleDeletePhase = (phaseIndex: number) => {
-    if (phaseIndex === 0) return; // Prevent Phase 1 deletion
-    dispatch({ type: "DELETE_MPT_PHASE", payload: phaseIndex });
-    setOpenAccordionItems((prev) => prev.filter((index) => index !== `phase-${phaseIndex}`));
-  };
+    if (mptRental.phases.length > 1) {
+      dispatch({ type: 'DELETE_MPT_PHASE', payload: phaseIndex })
+      if (currentPhase >= phaseIndex && currentPhase > 0) {
+        setCurrentPhase(currentPhase - 1)
+      }
+    }
+  }
 
   const handlePhaseFormUpdate = (field: keyof PhaseDrawerData, value: any) => {
     if (phaseFormData) {
@@ -504,41 +518,25 @@ const BidItemsStep5 = ({
     })
   }
 
-  const handleUseAdminDates = (checked: boolean) => {
-  if (!phaseFormData) return;
+  const handleUseAdminDates = (useAdminDates: boolean) => {
+    if (!phaseFormData) return
 
-  if (checked) {
-    if (!adminData.startDate || !adminData.endDate) {
-      toast.error('Project start and end dates are not set');
-      return;
+    if (useAdminDates && (!adminData.startDate || !adminData.endDate)) {
+      toast.error('Project start and end dates are not set')
+      return
+    } else if (useAdminDates) {
+      const days = calculateDays(adminData.startDate!, adminData.endDate!)
+      setPhaseFormData({
+        ...phaseFormData,
+        startDate: adminData.startDate!,
+        endDate: adminData.endDate!,
+        days: days
+      })
     }
-    const days = calculateDays(adminData.startDate!, adminData.endDate!);
-    setPhaseFormData({
-      ...phaseFormData,
-      startDate: adminData.startDate!,
-      endDate: adminData.endDate!,
-      days,
-      useAdminDates: true
-    });
-  } else {
-    setPhaseFormData({
-      ...phaseFormData,
-      useAdminDates: false
-    });
   }
-};
 
   const handleSavePhase = () => {
-  if (!phaseFormData || !phaseFormData.startDate || !phaseFormData.endDate) {
-    toast.error('Please select both start and end dates.');
-    return;
-  }
-  if (phaseFormData.endDate < phaseFormData.startDate) {
-    toast.error('End date cannot be before start date.');
-    return;
-  }
-
-      const targetPhaseIndex = editingPhaseIndex !== null ? editingPhaseIndex : mptRental.phases.length;
+    if (!phaseFormData) return
 
     if (editingPhaseIndex !== null) {
       // Update existing phase
@@ -626,7 +624,7 @@ const BidItemsStep5 = ({
         }
       })
     } else {
-      // Add new phase logic
+      // Add new phase logic (same as before)
       if (
         mptRental.phases.length === 1 &&
         mptRental.phases[0].name === '' &&
@@ -705,6 +703,7 @@ const BidItemsStep5 = ({
             phase: 0
           }
         })
+
         setCurrentPhase(0)
       } else {
         // Add a new phase
@@ -802,9 +801,7 @@ const BidItemsStep5 = ({
       }
     }
 
-    // Set accordion to expand only the saved/edited phase
-    setOpenAccordionItems([`phase-${targetPhaseIndex}`]);
-    handleCancelPhase();
+    handleCancelPhase()
   }
 
   const handleCancelPhase = () => {
@@ -813,7 +810,7 @@ const BidItemsStep5 = ({
     setEditingPhaseIndex(null)
   }
 
-  // Fetch equipment data
+  // Fetch equipment data (keeping the same useEffect as before)
   useEffect(() => {
     const initializeEquipmentData = async () => {
       try {
@@ -1064,9 +1061,9 @@ const BidItemsStep5 = ({
     // Map database names to equipment types
     const nameToType: Record<string, EquipmentType> = {
       "4' Ft Type III": 'fourFootTypeIII',
-      '6 Ft Wings': 'sixFootWings',
       'H Stands': 'hStand',
       'Posts 12ft': 'post',
+      '6 Ft Wings': 'sixFootWings',
       'SL Metal Stands': 'metalStands',
       Covers: 'covers',
       'Sand Bag': 'sandbag',
@@ -1310,12 +1307,7 @@ const BidItemsStep5 = ({
                         subtext='When you add phases, they will appear here as tabs.'
                       />
                     ) : (
-                      <Accordion
-                        type='multiple'
-                        className='w-full space-y-4'
-                        value={openAccordionItems}
-                        onValueChange={setOpenAccordionItems}
-                      >
+                      <Accordion type='multiple' className='w-full space-y-4'>
                         {mptRental.phases.map((phase, index) => (
                           <AccordionItem
                             key={index}
@@ -1444,13 +1436,14 @@ const BidItemsStep5 = ({
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
-                                  <div className='flex items-center justify-between mb-4'>
-                                    <span className='text-sm font-medium'>Emergency Jobs</span>
-                                    <Switch
-                                      checked={adminData?.emergencyJob || false}
-                                      onCheckedChange={handleEmergencyJobChange}
-                                    />
-                                  </div>
+                                    {/* Add switch here */}
+                                    <div className='flex items-center justify-between mb-4'>
+                                      <span className='text-sm font-medium'>Emergency Jobs</span>
+                                      <Switch
+                                        checked={adminData?.emergencyJob || false}
+                                        onCheckedChange={handleEmergencyJobChange}
+                                      />
+                                    </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
                                     {lightAndDrumList.map(equipmentKey => (
                                       <div
@@ -1784,7 +1777,7 @@ const BidItemsStep5 = ({
               </TabsContent>
             )}
             {activeTab === 'permanent' && (
-              <TabsContent value ductive='permanent' className='mt-6'>
+              <TabsContent value='permanent' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <PermanentSignsSummaryStep />
                 </div>
@@ -1817,167 +1810,171 @@ const BidItemsStep5 = ({
 
       {/* Phase Drawer */}
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
-  <DrawerContent className='min-w-lg'>
-    <div className='flex flex-col gap-2 relative z-10 bg-background'>
-      <DrawerHeader>
-        <DrawerTitle>
-          {editingPhaseIndex !== null ? `Edit Phase ${editingPhaseIndex + 1}` : 'Add Phase'}
-        </DrawerTitle>
-      </DrawerHeader>
-      <Separator className='w-full -mt-2' />
-    </div>
-
-    {phaseFormData && (
-      <div className='px-4 space-y-6 mt-4 overflow-y-auto h-full'>
-        <div className='space-y-4'>
-          <h4 className='font-medium'>Phase Information</h4>
-
-          <div className='flex items-center gap-x-2'>
-            <Checkbox
-              checked={phaseFormData.useAdminDates}
-              aria-label='Use same start and end dates as admin data'
-              onCheckedChange={handleUseAdminDates}
-            />
-            <div className='text-muted-foreground text-sm'>
-              Use same start and end dates as admin data
-            </div>
+        <DrawerContent className='min-w-lg'>
+          <div className='flex flex-col gap-2 relative z-10 bg-background'>
+            <DrawerHeader>
+              <DrawerTitle>
+                {editingPhaseIndex !== null
+                  ? `Edit Phase ${editingPhaseIndex + 1}`
+                  : 'Add Phase'}
+              </DrawerTitle>
+            </DrawerHeader>
+            <Separator className='w-full -mt-2' />
           </div>
 
-          <div className='grid grid-cols-1 gap-4'>
-            <div>
-              <Label className='mb-2' htmlFor='phase-name'>
-                Phase Name (Optional)
-              </Label>
-              <Input
-                id='phase-name'
-                value={phaseFormData.name}
-                onChange={e => handlePhaseFormUpdate('name', e.target.value)}
-                placeholder={`Phase ${(editingPhaseIndex ?? mptRental.phases.length) + 1}`}
-              />
-            </div>
+          {phaseFormData && (
+            <div className='px-4 space-y-6 mt-4 overflow-y-auto h-full'>
+              <div className='space-y-4'>
+                <h4 className='font-medium'>Phase Information</h4>
 
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='startDate' className='flex items-center gap-1'>
-                  Start Date <span className='text-red-500'>*</span>
-                </Label>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen} modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !phaseFormData.startDate && 'border-red-500'
-                      )}
-                    >
-                      <CalendarIcon className='mr-2 h-4 w-4' />
-                      {phaseFormData.startDate ? (
-                        format(phaseFormData.startDate, 'PPP')
-                      ) : (
-                        <span>Select start date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0'>
-                    <Calendar
-                      mode='single'
-                      selected={phaseFormData.startDate ?? undefined}
-                      onSelect={date => handleDateChange(date, 'startDate')}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                {!phaseFormData.startDate && (
-                  <p className='text-red-500 text-sm mt-1'>Start date is required</p>
-                )}
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='endDate' className='flex items-center gap-1'>
-                  End Date <span className='text-red-500'>*</span>
-                </Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen} modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !phaseFormData.endDate && 'border-red-500'
-                      )}
-                    >
-                      <CalendarIcon className='mr-2 h-4 w-4' />
-                      {phaseFormData.endDate ? (
-                        format(phaseFormData.endDate, 'PPP')
-                      ) : (
-                        <span>Select end date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0'>
-                    <Calendar
-                      mode='single'
-                      selected={phaseFormData.endDate ?? undefined}
-                      onSelect={date => handleDateChange(date, 'endDate')}
-                      initialFocus
-                      disabled={date =>
-                        phaseFormData.startDate ? date < phaseFormData.startDate : false
-                      }
-                    />
-                  </PopoverContent>
-                </Popover>
-                {!phaseFormData.endDate && (
-                  <p className='text-red-500 text-sm mt-1'>End date is required</p>
-                )}
-              </div>
-            </div>
-
-            {phaseFormData.startDate && (
-              <div className='bg-muted p-4 rounded-md'>
-                <div className='flex flex-col gap-4'>
-                  <div className='text-sm font-medium'>
-                    Set end date as number of days out from start date:
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <Badge
-                      className='px-3 py-1 cursor-pointer hover:bg-primary'
-                      onClick={() => setEndDateFromDays(30)}
-                    >
-                      30
-                    </Badge>
-                    <Badge
-                      className='px-3 py-1 cursor-pointer hover:bg-primary'
-                      onClick={() => setEndDateFromDays(60)}
-                    >
-                      60
-                    </Badge>
-                    <Badge
-                      className='px-3 py-1 cursor-pointer hover:bg-primary'
-                      onClick={() => setEndDateFromDays(90)}
-                    >
-                      90
-                    </Badge>
-                    <
-
-div className='flex items-center gap-2'>
-                      <Input
-                        className='w-20'
-                        onChange={e =>
-                          setEndDateFromDays(safeNumber(parseInt(e.target.value)))
-                        }
-                        placeholder='Days'
-                        type='number'
-                        min='1'
-                      />
-                    </div>
+                <div className='flex items-center gap-x-2'>
+                  <Checkbox
+                    checked={
+                      phaseFormData.startDate === adminData.startDate &&
+                      phaseFormData.endDate === adminData.endDate
+                    }
+                    aria-label='Use same start and end dates as admin data'
+                    onCheckedChange={handleUseAdminDates}
+                  />
+                  <div className='text-muted-foreground text-sm'>
+                    Use same start and end dates as admin data
                   </div>
                 </div>
+
+                <div className='grid grid-cols-1 gap-4'>
+                  <div>
+                    <Label className='mb-2' htmlFor='phase-name'>
+                      Phase Name (Optional)
+                    </Label>
+                    <Input
+                      id='phase-name'
+                      value={phaseFormData.name}
+                      onChange={e =>
+                        handlePhaseFormUpdate('name', e.target.value)
+                      }
+                      placeholder={`Phase ${
+                        (editingPhaseIndex ?? mptRental.phases.length) + 1
+                      }`}
+                    />
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='startDate'>Start Date</Label>
+                      <Popover
+                        open={startDateOpen}
+                        onOpenChange={setStartDateOpen}
+                        modal={true}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant='outline'
+                            className='w-full justify-start text-left font-normal'
+                          >
+                            <CalendarIcon className='mr-2 h-4 w-4' />
+                            {phaseFormData.startDate ? (
+                              format(phaseFormData.startDate, 'PPP')
+                            ) : (
+                              <span>Select start date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0'>
+                          <Calendar
+                            mode='single'
+                            selected={phaseFormData.startDate ?? undefined}
+                            onSelect={date =>
+                              handleDateChange(date, 'startDate')
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='endDate'>End Date</Label>
+                      <Popover
+                        open={endDateOpen}
+                        onOpenChange={setEndDateOpen}
+                        modal={true}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant='outline'
+                            className='w-full justify-start text-left font-normal'
+                          >
+                            <CalendarIcon className='mr-2 h-4 w-4' />
+                            {phaseFormData.endDate ? (
+                              format(phaseFormData.endDate, 'PPP')
+                            ) : (
+                              <span>Select end date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0'>
+                          <Calendar
+                            mode='single'
+                            selected={phaseFormData.endDate ?? undefined}
+                            onSelect={date => handleDateChange(date, 'endDate')}
+                            initialFocus
+                            disabled={date =>
+                              phaseFormData.startDate
+                                ? date < phaseFormData.startDate
+                                : false
+                            }
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {phaseFormData.startDate && (
+                    <div className='bg-muted p-4 rounded-md'>
+                      <div className='flex flex-col gap-4'>
+                        <div className='text-sm font-medium'>
+                          Set end date as number of days out from start date:
+                        </div>
+                        <div className='flex items-center gap-3'>
+                          <Badge
+                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            onClick={() => setEndDateFromDays(30)}
+                          >
+                            30
+                          </Badge>
+                          <Badge
+                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            onClick={() => setEndDateFromDays(60)}
+                          >
+                            60
+                          </Badge>
+                          <Badge
+                            className='px-3 py-1 cursor-pointer hover:bg-primary'
+                            onClick={() => setEndDateFromDays(90)}
+                          >
+                            90
+                          </Badge>
+                          <div className='flex items-center gap-2'>
+                            <Input
+                              className='w-20'
+                              onChange={e =>
+                                setEndDateFromDays(
+                                  safeNumber(parseInt(e.target.value))
+                                )
+                              }
+                              placeholder='Days'
+                              type='number'
+                              min='1'
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        <Separator />
-
+              <Separator />
 
               <div className='space-y-4'>
                 <h4 className='font-medium'>Trip and Labor</h4>
@@ -2085,10 +2082,7 @@ div className='flex items-center gap-2'>
                   Cancel
                 </Button>
               </DrawerClose>
-              <Button
-                onClick={handleSavePhase}
-                disabled={!phaseFormData || !phaseFormData.startDate || !phaseFormData.endDate}
-              >
+              <Button onClick={handleSavePhase} disabled={!phaseFormData}>
                 {editingPhaseIndex !== null ? 'Update Phase' : 'Save Phase'}
               </Button>
             </div>
