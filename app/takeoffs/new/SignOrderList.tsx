@@ -244,21 +244,14 @@ export function SignOrderList({
       description: "",
       substrate: "Plastic",
     };
-    setLocalSign(defaultSign); // Set localSign to show DesignationSearcher
-    setMode("create");
-    setOpen(false); // Keep SignEditingSheet closed
-  };
-
-  const handleDesignationSelected = (updatedSign: PrimarySign | SecondarySign) => {
     dispatch({
-      type: "ADD_MPT_SIGN",
+      type: 'ADD_MPT_SIGN',
       payload: {
         phaseNumber: currentPhase,
-        sign: updatedSign,
+        sign: defaultSign,
       },
     });
-    setLocalSign(updatedSign);
-    setOpen(true); // Open SignEditingSheet after designation is selected
+    setLocalSign(defaultSign);
   };
 
   const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
@@ -653,22 +646,8 @@ export function SignOrderList({
         </Table>
       </div>
       <div className="space-y-4 mt-4">
-        {localSign && (
-          <DesignationSearcher
-            localSign={localSign}
-            setLocalSign={setLocalSign}
-            onDesignationSelected={handleDesignationSelected}
-          />
-        )}
-        {localSign && open && (
-          <SignEditingSheet
-            open={open}
-            onOpenChange={handleClose}
-            mode={mode}
-            sign={localSign}
-            currentPhase={currentPhase}
-          />
-        )}
+        {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
+        {localSign && <SignEditingSheet open={open} onOpenChange={handleClose} mode={mode} sign={localSign} />}
       </div>
       {!onlyTable && (
         <>
