@@ -99,7 +99,7 @@ export type EstimateAction =
 		payload: { phase: number; }
 	}
 	| { type: "UPDATE_MPT_SIGN"; payload: MPTSignUpdatePayload }
-	| { type: "DELETE_MPT_SIGN"; payload: string }
+	| { type: "DELETE_MPT_SIGN"; payload: { phaseNumber: number; signId: string } }
 	/***FLAGGING + SERVICE WORK */
 	| { type: "ADD_FLAGGING" }
 	| { type: "UPDATE_FLAGGING"; payload: { key: keyof Flagging; value: any } }
