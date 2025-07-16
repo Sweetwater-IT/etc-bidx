@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
     const ascending = sortOrder === 'asc';
     const offset = (page - 1) * limit;
 
-    let tableName = 'available_jobs';
+    const tableName = 'available_jobs'; // Changed to const
     const status = searchParams.get('status');
-    const archived = searchParams.get('archived') === 'true'; // Add archived filter
+    const archived = searchParams.get('archived') === 'true';
 
     // Build base queries
     let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
       const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset');
       const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid');
       const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid');
-      const archivedCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', true); // Updated to use archived column
+      const archivedCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', true);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
         unset: unsetCountResult.count || 0,
         bid: bidCountResult.count || 0,
         'no-bid': noBidCountResult.count || 0,
-        archived: archivedCountResult.count || 0 // Updated to use archived column
+        archived: archivedCountResult.count || 0
       };
 
       const filteredOpenBidsCount = (filteredUnsetResult.count || 0) + (filteredBidResult.count || 0);
