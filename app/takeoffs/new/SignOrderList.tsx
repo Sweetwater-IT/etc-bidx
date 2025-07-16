@@ -11,7 +11,6 @@ import {
   SecondarySign,
   ExtendedPrimarySign,
   ExtendedSecondarySign,
-  SheetingType,
 } from "@/types/MPTEquipment";
 import {
   Table,
@@ -567,7 +566,7 @@ export function SignOrderList({
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setLocalSign({ ...sign }); // Create a copy to avoid mutation
+                                    setLocalSign({ ...sign });
                                     setOpen(true);
                                     setMode("edit");
                                   }}
@@ -663,7 +662,7 @@ export function SignOrderList({
             onOpenChange={handleClose}
             mode={mode}
             sign={localSign}
-            currentPhase={currentPhase} // Pass currentPhase to ensure correct dispatching
+            currentPhase={currentPhase}
           />
         )}
       </div>
@@ -691,3 +690,5 @@ export function SignOrderList({
     </div>
   );
 }
+
+export default SignOrderList;
