@@ -378,7 +378,7 @@ export const estimateReducer = (
 					...state.mptRental,
 					phases: state.mptRental.phases.map((phase: Phase) => ({
 						...phase,
-						signs: phase.signs.filter((sign) => sign.id !== signIdToDelete),
+						signs: phase.signs.filter((sign) => sign.id !== signId),
 					})),
 				},
 			};
