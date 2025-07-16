@@ -140,7 +140,7 @@ export function SignOrderList({
 
   useEffect(() => {
     if (localSign && localSign.designation !== "") {
-      setOpen(true);
+      setOpen(true); // Open SignEditingSheet only when designation is set
     }
   }, [localSign?.designation]);
 
@@ -244,16 +244,21 @@ export function SignOrderList({
       description: "",
       substrate: "Plastic",
     };
+    setLocalSign(defaultSign); // Set localSign to show DesignationSearcher
+    setMode("create");
+    setOpen(false); // Keep SignEditingSheet closed
+  };
+
+  const handleDesignationSelected = (updatedSign: PrimarySign | SecondarySign) => {
     dispatch({
       type: "ADD_MPT_SIGN",
       payload: {
         phaseNumber: currentPhase,
-        sign: defaultSign,
+        sign: updatedSign,
       },
     });
-    setLocalSign(defaultSign);
-    setMode("create");
-    setOpen(true);
+    setLocalSign(updatedSign);
+    setOpen(true); // Open SignEditingSheet after designation is selected
   };
 
   const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
@@ -589,16 +594,9 @@ export function SignOrderList({
                                         description: "",
                                         substrate: "Plastic",
                                       };
-                                      dispatch({
-                                        type: "ADD_MPT_SIGN",
-                                        payload: {
-                                          phaseNumber: currentPhase,
-                                          sign: defaultSecondary,
-                                        },
-                                      });
                                       setLocalSign({ ...defaultSecondary });
-                                      setOpen(true);
                                       setMode("create");
+                                      setOpen(false); // Show DesignationSearcher for secondary sign
                                     }}
                                   >
                                     <Plus className="h-4 w-4 mr-2" />
@@ -655,8 +653,15 @@ export function SignOrderList({
         </Table>
       </div>
       <div className="space-y-4 mt-4">
-        {localSign && <DesignationSearcher localSign={localSign} setLocalSign={setLocalSign} />}
         {localSign && (
+          <Designation шлях
+            DesignationSearcher
+            localSign={localSign}
+            setLocalSign={setLocalSign}
+            onDesignationSelected={handleDesignationSelected}
+          />
+        )}
+        {localSign && open && (
           <SignEditingSheet
             open={open}
             onOpenChange={handleClose}
