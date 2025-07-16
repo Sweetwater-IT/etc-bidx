@@ -362,6 +362,22 @@ const BidItemsStep5 = ({
     setActiveTab(value)
   }
 
+// Temporary workaround
+interface Phase {
+  name: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  days: number;
+  personnel: number;
+  numberTrucks: number;
+  additionalRatedHours: number;
+  additionalNonRatedHours: number;
+  maintenanceTrips: number;
+  standardEquipment: Record<string, { quantity: number }>;
+  customLightAndDrumItems: any[];
+  signs: any[];
+}
+
   // Format phase title for accordion trigger
   const formatPhaseTitle = (phase: Phase, index: number): string => {
     let title = `Phase ${index + 1}`;
