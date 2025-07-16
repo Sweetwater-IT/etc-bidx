@@ -412,7 +412,7 @@ export function SignOrderList({
                 }}
               >
                 <Copy className="w-4 h-4 mr-2" />
-                Copy Selected Phase's Signs
+                Copy Signs From Phase
               </button>
             </div>
           </div>
