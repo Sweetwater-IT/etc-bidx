@@ -166,8 +166,8 @@ const TripAndLaborSummary = ({
     if (value === undefined || Number.isNaN(value) || value < 0) {
         return "$0.00";
     }
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}";
+  };
 
   // Memoize cost calculations
   const {
@@ -339,6 +339,7 @@ const BidItemsStep5 = ({
   })
   const [itemName, setItemName] = useState('')
   const [digits, setDigits] = useState<Record<string, string>>({})
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]) // Added for accordion control
 
   // Phase drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -462,9 +463,9 @@ const BidItemsStep5 = ({
   }
 
   const handleDeletePhase = (phaseIndex: number) => {
-      if (phaseIndex === 0) return; // Prevent Phase 1 deletion
-      dispatch({ type: "DELETE_MPT_PHASE", payload: phaseIndex });
-      setOpenAccordionItems((prev) => prev.filter((index) => index !== phaseIndex));
+    if (phaseIndex === 0) return; // Prevent Phase 1 deletion
+    dispatch({ type: "DELETE_MPT_PHASE", payload: phaseIndex });
+    setOpenAccordionItems((prev) => prev.filter((index) => index !== `phase-${phaseIndex}`));
   };
 
   const handlePhaseFormUpdate = (field: keyof PhaseDrawerData, value: any) => {
@@ -530,7 +531,9 @@ const BidItemsStep5 = ({
   }
 
   const handleSavePhase = () => {
-    if (!phaseFormData) return
+    if (!phaseFormData || !phaseFormData.startDate || !phaseFormData.endDate) return;
+
+    const targetPhaseIndex = editingPhaseIndex !== null ? editingPhaseIndex : mptRental.phases.length;
 
     if (editingPhaseIndex !== null) {
       // Update existing phase
@@ -618,7 +621,7 @@ const BidItemsStep5 = ({
         }
       })
     } else {
-      // Add new phase logic (same as before)
+      // Add new phase logic
       if (
         mptRental.phases.length === 1 &&
         mptRental.phases[0].name === '' &&
@@ -696,8 +699,7 @@ const BidItemsStep5 = ({
             value: phaseFormData.maintenanceTrips,
             phase: 0
           }
-        })
-
+resas       })
         setCurrentPhase(0)
       } else {
         // Add a new phase
@@ -795,7 +797,9 @@ const BidItemsStep5 = ({
       }
     }
 
-    handleCancelPhase()
+    // Set accordion to expand only the saved/edited phase
+    setOpenAccordionItems([`phase-${targetPhaseIndex}`]);
+    handleCancelPhase();
   }
 
   const handleCancelPhase = () => {
@@ -1301,7 +1305,12 @@ const BidItemsStep5 = ({
                         subtext='When you add phases, they will appear here as tabs.'
                       />
                     ) : (
-                      <Accordion type='multiple' className='w-full space-y-4'>
+                      <Accordion
+                        type='multiple'
+                        className='w-full space-y-4'
+                        value={openAccordionItems}
+                        onValueChange={setOpenAccordionItems}
+                      >
                         {mptRental.phases.map((phase, index) => (
                           <AccordionItem
                             key={index}
@@ -2076,7 +2085,10 @@ const BidItemsStep5 = ({
                   Cancel
                 </Button>
               </DrawerClose>
-              <Button onClick={handleSavePhase} disabled={!phaseFormData}>
+              <Button
+                onClick={handleSavePhase}
+                disabled={!phaseFormData || !phaseFormData.startDate || !phaseFormData.endDate}
+              >
                 {editingPhaseIndex !== null ? 'Update Phase' : 'Save Phase'}
               </Button>
             </div>
