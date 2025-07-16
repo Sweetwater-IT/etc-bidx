@@ -364,7 +364,7 @@ const BidItemsStep5 = ({
 
   // Format phase title for accordion trigger
   const formatPhaseTitle = (phase: Phase, index: number): string => {
-    let title = `Phase ${index + 1}`
+    let title = `Phase ${index + 1}`;
 
     if (phase.startDate && phase.endDate) {
       title += ` - ${format(phase.startDate, 'MMM dd, yyyy')} - ${format(
