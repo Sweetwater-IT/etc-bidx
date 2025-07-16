@@ -372,51 +372,37 @@ export const estimateReducer = (
 
 		case "RESET_MPT_PHASE_SIGNS":
 		    if (!state.mptRental) return state;
-		    const phaseIndex = action.payload;
-		    const phaseToReset = state.mptRental.phases[phaseIndex];
+		    const targetPhaseIndex = action.payload;
+		    const phaseToReset = state.mptRental.phases[targetPhaseIndex];
+		    if (!phaseToReset) return state;
+		
 		    // Calculate equipment quantities to subtract
-		    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
-		    phaseToReset.signs.forEach((sign) => {
-		        if ("associatedStructure" in sign && sign.quantity > 0) {
-		            const primarySign = sign as PrimarySign;
-		            if (primarySign.cover) {
-		                equipmentUpdates.covers = (equipmentUpdates.covers || 0) + primarySign.quantity;
-		            }
-		            if (primarySign.associatedStructure !== "none") {
-		                equipmentUpdates[primarySign.associatedStructure as EquipmentType] =
-		                    (equipmentUpdates[primarySign.associatedStructure as EquipmentType] || 0) +
-		                    primarySign.quantity;
-		            }
-		            if (primarySign.bLights > 0) {
-		                equipmentUpdates.BLights =
-		                    (equipmentUpdates.BLights || 0) + primarySign.quantity * primarySign.bLights;
-		            }
-		        }
+		    const associatedEquipment = getAssociatedSignEquipment({
+		        ...phaseToReset,
+		        signs: []
 		    });
-		    // Update the phase's standardEquipment
+		
 		    return {
 		        ...state,
 		        mptRental: {
 		            ...state.mptRental,
-		            phases: state.mptRental.phases.map((phase, index) => {
-		                if (index === phaseIndex) {
-		                    const updatedStandardEquipment = { ...phase.standardEquipment };
-		                    Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
-		                        const currentQuantity = updatedStandardEquipment[equipmentType as EquipmentType]?.quantity || 0;
-		                        updatedStandardEquipment[equipmentType as EquipmentType] = {
-		                            ...updatedStandardEquipment[equipmentType as EquipmentType],
-		                            quantity: Math.max(0, currentQuantity - (quantity || 0)),
-		                        };
-		                    });
-		                    return {
-		                        ...phase,
-		                        signs: [],
-		                        standardEquipment: updatedStandardEquipment,
-		                    };
-		                }
-		                return phase;
-		            }),
-		        },
+		            phases: state.mptRental.phases.map((phase, index) =>
+		                index === targetPhaseIndex
+		                    ? {
+		                          ...phase,
+		                          signs: [],
+		                          standardEquipment: {
+		                              ...phase.standardEquipment,
+		                              covers: { quantity: Math.max(0, associatedEquipment.covers) },
+		                              fourFootTypeIII: { quantity: Math.max(0, associatedEquipment.fourFootTypeIII) },
+		                              hStand: { quantity: Math.max(0, associatedEquipment.hStand) },
+		                              post: { quantity: Math.max(0, associatedEquipment.post) },
+		                              BLights: { quantity: Math.max(0, associatedEquipment.BLights) }
+		                          }
+		                      }
+		                    : phase
+		            )
+		        }
 		    };
 			
 		case "REFRESH_MPT_PHASE_SIGNS":
