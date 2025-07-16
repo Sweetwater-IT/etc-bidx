@@ -78,33 +78,68 @@ export const estimateReducer = (
 			};
 
 		case "DELETE_MPT_PHASE":
-			if (!state.mptRental) return state;
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.filter(
-						(_, index) => index !== action.payload
-					),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    const phaseIndex = action.payload;
+		    if (phaseIndex === 0) return state; // Prevent Phase 1 deletion
+		    const phaseToDelete = state.mptRental.phases[phaseIndex];
+		    // Clean up associated equipment for signs in the deleted phase
+		    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
+		    phaseToDelete.signs.forEach((sign) => {
+		        if ("associatedStructure" in sign && sign.quantity > 0) {
+		            const primarySign = sign as PrimarySign;
+		            if (primarySign.cover) {
+		                equipmentUpdates.covers = (equipmentUpdates.covers || 0) + primarySign.quantity;
+		            }
+		            if (primarySign.associatedStructure !== "none") {
+		                equipmentUpdates[primarySign.associatedStructure as EquipmentType] =
+		                    (equipmentUpdates[primarySign.associatedStructure as EquipmentType] || 0) +
+		                    primarySign.quantity;
+		            }
+		            if (primarySign.bLights > 0) {
+		                equipmentUpdates.BLights =
+		                    (equipmentUpdates.BLights || 0) + primarySign.quantity * primarySign.bLights;
+		            }
+		        }
+		    });
+		    // Subtract equipment quantities from Phase 1
+		    const updatedPhases = state.mptRental.phases.map((phase, index) => {
+		        if (index === 0 && phaseIndex !== 0) {
+		            const updatedStandardEquipment = { ...phase.standardEquipment };
+		            Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
+		                const currentQuantity = updatedStandardEquipment[equipmentType as EquipmentType]?.quantity || 0;
+		                updatedStandardEquipment[equipmentType as EquipmentType] = {
+		                    ...updatedStandardEquipment[equipmentType as EquipmentType],
+		                    quantity: Math.max(0, currentQuantity - (quantity || 0)),
+		                };
+		            });
+		            return { ...phase, standardEquipment: updatedStandardEquipment };
+		        }
+		        return phase;
+		    });
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: updatedPhases.filter((_, index) => index !== phaseIndex),
+		        },
+		    };
 
 		case "UPDATE_MPT_PHASE_TRIP_AND_LABOR":
-			if (!state.mptRental) return state;
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase, index) =>
-						index === action.payload.phase
-							? {
-								...phase,
-								[action.payload.key]: action.payload.value,
-							}
-							: phase
-					),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phase, index) =>
+		                index === action.payload.phase
+		                    ? {
+		                          ...phase,
+		                          [action.payload.key]: Math.max(0, action.payload.value), // Prevent negative values
+		                      }
+		                    : phase
+		            ),
+		        },
+		    };
 
 		case "UPDATE_PHASE_NAME":
 			if (!state.mptRental) return state;
@@ -140,16 +175,15 @@ export const estimateReducer = (
 				},
 			};
 
-		case "UPDATE_TRUCK_AND_FUEL_COSTS": {
-			if (!state.mptRental) return state;
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					[action.payload.key]: action.payload.value,
-				},
-			};
-		}
+		case "UPDATE_TRUCK_AND_FUEL_COSTS":
+		    if (!state.mptRental) return state;
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            [action.payload.key]: action.payload.key === "mpgPerTruck" ? Math.max(1, action.payload.value) : Math.max(0, action.payload.value), // Prevent negative values, ensure mpgPerTruck >= 1
+		        },
+		    };
 
 		case "UPDATE_PAYBACK_CALCULATIONS":
 			if (!state.mptRental) return state;
@@ -188,35 +222,34 @@ export const estimateReducer = (
 			};
 
 		case "ADD_MPT_ITEM_NOT_SIGN":
-			if (!state.mptRental) return state;
-			const {
-				phaseNumber,
-				equipmentType: addEquipType,
-				value: addValue,
-				equipmentProperty,
-			} = action.payload;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase, index) => {
-						if (index === phaseNumber) {
-							return {
-								...phase,
-								standardEquipment: {
-									...phase.standardEquipment,
-									[addEquipType]: {
-										...phase.standardEquipment[addEquipType],
-										[equipmentProperty]: addValue,
-									},
-								},
-							};
-						}
-						return phase;
-					}),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    const {
+		        phaseNumber,
+		        equipmentType: addEquipType,
+		        value: addValue,
+		        equipmentProperty,
+		    } = action.payload;
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phase, index) => {
+		                if (index === phaseNumber) {
+		                    return {
+		                        ...phase,
+		                        standardEquipment: {
+		                            ...phase.standardEquipment,
+		                            [addEquipType]: {
+		                                ...phase.standardEquipment[addEquipType],
+		                                [equipmentProperty]: Math.max(0, addValue), // Prevent negative quantities
+		                            },
+		                        },
+		                    };
+		                }
+		                return phase;
+		            }),
+		        },
+		    };
 
 		case "ADD_LIGHT_AND_DRUM_CUSTOM_ITEM":
 			if (!state.mptRental) return state;
@@ -308,80 +341,149 @@ export const estimateReducer = (
 			};
 
 		case "UPDATE_MPT_SIGN":
-			if (!state.mptRental) return state;
-
-			const { phase, signId, key, value: updateValue } = action.payload;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phaseItem, index) => {
-						if (index === phase) {
-							return {
-								...phaseItem,
-								signs: phaseItem.signs.map((sign) =>
-									sign.id === signId ? { ...sign, [key]: updateValue } : sign
-								),
-							};
-						}
-						return phaseItem;
-					}),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    const { phase, signId, key, value: updateValue } = action.payload;
+		    // Ensure sign exists in the specified phase
+		    const phaseExists = state.mptRental.phases[phase];
+		    const signExists = phaseExists?.signs.some((sign) => sign.id === signId);
+		    if (!phaseExists || !signExists) return state;
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phaseItem, index) => {
+		                if (index === phase) {
+		                    return {
+		                        ...phaseItem,
+		                        signs: phaseItem.signs.map((sign) =>
+		                            sign.id === signId
+		                                ? {
+		                                      ...sign,
+		                                      [key]: key === "quantity" ? Math.max(0, updateValue) : updateValue,
+		                                  }
+		                                : sign
+		                        ),
+		                    };
+		                }
+		                return phaseItem;
+		            }),
+		        },
+		    };
 
 		case "RESET_MPT_PHASE_SIGNS":
-			if (!state.mptRental) return state;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase, index) => {
-						if (index === action.payload) {
-							return {
-								...phase,
-								signs: [],
-							};
-						}
-						return phase;
-					}),
-				},
-			};
-
+		    if (!state.mptRental) return state;
+		    const phaseIndex = action.payload;
+		    const phaseToReset = state.mptRental.phases[phaseIndex];
+		    // Calculate equipment quantities to subtract
+		    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
+		    phaseToReset.signs.forEach((sign) => {
+		        if ("associatedStructure" in sign && sign.quantity > 0) {
+		            const primarySign = sign as PrimarySign;
+		            if (primarySign.cover) {
+		                equipmentUpdates.covers = (equipmentUpdates.covers || 0) + primarySign.quantity;
+		            }
+		            if (primarySign.associatedStructure !== "none") {
+		                equipmentUpdates[primarySign.associatedStructure as EquipmentType] =
+		                    (equipmentUpdates[primarySign.associatedStructure as EquipmentType] || 0) +
+		                    primarySign.quantity;
+		            }
+		            if (primarySign.bLights > 0) {
+		                equipmentUpdates.BLights =
+		                    (equipmentUpdates.BLights || 0) + primarySign.quantity * primarySign.bLights;
+		            }
+		        }
+		    });
+		    // Update the phase's standardEquipment
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phase, index) => {
+		                if (index === phaseIndex) {
+		                    const updatedStandardEquipment = { ...phase.standardEquipment };
+		                    Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
+		                        const currentQuantity = updatedStandardEquipment[equipmentType as EquipmentType]?.quantity || 0;
+		                        updatedStandardEquipment[equipmentType as EquipmentType] = {
+		                            ...updatedStandardEquipment[equipmentType as EquipmentType],
+		                            quantity: Math.max(0, currentQuantity - (quantity || 0)),
+		                        };
+		                    });
+		                    return {
+		                        ...phase,
+		                        signs: [],
+		                        standardEquipment: updatedStandardEquipment,
+		                    };
+		                }
+		                return phase;
+		            }),
+		        },
+		    };
+			
 		case "REFRESH_MPT_PHASE_SIGNS":
-			if (!state.mptRental) return state;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase, index) => {
-						if (index === action.payload.phase) {
-							return {
-								...phase,
-								signs: phase.signs
-							};
-						}
-						return phase;
-					}),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    const phaseIndex = action.payload.phase;
+		    const phaseToRefresh = state.mptRental.phases[phaseIndex];
+		    if (!phaseToRefresh) return state;
+		    // Recalculate equipment quantities based on current signs
+		    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
+		    phaseToRefresh.signs.forEach((sign) => {
+		        if ("associatedStructure" in sign && sign.quantity > 0) {
+		            const primarySign = sign as PrimarySign;
+		            if (primarySign.cover) {
+		                equipmentUpdates.covers = (equipmentUpdates.covers || 0) + primarySign.quantity;
+		            }
+		            if (primarySign.associatedStructure !== "none") {
+		                equipmentUpdates[primarySign.associatedStructure as EquipmentType] =
+		                    (equipmentUpdates[primarySign.associatedStructure as EquipmentType] || 0) +
+		                    primarySign.quantity;
+		            }
+		            if (primarySign.bLights > 0) {
+		                equipmentUpdates.BLights =
+		                    (equipmentUpdates.BLights || 0) + primarySign.quantity * primarySign.bLights;
+		            }
+		        }
+		    });
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phase, index) => {
+		                if (index === phaseIndex) {
+		                    const updatedStandardEquipment = { ...phase.standardEquipment };
+		                    Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
+		                        updatedStandardEquipment[equipmentType as EquipmentType] = {
+		                            ...updatedStandardEquipment[equipmentType as EquipmentType],
+		                            quantity: Math.max(0, quantity || 0),
+		                        };
+		                    });
+		                    return {
+		                        ...phase,
+		                        signs: phase.signs, // Retain original signs
+		                        standardEquipment: updatedStandardEquipment,
+		                    };
+		                }
+		                return phase;
+		            }),
+		        },
+		    };
 
 		case "DELETE_MPT_SIGN":
-			if (!state.mptRental) return state;
-			const signIdToDelete = action.payload;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase: Phase) => ({
-						...phase,
-						signs: phase.signs.filter((sign) => sign.id !== signIdToDelete),
-					})),
-				},
-			};
+		    if (!state.mptRental) return state;
+		    const { phaseNumber, signId } = action.payload;
+		    return {
+		        ...state,
+		        mptRental: {
+		            ...state.mptRental,
+		            phases: state.mptRental.phases.map((phase, index) =>
+		                index === phaseNumber
+		                    ? {
+		                          ...phase,
+		                          signs: phase.signs.filter((sign) => sign.id !== signId),
+		                      }
+		                    : phase
+		            ),
+		        },
+		    };
 
 		case "ADD_FLAGGING":
 			return {
