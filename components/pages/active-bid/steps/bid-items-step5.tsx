@@ -124,7 +124,7 @@ const PhaseActionButtons = ({
   onEdit: (index: number) => void
   onDelete: (index: number) => void
   phaseIndex: number
-  totalPhases: number
+  totalPhases: number // Fixed typo from total1586Phases
 }) => (
   <div className='flex gap-2 mb-2'>
     <Button
@@ -164,9 +164,9 @@ const TripAndLaborSummary = ({
 }) => {
   const formatCurrency = (value: number | undefined): string => {
     if (value === undefined || Number.isNaN(value) || value < 0) {
-        return "$0.00";
+      return "$0.00";
     }
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}";
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Memoize cost calculations
@@ -249,9 +249,7 @@ const TripAndLaborSummary = ({
         </div>
       </div>      
       <div className='flex flex-col'>
-        <label className='text-sm font-semibold'>
-          Additional Non-Rated Hours
-        </label>
+        <label className='text-sm font-semibold'>Additional Non-Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
         </div>
@@ -259,9 +257,7 @@ const TripAndLaborSummary = ({
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Non-Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(
-            nonRatedHours + safeNumber(phase.additionalNonRatedHours)
-          ).toFixed(1)}
+          {safeNumber(nonRatedHours + safeNumber(phase.additionalNonRatedHours)).toFixed(1)}
         </div>
       </div>      
 
@@ -281,9 +277,7 @@ const TripAndLaborSummary = ({
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(
-            ratedHours + safeNumber(phase.additionalRatedHours)
-          ).toFixed(1)}
+          {safeNumber(ratedHours + safeNumber(phase.additionalRatedHours)).toFixed(1)}
         </div>
       </div> 
 
@@ -343,12 +337,8 @@ const BidItemsStep5 = ({
 
   // Phase drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(
-    null
-  )
-  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(
-    null
-  )
+  const [editingPhaseIndex, setEditingPhaseIndex] = useState<number | null>(null)
+  const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(null)
   const [activeTab, setActiveTab] = useState('mpt')
 
   // Ensure activeTab is always a visible tab
@@ -362,37 +352,18 @@ const BidItemsStep5 = ({
     setActiveTab(value)
   }
 
-// Temporary workaround
-interface Phase {
-  name: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  days: number;
-  personnel: number;
-  numberTrucks: number;
-  additionalRatedHours: number;
-  additionalNonRatedHours: number;
-  maintenanceTrips: number;
-  standardEquipment: Record<string, { quantity: number }>;
-  customLightAndDrumItems: any[];
-  signs: any[];
-}
-
   // Format phase title for accordion trigger
   const formatPhaseTitle = (phase: Phase, index: number): string => {
     let title = `Phase ${index + 1}`;
-
     if (phase.startDate && phase.endDate) {
       title += ` - ${format(phase.startDate, 'MMM dd, yyyy')} - ${format(
         phase.endDate,
         'MMM dd, yyyy'
       )}`
     }
-
     if (phase.name && phase.name.trim()) {
       title += ` - ${phase.name}`
     }
-
     return title
   }
 
@@ -715,7 +686,7 @@ interface Phase {
             value: phaseFormData.maintenanceTrips,
             phase: 0
           }
-resas       })
+        })
         setCurrentPhase(0)
       } else {
         // Add a new phase
@@ -824,7 +795,7 @@ resas       })
     setEditingPhaseIndex(null)
   }
 
-  // Fetch equipment data (keeping the same useEffect as before)
+  // Fetch equipment data
   useEffect(() => {
     const initializeEquipmentData = async () => {
       try {
@@ -1075,9 +1046,9 @@ resas       })
     // Map database names to equipment types
     const nameToType: Record<string, EquipmentType> = {
       "4' Ft Type III": 'fourFootTypeIII',
+      '6 Ft Wings': 'sixFootWings',
       'H Stands': 'hStand',
       'Posts 12ft': 'post',
-      '6 Ft Wings': 'sixFootWings',
       'SL Metal Stands': 'metalStands',
       Covers: 'covers',
       'Sand Bag': 'sandbag',
@@ -1455,14 +1426,13 @@ resas       })
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
-                                    {/* Add switch here */}
-                                    <div className='flex items-center justify-between mb-4'>
-                                      <span className='text-sm font-medium'>Emergency Jobs</span>
-                                      <Switch
-                                        checked={adminData?.emergencyJob || false}
-                                        onCheckedChange={handleEmergencyJobChange}
-                                      />
-                                    </div>
+                                  <div className='flex items-center justify-between mb-4'>
+                                    <span className='text-sm font-medium'>Emergency Jobs</span>
+                                    <Switch
+                                      checked={adminData?.emergencyJob || false}
+                                      onCheckedChange={handleEmergencyJobChange}
+                                    />
+                                  </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
                                     {lightAndDrumList.map(equipmentKey => (
                                       <div
@@ -1796,7 +1766,7 @@ resas       })
               </TabsContent>
             )}
             {activeTab === 'permanent' && (
-              <TabsContent value='permanent' className='mt-6'>
+              <TabsContent value ductive='permanent' className='mt-6'>
                 <div className='bg-white rounded-b-lg p-6'>
                   <PermanentSignsSummaryStep />
                 </div>
