@@ -384,146 +384,137 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const loadAvailableJobs = useCallback(async () => {
-        try {
-            console.log("Loading available jobs with activeSegment:", activeSegment);
-            startLoading();
-
-            // Special handling for archived segment
-            const options: any = {
-                limit: availableJobsPageSize,
-                page: availableJobsPageIndex + 1, // API uses 1-based indexing
-            };
-
-            // Add sorting parameters if available
-            if (sortBy) {
-                options.sortBy = sortBy;
-                options.sortOrder = sortOrder;
-                console.log(`Adding sort: ${sortBy} ${sortOrder}`);
-            }
-
-            // Add filter parameters if any are active
-            if (Object.keys(activeFilters).length > 0) {
-                options.filters = JSON.stringify(activeFilters);
-                console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
-            }
-
-            if (activeSegment === "archived") {
-                options.status = "archived";
-                console.log("Using archived filter");
-            } else if (activeSegment !== "all") {
-                const dbStatus = mapUiStatusToDbStatus(activeSegment);
-                console.log("Mapped DB status:", dbStatus);
-                options.status = dbStatus;
-            }
-            console.log("Fetch options:", options);
-
-            const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch available jobs');
-            }
-            const result = await response.json();
-            const { data, pagination } = result;
-
-            console.log("Fetched data:", data);
-            console.log("Pagination:", pagination);
-
-            const uiJobs = data.map((job: any) => {
-                const isEffectivelyUnknown = (value: any): boolean => {
-                    if (value === undefined || value === null) return true;
-                    if (typeof value === 'string') {
-                        const normalized = value.toLowerCase().trim();
-                        return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
-                    }
-                    return false;
-                };
-
-                let countyValue = '';
-                if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
-                    countyValue = job.county;
-                } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
-                    countyValue = job.county.name;
-                } else if (job.admin_data?.county) {
-                    if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
-                        countyValue = job.admin_data.county;
-                    } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
-                        countyValue = job.admin_data.county.name;
-                    }
-                }
-
-                const branchCode = job.branch_code || '';
-                const branchMap: Record<string, string> = {
-                    '10': 'Hatfield',
-                    '20': 'Turbotville',
-                    '30': 'West'
-                };
-                let branchValue = '';
-                if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
-                    branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
-                } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
-                    branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
-                } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
-                    branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
-                }
-
-                const locationValue = job.location || job.admin_data?.location || '';
-
-                const platformValue = job.platform || job.admin_data?.platform || '';
-
-                const requestorValue = job.requestor || job.admin_data?.requestor || '';
-
-                const ownerValue = job.owner || job.admin_data?.owner || '';
-
-                const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
-
-                const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
-
-                const noBidReason = job.no_bid_reason || null;
-
-                const stateRoute = job.state_route || null;
-
-                const services: Record<AvailableJobServices, boolean> = {
-                    'MPT': job.mpt || false,
-                    'Flagging': job.flagging || false,
-                    'Equipment Rental': job.equipment_rental || false,
-                    'Perm Signs': job.perm_signs || false,
-                    'Other': job.other || false
-                }
-
-                return {
-                    id: job.id,
-                    contractNumber: contractNumberValue,
-                    status: job.status || 'Unset',
-                    requestor: requestorValue,
-                    owner: ownerValue,
-                    lettingDate: job.letting_date || '',
-                    dueDate: job.due_date || '',
-                    county: {
-                        main: countyValue,
-                        secondary: branchValue
-                    },
-                    countyValue: countyValue,
-                    branch: branchValue,
-                    dbe: dbeValue,
-                    createdAt: job.created_at || '',
-                    location: locationValue,
-                    platform: platformValue,
-                    noBidReason,
-                    stateRoute,
-                    services,
-                    alreadyBid: job.alreadyBid || false,
-                    archived: job.archived === true
-                };
-            });
-
-            setAvailableJobs(uiJobs);
-            setAvailableJobsPageCount(pagination.pageCount);
-            setAvailableJobsTotalCount(pagination.totalCount);
-        } catch (error) {
-            console.error("Error loading jobs:", error);
-            toast.error("Failed to load jobs. Please try again.");
-        } finally {
-            stopLoading();
+      try {
+        console.log("Loading available jobs with activeSegment:", activeSegment);
+        startLoading();
+    
+        // Special handling for archived segment
+        const options: any = {
+          limit: availableJobsPageSize,
+          page: availableJobsPageIndex + 1, // API uses 1-based indexing
+        };
+    
+        // Add sorting parameters if available
+        if (sortBy) {
+          options.sortBy = sortBy;
+          options.sortOrder = sortOrder;
+          console.log(`Adding sort: ${sortBy} ${sortOrder}`);
         }
+    
+        // Add filter parameters if any are active
+        if (Object.keys(activeFilters).length > 0) {
+          options.filters = JSON.stringify(activeFilters);
+          console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
+        }
+    
+        // Correctly handle archived segment
+        if (activeSegment === "archived") {
+          options.archived = true; // Filter for archived jobs
+          console.log("Using archived filter");
+        } else if (activeSegment !== "all") {
+          const dbStatus = mapUiStatusToDbStatus(activeSegment);
+          options.status = dbStatus; // Filter by status for other segments
+          console.log("Mapped DB status:", dbStatus);
+        }
+        console.log("Fetch options:", options);
+    
+        const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch available jobs');
+        }
+        const result = await response.json();
+        const { data, pagination } = result;
+    
+        console.log("Fetched data:", data);
+        console.log("Pagination:", pagination);
+    
+        const uiJobs = data.map((job: any) => {
+          const isEffectivelyUnknown = (value: any): boolean => {
+            if (value === undefined || value === null) return true;
+            if (typeof value === 'string') {
+              const normalized = value.toLowerCase().trim();
+              return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+            }
+            return false;
+          };
+    
+          let countyValue = '';
+          if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+            countyValue = job.county;
+          } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+            countyValue = job.county.name;
+          } else if (job.admin_data?.county) {
+            if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+              countyValue = job.admin_data.county;
+            } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+              countyValue = job.admin_data.county.name;
+            }
+          }
+    
+          const branchCode = job.branch_code || '';
+          const branchMap: Record<string, string> = {
+            '10': 'Hatfield',
+            '20': 'Turbotville',
+            '30': 'West'
+          };
+          let branchValue = '';
+          if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+            branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
+          } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+            branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
+          } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+            branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
+          }
+    
+          const locationValue = job.location || job.admin_data?.location || '';
+          const platformValue = job.platform || job.admin_data?.platform || '';
+          const requestorValue = job.requestor || job.admin_data?.requestor || '';
+          const ownerValue = job.owner || job.admin_data?.owner || '';
+          const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
+          const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+          const noBidReason = job.no_bid_reason || null;
+          const stateRoute = job.state_route || null;
+    
+          const services: Record<AvailableJobServices, boolean> = {
+            'MPT': job.mpt || false,
+            'Flagging': job.flagging || false,
+            'Equipment Rental': job.equipment_rental || false,
+            'Perm Signs': job.perm_signs || false,
+            'Other': job.other || false
+          };
+    
+          return {
+            id: job.id,
+            contractNumber: contractNumberValue,
+            status: job.status || 'Unset',
+            requestor: requestorValue,
+            owner: ownerValue,
+            lettingDate: job.letting_date || '',
+            dueDate: job.due_date || '',
+            county: { main: countyValue, secondary: branchValue },
+            countyValue: countyValue,
+            branch: branchValue,
+            dbe: dbeValue,
+            createdAt: job.created_at || '',
+            location: locationValue,
+            platform: platformValue,
+            noBidReason,
+            stateRoute,
+            services,
+            alreadyBid: job.alreadyBid || false,
+            archived: job.archived === true
+          };
+        });
+    
+        setAvailableJobs(uiJobs);
+        setAvailableJobsPageCount(pagination.pageCount);
+        setAvailableJobsTotalCount(pagination.totalCount);
+      } catch (error) {
+        console.error("Error loading jobs:", error);
+        toast.error("Failed to load jobs. Please try again.");
+      } finally {
+        stopLoading();
+      }
     }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
 
     // Load active bids data
