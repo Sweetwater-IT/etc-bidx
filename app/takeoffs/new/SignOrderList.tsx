@@ -247,7 +247,7 @@ export function SignOrderList({
     dispatch({
       type: 'ADD_MPT_SIGN',
       payload: {
-        phaseNumber: 0,
+        phaseNumber: currentPhase,
         sign: defaultSign,
       },
     });
