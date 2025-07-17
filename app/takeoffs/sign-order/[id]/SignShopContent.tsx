@@ -144,13 +144,11 @@ const SignShopContent = ({ id }: Props) => {
         height: sign.height || 0,
         sheeting: sign.sheeting || '-',
         substrate: sign.substrate || '-',
-        stiffener: 'stiffener' in sign && sign.stiffener !== undefined ? sign.stiffener : '-', // Fix: Handle undefined
+        stiffener: 'stiffener' in sign && sign.stiffener !== undefined ? sign.stiffener : '-',
         inStock: (sign as ExtendedPrimarySign).inStock || 0,
         order: (sign as ExtendedPrimarySign).order || 0,
         make: (sign as ExtendedPrimarySign).make || 0,
-        unitPrice: (sign as ExtendedPrimarySign).unitPrice || undefined,
-        totalPrice: (sign as ExtendedPrimarySign).totalPrice || undefined,
-        primarySignId: (sign as ExtendedSecondarySign).primarySignId || undefined // Adjust for SecondarySign
+        primarySignId: (sign as ExtendedSecondarySign).primarySignId || undefined
       })),
       showFinancials: false
     }
