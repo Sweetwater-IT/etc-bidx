@@ -471,188 +471,185 @@ const SignShopContent = ({ id }: Props) => {
   }
 
   return (
-    <>
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Changes</DialogTitle>
-            <div>
-              {signOrder && (
-                <div className='space-y-4 mt-2'>
-                  <div>
-                    Confirm you want to assign this order to{' '}
-                    <span>{signOrder.assigned_to}</span>
+  <>
+    <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm Changes</DialogTitle>
+          {signOrder && (
+            <div className='space-y-4 mt-2'>
+              <div>
+                Confirm you want to assign this order to{' '}
+                <span>{signOrder.assigned_to}</span>
+              </div>
+              {mptRental.phases.length > 0 && (
+                <div className='space-y-2'>
+                  <p className='font-medium'>
+                    And confirm the following quantities:
+                  </p>
+                  <div className='max-h-60 overflow-y-auto'>
+                    <table className='w-full text-sm'>
+                      <thead>
+                        <tr className='border-b'>
+                          <th className='text-left py-2'>Designation</th>
+                          <th className='text-center py-2'>In stock</th>
+                          <th className='text-center py-2'>Order</th>
+                          <th className='text-center py-2'>Make</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mptRental.phases[0].signs.map(item => (
+                          <tr key={item.id} className='border-b'>
+                            <td className='py-2'>{item.designation}</td>
+                            <td className='text-center py-2'>
+                              {(item as ExtendedPrimarySign).inStock || 0}
+                            </td>
+                            <td className='text-center py-2'>
+                              {(item as ExtendedPrimarySign).order || 0}
+                            </td>
+                            <td className='text-center py-2'>
+                              {(item as ExtendedPrimarySign).make || 0}
+                            </td>
+                          </tr>
+                        ))}
+                        {mptRental.phases[0].signs.every(
+                          item =>
+                            ((item as ExtendedPrimarySign).order === 0 ||
+                              (item as ExtendedPrimarySign).order ===
+                                undefined) &&
+                            ((item as ExtendedPrimarySign).make === 0 ||
+                              (item as ExtendedPrimarySign).make ===
+                                undefined)
+                        ) && (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className='text-center py-2 text-gray-500'
+                            >
+                              No items to order or make
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                  {mptRental.phases.length > 0 && (
-                    <div className='space-y-2'>
-                      <p className='font-medium'>
-                        And confirm the following quantities:
-                      </p>
-                      <div className='max-h-60 overflow-y-auto'>
-                        <table className='w-full text-sm'>
-                          <thead>
-                            <tr className='border-b'>
-                              <th className='text-left py-2'>Designation</th>
-                              <th className='text-center py-2'>In stock</th>
-                              <th className='text-center py-2'>Order</th>
-                              <th className='text-center py-2'>Make</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {mptRental.phases[0].signs.map(item => (
-                              <tr key={item.id} className='border-b'>
-                                <td className='py-2'>{item.designation}</td>
-                                <td className='text-center py-2'>
-                                  {(item as ExtendedPrimarySign).inStock || 0}
-                                </td>
-                                <td className='text-center py-2'>
-                                  {(item as ExtendedPrimarySign).order || 0}
-                                </td>
-                                <td className='text-center py-2'>
-                                  {(item as ExtendedPrimarySign).make || 0}
-                                </td>
-                              </tr>
-                            ))}
-                            {mptRental.phases[0].signs.every(
-                              item =>
-                                ((item as ExtendedPrimarySign).order === 0 ||
-                                  (item as ExtendedPrimarySign).order ===
-                                    undefined) &&
-                                ((item as ExtendedPrimarySign).make === 0 ||
-                                  (item as ExtendedPrimarySign).make ===
-                                    undefined)
-                            ) && (
-                              <tr>
-                                <td
-                                  colSpan={3}
-                                  className='text-center py-2 text-gray-500'
-                                >
-                                  No items to order or make
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant='outline'
-                onClick={() => setShowConfirmDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={confirmSaveChanges} disabled={isLoading}>
-                {isLoading ? 'Saving...' : 'Yes, Save Changes'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        {/* Worksheet PDF Dialog */}
-        {openPdfDialog && (
-          <Dialog open={openPdfDialog} onOpenChange={setOpenPdfDialog}>
-            <DialogContent className='max-w-4xl h-fit w-fit'>
-              <DialogTitle>Sign Order Worksheet</DialogTitle>
-              <div className='mt-4'>
-                <PDFViewer height={600} width={800}>
-                  <SignOrderBidSummaryPDF
-                    {...mapSignOrderToBidSummaryProps(signOrder, mptRental)}
-                    equipmentRental={[]}
-                    flagging={undefined}
-                  />
-                </PDFViewer>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-        <SiteHeader>
-          <div className='flex items-center justify-between'>
-            <h1 className='text-3xl font-bold mt-2 ml-0'>
-              Sign Shop Order Tracker
-            </h1>
-            <div className='flex gap-2'>
-              <Button
-                onClick={handleSaveChanges}
-                className='bg-black text-white hover:bg-gray-900'
-              >
-                Save Changes
-              </Button>
-              <Button
-                onClick={() => setShowConfirmDialog(true)}
-                className='bg-primary text-white hover:bg-primary/90'
-              >
-                Send to Production
-              </Button>
-              <Button variant='outline' onClick={handleExport}>
-                Export
-              </Button>
-              <PDFDownloadLink
-                document={<SignOrderWorksheetPDF {...mapSignOrderToWorksheetProps(signOrder, mptRental)} />}
-                fileName={`SignOrderWorksheet_${id}.pdf`}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-                onClick={() => {
-                  if (!signOrder) {
-                    toast.error('No sign order data available')
-                  }
-                }}
-              >
-                {({ loading }) => (loading || !signOrder ? 'Loading...' : 'Download PDF')}
-              </PDFDownloadLink>
             </div>
-          </div>
-        </SiteHeader>
-        {!isLoading && signOrder && (
-          <div className='w-full flex flex-1 flex-col'>
-            <div className='@container/main flex flex-1 flex-col gap-2'>
-              <SignShopAdminInfo
-                signOrder={signOrder}
-                setSignOrder={setSignOrder}
-                id={id}
+          )}
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant='outline'
+            onClick={() => setShowConfirmDialog(false)}
+          >
+            Cancel
+          </Button>
+          <Button onClick={confirmSaveChanges} disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Yes, Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    {/* Worksheet PDF Dialog */}
+    {openPdfDialog && (
+      <Dialog open={openPdfDialog} onOpenChange={setOpenPdfDialog}>
+        <DialogContent className='max-w-4xl h-fit w-fit'>
+          <DialogTitle>Sign Order Worksheet</DialogTitle>
+          <div className='mt-4'>
+            <PDFViewer height={600} width={800}>
+              <SignOrderBidSummaryPDF
+                {...mapSignOrderToBidSummaryProps(signOrder, mptRental)}
+                equipmentRental={[]}
+                flagging={undefined}
               />
-              <div className='w-full bg-white p-8 rounded-md shadow-sm border border-gray-100 mb-8'>
-                <div className='flex justify-between items-center mb-4'>
-                  <h2 className='text-xl font-semibold'>Sign order</h2>
-                  <div className='flex gap-2'>
-                    <Button
-                      onClick={handleAddNewSign}
-                      className='bg-primary text-white hover:bg-primary/90'
-                    >
-                      <Plus className='h-4 w-4 mr-2' />
-                      Add New Sign
-                    </Button>
-                  </div>
-                </div>
-                {mptRental.phases.length > 0 && (
-                  <div className='max-w-full overflow-x-auto'>
-                    <SignOrderList
-                      currentPhase={0}
-                      onlyTable={true}
-                      shopMode={true}
-                      updateShopTracking={updateShopTracking}
-                      adjustShopValue={adjustShopValue}
-                    />
-                  </div>
-                )}
+            </PDFViewer>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    <SiteHeader>
+      <div className='flex items-center justify-between'>
+        <h1 className='text-3xl font-bold mt-2 ml-0'>
+          Sign Shop Order Tracker
+        </h1>
+        <div className='flex gap-2'>
+          <Button
+            onClick={handleSaveChanges}
+            className='bg-black text-white hover:bg-gray-900'
+          >
+            Save Changes
+          </Button>
+          <Button
+            onClick={() => setShowConfirmDialog(true)}
+            className='bg-primary text-white hover:bg-primary/90'
+          >
+            Send to Production
+          </Button>
+          <Button variant='outline' onClick={handleExport}>
+            Export
+          </Button>
+          <PDFDownloadLink
+            document={<SignOrderWorksheetPDF {...mapSignOrderToWorksheetProps(signOrder, mptRental)} />}
+            fileName={`SignOrderWorksheet_${id}.pdf`}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            onClick={() => {
+              if (!signOrder) {
+                toast.error('No sign order data available')
+              }
+            }}
+          >
+            {({ loading }) => (loading || !signOrder ? 'Loading...' : 'Download PDF')}
+          </PDFDownloadLink>
+        </div>
+      </div>
+    </SiteHeader>
+    {!isLoading && signOrder && (
+      <div className='w-full flex flex-1 flex-col'>
+        <div className='@container/main flex flex-1 flex-col gap-2'>
+          <SignShopAdminInfo
+            signOrder={signOrder}
+            setSignOrder={setSignOrder}
+            id={id}
+          />
+          <div className='w-full bg-white p-8 rounded-md shadow-sm border border-gray-100 mb-8'>
+            <div className='flex justify-between items-center mb-4'>
+              <h2 className='text-xl font-semibold'>Sign order</h2>
+              <div className='flex gap-2'>
+                <Button
+                  onClick={handleAddNewSign}
+                  className='bg-primary text-white hover:bg-primary/90'
+                >
+                  <Plus className='h-4 w-4 mr-2' />
+                  Add New Sign
+                </Button>
               </div>
-              <div className='w-full mt-4'>
-                <QuoteNotes
-                  notes={notes}
-                  onSave={handleSaveNote}
-                  onEdit={handleEditNote}
-                  onDelete={handleDeleteNote}
-                  loading={loadingNotes}
+            </div>
+            {mptRental.phases.length > 0 && (
+              <div className='max-w-full overflow-x-auto'>
+                <SignOrderList
+                  currentPhase={0}
+                  onlyTable={true}
+                  shopMode={true}
+                  updateShopTracking={updateShopTracking}
+                  adjustShopValue={adjustShopValue}
                 />
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </>
-    )
-  )
-}
+          <div className='w-full mt-4'>
+            <QuoteNotes
+              notes={notes}
+              onSave={handleSaveNote}
+              onEdit={handleEditNote}
+              onDelete={handleDeleteNote}
+              loading={loadingNotes}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+  </>
+)
 
 export default SignShopContent
