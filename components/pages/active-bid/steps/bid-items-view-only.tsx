@@ -734,162 +734,163 @@ const PermanentSignsViewOnly = () => {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-            {/* General Settings */}
-            <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-4">
-                <label className="text-sm font-semibold mb-2">
-                    General Settings
-                </label>
-            </div>
+        // <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
+        //     {/* General Settings */}
+        //     <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-4">
+        //         <label className="text-sm font-semibold mb-2">
+        //             General Settings
+        //         </label>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Separate Mobilization
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.separateMobilization ? 'Yes' : 'No'}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             Separate Mobilization
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.separateMobilization ? 'Yes' : 'No'}
+        //         </div>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Trucks
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.trucks || "-"}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             Trucks
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.trucks || "-"}
+        //         </div>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Personnel
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.personnel || "-"}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             Personnel
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.personnel || "-"}
+        //         </div>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    OW Trips
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.OWtrips || "-"}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             OW Trips
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.OWtrips || "-"}
+        //         </div>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Type B Removal Rate (per man hour)
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.typeBRemovalRatePerManHour || "-"}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             Type B Removal Rate (per man hour)
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.typeBRemovalRatePerManHour || "-"}
+        //         </div>
+        //     </div>
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Installed Post Man Hours
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.installedPostManHours || "-"}
-                </div>
-            </div>
+        //     <div className="flex flex-col">
+        //         <label className="text-sm font-semibold">
+        //             Installed Post Man Hours
+        //         </label>
+        //         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //             {permanentSigns?.installedPostManHours || "-"}
+        //         </div>
+        //     </div>
 
-            {/* Sign Items */}
-            {permanentSigns && permanentSigns.signItems && permanentSigns.signItems.length > 0 ? (
-                permanentSigns.signItems.map((item, index) => {
-                    const itemType = determineItemType(item);
-                    const hasSignSqFt = 'signSqFt' in item;
-                    const hasAntiTheftBolts = 'antiTheftBolts' in item;
-                    const hasChevronBracket = 'chevronBracket' in item;
-                    const hasStreetNameCrossBracket = 'streetNameCrossBracket' in item;
+        //     {/* Sign Items */}
+        //     {permanentSigns && permanentSigns.signItems && permanentSigns.signItems.length > 0 ? (
+        //         permanentSigns.signItems.map((item, index) => {
+        //             const itemType = determineItemType(item);
+        //             const hasSignSqFt = 'signSqFt' in item;
+        //             const hasAntiTheftBolts = 'antiTheftBolts' in item;
+        //             const hasChevronBracket = 'chevronBracket' in item;
+        //             const hasStreetNameCrossBracket = 'streetNameCrossBracket' in item;
 
-                    return (
-                        <React.Fragment key={item.id}>
-                            <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2 mt-4">
-                                <label className="text-sm font-semibold">
-                                    {getDisplayName(itemType)} - {item.name || 'Unnamed Item'}
-                                </label>
-                            </div>
+        //             return (
+        //                 <React.Fragment key={item.id}>
+        //                     <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2 mt-4">
+        //                         <label className="text-sm font-semibold">
+        //                             {getDisplayName(itemType)} - {item.name || 'Unnamed Item'}
+        //                         </label>
+        //                     </div>
 
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    # of Installs
-                                </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {formatNumber(item.numberInstalls)}
-                                </div>
-                            </div>
+        //                     <div className="flex flex-col">
+        //                         <label className="text-sm font-semibold">
+        //                             # of Installs
+        //                         </label>
+        //                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                             {formatNumber(item.numberInstalls)}
+        //                         </div>
+        //                     </div>
 
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Perm. Sign Bolts
-                                </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {formatNumber(item.permSignBolts)}
-                                </div>
-                            </div>
+        //                     <div className="flex flex-col">
+        //                         <label className="text-sm font-semibold">
+        //                             Perm. Sign Bolts
+        //                         </label>
+        //                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                             {formatNumber(item.permSignBolts)}
+        //                         </div>
+        //                     </div>
 
-                            {hasSignSqFt && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Sign Sq. Ft.
-                                    </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).signSqFt)}
-                                    </div>
-                                </div>
-                            )}
+        //                     {hasSignSqFt && (
+        //                         <div className="flex flex-col">
+        //                             <label className="text-sm font-semibold">
+        //                                 Sign Sq. Ft.
+        //                             </label>
+        //                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                                 {formatNumber((item as any).signSqFt)}
+        //                             </div>
+        //                         </div>
+        //                     )}
 
-                            {hasAntiTheftBolts && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Anti-Theft Bolts
-                                    </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).antiTheftBolts)}
-                                    </div>
-                                </div>
-                            )}
+        //                     {hasAntiTheftBolts && (
+        //                         <div className="flex flex-col">
+        //                             <label className="text-sm font-semibold">
+        //                                 Anti-Theft Bolts
+        //                             </label>
+        //                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                                 {formatNumber((item as any).antiTheftBolts)}
+        //                             </div>
+        //                         </div>
+        //                     )}
 
-                            {hasChevronBracket && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Chevron Bracket
-                                    </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).chevronBracket)}
-                                    </div>
-                                </div>
-                            )}
+        //                     {hasChevronBracket && (
+        //                         <div className="flex flex-col">
+        //                             <label className="text-sm font-semibold">
+        //                                 Chevron Bracket
+        //                             </label>
+        //                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                                 {formatNumber((item as any).chevronBracket)}
+        //                             </div>
+        //                         </div>
+        //                     )}
 
-                            {hasStreetNameCrossBracket && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Street Name Cross Bracket
-                                    </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).streetNameCrossBracket)}
-                                    </div>
-                                </div>
-                            )}
+        //                     {hasStreetNameCrossBracket && (
+        //                         <div className="flex flex-col">
+        //                             <label className="text-sm font-semibold">
+        //                                 Street Name Cross Bracket
+        //                             </label>
+        //                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+        //                                 {formatNumber((item as any).streetNameCrossBracket)}
+        //                             </div>
+        //                         </div>
+        //                     )}
 
-                            {/* Fill remaining grid space if needed */}
-                            {(!hasSignSqFt && !hasAntiTheftBolts && !hasChevronBracket && !hasStreetNameCrossBracket) && (
-                                <div className="flex flex-col">
-                                    {/* Empty space for grid alignment */}
-                                </div>
-                            )}
-                        </React.Fragment>
-                    );
-                })
-            ) : (
-                <div className="col-span-3 text-center py-8 text-muted-foreground">
-                    No permanent sign items configured
-                </div>
-            )}
-        </div>
+        //                     {/* Fill remaining grid space if needed */}
+        //                     {(!hasSignSqFt && !hasAntiTheftBolts && !hasChevronBracket && !hasStreetNameCrossBracket) && (
+        //                         <div className="flex flex-col">
+        //                             {/* Empty space for grid alignment */}
+        //                         </div>
+        //                     )}
+        //                 </React.Fragment>
+        //             );
+        //         })
+        //     ) : (
+        //         <div className="col-span-3 text-center py-8 text-muted-foreground">
+        //             No permanent sign items configured
+        //         </div>
+        //     )}
+        // </div>
+        <></>
     );
 };
 
