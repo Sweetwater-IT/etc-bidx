@@ -87,6 +87,7 @@ interface SignOrderWorksheetPDFProps {
     primarySignId?: string
   }[]
   showFinancials: boolean
+  mptRental: any // Adjust the type according to your mptRental structure
 }
 
 
@@ -124,7 +125,25 @@ const SignShopContent = ({ id }: Props) => {
   }
 
   // Function to map signOrder and mptRental to SignOrderWorksheetPDF props
-  const mapSignOrderToWorksheetProps = (signOrder: SignOrder | undefined, mptRental: any): SignOrderWorksheetPDFProps => {
+   const mapSignOrderToWorksheetProps = (signOrder: SignOrder | undefined, mptRental: any): SignOrderWorksheetPDFProps => {
+    if (!mptRental) {
+      console.error('mptRental is undefined');
+      return {
+        adminData: {
+          contractNumber: signOrder?.contract_number || '-',
+          jobNumber: signOrder?.job_number || '-',
+          customer Eliminated: customer: { name: signOrder?.contractors?.name || '-' },
+          orderDate: signOrder?.order_date ? new Date(signOrder.order_date) : undefined,
+          needDate: signOrder?.need_date ? new Date(signOrder.need_date) : undefined,
+          branch: signOrder?.branch || '-',
+          orderType: signOrder?.sale ? 'Sale' : signOrder?.rental ? 'Rental' : signOrder?.perm_signs ? 'Permanent Signs' : '-',
+          submitter: signOrder?.requestor || signOrder?.assigned_to || '-'
+        },
+        signList: [],
+        showFinancials: false,
+        mptRental: defaultMPTObject // Fallback to default if mptRental is undefined
+      }
+    }
     return {
       adminData: {
         contractNumber: signOrder?.contract_number || '-',
@@ -150,7 +169,8 @@ const SignShopContent = ({ id }: Props) => {
         make: (sign as ExtendedPrimarySign).make || 0,
         primarySignId: (sign as ExtendedSecondarySign).primarySignId || undefined
       })),
-      showFinancials: false
+      showFinancials: false,
+      mptRental: mptRental || defaultMPTObject // Fallback to default
     }
   }
 
