@@ -132,7 +132,7 @@ const SignShopContent = ({ id }: Props) => {
         adminData: {
           contractNumber: signOrder?.contract_number || '-',
           jobNumber: signOrder?.job_number || '-',
-          customer Eliminated: customer: { name: signOrder?.contractors?.name || '-' },
+          customer: { name: signOrder?.contractors?.name || '-' }, // Fixed syntax
           orderDate: signOrder?.order_date ? new Date(signOrder.order_date) : undefined,
           needDate: signOrder?.need_date ? new Date(signOrder.need_date) : undefined,
           branch: signOrder?.branch || '-',
