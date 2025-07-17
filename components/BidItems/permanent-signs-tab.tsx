@@ -23,10 +23,15 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { PMSItemKeys } from "@/types/TEstimateAction";
-import { PMSRemoveB, PMSRemoveF, PMSResetB, PMSResetF, PMSTypeB, PMSTypeF } from "@/types/TPermanentSigns";
+import { PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap } from "@/types/TPermanentSigns";
+import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC } from "@/types/default-objects/defaultPermanentSignsObject";
 import { v4 as uuidv4 } from 'uuid';
 import EmptyContainer from "./empty-container";
+import { Separator } from "../ui/separator";
+import { safeNumber } from "@/lib/safe-number";
+import { getPermSignDaysRequired, getRequiredInstallHours } from "@/lib/mptRentalHelperFunctions";
+import { fetchReferenceData } from "@/lib/api-client";
+import { toast } from "sonner";
 
 const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
   'Type B Post Mount': 'pmsTypeB',
@@ -34,72 +39,166 @@ const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
   'Remove Type B': 'removeTypeB',
   'Type F Post Mount': 'pmsTypeF',
   'Reset Type F': 'resetTypeF',
-  'Remove Type F': 'removeTypeF'
+  'Remove Type F': 'removeTypeF',
+  'Type C Post Mount': 'pmsTypeC',
+  'Flexible Delineator': 'flexibleDelineator'
 }
 
-// Helper function to determine the type based on properties
-const determineItemType = (item: PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF): PMSItemKeys => {
-  if ('signSqFt' in item && 'chevronBracket' in item && 'streetNameCrossBracket' in item) {
-    return 'pmsTypeB';
+const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
+  const newPMSId = uuidv4();
+  let defaultObjectToBeAdded: any;
+  switch (keyToBeAdded) {
+    case 'pmsTypeB':
+      defaultObjectToBeAdded = {
+        ...defaultPMSTypeB,
+        id: newPMSId
+      }
+      break;
+    case 'pmsTypeF':
+      defaultObjectToBeAdded = {
+        ...defaultPMSTypeB,
+        id: newPMSId,
+        type: 'F',
+        itemNumber: '0935-001'
+      }
+      break;
+    case 'pmsTypeC':
+      defaultObjectToBeAdded = {
+        ...defaultPMSTypeC,
+        id: newPMSId
+      }
+      break;
+    case 'resetTypeB':
+      defaultObjectToBeAdded = {
+        ...defaultPMSResetB,
+        name: '0941-0001',
+        id: newPMSId
+        // permSignBolts
+      }
+      break;
+    case 'resetTypeF':
+      defaultObjectToBeAdded = {
+        ...defaultPMSResetB,
+        itemNumber: '0945-0001',
+        id: newPMSId,
+        isRemove: false,
+        type: 'F'
+        // permSignBolts
+      }
+      break;
+    case 'removeTypeB':
+      defaultObjectToBeAdded = {
+        ...defaultPMSResetB,
+        id: newPMSId,
+        itemNumber: '0971-0001',
+        isRemove: true
+      }
+      break;
+    case 'removeTypeF':
+      defaultObjectToBeAdded = {
+        ...defaultPMSResetB,
+        id: newPMSId,
+        itemNumber: '0975-0001',
+        isRemove: true
+      }
+      break;
+    case 'flexibleDelineator':
+      defaultObjectToBeAdded = {
+        ...defaultFlexibleDelineators,
+        id: newPMSId
+      }
+      break;
+    default:
+      defaultObjectToBeAdded = undefined;
   }
-  if ('antiTheftBolts' in item && !('signSqFt' in item)) {
-    return 'resetTypeB';
-  }
+  return defaultObjectToBeAdded
+}
 
-  // For items with only basic properties (3-4 fields), check the name pattern
-  const keys = Object.keys(item);
-  if (keys.length <= 4) {
-    if (item.name?.includes('0935')) return 'pmsTypeF';
-    if (item.name?.includes('0945')) return 'resetTypeF';
-    if (item.name?.includes('0971')) return 'removeTypeB';
-    if (item.name?.includes('0975')) return 'removeTypeF';
+const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
+  //delineators
+  if (Object.hasOwn(item, 'cost')) {
+    return 'flexibleDelineator'
   }
-
-  // Fallback - shouldn't happen with proper data
-  return 'pmsTypeF';
-};
+  //post mounted installs
+  else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
+    if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
+      return 'pmsTypeC'
+    } else if ((item as PostMountedInstall).type === 'B') {
+      return 'pmsTypeB'
+    } else return 'pmsTypeF'
+  }
+  //removals
+  else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
+    return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
+  } else {
+    return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
+  }
+}
 
 const PermanentSignsSummaryStep = () => {
-  const { permanentSigns, dispatch } = useEstimate();
+  const { permanentSigns, dispatch, adminData } = useEstimate();
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF | null>(null);
+  const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
 
   const getDisplayName = (key: PMSItemKeys): string => {
     return Object.entries(PERMANENT_SIGN_ITEMS).find(([_, value]) => value === key)?.[0] || key;
   };
 
-  const createEmptyFormData = (type: PMSItemKeys): PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF => {
-    const baseData = {
-      id: uuidv4(),
-      name: '',
-      numberInstalls: 0,
-      permSignBolts: 0
-    };
-
-    switch (type) {
-      case 'pmsTypeB':
-        return {
-          ...baseData,
-          signSqFt: 0,
-          antiTheftBolts: 0,
-          chevronBracket: 0,
-          streetNameCrossBracket: 0
-        } as PMSTypeB;
-      case 'resetTypeB':
-        return {
-          ...baseData,
-          antiTheftBolts: 0
-        } as PMSResetB;
-      case 'pmsTypeF':
-      case 'resetTypeF':
-      case 'removeTypeB':
-      case 'removeTypeF':
-      default:
-        return baseData as PMSTypeF;
+  //get static data
+  useEffect(() => {
+    const getStaticData = async () => {
+      const response = await fetch('/api/permanent-signs');
+      if(!response.ok){
+        toast.error('Could not fetch permanent sign data')
+      }
+      else {
+        const data = await response.json();
+        dispatch({
+          type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS',
+          payload: {
+            key: 'productivityRates',
+            value: {
+              'flexibleDelineator': data.data.flex_delineator,
+              'pmsTypeB': data.data.type_b_install,
+              'pmsTypeF': data.data.type_f_install,
+              'pmsTypeC': data.data.type_c_install,
+              'resetTypeB': data.data.type_b_reset,
+              'resetTypeF': data.data.type_f_reset,
+              'removeTypeB': data.data.type_b_remove,
+              'removeTypeF': data.data.type_f_remove
+            }
+          }
+        })
+        dispatch({
+          type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS',
+          payload: {
+            key: 'maxDailyHours',
+            value: data.data.max_daily_hours
+          }
+        })
+        dispatch({
+          type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS',
+          payload: {
+            key: 'itemMarkup',
+            value: data.data.material_markup
+          }
+        })
+        dispatch({
+          type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS',
+          payload: {
+            key: 'equipmentData',
+            value: data.data.items.map((item: {name: string, price: number}) => ({
+              name: permSignsDbMap[item.name],
+              cost: item.price
+            })).filter(item => !!item.name)
+          }
+        })
+      }
     }
-  };
+    getStaticData();
+  }, [])
 
   const handleAddSign = () => {
     setSelectedType(undefined);
@@ -122,28 +221,43 @@ const PermanentSignsSummaryStep = () => {
   const handleTypeChange = (value: PMSItemKeys) => {
     setSelectedType(value);
     // Create new form data based on the selected type
-    const newFormData = createEmptyFormData(value);
-    setFormData(newFormData);
+    const defaultItem = createDefaultItem(value);
+    setFormData(defaultItem);
   };
 
-  const handleFieldUpdate = (field: keyof PMSTypeB, value: any) => {
+  const handleFieldUpdate = (field: AllPMSItemKeys, value: any) => {
     if (formData) {
       setFormData({ ...formData, [field]: value });
     }
   };
 
+  //handle install hour calcs on the fly
+  useEffect(() => {
+    if(permanentSigns && formData && selectedType) {
+      setFormData({ ...formData, installHoursRequired: getRequiredInstallHours(formData?.quantity, permanentSigns.productivityRates[selectedType], formData?.personnel)})
+    }
+  }, [formData?.personnel, permanentSigns?.productivityRates, formData?.quantity])
+
+  //handle trips calcs on the fly
+  useEffect(() => {
+    if(!permanentSigns || !selectedType || !formData) return;
+    if(selectedType === 'pmsTypeB'){
+      setFormData({...formData, numberTrips: formData.numberTrucks * getPermSignDaysRequired(formData.installHoursRequired, permanentSigns.maxDailyHours)})
+    }
+  }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired])
+
   const handleSave = () => {
     if (!formData || !selectedType) return;
 
     if (editingId) {
-      // Update existing item
+      // Update existing item by mapping through formData and updating relvent fields
       Object.keys(formData).forEach(field => {
         if (field !== 'id') {
           dispatch({
             type: 'UPDATE_PERMANENT_SIGNS_ITEM',
             payload: {
               signId: editingId,
-              field: field as keyof PMSTypeB,
+              field: field as AllPMSItemKeys,
               value: (formData as any)[field],
             },
           });
@@ -154,23 +268,8 @@ const PermanentSignsSummaryStep = () => {
       dispatch({
         type: 'ADD_PERMANENT_SIGNS_ITEM',
         payload: {
-          key: selectedType,
-          id: formData.id
+          newPMSItem: formData
         },
-      });
-
-      // Update the newly added item with form data
-      Object.keys(formData).forEach(field => {
-        if (field !== 'id') {
-          dispatch({
-            type: 'UPDATE_PERMANENT_SIGNS_ITEM',
-            payload: {
-              signId: formData.id,
-              field: field as keyof PMSTypeB,
-              value: (formData as any)[field],
-            },
-          });
-        }
       });
     }
 
@@ -194,113 +293,349 @@ const PermanentSignsSummaryStep = () => {
     });
   };
 
+  useEffect(() => {
+    console.log(permanentSigns)
+  }, [permanentSigns])
+
   const renderFormFields = () => {
     if (!formData || !selectedType) return null;
 
-    // Always render numberInstalls and permSignBolts (common to all types)
+    // Common fields that appear in all types
     const commonFields = (
       <>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block"># of Installs</Label>
+          <Label className="text-sm font-medium mb-2 block">Personnel</Label>
           <Input
             type="number"
-            value={formData?.numberInstalls || ""}
-            onChange={(e) => handleFieldUpdate('numberInstalls', parseInt(e.target.value) || 0)}
+            value={formData?.personnel || ""}
+            onChange={(e) => handleFieldUpdate('personnel', parseInt(e.target.value) || 0)}
             min={0}
             className="w-full"
           />
         </div>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Perm. Sign Bolts</Label>
+          <Label className="text-sm font-medium mb-2 block">Number of Trucks</Label>
           <Input
             type="number"
-            value={formData?.permSignBolts || ""}
-            onChange={(e) => handleFieldUpdate('permSignBolts', parseInt(e.target.value) || 0)}
+            value={formData?.numberTrucks || ""}
+            onChange={(e) => handleFieldUpdate('numberTrucks', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Number of Trips</Label>
+          <Input
+            type="number"
+            value={formData?.numberTrips || ""}
+            onChange={(e) => handleFieldUpdate('numberTrips', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).signPriceSqFt || ""}
+            onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">R/T Travel Time</Label>
+          <Input
+            type="number"
+            value={(safeNumber(adminData?.owTravelTimeMins) * 2) / 60}
+            // onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">R/T Travel Distance</Label>
+          <Input
+            type="number"
+            value={(safeNumber(adminData?.owMileage) * 2 * formData.numberTrips)}
+            // onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+          <Input
+            type="number"
+            value={formData?.quantity || ""}
+            onChange={(e) => handleFieldUpdate('quantity', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block whitespace-nowrap">Install Hours Required</Label>
+          <Input
+            type="number"
+            value={formData?.installHoursRequired || ""}
+            onChange={(e) => handleFieldUpdate('installHoursRequired', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.1"
+            className="w-full"
+          />
+        </div>
+        <Separator className="col-span-3"/>
+      </>
+    );
+
+    // Perm Sign Bolts field (most types have this, except resetTypeF)
+    const permSignBoltsField = selectedType !== 'resetTypeF' ? (
+      <div className="flex-1">
+        <Label className="text-sm font-medium mb-2 block">Perm. Sign Bolts</Label>
+        <Input
+          type="number"
+          value={formData?.permSignBolts || ""}
+          onChange={(e) => handleFieldUpdate('permSignBolts', parseInt(e.target.value) || 0)}
+          min={0}
+          className="w-full"
+          disabled
+        />
+      </div>
+    ) : null;
+
+    // Fields specific to PostMountedInstall (Type B and F)
+    const postMountedInstallFields = (selectedType === 'pmsTypeB' || selectedType === 'pmsTypeF') ? (
+      <>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Sign Sq. Footage</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).signSqFootage || ""}
+            onChange={(e) => handleFieldUpdate('signSqFootage', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.01"
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Hi-Reflective Strips</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).hiReflectiveStrips || ""}
+            onChange={(e) => handleFieldUpdate('hiReflectiveStrips', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">FYG Reflective Strips</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).fygReflectiveStrips || ""}
+            onChange={(e) => handleFieldUpdate('fygReflectiveStrips', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Jenny Brackets</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).jennyBrackets || ""}
+            onChange={(e) => handleFieldUpdate('jennyBrackets', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Stiffener Sq. Inches</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).stiffenerSqInches || ""}
+            onChange={(e) => handleFieldUpdate('stiffenerSqInches', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.01"
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">TMZ Brackets</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).tmzBrackets || ""}
+            onChange={(e) => handleFieldUpdate('tmzBrackets', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Anti-Theft Bolts</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).antiTheftBolts || ""}
+            onChange={(e) => handleFieldUpdate('antiTheftBolts', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Chevron Brackets</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).chevronBrackets || ""}
+            onChange={(e) => handleFieldUpdate('chevronBrackets', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block whitespace-nowrap">Street Name Cross Brackets</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstall).streetNameCrossBrackets || ""}
+            onChange={(e) => handleFieldUpdate('streetNameCrossBrackets', parseInt(e.target.value) || 0)}
             min={0}
             className="w-full"
           />
         </div>
       </>
-    );
+    ) : null;
 
-    // Check what additional fields this item has
-    const hasSignSqFt = 'signSqFt' in formData;
-    const hasAntiTheftBolts = 'antiTheftBolts' in formData;
-    const hasChevronBracket = 'chevronBracket' in formData;
-    const hasStreetNameCrossBracket = 'streetNameCrossBracket' in formData;
-
-    const additionalFields = (
+    // Fields specific to PostMountedInstallTypeC
+    const typeCFields = selectedType === 'pmsTypeC' ? (
       <>
-        {hasSignSqFt && (
-          <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">Sign Sq. Ft.</Label>
-            <Input
-              type="number"
-              value={(formData as PMSTypeB).signSqFt || ""}
-              onChange={(e) => handleFieldUpdate('signSqFt', parseFloat(e.target.value) || 0)}
-              min={0}
-              step="0.01"
-              className="w-full"
-            />
-          </div>
-        )}
-        {hasAntiTheftBolts && (
-          <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">Anti-Theft Bolts</Label>
-            <Input
-              type="number"
-              value={(formData as PMSTypeB | PMSResetB).antiTheftBolts || ""}
-              onChange={(e) => handleFieldUpdate('antiTheftBolts', parseInt(e.target.value) || 0)}
-              min={0}
-              className="w-full"
-            />
-          </div>
-        )}
-        {hasChevronBracket && (
-          <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">Chevron Bracket</Label>
-            <Input
-              type="number"
-              value={(formData as PMSTypeB).chevronBracket || ""}
-              onChange={(e) => handleFieldUpdate('chevronBracket', parseInt(e.target.value) || 0)}
-              min={0}
-              className="w-full"
-            />
-          </div>
-        )}
-        {hasStreetNameCrossBracket && (
-          <div className="flex-1">
-            <Label className="text-sm font-medium mb-2 block">Street Name Cross Bracket</Label>
-            <Input
-              type="number"
-              value={(formData as PMSTypeB).streetNameCrossBracket || ""}
-              onChange={(e) => handleFieldUpdate('streetNameCrossBracket', parseInt(e.target.value) || 0)}
-              min={0}
-              className="w-full"
-            />
-          </div>
-        )}
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Sign Sq. Footage</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).signSqFootage || ""}
+            onChange={(e) => handleFieldUpdate('signSqFootage', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.01"
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Hi-Reflective Strips</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).hiReflectiveStrips || ""}
+            onChange={(e) => handleFieldUpdate('hiReflectiveStrips', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">FYG Reflective Strips</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).fygReflectiveStrips || ""}
+            onChange={(e) => handleFieldUpdate('fygReflectiveStrips', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Stiffener Sq. Inches</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).stiffenerSqInches || ""}
+            onChange={(e) => handleFieldUpdate('stiffenerSqInches', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.01"
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">TMZ Brackets</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).tmzBrackets || ""}
+            onChange={(e) => handleFieldUpdate('tmzBrackets', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Anti-Theft Bolts</Label>
+          <Input
+            type="number"
+            value={(formData as PostMountedInstallTypeC).antiTheftBolts || ""}
+            onChange={(e) => handleFieldUpdate('antiTheftBolts', parseInt(e.target.value) || 0)}
+            min={0}
+            className="w-full"
+          />
+        </div>
       </>
-    );
+    ) : null;
+
+    // Fields specific to PostMountedResetOrRemove (reset and remove types)
+    const resetRemoveFields = (selectedType === 'resetTypeB' || selectedType === 'resetTypeF' ||
+      selectedType === 'removeTypeB' || selectedType === 'removeTypeF') ? (
+      <>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Is Remove</Label>
+          <Checkbox
+            checked={(formData as PostMountedResetOrRemove).isRemove || false}
+            onCheckedChange={(checked) => handleFieldUpdate('isRemove', checked)}
+          />
+        </div>
+        {/* Additional Items would need a more complex UI component - placeholder for now */}
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Additional Items</Label>
+          <div className="text-sm text-muted-foreground">
+            Additional items management would go here
+          </div>
+        </div>
+      </>
+    ) : null;
+
+    // Fields specific to InstallFlexibleDelineators
+    const flexibleDelineatorFields = selectedType === 'flexibleDelineator' ? (
+      <>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Cost</Label>
+          <Input
+            type="number"
+            value={(formData as InstallFlexibleDelineators).cost || ""}
+            onChange={(e) => handleFieldUpdate('cost', parseFloat(e.target.value) || 0)}
+            min={0}
+            step="0.01"
+            className="w-full"
+          />
+        </div>
+        {/* Additional Items would need a more complex UI component - placeholder for now */}
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Additional Items</Label>
+          <div className="text-sm text-muted-foreground">
+            Additional items management would go here
+          </div>
+        </div>
+      </>
+    ) : null;
 
     return (
       <div className="space-y-4">
-        {/* Name Input */}
+        {/* Item Number Input */}
         <div className="w-full">
-          <Label className="text-sm font-medium mb-2 block">Item Name/Number</Label>
+          <Label className="text-sm font-medium mb-2 block">Item Number</Label>
           <Input
             type="text"
-            value={formData?.name || ""}
-            onChange={(e) => handleFieldUpdate('name', e.target.value)}
+            value={formData?.itemNumber || ""}
+            onChange={(e) => handleFieldUpdate('itemNumber', e.target.value)}
             className="w-full"
-            placeholder="Enter item name or number"
+            placeholder="Enter item number"
           />
         </div>
 
         {/* Fields in responsive grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {commonFields}
-          {additionalFields}
+          {permSignBoltsField}
+          {postMountedInstallFields}
+          {typeCFields}
+          {resetRemoveFields}
+          {flexibleDelineatorFields}
         </div>
       </div>
     );
@@ -335,7 +670,7 @@ const PermanentSignsSummaryStep = () => {
                 <div className="flex items-center space-x-4">
                   <div className="font-medium">{getDisplayName(itemType)}</div>
                   <div className="text-sm text-muted-foreground">
-                    {pmsItem?.numberInstalls ? `Installs: ${pmsItem.numberInstalls}` : 'Not configured'}
+                    {pmsItem?.quantity ? `Installs: ${pmsItem.quantity}` : 'Not configured'}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -362,7 +697,7 @@ const PermanentSignsSummaryStep = () => {
 
       {/* Drawer for adding/editing permanent signs */}
       <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
-        <DrawerContent>
+        <DrawerContent className='min-w-[500px] h-full' >
           <DrawerHeader>
             <DrawerTitle>
               {editingId ? 'Edit Permanent Sign' : 'Add Permanent Sign'}
@@ -375,7 +710,7 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="px-4 space-y-4">
+          <div className="px-4 space-y-4 pb-12 overflow-y-auto">
             {/* Sign Type Selection */}
             <div className="w-full">
               <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
@@ -402,13 +737,13 @@ const PermanentSignsSummaryStep = () => {
           </div>
 
           <DrawerFooter>
-            <div className="flex justify-end space-x-3 w-full">
+            <div className="flex justify-end bg-white fixed border-t-1 pt-4 pr-4 right-0 bottom-4 space-x-3 w-full">
               <DrawerClose asChild>
                 <Button variant="outline" onClick={handleCancel}>
                   Cancel
                 </Button>
               </DrawerClose>
-              <Button 
+              <Button
                 onClick={handleSave}
                 disabled={!selectedType}
               >

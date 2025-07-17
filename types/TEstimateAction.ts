@@ -5,7 +5,7 @@ import { SaleItem } from "./TSaleItem";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
 import { County } from "./TCounty";
-import { CustomPMSItem, PMSEquipment, PMSResetB, PMSResetF, PMSTypeB, PMSTypeF } from "./TPermanentSigns";
+import { PMSItemNumbers, AllPMSItemKeys, PMSEquipmentPiece, PMSItemKeys } from "./TPermanentSigns";
 
 interface AddMPTItemNotSignPayload {
 	phaseNumber: number;
@@ -21,10 +21,6 @@ type MPTSignUpdatePayload =
 	| { phase: number; signId: string; key: 'cover'; value: boolean }  // Primary-only boolean property
 	| { phase: number; signId: string; key: 'primarySignId'; value: string }  // Secondary-only property
 	| { phase: number; signId: string; key: 'displayStructure'; value: string };  // Secondary-only property
-
-export type PMSEquipmentKey = keyof PMSTypeB | keyof PMSTypeF | keyof PMSResetB | keyof PMSResetF;
-
-export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF'
 
 export type EstimateAction =
 	| {
@@ -119,45 +115,20 @@ export type EstimateAction =
 	| { type: "ADD_PERMANENT_SIGNS" }
 	| {
 		type: 'ADD_PERMANENT_SIGNS_ITEM';
-		payload: {
-			key: PMSItemKeys,
-			id: string
-		}
+		payload: { newPMSItem: PMSItemNumbers }
 	}
 	| {
-		type: "UPDATE_STATIC_PERMANENT_SIGNS";
+		type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS';
 		payload: {
-			key: 'typeBRemovalRatePerManHour' | 'installedPostManHours';
-			value: number;
-		};
-	}
-	| {
-		type: 'UPDATE_PERMANENT_SIGNS_INPUTS';
-		payload: {
-			key: 'separateMobilization' | 'trucks' | 'personnel' | 'OWtrips',
-			value: boolean | number
-		}
-	}
-	| {
-		type: 'UPDATE_PERMANENT_SIGNS_NAME',
-		payload: {
-			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
-			value: string
-		}
-	}
-	| {
-		type: 'UPDATE_PERMANENT_SIGNS_EQUIPMENT',
-		payload: {
-			signId: string,
-			key: keyof PMSEquipment,//name cost quantity markup
-			value: number
+			key: 'maxDailyHours' | 'equipmentData' | 'productivityRates' | 'itemMarkup',
+			value: number | PMSEquipmentPiece[] | Record<PMSItemKeys, number>
 		}
 	}
 	| {
 		type: 'UPDATE_PERMANENT_SIGNS_ITEM';
 		payload: {
 			signId: string;
-			field: keyof PMSTypeB;
+			field: AllPMSItemKeys;
 			value: any;
 		}
 	}
@@ -167,29 +138,13 @@ export type EstimateAction =
 			signId: string
 		}
 	}
-	| {
-		type: 'ADD_CUSTOM_PMS_ITEM',
-		payload: {
-			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF',
-			item: CustomPMSItem
-		}
-	}
-	| {
-		type: 'UPDATE_CUSTOM_PMS_ITEM',
-		payload: {
-			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
-			itemIndex: number,
-			key: keyof CustomPMSItem,
-			value: string | number
-		}
-	}
-	| {
-		type: 'DELETE_CUSTOM_PMS_ITEM',
-		payload: {
-			pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
-			itemIndex: number
-		}
-	}
+	// | {
+	// 	type: 'DELETE_CUSTOM_PMS_ITEM',
+	// 	payload: {
+	// 		pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
+	// 		itemIndex: number
+	// 	}
+	// }
 	/****SALE ITEMS */
 	| { type: "ADD_SALE_ITEM"; payload: SaleItem }
 	| {

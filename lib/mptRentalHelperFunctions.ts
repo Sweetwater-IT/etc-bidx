@@ -952,67 +952,12 @@ export const calculateSaleItemMargin = (item: SaleItem) => {
   }
 };
 
-// export const calculatePMSTypeBSummary = (permanentSigns: PermanentSigns, adminData: AdminData, mptRental: MPTRentalEstimating) => {
-//   let totalCost = 0;
-//   let totalRevenue = 0;
+/****PERM SIGNS HELPER FUNCTIONS */
+//type b installs
+export const getRequiredInstallHours = (numberInstalls: number, productivityRate: number, personnel: number): number => {
+  return (numberInstalls / safeNumber(productivityRate)) * personnel
+}
 
-//   // First get all totals of all pms type b equipment
-//   Object.entries(permanentSigns.pmsTypeB).filter(entry => {
-//     const value = entry[1];
-//     return typeof value !== 'number' && typeof value !== 'string' && Object.hasOwn(value, 'quantity');
-//   }).forEach(([key, value]) => {
-//     const typedValue = value as PMSEquipment;
-
-//     // Calculate item cost
-//     const itemCost = typedValue.quantity * typedValue.unitCost;
-//     // Calculate item revenue with markup
-//     const itemRevenue = itemCost * (1 + (typedValue.markup / 100));
-
-//     // Add to running totals
-//     totalCost += itemCost;
-//     totalRevenue += itemRevenue;
-//   });
-
-//   // Apply the same fix to custom items
-//   permanentSigns.pmsTypeB.customItems.forEach(customItem => {
-//     const itemCost = customItem.quantity * customItem.unitCost;
-//     const itemRevenue = itemCost * (1 + (customItem.markup / 100));
-
-//     totalCost += itemCost;
-//     totalRevenue += itemRevenue;
-//   });
-
-//   let laborCost;
-//   if (permanentSigns.separateMobilization) {
-//     // If separate mobilization is true, include travel time in calculation
-//     laborCost = (((((safeNumber(adminData.owTravelTimeMins) * 2) / 60) * adminData.county.shopRateFromBranch * permanentSigns.personnel * permanentSigns.OWtrips)) /
-//       ((permanentSigns.pmsTypeB.twelveFtSquarePost.quantity / permanentSigns.installedPostManHours) * (adminData.county.fringeRate + adminData.county.laborRate) * permanentSigns.personnel));
-//   } else {
-//     laborCost = (((adminData.county.shopRateFromBranch * permanentSigns.personnel * permanentSigns.OWtrips)) /
-//       ((permanentSigns.pmsTypeB.twelveFtSquarePost.quantity / permanentSigns.installedPostManHours) * (adminData.county.fringeRate + adminData.county.laborRate) * permanentSigns.personnel));
-//   }
-//   //markup is 100% for pms type b
-//   const laborRevenue = laborCost * 2;
-//   let fuelCost
-//   // fuel cost calculation
-//   if (permanentSigns.separateMobilization) {
-//     fuelCost = ((((safeNumber(adminData.owMileage) * 2) * permanentSigns.OWtrips) / mptRental.mpgPerTruck) + (permanentSigns.OWtrips * mptRental.dispatchFee))
-//   }
-//   else {
-//     fuelCost = ((permanentSigns.OWtrips / mptRental.mpgPerTruck) + (permanentSigns.OWtrips * mptRental.dispatchFee))
-//   }
-
-//   //markup for pmsTypeB fuel is 0 
-//   const fuelRevenue = fuelCost;
-
-//   totalCost += laborCost + fuelCost;
-//   totalRevenue += laborRevenue + fuelRevenue;
-
-//   const grossProfit = totalRevenue - totalCost;
-//   return {
-//     totalCost,
-//     totalRevenue,
-//     grossProfit,
-//     grossMargin: grossProfit / totalRevenue
-//   };
-// };
+export const getPermSignDaysRequired = (installHours: number, maxDailyHours: number): number => {
+  return maxDailyHours > 0 ? Math.ceil(installHours / maxDailyHours) : 0
+}
