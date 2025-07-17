@@ -129,11 +129,11 @@ const SignShopContent = ({ id }: Props) => {
       adminData: {
         contractNumber: signOrder?.contract_number || '-',
         jobNumber: signOrder?.job_number || '-',
-        customer: { name: signOrder?.contractors?.name || '-' }, // Updated to use contractors.name
+        customer: { name: signOrder?.contractors?.name || '-' },
         orderDate: signOrder?.order_date ? new Date(signOrder.order_date) : undefined,
-        needDate: signOrder?.need_date ? new Date(signOrder.need_date) : undefined, // Prefer need_date over target_date
+        needDate: signOrder?.need_date ? new Date(signOrder.need_date) : undefined,
         branch: signOrder?.branch || '-',
-        orderType: signOrder?.sale ? 'Sale' : signOrder?.rental ? 'Rental' : signOrder?.perm_signs ? 'Permanent Signs' : '-', // Map order type
+        orderType: signOrder?.sale ? 'Sale' : signOrder?.rental ? 'Rental' : signOrder?.perm_signs ? 'Permanent Signs' : '-',
         submitter: signOrder?.requestor || signOrder?.assigned_to || '-'
       },
       signList: getShopSigns().map(sign => ({
@@ -144,13 +144,13 @@ const SignShopContent = ({ id }: Props) => {
         height: sign.height || 0,
         sheeting: sign.sheeting || '-',
         substrate: sign.substrate || '-',
-        stiffener: 'stiffener' in sign ? sign.stiffener : false,
+        stiffener: 'stiffener' in sign && sign.stiffener !== undefined ? sign.stiffener : '-', // Fix: Handle undefined
         inStock: (sign as ExtendedPrimarySign).inStock || 0,
         order: (sign as ExtendedPrimarySign).order || 0,
         make: (sign as ExtendedPrimarySign).make || 0,
         unitPrice: (sign as ExtendedPrimarySign).unitPrice || undefined,
         totalPrice: (sign as ExtendedPrimarySign).totalPrice || undefined,
-        primarySignId: (sign as ExtendedPrimarySign).primarySignId || undefined
+        primarySignId: (sign as ExtendedSecondarySign).primarySignId || undefined // Adjust for SecondarySign
       })),
       showFinancials: false
     }
