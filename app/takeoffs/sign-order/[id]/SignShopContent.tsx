@@ -127,13 +127,13 @@ const SignShopContent = ({ id }: Props) => {
   const mapSignOrderToWorksheetProps = (signOrder: SignOrder | undefined, mptRental: any): SignOrderWorksheetPDFProps => {
     return {
       adminData: {
-        contractNumber: signOrder?.contract_number || signOrder?.contractNumber || '-',
-        jobNumber: signOrder?.job_number || signOrder?.jobNumber || '-',
-        customer: { name: signOrder?.customer_name || signOrder?.customer?.name || '-' },
+        contractNumber: signOrder?.contract_number || '-',
+        jobNumber: signOrder?.job_number || '-',
+        customer: { name: signOrder?.contractors?.name || '-' }, // Updated to use contractors.name
         orderDate: signOrder?.order_date ? new Date(signOrder.order_date) : undefined,
-        needDate: signOrder?.target_date || signOrder?.need_date ? new Date(signOrder.target_date || signOrder.need_date) : undefined,
+        needDate: signOrder?.need_date ? new Date(signOrder.need_date) : undefined, // Prefer need_date over target_date
         branch: signOrder?.branch || '-',
-        orderType: signOrder?.order_type || '-',
+        orderType: signOrder?.sale ? 'Sale' : signOrder?.rental ? 'Rental' : signOrder?.perm_signs ? 'Permanent Signs' : '-', // Map order type
         submitter: signOrder?.requestor || signOrder?.assigned_to || '-'
       },
       signList: getShopSigns().map(sign => ({
@@ -152,7 +152,7 @@ const SignShopContent = ({ id }: Props) => {
         totalPrice: (sign as ExtendedPrimarySign).totalPrice || undefined,
         primarySignId: (sign as ExtendedPrimarySign).primarySignId || undefined
       })),
-      showFinancials: false // Set to true if financial data is available
+      showFinancials: false
     }
   }
 
