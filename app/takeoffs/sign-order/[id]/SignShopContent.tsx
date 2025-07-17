@@ -45,6 +45,7 @@ import '@/components/pages/active-bid/signs/no-spinner.css'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import SignOrderBidSummaryPDF from '@/components/sheets/SignOrderBidSummaryPDF'
 import { PDFViewer } from '@react-pdf/renderer'
+import { PDFDownloadLink } from '@react-pdf/renderer'
 import { Command, CommandGroup, CommandItem } from '@/components/ui/command'
 import {
   Popover,
@@ -524,6 +525,9 @@ const SignShopContent = ({ id }: Props) => {
             </Button>
             <Button variant='outline' onClick={handleExport}>
               Export
+            </Button>
+            <Button variant='outline'>
+             Download PDF
             </Button>
           </div>
         </div>
