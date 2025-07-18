@@ -369,19 +369,26 @@ export const estimateReducer = (
 			};
 
 		case "DELETE_MPT_SIGN":
-			if (!state.mptRental) return state;
-			const signIdToDelete = action.payload;
-
-			return {
-				...state,
-				mptRental: {
-					...state.mptRental,
-					phases: state.mptRental.phases.map((phase: Phase) => ({
-						...phase,
-						signs: phase.signs.filter((sign) => sign.id !== signId),
-					})),
-				},
-			};
+		  if (!state.mptRental) {
+		    console.warn("DELETE_MPT_SIGN: No mptRental in state");
+		    return state;
+		  }
+		  const { phaseNumber, signId } = action.payload;
+		  console.log("DELETE_MPT_SIGN: Deleting sign", signId, "from phase", phaseNumber);
+		  return {
+		    ...state,
+		    mptRental: {
+		      ...state.mptRental,
+		      phases: state.mptRental.phases.map((phase, index) =>
+			index === phaseNumber
+			  ? {
+			      ...phase,
+			      signs: phase.signs.filter(sign => sign.id !== signId)
+			    }
+			  : phase
+		      )
+		    }
+		  };
 
 		case "ADD_FLAGGING":
 			return {
