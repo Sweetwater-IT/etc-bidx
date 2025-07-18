@@ -8,10 +8,11 @@ import {
 } from '@/lib/mptRentalHelperFunctions'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
 import { safeNumber } from '@/lib/safe-number'
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 // import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const BidSummaryByItem = () => {
-  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate()
+  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns } = useEstimate()
 
   const [bidSummary, setBidSummary] = useState<{item: string, total: number, percentage: number}[]>([])
   const [discountSummary, setDiscountSummary] = useState<{item: string, discountRate: number}[]>([])
@@ -23,7 +24,7 @@ const BidSummaryByItem = () => {
       return
     }
 
-    const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging, serviceWork ?? defaultFlaggingObject, saleItems)
+    const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject)
     const mobilizationTotal : number = allTotals.mptTotalRevenue * 0.35
 
     setBidSummary([
@@ -51,6 +52,15 @@ const BidSummaryByItem = () => {
         item: 'Flagging',
         total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.flagging / 100)),
         percentage: safeNumber(allTotals.revenuePercentages.flagging)
+      },
+      {
+        item: 'Perm. Signs',
+        total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.permanentSigns / 100)),
+        percentage: safeNumber(allTotals.revenuePercentages.permanentSigns)
+      },      {
+        item: 'Perm. Signs',
+        total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.permanentSigns / 100)),
+        percentage: safeNumber(allTotals.revenuePercentages.permanentSigns)
       },
       {
         item: 'Sale',

@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getAllTotals } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
 
 interface BidSummaryAccordionProps {
   isViewSummaryOpen: boolean;
@@ -27,7 +28,7 @@ interface BidSummary {
 const BidSummaryAccordion = ({ isViewSummaryOpen, setIsViewSummaryOpen }: BidSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
 
-  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate();
+  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns } = useEstimate();
 
   const [bidSummary, setBidSummary] = useState<BidSummary>({
     revenue: 0,
@@ -37,7 +38,7 @@ const BidSummaryAccordion = ({ isViewSummaryOpen, setIsViewSummaryOpen }: BidSum
   });
 
   useEffect(() => {
-    const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems)
+    const allTotals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject)
 
     setBidSummary({
       revenue: allTotals.totalRevenue,

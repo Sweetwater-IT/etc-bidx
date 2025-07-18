@@ -8,6 +8,7 @@ import { Flagging } from '@/types/TFlagging';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { SaleItem } from '@/types/TSaleItem';
 import { EstimateCompleteView, EstimateGridView } from '@/types/estimate-view';
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 
 export async function GET(request: NextRequest) {
   try {
@@ -502,7 +503,8 @@ export async function POST(request: NextRequest) {
       equipmentRental || [], 
       flagging || defaultFlaggingObject, 
       serviceWork || defaultFlaggingObject, 
-      saleItems || []
+      saleItems || [],
+      defaultPermanentSignsObject
     );
 
     let bidEstimateId: string;

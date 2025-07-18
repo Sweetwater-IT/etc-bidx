@@ -4,9 +4,10 @@ import { useEstimate } from '@/contexts/EstimateContext'
 import { getAllTotals } from '@/lib/mptRentalHelperFunctions'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
 import { safeNumber } from '@/lib/safe-number'
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 
 const SaleItemsRevenueAndProfit = () => {
-  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems } = useEstimate()
+  const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns } = useEstimate()
   const [saleTotals, setSaleTotals] = useState<{
     totalCost: number
     totalRevenue: number
@@ -61,7 +62,8 @@ const SaleItemsRevenueAndProfit = () => {
       equipmentRental || [],
       flagging || defaultFlaggingObject,
       serviceWork || defaultFlaggingObject,
-      saleItems || []
+      saleItems || [],
+      permanentSigns ?? defaultPermanentSignsObject
     )
 
     setAllTotals({

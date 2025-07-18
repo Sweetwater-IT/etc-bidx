@@ -11,6 +11,7 @@ import { Flagging } from "@/types/TFlagging";
 import { FlaggingSummary } from "@/types/TFlaggingSummary";
 import { SaleItem } from "@/types/TSaleItem";
 import { safeNumber } from "./safe-number";
+import { determineItemType, InstallFlexibleDelineators, PermanentSigns, PMSItemKeys, PMSItemNumbers, PostMountedInstall, PostMountedInstallTypeC, PostMountedResetOrRemove } from "@/types/TPermanentSigns";
 // import { PermanentSigns, PMSEquipment } from "@/types/PermanentSigns";
 
 // Function to get equipment totals per phase
@@ -31,7 +32,7 @@ export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Reco
     sharps: { totalDaysRequired: 0, totalQuantity: 0 }
   };
 
-  if (!mptRental.phases) return equipmentTotals; 
+  if (!mptRental.phases) return equipmentTotals;
 
   mptRental.phases.forEach((phase) => {
     if (!phase?.standardEquipment) return;
@@ -205,36 +206,36 @@ interface AssociatedSignTotals {
 
 export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
   const structureCounts = phase.signs
-  .filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0)
-  .reduce((acc, sign) => {
-    if ('associatedStructure' in sign) {
-      // Add covers and lights (these are still simple multiplications)
-      acc.covers += (sign.cover ? sign.quantity : 0);
-      // acc.ACLights += (sign.aLights * sign.quantity);
-      acc.BLights += (sign.bLights * sign.quantity);
-      
-      // Map base equipment types to the totals object
-      switch (sign.associatedStructure) {
-        case 'fourFootTypeIII':
-          acc.fourFootTypeIII += sign.quantity;
-          break;
-        case 'hStand':
-          acc.hStand += sign.quantity;
-          break;
-        case 'post':
-          acc.post += sign.quantity;
-          break;
-        case 'none':
-          // Don't add anything for loose signs
-          break;
-        default:
-          // Handle any unexpected equipment types
-          console.warn(`Unknown base equipment type: ${sign.associatedStructure} for structure: ${sign.associatedStructure}`);
-          break;
+    .filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0)
+    .reduce((acc, sign) => {
+      if ('associatedStructure' in sign) {
+        // Add covers and lights (these are still simple multiplications)
+        acc.covers += (sign.cover ? sign.quantity : 0);
+        // acc.ACLights += (sign.aLights * sign.quantity);
+        acc.BLights += (sign.bLights * sign.quantity);
+
+        // Map base equipment types to the totals object
+        switch (sign.associatedStructure) {
+          case 'fourFootTypeIII':
+            acc.fourFootTypeIII += sign.quantity;
+            break;
+          case 'hStand':
+            acc.hStand += sign.quantity;
+            break;
+          case 'post':
+            acc.post += sign.quantity;
+            break;
+          case 'none':
+            // Don't add anything for loose signs
+            break;
+          default:
+            // Handle any unexpected equipment types
+            console.warn(`Unknown base equipment type: ${sign.associatedStructure} for structure: ${sign.associatedStructure}`);
+            break;
+        }
       }
-    }
-    return acc;
-  }, { fourFootTypeIII: 0, hStand: 0, post: 0, covers: 0, BLights: 0, ACLights: 0 });
+      return acc;
+    }, { fourFootTypeIII: 0, hStand: 0, post: 0, covers: 0, BLights: 0, ACLights: 0 });
 
   // Return the object with EquipmentType-compatible property names
   return structureCounts;
@@ -246,7 +247,7 @@ export function calculateTotalSignCostSummary(equipmentRental: MPTRentalEstimati
   const weightedSignTotals = getWeightedAverageDays(equipmentRental)
 
   const HITotals = calculateCostMetrics(equipmentRental, { HI: { totalDaysRequired: weightedSignTotals.HI, totalQuantity: allSignTotals.HI.totalSquareFootage } });
-  const DGTotals = calculateCostMetrics(equipmentRental, { DG: { totalDaysRequired: weightedSignTotals.DG, totalQuantity: allSignTotals.DG.totalSquareFootage } }); 
+  const DGTotals = calculateCostMetrics(equipmentRental, { DG: { totalDaysRequired: weightedSignTotals.DG, totalQuantity: allSignTotals.DG.totalSquareFootage } });
   const FYGTotals = calculateCostMetrics(equipmentRental, { FYG: { totalDaysRequired: weightedSignTotals.FYG, totalQuantity: allSignTotals.FYG.totalSquareFootage } });
   const TYPEXITotals = calculateCostMetrics(equipmentRental, { TYPEXI: { totalDaysRequired: weightedSignTotals.TYPEXI, totalQuantity: allSignTotals.TYPEXI.totalSquareFootage } });
   const SpecialTotals = calculateCostMetrics(equipmentRental, { Special: { totalDaysRequired: weightedSignTotals.Special, totalQuantity: allSignTotals.Special.totalSquareFootage } });
@@ -444,11 +445,12 @@ export interface AllTotals {
     mpt: number,
     rental: number,
     flagging: number,
-    sale: number
+    sale: number,
+    permanentSigns: number
   }
 }
 
-export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating, rentalEquipment: EquipmentRentalItem[], flagging: Flagging, serviceWork: Flagging, saleItems: SaleItem[]): AllTotals {
+export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimating, rentalEquipment: EquipmentRentalItem[], flagging: Flagging, serviceWork: Flagging, saleItems: SaleItem[], permanentSigns: PermanentSigns): AllTotals {
   //this gets all mpt rental stuff
   const mptRentalStats = calculateEquipmentCostSummary(mptRental);
   //this gets all light and drum channelizer stuff
@@ -459,6 +461,7 @@ export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimatin
   const totalRatedLaborStats = calculateLaborCostSummary(adminData, mptRental);
   //this gets all truck and fuel stats
   const totalTruckAndFuelStats = calculateTruckAndFuelCostSummary(adminData, mptRental);
+  const totalPermanentSignStats = getPermanentSignsCostSummary(permanentSigns, adminData, mptRental)
 
   const mptTotalCost = mptRentalStats.depreciationCost +
     lightAndDrumRentalStats.total.depreciationCost +
@@ -503,8 +506,8 @@ export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimatin
   const saleTotalCost = saleItems ? saleItems.reduce((sum, item) => sum + (item.quotePrice * item.quantity), 0) : 0;
   const saleTotalGrossProfit = saleTotalRevenue - saleTotalCost
 
-  const totalRevenue = mptTotalRevenue + rentalTotalRevenue + saleTotalRevenue + flaggingTotalRevenue;
-  const totalGrossProfit = mptGrossProfit + rentalTotalGrossProfit + flaggingTotalGrossProfit + saleTotalGrossProfit;
+  const totalRevenue = mptTotalRevenue + rentalTotalRevenue + saleTotalRevenue + flaggingTotalRevenue + totalPermanentSignStats.totalRevenue;
+  const totalGrossProfit = mptGrossProfit + rentalTotalGrossProfit + flaggingTotalGrossProfit + saleTotalGrossProfit + (totalPermanentSignStats.totalRevenue - totalPermanentSignStats.totalCost);
 
   return {
     mptTotalCost,
@@ -512,14 +515,15 @@ export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimatin
     mptGrossProfit,
     mptGrossMargin: mptTotalRevenue !== 0 ? (mptGrossProfit / mptTotalRevenue) * 100 : 0,
     totalRevenue,
-    totalCost: mptTotalCost + rentalTotalCost + flaggingTotalCost + saleTotalCost,
+    totalCost: mptTotalCost + rentalTotalCost + flaggingTotalCost + saleTotalCost + totalPermanentSignStats.totalCost,
     totalGrossProfit,
     totalGrossMargin: totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0,
     revenuePercentages: {
       mpt: totalRevenue !== 0 ? mptTotalRevenue / totalRevenue * 100 : 0,
       rental: totalRevenue !== 0 ? rentalTotalRevenue / totalRevenue * 100 : 0,
       flagging: totalRevenue !== 0 ? flaggingTotalRevenue / totalRevenue * 100 : 0,
-      sale: totalRevenue !== 0 ? saleTotalRevenue / totalRevenue * 100 : 0
+      sale: totalRevenue !== 0 ? saleTotalRevenue / totalRevenue * 100 : 0,
+      permanentSigns: totalRevenue !== 0 ? totalPermanentSignStats.totalRevenue / totalRevenue * 100 : 0
     }
   };
 }
@@ -857,7 +861,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   const fourFootQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
   const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
   const postQuantity = phase.standardEquipment.post?.quantity || 0;
-  
+
   const relevantEquipmentTotals = fourFootQuantity + hStandQuantity + postQuantity;
   return (safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30)) * 2;
 }
@@ -955,9 +959,169 @@ export const calculateSaleItemMargin = (item: SaleItem) => {
 /****PERM SIGNS HELPER FUNCTIONS */
 //type b installs
 export const getRequiredInstallHours = (numberInstalls: number, productivityRate: number, personnel: number): number => {
-  return (numberInstalls / safeNumber(productivityRate)) * personnel
+  return Math.round((numberInstalls / safeNumber(productivityRate)) * personnel * 100) / 100
 }
 
 export const getPermSignDaysRequired = (installHours: number, maxDailyHours: number): number => {
   return maxDailyHours > 0 ? Math.ceil(installHours / maxDailyHours) : 0
+}
+
+export const getPermSignTrips = (pmsItem: PMSItemNumbers, signItems: PMSItemNumbers[], maxDailyHours: number): number => {
+  const days = getPermSignDaysRequired(pmsItem.installHoursRequired, maxDailyHours)
+  const thisItemsTrips = pmsItem.numberTrucks * days;
+  //if it's the first item just make it's trips
+  if (signItems[0].id === pmsItem.id) {
+    return thisItemsTrips
+  }
+  //if the sum of all required install hours (including this item, is less than the max daily hours, this item should have 0 extra trips, unless of 
+  //course it has separate mobilization marked, in which case it should have one). If it exceeds the max daily hours, then it should follow the normal
+  //formula for getting trips (i.e. add the extra trips we need)
+  //=IF($W$41+$W$68<=$M$15,0+W56,W63*W61)
+  const totalRequiredHours = signItems.reduce((acc, item) => acc += item.installHoursRequired, 0);
+  if (totalRequiredHours <= maxDailyHours) {
+    return pmsItem.separateMobilization ? 1 : 0;
+  } else {
+    return thisItemsTrips
+  }
+}
+
+//only will get called on pms installs (type c, f, or b)
+export const getPermSignSqFtCost = (permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers): number => {
+  return safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignCostSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
+}
+
+//(F36*$T$12)+(J36*$T$8)+(F39*$T$9)+(J39*$T$10)+(N39*$T$11)+(F42*$T$13)+(J42*$T$14)+(F45*$T$15)+(N42*$T$16)+(J45*$T$17)
+export const getPermSignMaterialCost = (itemType: PMSItemKeys, permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers): number => {
+
+  const antiTheftBoltsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'antiTheftBolts')?.cost);
+  const postPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'post')?.cost);
+  const permSignBoltsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignBolts')?.cost);
+  const chevronBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'chevronBrackets')?.cost);
+  const streetNameCrossBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'streetNameCrossBrackets')?.cost);
+  const hiReflectiveStripsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'hiReflectiveStrips')?.cost);
+  const tmzBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'tmzBrackets')?.cost);
+  const jennyBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'jennyBrackets')?.cost);
+  const stiffenerPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'stiffenerSqInches')?.cost);
+  const fygReflectiveStripsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'fygReflectiveStrips')?.cost);
+
+  if (itemType === 'pmsTypeB' || itemType === 'pmsTypeF') {
+    const typeBItem = pmsItem as PostMountedInstall;
+    return (typeBItem.antiTheftBolts * antiTheftBoltsPrice) +
+      (typeBItem.chevronBrackets * chevronBracketsPrice) +
+      (typeBItem.streetNameCrossBrackets * streetNameCrossBracketsPrice) +
+      (typeBItem.quantity * postPrice) +
+      //all installs will have this
+      (typeBItem.permSignBolts! * permSignBoltsPrice) +
+      (typeBItem.hiReflectiveStrips * hiReflectiveStripsPrice) +
+      (typeBItem.tmzBrackets * tmzBracketsPrice) +
+      (typeBItem.jennyBrackets * jennyBracketsPrice) +
+      (typeBItem.stiffenerSqInches * stiffenerPrice) +
+      (typeBItem.fygReflectiveStrips * fygReflectiveStripsPrice)
+  }
+  //=+(F211*$T$19)+(J211*$T$8)+(F214*$T$9)+(F217*$T$13)+(J217*$T$14)+(J214*$T$15)+(N214*$T$17)
+  else if (itemType === 'pmsTypeC') {
+    const typeCItem = pmsItem as PostMountedInstallTypeC;
+    return (typeCItem.antiTheftBolts * antiTheftBoltsPrice) +
+      (typeCItem.quantity * postPrice) +
+      //all installs will have this
+      (typeCItem.permSignBolts! * permSignBoltsPrice) +
+      (typeCItem.hiReflectiveStrips * hiReflectiveStripsPrice) +
+      (typeCItem.tmzBrackets * tmzBracketsPrice) +
+      (typeCItem.stiffenerSqInches * stiffenerPrice) +
+      (typeCItem.fygReflectiveStrips * fygReflectiveStripsPrice)
+  }
+  else if (itemType === 'resetTypeB' || itemType === 'resetTypeF') {
+    const postCost = pmsItem.quantity * postPrice;
+    //resets still have bolts
+    const permSignBoltsCost = pmsItem.permSignBolts! * permSignBoltsPrice;
+    const otherItemsCost = (pmsItem as PostMountedResetOrRemove).additionalItems.reduce((acc, item) => {
+      const additionalItemCost = permanentSigns.equipmentData.find(equip => equip.name === item.equipmentType);
+      acc += (item.quantity * safeNumber(additionalItemCost?.cost))
+      return acc;
+    }, 0)
+    return postCost + permSignBoltsCost + otherItemsCost
+  }
+  else if (itemType === 'removeTypeB' || itemType === 'removeTypeF') {
+    const otherItemsCost = (pmsItem as PostMountedResetOrRemove).additionalItems.reduce((acc, item) => {
+      const additionalItemCost = permanentSigns.equipmentData.find(equip => equip.name === item.equipmentType);
+      acc += (item.quantity * safeNumber(additionalItemCost?.cost))
+      return acc;
+    }, 0)
+    return otherItemsCost
+  }
+  else if (itemType === 'flexibleDelineator') {
+    const flexCost = pmsItem.quantity * (pmsItem as InstallFlexibleDelineators).flexibleDelineatorCost
+    const otherItemsCost = (pmsItem as InstallFlexibleDelineators).additionalItems.reduce((acc, item) => {
+      const additionalItemCost = permanentSigns.equipmentData.find(equip => equip.name === item.equipmentType);
+      acc += (item.quantity * safeNumber(additionalItemCost?.cost))
+      return acc;
+    }, 0)
+    //resets still have post costs involved, removals no
+    return flexCost + otherItemsCost
+  }
+  else {
+    console.error('wrong pms type passed to material cost calculator');
+    return 0;
+  }
+}
+
+export const getPermSignLaborCost = (pmsItem: PMSItemNumbers, adminData: AdminData): number => {
+  return ((adminData.county.laborRate + adminData.county.fringeRate) * (pmsItem.installHoursRequired) * pmsItem.personnel) +
+    (pmsItem.personnel * adminData.county.shopRate * pmsItem.numberTrips * (safeNumber(adminData?.owTravelTimeMins) * 2) / 60)
+}
+//=+(((W40*W35)/$X$7)*$G$14)+($X$8*W35)
+export const getPermSignFuelCost = (pmsItem: PMSItemNumbers, adminData: AdminData, mptRental: MPTRentalEstimating): number => {
+  const travelCosts = ((safeNumber(adminData?.owMileage) * 2 * pmsItem.numberTrips) / mptRental.mpgPerTruck);
+  const dispatchCosts = (mptRental.dispatchFee * pmsItem.numberTrips)
+  return travelCosts + dispatchCosts
+}
+
+export const getPermSignTotalCost = (itemType: PMSItemKeys, permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers, adminData: AdminData, mptRental: MPTRentalEstimating): number => {
+  const laborCost = getPermSignLaborCost(pmsItem, adminData)
+  const permSignSqFtCost = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
+  const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
+  if (itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') {
+    const materialCost = getPermSignMaterialCost(itemType, permanentSigns, pmsItem);
+    return laborCost + permSignSqFtCost + materialCost + fuelCost;
+  }
+  //only post installs include the perm sign sq ft cost
+  else {
+    const materialCost = getPermSignMaterialCost(itemType, permanentSigns, pmsItem);
+    return laborCost + materialCost + fuelCost;
+  }
+}
+
+export const getPermanentSignRevenueAndMargin = (permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers, adminData: AdminData, mptRental: MPTRentalEstimating): { revenue: number, grossMargin: number } => {
+  let revenue: number = 0;
+  const itemType = determineItemType(pmsItem)
+  const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
+  if (pmsItem.standardPricing) {
+    //100% markup
+    const laborCostWithMarkup = getPermSignLaborCost(pmsItem, adminData) * 2;
+    const signCost = getPermSignSqFtCost(permanentSigns, pmsItem);
+    const materialCostWithMarkup = getPermSignMaterialCost(itemType, permanentSigns, pmsItem) * (1 + (permanentSigns.itemMarkup / 100));
+    const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
+    revenue = laborCostWithMarkup + signCost + materialCostWithMarkup + fuelCost
+  } else {
+    revenue = totalCost / (1 - (pmsItem.customMargin / 100));
+  }
+  return {
+    revenue,
+    grossMargin: (revenue - totalCost) / totalCost
+  }
+}
+
+export const getPermanentSignsCostSummary = (permanentSigns: PermanentSigns, adminData: AdminData, mptRental: MPTRentalEstimating): {
+  totalRevenue: number,
+  totalCost: number,
+  grossMargin: number
+} => {
+  const totalRevenue = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermanentSignRevenueAndMargin(permanentSigns, signItem, adminData, mptRental).revenue , 0)
+  const totalCost = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermSignTotalCost(determineItemType(signItem), permanentSigns, signItem, adminData, mptRental) , 0)
+
+  return {
+    totalRevenue,
+    totalCost,
+    grossMargin: safeNumber((totalRevenue - totalCost) / totalCost)
+  }
 }

@@ -8,10 +8,11 @@ import { safeNumber } from './safe-number';
 import { Flagging } from '@/types/TFlagging';
 import { SaleItem } from '@/types/TSaleItem';
 import { formatDate } from './formatUTCDate';
-import { AllTotals } from '@/types/IAllTotals';
+import { AllTotals } from './mptRentalHelperFunctions';
 import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 
 
 //generic wrapper for objects returned from the db as they are identical other than dates being iso strings
@@ -205,7 +206,14 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
             totalCost: 0,
             totalRevenue: 0,
             totalGrossMargin: 0,
-            totalGrossProfit: 0
+            totalGrossProfit: 0,
+            revenuePercentages: {
+                mpt: 0,
+                sale: 0,
+                rental: 0,
+                permanentSigns: 0,
+                flagging: 0,
+            }
         };
         const equipmentRentalToUse : EquipmentRentalItem[] = dataRow.equipment_rental ? dataRow.equipment_rental : []
 
@@ -227,7 +235,7 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
             equipmentTotals = getEquipmentTotalsPerPhase(mappedMPTData);
             signTotals = returnSignTotalsSquareFootage(mappedMPTData);
             laborSummary = calculateLaborCostSummary(mappedAdminData, mappedMPTData);
-            allTotals = getAllTotals(mappedAdminData, mappedMPTData, equipmentRentalToUse, dataRow.flagging ?? defaultFlaggingObject, dataRow.service_work ?? defaultFlaggingObject, dataRow.sale_items ?? [])
+            allTotals = getAllTotals(mappedAdminData, mappedMPTData, equipmentRentalToUse, dataRow.flagging ?? defaultFlaggingObject, dataRow.service_work ?? defaultFlaggingObject, dataRow.sale_items ?? [], (dataRow as any).permanent_signs ?? defaultPermanentSignsObject)
         } catch (error) {
             console.error("Error calculating MPT rental data:", error);
             equipmentTotals = {

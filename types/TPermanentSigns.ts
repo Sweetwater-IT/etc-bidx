@@ -9,25 +9,29 @@ export type PermanentSigns = {
 }
 export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF' | 'pmsTypeC' | 'flexibleDelineator'
 export type PMSItemNumbers = PostMountedInstall | PostMountedResetOrRemove | PostMountedInstallTypeC | InstallFlexibleDelineators
-export type PMSEquipmentItems = 'permSignBolts' | 'antiTheftBolts' | 'chevronBrackets' | 'streetNameCrossBrackets' | 
-'stiffenerSqInches' | 'tmzBrackets' | 'jennyBrackets' | 'hiReflectiveStrips' | 'fygReflectiveStrips' | 'post' | 'woodPostMetalSleeves' | 'permSignCostSqFt'
-| 'permSignPriceSqFt'
+export type PMSEquipmentItems = 'permSignBolts' | 'antiTheftBolts' | 'chevronBrackets' | 'streetNameCrossBrackets' |
+    'stiffenerSqInches' | 'tmzBrackets' | 'jennyBrackets' | 'hiReflectiveStrips' | 'fygReflectiveStrips' | 'post' | 'woodPostMetalSleeves' | 'permSignCostSqFt'
+    | 'permSignPriceSqFt'
 
-export type AllPMSItemKeys = 
+export type AllPMSItemKeys =
     // Base PermanentSignItem keys
-    | 'id' 
-    | 'itemNumber' 
-    | 'personnel' 
-    | 'numberTrucks' 
-    | 'numberTrips' 
-    | 'installHoursRequired' 
-    | 'quantity' 
-    | 'permSignBolts' 
+    | 'id'
+    | 'itemNumber'
+    | 'personnel'
+    | 'numberTrucks'
+    | 'numberTrips'
+    | 'installHoursRequired'
+    | 'quantity'
+    | 'permSignBolts'
     | 'productivityRate'
     // PostMountedInstall specific keys
     | 'type'
     | 'signSqFootage'
-    | 'signPriceSqFt'
+    | 'permSignPriceSqFt'
+    | 'standardPricing'
+    | 'customMargin'
+    | 'separateMobilization'
+    | 'permSignCostSqFt'
     | 'hiReflectiveStrips'
     | 'fygReflectiveStrips'
     | 'jennyBrackets'
@@ -40,7 +44,7 @@ export type AllPMSItemKeys =
     | 'isRemove'
     | 'additionalItems'
     // InstallFlexibleDelineators specific key
-    | 'cost';
+    | 'flexibleDelineatorCost';
 
 export interface PMSEquipmentPiece {
     name: PMSEquipmentItems
@@ -52,6 +56,9 @@ interface PermanentSignItem {
     itemNumber: string;
     personnel: number;
     numberTrucks: number;
+    customMargin: number;
+    standardPricing: boolean;
+    separateMobilization: boolean;
     numberTrips: number;
     installHoursRequired: number;
     quantity: number;
@@ -62,7 +69,6 @@ interface PermanentSignItem {
 export interface PostMountedInstall extends PermanentSignItem {
     type: 'B' | 'F'
     signSqFootage: number;
-    signPriceSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     jennyBrackets: number;
@@ -90,13 +96,13 @@ export interface PostMountedInstallTypeC extends PermanentSignItem {
     antiTheftBolts: number;
 }
 
-interface AdditionalPMSEquipment {
+export interface AdditionalPMSEquipment {
     equipmentType: PMSEquipmentItems
     quantity: number
 }
 
 export interface InstallFlexibleDelineators extends PermanentSignItem {
-    cost: number;
+    flexibleDelineatorCost: number;
     additionalItems: AdditionalPMSEquipment[]
 }
 
@@ -114,4 +120,40 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
     'WOOD_POST_METAL_SLEEVE': 'woodPostMetalSleeves',
     'PERM_SIGN_COST_SQ_FT': 'permSignCostSqFt',
     'PERM_SIGN_PRICE_SQ_FT': 'permSignPriceSqFt'
+};
+
+export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
+    //delineators
+    if (Object.hasOwn(item, 'cost')) {
+        return 'flexibleDelineator'
+    }
+    //post mounted installs
+    else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
+        if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
+            return 'pmsTypeC'
+        } else if ((item as PostMountedInstall).type === 'B') {
+            return 'pmsTypeB'
+        } else return 'pmsTypeF'
+    }
+    //removals
+    else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
+        return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
+    } else {
+        return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
+    }
+}
+
+export const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
+    'Type B Post Mount': 'pmsTypeB',
+    'Reset Type B': 'resetTypeB',
+    'Remove Type B': 'removeTypeB',
+    'Type F Post Mount': 'pmsTypeF',
+    'Reset Type F': 'resetTypeF',
+    'Remove Type F': 'removeTypeF',
+    'Type C Post Mount': 'pmsTypeC',
+    'Flexible Delineator': 'flexibleDelineator'
+}
+
+export const getDisplayName = (key: PMSItemKeys): string => {
+    return Object.entries(PERMANENT_SIGN_ITEMS).find(([_, value]) => value === key)?.[0] || key;
 };

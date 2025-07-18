@@ -23,26 +23,31 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap } from "@/types/TPermanentSigns";
+import { getDisplayName, PERMANENT_SIGN_ITEMS, PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap, PMSEquipmentItems, AdditionalPMSEquipment } from "@/types/TPermanentSigns";
 import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC } from "@/types/default-objects/defaultPermanentSignsObject";
 import { v4 as uuidv4 } from 'uuid';
 import EmptyContainer from "./empty-container";
 import { Separator } from "../ui/separator";
 import { safeNumber } from "@/lib/safe-number";
-import { getPermSignDaysRequired, getRequiredInstallHours } from "@/lib/mptRentalHelperFunctions";
-import { fetchReferenceData } from "@/lib/api-client";
+import { getPermanentSignRevenueAndMargin, getPermSignDaysRequired, getPermSignFuelCost, getPermSignLaborCost, getPermSignMaterialCost, getPermSignSqFtCost, getPermSignTotalCost, getPermSignTrips, getRequiredInstallHours } from "@/lib/mptRentalHelperFunctions";
 import { toast } from "sonner";
+import { Switch } from "../ui/switch";
+import { determineItemType } from "@/types/TPermanentSigns";
 
-const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
-  'Type B Post Mount': 'pmsTypeB',
-  'Reset Type B': 'resetTypeB',
-  'Remove Type B': 'removeTypeB',
-  'Type F Post Mount': 'pmsTypeF',
-  'Reset Type F': 'resetTypeF',
-  'Remove Type F': 'removeTypeF',
-  'Type C Post Mount': 'pmsTypeC',
-  'Flexible Delineator': 'flexibleDelineator'
-}
+
+
+// Additional equipment options for custom items
+const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
+  'Anti-Theft Bolts': 'antiTheftBolts',
+  'Chevron Brackets': 'chevronBrackets',
+  'Street Name Cross Brackets': 'streetNameCrossBrackets',
+  'Stiffener (per sq inch)': 'stiffenerSqInches',
+  'TMZ Brackets': 'tmzBrackets',
+  'Jenny Brackets': 'jennyBrackets',
+  'Hi-Reflective Strips': 'hiReflectiveStrips',
+  'FYG Reflective Strips': 'fygReflectiveStrips',
+  'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
+};
 
 const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
   const newPMSId = uuidv4();
@@ -114,43 +119,18 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
   return defaultObjectToBeAdded
 }
 
-const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
-  //delineators
-  if (Object.hasOwn(item, 'cost')) {
-    return 'flexibleDelineator'
-  }
-  //post mounted installs
-  else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
-    if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
-      return 'pmsTypeC'
-    } else if ((item as PostMountedInstall).type === 'B') {
-      return 'pmsTypeB'
-    } else return 'pmsTypeF'
-  }
-  //removals
-  else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
-    return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
-  } else {
-    return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
-  }
-}
-
 const PermanentSignsSummaryStep = () => {
-  const { permanentSigns, dispatch, adminData } = useEstimate();
+  const { permanentSigns, dispatch, adminData, mptRental } = useEstimate();
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
 
-  const getDisplayName = (key: PMSItemKeys): string => {
-    return Object.entries(PERMANENT_SIGN_ITEMS).find(([_, value]) => value === key)?.[0] || key;
-  };
-
   //get static data
   useEffect(() => {
     const getStaticData = async () => {
       const response = await fetch('/api/permanent-signs');
-      if(!response.ok){
+      if (!response.ok) {
         toast.error('Could not fetch permanent sign data')
       }
       else {
@@ -189,7 +169,7 @@ const PermanentSignsSummaryStep = () => {
           type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS',
           payload: {
             key: 'equipmentData',
-            value: data.data.items.map((item: {name: string, price: number}) => ({
+            value: data.data.items.map((item: { name: string, price: number }) => ({
               name: permSignsDbMap[item.name],
               cost: item.price
             })).filter(item => !!item.name)
@@ -227,29 +207,91 @@ const PermanentSignsSummaryStep = () => {
 
   const handleFieldUpdate = (field: AllPMSItemKeys, value: any) => {
     if (formData) {
-      setFormData({ ...formData, [field]: value });
+      setFormData(prevData => ({
+        ...prevData,
+        [field]: value
+      } as any));
     }
   };
 
+  // Handle additional items for custom equipment
+  const handleAddAdditionalItem = () => {
+    if (!formData || !('additionalItems' in formData)) return;
+    
+    const newItem: AdditionalPMSEquipment = {
+      equipmentType: 'antiTheftBolts', // default
+      quantity: 1
+    };
+
+    const updatedItems = [...(formData.additionalItems || []), newItem];
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  const handleRemoveAdditionalItem = (index: number) => {
+    if (!formData || !('additionalItems' in formData)) return;
+    
+    const updatedItems = (formData.additionalItems || []).filter((_, i) => i !== index);
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  const handleUpdateAdditionalItem = (index: number, field: keyof AdditionalPMSEquipment, value: any) => {
+    if (!formData || !('additionalItems' in formData)) return;
+    
+    const updatedItems = [...(formData.additionalItems || [])];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  //set number trips in form data
+  useEffect(() => {
+    if(!formData || !permanentSigns) return;
+    setFormData(prevData => ({
+      ...prevData,
+      numberTrips: getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
+    } as any))
+  }, [formData?.id, permanentSigns?.maxDailyHours, formData?.installHoursRequired, formData?.separateMobilization, formData?.numberTrucks])
+
   //handle install hour calcs on the fly
   useEffect(() => {
-    if(permanentSigns && formData && selectedType) {
-      setFormData({ ...formData, installHoursRequired: getRequiredInstallHours(formData?.quantity, permanentSigns.productivityRates[selectedType], formData?.personnel)})
+    if (permanentSigns && formData && selectedType) {
+      setFormData(prevData => ({
+        ...prevData,
+        installHoursRequired: getRequiredInstallHours(formData?.quantity, permanentSigns.productivityRates[selectedType], formData?.personnel)
+      } as any))
     }
   }, [formData?.personnel, permanentSigns?.productivityRates, formData?.quantity])
 
   //handle trips calcs on the fly
   useEffect(() => {
-    if(!permanentSigns || !selectedType || !formData) return;
-    if(selectedType === 'pmsTypeB'){
-      setFormData({...formData, numberTrips: formData.numberTrucks * getPermSignDaysRequired(formData.installHoursRequired, permanentSigns.maxDailyHours)})
+    if (!permanentSigns || !selectedType || !formData) return;
+    if (selectedType === 'pmsTypeB') {
+      setFormData(prevData => ({
+        ...prevData,
+        numberTrips: formData.numberTrucks * getPermSignDaysRequired(formData.installHoursRequired, permanentSigns.maxDailyHours)
+      } as any))
     }
   }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired])
+
+  //update perm sign bolts on the fly
+  useEffect(() => {
+    if (!selectedType || !formData || selectedType === 'resetTypeF') return;
+    setFormData(prevData => ({
+      ...prevData,
+      permSignBolts: formData.quantity * 2
+    } as any))
+  }, [formData?.quantity])
 
   const handleSave = () => {
     if (!formData || !selectedType) return;
 
     if (editingId) {
+      //if the number of trips got changed, run the update trips function to adjust for new install hours
+      if(formData.numberTrips !== permanentSigns?.signItems.find(signItem => signItem.id === editingId)?.numberTrips){
+        updatePermSignTrips(editingId);
+      }
       // Update existing item by mapping through formData and updating relvent fields
       Object.keys(formData).forEach(field => {
         if (field !== 'id') {
@@ -263,6 +305,7 @@ const PermanentSignsSummaryStep = () => {
           });
         }
       });
+
     } else {
       // Add new item
       dispatch({
@@ -279,6 +322,27 @@ const PermanentSignsSummaryStep = () => {
     setSelectedType(undefined);
   };
 
+  const updatePermSignTrips = (editedItemId? : string) =>{
+    if(!permanentSigns) return;
+    permanentSigns?.signItems.forEach((signItem, index) => {
+      if(index === 0) return;
+      if(!!editedItemId && signItem.id === editedItemId) return;
+      dispatch({
+        type: 'UPDATE_PERMANENT_SIGNS_ITEM',
+        payload: {
+          signId: signItem.id,
+          field: 'numberTrips',
+          value: getPermSignTrips(signItem, permanentSigns.signItems, permanentSigns.maxDailyHours)
+        }
+      })
+    })
+  } 
+
+  //useEffecct to update all trips of all items whenever an item gets added/removed
+  useEffect(() => {
+    updatePermSignTrips();
+  }, [permanentSigns?.signItems.length])
+
   const handleCancel = () => {
     setDrawerOpen(false);
     setFormData(null);
@@ -293,16 +357,18 @@ const PermanentSignsSummaryStep = () => {
     });
   };
 
-  useEffect(() => {
-    console.log(permanentSigns)
-  }, [permanentSigns])
-
   const renderFormFields = () => {
     if (!formData || !selectedType) return null;
 
     // Common fields that appear in all types
     const commonFields = (
       <>
+        {formData.id !== permanentSigns?.signItems[0].id && <div>
+          <Switch
+            checked={formData.separateMobilization}
+            onCheckedChange={(value) => handleFieldUpdate('separateMobilization', value)}
+          />
+        </div>}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">Personnel</Label>
           <Input
@@ -330,6 +396,28 @@ const PermanentSignsSummaryStep = () => {
             value={formData?.numberTrips || ""}
             onChange={(e) => handleFieldUpdate('numberTrips', parseInt(e.target.value) || 0)}
             min={0}
+            disabled={formData.id !== permanentSigns?.signItems[0].id}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">Sign Cost / Sq. Ft</Label>
+          <Input
+            type="number"
+            value={permanentSigns?.equipmentData.find(equip => equip.name === 'permSignCostSqFt')?.cost || ""}
+            onChange={(e) => {
+              if (!permanentSigns) return;
+              dispatch({
+                type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS', payload: {
+                  key: 'equipmentData', value: permanentSigns.equipmentData.map(equip => {
+                    if (equip.name === 'permSignCostSqFt') {
+                      return { name: equip.name, cost: parseInt(e.target.value) }
+                    } else return equip
+                  })
+                }
+              })
+            }}
+            min={0}
             className="w-full"
           />
         </div>
@@ -337,28 +425,53 @@ const PermanentSignsSummaryStep = () => {
           <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
           <Input
             type="number"
-            value={(formData as PostMountedInstall).signPriceSqFt || ""}
-            onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
+            value={permanentSigns?.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost || ""}
+            onChange={(e) => {
+              if (!permanentSigns) return;
+              dispatch({
+                type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS', payload: {
+                  key: 'equipmentData', value: permanentSigns.equipmentData.map(equip => {
+                    if (equip.name === 'permSignPriceSqFt') {
+                      return { name: equip.name, cost: parseInt(e.target.value) }
+                    } else return equip
+                  })
+                }
+              })
+            }}
+            min={10}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
+          <Input
+            type="number"
+            value={Math.round((safeNumber(adminData?.owTravelTimeMins) / 60) * 100) / 100}
+            onChange={(e) => {
+              dispatch({
+                type: 'UPDATE_ADMIN_DATA',
+                payload: {
+                  key: 'owTravelTimeMins',
+                  value: parseInt(e.target.value) * 60
+                }
+              })
+            }}
             min={0}
             className="w-full"
           />
         </div>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">R/T Travel Time</Label>
+          <Label className="text-sm font-medium mb-2 block">O/W Travel Distance</Label>
           <Input
             type="number"
-            value={(safeNumber(adminData?.owTravelTimeMins) * 2) / 60}
-            // onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
-            min={0}
-            className="w-full"
-          />
-        </div>
-        <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">R/T Travel Distance</Label>
-          <Input
-            type="number"
-            value={(safeNumber(adminData?.owMileage) * 2 * formData.numberTrips)}
-            // onChange={(e) => handleFieldUpdate('signPriceSqFt', parseInt(e.target.value) || 0)}
+            value={safeNumber(adminData?.owMileage)}
+            onChange={(e) => dispatch({
+              type: 'UPDATE_ADMIN_DATA',
+              payload: {
+                key: 'owTravelTimeMins',
+                value: parseInt(e.target.value)
+              }
+            })}
             min={0}
             className="w-full"
           />
@@ -384,7 +497,7 @@ const PermanentSignsSummaryStep = () => {
             className="w-full"
           />
         </div>
-        <Separator className="col-span-3"/>
+        <Separator className="col-span-3" />
       </>
     );
 
@@ -580,13 +693,6 @@ const PermanentSignsSummaryStep = () => {
             onCheckedChange={(checked) => handleFieldUpdate('isRemove', checked)}
           />
         </div>
-        {/* Additional Items would need a more complex UI component - placeholder for now */}
-        <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Additional Items</Label>
-          <div className="text-sm text-muted-foreground">
-            Additional items management would go here
-          </div>
-        </div>
       </>
     ) : null;
 
@@ -597,19 +703,82 @@ const PermanentSignsSummaryStep = () => {
           <Label className="text-sm font-medium mb-2 block">Cost</Label>
           <Input
             type="number"
-            value={(formData as InstallFlexibleDelineators).cost || ""}
-            onChange={(e) => handleFieldUpdate('cost', parseFloat(e.target.value) || 0)}
+            value={(formData as InstallFlexibleDelineators).flexibleDelineatorCost || ""}
+            onChange={(e) => handleFieldUpdate('flexibleDelineatorCost', parseFloat(e.target.value) || 0)}
             min={0}
             step="0.01"
             className="w-full"
           />
         </div>
-        {/* Additional Items would need a more complex UI component - placeholder for now */}
-        <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Additional Items</Label>
-          <div className="text-sm text-muted-foreground">
-            Additional items management would go here
+      </>
+    ) : null;
+
+    // Additional items section for custom equipment (not for main install types)
+    const canHaveAdditionalItems = selectedType && !['pmsTypeB', 'pmsTypeF', 'pmsTypeC'].includes(selectedType);
+    const additionalItemsSection = canHaveAdditionalItems && 'additionalItems' in formData ? (
+      <>
+        <Separator className="col-span-3" />
+        <div className="col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <Label className="text-sm font-medium">Additional Equipment</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddAdditionalItem}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Equipment
+            </Button>
           </div>
+          
+          {(formData as any).additionalItems?.map((item: AdditionalPMSEquipment, index: number) => (
+            <div key={index} className="grid grid-cols-3 gap-4 items-end mb-3 p-3 border rounded-lg">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Equipment Type</Label>
+                <Select
+                  value={item.equipmentType}
+                  onValueChange={(value: PMSEquipmentItems) => 
+                    handleUpdateAdditionalItem(index, 'equipmentType', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ADDITIONAL_EQUIPMENT_OPTIONS).map(([displayName, key]) => (
+                      <SelectItem key={key} value={key}>
+                        {displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                <Input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => 
+                    handleUpdateAdditionalItem(index, 'quantity', parseInt(e.target.value) || 0)
+                  }
+                  min={0}
+                />
+              </div>
+              
+              <div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveAdditionalItem(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </>
     ) : null;
@@ -636,6 +805,7 @@ const PermanentSignsSummaryStep = () => {
           {typeCFields}
           {resetRemoveFields}
           {flexibleDelineatorFields}
+          {additionalItemsSection}
         </div>
       </div>
     );
@@ -666,6 +836,23 @@ const PermanentSignsSummaryStep = () => {
               key={`sign-${pmsItem.id}`}
               className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
             >
+              <div className='grid grid-cols-2 mb-4'>
+                <div></div>
+                <div className='ml-auto flex items-center gap-x-2'>
+                  <div className='whitespace-nowrap'>Use custom margin</div>
+                  <Switch
+                    checked={!pmsItem.standardPricing}
+                    onCheckedChange={(value) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'standardPricing', value: !value } })}
+                  />
+                  {!pmsItem.standardPricing && <Input
+                    type='number'
+                    value={pmsItem.customMargin}
+                    min={0}
+                    step='0.01'
+                    onChange={(e) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'customMargin', value: parseInt(e.target.value) } })}
+                  />}
+                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="font-medium">{getDisplayName(itemType)}</div>
@@ -688,6 +875,83 @@ const PermanentSignsSummaryStep = () => {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                </div>
+              </div>
+              {/***Financials */}
+              <div className='grid grid-cols-3 mt-4'>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Total Revenue
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue}
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Total Cost
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Gross Margin
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                  {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Sign Costs
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignSqFtCost(permanentSigns, pmsItem)}
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Labor Cost
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignLaborCost(pmsItem, adminData)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Material Cost
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignMaterialCost(itemType, permanentSigns, pmsItem)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium mb-2 block">
+                    Fuel Cost
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignFuelCost(pmsItem, adminData, mptRental)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Price Per Square Foot
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                  {getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Total Days Required
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {getPermSignDaysRequired(pmsItem.installHoursRequired, permanentSigns.maxDailyHours)}
+                  </div>
                 </div>
               </div>
             </div>

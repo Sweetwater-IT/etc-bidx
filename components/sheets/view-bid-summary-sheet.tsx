@@ -3,13 +3,16 @@ import { formatCurrency } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import React, { useEffect, useMemo } from 'react';
-import { 
-  calculateEquipmentCostSummary, 
-  calculateLaborCostSummary, 
-  calculateLightAndDrumCostSummary, 
-  calculateTotalSignCostSummary, 
+import {
+  calculateEquipmentCostSummary,
+  calculateLaborCostSummary,
+  calculateLightAndDrumCostSummary,
+  calculateTotalSignCostSummary,
   calculateTruckAndFuelCostSummary,
-  getAllTotals
+  getAllTotals,
+  getPermanentSignRevenueAndMargin,
+  getPermanentSignsCostSummary,
+  getPermSignTotalCost
 } from '@/lib/mptRentalHelperFunctions';
 import { MPTEquipmentCost } from '@/types/MPTEquipmentCost';
 import { SheetingType } from '@/types/MPTEquipment';
@@ -17,26 +20,44 @@ import { LaborCostSummary } from "@/types/ILaborCostSummary";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { useEstimate } from "@/contexts/EstimateContext";
 import DiscountChecks from "../pages/active-bid/steps/discount-checks";
+import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
+import { determineItemType, getDisplayName } from "@/types/TPermanentSigns";
 
 interface ViewBidSummarySheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 interface BasicSummaryTotals {
-  totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin : number
+  totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin: number
 }
 
 export function ViewBidSummarySheet({
   open,
   onOpenChange,
 }: ViewBidSummarySheetProps) {
-  const { mptRental, adminData, flagging, serviceWork, equipmentRental, saleItems } = useEstimate();
+  const { mptRental, adminData, flagging, serviceWork, equipmentRental, saleItems, permanentSigns } = useEstimate();
   const [mptRentalStats, setMptRentalStats] = React.useState<MPTEquipmentCost | null>(null);
   const [lightAndDrumRentalStats, setLightAndDrumRentalStats] = React.useState<MPTEquipmentCost | null>(null);
   const [totalSignCostStats, setTotalSignCostStats] = React.useState<Record<SheetingType, MPTEquipmentCost> | null>(null);
   const [totalRatedLaborStats, setTotalRatedLaborStats] = React.useState<LaborCostSummary | null>(null);
   const [totalTruckAndFuelStats, setTotalTruckAndFuelStats] = React.useState<BasicSummaryTotals | null>(null);
+  const [totalPermSignsStats, setTotalPermSignsStats] = React.useState<BasicSummaryTotals | null>(null);
   const [allTotals, setAllTotals] = React.useState<BasicSummaryTotals | null>(null);
+
+  useEffect(() => {
+    if(!permanentSigns || !mptRental || !adminData){
+      setTotalPermSignsStats(null);
+      return;
+    }
+
+    const permSignsSummary = getPermanentSignsCostSummary(permanentSigns, adminData, mptRental);
+    setTotalPermSignsStats({
+      totalRevenue: permSignsSummary.totalRevenue,
+      totalCost: permSignsSummary.totalCost,
+      totalGrossProfit: permSignsSummary.totalRevenue - permSignsSummary.totalCost,
+      grossProfitMargin: permSignsSummary.grossMargin
+    })
+  }, [permanentSigns, mptRental, adminData])
 
   useEffect(() => {
     if (!mptRental) {
@@ -68,7 +89,7 @@ export function ViewBidSummarySheet({
 
   useEffect(() => {
     if (!mptRental) return;
-    const totals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems);
+    const totals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject);
     setAllTotals({
       totalCost: totals.mptTotalCost,
       totalRevenue: totals.mptTotalRevenue,
@@ -81,7 +102,7 @@ export function ViewBidSummarySheet({
     if (!mptRentalStats) return [];
     return [
       {
-        name: "MPT Equipment", 
+        name: "MPT Equipment",
         revenue: mptRentalStats.revenue,
         cost: mptRentalStats.depreciationCost,
         grossProfit: Number.isNaN(mptRentalStats.grossProfit) ? 0 : mptRentalStats.grossProfit,
@@ -89,7 +110,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "Channelizer and Light Rentals", 
+        name: "Channelizer and Light Rentals",
         revenue: lightAndDrumRentalStats?.revenue || 0,
         cost: lightAndDrumRentalStats?.depreciationCost || 0,
         grossProfit: lightAndDrumRentalStats?.grossProfit || 0,
@@ -97,7 +118,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "HI Signs", 
+        name: "HI Signs",
         revenue: totalSignCostStats?.HI.revenue || 0,
         cost: totalSignCostStats?.HI.depreciationCost || 0,
         grossProfit: totalSignCostStats?.HI.grossProfit || 0,
@@ -105,7 +126,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "DG Signs", 
+        name: "DG Signs",
         revenue: totalSignCostStats?.DG.revenue || 0,
         cost: totalSignCostStats?.DG.depreciationCost || 0,
         grossProfit: totalSignCostStats?.DG.grossProfit || 0,
@@ -113,7 +134,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "Special Signs", 
+        name: "Special Signs",
         revenue: totalSignCostStats?.Special.revenue || 0,
         cost: totalSignCostStats?.Special.depreciationCost || 0,
         grossProfit: totalSignCostStats?.Special.grossProfit || 0,
@@ -121,7 +142,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "Rate Labor", 
+        name: "Rate Labor",
         revenue: Number.isNaN(totalRatedLaborStats?.totalRatedLaborRevenue) ? 0 : (totalRatedLaborStats?.totalRatedLaborRevenue || 0),
         cost: totalRatedLaborStats?.totalRatedLaborCost || 0,
         grossProfit: Number.isNaN(totalRatedLaborStats?.totalRatedLaborCost) ? 0 : totalRatedLaborStats?.totalRatedLaborCost,
@@ -129,7 +150,7 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "Shop Labor", 
+        name: "Shop Labor",
         revenue: Number.isNaN(totalRatedLaborStats?.nonRateLaborRevenue) ? 0 : (totalRatedLaborStats?.nonRateLaborRevenue || 0),
         cost: totalRatedLaborStats?.totalNonRateLaborCost || 0,
         grossProfit: Number.isNaN(totalRatedLaborStats?.nonRateGrossProfit) ? 0 : (totalRatedLaborStats?.nonRateGrossProfit || 0),
@@ -137,15 +158,15 @@ export function ViewBidSummarySheet({
         highlight: false
       },
       {
-        name: "Truck & Fuel Costs", 
-        revenue: totalTruckAndFuelStats?.totalRevenue|| 0,
+        name: "Truck & Fuel Costs",
+        revenue: totalTruckAndFuelStats?.totalRevenue || 0,
         cost: totalTruckAndFuelStats?.totalCost || 0,
         grossProfit: totalTruckAndFuelStats?.totalGrossProfit || 0,
         grossMargin: totalTruckAndFuelStats?.grossProfitMargin || 0,
         highlight: false
       },
       {
-        name: "MPT Total", 
+        name: "MPT Total",
         revenue: allTotals?.totalRevenue || 0,
         cost: allTotals?.totalCost || 0,
         grossProfit: allTotals?.totalGrossProfit || 0,
@@ -164,7 +185,7 @@ export function ViewBidSummarySheet({
 
         <div className="mt-4 space-y-8 px-5">
           {/* MPT Discounting */}
-          <DiscountChecks/>
+          <DiscountChecks />
 
           {/* Revenue and Profit Summary */}
           <div className="space-y-4">
@@ -254,23 +275,28 @@ export function ViewBidSummarySheet({
                 <div className="font-medium">Gross Profit %</div>
               </div>
               <div className="divide-y">
-                {[
-                  { name: "PMS, Type B", highlight: false },
-                  { name: "Reset PMS, Type B", highlight: false },
-                  { name: "Remove PMS, Type B", highlight: false },
-                  { name: "PMS, Type F", highlight: false },
-                  { name: "Reset PMS, Type F", highlight: false },
-                  { name: "Remove PMS, Type F", highlight: false },
-                  { name: "Total", highlight: true },
-                ].map(({ name, highlight }) => (
-                  <div key={name} className={`grid grid-cols-5 gap-4 p-4 ${highlight ? "bg-muted" : ""}`}>
-                    <div>{name}</div>
-                    <div>{formatCurrency(0)}</div>
-                    <div>{formatCurrency(0)}</div>
-                    <div>{formatCurrency(0)}</div>
-                    <div>0.00%</div>
-                  </div>
-                ))}
+                {permanentSigns?.signItems.map(signItem => {
+                  const signFinancials = getPermanentSignRevenueAndMargin(permanentSigns, signItem, adminData, mptRental)
+                  const itemType = determineItemType(signItem)
+                  const signCost = getPermSignTotalCost(itemType, permanentSigns, signItem, adminData, mptRental)
+                  return (
+                    <div key={signItem.id} className={`grid grid-cols-5 gap-4 p-4`} >
+                      <div>{getDisplayName(itemType)}</div>
+                      <div>{signFinancials.revenue}</div>
+                      <div>{signCost}</div>
+                      <div>{signFinancials.revenue - signCost}</div>
+                      <div>{signFinancials.grossMargin}</div>
+                    </div>
+                  )
+                }
+                )}
+                <div className={`grid grid-cols-5 gap-4 p-4 bg-muted`} >
+                  <div>Permanent Signs</div>
+                  <div>{totalPermSignsStats?.totalRevenue}</div>
+                  <div>{totalPermSignsStats?.totalCost}</div>
+                  <div>{totalPermSignsStats?.totalGrossProfit}</div>
+                  <div>{totalPermSignsStats?.grossProfitMargin}</div>
+                </div>
               </div>
             </div>
 
@@ -357,6 +383,7 @@ export function ViewBidSummarySheet({
                 <div className="font-medium">Hours</div>
               </div>
               <div className="divide-y">
+                {/***needs to be implemented */}
                 {[
                   { name: "Rated Labor Hours", highlight: false },
                   { name: "Shop Labor Hours", highlight: false },
@@ -396,6 +423,6 @@ export function ViewBidSummarySheet({
           </div>
         </div>
       </SheetContent>
-    </Sheet>
+    </Sheet >
   );
 }
