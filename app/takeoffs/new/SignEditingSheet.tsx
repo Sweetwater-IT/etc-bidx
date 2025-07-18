@@ -322,35 +322,34 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     const handleSave = () => {
-        // For secondary signs, make sure the quantity matches the primary sign
-        let signToSave = localSign;
-        if (isSecondary && primarySign) {
-            signToSave = {
-                ...localSign,
-                quantity: primarySign.quantity
-            };
+      let signToSave = localSign;
+      if (isSecondary && primarySign) {
+        signToSave = { ...localSign, quantity: primarySign.quantity };
+      }
+      if (!signToSave.id) {
+        console.warn('SignEditingSheet: No sign ID, aborting save');
+        return;
+      }
+      Object.entries(signToSave).forEach(([key, value]) => {
+        if (key !== "id" && key !== "primarySignId") {
+          dispatch({
+            type: "UPDATE_MPT_SIGN",
+            payload: {
+              phase: currentPhase,
+              signId: signToSave.id,
+              key: key as keyof PrimarySign,
+              value,
+            },
+          });
         }
-
-        // Update the sign in the context using UPDATE_MPT_SIGN
-        Object.entries(signToSave).forEach(([key, value]) => {
-            if (key !== "id" && key !== "primarySignId") {
-                dispatch({
-                    type: "UPDATE_MPT_SIGN",
-                    payload: {
-                        phase: currentPhase,
-                        signId: sign.id,
-                        key: key as keyof PrimarySign,
-                        value,
-                    },
-                });
-            }
-        });
-        onOpenChange(false);
+      });
+      onOpenChange(false);
     };
 
     const handleCancel = () => {
-        setIsCustom(sign.isCustom || false);
-        onOpenChange(false);
+      setIsCustom(sign.isCustom || false);
+      setLocalSign({ ...sign });
+      onOpenChange(false);
     };
 
     return (
