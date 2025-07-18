@@ -373,8 +373,8 @@ export const estimateReducer = (
 		    console.warn("DELETE_MPT_SIGN: No mptRental in state");
 		    return state;
 		  }
-		  const { phaseNumber: deletePhaseNumber, signId } = action.payload;
-		  console.log("DELETE_MPT_SIGN: Deleting sign", signId, "from phase", deletePhaseNumber);
+		  const { phaseNumber: deletePhaseNumber, signId: deleteSignId } = action.payload;
+		  console.log("DELETE_MPT_SIGN: Deleting sign", deleteSignId, "from phase", deletePhaseNumber);
 		  return {
 		    ...state,
 		    mptRental: {
@@ -383,7 +383,7 @@ export const estimateReducer = (
 		        index === deletePhaseNumber
 		          ? {
 		              ...phase,
-		              signs: phase.signs.filter(sign => sign.id !== signId)
+		              signs: phase.signs.filter(sign => sign.id !== deleteSignId)
 		            }
 		          : phase
 		      )
