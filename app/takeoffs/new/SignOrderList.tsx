@@ -152,10 +152,10 @@ export function SignOrderList({
 
   const deleteAssociatedEquipmentInfo = useCallback((signId: string) => {
     console.log('Deleting associated equipment for sign:', signId);
-    const deletedSign = mptRental.phases[currentPhase].signs.find(
+    const deletedSign = mptRental.phases[currentPhase]?.signs.find(
       s => Object.hasOwn(s, 'associatedStructure') && s.id === signId
     ) as PrimarySign | undefined;
-
+  
     if (deletedSign && deletedSign.quantity > 0) {
       if (deletedSign.cover) {
         const newQuantity = Math.max(0, getCurrentEquipmentQuantity('covers') - deletedSign.quantity);
@@ -201,7 +201,7 @@ export function SignOrderList({
       }
     }
   }, [mptRental.phases, currentPhase, dispatch, getCurrentEquipmentQuantity]);
-
+  
   const handleSignAddition = useCallback(() => {
     console.log('Starting sign addition for phase:', currentPhase);
     try {
@@ -323,17 +323,17 @@ export function SignOrderList({
   }, [localSign]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open && mptRental?.phases?.[currentPhase]?.signs) {
       const invalidSigns = mptRental.phases[currentPhase].signs.filter(
         s => s.quantity < 1 || s.height < 1 || s.width < 1 || !s.designation
       );
       invalidSigns.forEach(s => {
-        console.log('Deleting invalid sign:', s.id);
+        console.log('Deleting invalid sign:', s.id, 'from phase:', currentPhase);
         dispatch({ type: 'DELETE_MPT_SIGN', payload: { phaseNumber: currentPhase, signId: s.id } });
         deleteAssociatedEquipmentInfo(s.id);
       });
     }
-  }, [open, currentPhase, dispatch, mptRental.phases, deleteAssociatedEquipmentInfo]);
+  }, [open, currentPhase, dispatch, mptRental, deleteAssociatedEquipmentInfo]);
 
   useEffect(() => {
     const signTotals = returnSignTotalsSquareFootage(mptRental);
