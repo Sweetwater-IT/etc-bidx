@@ -967,11 +967,10 @@ export const getPermSignDaysRequired = (installHours: number, maxDailyHours: num
 }
 
 export const getPermSignTrips = (pmsItem: PMSItemNumbers, signItems: PMSItemNumbers[], maxDailyHours: number): number => {
-  if(signItems.length < 1) return 0;
   const days = getPermSignDaysRequired(pmsItem.installHoursRequired, maxDailyHours)
   const thisItemsTrips = pmsItem.numberTrucks * days;
-  //if it's the first item just make it's trips
-  if (signItems[0].id === pmsItem.id) {
+  //if it's the first item just make it's trips unless it's the only item in the array (i.e. the first addition)
+  if (signItems.length === 0 || signItems[0]?.id === pmsItem.id) {
     return thisItemsTrips
   }
   //if the sum of all required install hours (including this item, is less than the max daily hours, this item should have 0 extra trips, unless of 
@@ -1072,7 +1071,7 @@ export const getPermSignLaborCost = (pmsItem: PMSItemNumbers, adminData: AdminDa
 }
 //=+(((W40*W35)/$X$7)*$G$14)+($X$8*W35)
 export const getPermSignFuelCost = (pmsItem: PMSItemNumbers, adminData: AdminData, mptRental: MPTRentalEstimating): number => {
-  const travelCosts = ((safeNumber(adminData?.owMileage) * 2 * pmsItem.numberTrips) / mptRental.mpgPerTruck);
+  const travelCosts = ((safeNumber(adminData?.owMileage) * 2 * pmsItem.numberTrips) / mptRental.mpgPerTruck) * safeNumber(adminData?.fuelCostPerGallon);
   const dispatchCosts = (mptRental.dispatchFee * pmsItem.numberTrips)
   return travelCosts + dispatchCosts
 }
@@ -1099,10 +1098,14 @@ export const getPermanentSignRevenueAndMargin = (permanentSigns: PermanentSigns,
   if (pmsItem.standardPricing) {
     //100% markup
     const laborCostWithMarkup = getPermSignLaborCost(pmsItem, adminData) * 2;
-    const signPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
     const materialCostWithMarkup = getPermSignMaterialCost(itemType, permanentSigns, pmsItem) * (1 + (permanentSigns.itemMarkup / 100));
     const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
-    revenue = laborCostWithMarkup + signPrice + materialCostWithMarkup + fuelCost
+    if(itemType === 'pmsTypeB' || itemType === 'pmsTypeC' || itemType === 'pmsTypeF'){
+      const signPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
+      revenue = laborCostWithMarkup + signPrice + materialCostWithMarkup + fuelCost
+    } else {
+      revenue = laborCostWithMarkup + materialCostWithMarkup + fuelCost
+    }
   } else {
     revenue = totalCost / (1 - (pmsItem.customMargin / 100));
   }

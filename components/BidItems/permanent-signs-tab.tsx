@@ -293,7 +293,7 @@ const PermanentSignsSummaryStep = () => {
       //if the number of trips got changed, run the update trips function to adjust for new install hours
       if(formData.numberTrips !== permanentSigns?.signItems.find(signItem => signItem.id === editingId)?.numberTrips){
         updatePermSignTrips(editingId);
-      }
+      } 
       // Update existing item by mapping through formData and updating relvent fields
       Object.keys(formData).forEach(field => {
         if (field !== 'id') {
@@ -402,7 +402,7 @@ const PermanentSignsSummaryStep = () => {
             className="w-full"
           />
         </div>
-        <div className="flex-1">
+        {(selectedType === 'pmsTypeB' || selectedType === 'pmsTypeF' || selectedType === 'pmsTypeC') && <><div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">Sign Cost / Sq. Ft</Label>
           <Input
             type="number"
@@ -443,7 +443,7 @@ const PermanentSignsSummaryStep = () => {
             min={10}
             className="w-full"
           />
-        </div>
+        </div></>}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
           <Input
@@ -722,7 +722,7 @@ const PermanentSignsSummaryStep = () => {
           </div>
           
           {(formData as any).additionalItems?.map((item: AdditionalPMSEquipment, index: number) => (
-            <div key={index} className="grid grid-cols-3 gap-4 items-end mb-3 p-3 border rounded-lg">
+            <div key={index} className="flex gap-4 items-end mb-3 p-3 border rounded-lg">
               <div>
                 <Label className="text-sm font-medium mb-2 block">Equipment Type</Label>
                 <Select
@@ -892,14 +892,14 @@ const PermanentSignsSummaryStep = () => {
                   {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}%
                   </div>
                 </div>
-                <div className="flex flex-col">
+                {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') && <div className="flex flex-col">
                   <label className="text-sm font-semibold">
                     Sign Costs
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     ${getPermSignSqFtCost(permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
-                </div>
+                </div>}
 
                 <div className="flex flex-col">
                   <label className="text-sm font-semibold">
@@ -925,14 +925,21 @@ const PermanentSignsSummaryStep = () => {
                     ${getPermSignFuelCost(pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
-                <div className="flex flex-col">
+                {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? <div className="flex flex-col">
                   <label className="text-sm font-semibold">
                     Price Per Square Foot
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                   ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
-                </div>
+                </div> : <div className="flex flex-col">
+                  <label className="text-sm font-semibold">
+                    Price Per Each
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                  ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / pmsItem.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </div>
+                </div>}
                 <div className="flex flex-col">
                   <label className="text-sm font-semibold">
                     Total Days Required
