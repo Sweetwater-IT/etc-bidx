@@ -967,6 +967,7 @@ export const getPermSignDaysRequired = (installHours: number, maxDailyHours: num
 }
 
 export const getPermSignTrips = (pmsItem: PMSItemNumbers, signItems: PMSItemNumbers[], maxDailyHours: number): number => {
+  if(signItems.length < 1) return 0;
   const days = getPermSignDaysRequired(pmsItem.installHoursRequired, maxDailyHours)
   const thisItemsTrips = pmsItem.numberTrucks * days;
   //if it's the first item just make it's trips
@@ -1078,7 +1079,7 @@ export const getPermSignFuelCost = (pmsItem: PMSItemNumbers, adminData: AdminDat
 
 export const getPermSignTotalCost = (itemType: PMSItemKeys, permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers, adminData: AdminData, mptRental: MPTRentalEstimating): number => {
   const laborCost = getPermSignLaborCost(pmsItem, adminData)
-  const permSignSqFtCost = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
+  const permSignSqFtCost = getPermSignSqFtCost(permanentSigns, pmsItem)
   const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
   if (itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') {
     const materialCost = getPermSignMaterialCost(itemType, permanentSigns, pmsItem);
@@ -1098,16 +1099,16 @@ export const getPermanentSignRevenueAndMargin = (permanentSigns: PermanentSigns,
   if (pmsItem.standardPricing) {
     //100% markup
     const laborCostWithMarkup = getPermSignLaborCost(pmsItem, adminData) * 2;
-    const signCost = getPermSignSqFtCost(permanentSigns, pmsItem);
+    const signPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
     const materialCostWithMarkup = getPermSignMaterialCost(itemType, permanentSigns, pmsItem) * (1 + (permanentSigns.itemMarkup / 100));
     const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
-    revenue = laborCostWithMarkup + signCost + materialCostWithMarkup + fuelCost
+    revenue = laborCostWithMarkup + signPrice + materialCostWithMarkup + fuelCost
   } else {
     revenue = totalCost / (1 - (pmsItem.customMargin / 100));
   }
   return {
     revenue,
-    grossMargin: (revenue - totalCost) / totalCost
+    grossMargin: (revenue - totalCost) / revenue
   }
 }
 

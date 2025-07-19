@@ -75,7 +75,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
 const DEFAULT_MPG_PER_TRUCK = 8
-const DEFAULT_DISPATCH_FEE = 75
+const DEFAULT_DISPATCH_FEE = 50
 const DEFAULT_ANNUAL_UTILIZATION = 0.75
 const DEFAULT_TARGET_MOIC = 2
 

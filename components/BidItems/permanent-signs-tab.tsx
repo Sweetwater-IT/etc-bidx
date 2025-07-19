@@ -33,6 +33,7 @@ import { getPermanentSignRevenueAndMargin, getPermSignDaysRequired, getPermSignF
 import { toast } from "sonner";
 import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
+import { formatCurrencyValue } from "@/lib/formatDecimals";
 
 
 
@@ -247,7 +248,7 @@ const PermanentSignsSummaryStep = () => {
 
   //set number trips in form data
   useEffect(() => {
-    if(!formData || !permanentSigns) return;
+    if(!formData || !permanentSigns || permanentSigns.signItems.length < 1 || !!editingId) return;
     setFormData(prevData => ({
       ...prevData,
       numberTrips: getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
@@ -267,17 +268,18 @@ const PermanentSignsSummaryStep = () => {
   //handle trips calcs on the fly
   useEffect(() => {
     if (!permanentSigns || !selectedType || !formData) return;
-    if (selectedType === 'pmsTypeB') {
+    const calculatedTrips = getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
       setFormData(prevData => ({
         ...prevData,
-        numberTrips: formData.numberTrucks * getPermSignDaysRequired(formData.installHoursRequired, permanentSigns.maxDailyHours)
-      } as any))
-    }
+        //if we're editing the first item and nothing has changed, don't automatically set the number trips (this will set trips back to original trips
+        // if the user changes a value then goes back to the original)
+        numberTrips: calculatedTrips 
+      }) as any)
   }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired])
 
   //update perm sign bolts on the fly
   useEffect(() => {
-    if (!selectedType || !formData || selectedType === 'resetTypeF') return;
+    if (!selectedType || !formData || selectedType === 'removeTypeB' || selectedType === 'removeTypeF') return;
     setFormData(prevData => ({
       ...prevData,
       permSignBolts: formData.quantity * 2
@@ -363,7 +365,7 @@ const PermanentSignsSummaryStep = () => {
     // Common fields that appear in all types
     const commonFields = (
       <>
-        {formData.id !== permanentSigns?.signItems[0].id && <div>
+        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div>
           <Switch
             checked={formData.separateMobilization}
             onCheckedChange={(value) => handleFieldUpdate('separateMobilization', value)}
@@ -396,7 +398,7 @@ const PermanentSignsSummaryStep = () => {
             value={formData?.numberTrips || ""}
             onChange={(e) => handleFieldUpdate('numberTrips', parseInt(e.target.value) || 0)}
             min={0}
-            disabled={formData.id !== permanentSigns?.signItems[0].id}
+            disabled={((!!permanentSigns && permanentSigns?.signItems?.length > 0) && formData.id !== permanentSigns?.signItems[0]?.id)}
             className="w-full"
           />
         </div>
@@ -452,11 +454,12 @@ const PermanentSignsSummaryStep = () => {
                 type: 'UPDATE_ADMIN_DATA',
                 payload: {
                   key: 'owTravelTimeMins',
-                  value: parseInt(e.target.value) * 60
+                  value: parseFloat(e.target.value) * 60
                 }
               })
             }}
             min={0}
+            step='0.01'
             className="w-full"
           />
         </div>
@@ -502,7 +505,7 @@ const PermanentSignsSummaryStep = () => {
     );
 
     // Perm Sign Bolts field (most types have this, except resetTypeF)
-    const permSignBoltsField = selectedType !== 'resetTypeF' ? (
+    const permSignBoltsField = (selectedType !== 'removeTypeF' && selectedType !== 'removeTypeB') ? (
       <div className="flex-1">
         <Label className="text-sm font-medium mb-2 block">Perm. Sign Bolts</Label>
         <Input
@@ -682,20 +685,6 @@ const PermanentSignsSummaryStep = () => {
       </>
     ) : null;
 
-    // Fields specific to PostMountedResetOrRemove (reset and remove types)
-    const resetRemoveFields = (selectedType === 'resetTypeB' || selectedType === 'resetTypeF' ||
-      selectedType === 'removeTypeB' || selectedType === 'removeTypeF') ? (
-      <>
-        <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Is Remove</Label>
-          <Checkbox
-            checked={(formData as PostMountedResetOrRemove).isRemove || false}
-            onCheckedChange={(checked) => handleFieldUpdate('isRemove', checked)}
-          />
-        </div>
-      </>
-    ) : null;
-
     // Fields specific to InstallFlexibleDelineators
     const flexibleDelineatorFields = selectedType === 'flexibleDelineator' ? (
       <>
@@ -803,7 +792,6 @@ const PermanentSignsSummaryStep = () => {
           {permSignBoltsField}
           {postMountedInstallFields}
           {typeCFields}
-          {resetRemoveFields}
           {flexibleDelineatorFields}
           {additionalItemsSection}
         </div>
@@ -849,7 +837,7 @@ const PermanentSignsSummaryStep = () => {
                     value={pmsItem.customMargin}
                     min={0}
                     step='0.01'
-                    onChange={(e) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'customMargin', value: parseInt(e.target.value) } })}
+                    onChange={(e) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'customMargin', value: safeNumber(parseInt(e.target.value)) } })}
                   />}
                 </div>
               </div>
@@ -884,7 +872,7 @@ const PermanentSignsSummaryStep = () => {
                     Total Revenue
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue}
+                    ${getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
 
@@ -893,7 +881,7 @@ const PermanentSignsSummaryStep = () => {
                     Total Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental)}
+                    ${getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -901,7 +889,7 @@ const PermanentSignsSummaryStep = () => {
                     Gross Margin
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                  {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}
+                  {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}%
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -909,7 +897,7 @@ const PermanentSignsSummaryStep = () => {
                     Sign Costs
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermSignSqFtCost(permanentSigns, pmsItem)}
+                    ${getPermSignSqFtCost(permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
 
@@ -918,7 +906,7 @@ const PermanentSignsSummaryStep = () => {
                     Labor Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermSignLaborCost(pmsItem, adminData)}
+                    ${getPermSignLaborCost(pmsItem, adminData).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -926,7 +914,7 @@ const PermanentSignsSummaryStep = () => {
                     Material Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermSignMaterialCost(itemType, permanentSigns, pmsItem)}
+                    ${getPermSignMaterialCost(itemType, permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -934,7 +922,7 @@ const PermanentSignsSummaryStep = () => {
                     Fuel Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getPermSignFuelCost(pmsItem, adminData, mptRental)}
+                    ${getPermSignFuelCost(pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -942,7 +930,7 @@ const PermanentSignsSummaryStep = () => {
                     Price Per Square Foot
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                  {getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage}
+                  ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
                 <div className="flex flex-col">
