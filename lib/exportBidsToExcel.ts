@@ -39,6 +39,7 @@ export type EstimateData = {
     equipment_rental: EquipmentRentalItem[]  | undefined
     flagging: Flagging | undefined
     service_work: Flagging | undefined
+    permanent_signs: any;
     sale_items: SaleItem[] | undefined
     project_manager: string | null;
     pm_email: string | null;

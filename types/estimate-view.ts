@@ -132,6 +132,8 @@ export interface EstimateCompleteView {
       quotePrice: number;
       markupPercentage: number;
     }>;
+
+    permanent_signs: any;
     
     project_manager: string | null;
     pm_email: string | null;

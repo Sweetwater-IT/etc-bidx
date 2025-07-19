@@ -471,33 +471,6 @@ export const estimateReducer = (
 				}
 			}
 
-		// case "UPDATE_STATIC_PERMANENT_SIGNS":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { key: permSignsStatic, value: permSignsStaticValue } = action.payload;
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[permSignsStatic]: permSignsStaticValue
-		// 		},
-		// 	};
-
-		// case "UPDATE_PERMANENT_SIGNS_NAME":
-		// 	if (!state.permanentSigns) return state;
-		// 	const { pmsType: pmsNameUpdate, value: newName } = action.payload;
-
-		// 	const foundPmsName = state.permanentSigns[pmsNameUpdate]
-		// 	return {
-		// 		...state,
-		// 		permanentSigns: {
-		// 			...state.permanentSigns,
-		// 			[pmsNameUpdate]: {
-		// 				...foundPmsName,
-		// 				name: newName
-		// 			}
-		// 		}
-		// 	}
-
 		case "ADD_PERMANENT_SIGNS_ITEM":
 			if (!state.permanentSigns) return state;
 			const { newPMSItem } = action.payload
@@ -673,6 +646,11 @@ export const estimateReducer = (
 			return {
 				...state,
 				saleItems: action.payload
+			}
+		case 'COPY_PERMANENT_SIGNS':
+			return {
+				...state,
+				permanentSigns: action.payload
 			}
 
 		case 'COPY_NOTES':

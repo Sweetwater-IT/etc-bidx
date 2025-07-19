@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { fetchActiveBidById } from '@/lib/api-client';
 import { useLoading } from '@/hooks/use-loading';
 import { Button } from '@/components/ui/button';
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 
 
 const AdminInfoViewOnly = () => {
@@ -37,7 +38,8 @@ const AdminInfoViewOnly = () => {
                 dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any });
                 dispatch({ type: 'COPY_FLAGGING', payload: data.flagging as any });
                 dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
-                dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any })
+                dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
+                dispatch({ type: 'COPY_PERMANENT_SIGNS', payload: data.permanent_signs ?? defaultPermanentSignsObject });
                 dispatch({ type: 'COPY_NOTES', payload: data.notes})
             }
             stopLoading();

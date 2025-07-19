@@ -1,4 +1,3 @@
-//need to add material mark up 55% (would be applied to all items)
 export type PermanentSigns = {
     maxDailyHours: number;
     itemMarkup: number;

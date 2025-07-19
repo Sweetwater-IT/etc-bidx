@@ -9,6 +9,7 @@ import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import { SaleItem } from '@/types/TSaleItem';
 import { EstimateCompleteView, EstimateGridView } from '@/types/estimate-view';
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
+import { determineItemType, PermanentSigns } from '@/types/TPermanentSigns';
 
 export async function GET(request: NextRequest) {
   try {
@@ -482,7 +483,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status, notes } = body.data as {
+    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status, permanentSigns, notes } = body.data as {
       id: number | undefined
       adminData: AdminData;
       mptRental: MPTRentalEstimating;
@@ -490,6 +491,7 @@ export async function POST(request: NextRequest) {
       flagging: Flagging;
       serviceWork: Flagging;
       saleItems: SaleItem[];
+      permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
       notes: string;
     };
@@ -504,7 +506,7 @@ export async function POST(request: NextRequest) {
       flagging || defaultFlaggingObject, 
       serviceWork || defaultFlaggingObject, 
       saleItems || [],
-      defaultPermanentSignsObject
+      permanentSigns || defaultPermanentSignsObject
     );
 
     let bidEstimateId: string;
@@ -891,6 +893,88 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to create sale items: ${saleError.message}`);
       }
     }
+
+    // Upsert permanent signs data
+if (permanentSigns) {
+  // Extract signItems and prepare info object
+  const { signItems, ...permanentSignsInfo } = permanentSigns;
+
+  // Upsert permanent_signs_entries
+  const { data: permanentSignsEntry, error: permanentSignsError } = await supabase
+    .from('permanent_signs_entries')
+    .upsert({
+      bid_estimate_id: bidEstimateId,
+      permanent_signs_info: permanentSignsInfo
+    }, {
+      onConflict: 'bid_estimate_id'
+    })
+    .select('id')
+    .single();
+
+  if (permanentSignsError) {
+    throw new Error(`Failed to upsert permanent signs entry: ${permanentSignsError.message}`);
+  }
+
+  // Delete existing permanent signs before inserting new ones
+  await supabase
+    .from('permanent_signs')
+    .delete()
+    .eq('permanent_signs_entry_id', permanentSignsEntry.id);
+
+  // Insert permanent sign items
+  if (signItems && signItems.length > 0) {
+    const permanentSignInserts = signItems.map(item => {
+      const itemType = determineItemType(item);
+      
+      return {
+        permanent_signs_entry_id: permanentSignsEntry.id,
+        item_type: itemType,
+        item_number: item.itemNumber || null,
+        personnel: item.personnel || 0,
+        number_trucks: item.numberTrucks || 0,
+        number_trips: item.numberTrips || 0,
+        install_hours_required: item.installHoursRequired || 0,
+        quantity: item.quantity || 0,
+        perm_sign_bolts: item.permSignBolts || null,
+        productivity_rate: (item as any).productivityRate || null,
+        
+        // PostMountedInstall fields (Type B/F/C)
+        type: (item as any).type || null,
+        sign_sq_footage: (item as any).signSqFootage || null,
+        perm_sign_price_sq_ft: (item as any).permSignPriceSqFt || null,
+        standard_pricing: item.standardPricing !== undefined ? item.standardPricing : true,
+        custom_margin: item.customMargin || null,
+        separate_mobilization: item.separateMobilization || false,
+        perm_sign_cost_sq_ft: (item as any).permSignCostSqFt || null,
+        hi_reflective_strips: (item as any).hiReflectiveStrips || null,
+        fyg_reflective_strips: (item as any).fygReflectiveStrips || null,
+        jenny_brackets: (item as any).jennyBrackets || null,
+        stiffener_sq_inches: (item as any).stiffenerSqInches || null,
+        tmz_brackets: (item as any).tmzBrackets || null,
+        anti_theft_bolts: (item as any).antiTheftBolts || null,
+        chevron_brackets: (item as any).chevronBrackets || null,
+        street_name_cross_brackets: (item as any).streetNameCrossBrackets || null,
+        
+        // PostMountedResetOrRemove fields
+        is_remove: (item as any).isRemove || null,
+        
+        // InstallFlexibleDelineators fields
+        flexible_delineator_cost: (item as any).flexibleDelineatorCost || null,
+        
+        // Additional items as JSON
+        additional_items: (item as any).additionalItems || []
+      };
+    });
+
+    const { error: permanentSignItemsError } = await supabase
+      .from('permanent_signs')
+      .insert(permanentSignInserts);
+
+    if (permanentSignItemsError) {
+      throw new Error(`Failed to create permanent sign items: ${permanentSignItemsError.message}`);
+    }
+  }
+}
 
     return NextResponse.json({ 
       success: true, 

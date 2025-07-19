@@ -13,6 +13,7 @@ import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEqui
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
 import { Flagging } from '@/types/TFlagging';
+import { PermanentSigns } from '@/types/TPermanentSigns';
 import { SaleItem } from '@/types/TSaleItem';
 import { User } from '@/types/User';
 
@@ -265,6 +266,7 @@ export async function createActiveBid(
   flagging: Flagging | null,
   serviceWork: Flagging | null,
   saleItems: SaleItem[],
+  permanentSigns: PermanentSigns,
   status: 'PENDING' | 'DRAFT',
   notes: string,
   id?: number,
@@ -291,6 +293,7 @@ export async function createActiveBid(
         flagging,
         serviceWork,
         saleItems,
+        permanentSigns,
         status,
         notes
       }

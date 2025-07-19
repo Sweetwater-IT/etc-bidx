@@ -5,6 +5,7 @@ import { EstimateContextType } from './EstimateReducer';
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData';
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
 import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject';
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 
 const defaultBidState: EstimateContextType = {
   adminData: defaultAdminObject,
@@ -12,6 +13,7 @@ const defaultBidState: EstimateContextType = {
   dispatch: () => { },
   equipmentRental: [],
   flagging: defaultFlaggingObject,
+  permanentSigns: defaultPermanentSignsObject,
   saleItems: [],
   ratesAcknowledged: false,
   notes: '',

@@ -60,7 +60,7 @@ import {
   getRatedHoursPerPhase,
   getTotalTripsPerPhase
 } from '@/lib/mptRentalHelperFunctions'
-import { createActiveBid, fetchReferenceData } from '@/lib/api-client'
+import { fetchReferenceData } from '@/lib/api-client'
 import EquipmentRentalTab from '@/components/BidItems/equipment-rental-tab'
 import SaleItemsStep from './sale-items-step'
 import FlaggingServicesTab from '@/components/BidItems/flagging-tab'

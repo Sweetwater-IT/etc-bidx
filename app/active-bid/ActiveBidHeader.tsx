@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import StepperSaveButtons from '@/components/pages/active-bid/steps/stepper-save-buttons'
 import { Badge } from '@/components/ui/badge'
 import isEqual from 'lodash/isEqual'
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 
 interface Props {
   mode: 'edit' | 'view' | 'new'
@@ -22,7 +23,7 @@ interface Props {
 
 const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
-  const { dispatch, adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork, notes, id, firstSaveTimestamp } = useEstimate()
+  const { dispatch, adminData, mptRental, equipmentRental, saleItems, flagging, serviceWork, permanentSigns, notes, id, firstSaveTimestamp } = useEstimate()
 
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const params = useSearchParams();
@@ -56,7 +57,8 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     equipmentRental,
     flagging,
     serviceWork,
-    saleItems
+    saleItems,
+    permanentSigns
   })
 
   useEffect(() => {
@@ -74,6 +76,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     const hasFlaggingChanged = !isEqual(flagging, prevStateRef.current.flagging)
     const hasServiceWorkChanged = !isEqual(serviceWork, prevStateRef.current.serviceWork)
     const hasSaleItemsChanged = !isEqual(saleItems, prevStateRef.current.saleItems)
+    const hasPermanentSignsChanged = !isEqual(permanentSigns, prevStateRef.current.permanentSigns)
 
     const hasAnyStateChanged =
       hasAdminDataChanged ||
@@ -81,7 +84,8 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
       hasEquipmentRentalChanged ||
       hasFlaggingChanged ||
       hasServiceWorkChanged ||
-      hasSaleItemsChanged
+      hasSaleItemsChanged ||
+      hasPermanentSignsChanged
 
     if (!adminData.contractNumber || adminData.contractNumber.trim() === '' || !hasAnyStateChanged || !id || (mode === 'new' && !firstSaveTimestamp)) return;
     else {
@@ -105,12 +109,13 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
       equipmentRental,
       flagging,
       serviceWork,
-      saleItems
+      saleItems,
+      permanentSigns
     };
 
     try {
       const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
-      const createdId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, id);
+      const createdId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, statusToUse, notes, id);
       if (!createdId.id) {
         toast.error('Id was not properly set after saving bid')
       } else {
@@ -147,7 +152,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         startLoading();
         const statusToUse = mode === 'new' ? 'DRAFT' : status as 'DRAFT' | 'PENDING'
         await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
-        serviceWork ?? defaultFlaggingObject, saleItems, statusToUse, notes, id ?? undefined);
+        serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, statusToUse, notes, id ?? undefined);
         toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
         router.replace('/jobs/active-bids')
       } catch (error) {

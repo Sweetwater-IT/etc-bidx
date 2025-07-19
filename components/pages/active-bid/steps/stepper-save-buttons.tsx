@@ -9,6 +9,7 @@ import { useLoading } from '@/hooks/use-loading';
 import { createActiveBid } from '@/lib/api-client';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
@@ -22,7 +23,7 @@ interface Props {
 
 const StepperSaveButtons = ({ mode, status }: Props) => {
 
-    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, ratesAcknowledged, notes, id } = useEstimate();
+    const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns, ratesAcknowledged, notes, id } = useEstimate();
 
     const [openPdfDialog, setOpenPdfDialog] = useState(false);
     const [selectedPdfType, setSelectedPdfType] = useState<string>('estimators');
@@ -46,7 +47,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
         }
         try {
             startLoading();
-            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, 'PENDING', notes, id);
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'PENDING', notes, id);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
             const params = new URLSearchParams();

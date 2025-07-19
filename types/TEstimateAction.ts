@@ -5,7 +5,7 @@ import { SaleItem } from "./TSaleItem";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
 import { County } from "./TCounty";
-import { PMSItemNumbers, AllPMSItemKeys, PMSEquipmentPiece, PMSItemKeys } from "./TPermanentSigns";
+import { PMSItemNumbers, AllPMSItemKeys, PMSEquipmentPiece, PMSItemKeys, PermanentSigns } from "./TPermanentSigns";
 
 interface AddMPTItemNotSignPayload {
 	phaseNumber: number;
@@ -138,13 +138,6 @@ export type EstimateAction =
 			signId: string
 		}
 	}
-	// | {
-	// 	type: 'DELETE_CUSTOM_PMS_ITEM',
-	// 	payload: {
-	// 		pmsType: 'pmsTypeB' | 'pmsTypeF' | 'resetTypeF' | 'removeTypeF' | 'resetTypeB' | 'removeTypeB',
-	// 		itemIndex: number
-	// 	}
-	// }
 	/****SALE ITEMS */
 	| { type: "ADD_SALE_ITEM"; payload: SaleItem }
 	| {
@@ -162,6 +155,7 @@ export type EstimateAction =
 	| { type: 'COPY_FLAGGING', payload: Flagging }
 	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
+	| { type: 'COPY_PERMANENT_SIGNS', payload: PermanentSigns}
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
 	| { type: 'UPDATE_NOTES', payload: string }
 	| { type: 'COPY_NOTES', payload: string }
