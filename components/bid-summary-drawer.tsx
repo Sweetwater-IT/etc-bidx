@@ -18,6 +18,7 @@ import { useEstimate } from "@/contexts/EstimateContext"
 import { AdminData } from "@/types/TAdminData"
 import { MPTRentalEstimating } from "@/types/MPTEquipment"
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject"
+import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject"
 
 interface BidSummaryDrawerProps {
   open: boolean
@@ -39,6 +40,7 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
     dispatch({ type: 'COPY_FLAGGING', payload: defaultBid.flagging ?? defaultFlaggingObject})
     dispatch({ type: 'COPY_SERVICE_WORK', payload: defaultBid.service_work ?? defaultFlaggingObject})
     dispatch({ type: 'COPY_SALE_ITEMS', payload: defaultBid.sale_items ?? []})
+    dispatch({ type: 'COPY_PERMANENT_SIGNS', payload: defaultBid.permanent_signs ?? defaultPermanentSignsObject });
   }, [defaultBid])
 
   return (

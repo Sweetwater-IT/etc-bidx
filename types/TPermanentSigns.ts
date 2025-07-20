@@ -1,133 +1,170 @@
 export type PermanentSigns = {
-    installedPostManHours: number; //comes from database
-    typeBRemovalRatePerManHour: number;
-    separateMobilization: boolean;
-    trucks: number;
+    maxDailyHours: number;
+    itemMarkup: number;
+    // separateMobilization: boolean;
+    equipmentData: PMSEquipmentPiece[]
+    productivityRates: Record<PMSItemKeys, number>;
+    signItems: PMSItemNumbers[]
+}
+export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF' | 'pmsTypeC' | 'flexibleDelineator'
+export type PMSItemNumbers = PostMountedInstall | PostMountedResetOrRemove | PostMountedInstallTypeC | InstallFlexibleDelineators
+export type PMSEquipmentItems = 'permSignBolts' | 'antiTheftBolts' | 'chevronBrackets' | 'streetNameCrossBrackets' |
+    'stiffenerSqInches' | 'tmzBrackets' | 'jennyBrackets' | 'hiReflectiveStrips' | 'fygReflectiveStrips' | 'post' | 'woodPostMetalSleeves' | 'permSignCostSqFt'
+    | 'permSignPriceSqFt'
+
+export type AllPMSItemKeys =
+    // Base PermanentSignItem keys
+    | 'id'
+    | 'itemNumber'
+    | 'personnel'
+    | 'numberTrucks'
+    | 'numberTrips'
+    | 'installHoursRequired'
+    | 'quantity'
+    | 'permSignBolts'
+    | 'productivityRate'
+    // PostMountedInstall specific keys
+    | 'type'
+    | 'signSqFootage'
+    | 'permSignPriceSqFt'
+    | 'standardPricing'
+    | 'customMargin'
+    | 'separateMobilization'
+    | 'permSignCostSqFt'
+    | 'hiReflectiveStrips'
+    | 'fygReflectiveStrips'
+    | 'jennyBrackets'
+    | 'stiffenerSqInches'
+    | 'tmzBrackets'
+    | 'antiTheftBolts'
+    | 'chevronBrackets'
+    | 'streetNameCrossBrackets'
+    // PostMountedResetOrRemove specific keys
+    | 'isRemove'
+    | 'additionalItems'
+    // InstallFlexibleDelineators specific key
+    | 'flexibleDelineatorCost';
+
+export interface PMSEquipmentPiece {
+    name: PMSEquipmentItems
+    cost: number;
+}
+
+interface PermanentSignItem {
+    id: string;
+    itemNumber: string;
     personnel: number;
-    OWtrips: number;
-    signItems: (PMSTypeB | PMSTypeF | PMSResetB | PMSResetF | PMSRemoveB | PMSRemoveF)[]
-}
-
-export type PMSTypeB = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    signSqFt: number;
-    permSignBolts: number;
-    antiTheftBolts: number;
-    chevronBracket: number;
-    streetNameCrossBracket: number;
-
-    // COMMENTED OUT OLD PROPERTIES
-    // name: string;
-    // flatSheetAlumSigns : PMSEquipment,
-    // twelveFtSquarePost : PMSEquipment,
-    // permSignBolts : PMSEquipment,
-    // antiTheftBolts : PMSEquipment,
-    // chevronBracket : PMSEquipment,
-    // streetNameCrossBracket : PMSEquipment,
-    // laborCost : number;
-    // fuelCost : number;
-    // customItems : CustomPMSItem[]
-}
-
-export type PMSTypeF = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    permSignBolts: number;
-
-    // COMMENTED OUT OLD PROPERTIES
-    // name: string;
-    // flatSheetAlumSigns : PMSEquipment,
-    // permSignBolts : PMSEquipment,
-    // antiTheftBolts : PMSEquipment,
-    // chevronBracket : PMSEquipment,
-    // streetNameCrossBracket : PMSEquipment,
-    // banding: PMSEquipment,
-    // bullseyeBuckles : PMSEquipment,
-    // laborCost : number;
-    // fuelCost : number;
-    // customItems : CustomPMSItem[]
-}
-
-export type PMSResetB = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    permSignBolts: number;
-    antiTheftBolts: number;
-
-    // COMMENTED OUT OLD PROPERTIES
-    // name: string;
-    // twelveFtSquarePost : PMSEquipment,
-    // permSignBolts: PMSEquipment;
-    // laborCost : number;
-    // fuelCost : number;
-    // customItems: CustomPMSItem[]
-}
-
-export type PMSResetF = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    permSignBolts: number;
-
-    // COMMENTED OUT OLD PROPERTIES
-    // name: string;
-    // customItems : CustomPMSItem[],
-    // permSignBolts: PMSEquipment,
-    // laborCost: number;
-    // fuelCost: number;
-}
-
-export type PMSRemoveB = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    permSignBolts: number;
-
-    // Note: No permSignBolts for Remove operations
-    // COMMENTED OUT OLD PROPERTIES - was Omit<PMSResetB, 'permSignBolts'>
-}
-
-export type PMSRemoveF = {
-    id: string;
-    name: string;
-    numberInstalls: number;
-    permSignBolts: number;
-
-    // Note: No permSignBolts for Remove operations  
-    // COMMENTED OUT OLD PROPERTIES - was Omit<PMSResetF, 'permSignBolts'>
-}
-
-// COMMENTED OUT OLD TYPES - keeping for reference
-export interface PMSEquipment {
+    numberTrucks: number;
+    customMargin: number;
+    standardPricing: boolean;
+    separateMobilization: boolean;
+    numberTrips: number;
+    installHoursRequired: number;
     quantity: number;
-    unitCost: number;
-    markup: number;
+    //pms reset type f is the only one without perm sign bolts
+    permSignBolts?: number
 }
 
-export interface CustomPMSItem {
-    name: string;
-    quantity: number;
-    unitCost: number;
-    markup: number;
+export interface PostMountedInstall extends PermanentSignItem {
+    type: 'B' | 'F'
+    signSqFootage: number;
+    hiReflectiveStrips: number;
+    fygReflectiveStrips: number;
+    jennyBrackets: number;
+    stiffenerSqInches: number;
+    tmzBrackets: number;
+    //perm signs are autopopulated: installs x 2
+    antiTheftBolts: number;
+    chevronBrackets: number;
+    streetNameCrossBrackets: number;
 }
 
-export interface PermSignMapping {
-    key: keyof PMSTypeB;
-    label: string;
-    dbName: string;
+export interface PostMountedResetOrRemove extends PermanentSignItem {
+    type: 'B' | 'F'
+    isRemove: boolean
+    additionalItems: AdditionalPMSEquipment[]
 }
 
-export const permSignsMap: PermSignMapping[] = [
-    { key: 'antiTheftBolts', dbName: 'Anti-Theft Bolts', label: 'Anti-Theft Bolts' },
-    { key: 'chevronBracket', dbName: 'Chevron Bracket', label: 'Chevron Brackets' },
-    { key: 'streetNameCrossBracket', dbName: 'Street Name Cross Bracket', label: 'Street Name Cross Brackets' },
-    //   {key: 'bullseyeBuckles', dbName: 'Bullseye Buckles', label: 'Bullseye Buckles'},
-    { key: 'permSignBolts', dbName: 'Perm. Sign Bolts', label: 'Perm. Sign Bolts' },
-    //   {key: 'flatSheetAlumSigns', dbName: 'Flat Sheet Alum. Signs', label: 'Flat Sheet Aluminum Signs'},
-    //   {key: 'twelveFtSquarePost', dbName: 'Posts 12ft', label: '12 Ft Square Post'}
-    // 'banding' : 'Banding', banding should be input by users
-]
+export interface PostMountedInstallTypeC extends PermanentSignItem {
+    signSqFootage: number;
+    signPriceSqFt: number;
+    hiReflectiveStrips: number;
+    fygReflectiveStrips: number;
+    stiffenerSqInches: number;
+    tmzBrackets: number;
+    antiTheftBolts: number;
+}
+
+export interface AdditionalPMSEquipment {
+    equipmentType: PMSEquipmentItems
+    quantity: number
+}
+
+export interface InstallFlexibleDelineators extends PermanentSignItem {
+    flexibleDelineatorCost: number;
+    additionalItems: AdditionalPMSEquipment[]
+}
+
+export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
+    'Anti-Theft Bolts': 'antiTheftBolts',
+    'Perm. Sign Bolts': 'permSignBolts',
+    'Chevron Bracket': 'chevronBrackets',
+    'Street Name Cross Bracket': 'streetNameCrossBrackets',
+    'STIFFENER_PER_INCH': 'stiffenerSqInches',
+    'TMZ_BRACKET': 'tmzBrackets',
+    'JENNY_BRACKET': 'jennyBrackets',
+    'HI_REFLECTIVE_STRIPS': 'hiReflectiveStrips',
+    'FYG_REFLECTIVE_STRIPS': 'fygReflectiveStrips',
+    'Posts 12ft': 'post', // or '12ft Posts' - both exist with same price
+    'WOOD_POST_METAL_SLEEVE': 'woodPostMetalSleeves',
+    'PERM_SIGN_COST_SQ_FT': 'permSignCostSqFt',
+    'PERM_SIGN_PRICE_SQ_FT': 'permSignPriceSqFt'
+};
+
+export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
+    //delineators
+    if (Object.hasOwn(item, 'flexibleDelineatorCost')) {
+        return 'flexibleDelineator'
+    }
+    //post mounted installs
+    else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
+        if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
+            return 'pmsTypeC'
+        } else if ((item as PostMountedInstall).type === 'B') {
+            return 'pmsTypeB'
+        } else return 'pmsTypeF'
+    }
+    //removals
+    else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
+        return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
+    } else {
+        return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
+    }
+}
+
+export const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
+    'Type B Post Mount': 'pmsTypeB',
+    'Reset Type B': 'resetTypeB',
+    'Remove Type B': 'removeTypeB',
+    'Type F Post Mount': 'pmsTypeF',
+    'Reset Type F': 'resetTypeF',
+    'Remove Type F': 'removeTypeF',
+    'Type C Post Mount': 'pmsTypeC',
+    'Flexible Delineator': 'flexibleDelineator'
+}
+
+export const getDisplayName = (key: PMSItemKeys): string => {
+    return Object.entries(PERMANENT_SIGN_ITEMS).find(([_, value]) => value === key)?.[0] || key;
+};
+
+export const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
+    'Anti-Theft Bolts': 'antiTheftBolts',
+    'Chevron Brackets': 'chevronBrackets',
+    'Street Name Cross Brackets': 'streetNameCrossBrackets',
+    'Stiffener (per sq inch)': 'stiffenerSqInches',
+    'TMZ Brackets': 'tmzBrackets',
+    'Jenny Brackets': 'jennyBrackets',
+    'Hi-Reflective Strips': 'hiReflectiveStrips',
+    'FYG Reflective Strips': 'fygReflectiveStrips',
+    'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
+  };

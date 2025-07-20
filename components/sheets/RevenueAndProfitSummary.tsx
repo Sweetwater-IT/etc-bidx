@@ -17,6 +17,8 @@ import {
 import FlaggingRevenueAndProfit from './FlaggingRevenueAndProfit'
 import RentalRevenueAndProfit from './RentalRevenueAndProfit'
 import SaleItemsRevenueAndProfit from './SaleItemsRevenueAndProfit'
+import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
+import PermanentSignsSummaryStep from '../BidItems/permanent-signs-tab'
 
 interface BasicSummaryTotals {
   totalCost: number;
@@ -26,7 +28,7 @@ interface BasicSummaryTotals {
 }
 
 const RevenueAndProfitSummary = () => {
-  const { mptRental, adminData, flagging, serviceWork, equipmentRental, saleItems } = useEstimate()
+  const { mptRental, adminData, flagging, serviceWork, equipmentRental, saleItems, permanentSigns } = useEstimate()
   const [mptRentalStats, setMptRentalStats] = React.useState<MPTEquipmentCost | null>(null)
   const [lightAndDrumRentalStats, setLightAndDrumRentalStats] = React.useState<MPTEquipmentCost | null>(null)
   const [totalSignCostStats, setTotalSignCostStats] = React.useState<Record<SheetingType, MPTEquipmentCost> | null>(null)
@@ -67,7 +69,7 @@ const RevenueAndProfitSummary = () => {
       setAllTotals(null)
       return
     }
-    const totals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems)
+    const totals = getAllTotals(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject)
     setAllTotals({
       totalCost: totals.mptTotalCost,
       totalRevenue: totals.mptTotalRevenue,

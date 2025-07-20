@@ -3,6 +3,8 @@
 import { useEstimate } from '@/contexts/EstimateContext'
 import React, { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ADDITIONAL_EQUIPMENT_OPTIONS, determineItemType, getDisplayName, InstallFlexibleDelineators, PostMountedInstall, PostMountedInstallTypeC, } from '@/types/TPermanentSigns';
+import { getPermanentSignRevenueAndMargin, getPermSignDaysRequired, getPermSignTotalCost } from '@/lib/mptRentalHelperFunctions';
 
 // Mapping for equipment labels
 const labelMapping: Record<string, string> = {
@@ -689,43 +691,12 @@ const SaleItemsViewOnly = () => {
     );
 };
 
-// Add this component to your BidItemsViewOnly file
-
 const PermanentSignsViewOnly = () => {
-    const { permanentSigns } = useEstimate();
+    const { permanentSigns, adminData, mptRental } = useEstimate();
 
-    const PERMANENT_SIGN_ITEMS: Record<string, string> = {
-        'pmsTypeB': 'Type B Post Mount',
-        'resetTypeB': 'Reset Type B',
-        'removeTypeB': 'Remove Type B',
-        'pmsTypeF': 'Type F Post Mount',
-        'resetTypeF': 'Reset Type F',
-        'removeTypeF': 'Remove Type F'
-    };
-
-    // Helper function to determine the type based on properties
-    const determineItemType = (item: any): string => {
-        if ('signSqFt' in item && 'chevronBracket' in item && 'streetNameCrossBracket' in item) {
-            return 'pmsTypeB';
-        }
-        if ('antiTheftBolts' in item && !('signSqFt' in item)) {
-            return 'resetTypeB';
-        }
-        
-        // For items with only basic properties, check the name pattern
-        const keys = Object.keys(item);
-        if (keys.length <= 4) {
-            if (item.name?.includes('0935')) return 'pmsTypeF';
-            if (item.name?.includes('0945')) return 'resetTypeF';
-            if (item.name?.includes('0971')) return 'removeTypeB';
-            if (item.name?.includes('0975')) return 'removeTypeF';
-        }
-        
-        return 'pmsTypeF';
-    };
-
-    const getDisplayName = (itemType: string): string => {
-        return PERMANENT_SIGN_ITEMS[itemType] || itemType;
+    const formatCurrency = (value: number | null | undefined): string => {
+        if (!value) return "-";
+        return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatNumber = (value: number | null | undefined): string => {
@@ -733,162 +704,210 @@ const PermanentSignsViewOnly = () => {
         return value.toString();
     };
 
+    if (!permanentSigns || permanentSigns.signItems.length === 0) {
+        return (
+            <div className="text-center py-8 text-muted-foreground">
+                No permanent signs configured
+            </div>
+        );
+    }
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-            {/* General Settings */}
-            <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-4">
-                <label className="text-sm font-semibold mb-2">
-                    General Settings
-                </label>
-            </div>
+        <div className="space-y-4">
+            {permanentSigns.signItems.map(pmsItem => {
+                const itemType = determineItemType(pmsItem);
+                const revenue = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue;
+                const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
+                const grossMargin = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin;
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Separate Mobilization
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.separateMobilization ? 'Yes' : 'No'}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Trucks
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.trucks || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Personnel
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.personnel || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    OW Trips
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.OWtrips || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Type B Removal Rate (per man hour)
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.typeBRemovalRatePerManHour || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Installed Post Man Hours
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {permanentSigns?.installedPostManHours || "-"}
-                </div>
-            </div>
-
-            {/* Sign Items */}
-            {permanentSigns && permanentSigns.signItems && permanentSigns.signItems.length > 0 ? (
-                permanentSigns.signItems.map((item, index) => {
-                    const itemType = determineItemType(item);
-                    const hasSignSqFt = 'signSqFt' in item;
-                    const hasAntiTheftBolts = 'antiTheftBolts' in item;
-                    const hasChevronBracket = 'chevronBracket' in item;
-                    const hasStreetNameCrossBracket = 'streetNameCrossBracket' in item;
-
-                    return (
-                        <React.Fragment key={item.id}>
-                            <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2 mt-4">
-                                <label className="text-sm font-semibold">
-                                    {getDisplayName(itemType)} - {item.name || 'Unnamed Item'}
-                                </label>
+                return (
+                    <div
+                        key={`sign-${pmsItem.id}`}
+                        className="rounded-lg border bg-card text-card-foreground shadow-sm p-4"
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="font-medium text-lg">{getDisplayName(itemType)}</div>
+                            <div className="text-sm text-muted-foreground">
+                                Item: {pmsItem.itemNumber || 'N/A'}
                             </div>
+                        </div>
 
+                        {/* Key Metrics Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div className="flex flex-col">
                                 <label className="text-sm font-semibold">
-                                    # of Installs
+                                    Quantity
                                 </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {formatNumber(item.numberInstalls)}
+                                <div className="pr-3 py-1 text-muted-foreground">
+                                    {formatNumber(pmsItem.quantity)}
                                 </div>
                             </div>
 
                             <div className="flex flex-col">
                                 <label className="text-sm font-semibold">
-                                    Perm. Sign Bolts
+                                    Personnel
                                 </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {formatNumber(item.permSignBolts)}
+                                <div className="pr-3 py-1 text-muted-foreground">
+                                    {formatNumber(pmsItem.personnel)}
                                 </div>
                             </div>
 
-                            {hasSignSqFt && (
+                            <div className="flex flex-col">
+                                <label className="text-sm font-semibold">
+                                    Install Hours
+                                </label>
+                                <div className="pr-3 py-1 text-muted-foreground">
+                                    {formatNumber(pmsItem.installHoursRequired)}
+                                </div>
+                            </div>
+
+                            {/* Sign Square Footage for relevant types */}
+                            {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') && (
                                 <div className="flex flex-col">
                                     <label className="text-sm font-semibold">
-                                        Sign Sq. Ft.
+                                        Sign Sq. Footage
                                     </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).signSqFt)}
+                                    <div className="pr-3 py-1 text-muted-foreground">
+                                        {formatNumber((pmsItem as PostMountedInstall | PostMountedInstallTypeC).signSqFootage)}
                                     </div>
                                 </div>
                             )}
 
-                            {hasAntiTheftBolts && (
+                            {/* Perm Sign Bolts (if applicable) */}
+                            {pmsItem.permSignBolts && (
                                 <div className="flex flex-col">
                                     <label className="text-sm font-semibold">
-                                        Anti-Theft Bolts
+                                        Perm. Sign Bolts
                                     </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).antiTheftBolts)}
+                                    <div className="pr-3 py-1 text-muted-foreground">
+                                        {formatNumber(pmsItem.permSignBolts)}
                                     </div>
                                 </div>
                             )}
 
-                            {hasChevronBracket && (
+                            {/* Flexible Delineator Cost */}
+                            {itemType === 'flexibleDelineator' && (
                                 <div className="flex flex-col">
                                     <label className="text-sm font-semibold">
-                                        Chevron Bracket
+                                        Cost per Unit
                                     </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).chevronBracket)}
+                                    <div className="pr-3 py-1 text-muted-foreground">
+                                        {formatCurrency((pmsItem as InstallFlexibleDelineators).flexibleDelineatorCost)}
                                     </div>
                                 </div>
                             )}
 
-                            {hasStreetNameCrossBracket && (
+                            {/* Additional Items Count */}
+                            {'additionalItems' in pmsItem && pmsItem.additionalItems && pmsItem.additionalItems.length > 0 && (
                                 <div className="flex flex-col">
                                     <label className="text-sm font-semibold">
-                                        Street Name Cross Bracket
+                                        Additional Items
                                     </label>
-                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                        {formatNumber((item as any).streetNameCrossBracket)}
+                                    <div className="pr-3 py-1 text-muted-foreground">
+                                        {pmsItem.additionalItems.length} item(s)
                                     </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Fill remaining grid space if needed */}
-                            {(!hasSignSqFt && !hasAntiTheftBolts && !hasChevronBracket && !hasStreetNameCrossBracket) && (
-                                <div className="flex flex-col">
-                                    {/* Empty space for grid alignment */}
+                        {/* Additional Items Detail */}
+                        {'additionalItems' in pmsItem && pmsItem.additionalItems && pmsItem.additionalItems.length > 0 && (
+                            <div className="mb-4">
+                                <label className="text-sm font-semibold mb-2 block">
+                                    Additional Equipment Details
+                                </label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {pmsItem.additionalItems.map((item, index) => {
+                                        const displayName = Object.entries(ADDITIONAL_EQUIPMENT_OPTIONS).find(
+                                            ([_, value]) => value === item.equipmentType
+                                        )?.[0] || item.equipmentType;
+                                        
+                                        return (
+                                            <div key={index} className="text-sm text-muted-foreground">
+                                                {displayName}: {item.quantity}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </React.Fragment>
-                    );
-                })
-            ) : (
-                <div className="col-span-3 text-center py-8 text-muted-foreground">
-                    No permanent sign items configured
-                </div>
-            )}
+                            </div>
+                        )}
+
+                        {/* Financial Summary */}
+                        <div className="border-t pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="flex flex-col">
+                                    <label className="text-sm font-semibold">
+                                        Total Revenue
+                                    </label>
+                                    <div className="pr-3 py-1 text-green-600 font-medium">
+                                        {formatCurrency(revenue)}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col">
+                                    <label className="text-sm font-semibold">
+                                        Total Cost
+                                    </label>
+                                    <div className="pr-3 py-1 text-red-600 font-medium">
+                                        {formatCurrency(totalCost)}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col">
+                                    <label className="text-sm font-semibold">
+                                        Gross Margin
+                                    </label>
+                                    <div className="pr-3 py-1 text-blue-600 font-medium">
+                                        {(grossMargin * 100).toFixed(2)}%
+                                    </div>
+                                </div>
+
+                                {/* Price per unit for different types */}
+                                {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? (
+                                    <div className="flex flex-col">
+                                        <label className="text-sm font-semibold">
+                                            Price per Sq. Ft.
+                                        </label>
+                                        <div className="pr-3 py-1 text-muted-foreground">
+                                            {formatCurrency(revenue / (pmsItem as PostMountedInstall | PostMountedInstallTypeC).signSqFootage)}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col">
+                                        <label className="text-sm font-semibold">
+                                            Price per Unit
+                                        </label>
+                                        <div className="pr-3 py-1 text-muted-foreground">
+                                            {formatCurrency(revenue / pmsItem.quantity)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col">
+                                    <label className="text-sm font-semibold">
+                                        Days Required
+                                    </label>
+                                    <div className="pr-3 py-1 text-muted-foreground">
+                                        {getPermSignDaysRequired(pmsItem.installHoursRequired, permanentSigns.maxDailyHours)}
+                                    </div>
+                                </div>
+
+                                {!pmsItem.standardPricing && (
+                                    <div className="flex flex-col">
+                                        <label className="text-sm font-semibold">
+                                            Custom Margin
+                                        </label>
+                                        <div className="pr-3 py-1 text-orange-600 font-medium">
+                                            {pmsItem.customMargin ? `${(pmsItem.customMargin * 100).toFixed(2)}%` : 'N/A'}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 };

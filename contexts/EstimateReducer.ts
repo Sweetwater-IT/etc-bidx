@@ -5,8 +5,7 @@ import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { ExtendedPrimarySign, MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
-import { defaultPermanentSignsObject, defaultPMSRemoveB, defaultPMSRemoveF, defaultPMSTypeB, defaultPMSTypeF } from "@/types/default-objects/defaultPermanentSignsObject";
-import { SetStateAction } from "react";
+import { defaultPermanentSignsObject,  } from "@/types/default-objects/defaultPermanentSignsObject";
 
 // Define the reducer's context type
 export interface EstimateContextType extends Estimate {
@@ -460,7 +459,7 @@ export const estimateReducer = (
 				permanentSigns: defaultPermanentSignsObject,
 			};
 
-		case "UPDATE_PERMANENT_SIGNS_INPUTS":
+		case "UPDATE_PERMANENT_SIGNS_ASSUMPTIONS":
 			if (!state.permanentSigns) return state;
 
 			const { key: permSignsKey, value: permSignsValue } = action.payload
@@ -472,87 +471,14 @@ export const estimateReducer = (
 				}
 			}
 
-		case "UPDATE_STATIC_PERMANENT_SIGNS":
-			if (!state.permanentSigns) return state;
-			const { key: permSignsStatic, value: permSignsStaticValue } = action.payload;
-			return {
-				...state,
-				permanentSigns: {
-					...state.permanentSigns,
-					[permSignsStatic]: permSignsStaticValue
-				},
-			};
-
-		case "UPDATE_PERMANENT_SIGNS_NAME":
-			if (!state.permanentSigns) return state;
-			const { pmsType: pmsNameUpdate, value: newName } = action.payload;
-
-			const foundPmsName = state.permanentSigns[pmsNameUpdate]
-			return {
-				...state,
-				permanentSigns: {
-					...state.permanentSigns,
-					[pmsNameUpdate]: {
-						...foundPmsName,
-						name: newName
-					}
-				}
-			}
-
 		case "ADD_PERMANENT_SIGNS_ITEM":
 			if (!state.permanentSigns) return state;
-			const { key: keyToBeAdded, id: newPMSId } = action.payload
-			let defaultObjectToBeAdded: any;
-			switch (keyToBeAdded) {
-				case 'pmsTypeB':
-					defaultObjectToBeAdded = {
-						...defaultPMSTypeB,
-						id: newPMSId
-					}
-					break;
-				case 'pmsTypeF':
-					defaultObjectToBeAdded = {
-						...defaultPMSTypeF,
-						id: newPMSId
-					}
-					break;
-				case 'resetTypeB':
-					defaultObjectToBeAdded = {
-						...defaultPMSRemoveB,
-						name: '0941-0001',
-						id: newPMSId
-						// permSignBolts
-					}
-					break;
-				case 'resetTypeF':
-					defaultObjectToBeAdded = {
-						...defaultPMSRemoveF,
-						name: '0945-0001',
-						id: newPMSId
-						// permSignBolts
-					}
-					break;
-				case 'removeTypeB':
-					defaultObjectToBeAdded = {
-						...defaultPMSRemoveB,
-						id: newPMSId
-					}
-					break;
-				case 'removeTypeF':
-					defaultObjectToBeAdded = {
-						...defaultPMSRemoveF,
-						id: newPMSId
-					}
-					break;
-				default:
-					defaultObjectToBeAdded = undefined;
-			}
-			if (!defaultObjectToBeAdded) return state;
-			else return {
+			const { newPMSItem } = action.payload
+			return {
 				...state,
 				permanentSigns: {
 					...state.permanentSigns,
-					signItems: [...state.permanentSigns.signItems, defaultObjectToBeAdded]
+					signItems: [...state.permanentSigns.signItems, newPMSItem]
 				}
 			}
 		case "UPDATE_PERMANENT_SIGNS_ITEM":
@@ -720,6 +646,11 @@ export const estimateReducer = (
 			return {
 				...state,
 				saleItems: action.payload
+			}
+		case 'COPY_PERMANENT_SIGNS':
+			return {
+				...state,
+				permanentSigns: action.payload
 			}
 
 		case 'COPY_NOTES':

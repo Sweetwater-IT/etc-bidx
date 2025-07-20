@@ -28,6 +28,7 @@ import { safeNumber } from "@/lib/safe-number";
 import { formatDecimal } from "@/lib/formatDecimals";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { useAuth } from "@/contexts/auth-context";
+import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
 
 
 const step: Step = {
@@ -60,7 +61,7 @@ const step: Step = {
 const AdminInformationStep1 = () => {
 
   const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental, 
-    flagging, serviceWork, saleItems, equipmentRental, notes } = useEstimate();
+    flagging, serviceWork, saleItems, equipmentRental, notes, permanentSigns } = useEstimate();
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
@@ -221,6 +222,7 @@ const AdminInformationStep1 = () => {
         dispatch({ type: 'COPY_FLAGGING', payload: data.flagging as any });
         dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
         dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
+        dispatch({ type: 'COPY_PERMANENT_SIGNS', payload: data.permanent_signs ?? defaultPermanentSignsObject });
         dispatch({ type: 'COPY_NOTES', payload: data.notes});
         dispatch({ type: 'SET_FIRST_SAVE', payload: new Date(data.created_at).getTime()})
       }
@@ -737,7 +739,7 @@ const AdminInformationStep1 = () => {
                                 // add 0 to simulate saving state
                                 dispatch({ type: 'SET_FIRST_SAVE', payload: 0})
                                 const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
-                                  serviceWork ?? defaultFlaggingObject, saleItems, 'DRAFT', notes);
+                                  serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
                                 dispatch({ type: 'SET_FIRST_SAVE', payload: 1})
                                 dispatch({ type: 'SET_ID', payload: createResponse.id })
                               } catch(err){
