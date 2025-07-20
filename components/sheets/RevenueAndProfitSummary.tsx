@@ -18,6 +18,7 @@ import FlaggingRevenueAndProfit from './FlaggingRevenueAndProfit'
 import RentalRevenueAndProfit from './RentalRevenueAndProfit'
 import SaleItemsRevenueAndProfit from './SaleItemsRevenueAndProfit'
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
+import PermanentSignsSummaryStep from '../BidItems/permanent-signs-tab'
 
 interface BasicSummaryTotals {
   totalCost: number;

@@ -46,7 +46,7 @@ const BidSummaryAccordion = ({ isViewSummaryOpen, setIsViewSummaryOpen }: BidSum
       grossProfit: allTotals.totalGrossProfit,
       grossMargin: allTotals.totalGrossMargin
     })
-  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns])
 
   return (
     <>

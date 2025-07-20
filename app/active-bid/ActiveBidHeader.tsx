@@ -98,7 +98,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         autosave();
       }, 5000)
     }
-  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
+  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns])
 
   const autosave = async () => {
     if (!id) return;

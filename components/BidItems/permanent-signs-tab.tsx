@@ -23,7 +23,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { getDisplayName, PERMANENT_SIGN_ITEMS, PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap, PMSEquipmentItems, AdditionalPMSEquipment } from "@/types/TPermanentSigns";
+import { getDisplayName, PERMANENT_SIGN_ITEMS, ADDITIONAL_EQUIPMENT_OPTIONS, PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap, PMSEquipmentItems, AdditionalPMSEquipment } from "@/types/TPermanentSigns";
 import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC } from "@/types/default-objects/defaultPermanentSignsObject";
 import { v4 as uuidv4 } from 'uuid';
 import EmptyContainer from "./empty-container";
@@ -34,21 +34,6 @@ import { toast } from "sonner";
 import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
 import { formatCurrencyValue } from "@/lib/formatDecimals";
-
-
-
-// Additional equipment options for custom items
-const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
-  'Anti-Theft Bolts': 'antiTheftBolts',
-  'Chevron Brackets': 'chevronBrackets',
-  'Street Name Cross Brackets': 'streetNameCrossBrackets',
-  'Stiffener (per sq inch)': 'stiffenerSqInches',
-  'TMZ Brackets': 'tmzBrackets',
-  'Jenny Brackets': 'jennyBrackets',
-  'Hi-Reflective Strips': 'hiReflectiveStrips',
-  'FYG Reflective Strips': 'fygReflectiveStrips',
-  'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
-};
 
 const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
   const newPMSId = uuidv4();
@@ -365,7 +350,8 @@ const PermanentSignsSummaryStep = () => {
     // Common fields that appear in all types
     const commonFields = (
       <>
-        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div>
+        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div className='mt-1'>
+          <Label className='mb-2'>Separate mobilization</Label>
           <Switch
             checked={formData.separateMobilization}
             onCheckedChange={(value) => handleFieldUpdate('separateMobilization', value)}

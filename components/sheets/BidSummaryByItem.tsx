@@ -39,11 +39,6 @@ const BidSummaryByItem = () => {
         percentage: safeNumber(((allTotals.mptTotalRevenue * 0.65) / allTotals.totalRevenue) * 100)
       },
       {
-        item: 'Perm. Signs',
-        total: 0,
-        percentage: 0
-      },
-      {
         item: 'Rental',
         total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.rental / 100 )),
         percentage: safeNumber(allTotals.revenuePercentages.rental)
@@ -54,10 +49,6 @@ const BidSummaryByItem = () => {
         percentage: safeNumber(allTotals.revenuePercentages.flagging)
       },
       {
-        item: 'Perm. Signs',
-        total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.permanentSigns / 100)),
-        percentage: safeNumber(allTotals.revenuePercentages.permanentSigns)
-      },      {
         item: 'Perm. Signs',
         total: safeNumber(allTotals.totalRevenue * (allTotals.revenuePercentages.permanentSigns / 100)),
         percentage: safeNumber(allTotals.revenuePercentages.permanentSigns)

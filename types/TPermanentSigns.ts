@@ -123,7 +123,7 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
 
 export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
     //delineators
-    if (Object.hasOwn(item, 'cost')) {
+    if (Object.hasOwn(item, 'flexibleDelineatorCost')) {
         return 'flexibleDelineator'
     }
     //post mounted installs
@@ -156,3 +156,15 @@ export const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
 export const getDisplayName = (key: PMSItemKeys): string => {
     return Object.entries(PERMANENT_SIGN_ITEMS).find(([_, value]) => value === key)?.[0] || key;
 };
+
+export const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
+    'Anti-Theft Bolts': 'antiTheftBolts',
+    'Chevron Brackets': 'chevronBrackets',
+    'Street Name Cross Brackets': 'streetNameCrossBrackets',
+    'Stiffener (per sq inch)': 'stiffenerSqInches',
+    'TMZ Brackets': 'tmzBrackets',
+    'Jenny Brackets': 'jennyBrackets',
+    'Hi-Reflective Strips': 'hiReflectiveStrips',
+    'FYG Reflective Strips': 'fygReflectiveStrips',
+    'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
+  };
