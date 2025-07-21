@@ -483,7 +483,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status, permanentSigns, notes } = body.data as {
+    const { id, adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, status, permanentSigns, notes, availableJobId } = body.data as {
       id: number | undefined
       adminData: AdminData;
       mptRental: MPTRentalEstimating;
@@ -494,6 +494,7 @@ export async function POST(request: NextRequest) {
       permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
       notes: string;
+      availableJobId?: number;
     };
 
     // Calculate totals
@@ -547,6 +548,19 @@ export async function POST(request: NextRequest) {
       }
       
       bidEstimateId = newBid.id;
+    }
+
+    // If an availableJobId is provided, update the original job
+    if (availableJobId) {
+      const { error: updateAvailableJobError } = await supabase
+        .from('available_jobs')
+        .update({ status: 'Bid' })
+        .eq('id', availableJobId);
+
+      if (updateAvailableJobError) {
+        // Log the error but don't block the bid creation
+        console.error(`Failed to update available job ${availableJobId}: ${updateAvailableJobError.message}`);
+      }
     }
 
     // Upsert admin data

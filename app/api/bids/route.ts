@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
 import { safeNumber } from '@/lib/safe-number';
 
+export const dynamic = 'force-dynamic';
+
 type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 
 // GET: Fetch all bids with optional filtering, plus counts and stats

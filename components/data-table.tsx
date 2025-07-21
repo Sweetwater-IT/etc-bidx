@@ -541,7 +541,7 @@ export function DataTable<TData extends object> ({
                 <DropdownMenuContent align='end' className='z-[200]'>
                   {onMarkAsBidJob &&
                     'status' in row.original &&
-                    (row.original as any).status === 'Bid' &&
+                    (row.original as any).status !== 'No Bid' &&
                     !(row.original as any).alreadyBid && (
                       <DropdownMenuItem
                         onClick={e => {
