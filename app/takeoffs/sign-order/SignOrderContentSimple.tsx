@@ -28,6 +28,11 @@ import {
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
+import { PanelLeftClose, PanelRight } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
+import { PDFViewer } from '@react-pdf/renderer'
+import { useMemo } from 'react';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -44,6 +49,33 @@ export interface SignOrderAdminInformation {
   orderNumber?: string
   startDate?: Date
   endDate?: Date
+}
+export interface AdminData {
+  contractNumber?: string
+  jobNumber?: string
+  customer?: { name?: string }
+  orderDate?: string | Date
+  needDate?: string | Date
+  branch?: string
+  orderType?: string
+  submitter?: string
+}
+
+export interface SignItem {
+  designation: string
+  description: string
+  quantity: number
+  width: number
+  height: number
+  sheeting: string
+  substrate: string
+  stiffener: string | boolean
+  inStock?: number
+  order?: number
+  make?: number
+  unitPrice?: number
+  totalPrice?: number
+  primarySignId?: string
 }
 
 interface Props {
@@ -69,6 +101,17 @@ export default function SignOrderContentSimple ({
     contractNumber: '',
     orderNumber: undefined
   })
+  const [adminData, setAdminData] = useState<AdminData>({
+    contractNumber: '',
+    jobNumber: '',
+    customer: { name: '' },
+    orderDate: new Date(),
+    needDate: '',
+    branch: '',
+    orderType: '',
+    submitter: ''
+  })
+  const [signList, setSignList] = useState<SignItem[]>([])
 
   const { startLoading, stopLoading } = useLoading()
 
@@ -275,7 +318,17 @@ export default function SignOrderContentSimple ({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-
+      setSignList(mptRental.phases[0].signs.map(normalizeSign));
+      setAdminData({
+        contractNumber: adminInfo.contractNumber,
+        jobNumber: adminInfo.jobNumber,
+        customer: { name: adminInfo.customer?.name },
+        orderDate: adminInfo.orderDate,
+        needDate: adminInfo.needDate || '',
+        branch: adminInfo.selectedBranch,
+        orderType: adminInfo.orderType.join(', '),
+        submitter: adminInfo.requestor?.name || ''
+      })
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
@@ -514,6 +567,11 @@ export default function SignOrderContentSimple ({
     }
   }
 
+  const pdfDoc = useMemo(
+    () => <SignOrderWorksheetPDF adminData={adminData} signList={signList} showFinancials={true} />,
+    [adminData, signList]
+  );
+
   return mptRental.phases.length > 0 ? (
     <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
@@ -550,39 +608,62 @@ export default function SignOrderContentSimple ({
         }
       />
       <div className='flex gap-6 p-6 max-w-full'>
-        {/* Main Form Column (3/4) */}
-        <div className='w-3/4 space-y-6'>
-          <SignOrderAdminInfo
-            adminInfo={adminInfo}
-            setAdminInfo={setAdminInfo}
-            showInitialAdminState={!!initialSignOrderId}
-          />
-          <SignOrderList />
-        </div>
-        {/* Right Column (1/4) */}
-        <div className='w-1/4 space-y-6'>
-          <EquipmentTotalsAccordion />
-          <div className='border rounded-lg p-4'>
-            <h2 className='mb-2 text-lg font-semibold'>Files</h2>
-            <Dropzone
-              {...fileUploadProps}
-              className='p-8 cursor-pointer space-y-4'
-            >
-              <DropzoneContent />
-              <DropzoneEmptyState />
-            </Dropzone>
+          {/* Left Section: expands if PDF preview is hidden */}
+          <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
+            {/* Main Form Column (3/4) */}
+              <SignOrderAdminInfo
+                adminInfo={adminInfo}
+                setAdminInfo={setAdminInfo}
+                showInitialAdminState={!!initialSignOrderId}
+              />
+              <SignOrderList />
+            {/* Right Column (1/4) */}
+              {/* Toggle Button for PDF Preview (floated to the right, outside preview) */}
+              <EquipmentTotalsAccordion />
+              <div className='border rounded-lg p-4'>
+                <h2 className='mb-2 text-lg font-semibold'>Files</h2>
+                <Dropzone
+                  {...fileUploadProps}
+                  className='p-8 cursor-pointer space-y-4'
+                >
+                  <DropzoneContent />
+                  <DropzoneEmptyState />
+                </Dropzone>
+              </div>
+              <QuoteNotes
+                notes={notes}
+                onSave={handleSaveNote}
+                onEdit={handleEditNote}
+                onDelete={handleDeleteNote}
+                loading={loadingNotes}
+              />
           </div>
-          <QuoteNotes
-            notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            loading={loadingNotes}
-          />
-        </div>
+          {/* PDF Preview Section: only render if visible */}
+          <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
+            <PDFViewer width='100%' height={1000} showToolbar={false}>
+              {pdfDoc}
+            </PDFViewer>
+          </div>
       </div>
     </div>
   ) : (
     <></>
   )
 }
+
+const normalizeSign = (sign: any): SignItem => ({
+  designation: sign.designation || '',
+  description: sign.description || '',
+  quantity: sign.quantity || 0,
+  width: sign.width || 0,
+  height: sign.height || 0,
+  sheeting: sign.sheeting || '',
+  substrate: sign.substrate || '', // ensure string, fallback to empty string
+  stiffener: typeof sign.stiffener === 'string' || typeof sign.stiffener === 'boolean' ? sign.stiffener : '',
+  inStock: sign.inStock ?? 0,
+  order: sign.order ?? 0,
+  make: sign.make ?? 0,
+  unitPrice: sign.unitPrice ?? undefined,
+  totalPrice: sign.totalPrice ?? undefined,
+  primarySignId: sign.primarySignId ?? undefined,
+});

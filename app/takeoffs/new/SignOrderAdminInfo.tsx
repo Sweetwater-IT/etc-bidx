@@ -113,7 +113,8 @@ export function SignOrderAdminInfo({
                     ...prev,
                     jobNumber: contractJob.job_number,
                     contractNumber: contractJob.contractNumber || '',
-                    customer: associatedCustomer || null
+                    customer: associatedCustomer || null,
+                    selectedBranch: contractJob.branch
                 }));
             } else {
                 // It's an estimate
@@ -122,7 +123,8 @@ export function SignOrderAdminInfo({
                     ...prev,
                     jobNumber: '',
                     contractNumber: contractJob.contract_number,
-                    customer: associatedCustomer || null
+                    customer: associatedCustomer || null,
+                    selectedBranch: contractJob.branch
                 }));
             }
             setSheetOpen(true)
