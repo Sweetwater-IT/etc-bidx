@@ -18,7 +18,7 @@ export const defaultPMSTypeB: PostMountedInstall = {
     hiReflectiveStrips: 0,
     fygReflectiveStrips: 0,
     jennyBrackets: 0,
-    stiffenerSqInches: 0,
+    stiffenerInches: 0,
     tmzBrackets: 0,
     antiTheftBolts: 0,
     chevronBrackets: 0,
@@ -42,7 +42,7 @@ export const defaultPMSTypeC: PostMountedInstallTypeC = {
     signPriceSqFt: 0,
     hiReflectiveStrips: 0,
     fygReflectiveStrips: 0,
-    stiffenerSqInches: 0,
+    stiffenerInches: 0,
     tmzBrackets: 0,
     antiTheftBolts: 0
 }

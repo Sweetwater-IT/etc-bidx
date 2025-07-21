@@ -31,11 +31,11 @@ export const defaultPhaseObject : Phase = {
 }
 
 export const defaultMPTObject: MPTRentalEstimating = {
-    mpgPerTruck: 0,
-    dispatchFee: 0,
-    paybackPeriod: 0,
-    targetMOIC: 0,
-    annualUtilization: 0,
+    mpgPerTruck: 8,
+    dispatchFee: 50,
+    paybackPeriod: 5,
+    targetMOIC: 2,
+    annualUtilization: .75,
     equipmentCosts: {
         fourFootTypeIII: { cost: 0, price: 0 },
         sixFootWings: { cost: 0, price: 0 },

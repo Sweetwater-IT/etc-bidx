@@ -1001,22 +1001,23 @@ export const getPermSignMaterialCost = (itemType: PMSItemKeys, permanentSigns: P
   const hiReflectiveStripsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'hiReflectiveStrips')?.cost);
   const tmzBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'tmzBrackets')?.cost);
   const jennyBracketsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'jennyBrackets')?.cost);
-  const stiffenerPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'stiffenerSqInches')?.cost);
+  const stiffenerPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'stiffenerInches')?.cost);
   const fygReflectiveStripsPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'fygReflectiveStrips')?.cost);
 
   if (itemType === 'pmsTypeB' || itemType === 'pmsTypeF') {
     const typeBItem = pmsItem as PostMountedInstall;
-    return (typeBItem.antiTheftBolts * antiTheftBoltsPrice) +
+    const postCost = typeBItem.quantity * postPrice;
+    const totalCost = (typeBItem.antiTheftBolts * antiTheftBoltsPrice) +
       (typeBItem.chevronBrackets * chevronBracketsPrice) +
       (typeBItem.streetNameCrossBrackets * streetNameCrossBracketsPrice) +
-      (typeBItem.quantity * postPrice) +
       //all installs will have this
       (typeBItem.permSignBolts! * permSignBoltsPrice) +
       (typeBItem.hiReflectiveStrips * hiReflectiveStripsPrice) +
       (typeBItem.tmzBrackets * tmzBracketsPrice) +
       (typeBItem.jennyBrackets * jennyBracketsPrice) +
-      (typeBItem.stiffenerSqInches * stiffenerPrice) +
-      (typeBItem.fygReflectiveStrips * fygReflectiveStripsPrice)
+      (typeBItem.stiffenerInches * stiffenerPrice) +
+      (typeBItem.fygReflectiveStrips * fygReflectiveStripsPrice);
+      return itemType === 'pmsTypeF' ? totalCost : totalCost + postCost
   }
   //=+(F211*$T$19)+(J211*$T$8)+(F214*$T$9)+(F217*$T$13)+(J217*$T$14)+(J214*$T$15)+(N214*$T$17)
   else if (itemType === 'pmsTypeC') {
@@ -1027,7 +1028,7 @@ export const getPermSignMaterialCost = (itemType: PMSItemKeys, permanentSigns: P
       (typeCItem.permSignBolts! * permSignBoltsPrice) +
       (typeCItem.hiReflectiveStrips * hiReflectiveStripsPrice) +
       (typeCItem.tmzBrackets * tmzBracketsPrice) +
-      (typeCItem.stiffenerSqInches * stiffenerPrice) +
+      (typeCItem.stiffenerInches * stiffenerPrice) +
       (typeCItem.fygReflectiveStrips * fygReflectiveStripsPrice)
   }
   else if (itemType === 'resetTypeB' || itemType === 'resetTypeF') {
