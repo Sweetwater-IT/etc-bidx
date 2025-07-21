@@ -111,6 +111,8 @@ const PermanentSignsSummaryStep = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
+  //this is so that the hours don't autopopulate when the drawer opens for the first time
+  const [editOpened, setEditOpened] = useState<boolean>(false);
 
   //get static data
   useEffect(() => {
@@ -203,7 +205,7 @@ const PermanentSignsSummaryStep = () => {
   // Handle additional items for custom equipment
   const handleAddAdditionalItem = () => {
     if (!formData || !('additionalItems' in formData)) return;
-    
+
     const newItem: AdditionalPMSEquipment = {
       equipmentType: 'antiTheftBolts', // default
       quantity: 1
@@ -215,14 +217,14 @@ const PermanentSignsSummaryStep = () => {
 
   const handleRemoveAdditionalItem = (index: number) => {
     if (!formData || !('additionalItems' in formData)) return;
-    
+
     const updatedItems = (formData.additionalItems || []).filter((_, i) => i !== index);
     handleFieldUpdate('additionalItems', updatedItems);
   };
 
   const handleUpdateAdditionalItem = (index: number, field: keyof AdditionalPMSEquipment, value: any) => {
     if (!formData || !('additionalItems' in formData)) return;
-    
+
     const updatedItems = [...(formData.additionalItems || [])];
     updatedItems[index] = {
       ...updatedItems[index],
@@ -231,17 +233,12 @@ const PermanentSignsSummaryStep = () => {
     handleFieldUpdate('additionalItems', updatedItems);
   };
 
-  //set number trips in form data
-  useEffect(() => {
-    if(!formData || !permanentSigns || permanentSigns.signItems.length < 1 || !!editingId) return;
-    setFormData(prevData => ({
-      ...prevData,
-      numberTrips: getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
-    } as any))
-  }, [formData?.id, permanentSigns?.maxDailyHours, formData?.installHoursRequired, formData?.separateMobilization, formData?.numberTrucks])
-
   //handle install hour calcs on the fly
   useEffect(() => {
+    if(!editOpened){
+      setEditOpened(true);
+      return;
+    }
     if (permanentSigns && formData && selectedType) {
       setFormData(prevData => ({
         ...prevData,
@@ -254,13 +251,20 @@ const PermanentSignsSummaryStep = () => {
   useEffect(() => {
     if (!permanentSigns || !selectedType || !formData) return;
     const calculatedTrips = getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
-      setFormData(prevData => ({
-        ...prevData,
-        //if we're editing the first item and nothing has changed, don't automatically set the number trips (this will set trips back to original trips
-        // if the user changes a value then goes back to the original)
-        numberTrips: calculatedTrips 
-      }) as any)
-  }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired])
+    setFormData(prevData => ({
+      ...prevData,
+      //if we're editing the first item and nothing has changed, don't automatically set the number trips (this will set trips back to original trips
+      // if the user changes a value then goes back to the original)
+      numberTrips: calculatedTrips
+    }) as any)
+  }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired]);
+
+  //sync edit opened state with drawer
+  useEffect(() => {
+    if(!drawerOpen){
+      setEditOpened(false);
+    }
+  }, [drawerOpen])
 
   //update perm sign bolts on the fly
   useEffect(() => {
@@ -276,9 +280,9 @@ const PermanentSignsSummaryStep = () => {
 
     if (editingId) {
       //if the number of trips got changed, run the update trips function to adjust for new install hours
-      if(formData.numberTrips !== permanentSigns?.signItems.find(signItem => signItem.id === editingId)?.numberTrips){
+      if (formData.numberTrips !== permanentSigns?.signItems.find(signItem => signItem.id === editingId)?.numberTrips) {
         updatePermSignTrips(editingId);
-      } 
+      }
       // Update existing item by mapping through formData and updating relvent fields
       Object.keys(formData).forEach(field => {
         if (field !== 'id') {
@@ -309,11 +313,11 @@ const PermanentSignsSummaryStep = () => {
     setSelectedType(undefined);
   };
 
-  const updatePermSignTrips = (editedItemId? : string) =>{
-    if(!permanentSigns) return;
+  const updatePermSignTrips = (editedItemId?: string) => {
+    if (!permanentSigns) return;
     permanentSigns?.signItems.forEach((signItem, index) => {
-      if(index === 0) return;
-      if(!!editedItemId && signItem.id === editedItemId) return;
+      if (index === 0) return;
+      if (!!editedItemId && signItem.id === editedItemId) return;
       dispatch({
         type: 'UPDATE_PERMANENT_SIGNS_ITEM',
         payload: {
@@ -323,7 +327,7 @@ const PermanentSignsSummaryStep = () => {
         }
       })
     })
-  } 
+  }
 
   //useEffecct to update all trips of all items whenever an item gets added/removed
   useEffect(() => {
@@ -384,7 +388,8 @@ const PermanentSignsSummaryStep = () => {
             value={formData?.numberTrips || ""}
             onChange={(e) => handleFieldUpdate('numberTrips', parseInt(e.target.value) || 0)}
             min={0}
-            disabled={((!!permanentSigns && permanentSigns?.signItems?.length > 0) && formData.id !== permanentSigns?.signItems[0]?.id)}
+            readOnly
+            disabled
             className="w-full"
           />
         </div>
@@ -409,27 +414,28 @@ const PermanentSignsSummaryStep = () => {
             className="w-full"
           />
         </div>
-        <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
-          <Input
-            type="number"
-            value={permanentSigns?.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost || ""}
-            onChange={(e) => {
-              if (!permanentSigns) return;
-              dispatch({
-                type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS', payload: {
-                  key: 'equipmentData', value: permanentSigns.equipmentData.map(equip => {
-                    if (equip.name === 'permSignPriceSqFt') {
-                      return { name: equip.name, cost: parseInt(e.target.value) }
-                    } else return equip
-                  })
-                }
-              })
-            }}
-            min={10}
-            className="w-full"
-          />
-        </div></>}
+          <div className="flex-1">
+            <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
+            <Input
+              type="number"
+              value={permanentSigns?.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost || ""}
+              onChange={(e) => {
+                if (!permanentSigns) return;
+                dispatch({
+                  type: 'UPDATE_PERMANENT_SIGNS_ASSUMPTIONS', payload: {
+                    key: 'equipmentData', value: permanentSigns.equipmentData.map(equip => {
+                      if (equip.name === 'permSignPriceSqFt') {
+                        return { name: equip.name, cost: parseFloat(e.target.value) }
+                      } else return equip
+                    })
+                  }
+                })
+              }}
+              min={10}
+              step='0.01'
+              className="w-full"
+            />
+          </div></>}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
           <Input
@@ -466,7 +472,7 @@ const PermanentSignsSummaryStep = () => {
           />
         </div>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+          <Label className="text-sm font-medium mb-2 block">Quantity / Installs</Label>
           <Input
             type="number"
             value={formData?.quantity || ""}
@@ -550,11 +556,11 @@ const PermanentSignsSummaryStep = () => {
           />
         </div>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Stiffener Sq. Inches</Label>
+          <Label className="text-sm font-medium mb-2 block">Stiffner Inches</Label>
           <Input
             type="number"
-            value={(formData as PostMountedInstall).stiffenerSqInches || ""}
-            onChange={(e) => handleFieldUpdate('stiffenerSqInches', parseFloat(e.target.value) || 0)}
+            value={(formData as PostMountedInstall).stiffenerInches || ""}
+            onChange={(e) => handleFieldUpdate('stiffenerInches', parseFloat(e.target.value) || 0)}
             min={0}
             step="0.01"
             className="w-full"
@@ -638,11 +644,11 @@ const PermanentSignsSummaryStep = () => {
           />
         </div>
         <div className="flex-1">
-          <Label className="text-sm font-medium mb-2 block">Stiffener Sq. Inches</Label>
+          <Label className="text-sm font-medium mb-2 block">Stiffner Inches</Label>
           <Input
             type="number"
-            value={(formData as PostMountedInstallTypeC).stiffenerSqInches || ""}
-            onChange={(e) => handleFieldUpdate('stiffenerSqInches', parseFloat(e.target.value) || 0)}
+            value={(formData as PostMountedInstallTypeC).stiffenerInches || ""}
+            onChange={(e) => handleFieldUpdate('stiffenerInches', parseFloat(e.target.value) || 0)}
             min={0}
             step="0.01"
             className="w-full"
@@ -706,14 +712,14 @@ const PermanentSignsSummaryStep = () => {
               Add Equipment
             </Button>
           </div>
-          
+
           {(formData as any).additionalItems?.map((item: AdditionalPMSEquipment, index: number) => (
             <div key={index} className="flex gap-4 items-end mb-3 p-3 border rounded-lg">
               <div>
                 <Label className="text-sm font-medium mb-2 block">Equipment Type</Label>
                 <Select
                   value={item.equipmentType}
-                  onValueChange={(value: PMSEquipmentItems) => 
+                  onValueChange={(value: PMSEquipmentItems) =>
                     handleUpdateAdditionalItem(index, 'equipmentType', value)
                   }
                 >
@@ -729,19 +735,19 @@ const PermanentSignsSummaryStep = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                <Label className="text-sm font-medium mb-2 block">Quantity / Installs</Label>
                 <Input
                   type="number"
                   value={item.quantity}
-                  onChange={(e) => 
+                  onChange={(e) =>
                     handleUpdateAdditionalItem(index, 'quantity', parseInt(e.target.value) || 0)
                   }
                   min={0}
                 />
               </div>
-              
+
               <div>
                 <Button
                   type="button"
@@ -828,8 +834,24 @@ const PermanentSignsSummaryStep = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+                <div className="flex items-end space-x-4">
                   <div className="font-medium">{getDisplayName(itemType)}</div>
+                  {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? <div className="flex gap-x-2 items-center">
+                    <label className="text-red-400 text-sm font-medium">
+                      Price Per Square Foot:
+                    </label>
+                    <div className="text-sm text-red-500">
+                      ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div> : <div className="flex gap-x-2 items-center">
+                    <label className="text-red-400 text-sm font-medium">
+                      Price Per Each:
+                    </label>
+                    <div className="text-sm text-red-500">
+                      ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / pmsItem.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>}
+                  {Object.hasOwn(pmsItem, 'signSqFootage') && <div className="text-sm text-muted-foreground">Square Footage: {(pmsItem as PostMountedInstall).signSqFootage}</div>}
                   <div className="text-sm text-muted-foreground">
                     {pmsItem?.quantity ? `Installs: ${pmsItem.quantity}` : 'Not configured'}
                   </div>
@@ -858,7 +880,7 @@ const PermanentSignsSummaryStep = () => {
                     Total Revenue
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
 
@@ -867,7 +889,7 @@ const PermanentSignsSummaryStep = () => {
                     Total Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -875,7 +897,7 @@ const PermanentSignsSummaryStep = () => {
                     Gross Margin
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                  {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}%
+                    {(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin * 100).toFixed(2)}%
                   </div>
                 </div>
                 {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') && <div className="flex flex-col">
@@ -883,7 +905,7 @@ const PermanentSignsSummaryStep = () => {
                     Sign Costs
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermSignSqFtCost(permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermSignSqFtCost(permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>}
 
@@ -892,7 +914,7 @@ const PermanentSignsSummaryStep = () => {
                     Labor Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermSignLaborCost(pmsItem, adminData).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermSignLaborCost(pmsItem, adminData).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -900,7 +922,7 @@ const PermanentSignsSummaryStep = () => {
                     Material Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermSignMaterialCost(itemType, permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermSignMaterialCost(itemType, permanentSigns, pmsItem).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -908,7 +930,7 @@ const PermanentSignsSummaryStep = () => {
                     Fuel Cost
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    ${getPermSignFuelCost(pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${getPermSignFuelCost(pmsItem, adminData, mptRental).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? <div className="flex flex-col">
@@ -916,14 +938,14 @@ const PermanentSignsSummaryStep = () => {
                     Price Per Square Foot
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                  ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / (pmsItem as PostMountedInstall).signSqFootage).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div> : <div className="flex flex-col">
                   <label className="text-sm font-semibold">
                     Price Per Each
                   </label>
                   <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                  ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / pmsItem.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${(getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue / pmsItem.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>}
                 <div className="flex flex-col">

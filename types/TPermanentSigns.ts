@@ -9,7 +9,7 @@ export type PermanentSigns = {
 export type PMSItemKeys = 'pmsTypeB' | 'pmsTypeF' | 'resetTypeB' | 'resetTypeF' | 'removeTypeB' | 'removeTypeF' | 'pmsTypeC' | 'flexibleDelineator'
 export type PMSItemNumbers = PostMountedInstall | PostMountedResetOrRemove | PostMountedInstallTypeC | InstallFlexibleDelineators
 export type PMSEquipmentItems = 'permSignBolts' | 'antiTheftBolts' | 'chevronBrackets' | 'streetNameCrossBrackets' |
-    'stiffenerSqInches' | 'tmzBrackets' | 'jennyBrackets' | 'hiReflectiveStrips' | 'fygReflectiveStrips' | 'post' | 'woodPostMetalSleeves' | 'permSignCostSqFt'
+    'stiffenerInches' | 'tmzBrackets' | 'jennyBrackets' | 'hiReflectiveStrips' | 'fygReflectiveStrips' | 'post' | 'woodPostMetalSleeves' | 'permSignCostSqFt'
     | 'permSignPriceSqFt'
 
 export type AllPMSItemKeys =
@@ -34,7 +34,7 @@ export type AllPMSItemKeys =
     | 'hiReflectiveStrips'
     | 'fygReflectiveStrips'
     | 'jennyBrackets'
-    | 'stiffenerSqInches'
+    | 'stiffenerInches'
     | 'tmzBrackets'
     | 'antiTheftBolts'
     | 'chevronBrackets'
@@ -71,7 +71,7 @@ export interface PostMountedInstall extends PermanentSignItem {
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     jennyBrackets: number;
-    stiffenerSqInches: number;
+    stiffenerInches: number;
     tmzBrackets: number;
     //perm signs are autopopulated: installs x 2
     antiTheftBolts: number;
@@ -90,7 +90,7 @@ export interface PostMountedInstallTypeC extends PermanentSignItem {
     signPriceSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
-    stiffenerSqInches: number;
+    stiffenerInches: number;
     tmzBrackets: number;
     antiTheftBolts: number;
 }
@@ -110,7 +110,7 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
     'Perm. Sign Bolts': 'permSignBolts',
     'Chevron Bracket': 'chevronBrackets',
     'Street Name Cross Bracket': 'streetNameCrossBrackets',
-    'STIFFENER_PER_INCH': 'stiffenerSqInches',
+    'STIFFENER_INCHES': 'stiffenerInches',
     'TMZ_BRACKET': 'tmzBrackets',
     'JENNY_BRACKET': 'jennyBrackets',
     'HI_REFLECTIVE_STRIPS': 'hiReflectiveStrips',
@@ -161,7 +161,7 @@ export const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
     'Anti-Theft Bolts': 'antiTheftBolts',
     'Chevron Brackets': 'chevronBrackets',
     'Street Name Cross Brackets': 'streetNameCrossBrackets',
-    'Stiffener (per sq inch)': 'stiffenerSqInches',
+    'Stiffener Inches': 'stiffenerInches',
     'TMZ Brackets': 'tmzBrackets',
     'Jenny Brackets': 'jennyBrackets',
     'Hi-Reflective Strips': 'hiReflectiveStrips',

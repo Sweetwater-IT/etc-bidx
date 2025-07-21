@@ -496,8 +496,6 @@ export async function POST(request: NextRequest) {
       notes: string;
     };
 
-    console.log(body.data)
-
     // Calculate totals
     const allTotals = getAllTotals(
       adminData, 
@@ -677,7 +675,6 @@ export async function POST(request: NextRequest) {
       if (phaseError) {
         throw new Error(`Failed to create phase ${i}: ${phaseError.message}`);
       }
-      console.log(phaseEntry)
       // Insert signs for this phase
       const signInserts = phase.signs.map(sign => {
         if ('primarySignId' in sign) {
@@ -731,7 +728,6 @@ export async function POST(request: NextRequest) {
 
       // Insert secondary signs
       const secondarySigns = signInserts.filter(sign => 'primary_sign_id' in sign);
-      console.log(secondarySigns)
       if (secondarySigns.length > 0) {
         const { error: secondarySignError } = await supabase
           .from('mpt_secondary_signs')
@@ -898,7 +894,6 @@ export async function POST(request: NextRequest) {
 if (permanentSigns) {
   // Extract signItems and prepare info object
   const { signItems, ...permanentSignsInfo } = permanentSigns;
-
   // Upsert permanent_signs_entries
   const { data: permanentSignsEntry, error: permanentSignsError } = await supabase
     .from('permanent_signs_entries')
@@ -949,7 +944,7 @@ if (permanentSigns) {
         hi_reflective_strips: (item as any).hiReflectiveStrips || null,
         fyg_reflective_strips: (item as any).fygReflectiveStrips || null,
         jenny_brackets: (item as any).jennyBrackets || null,
-        stiffener_sq_inches: (item as any).stiffenerSqInches || null,
+        stiffener_inches: (item as any).stiffenerInches || null,
         tmz_brackets: (item as any).tmzBrackets || null,
         anti_theft_bolts: (item as any).antiTheftBolts || null,
         chevron_brackets: (item as any).chevronBrackets || null,

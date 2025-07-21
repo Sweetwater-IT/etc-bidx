@@ -33,6 +33,8 @@ const AdminInfoViewOnly = () => {
                 const data = await fetchActiveBidById(id);
                 //estimate-view is not completley accurate yet, but eventually we could pass the whole down
                 //to one reducer functio nand update all the state at once
+                console.log('copying this')
+                console.log(data.mpt_rental)
                 dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });
                 dispatch({ type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any });
                 dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any });
