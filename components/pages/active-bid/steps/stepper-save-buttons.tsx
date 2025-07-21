@@ -41,21 +41,92 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
 
 
     const handleSubmit = async () => {
-        if (!id) {
-            toast.error('Bid ID is not set')
-            return;
-        }
+        
         try {
             startLoading();
-            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'PENDING', notes, id);
+            
+            let bidIdToUse = id;
+            
+            // If no ID is set (auto-save didn't work), create the bid first as draft
+            if (!bidIdToUse) {
+                console.log('⚠️ No bid ID - creating new draft bid...');
+                
+                try {
+                    const draftResponse = await createActiveBid(
+                        adminData, 
+                        mptRental, 
+                        equipmentRental, 
+                        flagging ?? defaultFlaggingObject, 
+                        serviceWork ?? defaultFlaggingObject, 
+                        saleItems, 
+                        permanentSigns ?? defaultPermanentSignsObject, 
+                        'DRAFT', 
+                        notes
+                    );
+                    bidIdToUse = draftResponse.id;
+                    console.log('✅ Created draft bid with ID:', bidIdToUse);
+                } catch (error) {
+                    // If we get a duplicate contract number error, create a unique variation
+                    if (error.message && error.message.includes('duplicate key value violates unique constraint')) {
+                        console.log('⚠️ Contract number already exists, creating unique variation...');
+                        
+                        // Create a unique variation by adding a suffix
+                        const originalContractNumber = adminData.contractNumber;
+                        const uniqueContractNumber = `${originalContractNumber}-${Date.now().toString().slice(-6)}`;
+                        
+                        console.log('📝 Using unique contract number:', uniqueContractNumber);
+                        
+                        const modifiedAdminData = {
+                            ...adminData,
+                            contractNumber: uniqueContractNumber
+                        };
+                        
+                        const draftResponse = await createActiveBid(
+                            modifiedAdminData, 
+                            mptRental, 
+                            equipmentRental, 
+                            flagging ?? defaultFlaggingObject, 
+                            serviceWork ?? defaultFlaggingObject, 
+                            saleItems, 
+                            permanentSigns ?? defaultPermanentSignsObject, 
+                            'DRAFT', 
+                            notes
+                        );
+                        bidIdToUse = draftResponse.id;
+                        
+                        // Update the admin data to use the new contract number for the final bid
+                        adminData.contractNumber = uniqueContractNumber;
+                        
+                        console.log('✅ Created draft bid with unique contract number and ID:', bidIdToUse);
+                    } else {
+                        // Re-throw other errors
+                        throw error;
+                    }
+                }
+            }
+            
+            // Now update the bid to PENDING status
+            const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'PENDING', notes, bidIdToUse);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
             stopLoading()
-            const params = new URLSearchParams();
-            params.append('bidId', newBidId.id.toString());
-            params.append('tuckSidebar', 'true');
-            params.append('fullscreen', 'true');
-            params.append('defaultEditable', 'false');
-            router.replace(`/active-bid/view?${params.toString()}`)
+            
+            // Get the original available job ID from the URL params to redirect back to jobs page
+            const availableJobId = params.get('jobId');
+            
+            if (availableJobId) {
+                // Redirect back to the available jobs page with the jobId parameter
+                // This will trigger our job removal logic
+                console.log('✅ Redirecting to jobs page with jobId:', availableJobId);
+                router.replace(`/jobs/available?jobId=${availableJobId}`);
+            } else {
+                // Fallback: redirect to bid view if no jobId available
+                const viewParams = new URLSearchParams();
+                viewParams.append('bidId', newBidId.id.toString());
+                viewParams.append('tuckSidebar', 'true');
+                viewParams.append('fullscreen', 'true');
+                viewParams.append('defaultEditable', 'false');
+                router.replace(`/active-bid/view?${viewParams.toString()}`);
+            }
         } catch (error) {
             console.error("Error creating bid:", error);
             stopLoading()
