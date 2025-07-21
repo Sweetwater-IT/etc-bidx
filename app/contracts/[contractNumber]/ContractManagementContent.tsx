@@ -232,7 +232,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
             <PDFViewer height={600} width={600}>
               <FringeBenefitsStatement
                 laborGroup={laborGroup}
-                sender={sender}
+                sender={{ ...sender, name: sender.name || '' }}
                 adminData={adminData}
               />
             </PDFViewer>
@@ -248,7 +248,9 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
           <DialogTitle>Workers Protection</DialogTitle>
           <div className='mt-4'>
             <PDFViewer height={600} width={600}>
-              <WorkerProtectionCertification sender={sender} />
+              <WorkerProtectionCertification
+                sender={{ ...sender, name: sender.name || '' }}
+              />
             </PDFViewer>
           </div>
         </DialogContent>

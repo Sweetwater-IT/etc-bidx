@@ -270,6 +270,7 @@ export async function createActiveBid(
   status: 'PENDING' | 'DRAFT',
   notes: string,
   id?: number,
+  availableJobId?: number,
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
   const processedAdminData = {
@@ -295,7 +296,8 @@ export async function createActiveBid(
         saleItems,
         permanentSigns,
         status,
-        notes
+        notes,
+        availableJobId
       }
     }),
   });

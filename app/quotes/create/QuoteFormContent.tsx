@@ -178,7 +178,7 @@ export default function QuoteFormContent () {
           quoteDate={new Date(quoteDate)}
           quoteNumber={quoteId}
           pointOfContact={pointOfContact}
-          sender={sender}
+          sender={{ ...sender, name: sender.name || '' }}
           paymentTerms={paymentTerms as PaymentTerms}
           includedTerms={includeTerms}
           customTaC={includeTerms['custom-terms'] ? customTerms : ''}
