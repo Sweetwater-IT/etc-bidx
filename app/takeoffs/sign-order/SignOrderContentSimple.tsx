@@ -28,10 +28,10 @@ import {
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
-import { PanelLeftClose, PanelRight } from 'lucide-react'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { PDFViewer } from '@react-pdf/renderer'
+import { AdminData, SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
+import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
@@ -49,33 +49,6 @@ export interface SignOrderAdminInformation {
   orderNumber?: string
   startDate?: Date
   endDate?: Date
-}
-export interface AdminData {
-  contractNumber?: string
-  jobNumber?: string
-  customer?: { name?: string }
-  orderDate?: string | Date
-  needDate?: string | Date
-  branch?: string
-  orderType?: string
-  submitter?: string
-}
-
-export interface SignItem {
-  designation: string
-  description: string
-  quantity: number
-  width: number
-  height: number
-  sheeting: string
-  substrate: string
-  stiffener: string | boolean
-  inStock?: number
-  order?: number
-  make?: number
-  unitPrice?: number
-  totalPrice?: number
-  primarySignId?: string
 }
 
 interface Props {
@@ -640,9 +613,15 @@ export default function SignOrderContentSimple ({
           </div>
           {/* PDF Preview Section: only render if visible */}
           <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
-            <PDFViewer width='100%' height={1000} showToolbar={false}>
-              {pdfDoc}
-            </PDFViewer>
+            <div className='flex justify-end'>
+              <PDFDownloadLink
+                document={pdfDoc}
+                fileName="sign-order.pdf"
+              >
+                <Button>Download PDF</Button>
+              </PDFDownloadLink>
+            </div>
+            <SignOrderWorksheet adminData={adminData} signList={signList} showFinancials={true} />
           </div>
       </div>
     </div>

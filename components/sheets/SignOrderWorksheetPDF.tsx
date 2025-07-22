@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { styles as baseStyles } from './styles/bidSummaryPDFStyle'
 
-interface AdminData {
+export interface AdminData {
   contractNumber?: string
   jobNumber?: string
   customer?: { name?: string }
@@ -13,7 +13,7 @@ interface AdminData {
   submitter?: string
 }
 
-interface SignItem {
+export interface SignItem {
   designation: string
   description: string
   quantity: number
@@ -169,10 +169,10 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
         <View style={styles.titleBar}>
           <Text style={styles.titleText}>Sign Order Worksheet</Text>
           <View style={styles.titleRight}>
-            <Text style={{ fontSize: 10, color: '#fff' }}>
+            <Text style={{ fontSize: 10 }}>
               Submitter: {adminData.submitter || '-'}
             </Text>
-            <Text style={{ fontSize: 10, color: '#fff' }}>
+            <Text style={{ fontSize: 10 }}>
               Submission Date: {safeDateString(new Date())}
             </Text>
           </View>
