@@ -2024,7 +2024,7 @@ const BidItemsStep5 = ({
                     <Input
                       id='maintenance-trips'
                       type='number'
-                      min={0}
+                      step={0.1}
                       value={phaseFormData.maintenanceTrips || ''}
                       onChange={e =>
                         handlePhaseFormUpdate(
