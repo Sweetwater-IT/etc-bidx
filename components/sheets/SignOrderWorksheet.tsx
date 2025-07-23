@@ -41,7 +41,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
               <span className="font-bold">Order Type:</span> {adminData.orderType || '-'}
             </div>
           </div>
-          <div className="flex border-t-2 border-black">
+          <div className="flex border-t-2 border-b-2 border-black">
             <div className="flex-1 border-r-2 border-black p-1">
               <span className="font-bold">Customer:</span> {adminData.customer?.name || '-'}
             </div>
@@ -70,7 +70,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
                 <th className={headerCellClass + " w-1/10"}>Substrate</th>
                 <th className={headerCellClass + " w-1/10"}>Stiffener</th>
                 {showFinancials && <th className={headerCellClass + " w-1/10"}>Unit Price</th>}
-                {showFinancials && <th className={headerCellClass + " w-1/10"}>Total Price</th>}
+                {showFinancials && <th className={"w-1/10 !border-r-0 " + headerCellClass}>Total Price</th>}
               </tr>
             </thead>
             <tbody>
@@ -98,7 +98,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
                     </td>
                   )}
                   {showFinancials && (
-                    <td className={cellClass + " w-1/10"}>
+                    <td className={"w-1/10 !border-r-0 " + cellClass}>
                       {item.totalPrice !== undefined
                         ? `$${item.totalPrice.toFixed(2)}`
                         : '-'}
