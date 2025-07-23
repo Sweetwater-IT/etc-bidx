@@ -120,7 +120,7 @@ export function returnPhaseTotals(mptRental: MPTRentalEstimating): PhaseTotals {
 
   let totalPersonnel = 0;
   let totalDays = 0;
-  let totalTrips = Math.ceil((allEquipmentTotals.fourFootTypeIII.totalQuantity + 
+  let totalTrips = Math.ceil((allEquipmentTotals.fourFootTypeIII.totalQuantity 
     // allEquipmentTotals.sixFootTypeIII.totalQuantity +
     // allEquipmentTotals.post.totalQuantity +
     // allEquipmentTotals.hStand.totalQuantity
