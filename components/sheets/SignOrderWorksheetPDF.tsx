@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { styles as baseStyles } from './styles/bidSummaryPDFStyle'
 
-export interface AdminData {
+export interface AdminDataInfo {
   contractNumber?: string
   jobNumber?: string
   customer?: { name?: string }
@@ -28,10 +28,13 @@ export interface SignItem {
   unitPrice?: number
   totalPrice?: number
   primarySignId?: string
+  displayStructure?: string
+  bLights?: number
+  cover?: boolean
 }
 
 interface Props {
-  adminData: AdminData
+  adminData: AdminDataInfo
   signList: SignItem[]
   showFinancials: boolean
 }

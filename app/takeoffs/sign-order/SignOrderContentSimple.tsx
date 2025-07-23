@@ -29,7 +29,7 @@ import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { AdminData, SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import { AdminDataInfo, SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
@@ -58,7 +58,7 @@ interface Props {
 export default function SignOrderContentSimple ({
   signOrderId: initialSignOrderId
 }: Props) {
-  const { dispatch, mptRental } = useEstimate()
+  const { dispatch, adminData, mptRental, equipmentRental, flagging } = useEstimate()
   const router = useRouter()
 
   // Set up admin info state in the parent component
@@ -74,7 +74,7 @@ export default function SignOrderContentSimple ({
     contractNumber: '',
     orderNumber: undefined
   })
-  const [adminData, setAdminData] = useState<AdminData>({
+  const [adminDataInfo, setAdminDataInfo] = useState<AdminDataInfo>({
     contractNumber: '',
     jobNumber: '',
     customer: { name: '' },
@@ -292,7 +292,7 @@ export default function SignOrderContentSimple ({
         clearTimeout(saveTimeoutRef.current)
       }
       setSignList(mptRental.phases[0].signs.map(normalizeSign));
-      setAdminData({
+      setAdminDataInfo({
         contractNumber: adminInfo.contractNumber,
         jobNumber: adminInfo.jobNumber,
         customer: { name: adminInfo.customer?.name },
@@ -541,8 +541,8 @@ export default function SignOrderContentSimple ({
   }
 
   const pdfDoc = useMemo(
-    () => <SignOrderWorksheetPDF adminData={adminData} signList={signList} showFinancials={true} />,
-    [adminData, signList]
+    () => <SignOrderWorksheetPDF adminData={adminDataInfo} signList={signList} showFinancials={true} />,
+    [adminDataInfo, signList]
   );
 
   return mptRental.phases.length > 0 ? (
@@ -621,7 +621,7 @@ export default function SignOrderContentSimple ({
                 <Button>Download PDF</Button>
               </PDFDownloadLink>
             </div>
-            <SignOrderWorksheet adminData={adminData} signList={signList} showFinancials={true} />
+            <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
           </div>
       </div>
     </div>
@@ -641,6 +641,9 @@ const normalizeSign = (sign: any): SignItem => ({
   stiffener: typeof sign.stiffener === 'string' || typeof sign.stiffener === 'boolean' ? sign.stiffener : '',
   inStock: sign.inStock ?? 0,
   order: sign.order ?? 0,
+  displayStructure: sign.displayStructure || '',
+  bLights: sign.bLights || 0,
+  cover: sign.cover || false,
   make: sign.make ?? 0,
   unitPrice: sign.unitPrice ?? undefined,
   totalPrice: sign.totalPrice ?? undefined,
