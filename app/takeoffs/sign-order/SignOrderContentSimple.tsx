@@ -29,7 +29,7 @@ import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { AdminDataInfo, SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
@@ -58,7 +58,7 @@ interface Props {
 export default function SignOrderContentSimple ({
   signOrderId: initialSignOrderId
 }: Props) {
-  const { dispatch, adminData, mptRental, equipmentRental, flagging } = useEstimate()
+  const { dispatch, mptRental } = useEstimate()
   const router = useRouter()
 
   // Set up admin info state in the parent component
@@ -73,16 +73,6 @@ export default function SignOrderContentSimple ({
     isSubmitting: false,
     contractNumber: '',
     orderNumber: undefined
-  })
-  const [adminDataInfo, setAdminDataInfo] = useState<AdminDataInfo>({
-    contractNumber: '',
-    jobNumber: '',
-    customer: { name: '' },
-    orderDate: new Date(),
-    needDate: '',
-    branch: '',
-    orderType: '',
-    submitter: ''
   })
   const [signList, setSignList] = useState<SignItem[]>([])
 
@@ -292,16 +282,6 @@ export default function SignOrderContentSimple ({
         clearTimeout(saveTimeoutRef.current)
       }
       setSignList(mptRental.phases[0].signs.map(normalizeSign));
-      setAdminDataInfo({
-        contractNumber: adminInfo.contractNumber,
-        jobNumber: adminInfo.jobNumber,
-        customer: { name: adminInfo.customer?.name },
-        orderDate: adminInfo.orderDate,
-        needDate: adminInfo.needDate || '',
-        branch: adminInfo.selectedBranch,
-        orderType: adminInfo.orderType.join(', '),
-        submitter: adminInfo.requestor?.name || ''
-      })
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
@@ -541,8 +521,8 @@ export default function SignOrderContentSimple ({
   }
 
   const pdfDoc = useMemo(
-    () => <SignOrderWorksheetPDF adminData={adminDataInfo} signList={signList} showFinancials={true} />,
-    [adminDataInfo, signList]
+    () => <SignOrderWorksheetPDF adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />,
+    [adminInfo, signList, mptRental, notes]
   );
 
   return mptRental.phases.length > 0 ? (

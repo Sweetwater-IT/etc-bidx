@@ -59,7 +59,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
             <div className="flex-1 border-r-2 border-black p-1">
               <span className="font-bold">Contract #:</span> {adminInfo.contractNumber || '-'}
             </div>
-            <div className="flex-1 border-r-2 border-black p-1">
+            <div className="flex-1 border-black p-1">
               <span className="font-bold">Phase #:</span> {mptRental?.phases.length || 0}
             </div>
           </div>
@@ -73,7 +73,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
             <div className="flex-1 border-r-2 border-black p-1 flex items-center gap-2">
               <span className="font-bold">Permanent:</span> <Checkbox checked={adminInfo.orderType.includes('permanent signs')} />
             </div>
-            <div className="flex-1 border-r-2 border-black p-1 flex items-center gap-2">
+            <div className="flex-1 border-black p-1 flex items-center gap-2">
               <span className="font-bold">Multiple:</span> <Checkbox checked={adminInfo.orderType.length > 1} />
             </div>
           </div>
@@ -84,7 +84,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
             <div className="flex-1 border-r-2 border-black p-1">
               <span className="font-bold">Rental Start Date:</span> {adminInfo.startDate ? new Date(adminInfo.startDate).toLocaleDateString() : '-'}
             </div>
-            <div className="flex-1 border-r-2 border-black p-1">
+            <div className="flex-1 border-black p-1">
               <span className="font-bold">Rental End Date:</span> {adminInfo.endDate ? new Date(adminInfo.endDate).toLocaleDateString() : '-'}
             </div>
           </div>
