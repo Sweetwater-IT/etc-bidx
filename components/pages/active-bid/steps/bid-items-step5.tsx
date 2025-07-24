@@ -184,8 +184,8 @@ const TripAndLaborSummary = ({
     const trips = getTotalTripsPerPhase(phase)
     const rated = getRatedHoursPerPhase(phase)
     const nonRated = getNonRatedHoursPerPhase(adminData, phase)
-    const baseTrips = Math.ceil(((allEquipmentTotals.fourFootTypeIII.totalQuantity 
-     + allEquipmentTotals.sixFootTypeIII.totalQuantity) / 30) * 2); // Base trips from equipment
+    const baseTrips = Math.ceil(((fourFootTypeIIIQuantity 
+     + sixFootWingsQuantity) / 30) * 2); // Base trips from equipment
 
 
     const mobilization =
