@@ -172,38 +172,47 @@ const TripAndLaborSummary = ({
     })}`
   }
 
-  // Memoize cost calculations
+   // Memoize cost calculations
   const {
     mobilizationCost,
     fuelCost,
     truckAndFuelCost,
+    baseTrips,
     totalTrips,
     ratedHours,
-    nonRatedHours
+    nonRatedHours,
   } = useMemo(() => {
-    const trips = getTotalTripsPerPhase(phase)
-    const rated = getRatedHoursPerPhase(phase)
-    const nonRated = getNonRatedHoursPerPhase(adminData, phase)
-    const baseTrips = Math.ceil(((fourFootTypeIIIQuantity 
-     + sixFootWingsQuantity) / 30) * 2); // Base trips from equipment
+    // Safely access equipment quantities from phase.standardEquipment
+    const fourFootTypeIIIQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
 
+    // Calculate baseTrips based on equipment
+    const baseTrips = Math.ceil(((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30) * 2);
 
-    const mobilization =
-      (phase.numberTrucks || 0) * trips * (mptRental?.dispatchFee || 0)
+    // Add additional trips from phase.maintenanceTrips
+    const additionalTrips = safeNumber(phase.maintenanceTrips);
+    const totalTrips = baseTrips + additionalTrips;
+
+    const rated = getRatedHoursPerPhase(phase);
+    const nonRated = getNonRatedHoursPerPhase(adminData, phase);
+
+    const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
     const fuel =
-      (((phase.numberTrucks || 0) * trips * 2 * (adminData?.owMileage ?? 0)) /
+      (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
         (mptRental?.mpgPerTruck || 1)) *
-      (adminData?.fuelCostPerGallon ?? 0)
+      (adminData?.fuelCostPerGallon ?? 0);
 
     return {
       mobilizationCost: mobilization,
       fuelCost: fuel,
       truckAndFuelCost: mobilization + fuel,
-      totalTrips: trips,
+      baseTrips,
+      totalTrips,
       ratedHours: rated,
-      nonRatedHours: nonRated
-    }
-  }, [phase, adminData, mptRental])
+      nonRatedHours: nonRated,
+    };
+  }, [phase, adminData, mptRental]);
+
 
   return (
     <div className='grid grid-cols-3 gap-4 text-sm'>
