@@ -225,7 +225,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               Submitter: {adminInfo.requestor?.name || '-'}
             </Text>
             <Text style={{ fontSize: 10 }}>
-              Submission Date: {adminInfo.orderDate ? new Date(adminInfo.orderDate).toLocaleDateString() : '-'}
+              Submission Date: {new Date(adminInfo.orderDate).toLocaleDateString()}
             </Text>
           </View>
         </View>

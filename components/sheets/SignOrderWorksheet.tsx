@@ -39,7 +39,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
           <div className="text-lg font-bold">Sign Order Worksheet</div>
           <div className="text-sm text-right font-medium">
             <div>Submitter: {adminInfo.requestor?.name || '-'}</div>
-            <div>Submission Date: {adminInfo.orderDate ? new Date(adminInfo.orderDate).toLocaleDateString() : '-'}</div>
+            <div>Submission Date: {new Date(adminInfo.orderDate).toLocaleDateString()}</div>
           </div>
         </div>
         {/* Header Section */}
