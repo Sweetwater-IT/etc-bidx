@@ -968,24 +968,63 @@ export const getPermSignDaysRequired = (installHours: number, maxDailyHours: num
   return maxDailyHours > 0 ? Math.ceil(installHours / maxDailyHours) : 0
 }
 
-export const getPermSignTrips = (pmsItem: PMSItemNumbers, signItems: PMSItemNumbers[], maxDailyHours: number): number => {
-  const days = getPermSignDaysRequired(pmsItem.installHoursRequired, maxDailyHours)
-  const thisItemsTrips = pmsItem.numberTrucks * days;
-  //if it's the first item just make it's trips unless it's the only item in the array (i.e. the first addition)
-  if (signItems.length === 0 || signItems[0]?.id === pmsItem.id) {
-    return thisItemsTrips
+export const getPermSignTrips = (
+  pmsItem: PMSItemNumbers,
+  signItems: PMSItemNumbers[],
+  maxDailyHours: number
+): { updatedItems: PMSItemNumbers[], totalTrips: number } => {
+  let totalTrips = 0;
+  let remainingHours = 0;
+  const updatedItems: PMSItemNumbers[] = [];
+
+  // Separate items into regular and separate mobilization
+  const regularItems = signItems.filter(item => !item.separateMobilization);
+  const separateMobilizationItems = signItems.filter(item => item.separateMobilization);
+
+  // Process regular items
+  for (const item of regularItems) {
+    const itemType = determineItemType(item);
+    const installHours = item.installHoursRequired;
+
+    const updatedItem = { ...item };
+
+    if (remainingHours >= installHours) {
+      // Fits within remaining hours, no new days
+      updatedItem.days = 0;
+      updatedItem.numberTrips = 0; // No additional trips
+      remainingHours -= installHours;
+    } else {
+      // Calculate additional days needed
+      const hoursNeeded = installHours - remainingHours;
+      const daysForItem = Math.ceil(hoursNeeded / maxDailyHours);
+      updatedItem.days = daysForItem;
+      updatedItem.numberTrips = daysForItem * item.numberTrucks;
+      totalTrips += daysForItem; // Add days to total trips
+      remainingHours = (daysForItem * maxDailyHours) - hoursNeeded;
+    }
+
+    updatedItems.push(updatedItem);
   }
-  //if the sum of all required install hours (including this item, is less than the max daily hours, this item should have 0 extra trips, unless of 
-  //course it has separate mobilization marked, in which case it should have one). If it exceeds the max daily hours, then it should follow the normal
-  //formula for getting trips (i.e. add the extra trips we need)
-  //=IF($W$41+$W$68<=$M$15,0+W56,W63*W61)
-  const totalRequiredHours = signItems.reduce((acc, item) => acc += item.installHoursRequired, 0);
-  if (totalRequiredHours <= maxDailyHours) {
-    return pmsItem.separateMobilization ? 1 : 0;
-  } else {
-    return thisItemsTrips
+
+    // Process separate mobilization items
+  for (const item of separateMobilizationItems) {
+    const itemType = determineItemType(item);
+    const installHours = item.installHoursRequired;
+    const daysForItem = Math.ceil(installHours / maxDailyHours);
+    const updatedItem = {
+      ...item,
+      days: daysForItem,
+      numberTrips: daysForItem * item.numberTrucks,
+    };
+    totalTrips += daysForItem; // Add days to total trips
+    updatedItems.push(updatedItem);
   }
-}
+
+  // Sort items to maintain original order
+  const sortedItems = signItems.map(original => updatedItems.find(item => item.id === original.id)!);
+
+  return { updatedItems: sortedItems, totalTrips };
+};
 
 //only will get called on pms installs (type c, f, or b)
 export const getPermSignSqFtCost = (permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers): number => {
