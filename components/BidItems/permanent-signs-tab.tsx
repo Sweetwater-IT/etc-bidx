@@ -1,11 +1,10 @@
-// permanent-signs-tab.tsx
+// components/BidItems/permanent-signs-tab.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
@@ -234,6 +233,7 @@ const PermanentSignsSummaryStep = () => {
     permanentSigns?.signItems,
     permanentSigns?.maxDailyHours,
     permanentSigns?.productivityRates,
+    dispatch, // Added to satisfy ESLint
   ]);
 
   // Handle install hours calculation
@@ -242,24 +242,36 @@ const PermanentSignsSummaryStep = () => {
       setEditOpened(true);
       return;
     }
-    setFormData(prevData => ({
-      ...prevData,
-      installHoursRequired: getRequiredInstallHours(
-        prevData.quantity,
-        permanentSigns.productivityRates[selectedType],
-        prevData.personnel
-      ),
-    } as any));
-  }, [formData?.personnel, formData?.quantity, permanentSigns?.productivityRates, selectedType]);
+    setFormData(prevData => {
+      if (!prevData) return prevData; // Guard against null prevData
+      return {
+        ...prevData,
+        installHoursRequired: getRequiredInstallHours(
+          prevData.quantity,
+          permanentSigns.productivityRates[selectedType],
+          prevData.personnel
+        ),
+      };
+    });
+  }, [
+    editOpened,
+    permanentSigns,
+    formData,
+    selectedType,
+    permanentSigns?.productivityRates, // Added to satisfy ESLint
+  ]);
 
   // Update perm sign bolts
   useEffect(() => {
     if (!selectedType || !formData || selectedType === "removeTypeB" || selectedType === "removeTypeF") return;
-    setFormData(prevData => ({
-      ...prevData,
-      permSignBolts: formData.quantity * 2,
-    } as any));
-  }, [formData?.quantity, selectedType]);
+    setFormData(prevData => {
+      if (!prevData) return prevData; // Guard against null prevData
+      return {
+        ...prevData,
+        permSignBolts: prevData.quantity * 2,
+      };
+    });
+  }, [formData?.quantity, selectedType, formData]); // Added formData to satisfy ESLint
 
   // Reset editOpened when drawer closes
   useEffect(() => {
@@ -275,7 +287,7 @@ const PermanentSignsSummaryStep = () => {
     setDrawerOpen(true);
   };
 
-  const handleEditItem = (signId: string) => {
+  const handleEditItem = useCallback((signId: string) => {
     const item = permanentSigns?.signItems.find(item => item.id === signId);
     if (item) {
       setFormData({ ...item });
@@ -284,54 +296,60 @@ const PermanentSignsSummaryStep = () => {
       setSelectedType(itemType);
       setDrawerOpen(true);
     }
-  };
+  }, [permanentSigns]); // Wrapped in useCallback to stabilize function reference
 
-  const handleTypeChange = (value: PMSItemKeys) => {
+  const handleTypeChange = useCallback((value: PMSItemKeys) => {
     setSelectedType(value);
     const defaultItem = createDefaultItem(value);
     setFormData(defaultItem);
-  };
+  }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleFieldUpdate = (field: AllPMSItemKeys, value: any) => {
-    if (formData) {
-      setFormData(prevData => ({
+  const handleFieldUpdate = useCallback((field: AllPMSItemKeys, value: any) => {
+    setFormData(prevData => {
+      if (!prevData) return prevData;
+      return {
         ...prevData,
         [field]: value,
-      } as any));
-    }
-  };
+      };
+    });
+  }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleAddAdditionalItem = () => {
-    if (!formData || !("additionalItems" in formData)) return;
-    const newItem: AdditionalPMSEquipment = {
-      equipmentType: "antiTheftBolts",
-      quantity: 1,
-    };
-    const updatedItems = [...(formData.additionalItems || []), newItem];
-    handleFieldUpdate("additionalItems", updatedItems);
-  };
+  const handleAddAdditionalItem = useCallback(() => {
+    setFormData(prevData => {
+      if (!prevData || !("additionalItems" in prevData)) return prevData;
+      const newItem: AdditionalPMSEquipment = {
+        equipmentType: "antiTheftBolts",
+        quantity: 1,
+      };
+      const updatedItems = [...(prevData.additionalItems || []), newItem];
+      return { ...prevData, additionalItems: updatedItems };
+    });
+  }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleRemoveAdditionalItem = (index: number) => {
-    if (!formData || !("additionalItems" in formData)) return;
-    const updatedItems = (formData.additionalItems || []).filter((_, i) => i !== index);
-    handleFieldUpdate("additionalItems", updatedItems);
-  };
+  const handleRemoveAdditionalItem = useCallback((index: number) => {
+    setFormData(prevData => {
+      if (!prevData || !("additionalItems" in prevData)) return prevData;
+      const updatedItems = (prevData.additionalItems || []).filter((_, i) => i !== index);
+      return { ...prevData, additionalItems: updatedItems };
+    });
+  }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleUpdateAdditionalItem = (
-    index: number,
-    field: keyof AdditionalPMSEquipment,
-    value: any
-  ) => {
-    if (!formData || !("additionalItems" in formData)) return;
-    const updatedItems = [...(formData.additionalItems || [])];
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value,
-    };
-    handleFieldUpdate("additionalItems", updatedItems);
-  };
+  const handleUpdateAdditionalItem = useCallback(
+    (index: number, field: keyof AdditionalPMSEquipment, value: any) => {
+      setFormData(prevData => {
+        if (!prevData || !("additionalItems" in prevData)) return prevData;
+        const updatedItems = [...(prevData.additionalItems || [])];
+        updatedItems[index] = {
+          ...updatedItems[index],
+          [field]: value,
+        };
+        return { ...prevData, additionalItems: updatedItems };
+      });
+    },
+    []
+  ); // Wrapped in useCallback to stabilize function reference
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!formData || !selectedType || !permanentSigns) return;
 
     if (editingId) {
@@ -362,21 +380,21 @@ const PermanentSignsSummaryStep = () => {
     setFormData(null);
     setEditingId(null);
     setSelectedType(undefined);
-  };
+  }, [formData, selectedType, permanentSigns, editingId, dispatch]); // Added dependencies
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setDrawerOpen(false);
     setFormData(null);
     setEditingId(null);
     setSelectedType(undefined);
-  };
+  }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleItemDelete = (pmsId: string) => {
+  const handleItemDelete = useCallback((pmsId: string) => {
     dispatch({
       type: "DELETE_PERMANENT_SIGNS_ITEM",
       payload: { signId: pmsId },
     });
-  };
+  }, [dispatch]); // Wrapped in useCallback to stabilize function reference
 
   const renderFormFields = () => {
     if (!formData || !selectedType) return null;
