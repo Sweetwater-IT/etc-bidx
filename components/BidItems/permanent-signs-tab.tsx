@@ -35,7 +35,7 @@ import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
 import { formatCurrencyValue } from "@/lib/formatDecimals";
 
-const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
+const createDefaultItem = (keyToBeAdded: PMSItemKeys | ''): PMSItemNumbers => {
   const newPMSId = uuidv4();
   let defaultObjectToBeAdded: any;
   switch (keyToBeAdded) {
@@ -107,12 +107,30 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
 
 const PermanentSignsSummaryStep = () => {
   const { permanentSigns, dispatch, adminData, mptRental } = useEstimate();
-  const [selectedType, setSelectedType] = useState<PMSItemKeys>();
+  const [selectedType, setSelectedType] = useState<PMSItemKeys | '' | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
+  const [switchCustomNameSign, setSwitchCustomNameSign] = useState<boolean>(false);
   //this is so that the hours don't autopopulate when the drawer opens for the first time
   const [editOpened, setEditOpened] = useState<boolean>(false);
+
+  const handleSwitchNameSign = () => {
+    setSwitchCustomNameSign((prev) => {
+
+      if (!prev === true) {
+        const defaultItem = createDefaultItem('');
+        setFormData(defaultItem);
+      }
+
+      return !prev
+    })
+
+  }
+
+  const handleChangeSelectedTypeInput = (e) => {
+    setSelectedType(e.target.value);
+  };
 
   //get static data
   useEffect(() => {
@@ -135,7 +153,7 @@ const PermanentSignsSummaryStep = () => {
               'resetTypeB': data.data.type_b_reset,
               'resetTypeF': data.data.type_f_reset,
               'removeTypeB': data.data.type_b_remove,
-              'removeTypeF': data.data.type_f_remove
+              'removeTypeF': data.data.type_f_remove,
             }
           }
         })
@@ -235,7 +253,7 @@ const PermanentSignsSummaryStep = () => {
 
   //handle install hour calcs on the fly
   useEffect(() => {
-    if(!editOpened){
+    if (!editOpened) {
       setEditOpened(true);
       return;
     }
@@ -261,7 +279,7 @@ const PermanentSignsSummaryStep = () => {
 
   //sync edit opened state with drawer
   useEffect(() => {
-    if(!drawerOpen){
+    if (!drawerOpen) {
       setEditOpened(false);
     }
   }, [drawerOpen])
@@ -977,27 +995,46 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
 
+          <div className="flex items-center space-x-2">
+            <Label className="text-sm font-medium mb-2 block">Enter type manually</Label>
+            <Switch checked={switchCustomNameSign} onCheckedChange={handleSwitchNameSign} />
+          </div>
+
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
             {/* Sign Type Selection */}
-            <div className="w-full">
-              <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-              <Select
-                value={selectedType}
-                onValueChange={handleTypeChange}
-                disabled={!!editingId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose permanent sign item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                    <SelectItem key={key} value={key}>
-                      {displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {
+              switchCustomNameSign ?
+                <div className="">
+                  <Label className="text-sm font-medium mb-2 block">Name of the sign type</Label>
+                  <Input
+                    type="text"
+                    value={selectedType}
+                    onChange={(e) => handleChangeSelectedTypeInput(e)}
+                    min={0}
+                    className="w-full"
+                  />
+                </div>
+                :
+                <div className="w-full">
+                  <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
+                  <Select
+                    value={selectedType}
+                    onValueChange={handleTypeChange}
+                    disabled={!!editingId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose permanent sign item" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
+                        <SelectItem key={key} value={key}>
+                          {displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+            }
 
             {/* Render form fields based on selected type */}
             {selectedType && renderFormFields()}
