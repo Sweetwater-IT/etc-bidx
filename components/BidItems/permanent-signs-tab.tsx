@@ -24,7 +24,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { getDisplayName, PERMANENT_SIGN_ITEMS, ADDITIONAL_EQUIPMENT_OPTIONS, PostMountedInstall, PostMountedResetOrRemove, PostMountedInstallTypeC, InstallFlexibleDelineators, PMSItemNumbers, AllPMSItemKeys, PMSItemKeys, permSignsDbMap, PMSEquipmentItems, AdditionalPMSEquipment } from "@/types/TPermanentSigns";
-import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC } from "@/types/default-objects/defaultPermanentSignsObject";
+import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC, defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
 import { v4 as uuidv4 } from 'uuid';
 import EmptyContainer from "./empty-container";
 import { Separator } from "../ui/separator";
@@ -35,7 +35,7 @@ import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
 import { formatCurrencyValue } from "@/lib/formatDecimals";
 
-const createDefaultItem = (keyToBeAdded: PMSItemKeys | ''): PMSItemNumbers => {
+const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
   const newPMSId = uuidv4();
   let defaultObjectToBeAdded: any;
   switch (keyToBeAdded) {
@@ -100,37 +100,21 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys | ''): PMSItemNumbers => {
       }
       break;
     default:
-      defaultObjectToBeAdded = undefined;
+      defaultObjectToBeAdded = undefined
   }
   return defaultObjectToBeAdded
 }
 
 const PermanentSignsSummaryStep = () => {
+  const [isCustomName, setIsCustomName] = useState(false);
   const { permanentSigns, dispatch, adminData, mptRental } = useEstimate();
-  const [selectedType, setSelectedType] = useState<PMSItemKeys | '' | undefined>(undefined);
+  const [selectedType, setSelectedType] = useState<PMSItemKeys>();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
-  const [switchCustomNameSign, setSwitchCustomNameSign] = useState<boolean>(false);
   //this is so that the hours don't autopopulate when the drawer opens for the first time
   const [editOpened, setEditOpened] = useState<boolean>(false);
-
-  const handleSwitchNameSign = () => {
-    setSwitchCustomNameSign((prev) => {
-
-      if (!prev === true) {
-        const defaultItem = createDefaultItem('');
-        setFormData(defaultItem);
-      }
-
-      return !prev
-    })
-
-  }
-
-  const handleChangeSelectedTypeInput = (e) => {
-    setSelectedType(e.target.value);
-  };
 
   //get static data
   useEffect(() => {
@@ -206,6 +190,8 @@ const PermanentSignsSummaryStep = () => {
 
   const handleTypeChange = (value: PMSItemKeys) => {
     setSelectedType(value);
+    handleFieldUpdate('customItemTypeName', '')
+    setIsCustomName(false)
     // Create new form data based on the selected type
     const defaultItem = createDefaultItem(value);
     setFormData(defaultItem);
@@ -372,7 +358,7 @@ const PermanentSignsSummaryStep = () => {
     // Common fields that appear in all types
     const commonFields = (
       <>
-        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div className='mt-1'>
+        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div className='mt-1 bg-red-100'>
           <Label className='mb-2'>Separate mobilization</Label>
           <Switch
             checked={formData.separateMobilization}
@@ -835,7 +821,6 @@ const PermanentSignsSummaryStep = () => {
               className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
             >
               <div className='grid grid-cols-2 mb-4'>
-                <div></div>
                 <div className='ml-auto flex items-center gap-x-2'>
                   <div className='whitespace-nowrap'>Use custom margin</div>
                   <Switch
@@ -995,45 +980,61 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="flex items-center space-x-2">
-            <Label className="text-sm font-medium mb-2 block">Enter type manually</Label>
-            <Switch checked={switchCustomNameSign} onCheckedChange={handleSwitchNameSign} />
-          </div>
-
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
             {/* Sign Type Selection */}
             {
-              switchCustomNameSign ?
-                <div className="">
-                  <Label className="text-sm font-medium mb-2 block">Name of the sign type</Label>
-                  <Input
-                    type="text"
-                    value={selectedType}
-                    onChange={(e) => handleChangeSelectedTypeInput(e)}
-                    min={0}
-                    className="w-full"
+              // Selector de tipo original
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
+                <Select
+                  value={selectedType}
+                  onValueChange={handleTypeChange}
+                  disabled={!!editingId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose permanent sign item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
+                      <SelectItem key={key} value={key}>
+                        {displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+
+            {
+              selectedType &&
+              <div className="flex flex-col items-start w-full">
+                <div className="flex items-start space-x-2 mb-4 flex-col">
+                  <Label className="" htmlFor="custom-sign-name">Use custom name type</Label>
+                  <Switch
+                    className="mt-4"
+                    id="custom-sign-name"
+                    checked={isCustomName}
+                    onCheckedChange={(value) => {
+                      setIsCustomName(value);
+                      if(value) {
+                        handleFieldUpdate('customItemTypeName',selectedType)
+                      }
+                    }}
                   />
                 </div>
-                :
-                <div className="w-full">
-                  <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-                  <Select
-                    value={selectedType}
-                    onValueChange={handleTypeChange}
-                    disabled={!!editingId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose permanent sign item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                        <SelectItem key={key} value={key}>
-                          {displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {isCustomName && (
+                  <div className="w-full flex flex-col">
+                    <Label className="text-sm font-medium mb-2 block">Personalized name</Label>
+                    <Input
+                      type="text"
+                      value={formData?.customItemTypeName || ""}
+                      onChange={(e) => handleFieldUpdate('customItemTypeName',e.target.value)}
+                      className="w-full"
+                      placeholder="Enter a name..."
+                    />
+                  </div>
+                )}
+              </div>
             }
 
             {/* Render form fields based on selected type */}

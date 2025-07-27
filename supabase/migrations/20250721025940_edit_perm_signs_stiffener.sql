@@ -96,7 +96,8 @@ SELECT be.id,
                                 'tmzBrackets', ps.tmz_brackets,
                                 'antiTheftBolts', ps.anti_theft_bolts,
                                 'chevronBrackets', ps.chevron_brackets,
-                                'streetNameCrossBrackets', ps.street_name_cross_brackets
+                                'streetNameCrossBrackets', ps.street_name_cross_brackets,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedInstall Type F
                             WHEN 'pmsTypeF' THEN json_build_object(
@@ -123,7 +124,8 @@ SELECT be.id,
                                 'tmzBrackets', ps.tmz_brackets,
                                 'antiTheftBolts', ps.anti_theft_bolts,
                                 'chevronBrackets', ps.chevron_brackets,
-                                'streetNameCrossBrackets', ps.street_name_cross_brackets
+                                'streetNameCrossBrackets', ps.street_name_cross_brackets,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedInstallTypeC
                             WHEN 'pmsTypeC' THEN json_build_object(
@@ -142,7 +144,8 @@ SELECT be.id,
                                 'fygReflectiveStrips', ps.fyg_reflective_strips,
                                 'stiffenerInches', ps.stiffener_inches,
                                 'tmzBrackets', ps.tmz_brackets,
-                                'antiTheftBolts', ps.anti_theft_bolts
+                                'antiTheftBolts', ps.anti_theft_bolts,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedResetOrRemove (Reset Type B)
                             WHEN 'resetTypeB' THEN json_build_object(
@@ -157,7 +160,8 @@ SELECT be.id,
                                 'productivityRate', ps.productivity_rate,
                                 'type', ps.type,
                                 'isRemove', ps.is_remove,
-                                'additionalItems', ps.additional_items
+                                'additionalItems', ps.additional_items,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedResetOrRemove (Reset Type F)
                             WHEN 'resetTypeF' THEN json_build_object(
@@ -171,7 +175,8 @@ SELECT be.id,
                                 'productivityRate', ps.productivity_rate,
                                 'type', ps.type,
                                 'isRemove', ps.is_remove,
-                                'additionalItems', ps.additional_items
+                                'additionalItems', ps.additional_items,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedResetOrRemove (Remove Type B)
                             WHEN 'removeTypeB' THEN json_build_object(
@@ -186,7 +191,8 @@ SELECT be.id,
                                 'productivityRate', ps.productivity_rate,
                                 'type', ps.type,
                                 'isRemove', ps.is_remove,
-                                'additionalItems', ps.additional_items
+                                'additionalItems', ps.additional_items,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- PostMountedResetOrRemove (Remove Type F)
                             WHEN 'removeTypeF' THEN json_build_object(
@@ -201,7 +207,8 @@ SELECT be.id,
                                 'productivityRate', ps.productivity_rate,
                                 'type', ps.type,
                                 'isRemove', ps.is_remove,
-                                'additionalItems', ps.additional_items
+                                'additionalItems', ps.additional_items,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             -- InstallFlexibleDelineators
                             WHEN 'flexibleDelineator' THEN json_build_object(
@@ -215,7 +222,8 @@ SELECT be.id,
                                 'permSignBolts', ps.perm_sign_bolts,
                                 'productivityRate', ps.productivity_rate,
                                 'flexibleDelineatorCost', ps.flexible_delineator_cost,
-                                'additionalItems', ps.additional_items
+                                'additionalItems', ps.additional_items,
+                                'customItemTypeName', ps.custom_item_type_name
                             )
                             ELSE json_build_object(
                                 'id', ps.id::text,
