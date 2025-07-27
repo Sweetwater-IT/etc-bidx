@@ -878,7 +878,18 @@ const PermanentSignsSummaryStep = () => {
               </div>
               {/***Financials */}
               <div className='grid grid-cols-3 mt-4'>
-                <div className="flex flex-col">
+                {
+                  pmsItem.customItemTypeName &&
+                  <div className="flex flex-col">
+                    <label className="text-sm font-semibold">
+                      Custom Name Type
+                    </label>
+                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                      {pmsItem.customItemTypeName}
+                    </div>
+                  </div>
+                }
+                <div className="flex flex-col mt-1">
                   <label className="text-sm font-semibold">
                     Total Revenue
                   </label>
@@ -1016,8 +1027,10 @@ const PermanentSignsSummaryStep = () => {
                     checked={isCustomName}
                     onCheckedChange={(value) => {
                       setIsCustomName(value);
-                      if(value) {
-                        handleFieldUpdate('customItemTypeName',selectedType)
+                      if (value) {
+                        handleFieldUpdate('customItemTypeName', selectedType)
+                      } else {
+                        handleFieldUpdate('customItemTypeName', '')
                       }
                     }}
                   />
@@ -1028,7 +1041,7 @@ const PermanentSignsSummaryStep = () => {
                     <Input
                       type="text"
                       value={formData?.customItemTypeName || ""}
-                      onChange={(e) => handleFieldUpdate('customItemTypeName',e.target.value)}
+                      onChange={(e) => handleFieldUpdate('customItemTypeName', e.target.value)}
                       className="w-full"
                       placeholder="Enter a name..."
                     />
