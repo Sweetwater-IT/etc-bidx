@@ -838,7 +838,7 @@ const PermanentSignsSummaryStep = () => {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-end space-x-4">
-                  <div className="font-medium">{getDisplayName(itemType)}</div>
+                  <div className="font-medium">{ pmsItem.customItemTypeName? pmsItem.customItemTypeName : getDisplayName(itemType)}</div>
                   {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? <div className="flex gap-x-2 items-center">
                     <label className="text-red-400 text-sm font-medium">
                       Price Per Square Foot:
@@ -878,17 +878,6 @@ const PermanentSignsSummaryStep = () => {
               </div>
               {/***Financials */}
               <div className='grid grid-cols-3 mt-4'>
-                {
-                  pmsItem.customItemTypeName &&
-                  <div className="flex flex-col">
-                    <label className="text-sm font-semibold">
-                      Custom Name Type
-                    </label>
-                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                      {pmsItem.customItemTypeName}
-                    </div>
-                  </div>
-                }
                 <div className="flex flex-col mt-1">
                   <label className="text-sm font-semibold">
                     Total Revenue
