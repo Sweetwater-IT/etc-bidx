@@ -601,7 +601,9 @@ export default function SignOrderContentSimple ({
                 <Button>Download PDF</Button>
               </PDFDownloadLink>
             </div>
-            <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
+            <div className='min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]'>
+              <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
+            </div>
           </div>
       </div>
     </div>

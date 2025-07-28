@@ -19,6 +19,8 @@ import {
 } from '@/types/default-objects/defaultMPTObject'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { Badge } from '@/components/ui/badge'
+import { SendEmailDialog } from './SendEmailDialog'
+import { Note } from '@/components/pages/quote-form/QuoteNotes'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -89,7 +91,8 @@ export default function SignOrderViewContent () {
   const [loading, setLoading] = useState(true)
   const [orderDate, setOrderDate] = useState<Date | undefined>(undefined)
   const [needDate, setNeedDate] = useState<Date | undefined>(undefined)
-
+  const [openEmailDialog, setOpenEmailDialog] = useState(false)
+  const [notes, setNotes] = useState<Note[]>([])
   // Order type checkboxes state
   const [isSale, setIsSale] = useState(false)
   const [isRental, setIsRental] = useState(false)
@@ -373,9 +376,21 @@ export default function SignOrderViewContent () {
         setLoading(false)
       }
     }
-
+    const fetchNotes = async () => {
+      try {
+        if (!params || !params.id) return
+        const res = await fetch(`/api/sign-orders?id=${params.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setNotes(Array.isArray(data.notes) ? data.notes : [])
+        }
+      } catch (error) {
+        console.error('Error fetching notes:', error)
+      }
+    }
     if (params && params.id) {
       fetchSignOrder()
+      fetchNotes()
     }
   }, [params, dispatch])
 
@@ -459,6 +474,7 @@ export default function SignOrderViewContent () {
 
   return (
     <>
+      <SendEmailDialog open={openEmailDialog} onOpenChange={setOpenEmailDialog} mptRental={mptRental} adminInfo={adminInfo} notes={notes} />
       <SiteHeader>
         <div className='flex items-center justify-between'>
           <h1 className='text-3xl font-bold mt-2 ml-0'>View Sign Order</h1>
@@ -471,6 +487,9 @@ export default function SignOrderViewContent () {
             </Button>
             <Button variant='outline' onClick={handleExport}>
               Export
+            </Button>
+            <Button variant='outline' onClick={() => setOpenEmailDialog(true)}>
+              Send Email
             </Button>
             <Button
               onClick={() => handleSave('SUBMITTED')}
