@@ -838,7 +838,7 @@ const PermanentSignsSummaryStep = () => {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-end space-x-4">
-                  <div className="font-medium">{ pmsItem.customItemTypeName? pmsItem.customItemTypeName : getDisplayName(itemType)}</div>
+                  <div className="font-medium">{pmsItem.customItemTypeName ? pmsItem.customItemTypeName : getDisplayName(itemType)}</div>
                   {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? <div className="flex gap-x-2 items-center">
                     <label className="text-red-400 text-sm font-medium">
                       Price Per Square Foot:
@@ -1016,9 +1016,7 @@ const PermanentSignsSummaryStep = () => {
                     checked={isCustomName}
                     onCheckedChange={(value) => {
                       setIsCustomName(value);
-                      if (value) {
-                        handleFieldUpdate('customItemTypeName', selectedType)
-                      } else {
+                      if (!value) {
                         handleFieldUpdate('customItemTypeName', '')
                       }
                     }}
