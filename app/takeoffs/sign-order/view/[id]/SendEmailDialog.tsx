@@ -13,6 +13,7 @@ import { TagsInput } from '@/components/ui/tags-input'
 import { toast } from 'sonner'
 import ReactPDF from '@react-pdf/renderer'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
+import { FileIcon } from 'lucide-react'
 
 interface SendEmailDialogProps {
   open: boolean
@@ -39,6 +40,35 @@ export function SendEmailDialog ({
   const signList = useMemo(() => {
     return mptRental?.phases[0].signs.map(normalizeSign) || []
   }, [mptRental])
+
+  const handleViewPdf = async () => {
+    try {
+      // Generate the PDF blob
+      const pdfBlob = await ReactPDF.pdf(
+        <SignOrderWorksheetPDF 
+          adminInfo={adminInfo} 
+          signList={signList} 
+          mptRental={mptRental} 
+          notes={notes} 
+        />
+      ).toBlob()
+
+      // Create a URL for the blob
+      const url = URL.createObjectURL(pdfBlob)
+      
+      // Open the PDF in a new tab
+      const newWindow = window.open(url, '_blank')
+      
+      // Clean up the blob URL after a delay to ensure the new tab has loaded
+      setTimeout(() => {
+        URL.revokeObjectURL(url)
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF')
+    }
+  }
 
   const handleSendEmail = async () => {
     if (toEmails.length === 0) {
@@ -70,7 +100,7 @@ export function SendEmailDialog ({
       ).toBlob()
 
       // Create a File object from the blob
-      const pdfFile = new File([pdfBlob], `Sign-Order-Worksheet-${adminInfo.contractNumber || 'Unknown'}.pdf`, {
+      const pdfFile = new File([pdfBlob], `Sign-Order-Worksheet-${adminInfo.contractNumber || ''}.pdf`, {
         type: 'application/pdf'
       })
 
@@ -170,8 +200,12 @@ export function SendEmailDialog ({
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
                 />
-                <div className='bg-white p-6 max-w-[900px]'>
-                  <SignOrderWorksheet adminInfo={adminInfo} mptRental={mptRental} signList={signList} notes={notes} />
+                <div 
+                  className='p-1 text-blue-700 border border-background rounded shadow w-fit text-sm bg-white flex gap-1 items-center cursor-pointer hover:text-blue-500 transition-colors'
+                  onClick={handleViewPdf}
+                >
+                  <FileIcon className='w-4 h-4' />
+                  <div>Sign-Order-Worksheet-{adminInfo.contractNumber||""}.pdf</div>
                 </div>
               </div>
               <div className='flex items-center justify-end gap-4'>
