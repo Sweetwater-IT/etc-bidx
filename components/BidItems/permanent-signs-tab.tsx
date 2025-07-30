@@ -233,45 +233,59 @@ const PermanentSignsSummaryStep = () => {
     permanentSigns?.signItems,
     permanentSigns?.maxDailyHours,
     permanentSigns?.productivityRates,
-    dispatch, // Added to satisfy ESLint
+    dispatch,
   ]);
 
-  // Handle install hours calculation
   useEffect(() => {
     if (!editOpened || !permanentSigns || !formData || !selectedType) {
       setEditOpened(true);
       return;
     }
-    setFormData(prevData => {
-      if (!prevData) return prevData; // Guard against null prevData
+
+    const newInstall = getRequiredInstallHours(
+      formData.quantity,
+      permanentSigns.productivityRates[selectedType],
+      formData.personnel
+    );
+
+    setFormData(prev => {
+      if (!prev || prev.installHoursRequired === newInstall) return prev;
+
       return {
-        ...prevData,
-        installHoursRequired: getRequiredInstallHours(
-          prevData.quantity,
-          permanentSigns.productivityRates[selectedType],
-          prevData.personnel
-        ),
+        ...prev,
+        installHoursRequired: newInstall,
       };
     });
   }, [
     editOpened,
-    permanentSigns,
-    formData,
     selectedType,
-    permanentSigns?.productivityRates, // Added to satisfy ESLint
+    permanentSigns?.productivityRates,   
+    formData?.quantity,
+    formData?.personnel,
   ]);
 
   // Update perm sign bolts
   useEffect(() => {
-    if (!selectedType || !formData || selectedType === "removeTypeB" || selectedType === "removeTypeF") return;
-    setFormData(prevData => {
-      if (!prevData) return prevData; // Guard against null prevData
+    if (
+      !formData ||
+      !selectedType ||
+      selectedType === "removeTypeB" ||
+      selectedType === "removeTypeF"
+    ) return;
+
+    const newBolts = formData.quantity * 2;
+
+    setFormData(prev => {
+      if (!prev || prev.permSignBolts === newBolts) return prev;
       return {
-        ...prevData,
-        permSignBolts: prevData.quantity * 2,
+        ...prev,
+        permSignBolts: newBolts,
       };
     });
-  }, [formData?.quantity, selectedType, formData]); // Added formData to satisfy ESLint
+  }, [
+    formData?.quantity,
+    selectedType,
+  ]); // Added formData to satisfy ESLint
 
   // Reset editOpened when drawer closes
   useEffect(() => {
