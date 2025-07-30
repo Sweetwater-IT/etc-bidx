@@ -259,7 +259,7 @@ const PermanentSignsSummaryStep = () => {
   }, [
     editOpened,
     selectedType,
-    permanentSigns?.productivityRates,   
+    permanentSigns?.productivityRates,
     formData?.quantity,
     formData?.personnel,
   ]);
@@ -286,6 +286,22 @@ const PermanentSignsSummaryStep = () => {
     formData?.quantity,
     selectedType,
   ]); // Added formData to satisfy ESLint
+
+
+  useEffect(() => {
+    if (!permanentSigns || !selectedType || !formData) return;
+    console.log('si pase');
+    
+    const calculatedTrips = getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
+    console.log('el calculo es', calculatedTrips);
+    
+    setFormData(prevData => ({
+      ...prevData,
+      //if we're editing the first item and nothing has changed, don't automatically set the number trips (this will set trips back to original trips
+      // if the user changes a value then goes back to the original)
+      numberTrips: calculatedTrips
+    }) as any)
+  }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired]);
 
   // Reset editOpened when drawer closes
   useEffect(() => {
@@ -395,7 +411,6 @@ const PermanentSignsSummaryStep = () => {
     setEditingId(null);
     setSelectedType(undefined);
   }, [formData, selectedType, permanentSigns, editingId, dispatch]); // Added dependencies
-
   const handleCancel = useCallback(() => {
     setDrawerOpen(false);
     setFormData(null);
