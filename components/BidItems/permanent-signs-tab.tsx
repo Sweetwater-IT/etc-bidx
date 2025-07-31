@@ -141,7 +141,6 @@ const PermanentSignsSummaryStep = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
   const [editOpened, setEditOpened] = useState<boolean>(false);
-  const [totalTrips, setTotalTrips] = useState<number>(0);
 
   // Fetch static data
   useEffect(() => {
@@ -410,6 +409,7 @@ const PermanentSignsSummaryStep = () => {
     setEditingId(null);
     setSelectedType(undefined);
   }, [formData, selectedType, permanentSigns, editingId, dispatch]); // Added dependencies
+
   const handleCancel = useCallback(() => {
     setDrawerOpen(false);
     setFormData(null);
@@ -423,6 +423,12 @@ const PermanentSignsSummaryStep = () => {
       payload: { signId: pmsId },
     });
   }, [dispatch]); // Wrapped in useCallback to stabilize function reference
+
+  const getTotalDays = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.days, 0)
+
+
+  const getTotalTrips = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.numberTrips, 0)
+
 
   const renderFormFields = () => {
     if (!formData || !selectedType) return null;
@@ -875,12 +881,28 @@ const PermanentSignsSummaryStep = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between pb-2 border-b mb-6">
+      <div className="flex items-center justify-between pb-2 border-b mb-3">
         <h3 className="text-xl text-black font-semibold">Permanent Signs</h3>
         <Button onClick={handleAddSign}>
           <Plus className="mr-2 h-4 w-4" />
           Add Sign Item
         </Button>
+      </div>
+      <div className="flex flex-row items-center mb-3">
+        <div className="flex flex-row items-center gap-[8px]">
+          <label className="text-sm font-semibold">Total Trips Required: </label>
+          <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+            {getTotalTrips() ?? " -"}
+          </div>
+        </div>
+        <div className="flex flex-row items-center gap-[8px]">
+          <label className="text-sm font-semibold">Total Days Required: </label>
+          <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+            {getTotalDays() ?? " -"}
+          </div>
+        </div>
+
+
       </div>
       <div className="relative">
         {(!permanentSigns || permanentSigns.signItems.length === 0) && (
@@ -949,7 +971,7 @@ const PermanentSignsSummaryStep = () => {
                       </div>
                     ) : (
                       <div className="flex gap-x-2 items-center">
-                        <label className="text-red-400 text-sm font-medium">Price Per Each:</label>
+                        <label className="text-red-400 text-sm font-medium">Price Per Sign:</label>
                         <div className="text-sm text-red-500">
                           {formatCurrencyValue(
                             getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental)
@@ -964,10 +986,13 @@ const PermanentSignsSummaryStep = () => {
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground">
-                      {pmsItem?.quantity ? `Installs: ${pmsItem.quantity}` : "Not configured"}
+                      {pmsItem?.quantity ? `Number of Installs: ${pmsItem.quantity}` : "Not configured"}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Days: {pmsItem.days || "-"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Trips: {pmsItem.numberTrips || "-"}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1027,7 +1052,7 @@ const PermanentSignsSummaryStep = () => {
                     </div>
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-sm font-medium mb-2 block">Fuel Cost</label>
+                    <label className="text-sm font-semibold">Fuel Cost</label>
                     <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                       {formatCurrencyValue(getPermSignFuelCost(pmsItem, adminData, mptRental))}
                     </div>
@@ -1054,9 +1079,16 @@ const PermanentSignsSummaryStep = () => {
                     </div>
                   )}
                   <div className="flex flex-col">
-                    <label className="text-sm font-semibold">Total Days Required</label>
+                    <label className="text-sm font-semibold">Days Required</label>
                     <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                       {pmsItem.days || "-"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label className="text-sm font-semibold">Trips Required</label>
+                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                      {pmsItem.numberTrips || "-"}
                     </div>
                   </div>
                 </div>
@@ -1110,7 +1142,7 @@ const PermanentSignsSummaryStep = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-    </div>
+    </div >
   );
 };
 
