@@ -78,6 +78,8 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
         id: newPMSId,
         type: "F",
         itemNumber: "0935-001",
+        permSignCostSqFt: 0,
+        permSignPriceSqFt: 0,
         days: 0,
         numberTrips: 0,
       };
@@ -135,7 +137,7 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
 };
 
 const PermanentSignsSummaryStep = () => {
-  const { permanentSigns, dispatch, adminData, mptRental } = useEstimate();
+  const { permanentSigns, dispatch, adminData, mptRental, } = useEstimate();
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -327,10 +329,23 @@ const PermanentSignsSummaryStep = () => {
   }, [permanentSigns]); // Wrapped in useCallback to stabilize function reference
 
   const handleTypeChange = useCallback((value: PMSItemKeys) => {
-    setSelectedType(value);
     const defaultItem = createDefaultItem(value);
+
+    if (
+      defaultItem &&
+      (value === "pmsTypeB" || value === "pmsTypeF" || value === "pmsTypeC") &&
+      permanentSigns
+    ) {
+      const baseCost = permanentSigns.equipmentData.find(e => e.name === "permSignCostSqFt")?.cost ?? 0;
+      const basePrice = permanentSigns.equipmentData.find(e => e.name === "permSignPriceSqFt")?.cost ?? 0;
+
+      (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignCostSqFt = baseCost;
+      (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignPriceSqFt = basePrice;
+    }
+
+    setSelectedType(value);
     setFormData(defaultItem);
-  }, []); // Wrapped in useCallback to stabilize function reference
+  }, [permanentSigns]);
 
   const handleFieldUpdate = useCallback((field: AllPMSItemKeys, value: any) => {
     setFormData(prevData => {
@@ -425,10 +440,11 @@ const PermanentSignsSummaryStep = () => {
   }, [dispatch]); // Wrapped in useCallback to stabilize function reference
 
   const getTotalDays = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.days, 0)
-
-
   const getTotalTrips = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.numberTrips, 0)
 
+  function hasPermSignSqFtFields(item: PMSItemNumbers): item is PostMountedInstall | PostMountedInstallTypeC {
+    return 'permSignCostSqFt' in item && 'permSignPriceSqFt' in item;
+  }
 
   const renderFormFields = () => {
     if (!formData || !selectedType) return null;
@@ -486,53 +502,37 @@ const PermanentSignsSummaryStep = () => {
         </div>
         {(selectedType === "pmsTypeB" || selectedType === "pmsTypeF" || selectedType === "pmsTypeC") && (
           <>
-            <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">Sign Cost / Sq. Ft</Label>
-              <Input
-                type="number"
-                value={permanentSigns?.equipmentData.find(equip => equip.name === "permSignCostSqFt")?.cost || ""}
-                onChange={(e) => {
-                  if (!permanentSigns) return;
-                  dispatch({
-                    type: "UPDATE_PERMANENT_SIGNS_ASSUMPTIONS",
-                    payload: {
-                      key: "equipmentData",
-                      value: permanentSigns.equipmentData.map(equip =>
-                        equip.name === "permSignCostSqFt"
-                          ? { name: equip.name, cost: parseFloat(e.target.value) }
-                          : equip
-                      ),
-                    },
-                  });
-                }}
-                min={0}
-                className="w-full"
-              />
-            </div>
-            <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
-              <Input
-                type="number"
-                value={permanentSigns?.equipmentData.find(equip => equip.name === "permSignPriceSqFt")?.cost || ""}
-                onChange={(e) => {
-                  if (!permanentSigns) return;
-                  dispatch({
-                    type: "UPDATE_PERMANENT_SIGNS_ASSUMPTIONS",
-                    payload: {
-                      key: "equipmentData",
-                      value: permanentSigns.equipmentData.map(equip =>
-                        equip.name === "permSignPriceSqFt"
-                          ? { name: equip.name, cost: parseFloat(e.target.value) }
-                          : equip
-                      ),
-                    },
-                  });
-                }}
-                min={10}
-                step="0.01"
-                className="w-full"
-              />
-            </div>
+            {(selectedType === "pmsTypeB" || selectedType === "pmsTypeF" || selectedType === "pmsTypeC") && hasPermSignSqFtFields(formData) && (
+              <>
+                <div className="flex-1">
+                  <Label className="text-sm font-medium mb-2 block">Sign Cost / Sq. Ft</Label>
+                  <Input
+                    type="number"
+                    value={formData.permSignCostSqFt}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) handleFieldUpdate("permSignCostSqFt", val);
+                    }}
+                    min={0}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-sm font-medium mb-2 block">Sign Price / Sq. Ft</Label>
+                  <Input
+                    type="number"
+                    value={formData.permSignPriceSqFt}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) handleFieldUpdate("permSignPriceSqFt", val);
+                    }}
+                    min={0}
+                    step="0.01"
+                    className="w-full"
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
         <div className="flex-1">
@@ -920,7 +920,6 @@ const PermanentSignsSummaryStep = () => {
                 className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
               >
                 <div className="grid grid-cols-2 mb-4">
-                  <div></div>
                   <div className="ml-auto flex items-center gap-x-2">
                     <div className="whitespace-nowrap">Use custom margin</div>
                     <Switch
@@ -957,7 +956,7 @@ const PermanentSignsSummaryStep = () => {
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-end space-x-4">
+                  <div className="flex flex-row items-start flex-wrap space-x-4 space-y-2">
                     <div className="font-medium">{getDisplayName(itemType)}</div>
                     {(itemType === "pmsTypeB" || itemType === "pmsTypeF" || itemType === "pmsTypeC") ? (
                       <div className="flex gap-x-2 items-center">
@@ -994,8 +993,20 @@ const PermanentSignsSummaryStep = () => {
                     <div className="text-sm text-muted-foreground">
                       Trips: {pmsItem.numberTrips || "-"}
                     </div>
+                    {
+                      (itemType === "pmsTypeB" || itemType === "pmsTypeF" || itemType === "pmsTypeC") && hasPermSignSqFtFields(pmsItem) && (
+                        <>
+                          <div className="text-sm text-muted-foreground">
+                            Sign Cost / Sq. Ft: {pmsItem.permSignCostSqFt ?? "-"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Sign Price / Sq. Ft: {pmsItem.permSignPriceSqFt ?? "-"}
+                          </div>
+                        </>
+                      )
+                    }
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 flex-wrap">
                     <Button variant="ghost" size="sm" onClick={() => handleEditItem(pmsItem.id)}>
                       Edit
                     </Button>

@@ -70,6 +70,8 @@ interface PermanentSignItem {
 export interface PostMountedInstall extends PermanentSignItem {
     type: 'B' | 'F'
     signSqFootage: number;
+    permSignPriceSqFt: number;
+    permSignCostSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     jennyBrackets: number;
@@ -89,7 +91,8 @@ export interface PostMountedResetOrRemove extends PermanentSignItem {
 
 export interface PostMountedInstallTypeC extends PermanentSignItem {
     signSqFootage: number;
-    signPriceSqFt: number;
+    permSignPriceSqFt: number;
+    permSignCostSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     stiffenerInches: number;
