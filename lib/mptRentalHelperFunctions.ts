@@ -1021,8 +1021,13 @@ export const getPermSignTrips = (
 
 //only will get called on pms installs (type c, f, or b)
 export const getPermSignSqFtCost = (permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers): number => {
-  return safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignCostSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
-}
+  if ('permSignCostSqFt' in pmsItem && typeof pmsItem.permSignCostSqFt === 'number' && pmsItem.signSqFootage) {
+    return safeNumber(pmsItem.permSignCostSqFt) * pmsItem.signSqFootage;
+  }
+  const globalCost = permanentSigns.equipmentData.find(equip => equip.name === 'permSignCostSqFt')?.cost ?? 0;
+  const sqFootage = ('signSqFootage' in pmsItem && pmsItem.signSqFootage) || 0;
+  return safeNumber(globalCost) * sqFootage;
+};
 
 //(F36*$T$12)+(J36*$T$8)+(F39*$T$9)+(J39*$T$10)+(N39*$T$11)+(F42*$T$13)+(J42*$T$14)+(F45*$T$15)+(N42*$T$16)+(J45*$T$17)
 export const getPermSignMaterialCost = (itemType: PMSItemKeys, permanentSigns: PermanentSigns, pmsItem: PMSItemNumbers): number => {
