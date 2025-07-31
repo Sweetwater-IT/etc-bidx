@@ -198,45 +198,8 @@ const PermanentSignsSummaryStep = () => {
     getStaticData();
   }, [dispatch]);
 
-  // Update trips, days, and numberTrips when signItems or relevant fields change
   useEffect(() => {
-    if (!permanentSigns || !permanentSigns.signItems.length) {
-      setTotalTrips(0);
-      return;
-    }
-    const firstItem = permanentSigns.signItems[0];
-    const { updatedItems, totalTrips } = getPermSignTrips(
-      firstItem,
-      permanentSigns.signItems,
-      permanentSigns.maxDailyHours
-    );
-    updatedItems.forEach(item => {
-      dispatch({
-        type: "UPDATE_PERMANENT_SIGNS_ITEM",
-        payload: {
-          signId: item.id,
-          field: "days",
-          value: item.days,
-        },
-      });
-      dispatch({
-        type: "UPDATE_PERMANENT_SIGNS_ITEM",
-        payload: {
-          signId: item.id,
-          field: "numberTrips",
-          value: item.numberTrips,
-        },
-      });
-    });
-    setTotalTrips(totalTrips);
-  }, [
-    permanentSigns?.signItems,
-    permanentSigns?.maxDailyHours,
-    permanentSigns?.productivityRates,
-    dispatch,
-  ]);
 
-  useEffect(() => {
     if (!editOpened || !permanentSigns || !formData || !selectedType) {
       setEditOpened(true);
       return;
@@ -248,7 +211,7 @@ const PermanentSignsSummaryStep = () => {
       formData.personnel
     );
 
-    setFormData(prev => {
+    setFormData((prev: any) => {
       if (!prev || prev.installHoursRequired === newInstall) return prev;
 
       return {
@@ -264,6 +227,57 @@ const PermanentSignsSummaryStep = () => {
     formData?.personnel,
   ]);
 
+  // Update totalTrips and days, when change quantity
+  useEffect(() => {
+    if (!editOpened || !permanentSigns || !formData || !selectedType) return;
+
+    const quantity = formData.quantity;
+    const personnel = formData.personnel;
+
+    const newInstall = getRequiredInstallHours(
+      quantity,
+      permanentSigns.productivityRates[selectedType],
+      personnel
+    );
+
+    const arraySigns = editingId
+      ? permanentSigns.signItems.map(item =>
+        item.id === formData.id
+          ? { ...formData, installHoursRequired: newInstall }
+          : item
+      )
+      : [...permanentSigns.signItems, {
+        ...formData,
+        installHoursRequired: newInstall
+      }];
+
+    const firstItem = permanentSigns.signItems[0] ?? formData;
+
+    const { updatedItems, totalTrips } = getPermSignTrips(
+      firstItem,
+      arraySigns,
+      permanentSigns.maxDailyHours
+    );
+
+    const currentItem = updatedItems.find((itm) => itm.id === formData.id);
+    if (!currentItem) return;
+
+    setFormData((prev: any) => ({
+      ...prev,
+      installHoursRequired: newInstall,
+      days: currentItem.days,
+      numberTrips: totalTrips,
+    }));
+  }, [
+    formData?.quantity,
+    formData?.personnel,
+    permanentSigns?.signItems,
+    permanentSigns?.maxDailyHours,
+    selectedType,
+    editOpened,
+    editingId,
+  ]);
+
   // Update perm sign bolts
   useEffect(() => {
     if (
@@ -277,6 +291,7 @@ const PermanentSignsSummaryStep = () => {
 
     setFormData(prev => {
       if (!prev || prev.permSignBolts === newBolts) return prev;
+
       return {
         ...prev,
         permSignBolts: newBolts,
@@ -286,22 +301,6 @@ const PermanentSignsSummaryStep = () => {
     formData?.quantity,
     selectedType,
   ]); // Added formData to satisfy ESLint
-
-
-  useEffect(() => {
-    if (!permanentSigns || !selectedType || !formData) return;
-    console.log('si pase');
-    
-    const calculatedTrips = getPermSignTrips(formData, permanentSigns.signItems, permanentSigns.maxDailyHours)
-    console.log('el calculo es', calculatedTrips);
-    
-    setFormData(prevData => ({
-      ...prevData,
-      //if we're editing the first item and nothing has changed, don't automatically set the number trips (this will set trips back to original trips
-      // if the user changes a value then goes back to the original)
-      numberTrips: calculatedTrips
-    }) as any)
-  }, [formData?.numberTrucks, permanentSigns?.maxDailyHours, formData?.installHoursRequired]);
 
   // Reset editOpened when drawer closes
   useEffect(() => {
@@ -401,7 +400,7 @@ const PermanentSignsSummaryStep = () => {
       dispatch({
         type: "ADD_PERMANENT_SIGNS_ITEM",
         payload: {
-          newPMSItem: { ...formData, days: 0, numberTrips: 0 },
+          newPMSItem: { ...formData },
         },
       });
     }

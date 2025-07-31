@@ -976,25 +976,20 @@ export const getPermSignTrips = (
   let totalTrips = 0;
   let remainingHours = 0;
   const updatedItems: PMSItemNumbers[] = [];
-
-  // Separate items into regular and separate mobilization
+  
   const regularItems = signItems.filter(item => !item.separateMobilization);
+  
   const separateMobilizationItems = signItems.filter(item => item.separateMobilization);
 
-  // Process regular items
   for (const item of regularItems) {
-    const itemType = determineItemType(item);
     const installHours = item.installHoursRequired;
-
     const updatedItem = { ...item };
 
     if (remainingHours >= installHours) {
-      // Fits within remaining hours, no new days
       updatedItem.days = 0;
-      updatedItem.numberTrips = 0; // No additional trips
+      updatedItem.numberTrips = 0;
       remainingHours -= installHours;
     } else {
-      // Calculate additional days needed
       const hoursNeeded = installHours - remainingHours;
       const daysForItem = Math.ceil(hoursNeeded / maxDailyHours);
       updatedItem.days = daysForItem;
@@ -1006,9 +1001,7 @@ export const getPermSignTrips = (
     updatedItems.push(updatedItem);
   }
 
-    // Process separate mobilization items
   for (const item of separateMobilizationItems) {
-    const itemType = determineItemType(item);
     const installHours = item.installHoursRequired;
     const daysForItem = Math.ceil(installHours / maxDailyHours);
     const updatedItem = {
@@ -1016,12 +1009,12 @@ export const getPermSignTrips = (
       days: daysForItem,
       numberTrips: daysForItem * item.numberTrucks,
     };
-    totalTrips += daysForItem; // Add days to total trips
+    totalTrips += updatedItem.numberTrips;
     updatedItems.push(updatedItem);
   }
 
-  // Sort items to maintain original order
-  const sortedItems = signItems.map(original => updatedItems.find(item => item.id === original.id)!);
+  const updatedMap = new Map(updatedItems.map(item => [item.id, item]));
+  const sortedItems = signItems.map(item => updatedMap.get(item.id)!);
 
   return { updatedItems: sortedItems, totalTrips };
 };
