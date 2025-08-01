@@ -19,6 +19,7 @@ import RentalRevenueAndProfit from './RentalRevenueAndProfit'
 import SaleItemsRevenueAndProfit from './SaleItemsRevenueAndProfit'
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 import PermanentSignsSummaryStep from '../BidItems/permanent-signs-tab'
+import PermSignsRevenueAndProfit from './PermSignsRevenueAndProfit'
 
 interface BasicSummaryTotals {
   totalCost: number;
@@ -278,6 +279,7 @@ const RevenueAndProfitSummary = () => {
       <FlaggingRevenueAndProfit />
       <RentalRevenueAndProfit />
       <SaleItemsRevenueAndProfit />
+      <PermSignsRevenueAndProfit/>
     </div>
   )
 }
