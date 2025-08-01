@@ -44,6 +44,7 @@ import {
   defaultPMSResetB,
   defaultPMSTypeB,
   defaultPMSTypeC,
+  defaultPermanentSignsObject
 } from "@/types/default-objects/defaultPermanentSignsObject";
 import { v4 as uuidv4 } from "uuid";
 import EmptyContainer from "./empty-container";
@@ -94,7 +95,7 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
         itemNumber: "0941-0001",
         days: 0,
         numberTrips: 0,
-      };
+    }
       break;
     case "resetTypeF":
       defaultObjectToBeAdded = {
@@ -137,6 +138,7 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
 };
 
 const PermanentSignsSummaryStep = () => {
+  const [isCustomName, setIsCustomName] = useState(false);
   const { permanentSigns, dispatch, adminData, mptRental, } = useEstimate();
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -342,8 +344,12 @@ const PermanentSignsSummaryStep = () => {
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignCostSqFt = baseCost;
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignPriceSqFt = basePrice;
     }
-
+    if(isCustomName){
+      handleFieldUpdate('customItemTypeName', '')
+    }
     setSelectedType(value);
+    setIsCustomName(false)
+
     setFormData(defaultItem);
   }, [permanentSigns]);
 
@@ -398,7 +404,7 @@ const PermanentSignsSummaryStep = () => {
     if (editingId) {
       // Update existing item
       Object.keys(formData).forEach(field => {
-        if (field !== "id" && field !== "days" && field !== "numberTrips") {
+        if (field !== "id") {
           dispatch({
             type: "UPDATE_PERMANENT_SIGNS_ITEM",
             payload: {
@@ -441,7 +447,7 @@ const PermanentSignsSummaryStep = () => {
 
   const getTotalDays = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.days, 0)
   const getTotalTrips = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.numberTrips, 0)
-
+  
   function hasPermSignSqFtFields(item: PMSItemNumbers): item is PostMountedInstall | PostMountedInstallTypeC {
     return 'permSignCostSqFt' in item && 'permSignPriceSqFt' in item;
   }
@@ -957,7 +963,7 @@ const PermanentSignsSummaryStep = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex flex-row items-start flex-wrap space-x-4 space-y-2">
-                    <div className="font-medium">{getDisplayName(itemType)}</div>
+                    <div className="font-medium">{pmsItem.customItemTypeName ? pmsItem.customItemTypeName : getDisplayName(itemType)}</div>
                     {(itemType === "pmsTypeB" || itemType === "pmsTypeF" || itemType === "pmsTypeC") ? (
                       <div className="flex gap-x-2 items-center">
                         <label className="text-red-400 text-sm font-medium">Price Per Square Foot:</label>
@@ -1118,25 +1124,60 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
-            <div className="w-full">
-              <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-              <Select
-                value={selectedType}
-                onValueChange={handleTypeChange}
-                disabled={!!editingId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose permanent sign item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                    <SelectItem key={key} value={key}>
-                      {displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {
+              // Selector de tipo original
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
+                <Select
+                  value={selectedType}
+                  onValueChange={handleTypeChange}
+                  disabled={!!editingId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose permanent sign item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
+                      <SelectItem key={key} value={key}>
+                        {displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+            {
+              selectedType &&
+              <div className="flex flex-col items-start w-full">
+                <div className="flex items-start space-x-2 mb-4 flex-col">
+                  <Label className="" htmlFor="custom-sign-name">Use custom name type</Label>
+                  <Switch
+                    className="mt-4"
+                    id="custom-sign-name"
+                    checked={isCustomName}
+                    onCheckedChange={(value) => {
+                      setIsCustomName(value);
+                      if (!value) {
+                        handleFieldUpdate('customItemTypeName', '')
+                      }
+                    }}
+                  />
+                </div>
+                {isCustomName && (
+                  <div className="w-full flex flex-col">
+                    <Label className="text-sm font-medium mb-2 block">Personalized name</Label>
+                    <Input
+                      type="text"
+                      value={formData?.customItemTypeName || ""}
+                      onChange={(e) => handleFieldUpdate('customItemTypeName', e.target.value)}
+                      className="w-full"
+                      placeholder="Enter a name..."
+                    />
+                  </div>
+                )}
+              </div>
+            }
+
             {selectedType && renderFormFields()}
           </div>
           <DrawerFooter>

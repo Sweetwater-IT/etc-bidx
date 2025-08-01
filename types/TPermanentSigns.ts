@@ -44,7 +44,8 @@ export type AllPMSItemKeys =
     | 'isRemove'
     | 'additionalItems'
     // InstallFlexibleDelineators specific key
-    | 'flexibleDelineatorCost';
+    | 'flexibleDelineatorCost'
+    | 'customItemTypeName'
 
 export interface PMSEquipmentPiece {
     name: PMSEquipmentItems
@@ -64,6 +65,7 @@ interface PermanentSignItem {
     quantity: number;
     //pms reset type f is the only one without perm sign bolts
     permSignBolts?: number
+    customItemTypeName?: string;
     days: number; // Added new field
 }
 
