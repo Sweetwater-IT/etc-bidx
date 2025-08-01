@@ -24,6 +24,7 @@ export type AllPMSItemKeys =
     | 'quantity'
     | 'permSignBolts'
     | 'productivityRate'
+    | 'days' // Added new field
     // PostMountedInstall specific keys
     | 'type'
     | 'signSqFootage'
@@ -66,6 +67,7 @@ interface PermanentSignItem {
     //pms reset type f is the only one without perm sign bolts
     permSignBolts?: number
     customItemTypeName?: string;
+    days: number; // Added new field
 }
 
 export interface PostMountedInstall extends PermanentSignItem {
