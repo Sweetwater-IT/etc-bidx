@@ -12,7 +12,7 @@ CREATE INDEX idx_permanent_signs_entries_estimate_id ON permanent_signs_entries(
 CREATE TABLE permanent_signs (
     id SERIAL PRIMARY KEY,
     permanent_signs_entry_id INTEGER NOT NULL REFERENCES permanent_signs_entries(id) ON DELETE CASCADE,
-    
+    custom_item_type_name VARCHAR(255),
     -- Item type and identification
     item_type VARCHAR(30) NOT NULL,
     item_number VARCHAR(100),
@@ -45,7 +45,6 @@ CREATE TABLE permanent_signs (
     
     -- PostMountedResetOrRemove fields
     is_remove BOOLEAN,
-    
     -- InstallFlexibleDelineators fields
     flexible_delineator_cost DECIMAL(10,2),
     
@@ -167,7 +166,8 @@ SELECT be.id,
                             'streetNameCrossBrackets', ps.street_name_cross_brackets,
                             'isRemove', ps.is_remove,
                             'flexibleDelineatorCost', ps.flexible_delineator_cost,
-                            'additionalItems', ps.additional_items
+                            'additionalItems', ps.additional_items,
+                            'customItemTypeName', ps.custom_item_type_name
                         ) ORDER BY ps.id
                     )
                     FROM permanent_signs ps

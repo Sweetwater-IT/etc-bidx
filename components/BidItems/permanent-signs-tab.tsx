@@ -24,6 +24,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { defaultFlexibleDelineators, defaultPMSResetB, defaultPMSTypeB, defaultPMSTypeC, defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
+import { v4 as uuidv4 } from 'uuid';
 import {
   getDisplayName,
   PERMANENT_SIGN_ITEMS,
@@ -39,13 +41,6 @@ import {
   PMSEquipmentItems,
   AdditionalPMSEquipment,
 } from "@/types/TPermanentSigns";
-import {
-  defaultFlexibleDelineators,
-  defaultPMSResetB,
-  defaultPMSTypeB,
-  defaultPMSTypeC,
-} from "@/types/default-objects/defaultPermanentSignsObject";
-import { v4 as uuidv4 } from "uuid";
 import EmptyContainer from "./empty-container";
 import { Separator } from "../ui/separator";
 import { safeNumber } from "@/lib/safe-number";
@@ -129,14 +124,16 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
       defaultObjectToBeAdded = { ...defaultFlexibleDelineators, id: newPMSId, days: 0, numberTrips: 0 };
       break;
     default:
-      defaultObjectToBeAdded = undefined;
+      defaultObjectToBeAdded = undefined
   }
   return defaultObjectToBeAdded;
 };
 
 const PermanentSignsSummaryStep = () => {
+  const [isCustomName, setIsCustomName] = useState(false);
   const { permanentSigns, dispatch, adminData, mptRental } = useEstimate();
   const [selectedType, setSelectedType] = useState<PMSItemKeys>();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
@@ -155,17 +152,17 @@ const PermanentSignsSummaryStep = () => {
           payload: {
             key: "productivityRates",
             value: {
-              flexibleDelineator: data.data.flex_delineator,
-              pmsTypeB: data.data.type_b_install,
-              pmsTypeF: data.data.type_f_install,
-              pmsTypeC: data.data.type_c_install,
-              resetTypeB: data.data.type_b_reset,
-              resetTypeF: data.data.type_f_reset,
-              removeTypeB: data.data.type_b_remove,
-              removeTypeF: data.data.type_f_remove,
-            },
-          },
-        });
+              'flexibleDelineator': data.data.flex_delineator,
+              'pmsTypeB': data.data.type_b_install,
+              'pmsTypeF': data.data.type_f_install,
+              'pmsTypeC': data.data.type_c_install,
+              'resetTypeB': data.data.type_b_reset,
+              'resetTypeF': data.data.type_f_reset,
+              'removeTypeB': data.data.type_b_remove,
+              'removeTypeF': data.data.type_f_remove,
+            }
+          }
+        })
         dispatch({
           type: "UPDATE_PERMANENT_SIGNS_ASSUMPTIONS",
           payload: {
@@ -328,19 +325,56 @@ const PermanentSignsSummaryStep = () => {
 
   const handleTypeChange = useCallback((value: PMSItemKeys) => {
     setSelectedType(value);
+    handleFieldUpdate('customItemTypeName', '')
+    setIsCustomName(false)
+    // Create new form data based on the selected type
     const defaultItem = createDefaultItem(value);
     setFormData(defaultItem);
   }, []); // Wrapped in useCallback to stabilize function reference
 
-  const handleFieldUpdate = useCallback((field: AllPMSItemKeys, value: any) => {
-    setFormData(prevData => {
-      if (!prevData) return prevData;
-      return {
+  const handleFieldUpdate = (field: AllPMSItemKeys, value: any) => {
+    if (formData) {
+      setFormData(prevData => ({
         ...prevData,
-        [field]: value,
-      };
-    });
-  }, []); // Wrapped in useCallback to stabilize function reference
+        [field]: value
+      } as any));
+    }
+  };
+
+  // Handle additional items for custom equipment
+  const handleAddAdditionalItem = () => {
+    if (!formData || !('additionalItems' in formData)) return;
+
+    const newItem: AdditionalPMSEquipment = {
+      equipmentType: 'antiTheftBolts', // default
+      quantity: 1
+    };
+
+    const updatedItems = [...(formData.additionalItems || []), newItem];
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  const handleRemoveAdditionalItem = (index: number) => {
+    if (!formData || !('additionalItems' in formData)) return;
+
+    const updatedItems = (formData.additionalItems || []).filter((_, i) => i !== index);
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  const handleUpdateAdditionalItem = (index: number, field: keyof AdditionalPMSEquipment, value: any) => {
+    if (!formData || !('additionalItems' in formData)) return;
+
+    const updatedItems = [...(formData.additionalItems || [])];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
+    handleFieldUpdate('additionalItems', updatedItems);
+  };
+
+  //handle install hour calcs on the fly
+    if (permanentSigns && formData && selectedType) {
+      setFormData(prevData => ({
 
   const handleAddAdditionalItem = useCallback(() => {
     setFormData(prevData => {
@@ -353,6 +387,13 @@ const PermanentSignsSummaryStep = () => {
       return { ...prevData, additionalItems: updatedItems };
     });
   }, []); // Wrapped in useCallback to stabilize function reference
+
+  //sync edit opened state with drawer
+  useEffect(() => {
+    if (!drawerOpen) {
+      setEditOpened(false);
+    }
+  }, [drawerOpen])
 
   const handleRemoveAdditionalItem = useCallback((index: number) => {
     setFormData(prevData => {
@@ -435,15 +476,13 @@ const PermanentSignsSummaryStep = () => {
 
     const commonFields = (
       <>
-        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && (
-          <div className="mt-1">
-            <Label className="text-sm font-medium mb-2 block">Separate Mobilization</Label>
-            <Switch
-              checked={formData.separateMobilization}
-              onCheckedChange={(value) => handleFieldUpdate("separateMobilization", value)}
-            />
-          </div>
-        )}
+        {!!permanentSigns && permanentSigns.signItems.length > 0 && formData.id !== permanentSigns.signItems[0]?.id && <div className='mt-1 bg-red-100'>
+          <Label className='mb-2'>Separate mobilization</Label>
+          <Switch
+            checked={formData.separateMobilization}
+            onCheckedChange={(value) => handleFieldUpdate('separateMobilization', value)}
+          />
+        </div>}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">Personnel</Label>
           <Input
@@ -911,50 +950,28 @@ const PermanentSignsSummaryStep = () => {
             subtext="When you add permanent signs, they will appear here."
           />
         )}
-        {permanentSigns &&
-          permanentSigns.signItems.map(pmsItem => {
-            const itemType = determineItemType(pmsItem);
-            return (
-              <div
-                key={`sign-${pmsItem.id}`}
-                className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
-              >
-                <div className="grid grid-cols-2 mb-4">
-                  <div></div>
-                  <div className="ml-auto flex items-center gap-x-2">
-                    <div className="whitespace-nowrap">Use custom margin</div>
-                    <Switch
-                      checked={!pmsItem.standardPricing}
-                      onCheckedChange={(value) =>
-                        dispatch({
-                          type: "UPDATE_PERMANENT_SIGNS_ITEM",
-                          payload: {
-                            signId: pmsItem.id,
-                            field: "standardPricing",
-                            value: !value,
-                          },
-                        })
-                      }
-                    />
-                    {!pmsItem.standardPricing && (
-                      <Input
-                        type="number"
-                        value={pmsItem.customMargin}
-                        min={0}
-                        step="0.01"
-                        onChange={(e) =>
-                          dispatch({
-                            type: "UPDATE_PERMANENT_SIGNS_ITEM",
-                            payload: {
-                              signId: pmsItem.id,
-                              field: "customMargin",
-                              value: safeNumber(parseFloat(e.target.value)),
-                            },
-                          })
-                        }
-                      />
-                    )}
-                  </div>
+        {permanentSigns && permanentSigns.signItems.map(pmsItem => {
+          const itemType = determineItemType(pmsItem);
+
+          return (
+            <div
+              key={`sign-${pmsItem.id}`}
+              className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
+            >
+              <div className='grid grid-cols-2 mb-4'>
+                <div className='ml-auto flex items-center gap-x-2'>
+                  <div className='whitespace-nowrap'>Use custom margin</div>
+                  <Switch
+                    checked={!pmsItem.standardPricing}
+                    onCheckedChange={(value) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'standardPricing', value: !value } })}
+                  />
+                  {!pmsItem.standardPricing && <Input
+                    type='number'
+                    value={pmsItem.customMargin}
+                    min={0}
+                    step='0.01'
+                    onChange={(e) => dispatch({ type: 'UPDATE_PERMANENT_SIGNS_ITEM', payload: { signId: pmsItem.id, field: 'customMargin', value: safeNumber(parseInt(e.target.value)) } })}
+                  />}
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-end space-x-4">
@@ -994,6 +1011,37 @@ const PermanentSignsSummaryStep = () => {
                     <div className="text-sm text-muted-foreground">
                       Trips: {pmsItem.numberTrips || "-"}
                     </div>
+                  </div>}
+                  {Object.hasOwn(pmsItem, 'signSqFootage') && <div className="text-sm text-muted-foreground">Square Footage: {(pmsItem as PostMountedInstall).signSqFootage}</div>}
+                  <div className="text-sm text-muted-foreground">
+                    {pmsItem?.quantity ? `Installs: ${pmsItem.quantity}` : 'Not configured'}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditItem(pmsItem.id)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleItemDelete(pmsItem.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              {/***Financials */}
+              <div className='grid grid-cols-3 mt-4'>
+                <div className="flex flex-col mt-1">
+                  <label className="text-sm font-semibold">
+                    Total Revenue
+                  </label>
+                  <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    ${getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => handleEditItem(pmsItem.id)}>
@@ -1107,25 +1155,64 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
-            <div className="w-full">
-              <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-              <Select
-                value={selectedType}
-                onValueChange={handleTypeChange}
-                disabled={!!editingId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose permanent sign item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                    <SelectItem key={key} value={key}>
-                      {displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+            {/* Sign Type Selection */}
+            {
+              // Selector de tipo original
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
+                <Select
+                  value={selectedType}
+                  onValueChange={handleTypeChange}
+                  disabled={!!editingId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose permanent sign item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
+                      <SelectItem key={key} value={key}>
+                        {displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+
+            {
+              selectedType &&
+              <div className="flex flex-col items-start w-full">
+                <div className="flex items-start space-x-2 mb-4 flex-col">
+                  <Label className="" htmlFor="custom-sign-name">Use custom name type</Label>
+                  <Switch
+                    className="mt-4"
+                    id="custom-sign-name"
+                    checked={isCustomName}
+                    onCheckedChange={(value) => {
+                      setIsCustomName(value);
+                      if (!value) {
+                        handleFieldUpdate('customItemTypeName', '')
+                      }
+                    }}
+                  />
+                </div>
+                {isCustomName && (
+                  <div className="w-full flex flex-col">
+                    <Label className="text-sm font-medium mb-2 block">Personalized name</Label>
+                    <Input
+                      type="text"
+                      value={formData?.customItemTypeName || ""}
+                      onChange={(e) => handleFieldUpdate('customItemTypeName', e.target.value)}
+                      className="w-full"
+                      placeholder="Enter a name..."
+                    />
+                  </div>
+                )}
+              </div>
+            }
+
+            {/* Render form fields based on selected type */}
             {selectedType && renderFormFields()}
           </div>
           <DrawerFooter>

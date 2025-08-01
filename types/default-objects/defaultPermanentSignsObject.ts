@@ -97,7 +97,7 @@ export const defaultPermanentSignsObject: PermanentSigns = {
         'resetTypeB': 0,
         'resetTypeF': 0,
         'removeTypeB': 0,
-        'removeTypeF': 0
+        'removeTypeF': 0,
     },
     equipmentData: [],
     signItems: []
