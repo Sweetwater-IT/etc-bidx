@@ -7,7 +7,6 @@ import { safeNumber } from '@/lib/safe-number'
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 import { determineItemType } from '@/types/TPermanentSigns'
 import { getDisplayName } from '@/types/TPermanentSigns'
-import { formatCurrencyValue } from '@/lib/formatDecimals'
 
 interface BasicSummaryTotals {
     totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin: number
@@ -138,19 +137,17 @@ const PermSignsRevenueAndProfit = () => {
 
             {permanentSigns?.signItems && permanentSigns.signItems.length > 0 ? (
                 <>
-                    {/* Sale Items Row */}
                     {permSignItemRows.map((sign, index) => (
                         <div key={index} className="grid grid-cols-5 text-sm py-1">
-                            <div className='truncate pr-2'>{getDisplayName(sign.name as any)}</div>
-                            <div>${sign.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className="whitespace-normal break-words pr-2">
+                                {getDisplayName(sign.name as any)}
+                            </div>                            <div>${sign.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>${sign.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>${sign.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>{(safeNumber(sign.grossMargin) * 100).toFixed(2)}%</div>
                         </div>
                     ))}
 
-
-                    {/* Sale Items Total */}
                     <div className="grid grid-cols-5 border-t border-gray-300 py-1 bg-green-50">
                         <div className="text-sm font-medium">Total</div>
                         <div className="text-sm font-medium">
@@ -192,7 +189,7 @@ const PermSignsRevenueAndProfit = () => {
                         </p>
                     </div>
 
-                    {/* ALL TOTALS in orange (even when no sale items) */}
+                    {/* ALL TOTALS in orange (even when no permanent signs items) */}
                     <div className="grid grid-cols-5 border-t border-gray-300 mt-2" style={{ backgroundColor: '#ed7d31' }}>
                         <div className="text-sm font-medium">BID TOTAL</div>
                         <div className="text-sm font-medium">
