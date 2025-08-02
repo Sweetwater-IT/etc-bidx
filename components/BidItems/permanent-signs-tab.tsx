@@ -966,7 +966,7 @@ const PermanentSignsSummaryStep = () => {
                     <div className="font-medium">{pmsItem.customItemTypeName ? pmsItem.customItemTypeName : getDisplayName(itemType)}</div>
                     {(itemType === "pmsTypeB" || itemType === "pmsTypeF" || itemType === "pmsTypeC") ? (
                       <div className="flex gap-x-2 items-center">
-                        <label className="text-red-400 text-sm font-medium">Price Per Square Foot:</label>
+                        <label className="text-red-400 text-sm font-medium">Price Per Square Foot: $</label>
                         <div className="text-sm text-red-500">
                           {formatCurrencyValue(
                             getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental)
@@ -976,8 +976,8 @@ const PermanentSignsSummaryStep = () => {
                       </div>
                     ) : (
                       <div className="flex gap-x-2 items-center">
-                        <label className="text-red-400 text-sm font-medium">Price Per Sign:</label>
-                        <div className="text-sm text-red-500">
+                        <label className="text-red-400 text-sm font-medium">Price Per Sign: $</label>
+                        <div className="text-sm text-red-500"> 
                           {formatCurrencyValue(
                             getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental)
                               .revenue / pmsItem.quantity

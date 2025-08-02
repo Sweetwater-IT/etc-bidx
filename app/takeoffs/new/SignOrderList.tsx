@@ -355,6 +355,15 @@ export function SignOrderList({
     }
   }, [mptRental.phases, currentPhase, onlyTable]);
 
+  function getBLightColorCode(bLightsColor?: string): string {
+    console.log('retornare ', bLightsColor);
+
+    if (!bLightsColor) return '';
+    if (bLightsColor === 'Red') return 'R';
+    if (bLightsColor === 'White') return 'W';
+    return 'Y';
+  }
+
   const formatColumnValue = useCallback((
     sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign,
     column: keyof PrimarySign
@@ -375,14 +384,7 @@ export function SignOrderList({
         if (!isPrimary) {
           valueToReturn = '-';
         } else {
-          const bLightColor = !sign.bLightsColor
-            ? ''
-            : (sign as PrimarySign).bLightsColor === 'Red'
-              ? 'R'
-              : (sign as PrimarySign).bLightsColor === 'White'
-                ? 'W'
-                : 'Y';
-          valueToReturn = sign[column] + ' ' + bLightColor;
+          valueToReturn = sign[column] + ' ' + getBLightColorCode(sign.bLightsColor);
         }
         break;
       case 'associatedStructure':
@@ -421,8 +423,8 @@ export function SignOrderList({
               <button
                 type="button"
                 className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase !== '' && !hasCopied
-                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer'
-                    : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                   }`}
                 disabled={selectedPhase === '' || hasCopied}
                 onClick={() => {
@@ -661,7 +663,7 @@ export function SignOrderList({
                                 </Tooltip>
                               </TooltipProvider>
                             ) : sc.key === 'bLights' ?
-                              Number(sign.quantity * (sign as any).bLights)
+                              Number(sign.quantity * (sign as any).bLights) + " " + getBLightColorCode(sign.bLightsColor)
                               :
                               (
                                 formatColumnValue(sign, sc.key as keyof PrimarySign)
