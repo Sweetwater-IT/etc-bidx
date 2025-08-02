@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
+import { singleQuote } from 'pdf-lib';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -339,8 +340,8 @@ export function SignOrderList({
     const signTotals = returnSignTotalsSquareFootage(mptRental);
     setSquareFootageTotal(
       signTotals.HI.totalSquareFootage +
-        signTotals.DG.totalSquareFootage +
-        signTotals.Special.totalSquareFootage
+      signTotals.DG.totalSquareFootage +
+      signTotals.Special.totalSquareFootage
     );
   }, [mptRental]);
 
@@ -377,10 +378,10 @@ export function SignOrderList({
           const bLightColor = !sign.bLightsColor
             ? ''
             : (sign as PrimarySign).bLightsColor === 'Red'
-            ? 'R'
-            : (sign as PrimarySign).bLightsColor === 'White'
-            ? 'W'
-            : 'Y';
+              ? 'R'
+              : (sign as PrimarySign).bLightsColor === 'White'
+                ? 'W'
+                : 'Y';
           valueToReturn = sign[column] + ' ' + bLightColor;
         }
         break;
@@ -419,11 +420,10 @@ export function SignOrderList({
               </select>
               <button
                 type="button"
-                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${
-                  selectedPhase !== '' && !hasCopied
+                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase !== '' && !hasCopied
                     ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer'
                     : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                }`}
+                  }`}
                 disabled={selectedPhase === '' || hasCopied}
                 onClick={() => {
                   handleCopySigns();
@@ -488,183 +488,188 @@ export function SignOrderList({
                 <TableRow key={sign.id}>
                   {SIGN_COLUMNS
                     .filter(sc => (shopMode ? !sc.shopOnly || sc.shopOnly === true : !sc.shopOnly))
-                    .map((sc, index) => (
-                      <TableCell className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''} key={sc.key}>
-                        <div className="flex items-center text-nowrap truncate max-w-50">
-                          {Object.hasOwn(sign, 'primarySignId') && index === 0 && (
-                            <ChevronRight className="inline h-6 text-muted-foreground" />
-                          )}
-                          {shopMode && (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
-                            <div className="flex items-center">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
-                                onClick={() =>
-                                  adjustShopValue &&
-                                  adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', -1)
-                                }
-                              >
-                                -
-                              </Button>
-                              <Input
-                                type="number"
-                                value={(sign as any)[sc.key] || 0}
-                                onChange={e => {
-                                  const value = parseInt(e.target.value);
-                                  const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
-                                  if (updateShopTracking) {
-                                    updateShopTracking(
-                                      sign.id,
-                                      sc.key as 'inStock' | 'order' | 'make',
-                                      newValue
-                                    );
-                                  }
-                                }}
-                                className="h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner"
-                                min={0}
-                                max={999}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
-                                onClick={() =>
-                                  adjustShopValue &&
-                                  adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', 1)
-                                }
-                              >
-                                +
-                              </Button>
-                            </div>
-                          ) : sc.key === 'quantity' ? (
-                            Object.hasOwn(sign, 'primarySignId') ? (
-                              formatColumnValue(sign, 'quantity')
-                            ) : (
-                              <div className="inline-flex items-center">
-                                <button
+                    .map((sc, index) => {
+                      return (
+                        <TableCell className={sc.sticky ? 'sticky right-0 bg-white z-10' : ''} key={sc.key}>
+                          <div className="flex items-center text-nowrap truncate max-w-50">
+                            {Object.hasOwn(sign, 'primarySignId') && index === 0 && (
+                              <ChevronRight className="inline h-6 text-muted-foreground" />
+                            )}
+                            {shopMode && (sc.key === 'inStock' || sc.key === 'order' || sc.key === 'make') ? (
+                              <div className="flex items-center">
+                                <Button
                                   type="button"
-                                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                  variant="outline"
+                                  className="h-8 w-8 text-xs rounded-r-none border-r-0 bg-gray-100 hover:bg-gray-200"
                                   onClick={() =>
-                                    sign.quantity === 0
-                                      ? console.log('no')
-                                      : handleQuantityChange(sign.id, sign.quantity - 1)
+                                    adjustShopValue &&
+                                    adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', -1)
                                   }
-                                  aria-label="Decrease quantity"
                                 >
                                   -
-                                </button>
-                                <input
+                                </Button>
+                                <Input
                                   type="number"
-                                  min={0}
-                                  max={999}
-                                  value={sign.quantity}
+                                  value={(sign as any)[sc.key] || 0}
                                   onChange={e => {
                                     const value = parseInt(e.target.value);
                                     const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
-                                    handleQuantityChange(sign.id, safeNumber(newValue));
-                                  }}
-                                  className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
-                                  style={{ width: 40, height: 28 }}
-                                />
-                                <button
-                                  type="button"
-                                  className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
-                                  onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
-                                  aria-label="Increase quantity"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            )
-                          ) : sc.key === 'actions' ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild className="flex items-center justify-center">
-                                <Button variant="ghost" size="sm" className="!p-[2px]">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    console.log('Editing sign:', sign.id);
-                                    setLocalSign({ ...sign });
-                                    setOpen(true);
-                                    setMode('edit');
-                                  }}
-                                >
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                {Object.hasOwn(sign, 'associatedStructure') && (
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      console.log('Adding secondary sign for primary:', sign.id, 'in phase:', currentPhase);
-                                      const defaultSecondary: SecondarySign = {
-                                        id: generateUniqueId(),
-                                        primarySignId: sign.id,
-                                        designation: '',
-                                        width: 0,
-                                        height: 0,
-                                        quantity: sign.quantity,
-                                        sheeting: 'HI',
-                                        isCustom: false,
-                                        description: '',
-                                        substrate: 'Plastic',
-                                      };
-                                      setLocalSign({ ...defaultSecondary });
-                                      setMode('create');
-                                      setOpen(false);
-                                    }}
-                                  >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Secondary Sign
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    console.log('Deleting sign:', sign.id, 'from phase:', currentPhase);
-                                    deleteAssociatedEquipmentInfo(sign.id);
-                                    dispatch({
-                                      type: 'DELETE_MPT_SIGN',
-                                      payload: { phaseNumber: currentPhase, signId: sign.id },
-                                    });
-                                    if (Object.hasOwn(sign, 'associatedStructure')) {
-                                      mptRental.phases[currentPhase].signs.forEach(s => {
-                                        if ('primarySignId' in s && s.primarySignId === sign.id) {
-                                          dispatch({
-                                            type: 'DELETE_MPT_SIGN',
-                                            payload: { phaseNumber: currentPhase, signId: s.id },
-                                          });
-                                        }
-                                      });
+                                    if (updateShopTracking) {
+                                      updateShopTracking(
+                                        sign.id,
+                                        sc.key as 'inStock' | 'order' | 'make',
+                                        newValue
+                                      );
                                     }
                                   }}
+                                  className="h-8 rounded-none text-center w-10 min-w-[2.5rem] px-0 text-xs no-spinner"
+                                  min={0}
+                                  max={999}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="h-8 w-8 text-xs rounded-l-none border-l-0 bg-gray-100 hover:bg-gray-200"
+                                  onClick={() =>
+                                    adjustShopValue &&
+                                    adjustShopValue(sign.id, sc.key as 'inStock' | 'order' | 'make', 1)
+                                  }
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : sc.key === 'description' ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-pointer truncate block">
-                                    {formatColumnValue(sign, sc.key as keyof PrimarySign)}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">{sign.description || 'No description'}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            formatColumnValue(sign, sc.key as keyof PrimarySign)
-                          )}
-                        </div>
-                      </TableCell>
-                    ))}
+                                  +
+                                </Button>
+                              </div>
+                            ) : sc.key === 'quantity' ? (
+                              Object.hasOwn(sign, 'primarySignId') ? (
+                                formatColumnValue(sign, 'quantity')
+                              ) : (
+                                <div className="inline-flex items-center">
+                                  <button
+                                    type="button"
+                                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                    onClick={() =>
+                                      sign.quantity === 0
+                                        ? console.log('no')
+                                        : handleQuantityChange(sign.id, sign.quantity - 1)
+                                    }
+                                    aria-label="Decrease quantity"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={999}
+                                    value={sign.quantity}
+                                    onChange={e => {
+                                      const value = parseInt(e.target.value);
+                                      const newValue = isNaN(value) ? 0 : Math.max(0, Math.min(999, value));
+                                      handleQuantityChange(sign.id, safeNumber(newValue));
+                                    }}
+                                    className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
+                                    style={{ width: 40, height: 28 }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="w-7 h-7 flex items-center justify-center border rounded bg-muted text-lg hover:bg-accent"
+                                    onClick={() => handleQuantityChange(sign.id, sign.quantity + 1)}
+                                    aria-label="Increase quantity"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              )
+                            ) : sc.key === 'actions' ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild className="flex items-center justify-center">
+                                  <Button variant="ghost" size="sm" className="!p-[2px]">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      console.log('Editing sign:', sign.id);
+                                      setLocalSign({ ...sign });
+                                      setOpen(true);
+                                      setMode('edit');
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  {Object.hasOwn(sign, 'associatedStructure') && (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        console.log('Adding secondary sign for primary:', sign.id, 'in phase:', currentPhase);
+                                        const defaultSecondary: SecondarySign = {
+                                          id: generateUniqueId(),
+                                          primarySignId: sign.id,
+                                          designation: '',
+                                          width: 0,
+                                          height: 0,
+                                          quantity: sign.quantity,
+                                          sheeting: 'HI',
+                                          isCustom: false,
+                                          description: '',
+                                          substrate: 'Plastic',
+                                        };
+                                        setLocalSign({ ...defaultSecondary });
+                                        setMode('create');
+                                        setOpen(false);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Secondary Sign
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      console.log('Deleting sign:', sign.id, 'from phase:', currentPhase);
+                                      deleteAssociatedEquipmentInfo(sign.id);
+                                      dispatch({
+                                        type: 'DELETE_MPT_SIGN',
+                                        payload: { phaseNumber: currentPhase, signId: sign.id },
+                                      });
+                                      if (Object.hasOwn(sign, 'associatedStructure')) {
+                                        mptRental.phases[currentPhase].signs.forEach(s => {
+                                          if ('primarySignId' in s && s.primarySignId === sign.id) {
+                                            dispatch({
+                                              type: 'DELETE_MPT_SIGN',
+                                              payload: { phaseNumber: currentPhase, signId: s.id },
+                                            });
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : sc.key === 'description' ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-pointer truncate block">
+                                      {formatColumnValue(sign, sc.key as keyof PrimarySign)}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="max-w-xs">{sign.description || 'No description'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : sc.key === 'bLights' ?
+                              Number(sign.quantity * (sign as any).bLights)
+                              :
+                              (
+                                formatColumnValue(sign, sc.key as keyof PrimarySign)
+                              )}
+                          </div>
+                        </TableCell>
+                      )
+                    })}
                 </TableRow>
               ))}
           </TableBody>
