@@ -39,13 +39,12 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
 
     const params = useSearchParams();
 
-
     const handleSubmit = async () => {
         if (!id) {
             toast.error('Bid ID is not set')
             return;
         }
-        try {
+        try {            
             startLoading();
             const newBidId = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'PENDING', notes, id);
             toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
@@ -133,5 +132,6 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     )
 
 }
+
 
 export default StepperSaveButtons

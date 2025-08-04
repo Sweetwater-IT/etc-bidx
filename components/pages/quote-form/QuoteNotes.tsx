@@ -23,6 +23,8 @@ interface QuoteNotesProps {
   onEdit: (index: number, updatedNote: Note) => void
   onDelete: (index: number) => void
   loading?: boolean
+  title?: string;
+  canEdit?: boolean
 }
 
 function formatDateTime (ts: number) {
@@ -71,7 +73,9 @@ export function QuoteNotes ({
   onSave,
   onEdit,
   onDelete,
-  loading
+  loading,
+  title = "Recent activity",
+  canEdit = true
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -129,7 +133,7 @@ export function QuoteNotes ({
 
   return (
     <div className='rounded-lg border p-6'>
-      <h2 className='mb-4 text-lg font-semibold'>Recent activity</h2>
+      <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
       <div className='space-y-4'>
         {loading ? (
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
@@ -137,7 +141,7 @@ export function QuoteNotes ({
           </div>
         ) : notes.length === 0 && !isAdding ? (
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
-            No recent activity
+            No {title}
           </div>
         ) : null}
         {notes.length > 0 && !loading && (
@@ -184,31 +188,35 @@ export function QuoteNotes ({
                       <>
                         <div className='text-sm mb-1 flex items-center'>
                           <span>{note.text}</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                className='ml-2'
-                              >
-                                <span className='sr-only'>Open options</span>
-                                <MoreVertical className='h-4 w-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end' className='w-28'>
-                              <DropdownMenuItem
-                                onClick={() => handleEditNote(idx)}
-                              >
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteNote(idx)}
-                                variant='destructive'
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {
+                            canEdit &&
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='ml-2'
+                                >
+                                  <span className='sr-only'>Open options</span>
+                                  <MoreVertical className='h-4 w-4' />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align='end' className='w-28'>
+                                <DropdownMenuItem
+                                  onClick={() => handleEditNote(idx)}
+                                >
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteNote(idx)}
+                                  variant='destructive'
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
+                          }
                         </div>
                         <div className='text-xs text-muted-foreground'>
                           {formatDateTime(note.timestamp)} by{' '}
@@ -244,7 +252,7 @@ export function QuoteNotes ({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : canEdit && (
           <Button variant='outline' onClick={handleAddNote}>
             + Add note
           </Button>

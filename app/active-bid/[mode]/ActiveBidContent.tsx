@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useLoading } from "@/hooks/use-loading";
 import { fetchActiveBidById } from "@/lib/api-client";
 
+
 function formatCreatedAt(value: string) {
     const dateStr = value.split("T")[0]; // Gets "2025-05-26"
     const [year, month, day] = dateStr.split("-");

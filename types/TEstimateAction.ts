@@ -6,6 +6,7 @@ import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
 import { County } from "./TCounty";
 import { PMSItemNumbers, AllPMSItemKeys, PMSEquipmentPiece, PMSItemKeys, PermanentSigns } from "./TPermanentSigns";
+import { INote } from "./TEstimate";
 
 interface AddMPTItemNotSignPayload {
 	phaseNumber: number;
@@ -157,8 +158,8 @@ export type EstimateAction =
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
 	| { type: 'COPY_PERMANENT_SIGNS', payload: PermanentSigns}
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
-	| { type: 'UPDATE_NOTES', payload: string }
-	| { type: 'COPY_NOTES', payload: string }
+	| { type: 'UPDATE_NOTES', payload: INote[] }
+	| { type: 'COPY_NOTES', payload: INote[] }
 	| { type: 'SET_FIRST_SAVE', payload: number }
 	| { type: 'SET_ID', payload: number }
 	| {

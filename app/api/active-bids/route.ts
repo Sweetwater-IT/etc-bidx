@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
       saleItems: SaleItem[];
       permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
-      notes: string;
+notes: { text: string, timestamp: number }[]
     };
 
     // Calculate totals
@@ -549,6 +549,33 @@ export async function POST(request: NextRequest) {
       bidEstimateId = newBid.id;
     }
 
+    if (notes && notes.length > 0) {
+      if (id) {
+        await supabase
+          .from('bid_notes')
+          .delete()
+          .eq('bid_id', bidEstimateId);
+      }
+
+      const noteInserts = notes.map(note => {
+        const isoTimestamp = new Date(note.timestamp).toISOString();
+
+        return {
+          bid_id: bidEstimateId,  
+          text: note.text,
+          created_at: isoTimestamp
+        }
+      });
+
+      const { error: notesError } = await supabase
+        .from('bid_notes')
+        .insert(noteInserts);
+
+      if (notesError) {
+        throw new Error(`Failed to insert bid notes: ${notesError.message}`);
+      }
+    }
+    
     // Upsert admin data
     const { error: adminError } = await supabase
       .from('admin_data_entries')

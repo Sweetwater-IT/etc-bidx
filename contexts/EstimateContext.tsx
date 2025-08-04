@@ -16,7 +16,7 @@ const defaultBidState: EstimateContextType = {
   permanentSigns: defaultPermanentSignsObject,
   saleItems: [],
   ratesAcknowledged: false,
-  notes: '',
+  notes: [],
   firstSaveTimestamp: null,
   id: null
 };

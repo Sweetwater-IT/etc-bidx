@@ -550,7 +550,7 @@ export const estimateReducer = (
 				flagging: defaultFlaggingObject,
 				equipmentRental: [],
 				ratesAcknowledged: false,
-				notes: '',
+				notes: [],
 				firstSaveTimestamp: null,
 				id: null
 				// permanentSigns: defaultPermanentSignsObject, 
@@ -659,16 +659,18 @@ export const estimateReducer = (
 				notes: action.payload
 			}
 
-		case 'SET_RATES_ACKNOWLEDGED':
-			return {
-				...state,
-				ratesAcknowledged: action.payload
-			}
 		case 'UPDATE_NOTES':
 			return {
 				...state,
 				notes: action.payload
 			}
+
+		case 'SET_RATES_ACKNOWLEDGED':
+			return {
+				...state,
+				ratesAcknowledged: action.payload
+			}
+
 
 		case 'SET_FIRST_SAVE':
 			return {
@@ -676,7 +678,7 @@ export const estimateReducer = (
 				firstSaveTimestamp: action.payload
 			}
 
-		case 'SET_ID':
+		case 'SET_ID':			
 			return {
 				...state,
 				id: action.payload

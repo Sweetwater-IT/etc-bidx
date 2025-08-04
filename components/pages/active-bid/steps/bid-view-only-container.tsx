@@ -59,9 +59,7 @@ const SUBCONTRACTOR_OPTIONS = [
 const BidViewOnlyContainer = () => {
   const searchParams = useSearchParams()
   const bidId = searchParams?.get('bidId')
-  const [localNotes, setLocalNotes] = useState<string>('')
-  const [savedNotes, setSavedNotes] = useState<string>('')
-  const [isSavingNotes, setIsSavingNotes] = useState<boolean>(false)
+  const [localNotes, setLocalNotes] = useState<{ id: number; text: string; created_at: Date }[]>([])
   const [contractor, setContractor] = useState<Customer>()
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [subcontractor, setSubcontractor] = useState<{
@@ -109,10 +107,12 @@ const BidViewOnlyContainer = () => {
         const response = await fetch(`/api/active-bids/${bidId}`)
         if (response.ok) {
           const result = await response.json()
+
           if (result.success && result.data) {
-            const notes = result.data.notes || ''
-            setLocalNotes(notes)
-            setSavedNotes(notes)
+            const notes = result.data.bid_notes || []
+            if (notes.length > 0) {
+              setLocalNotes(notes)
+            }
           }
         }
       } catch (error) {
@@ -123,34 +123,34 @@ const BidViewOnlyContainer = () => {
     fetchBidData()
   }, [bidId])
 
-  const handleSaveNotes = async () => {
-    if (!bidId) return
+  // const handleSaveNotes = async () => {
+  //   if (!bidId) return
 
-    setIsSavingNotes(true)
-    try {
-      const response = await fetch(`/api/active-bids/${bidId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notes: localNotes })
-      })
+  //   setIsSavingNotes(true)
+  //   try {
+  //     const response = await fetch(`/api/active-bids/${bidId}`, {
+  //       method: 'PATCH',
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify({ notes: localNotes })
+  //     })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        toast.error(errorData.message || 'Failed to save notes')
-      } else {
-        const result = await response.json()
-        toast.success('Notes saved successfully')
-        setSavedNotes(localNotes)
-      }
-    } catch (error) {
-      console.error('Error saving notes:', error)
-      toast.error('Failed to save notes')
-    } finally {
-      setIsSavingNotes(false)
-    }
-  }
+  //     if (!response.ok) {
+  //       const errorData = await response.json()
+  //       toast.error(errorData.message || 'Failed to save notes')
+  //     } else {
+  //       const result = await response.json()
+  //       toast.success('Notes saved successfully')
+  //       setSavedNotes(localNotes)
+  //     }
+  //   } catch (error) {
+  //     console.error('Error saving notes:', error)
+  //     toast.error('Failed to save notes')
+  //   } finally {
+  //     setIsSavingNotes(false)
+  //   }
+  // }
 
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024, // 50MB
@@ -260,11 +260,10 @@ const BidViewOnlyContainer = () => {
   }
 
   // Check if notes have changed
-  const hasUnsavedChanges = localNotes !== savedNotes
 
   // Fetch notes for the bid on mount
   useEffect(() => {
-    async function fetchNotes () {
+    async function fetchNotes() {
       setLoadingNotes(true)
       try {
         if (!bidId) return
@@ -503,11 +502,16 @@ const BidViewOnlyContainer = () => {
             </div>
           </div>
           <QuoteNotes
-            notes={notes}
+            notes={localNotes.map(note => ({
+              timestamp: new Date(note.created_at).getTime(), // convertir fecha ISO a timestamp numérico
+              text: note.text
+            }))}
+            title='Notes'
             onSave={handleSaveNote}
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
             loading={loadingNotes}
+            canEdit={false}
           />
           <div className='rounded-lg border p-6'>
             <h2 className='mb-4 text-lg font-semibold'>Files</h2>

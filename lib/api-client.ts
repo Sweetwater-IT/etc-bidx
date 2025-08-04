@@ -12,6 +12,7 @@ import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
+import { INote } from '@/types/TEstimate';
 import { Flagging } from '@/types/TFlagging';
 import { PermanentSigns } from '@/types/TPermanentSigns';
 import { SaleItem } from '@/types/TSaleItem';
@@ -268,7 +269,7 @@ export async function createActiveBid(
   saleItems: SaleItem[],
   permanentSigns: PermanentSigns,
   status: 'PENDING' | 'DRAFT',
-  notes: string,
+  notes: INote[],
   id?: number,
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
@@ -311,7 +312,7 @@ export async function createActiveBid(
 /**
  * Update an existing active bid
  */
-export async function updateActiveBid(id: number, data: any): Promise<BidEstimate> {
+export async function updateActiveBid(id: number, data: any): Promise<BidEstimate> {  
   try {
     // If the data contains adminData, ensure division and owner fields have valid values
     if (data.adminData && typeof data.adminData === 'object') {

@@ -5,6 +5,11 @@ import { PermanentSigns } from "./TPermanentSigns";
 import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { SaleItem } from "./TSaleItem";
 
+export interface INote {
+    text:string;
+    timestamp: number;
+}
+
 export type Estimate = {
     adminData : AdminData,
     mptRental : MPTRentalEstimating
@@ -17,7 +22,7 @@ export type Estimate = {
     totalCost? : number;
     totalGrossProfit? : number;
     ratesAcknowledged: boolean;
-    notes: string
+    notes: INote[] | [];
     firstSaveTimestamp: number | null
     id: number | null
 }
