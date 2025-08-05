@@ -108,6 +108,8 @@ export default function MPTOrderContentSimple ({
 
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const [shouldGeneratePDF, setShouldGeneratePDF] = useState(false)
+  const pdfDownloadRef = useRef<HTMLAnchorElement>(null)
 
   const isOrderInvalid = (): boolean => {
     return (
@@ -284,7 +286,7 @@ export default function MPTOrderContentSimple ({
     const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged
 
     // Don't autosave if no changes, no contract number, or if it's never been saved
-    if ( !hasAnyStateChanged) return
+    if (isOrderInvalid() || !hasAnyStateChanged) return
     else {
       // Clear timeout if there is one
       if (saveTimeoutRef.current) {
@@ -292,10 +294,6 @@ export default function MPTOrderContentSimple ({
       }
       const normalizedSigns = mptRental.phases[0].signs.map(normalizeSign);
       const { type3Signs, trailblazersSigns, looseSigns } = categorizeSigns(normalizedSigns);
-      // Set signList as an object with categorized arrays
-      setType3Signs(type3Signs)
-      setTrailblazersSigns(trailblazersSigns)
-      setLooseSigns(looseSigns)
       setSignList({
         type3Signs,
         trailblazersSigns,
@@ -539,11 +537,23 @@ export default function MPTOrderContentSimple ({
     }
   }
 
-  const pdfDoc = useMemo(
-    () => <MPTOrderWorksheetPDF adminInfo={adminInfo} type3Signs={type3Signs} trailblazersSigns={trailblazersSigns} looseSigns={looseSigns} mptRental={mptRental} notes={notes} />,
-    [adminInfo, type3Signs, trailblazersSigns, looseSigns, mptRental, notes]
-  );
+  const generatePDF = () => {
+    console.log("Generating PDF...")
+    return <MPTOrderWorksheetPDF adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />;
+  };
 
+  const handleDownloadPDF = () => {
+    setShouldGeneratePDF(true);
+    // Wait for the PDFDownloadLink to render, then click it
+    setTimeout(() => {
+      const downloadElement = document.getElementById('download') as HTMLAnchorElement;
+      if (downloadElement) {
+        downloadElement.click();
+      }
+      setShouldGeneratePDF(false);
+    }, 1500);
+  };
+  
   return mptRental.phases.length > 0 ? (
     <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
@@ -610,16 +620,21 @@ export default function MPTOrderContentSimple ({
                 loading={loadingNotes}
               />
           </div>
-          {/* PDF Preview Section: only render if visible */}
-          <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
-            <div className='flex justify-end'>
-              <PDFDownloadLink
-                document={pdfDoc}
-                fileName="mpt-order.pdf"
-              >
-                <Button>Download PDF</Button>
-              </PDFDownloadLink>
-            </div>
+                     {/* PDF Preview Section: only render if visible */}
+           <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
+             <div className='flex justify-end'>
+                {shouldGeneratePDF ? (
+                  <PDFDownloadLink
+                    document={generatePDF()}
+                    fileName="mpt-order.pdf"
+                    id="download"
+                  >
+                      <Button>Generating...</Button>
+                  </PDFDownloadLink>
+                ) : (
+                  <Button onClick={handleDownloadPDF}>Download PDF</Button>
+                )}
+             </div>
             <div className='min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]'>
               <MPTOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
             </div>
@@ -655,7 +670,5 @@ const categorizeSigns = (signs: SignItem[]) => {
       looseSigns.push(sign);
     }
   });
-
-
   return { type3Signs, trailblazersSigns, looseSigns };
 };

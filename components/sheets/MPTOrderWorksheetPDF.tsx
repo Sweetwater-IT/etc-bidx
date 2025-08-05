@@ -19,9 +19,11 @@ export interface SignItem {
 
 interface Props {
   adminInfo: SignOrderAdminInformation
-  type3Signs: SignItem[]
-  trailblazersSigns: SignItem[]
-  looseSigns: SignItem[]
+  signList: {
+    type3Signs: SignItem[];
+    trailblazersSigns: SignItem[];
+    looseSigns: SignItem[];
+  };
   mptRental: MPTRentalEstimating | undefined
   notes: Note[]
 }
@@ -49,7 +51,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', // Remove black background
     color: '#000', // Black text
     alignItems: 'center',
-    borderBottom: '2px solid black',
     padding: 8
   },
   titleText: {
@@ -77,15 +78,19 @@ const styles = StyleSheet.create({
     paddingTop: 12
   },
   headerContainer: {
-    borderBottom: '2px solid black',
-    borderTop: '2px solid black',
+    borderBottom: '4px solid black',
+    borderTop: '4px solid black',
     marginBottom: 0,
     marginTop: 0
   },
   headerRow: {
     flexDirection: 'row',
     borderBottom: '1.5px solid black',
-    minHeight: 20
+    minHeight: 20,
+  },
+  lastHeaderRow: {
+    flexDirection: 'row',
+    minHeight: 20,
   },
   headerCell: {
     flex: 1,
@@ -215,16 +220,10 @@ const Footer = ({
 
 const MPTOrderWorksheetPDF: React.FC<Props> = ({
   adminInfo,
-  type3Signs,
-  trailblazersSigns,
-  looseSigns,
+  signList,
   mptRental,
   notes
 }) => {
-  const [signList, setSignList] = useState<SignItem[]>([])
-  useEffect(() => {
-    setSignList([...trailblazersSigns.map((item) => ({...item, type: 'trailblazers' as const})), ...type3Signs.map((item) => ({...item, type: 'type3' as const})), ...looseSigns.map((item) => ({...item, type: 'loose' as const}))])
-  }, [trailblazersSigns, type3Signs, looseSigns])
   return (
   <Document>
     <Page size='A4' style={styles.page}>
@@ -287,7 +286,7 @@ const MPTOrderWorksheetPDF: React.FC<Props> = ({
               </Text>
             </View>
           </View>
-          <View style={styles.headerRow}>
+          <View style={styles.lastHeaderRow}>
             <View style={styles.headerCell}>
               <Text style={styles.label}>Order Date:</Text>
               <Text style={styles.value}>
@@ -326,106 +325,59 @@ const MPTOrderWorksheetPDF: React.FC<Props> = ({
               <Text style={[styles.cell, styles.columnHeader, { flex: 0.4 }]}>Legend</Text>
               <Text style={[styles.cell, styles.columnHeader, { flex: 0.2 }]}>Structure</Text>
             </View>
-            {
-              signList.map((item, idx) => (
-                <>
-                  <View style={styles.row} key={idx}>
-                    <Text style={[styles.cell, { flex: 0.1 }]}>{item.quantity || 0}</Text>
-                    <Text style={[styles.cell, { flex: 0.1 }]}>{item.size || ''}</Text>
-                    <Text style={[styles.cell, { flex: 0.4 }]}>{item.legend || ''}</Text>
-                    <Text style={[styles.cell, { flex: 0.2 }]}>{item.displayStructure || ''}</Text>
-                  </View>
-                </>
-              ))
-            }
-            {/* Group items by type and render with category headers */}
-            {(() => {
-              const groupedItems = {
-                trailblazers: signList.filter(item => item.type === 'trailblazers'),
-                type3: signList.filter(item => item.type === 'type3'),
-                loose: signList.filter(item => item.type === 'loose')
-              };
-              
-              const sections: React.ReactElement[] = [];
-              
-              // TRAILBLAZERS Section
-              if (groupedItems.trailblazers.length > 0) {
-                sections.push(
-                  <View key="trailblazers-section">
-                    {groupedItems.trailblazers.map((item, idx) => (
-                      <View style={styles.row} key={`trailblazers-${idx}`}>
-                        {idx === 0 && (
-                          <Text style={[styles.cell, { flex: 0.2, borderRight: '1.5px solid black' }]}>
-                            TRAILBLAZERS
-                          </Text>
-                        )}
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.quantity || 0}</Text>
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.size || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.4 }]}>{item.legend || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.2 }]}>{item.displayStructure || ''}</Text>
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-              
-              // TYPE III Section
-              if (groupedItems.type3.length > 0) {
-                sections.push(
-                  <View key="type3-section">
-                    {groupedItems.type3.map((item, idx) => (
-                      <View style={styles.row} key={`type3-${idx}`}>
-                        {idx === 0 && (
-                          <Text style={[styles.cell, { flex: 0.2, borderRight: '1.5px solid black' }]}>
-                            TYPE III'S
-                          </Text>
-                        )}
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.quantity || 0}</Text>
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.size || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.4 }]}>{item.legend || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.2 }]}>{item.displayStructure || ''}</Text>
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-              
-              // LOOSE Section
-              if (groupedItems.loose.length > 0) {
-                sections.push(
-                  <View key="loose-section">
-                    {groupedItems.loose.map((item, idx) => (
-                      <View style={styles.row} key={`loose-${idx}`}>
-                        {idx === 0 && (
-                          <Text style={[styles.cell, { flex: 0.2, borderRight: '1.5px solid black' }]}>
-                            LOOSE
-                          </Text>
-                        )}
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.quantity || 0}</Text>
-                        <Text style={[styles.cell, { flex: 0.1 }]}>{item.size || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.4 }]}>{item.legend || ''}</Text>
-                        <Text style={[styles.cell, { flex: 0.2 }]}>{item.displayStructure || ''}</Text>
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-              
-              return sections;
-            })()}
-        </View>
-        {/* NOTES */}
-        <View style={styles.equipmentContainer}>
-            <Text style={styles.equipmentTitle}>NOTES</Text>
-            {
-              notes.map((note, idx) => (
-                <View style={styles.notesRow} key={idx}>
-                  <Text>{note.text}</Text>
-                  <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>TRAILBLAZERS</Text>
                 </View>
-              ))
-            }
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.trailblazersSigns.map((item, idx) => (
+                      <View style={{borderBottom: signList.trailblazersSigns.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>TYPE III'S</Text>
+                </View>
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.type3Signs.map((item, idx) => (
+                      <View style={{borderBottom: signList.type3Signs.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>LOOSE</Text>
+                </View>
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.looseSigns.map((item, idx) => (
+                      <View style={{borderBottom: signList.looseSigns.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
         </View>
+        
         {/* Footer */}
         <Footer pageNumber={1} totalPages={1} />
       </View>

@@ -58,7 +58,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', // Remove black background
     color: '#000', // Black text
     alignItems: 'center',
-    borderBottom: '2px solid black',
     padding: 8
   },
   titleText: {
@@ -86,14 +85,18 @@ const styles = StyleSheet.create({
     paddingTop: 12
   },
   headerContainer: {
-    borderBottom: '2px solid black',
-    borderTop: '2px solid black',
+    borderBottom: '4px solid black',
+    borderTop: '4px solid black',
     marginBottom: 0,
     marginTop: 0
   },
   headerRow: {
     flexDirection: 'row',
     borderBottom: '1.5px solid black',
+    minHeight: 20
+  },
+  lastHeaderRow: {
+    flexDirection: 'row',
     minHeight: 20
   },
   headerCell: {
@@ -281,7 +284,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               <Checkbox checked={adminInfo.orderType.length > 1} />
             </View>
           </View>
-          <View style={styles.headerRow}>
+          <View style={styles.lastHeaderRow}>
             <View style={styles.headerCell}>
               <Text style={styles.label}>Need Date:</Text>
               <Text style={styles.value}>
