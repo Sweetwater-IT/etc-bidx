@@ -150,9 +150,6 @@ export function CreateJobSheet({
   }, [formData.customJobNumber, formData.division, branch]);
 
   const validateCustomJobNumber = async () => {
-    const branchCodeMap = { hatfield: '10', turbotville: '20', west: '30' }
-    const branchCode = branchCodeMap[branch?.toLowerCase()] || '20'
-    const division = formData.division || 'PUBLIC';
     const jobNumber = formData.customJobNumber.toString();
 
     if (!jobNumber || jobNumber.length !== 7) {
@@ -160,7 +157,7 @@ export function CreateJobSheet({
     }
 
     try {
-      const res = await fetch(`/api/jobs/exist-job-number?branchCode=${branchCode}&division=${division}&customJobNumber=${jobNumber}`);
+      const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
       const data = await res.json();
 
       setIsValidJobNumber(!data.exists);

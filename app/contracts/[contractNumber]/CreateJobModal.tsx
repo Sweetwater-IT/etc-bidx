@@ -122,6 +122,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       project_manager: projectManager || '',
       project_email: pmEmail || '',
       project_phone: pmPhone || '',
+      customJobId: jobId
     }))
   }, [customer, customerContractNumber, projectManager, pmEmail, pmPhone])
 
@@ -387,6 +388,34 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     })
   }
 
+    useEffect(() => {            
+      if (!formValues.customJobId) return;
+  
+      const timeout = setTimeout(() => {
+        validateCustomJobNumber();
+      }, 500);
+  
+      return () => clearTimeout(timeout);
+    }, [formValues.customJobId]);
+    
+    const validateCustomJobNumber = async () => {
+      const jobNumber = formValues?.customJobId?.toString();
+  
+      if (!jobNumber || jobNumber.length !== 7) {
+        return;
+      }
+  
+      try {
+        const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
+        const data = await res.json();
+  
+        setIsValidJobNumber(!data.exists);
+      } catch (error) {
+        console.error('Error validating job number:', error);
+        setIsValidJobNumber(false);
+      }
+    };
+
   // Check if form is valid
   const isFormValid = () => {
     // Basic form validation
@@ -516,7 +545,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                   <Label htmlFor='custom_job_number' className='text-sm font-medium mb-1.5' >Number Job</Label>
                   <Input
                     id='custom_job_number'
-                    placeholder='Enter contract number'
+                    placeholder='Enter Custom ID'
                     className='h-10 border-gray-200'
                     value={formValues.customJobId}
                     onChange={e => {
@@ -947,7 +976,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isFormValid() || isSubmitting || jobCreated}
+            disabled={!isFormValid() || isSubmitting || jobCreated || isValidJobNumber === false}
             className='min-w-[120px]'
           >
             {isSubmitting ? (

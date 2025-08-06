@@ -141,8 +141,6 @@ export async function POST(req: NextRequest) {
       const { data: existing } = await supabase
         .from('job_numbers')
         .select('id')
-        .eq('branch_code', branchCode)
-        .eq('owner_type', ownerTypeCode)
         .eq('year', customYear)
         .eq('sequential_number', customSeq)
         .neq('id', jobRow?.job_number_id)
@@ -155,7 +153,6 @@ export async function POST(req: NextRequest) {
       currentYear = customYear;
       nextSequentialNumber = customSeq;
     } else {
-      // 🔁 Fallback automático (lo que ya hacías antes)
       const ownerTypeMap = { 'PUBLIC': '22', 'PRIVATE': '21' };
       ownerTypeCode = ownerTypeMap[jobData.adminData.division?.toUpperCase()] || '22';
 

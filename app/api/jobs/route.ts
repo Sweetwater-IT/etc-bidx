@@ -521,17 +521,20 @@ export async function POST(req: NextRequest) {
     }
     // Generate unique P- job number
     const fullJobNumberParsed = `${requestData.branchCode ?? '10'}-${requestData.division === 'PUBLIC' ? '21' : '22'}-${requestData.customJobNumber}`;
-    let jobNumber = '';
+    const year = parseInt(requestData.customJobNumber.slice(0, 4), 10);
+    const sequential = parseInt(requestData.customJobNumber.slice(4), 10);
 
+    let jobNumber = '';
     let isUnique = false;
 
     if (requestData.customJobNumber) {
       const fullJobNumber = `${requestData.branchCode ?? '10'}${requestData.division === 'PUBLIC' ? '21' : '22'}${requestData.customJobNumber}`;
-      
+
       const { data: existing } = await supabase
         .from('job_numbers')
         .select('id')
-        .eq('job_number', fullJobNumber)
+        .eq('year', year)
+        .eq('sequential_number', sequential)
         .single();
 
       if (existing) {
@@ -566,10 +569,24 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    
+    const payload: any = {
+      job_number: fullJobNumberParsed,
+      year,
+      owner_type:requestData.division === 'PUBLIC' ? '21' : '22',
+      branch_code: requestData.branchCode ?? 20
+
+    };
+
+    if (requestData.customJobNumber) {
+      payload.sequential_number = sequential
+    }
+
     // Insert the generated job number
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
-      .insert({ job_number: fullJobNumberParsed })
+      .insert(payload)
       .select('id')
       .single();
     if (jobNumberError || !jobNumberData) {

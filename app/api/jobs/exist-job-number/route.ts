@@ -3,24 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const branchCode = searchParams.get('branchCode');
-  const division = searchParams.get('division'); 
   const customJobNumber = searchParams.get('customJobNumber');
-
-  if (!branchCode || !division || !customJobNumber) {
+  
+  if (!customJobNumber || !/^\d{7}$/.test(customJobNumber)) {
     return NextResponse.json(
-      { error: 'Missing required parameters' },
+      { error: 'Invalid or missing customJobNumber. Expected format: 7 digits (YYYYXXX)' },
       { status: 400 }
     );
   }
-
-  const divisionCode = division === 'PUBLIC' ? '21' : '22';
-  const fullJobNumber = `${branchCode}-${divisionCode}-${customJobNumber}`;
+  
+  const year = parseInt(customJobNumber.slice(0, 4), 10);
+  const sequential = parseInt(customJobNumber.slice(4), 10);
 
   const { data, error } = await supabase
-    .from('jobs_list')
+    .from('job_numbers')
     .select('id')
-    .eq('job_number', fullJobNumber)
+    .eq('year', year)
+    .eq('sequential_number', sequential)
     .single();
 
   if (error && error.code !== 'PGRST116') {
@@ -31,7 +30,5 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const exists = !!data;
-
-  return NextResponse.json({ exists, jobNumber: fullJobNumber }, { status: 200 });
+  return NextResponse.json({ exists: !!data }, { status: 200 });
 }
