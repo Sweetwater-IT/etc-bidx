@@ -520,8 +520,32 @@ export async function POST(req: NextRequest) {
       return result;
     }
     // Generate unique P- job number
+    const fullJobNumberParsed = `${requestData.branchCode ?? '10'}-${requestData.division === 'PUBLIC' ? '21' : '22'}-${requestData.customJobNumber}`;
     let jobNumber = '';
+
     let isUnique = false;
+
+    if (requestData.customJobNumber) {
+      const fullJobNumber = `${requestData.branchCode ?? '10'}${requestData.division === 'PUBLIC' ? '21' : '22'}${requestData.customJobNumber}`;
+      
+      const { data: existing } = await supabase
+        .from('job_numbers')
+        .select('id')
+        .eq('job_number', fullJobNumber)
+        .single();
+
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Job number already exists' },
+          { status: 400 }
+        );
+      }
+
+      jobNumber = fullJobNumber;
+      isUnique = true;
+    }
+
+
     let attempts = 0;
     const maxAttempts = 10;
     while (!isUnique && attempts < maxAttempts) {
@@ -545,7 +569,7 @@ export async function POST(req: NextRequest) {
     // Insert the generated job number
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
-      .insert({ job_number: jobNumber })
+      .insert({ job_number: fullJobNumberParsed })
       .select('id')
       .single();
     if (jobNumberError || !jobNumberData) {

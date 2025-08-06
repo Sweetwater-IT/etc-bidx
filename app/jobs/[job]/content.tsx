@@ -384,137 +384,137 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const loadAvailableJobs = useCallback(async () => {
-      try {
-        console.log("Loading available jobs with activeSegment:", activeSegment);
-        startLoading();
-    
-        // Special handling for archived segment
-        const options: any = {
-          limit: availableJobsPageSize,
-          page: availableJobsPageIndex + 1, // API uses 1-based indexing
-        };
-    
-        // Add sorting parameters if available
-        if (sortBy) {
-          options.sortBy = sortBy;
-          options.sortOrder = sortOrder;
-          console.log(`Adding sort: ${sortBy} ${sortOrder}`);
-        }
-    
-        // Add filter parameters if any are active
-        if (Object.keys(activeFilters).length > 0) {
-          options.filters = JSON.stringify(activeFilters);
-          console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
-        }
-    
-        // Correctly handle archived segment
-        if (activeSegment === "archived") {
-          options.archived = true; // Filter for archived jobs
-          console.log("Using archived filter");
-        } else if (activeSegment !== "all") {
-          const dbStatus = mapUiStatusToDbStatus(activeSegment);
-          options.status = dbStatus; // Filter by status for other segments
-          console.log("Mapped DB status:", dbStatus);
-        }
-        console.log("Fetch options:", options);
-    
-        const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch available jobs');
-        }
-        const result = await response.json();
-        const { data, pagination } = result;
-    
-        console.log("Fetched data:", data);
-        console.log("Pagination:", pagination);
-    
-        const uiJobs = data.map((job: any) => {
-          const isEffectivelyUnknown = (value: any): boolean => {
-            if (value === undefined || value === null) return true;
-            if (typeof value === 'string') {
-              const normalized = value.toLowerCase().trim();
-              return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+        try {
+            console.log("Loading available jobs with activeSegment:", activeSegment);
+            startLoading();
+
+            // Special handling for archived segment
+            const options: any = {
+                limit: availableJobsPageSize,
+                page: availableJobsPageIndex + 1, // API uses 1-based indexing
+            };
+
+            // Add sorting parameters if available
+            if (sortBy) {
+                options.sortBy = sortBy;
+                options.sortOrder = sortOrder;
+                console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-            return false;
-          };
-    
-          let countyValue = '';
-          if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
-            countyValue = job.county;
-          } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
-            countyValue = job.county.name;
-          } else if (job.admin_data?.county) {
-            if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
-              countyValue = job.admin_data.county;
-            } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
-              countyValue = job.admin_data.county.name;
+
+            // Add filter parameters if any are active
+            if (Object.keys(activeFilters).length > 0) {
+                options.filters = JSON.stringify(activeFilters);
+                console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-          }
-    
-          const branchCode = job.branch_code || '';
-          const branchMap: Record<string, string> = {
-            '10': 'Hatfield',
-            '20': 'Turbotville',
-            '30': 'West'
-          };
-          let branchValue = '';
-          if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
-            branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
-          } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
-            branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
-          } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
-            branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
-          }
-    
-          const locationValue = job.location || job.admin_data?.location || '';
-          const platformValue = job.platform || job.admin_data?.platform || '';
-          const requestorValue = job.requestor || job.admin_data?.requestor || '';
-          const ownerValue = job.owner || job.admin_data?.owner || '';
-          const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
-          const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
-          const noBidReason = job.no_bid_reason || null;
-          const stateRoute = job.state_route || null;
-    
-          const services: Record<AvailableJobServices, boolean> = {
-            'MPT': job.mpt || false,
-            'Flagging': job.flagging || false,
-            'Equipment Rental': job.equipment_rental || false,
-            'Perm Signs': job.perm_signs || false,
-            'Other': job.other || false
-          };
-    
-          return {
-            id: job.id,
-            contractNumber: contractNumberValue,
-            status: job.status || 'Unset',
-            requestor: requestorValue,
-            owner: ownerValue,
-            lettingDate: job.letting_date || '',
-            dueDate: job.due_date || '',
-            county: { main: countyValue, secondary: branchValue },
-            countyValue: countyValue,
-            branch: branchValue,
-            dbe: dbeValue,
-            createdAt: job.created_at || '',
-            location: locationValue,
-            platform: platformValue,
-            noBidReason,
-            stateRoute,
-            services,
-            alreadyBid: job.alreadyBid || false,
-            archived: job.archived === true
-          };
-        });
-    
-        setAvailableJobs(uiJobs);
-        setAvailableJobsPageCount(pagination.pageCount);
-        setAvailableJobsTotalCount(pagination.totalCount);
-      } catch (error) {
-        console.error("Error loading jobs:", error);
-        toast.error("Failed to load jobs. Please try again.");
-      } finally {
-        stopLoading();
-      }
+
+            // Correctly handle archived segment
+            if (activeSegment === "archived") {
+                options.archived = true; // Filter for archived jobs
+                console.log("Using archived filter");
+            } else if (activeSegment !== "all") {
+                const dbStatus = mapUiStatusToDbStatus(activeSegment);
+                options.status = dbStatus; // Filter by status for other segments
+                console.log("Mapped DB status:", dbStatus);
+            }
+            console.log("Fetch options:", options);
+
+            const response = await fetch(`/api/bids?${new URLSearchParams(options).toString()}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch available jobs');
+            }
+            const result = await response.json();
+            const { data, pagination } = result;
+
+            console.log("Fetched data:", data);
+            console.log("Pagination:", pagination);
+
+            const uiJobs = data.map((job: any) => {
+                const isEffectivelyUnknown = (value: any): boolean => {
+                    if (value === undefined || value === null) return true;
+                    if (typeof value === 'string') {
+                        const normalized = value.toLowerCase().trim();
+                        return normalized === '' || normalized === 'unknown' || normalized === 'n/a' || normalized === '-';
+                    }
+                    return false;
+                };
+
+                let countyValue = '';
+                if (typeof job.county === 'string' && !isEffectivelyUnknown(job.county)) {
+                    countyValue = job.county;
+                } else if (job.county?.name && !isEffectivelyUnknown(job.county.name)) {
+                    countyValue = job.county.name;
+                } else if (job.admin_data?.county) {
+                    if (typeof job.admin_data.county === 'string' && !isEffectivelyUnknown(job.admin_data.county)) {
+                        countyValue = job.admin_data.county;
+                    } else if (job.admin_data.county?.name && !isEffectivelyUnknown(job.admin_data.county.name)) {
+                        countyValue = job.admin_data.county.name;
+                    }
+                }
+
+                const branchCode = job.branch_code || '';
+                const branchMap: Record<string, string> = {
+                    '10': 'Hatfield',
+                    '20': 'Turbotville',
+                    '30': 'West'
+                };
+                let branchValue = '';
+                if (typeof job.branch === 'string' && !isEffectivelyUnknown(job.branch)) {
+                    branchValue = job.branch.charAt(0).toUpperCase() + job.branch.slice(1).toLowerCase();
+                } else if (branchMap[branchCode] && !isEffectivelyUnknown(branchMap[branchCode])) {
+                    branchValue = branchMap[branchCode].charAt(0).toUpperCase() + branchMap[branchCode].slice(1).toLowerCase();
+                } else if (job.admin_data?.branch && !isEffectivelyUnknown(job.admin_data.branch)) {
+                    branchValue = job.admin_data.branch.charAt(0).toUpperCase() + job.admin_data.branch.slice(1).toLowerCase();
+                }
+
+                const locationValue = job.location || job.admin_data?.location || '';
+                const platformValue = job.platform || job.admin_data?.platform || '';
+                const requestorValue = job.requestor || job.admin_data?.requestor || '';
+                const ownerValue = job.owner || job.admin_data?.owner || '';
+                const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
+                const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+                const noBidReason = job.no_bid_reason || null;
+                const stateRoute = job.state_route || null;
+
+                const services: Record<AvailableJobServices, boolean> = {
+                    'MPT': job.mpt || false,
+                    'Flagging': job.flagging || false,
+                    'Equipment Rental': job.equipment_rental || false,
+                    'Perm Signs': job.perm_signs || false,
+                    'Other': job.other || false
+                };
+
+                return {
+                    id: job.id,
+                    contractNumber: contractNumberValue,
+                    status: job.status || 'Unset',
+                    requestor: requestorValue,
+                    owner: ownerValue,
+                    lettingDate: job.letting_date || '',
+                    dueDate: job.due_date || '',
+                    county: { main: countyValue, secondary: branchValue },
+                    countyValue: countyValue,
+                    branch: branchValue,
+                    dbe: dbeValue,
+                    createdAt: job.created_at || '',
+                    location: locationValue,
+                    platform: platformValue,
+                    noBidReason,
+                    stateRoute,
+                    services,
+                    alreadyBid: job.alreadyBid || false,
+                    archived: job.archived === true
+                };
+            });
+
+            setAvailableJobs(uiJobs);
+            setAvailableJobsPageCount(pagination.pageCount);
+            setAvailableJobsTotalCount(pagination.totalCount);
+        } catch (error) {
+            console.error("Error loading jobs:", error);
+            toast.error("Failed to load jobs. Please try again.");
+        } finally {
+            stopLoading();
+        }
     }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
 
     // Load active bids data
@@ -545,32 +545,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 page: 1,
                 detailed: true
             }
-    
+
             if (sortBy) {
                 ops.sortBy = sortBy
                 ops.sortOrder = sortOrder
             }
-    
+
             const res = await fetch(`/api/active-bids?${new URLSearchParams(ops).toString()}`);
             if (!res.ok) {
                 throw new Error('Failed to fetch active bids');
             }
-    
+
             const resu = await res.json()
             setAllActiveBidsDetailed(resu.data)
-    
+
             const options: any = {
                 limit: activeBidsPageSize,
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
                 detailed: true
             };
-    
+
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-    
+
             // Handle segment filtering
             if (activeSegment === "archived") {
                 // For archived segment, filter by archived field
@@ -579,9 +579,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             } else if (activeSegment !== "all") {
                 // For non-archived segments, exclude archived items and filter by status/division
                 options.archived = false; // Explicitly exclude archived items
-                
+
                 const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending'];
-    
+
                 if (statusValues.includes(activeSegment.toLowerCase())) {
                     options.status = activeSegment;
                 } else {
@@ -591,16 +591,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 // For "all" segment, explicitly exclude archived items
                 options.archived = false;
             }
-    
+
             // Add sorting parameters if available
             if (sortBy) {
                 options.sortBy = sortBy;
                 options.sortOrder = sortOrder;
                 console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-    
+
             console.log("Active bids fetch options:", options);
-    
+
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bids');
@@ -608,7 +608,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             //raw data has all the info we need
             const { data, stats, pagination } = result;
-    
+
             const transformedData = data.map(e => ({
                 id: e.id,
                 contractNumber: e.contractNumber,
@@ -616,11 +616,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
-                county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
-                    main: e.admin_data.county.name,
-                    secondary: e.admin_data.county.branch
-                },
-                branch: e.admin_data.county.branch,
+                county: (e.admin_data?.county?.name === '' || e.admin_data?.county?.name === 'Choose County' || !e.admin_data?.county)
+                    ? '-'
+                    : {
+                        main: e.admin_data.county.name,
+                        secondary: e?.admin_data?.county?.branch ?? ''
+                    },
+                branch: e.admin_data?.county?.branch ?? '',
                 estimator: e.admin_data.estimator || 'Unknown',
                 status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
                 division: e.admin_data.division,
@@ -630,14 +632,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ?
                     Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
                 totalHours: e.mpt_rental?._summary?.hours || 0,
-                mptValue: e.mpt_rental._summary.revenue || 0,
+                mptValue: e.mpt_rental?._summary.revenue || 0,
                 permSignValue: 0,
                 rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
                     sum + (item.revenue || 0), 0) || 0,
                 createdAt: e.created_at ? e.created_at : "",
-                total: e.mpt_rental._summary.revenue || 0
+                total: e.mpt_rental?._summary?.revenue || 0
             }));
-    
+
             setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);
@@ -669,12 +671,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const loadActiveJobs = useCallback(async () => {
         try {
             startLoading();
-    
+
             const options: any = {
                 limit: activeJobsPageSize,
                 page: activeJobsPageIndex + 1, // API uses 1-based indexing
             };
-    
+
             // Handle segment filtering for archived jobs
             if (activeSegment === "archived") {
                 // For archived segment, filter by archived field
@@ -688,29 +690,29 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 // For "all" segment, explicitly exclude archived items
                 options.archived = false;
             }
-    
+
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-    
+
             // Add sorting parameters if available
             if (sortBy) {
                 options.sortBy = sortBy;
                 options.sortOrder = sortOrder;
                 console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-    
+
             console.log("Active jobs fetch options:", options);
-    
+
             const response = await fetch(`/api/jobs?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active jobs');
             }
             const result = await response.json();
             const { data, stats, pagination } = result;
-    
+
             const uiJobs = data.map((job: any) => ({
                 id: job.id,
                 jobNumber: job.jobNumber,
@@ -730,7 +732,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 wonBidItems: job.wonBidItems,
                 archived: job.archived // Include archived status
             }));
-    
+
             setActiveJobs(uiJobs);
             setActiveJobsPageCount(pagination.pageCount);
             setActiveJobsTotalCount(pagination.totalCount);
@@ -1015,7 +1017,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: "contractor", title: "Contractor" },
         { key: "startDate", title: "Start Date", className: 'whitespace-nowrap' },
         { key: "endDate", title: "End Date", className: 'whitespace-nowrap' },
-        { key: 'cpr', title: 'CPR'},
+        { key: 'cpr', title: 'CPR' },
         { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
     ];
 
@@ -1442,7 +1444,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             page: 1,
             detailed: true
         };
-    
+
         // Handle segment filtering
         if (activeSegment === "archived") {
             // For archived segment, filter by archived field
@@ -1450,7 +1452,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } else if (activeSegment !== "all") {
             // For non-archived segments, exclude archived items and filter by status/division
             options.archived = false;
-            
+
             const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending'];
             if (statusValues.includes(activeSegment.toLowerCase())) {
                 options.status = activeSegment;
@@ -1461,25 +1463,25 @@ export function JobPageContent({ job }: JobPageContentProps) {
             // For "all" segment, explicitly exclude archived items
             options.archived = false;
         }
-    
+
         // Apply current sorting if any
         if (sortBy) {
             options.sortBy = sortBy;
             options.sortOrder = sortOrder;
         }
-    
+
         // Apply current filters if any
         if (Object.keys(activeFilters).length > 0) {
             options.filters = JSON.stringify(activeFilters);
         }
-    
+
         console.log("Fetch all filtered active bids options:", options);
-    
+
         const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
         if (!response.ok) {
             throw new Error('Failed to fetch all active bids');
         }
-    
+
         const result = await response.json();
         return result.data.map((e: any) => ({
             id: e.id,
@@ -1490,8 +1492,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 customers.find(c => c.name === e.contractor_name)?.name : '-',
             subcontractor: e.subcontractor_name || '-',
             owner: e.admin_data.owner || 'Unknown',
-            county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
-                main: e.admin_data.county.name,
+            county: e.admin_data?.county?.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
+                main: e.admin_data.county.name ?? '',
                 secondary: e.admin_data.county.branch
             },
             branch: e.admin_data.county.branch,
@@ -1693,7 +1695,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 params.set("limit", "1");
                 params.set("page", "1");
                 params.set("archived", "false");
-                params.set("filters", JSON.stringify({"branch":[opt.value]}));
+                params.set("filters", JSON.stringify({ "branch": [opt.value] }));
                 params.set("branch", opt.value);
                 const res = await fetch(`/api/jobs?${params.toString()}`);
                 if (res.ok) {
