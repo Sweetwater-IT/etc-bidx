@@ -5,6 +5,9 @@ import React, { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ADDITIONAL_EQUIPMENT_OPTIONS, determineItemType, getDisplayName, InstallFlexibleDelineators, PostMountedInstall, PostMountedInstallTypeC, } from '@/types/TPermanentSigns';
 import { getPermanentSignRevenueAndMargin, getPermSignDaysRequired, getPermSignTotalCost } from '@/lib/mptRentalHelperFunctions';
+import PhasesViewOnly from './phases-view-only';
+import SignsViewOnly from './signs-view-only';
+import TripAndLaborViewOnlyAll from './trip-and-labor-view-only';
 
 // Mapping for equipment labels
 const labelMapping: Record<string, string> = {
@@ -61,7 +64,7 @@ const FlaggingViewOnly = () => {
 
     const getEquipCost = () => {
         if (!flagging) return 0;
-        
+
         const arrowBoardsCost = (flagging?.arrowBoards.quantity || 0) * (flagging.arrowBoards.cost || 0);
         const messageBoardsCost = (flagging?.messageBoards.quantity || 0) * (flagging.messageBoards.cost || 0);
         const tmaCost = (flagging?.TMA.quantity || 0) * (flagging.TMA.cost || 0);
@@ -215,7 +218,7 @@ const ServiceWorkViewOnly = () => {
 
     const getEquipCost = () => {
         if (!serviceWork) return 0;
-        
+
         const arrowBoardsCost = (serviceWork?.arrowBoards.quantity || 0) * (serviceWork.arrowBoards.cost || 0);
         const messageBoardsCost = (serviceWork?.messageBoards.quantity || 0) * (serviceWork.messageBoards.cost || 0);
         const tmaCost = (serviceWork?.TMA.quantity || 0) * (serviceWork.TMA.cost || 0);
@@ -389,7 +392,7 @@ const MPTViewOnly = () => {
                                             {formatLabel(equipmentKey)}
                                         </label>
                                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                            Qty: {quantity} 
+                                            Qty: {quantity}
                                             {/* | Cost: {formatCurrency(price)} */}
                                         </div>
                                     </div>
@@ -421,7 +424,7 @@ const MPTViewOnly = () => {
                                             {formatLabel(equipmentKey)}
                                         </label>
                                         <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                            Qty: {quantity} 
+                                            Qty: {quantity}
                                             {/* | Cost: {formatCurrency(price)} */}
                                         </div>
                                         {adminData?.emergencyJob && emergencyRate && (
@@ -657,8 +660,8 @@ const SaleItemsViewOnly = () => {
                                 Margin
                             </label>
                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.quotePrice && item.markupPercentage 
-                                    ? `${calculateMargin(item.quotePrice, item.markupPercentage).toFixed(2)}%` 
+                                {item.quotePrice && item.markupPercentage
+                                    ? `${calculateMargin(item.quotePrice, item.markupPercentage).toFixed(2)}%`
                                     : "-"}
                             </div>
                         </div>
@@ -822,7 +825,7 @@ const PermanentSignsViewOnly = () => {
                                         const displayName = Object.entries(ADDITIONAL_EQUIPMENT_OPTIONS).find(
                                             ([_, value]) => value === item.equipmentType
                                         )?.[0] || item.equipmentType;
-                                        
+
                                         return (
                                             <div key={index} className="text-sm text-muted-foreground">
                                                 {displayName}: {item.quantity}
@@ -964,20 +967,28 @@ const BidItemsViewOnly = () => {
 
                 {/* MPT Tab */}
                 <TabsContent value="mpt" className="mt-6">
+                    <div className='text-xl font-semibold pl-6 mb-4 mt-6'>Phases</div>
+                    <PhasesViewOnly />
+                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>Signs</div>
+                    <SignsViewOnly />
+                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>
+                        Trip and Labor
+                    </div>
+                    <TripAndLaborViewOnlyAll />
                     <MPTViewOnly />
                 </TabsContent>
 
                 {/* Equipment Rental Tab */}
                 <TabsContent value="equipment" className="mt-6">
                     <div className="text-center py-6 text-muted-foreground pl-6">
-                        <EquipmentRentalViewOnly/>
+                        <EquipmentRentalViewOnly />
                     </div>
                 </TabsContent>
 
                 {/* Permanent Signs Tab */}
                 <TabsContent value="permanent" className="mt-6">
                     <div className="text-center py-6 text-muted-foreground pl-6">
-                        <PermanentSignsViewOnly/>
+                        <PermanentSignsViewOnly />
                     </div>
                 </TabsContent>
 
@@ -989,7 +1000,7 @@ const BidItemsViewOnly = () => {
                 {/* Sale Items Tab */}
                 <TabsContent value="sale" className="mt-6">
                     <div className="text-center py-6 text-muted-foreground pl-6">
-                       <SaleItemsViewOnly/>
+                        <SaleItemsViewOnly />
                     </div>
                 </TabsContent>
 
