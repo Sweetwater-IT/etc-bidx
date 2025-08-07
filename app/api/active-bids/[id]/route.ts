@@ -49,7 +49,7 @@ export async function GET(
         ...data,
         admin_data: {
           ...data.admin_data,
-          contractNumber : data.admin_data.contractNumber.endsWith('-DRAFT') ? data.admin_data.contractNumber : data.admin_data.contractNumber + '-DRAFT'
+          contractNumber : data?.admin_data?.contractNumber?.endsWith('-DRAFT') ? data?.admin_data?.contractNumber : data?.admin_data?.contractNumber + '-DRAFT'
         }
       }
     }
@@ -92,7 +92,7 @@ export async function PATCH(
       .select()
       .single();
 
-      if (body.status !== 'DRAFT' && updatedBid.contract_number.endsWith('-DRAFT')) {
+      if (body.status !== 'DRAFT' && updatedBid?.contract_number?.endsWith('-DRAFT')) {
         const { error: contractUpdateError } = await supabase
           .from('admin_data_entries')
           .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })
