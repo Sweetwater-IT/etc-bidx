@@ -183,7 +183,7 @@ const TripAndLaborSummary = ({
     nonRatedHours,
   } = useMemo(() => {
     // Safely access equipment quantities from phase.standardEquipment
-    const fourFootTypeIIIQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+    const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
     const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
 
     // Calculate baseTrips based on equipment
@@ -1128,7 +1128,7 @@ const BidItemsStep5 = ({
       const phase = mptRental.phases[currentPhase]
       const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0
       const fourFootTypeIIIQuantity =
-        phase.standardEquipment.fourFootTypeIII?.quantity || 0
+        phase.standardEquipment?.fourFootTypeIII?.quantity || 0
       const sixFootWingsQuantity =
         phase.standardEquipment.sixFootWings?.quantity || 0
 

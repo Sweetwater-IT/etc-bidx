@@ -25,13 +25,21 @@ export async function GET(
       }
     } else {
       const { data: estimateData, error: estimateError } = await supabase
-      .from('estimate_complete')
-      .select('*')
-      .eq('id', resolvedParams.id)
-      .single();
+        .from('estimate_complete')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single();
 
-      if (!estimateError) {
-        data = estimateData;
+      const { data: bidNotes, error: notesError } = await supabase
+        .from('bid_notes')
+        .select('id, text, created_at')
+        .eq('bid_id', resolvedParams.id);
+
+      if (!estimateError && !notesError) {
+        data = {
+          ...estimateData,
+          bid_notes: bidNotes
+        };
         error = null;
       }
     }
@@ -43,16 +51,18 @@ export async function GET(
       );
     }
 
-    //append draft if necessary
-    if(data.status === 'DRAFT'){
+    if (data?.status === 'DRAFT') {
       data = {
         ...data,
         admin_data: {
           ...data.admin_data,
-          contractNumber : data?.admin_data?.contractNumber?.endsWith('-DRAFT') ? data?.admin_data?.contractNumber : data?.admin_data?.contractNumber + '-DRAFT'
+          contractNumber: data.admin_data.contractNumber.endsWith('-DRAFT')
+            ? data.admin_data.contractNumber
+            : data.admin_data.contractNumber + '-DRAFT'
         }
-      }
+      };
     }
+
     
     return NextResponse.json({ success: true, data });
     
@@ -83,6 +93,40 @@ export async function PATCH(
     }
     
     const body = await request.json();
+     
+    if (body.notes && Array.isArray(body.notes)) {
+      const { error: deleteError } = await supabase
+        .from('bid_notes')
+        .delete()
+        .eq('bid_id', id)
+
+      if (deleteError) {
+        console.error('Error deleting previous bid notes:', deleteError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to delete old notes', error: deleteError.message },
+          { status: 500 }
+        );
+      }
+
+      // 2. Insert new notes
+      const newNotes = body.notes.map((note: any) => ({
+        bid_id: id,
+        text: note.text,
+        created_at: new Date(note.timestamp).toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('bid_notes')
+        .insert(newNotes);
+
+      if (insertError) {
+        console.error('Error inserting new bid notes:', insertError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to insert new notes', error: insertError.message },
+          { status: 500 }
+        );
+      }
+    }
     
     // First, update the bid estimate
     const { data: updatedBid, error: updateError } = await supabase
@@ -92,7 +136,7 @@ export async function PATCH(
       .select()
       .single();
 
-      if (body.status !== 'DRAFT' && updatedBid?.contract_number?.endsWith('-DRAFT')) {
+      if (body.status !== 'DRAFT' && updatedBid.contract_number.endsWith('-DRAFT')) {
         const { error: contractUpdateError } = await supabase
           .from('admin_data_entries')
           .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })

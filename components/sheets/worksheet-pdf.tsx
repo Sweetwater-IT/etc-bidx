@@ -250,7 +250,7 @@ const GenerateBidSummaryReactPDF = ({
               <Text style={styles.quantityCell}>
                 {mptRental &&
                   safeNumber(
-                    getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII
+                    getEquipmentTotalsPerPhase(mptRental)?.fourFootTypeIII
                       .totalQuantity
                   )}
               </Text>
@@ -347,7 +347,7 @@ const GenerateBidSummaryReactPDF = ({
                 STRUCTURES:{' '}
                 {mptRental
                   ? safeNumber(
-                      getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII
+                      getEquipmentTotalsPerPhase(mptRental)?.fourFootTypeIII
                         .totalQuantity +
                         getEquipmentTotalsPerPhase(mptRental).hStand
                           .totalQuantity
@@ -616,7 +616,7 @@ const GenerateBidSummaryReactPDF = ({
               safeNumber(phase.standardEquipment.ACLights.quantity),
             type3:
               acc.type3 +
-              safeNumber(phase.standardEquipment.fourFootTypeIII.quantity),
+              safeNumber(phase.standardEquipment?.fourFootTypeIII.quantity),
             hStand:
               acc.hStand + safeNumber(phase.standardEquipment.hStand.quantity),
             post: acc.post + safeNumber(phase.standardEquipment.post.quantity),
@@ -716,7 +716,7 @@ const GenerateBidSummaryReactPDF = ({
               {safeNumber(phase.standardEquipment.ACLights.quantity)}
             </Text>
             <Text style={styles.phaseSummaryCell}>
-              {safeNumber(phase.standardEquipment.fourFootTypeIII.quantity)}
+              {safeNumber(phase.standardEquipment?.fourFootTypeIII.quantity)}
             </Text>
             <Text style={styles.phaseSummaryCell}>
               {safeNumber(phase.standardEquipment.sixFootWings.quantity)}
@@ -968,7 +968,7 @@ const GenerateBidSummaryReactPDF = ({
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
                     4&apos; Type III:{' '}
-                    {getAssociatedSignEquipment(phase).fourFootTypeIII} | Post:{' '}
+                    {getAssociatedSignEquipment(phase)?.fourFootTypeIII} | Post:{' '}
                     {getAssociatedSignEquipment(phase).post} | H Stand:{' '}
                     {getAssociatedSignEquipment(phase).hStand}
                   </Text>

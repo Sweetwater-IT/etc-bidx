@@ -120,7 +120,7 @@ export function returnPhaseTotals(mptRental: MPTRentalEstimating): PhaseTotals {
 
   let totalPersonnel = 0;
   let totalDays = 0;
-  let totalTrips = Math.ceil((allEquipmentTotals.fourFootTypeIII.totalQuantity 
+  let totalTrips = Math.ceil((allEquipmentTotals?.fourFootTypeIII.totalQuantity 
      + allEquipmentTotals.sixFootWings.totalQuantity
     // allEquipmentTotals.post.totalQuantity +
     // allEquipmentTotals.hStand.totalQuantity
@@ -841,7 +841,7 @@ export function getRatedHoursPerPhase(phase: Phase): number {
   if (!phase.personnel || phase.personnel === 0) {
     return 0;
   }
-  const relevantEquipmentTotals = phase.standardEquipment.fourFootTypeIII.quantity + phase.standardEquipment.hStand.quantity + phase.standardEquipment.post.quantity
+  const relevantEquipmentTotals = phase.standardEquipment?.fourFootTypeIII.quantity + phase.standardEquipment.hStand.quantity + phase.standardEquipment.post.quantity
   return Math.ceil((relevantEquipmentTotals / 10) * phase.personnel * 2)
 }
 
@@ -860,7 +860,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   }
 
   // Safely access equipment quantities with null checks
-  const fourFootQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+  const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
   const postQuantity = phase.standardEquipment.post?.quantity || 0;
 
