@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy } from 'lucide-react';
+import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { useEstimate } from '@/contexts/EstimateContext';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
@@ -26,6 +26,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import SignEditingSheet from './SignEditingSheet';
@@ -38,7 +41,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
-import { singleQuote } from 'pdf-lib';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -600,29 +602,59 @@ export function SignOrderList({
                                     Edit
                                   </DropdownMenuItem>
                                   {Object.hasOwn(sign, 'associatedStructure') && (
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        console.log('Adding secondary sign for primary:', sign.id, 'in phase:', currentPhase);
-                                        const defaultSecondary: SecondarySign = {
-                                          id: generateUniqueId(),
-                                          primarySignId: sign.id,
-                                          designation: '',
-                                          width: 0,
-                                          height: 0,
-                                          quantity: sign.quantity,
-                                          sheeting: 'HI',
-                                          isCustom: false,
-                                          description: '',
-                                          substrate: 'Plastic',
-                                        };
-                                        setLocalSign({ ...defaultSecondary });
-                                        setMode('create');
-                                        setOpen(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Secondary Sign
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          console.log('Adding secondary sign for primary:', sign.id, 'in phase:', currentPhase);
+                                          const defaultSecondary: SecondarySign = {
+                                            id: generateUniqueId(),
+                                            primarySignId: sign.id,
+                                            designation: '',
+                                            width: 0,
+                                            height: 0,
+                                            quantity: sign.quantity,
+                                            sheeting: 'HI',
+                                            isCustom: false,
+                                            description: '',
+                                            substrate: 'Plastic',
+                                          };
+                                          setLocalSign({ ...defaultSecondary });
+                                          setMode('create');
+                                          setOpen(false);
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Secondary Sign
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                          <Repeat className="h-4 w-4 mr-4" />
+                                          Duplicate sign
+                                        </DropdownMenuSubTrigger>
+
+                                        <DropdownMenuSubContent>
+                                          {(
+                                            shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs
+                                          ).filter(sign => 'primarySignId' in sign).map((secondary) => (
+                                            <DropdownMenuItem
+                                              key={secondary.id}
+                                              onClick={() => {
+                                                const duplicated = {
+                                                  ...secondary,
+                                                  id: generateUniqueId(),
+                                                  primarySignId: sign.id,
+                                                  quantity: sign.quantity,
+                                                };
+                                                handleDesignationSelected(duplicated); 
+                                                setMode('create');
+                                              }}
+                                            >
+                                              {secondary.designation || `Secondary #${secondary.id}`}
+                                            </DropdownMenuItem>
+                                          ))}
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
+                                    </>
                                   )}
                                   <DropdownMenuItem
                                     onClick={() => {
