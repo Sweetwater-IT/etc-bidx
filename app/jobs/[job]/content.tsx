@@ -35,6 +35,7 @@ import { EstimateData, exportBidsToExcel } from "@/lib/exportBidsToExcel";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { safeNumber } from "@/lib/safe-number";
+import { formatDate } from "@/lib/formatUTCDate";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -489,13 +490,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     status: job.status || 'Unset',
                     requestor: requestorValue,
                     owner: ownerValue,
-                    lettingDate: job.letting_date || '',
-                    dueDate: job.due_date || '',
+                    lettingDate: job.letting_date ? formatDate(job.letting_date) : '-',
+                    dueDate: job.due_date ? formatDate(job.due_date) : '-',
                     county: { main: countyValue, secondary: branchValue },
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at || '',
+                    createdAt: job.created_at ? formatDate(job.created_at) : '-',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
