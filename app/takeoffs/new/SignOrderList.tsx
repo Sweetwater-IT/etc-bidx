@@ -603,55 +603,66 @@ export function SignOrderList({
                                   </DropdownMenuItem>
                                   {Object.hasOwn(sign, 'associatedStructure') && (
                                     <>
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          console.log('Adding secondary sign for primary:', sign.id, 'in phase:', currentPhase);
-                                          const defaultSecondary: SecondarySign = {
-                                            id: generateUniqueId(),
-                                            primarySignId: sign.id,
-                                            designation: '',
-                                            width: 0,
-                                            height: 0,
-                                            quantity: sign.quantity,
-                                            sheeting: 'HI',
-                                            isCustom: false,
-                                            description: '',
-                                            substrate: 'Plastic',
-                                          };
-                                          setLocalSign({ ...defaultSecondary });
-                                          setMode('create');
-                                          setOpen(false);
-                                        }}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Secondary Sign
-                                      </DropdownMenuItem>
                                       <DropdownMenuSub>
                                         <DropdownMenuSubTrigger>
-                                          <Repeat className="h-4 w-4 mr-4" />
-                                          Duplicate sign
+                                          <Plus className="h-4 w-4 mr-4" />
+                                          Add Secondary Sign
                                         </DropdownMenuSubTrigger>
 
                                         <DropdownMenuSubContent>
-                                          {(
-                                            shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs
-                                          ).filter(sign => 'primarySignId' in sign).map((secondary) => (
-                                            <DropdownMenuItem
-                                              key={secondary.id}
-                                              onClick={() => {
-                                                const duplicated = {
-                                                  ...secondary,
-                                                  id: generateUniqueId(),
-                                                  primarySignId: sign.id,
-                                                  quantity: sign.quantity,
-                                                };
-                                                handleDesignationSelected(duplicated); 
-                                                setMode('create');
-                                              }}
-                                            >
-                                              {secondary.designation || `Secondary #${secondary.id}`}
-                                            </DropdownMenuItem>
-                                          ))}
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              console.log('Adding new secondary sign for primary:', sign.id, 'in phase:', currentPhase);
+                                              const defaultSecondary: SecondarySign = {
+                                                id: generateUniqueId(),
+                                                primarySignId: sign.id,
+                                                designation: '',
+                                                width: 0,
+                                                height: 0,
+                                                quantity: sign.quantity,
+                                                sheeting: 'HI',
+                                                isCustom: false,
+                                                description: '',
+                                                substrate: 'Plastic',
+                                              };
+                                              setLocalSign({ ...defaultSecondary });
+                                              setMode('create');
+                                              setOpen(false);
+                                            }}
+                                          >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            New Secondary Sign
+                                          </DropdownMenuItem>
+
+                                          <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger>
+                                              <Repeat className="h-4 w-4 mr-4" />
+                                              Duplicate Existing Sign
+                                            </DropdownMenuSubTrigger>
+
+                                            <DropdownMenuSubContent>
+                                              {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
+                                                .filter(s => 'primarySignId' in s)
+                                                .map((secondary) => (
+                                                  <DropdownMenuItem
+                                                    key={secondary.id}
+                                                    onClick={() => {
+                                                      const duplicated = {
+                                                        ...secondary,
+                                                        id: generateUniqueId(),
+                                                        primarySignId: sign.id,
+                                                        quantity: sign.quantity,
+                                                      };
+                                                      handleDesignationSelected(duplicated);
+                                                      setMode('create');
+                                                      setOpen(false);
+                                                    }}
+                                                  >
+                                                    {secondary.designation || `Secondary #${secondary.id}`}
+                                                  </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuSubContent>
+                                          </DropdownMenuSub>
                                         </DropdownMenuSubContent>
                                       </DropdownMenuSub>
                                     </>
