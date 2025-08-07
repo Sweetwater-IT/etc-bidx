@@ -545,32 +545,32 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 page: 1,
                 detailed: true
             }
-    
+
             if (sortBy) {
                 ops.sortBy = sortBy
                 ops.sortOrder = sortOrder
             }
-    
+
             const res = await fetch(`/api/active-bids?${new URLSearchParams(ops).toString()}`);
             if (!res.ok) {
                 throw new Error('Failed to fetch active bids');
             }
-    
+
             const resu = await res.json()
             setAllActiveBidsDetailed(resu.data)
-    
+
             const options: any = {
                 limit: activeBidsPageSize,
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
                 detailed: true
             };
-    
+
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
-    
+
             // Handle segment filtering
             if (activeSegment === "archived") {
                 // For archived segment, filter by archived field
@@ -579,9 +579,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             } else if (activeSegment !== "all") {
                 // For non-archived segments, exclude archived items and filter by status/division
                 options.archived = false; // Explicitly exclude archived items
-                
+
                 const statusValues = ['pending', 'won', 'lost', 'draft', 'won-pending'];
-    
+
                 if (statusValues.includes(activeSegment.toLowerCase())) {
                     options.status = activeSegment;
                 } else {
@@ -591,16 +591,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 // For "all" segment, explicitly exclude archived items
                 options.archived = false;
             }
-    
+
             // Add sorting parameters if available
             if (sortBy) {
                 options.sortBy = sortBy;
                 options.sortOrder = sortOrder;
                 console.log(`Adding sort: ${sortBy} ${sortOrder}`);
             }
-    
+
             console.log("Active bids fetch options:", options);
-    
+
             const response = await fetch(`/api/active-bids?${new URLSearchParams(options).toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bids');
@@ -608,7 +608,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             //raw data has all the info we need
             const { data, stats, pagination } = result;
-    
+
             const transformedData = data.map(e => ({
                 id: e.id,
                 contractNumber: e.contractNumber,
@@ -616,11 +616,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
                 subcontractor: e.subcontractor_name || '-',
                 owner: e.admin_data.owner || 'Unknown',
-                county: e.admin_data.county.name === '' || e.admin_data.county.name === 'Choose County' ? '-' : {
-                    main: e.admin_data.county.name,
-                    secondary: e.admin_data.county.branch
-                },
-                branch: e.admin_data.county.branch,
+                county: (e.admin_data?.county?.name === '' || e.admin_data?.county?.name === 'Choose County' || !e.admin_data?.county)
+                    ? '-'
+                    : {
+                        main: e.admin_data.county.name,
+                        secondary: e?.admin_data?.county?.branch ?? ''
+                    },
+                branch: e.admin_data?.county?.branch ?? '',
                 estimator: e.admin_data.estimator || 'Unknown',
                 status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
                 division: e.admin_data.division,
@@ -630,14 +632,14 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 projectDays: e.total_days ? e.total_days : (!!e.admin_data.startDate && !!e.admin_data.endDate) ?
                     Math.ceil((new Date(e.admin_data.endDate).getTime() - new Date(e.admin_data.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
                 totalHours: e.mpt_rental?._summary?.hours || 0,
-                mptValue: e.mpt_rental._summary.revenue || 0,
+                mptValue: e.mpt_rental?._summary.revenue || 0,
                 permSignValue: 0,
                 rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
                     sum + (item.revenue || 0), 0) || 0,
                 createdAt: e.created_at ? e.created_at : "",
-                total: e.mpt_rental._summary.revenue || 0
+                total: e.mpt_rental?._summary?.revenue || 0
             }));
-    
+
             setActiveBids(transformedData);
             setActiveBidsPageCount(pagination.pageCount);
             setActiveBidsTotalCount(pagination.totalCount);
