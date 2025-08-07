@@ -409,9 +409,12 @@ export async function GET(request: NextRequest) {
       if (detailed) {
         return {
           ...bid,
-          contractNumber: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.admin_data.contractNumber + '-DRAFT' : bid.admin_data.contractNumber,
-          status: actualStatus,
-        };
+          contractNumber:
+            (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT'))
+              ? bid.admin_data?.contractNumber + '-DRAFT'
+              : bid.admin_data?.contractNumber,
+                    status: actualStatus,
+                  };
       } else {
         return {
           id: bid.id,
