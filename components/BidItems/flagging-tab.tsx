@@ -28,6 +28,7 @@ import { calculateFlaggingCostSummary } from '@/lib/mptRentalHelperFunctions'
 import { Flagging } from '@/types/TFlagging'
 import { Plus, Edit, Trash2, Clock, User } from 'lucide-react'
 import EmptyContainer from './empty-container'
+import { AdminData } from '@/types/TAdminData'
 
 // Markup percentages arrays for rated and non-rated jobs
 const NON_RATED_MARKUP_PERCENTAGES = [
@@ -78,6 +79,17 @@ const FlaggingServicesTab = () => {
   const [arrowBoardCost, setArrowBoardCost] = useState('')
   const [messageBoardCost, setMessageBoardCost] = useState('')
   const [tmaCost, setTMACost] = useState('')
+  const [customGrossMargin, setCustomGrossMargin] = useState<{
+    customGrossMargin: number,
+    lumpSum: number,
+    hourlyRate: number,
+    item: any;
+  }>({
+    customGrossMargin: 0,
+    lumpSum: 0,
+    hourlyRate: 0,
+    item: {}
+  })
 
   // Initialize flagging services if needed
   useEffect(() => {
@@ -158,13 +170,13 @@ const FlaggingServicesTab = () => {
 
   // On mount or when global flagging changes, sync local flaggingItems to always show the saved flagging
   useEffect(() => {
-  // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
-  if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
-    setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
-  } else {
-    setFlaggingItems([]);
-  }
-}, [flagging]);
+    // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
+    if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
+      setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
+    } else {
+      setFlaggingItems([]);
+    }
+  }, [flagging]);
 
   const handleAddFlagging = () => {
     setFormData({
@@ -246,6 +258,92 @@ const FlaggingServicesTab = () => {
       }
     })
   }
+  console.log('xdxdxd', formData);
+
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      const item = customGrossMargin?.item
+
+      if (!item || !adminData || !flagging) return;
+
+      const { hourlyRate, lumpSumWithEquipment } = calculateCustomGrossMarginValues({
+        item,
+        adminData,
+        flagging,
+        markupRate: customGrossMargin.customGrossMargin
+      })
+
+      setCustomGrossMargin(prev => ({
+        ...prev,
+        lumpSum: lumpSumWithEquipment,
+        hourlyRate
+      }))
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [customGrossMargin.customGrossMargin, flaggingItems, adminData, flagging])
+
+  function calculateCustomGrossMarginValues({
+    item,
+    adminData,
+    flagging,
+    markupRate
+  }: {
+    item: FlaggingItem
+    adminData: AdminData
+    flagging: Flagging
+    markupRate: number
+  }) {
+    if (!adminData || !flagging) return { lumpSumWithEquipment: 0, hourlyRate: 0 }
+
+    const tempFlagging: Flagging = {
+      ...flagging,
+      standardPricing: false,
+      standardLumpSum: 0,
+      markupRate: 0,
+      fuelEconomyMPG: flagging?.fuelEconomyMPG ?? 0,
+      truckDispatchFee: flagging?.truckDispatchFee ?? 0,
+      workerComp: flagging?.workerComp ?? 0,
+      generalLiability: flagging?.generalLiability ?? 0,
+      personnel: item.personnel,
+      numberTrucks: item.numberTrucks,
+      onSiteJobHours: item.onSiteJobHours,
+      fuelCostPerGallon: item.fuelCostPerGallon,
+      arrowBoards: item.arrowBoards,
+      messageBoards: item.messageBoards,
+      TMA: item.TMA,
+      additionalEquipmentCost: item.additionalEquipmentCost
+    }
+
+    const summary = calculateFlaggingCostSummary(adminData, tempFlagging, false)
+    if (!summary) return { lumpSumWithEquipment: 0, hourlyRate: 0 }
+
+    const lumpSum = summary.totalFlaggingCost / (1 - markupRate / 100)
+
+    const arrowBoardsCost = item.arrowBoards.includeInLumpSum
+      ? safeNumber(item.arrowBoards.quantity) * item.arrowBoards.cost
+      : 0
+
+    const messageBoardsCost = item.messageBoards.includeInLumpSum
+      ? safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
+      : 0
+
+    const tmaCost = item.TMA.includeInLumpSum
+      ? safeNumber(item.TMA.quantity) * item.TMA.cost
+      : 0
+
+    const lumpSumWithEquipment = lumpSum + arrowBoardsCost + messageBoardsCost + tmaCost
+
+    const totalHours =
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) +
+      item.onSiteJobHours
+
+    const hourlyRate =
+      item.personnel > 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0
+
+    return { lumpSumWithEquipment, hourlyRate }
+  }
+
 
   // Standard pricing calculation functions
   const getPersonLumpSum = (numberPersonnel: number) => {
@@ -259,7 +357,7 @@ const FlaggingServicesTab = () => {
     const hourlyRate =
       adminData.rated === 'RATED'
         ? adminData.county.flaggingFringeRate +
-          adminData.county.flaggingBaseRate
+        adminData.county.flaggingBaseRate
         : adminData.county.flaggingRate
 
     const dayRate = hourlyRate * 8
@@ -280,7 +378,7 @@ const FlaggingServicesTab = () => {
     const hourlyRate =
       adminData.rated === 'RATED'
         ? adminData.county.flaggingFringeRate +
-          adminData.county.flaggingBaseRate
+        adminData.county.flaggingBaseRate
         : adminData.county.flaggingRate
 
     const overTime = hourlyRate * 1.5
@@ -451,8 +549,8 @@ const FlaggingServicesTab = () => {
 
     const messageBoardsCost = item.messageBoards.includeInLumpSum
       ? Number(
-          safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
-        )
+        safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
+      )
       : 0
 
     const tmaCost = item.TMA.includeInLumpSum
@@ -480,7 +578,6 @@ const FlaggingServicesTab = () => {
     newItems[itemIndex].markupRate = rate
     setFlaggingItems(newItems)
 
-    // Dispatch the markup rate to global state
     dispatch({
       type: 'UPDATE_FLAGGING',
       payload: {
@@ -503,8 +600,8 @@ const FlaggingServicesTab = () => {
     return Math.max(
       0,
       safeNumber(item.onSiteJobHours) +
-        Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) -
-        8
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) -
+      8
     )
   }
 
@@ -566,16 +663,16 @@ const FlaggingServicesTab = () => {
               {(item.arrowBoards.quantity > 0 ||
                 item.messageBoards.quantity > 0 ||
                 item.TMA.quantity > 0) && (
-                <div className='grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-4'>
-                  {item.arrowBoards.quantity > 0 && (
-                    <div>Arrow Boards: {item.arrowBoards.quantity}</div>
-                  )}
-                  {item.messageBoards.quantity > 0 && (
-                    <div>Message Boards: {item.messageBoards.quantity}</div>
-                  )}
-                  {item.TMA.quantity > 0 && <div>TMA: {item.TMA.quantity}</div>}
-                </div>
-              )}
+                  <div className='grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-4'>
+                    {item.arrowBoards.quantity > 0 && (
+                      <div>Arrow Boards: {item.arrowBoards.quantity}</div>
+                    )}
+                    {item.messageBoards.quantity > 0 && (
+                      <div>Message Boards: {item.messageBoards.quantity}</div>
+                    )}
+                    {item.TMA.quantity > 0 && <div>TMA: {item.TMA.quantity}</div>}
+                  </div>
+                )}
 
               {/* Cost Summary for Custom Pricing */}
               {!item.isStandardPricing && (
@@ -594,6 +691,45 @@ const FlaggingServicesTab = () => {
                 <div>Lump Sum</div>
                 <div>Hourly Rate / Man</div>
                 <div className='text-center'>Use this price?</div>
+              </div>
+
+              <div className='grid grid-cols-4 gap-4 py-2 border-t text-sm items-center'>
+                <Input
+                  value={customGrossMargin.customGrossMargin}
+                  max={100}
+                  min={0}
+                  placeholder='Custom gross margin'
+                  className='bg-muted/50'
+                  onChange={(e: any) =>
+                    setCustomGrossMargin(prev => ({
+                      ...prev,
+                      customGrossMargin: Number(e.target.value),
+                      item: item
+                    }))
+                  }
+                />
+                <div>
+                  ${safeNumber(customGrossMargin.lumpSum).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div>
+                  ${customGrossMargin.hourlyRate.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div className='flex justify-center'>
+                  <Checkbox
+                    checked={item.markupRate === customGrossMargin.customGrossMargin}
+                    onCheckedChange={checked => {
+                      if (checked) {
+                        handleMarkupSelection(index, customGrossMargin.customGrossMargin)
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {(adminData?.rated === 'RATED'
@@ -1387,9 +1523,9 @@ const FlaggingServicesTab = () => {
                             $
                             {(
                               formData.arrowBoards.quantity *
-                                formData.arrowBoards.cost +
+                              formData.arrowBoards.cost +
                               formData.messageBoards.quantity *
-                                formData.messageBoards.cost +
+                              formData.messageBoards.cost +
                               formData.TMA.quantity * formData.TMA.cost
                             ).toLocaleString('en-US', {
                               minimumFractionDigits: 2,

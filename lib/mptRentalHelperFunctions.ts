@@ -890,7 +890,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const fuelEconomyMPG = toNumber(flagging?.fuelEconomyMPG);
   const truckDispatchFee = toNumber(flagging?.truckDispatchFee);
   const additionalEquipmentCost = toNumber(flagging?.additionalEquipmentCost);
-  const arrowBoardsCost = flagging.arrowBoards.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
+  const arrowBoardsCost = flagging?.arrowBoards?.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
   const messageBoardsCost = flagging.messageBoards.includeInLumpSum ? toNumber(safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost) : 0;
   const tmaCost = flagging.TMA.includeInLumpSum ? toNumber(safeNumber(flagging.TMA.quantity) * flagging.TMA.cost) : 0;
 
