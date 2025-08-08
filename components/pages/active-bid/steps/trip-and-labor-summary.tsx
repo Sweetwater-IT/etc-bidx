@@ -105,7 +105,7 @@ export const TripAndLaborSummary = ({
         <div className='flex flex-col'>
           <label className='text-sm font-semibold'>Total Trips</label>
           <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-            {safeNumber(baseTrips + (safeNumber(phase.maintenanceTrips) * 2))}
+            {safeNumber(baseTrips + safeNumber(phase.maintenanceTrips))}
           </div>
         </div>      
   
