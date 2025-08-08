@@ -1259,7 +1259,7 @@ const BidItemsStep5 = ({
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
                                     {/* Add switch here */}
-                                    <div className='flex flex-col gap-2'>
+                                    <div className='flex flex-col gap-2 mb-4'>
                                       <span className='text-sm font-medium'>Emergency Job?</span>
                                       <Switch
                                         checked={adminData?.emergencyJob || false}
