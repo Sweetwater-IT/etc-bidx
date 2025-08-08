@@ -85,7 +85,7 @@ const FlaggingServicesTab = () => {
     hourlyRate: number,
     item: any;
   }>({
-    customGrossMargin: 0,
+    customGrossMargin: 35,
     lumpSum: 0,
     hourlyRate: 0,
     item: {}
@@ -170,9 +170,12 @@ const FlaggingServicesTab = () => {
 
   // On mount or when global flagging changes, sync local flaggingItems to always show the saved flagging
   useEffect(() => {
-    // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
     if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
       setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
+      setCustomGrossMargin(prev => ({
+        ...prev,
+        item: flagging
+      }))
     } else {
       setFlaggingItems([]);
     }
@@ -258,7 +261,6 @@ const FlaggingServicesTab = () => {
       }
     })
   }
-  console.log('xdxdxd', formData);
 
   React.useEffect(() => {
     const timeout = setTimeout(() => {
@@ -694,20 +696,23 @@ const FlaggingServicesTab = () => {
               </div>
 
               <div className='grid grid-cols-4 gap-4 py-2 border-t text-sm items-center'>
-                <Input
-                  value={customGrossMargin.customGrossMargin}
-                  max={100}
-                  min={0}
-                  placeholder='Custom gross margin'
-                  className='bg-muted/50'
-                  onChange={(e: any) =>
-                    setCustomGrossMargin(prev => ({
-                      ...prev,
-                      customGrossMargin: Number(e.target.value),
-                      item: item
-                    }))
-                  }
-                />
+                <div className='w-full flex flex-row items-center gap-2'>
+                  <Input
+                    value={customGrossMargin.customGrossMargin}
+                    max={100}
+                    min={0}
+                    placeholder='Custom gross margin'
+                    className='bg-muted/50 w-12'
+                    onChange={(e: any) =>
+                      setCustomGrossMargin(prev => ({
+                        ...prev,
+                        customGrossMargin: Number(e.target.value),
+                        item: item
+                      }))
+                    }
+                  />
+                  <p>%</p>
+                </div>
                 <div>
                   ${safeNumber(customGrossMargin.lumpSum).toLocaleString('en-US', {
                     minimumFractionDigits: 2,
