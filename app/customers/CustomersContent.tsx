@@ -116,6 +116,12 @@ const CustomersContent = () => {
     }
   }, [customers, drawerOpen]);
 
+    // Add this handler
+  const handleDeleteSelected = useCallback((selectedRows: Customer[]) => {
+    console.log('Selected customers for deletion:', selectedRows);
+    // Minimal handler to trigger checkbox rendering
+  }, []);
+
   // Only add event listener when drawer is open
   useEffect(() => {
     if (drawerOpen) {

@@ -714,7 +714,7 @@ export function SignOrderList({
                                 </Tooltip>
                               </TooltipProvider>
                             ) : sc.key === 'bLights' ?
-                              Number(sign.quantity * (sign as any).bLights) + " " + getBLightColorCode(sign.bLightsColor)
+                              Number((sign as any).bLights) + " " + getBLightColorCode(sign.bLightsColor)
                               :
                               (
                                 formatColumnValue(sign, sc.key as keyof PrimarySign)
