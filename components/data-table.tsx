@@ -1106,17 +1106,21 @@ export function DataTable<TData extends object> ({
                   table.getRowModel().rows.map(row => (
                     <TableRow
                       key={row.id}
-                      data-state={
-                        isRowSelected(row.original, selectedItem)
-                          ? 'selected'
-                          : ''
-                      }
+                      data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
                       className={cn(
                         'cursor-pointer',
-                        isRowSelected(row.original, selectedItem) &&
-                          'bg-muted/50'
+                        isRowSelected(row.original, selectedItem) && 'bg-muted/50'
                       )}
-                      onClick={() => onRowClick && onRowClick(row.original)}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.dataset.slot === 'checkbox') return;
+                        const checkbox = target.closest('[data-slot="checkbox"]');
+                        if (checkbox) return;
+                        if (onViewDetails) {
+                          console.log('Row clicked, calling onViewDetails:', row.original);
+                          onViewDetails(row.original as TData);
+                        }
+                      }}
                     >
                       {row.getVisibleCells().map(cell => {
                         const isActions = cell.column.id === 'actions'
