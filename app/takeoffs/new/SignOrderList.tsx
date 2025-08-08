@@ -641,7 +641,10 @@ export function SignOrderList({
                                             <DropdownMenuSubContent>
                                               {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
                                                 .filter(s => 'primarySignId' in s)
-                                                .map((secondary) => (
+                                                .filter((secondary, index, self) =>
+                                                  index === self.findIndex(s => s.designation === secondary.designation)
+                                                )
+                                                .map((secondary, i, arr) => (
                                                   <DropdownMenuItem
                                                     key={secondary.id}
                                                     onClick={() => {
@@ -656,7 +659,14 @@ export function SignOrderList({
                                                       setOpen(false);
                                                     }}
                                                   >
-                                                    {secondary.designation || `Secondary #${secondary.id}`}
+                                                    <div
+                                                      className={`flex w-full flex-col pb-4 ${i !== arr.length - 1 ? 'border-b border-gray-300' : ''}`}
+                                                    >
+                                                      <p>
+                                                        {(secondary.designation + ` (${secondary.width}x${secondary.height})`) || `Secondary #${secondary.id}`}
+                                                      </p>
+                                                      <p>{secondary.description}</p>
+                                                    </div>
                                                   </DropdownMenuItem>
                                                 ))}
                                             </DropdownMenuSubContent>
