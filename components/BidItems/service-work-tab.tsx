@@ -131,6 +131,38 @@ const ServiceWorkTab = () => {
     fetchFlaggingStaticData();
   }, [dispatch]);
 
+  //Add
+  useEffect(() => {
+  if (serviceWork && (serviceWork.personnel > 0 || serviceWork.numberTrucks > 0)) {
+    setServiceWorkItems([{
+      id: 'service-work',
+      personnel: serviceWork.personnel || 0,
+      numberTrucks: serviceWork.numberTrucks || 0,
+      onSiteJobHours: serviceWork.onSiteJobHours || 0,
+      fuelCostPerGallon: serviceWork.fuelCostPerGallon || 0,
+      arrowBoards: {
+        quantity: serviceWork.arrowBoards?.quantity || 0,
+        cost: serviceWork.arrowBoards?.cost || 50,
+        includeInLumpSum: serviceWork.arrowBoards?.includeInLumpSum || false
+      },
+      messageBoards: {
+        quantity: serviceWork.messageBoards?.quantity || 0,
+        cost: serviceWork.messageBoards?.cost || 100,
+        includeInLumpSum: serviceWork.messageBoards?.includeInLumpSum || false
+      },
+      TMA: {
+        quantity: serviceWork.TMA?.quantity || 0,
+        cost: serviceWork.TMA?.cost || 500,
+        includeInLumpSum: serviceWork.TMA?.includeInLumpSum || false
+      },
+      additionalEquipmentCost: serviceWork.additionalEquipmentCost || 0,
+      markupRate: serviceWork.markupRate || 50
+    }]);
+  } else {
+    setServiceWorkItems([]);
+  }
+}, [serviceWork]);
+
   // Calculate service work cost summary for current form data
   useEffect(() => {
     if (formData && adminData && serviceWork) {

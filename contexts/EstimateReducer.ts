@@ -548,6 +548,7 @@ export const estimateReducer = (
 				saleItems: [],
 				mptRental: defaultMPTObject,
 				flagging: defaultFlaggingObject,
+				serviceWork: defaultFlaggingObject,
 				equipmentRental: [],
 				ratesAcknowledged: false,
 				notes: [],
@@ -639,7 +640,7 @@ export const estimateReducer = (
 		case 'COPY_SERVICE_WORK':
 			return {
 				...state,
-				flagging: action.payload
+				serviceWork: action.payload
 			};
 
 		case 'COPY_SALE_ITEMS':
