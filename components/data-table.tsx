@@ -744,80 +744,65 @@ export function DataTable<TData extends object> ({
           : ''
       })
     }
-    // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
-    if (onArchiveSelected || onDeleteSelected) {
-      cols.unshift({
-        id: 'select',
-        header: ({ table }: any) => (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Checkbox
-                className={`translate-x-1 ${
-                  table.getIsAllPageRowsSelected()
-                    ? 'bg-black text-white border-black'
-                    : ''
-                }`}
-                checked={table.getIsAllPageRowsSelected()}
-                onCheckedChange={value => {
-                  // row.toggleSelected(!!value);
-                }}
-                aria-label='Select all rows'
-                role='combobox'
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent avoidCollisions={false} align='start'>
-              <DropdownMenuItem
-                onClick={() => {
-                  table.toggleAllPageRowsSelected(true)
-                  onAllRowsSelectedChange?.(false)
-                }}
-              >
-                Select{' '}
-                {`${data.length} ${
-                  onMarkAsBidJob ? 'available jobs' : 'items'
-                }`}{' '}
-                on this page
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  table.toggleAllRowsSelected(true)
-                  onAllRowsSelectedChange?.(true)
-                }}
-              >
-                Select all{' '}
-                {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
-              </DropdownMenuItem>
-              <Separator />
-              <DropdownMenuItem
-                onClick={() => {
-                  table.toggleAllRowsSelected(false)
-                  onAllRowsSelectedChange?.(false)
-                }}
-              >
-                Deselect all
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-        cell: ({ row }: any) => (
-          <div className='flex justify-center'>
+    // fix checkbox column > if onArchiveSelected or onDeleteSelected is provided
+    cols.unshift({
+      id: 'select',
+      header: ({ table }) => (
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
             <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={value => {
-                row.toggleSelected(!!value)
-              }}
-              aria-label='Select row'
-              onClick={e => e.stopPropagation()} // Prevent row click when checkbox is clicked
+              className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+              checked={table.getIsAllPageRowsSelected()}
+              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+              aria-label='Select all rows'
+              role='combobox'
             />
-          </div>
-        ),
-        meta: {
-          className: 'w-16 text-right'
-        },
-        enableSorting: false,
-        enableHiding: false
-      })
-    }
+          </DropdownMenuTrigger>
+          <DropdownMenuContent avoidCollisions={false} align='start'>
+            <DropdownMenuItem
+              onClick={() => {
+                table.toggleAllPageRowsSelected(true);
+                onAllRowsSelectedChange?.(false);
+              }}
+            >
+              Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                table.toggleAllPageRowsSelected(true);
+                onAllRowsSelectedChange?.(true);
+              }}
+            >
+              Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
+            </DropdownMenuItem>
+            <Separator />
+            <DropdownMenuItem
+              onClick={() => {
+                table.toggleAllRowsSelected(false);
+                onAllRowsSelectedChange?.(false);
+              }}
+            >
+              Deselect all
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      cell: ({ row }) => (
+        <div className='flex justify-center'>
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label='Select row'
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      ),
+      meta: {
+        className: 'w-16 text-right'
+      },
+      enableSorting: false,
+      enableHiding: false
+    });
 
     return cols
   }, [
@@ -846,7 +831,7 @@ export function DataTable<TData extends object> ({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
+    enableRowSelection: true,
     state: {
       pagination: {
         pageIndex,
