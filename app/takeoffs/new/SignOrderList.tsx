@@ -358,8 +358,6 @@ export function SignOrderList({
   }, [mptRental.phases, currentPhase, onlyTable]);
 
   function getBLightColorCode(bLightsColor?: string): string {
-    console.log('retornare ', bLightsColor);
-
     if (!bLightsColor) return '';
     if (bLightsColor === 'Red') return 'R';
     if (bLightsColor === 'White') return 'W';

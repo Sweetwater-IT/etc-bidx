@@ -10,7 +10,9 @@ import {
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
-  DrawerTitle
+  DrawerOverlay,
+  DrawerTitle,
+
 } from '@/components/ui/drawer'
 import {
   Popover,
@@ -30,7 +32,8 @@ import {
   Plus,
   Edit,
   Calendar as CalendarIcon,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -92,7 +95,7 @@ const formatLabel = (key: string) => {
 // Calculate days between dates (abstracted function)
 const calculateDays = (start: Date, end: Date): number => {
   const diffTime = Math.abs(end.getTime() - start.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) // Include both start and end date
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return diffDays
 }
 
@@ -162,6 +165,7 @@ const BidItemsStep5 = ({
     cost: 0,
     usefulLife: 0
   })
+  const [draweStateEquipmanet, setDraweStateEquipmanet] = React.useState<boolean>(false)
   const [itemName, setItemName] = useState('')
   const [digits, setDigits] = useState<Record<string, string>>({})
 
@@ -173,7 +177,29 @@ const BidItemsStep5 = ({
   const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(
     null
   )
+  const [modeEdit, setModeEdit] = React.useState<{
+    lightAndDrum: boolean,
+    MPTEquipament: boolean,
+    customEquipament: boolean
+  }>({
+    lightAndDrum: false,
+    MPTEquipament: false,
+    customEquipament: false
+  })
+
   const [activeTab, setActiveTab] = useState('mpt')
+
+  const toggleEditMode = (key: 'lightAndDrum' | 'MPTEquipament' | 'customEquipament', value: any) => {
+    setModeEdit((prev) => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  const toggleDrawerAddEquipament = () => [
+    setDraweStateEquipmanet((prev) => !prev)
+  ]
+
 
   // Ensure activeTab is always a visible tab
   useEffect(() => {
@@ -775,7 +801,6 @@ const BidItemsStep5 = ({
                 `No matching sign data found for database name: ${sign.dbName}`
               )
 
-              // Set default values for signs if not found
               dispatch({
                 type: 'UPDATE_STATIC_EQUIPMENT_INFO',
                 payload: {
@@ -808,40 +833,40 @@ const BidItemsStep5 = ({
       } catch (error) {
         console.error('Error initializing equipment data:', error)
 
-        // Set default values for all equipment types in case of error
-        ;[...standardEquipmentList, ...lightAndDrumList].forEach(
-          equipmentType => {
-            // Set default price (placeholder)
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'price',
-                value: getDefaultPrice(equipmentType)
-              }
-            })
+          // Set default values for all equipment types in case of error
+          ;[...standardEquipmentList, ...lightAndDrumList].forEach(
+            equipmentType => {
+              // Set default price (placeholder)
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: {
+                  type: equipmentType,
+                  property: 'price',
+                  value: getDefaultPrice(equipmentType)
+                }
+              })
 
-            // Set default useful life (365 days = 1 year)
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'usefulLife',
-                value: 365
-              }
-            })
+              // Set default useful life (365 days = 1 year)
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: {
+                  type: equipmentType,
+                  property: 'usefulLife',
+                  value: 365
+                }
+              })
 
-            // Set default payback period
-            dispatch({
-              type: 'UPDATE_STATIC_EQUIPMENT_INFO',
-              payload: {
-                type: equipmentType,
-                property: 'paybackPeriod',
-                value: DEFAULT_PAYBACK_PERIOD
-              }
-            })
-          }
-        )
+              // Set default payback period
+              dispatch({
+                type: 'UPDATE_STATIC_EQUIPMENT_INFO',
+                payload: {
+                  type: equipmentType,
+                  property: 'paybackPeriod',
+                  value: DEFAULT_PAYBACK_PERIOD
+                }
+              })
+            }
+          )
 
         // Set default values for signs
         signList.forEach(sign => {
@@ -998,12 +1023,12 @@ const BidItemsStep5 = ({
   }
 
   // Add custom item to the list
-  const handleAddCustomItem = () => {
+  const handleAddCustomItem = (phaseIndex: number) => {
     if (itemName && newCustomItem.quantity > 0 && newCustomItem.cost > 0) {
       dispatch({
         type: 'ADD_LIGHT_AND_DRUM_CUSTOM_ITEM',
         payload: {
-          phaseNumber: currentPhase,
+          phaseNumber: phaseIndex,
           item: {
             id: itemName,
             ...newCustomItem
@@ -1192,6 +1217,45 @@ const BidItemsStep5 = ({
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
+                                  <div className='flex flex-row items-center mb-4 justify-end'>
+                                    {
+                                      modeEdit.MPTEquipament ? (
+                                        <div className='flex gap-2'>
+                                          <Button
+                                            size='sm'
+                                            variant='default'
+                                            className='h-8'
+                                            onClick={() => {
+                                              toggleEditMode('MPTEquipament', false)
+                                            }}
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('MPTEquipament', false)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('MPTEquipament', true)}
+                                          >
+                                            <Edit className='h-4 w-4 mr-1' />
+                                            Edit
+                                          </Button>
+                                        </div>
+                                      )
+                                    }
+
+                                  </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
                                     {standardEquipmentList.map(equipmentKey =>
                                       equipmentKey === 'sandbag' ? (
@@ -1223,25 +1287,36 @@ const BidItemsStep5 = ({
                                             >
                                               Quantity:
                                             </Label>
-                                            <Input
-                                              id={`quantity-${equipmentKey}-${index}`}
-                                              type='number'
-                                              min={getMinQuantity(equipmentKey)}
-                                              value={
-                                                phase.standardEquipment[
-                                                  equipmentKey
-                                                ]?.quantity || ''
-                                              }
-                                              onChange={e =>
-                                                handleStandardInputChange(
-                                                  parseFloat(e.target.value) ||
-                                                    0,
-                                                  equipmentKey,
-                                                  'quantity'
-                                                )
-                                              }
-                                              className='w-full'
-                                            />
+                                            {
+                                              modeEdit.MPTEquipament ?
+                                                <Input
+                                                  id={`quantity-${equipmentKey}-${index}`}
+                                                  type='number'
+                                                  min={getMinQuantity(equipmentKey)}
+                                                  value={
+                                                    phase.standardEquipment[
+                                                      equipmentKey
+                                                    ]?.quantity || ''
+                                                  }
+                                                  onChange={e => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    const min = getMinQuantity(equipmentKey) ?? 0;
+                                                    const newVal = val < min ? min : val;
+                                                    handleStandardInputChange(newVal, equipmentKey, 'quantity');
+                                                  }}
+                                                  className='w-full'
+                                                />
+                                                :
+                                                <Label
+                                                  className='flex text-muted-foreground'
+                                                >
+                                                  {
+                                                    phase.standardEquipment[
+                                                      equipmentKey
+                                                    ]?.quantity || '-'
+                                                  }
+                                                </Label>
+                                            }
                                           </div>
                                         </div>
                                       )
@@ -1258,7 +1333,7 @@ const BidItemsStep5 = ({
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
-                                    {/* Add switch here */}
+                                  <div className='flex flex-row items-center justify-between w-full'>
                                     <div className='flex flex-col gap-2 mb-4'>
                                       <span className='text-sm font-medium'>Emergency Job?</span>
                                       <Switch
@@ -1266,6 +1341,45 @@ const BidItemsStep5 = ({
                                         onCheckedChange={handleEmergencyJobChange}
                                       />
                                     </div>
+                                    <div className='mb-4'>
+                                    {
+                                      modeEdit.lightAndDrum ? (
+                                        <div className='flex gap-2'>
+                                          <Button
+                                            size='sm'
+                                            variant='default'
+                                            className='h-8'
+                                            onClick={() => {
+                                              toggleEditMode('lightAndDrum', false)
+                                            }}
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('lightAndDrum', false)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('lightAndDrum', true)}
+                                          >
+                                            <Edit className='h-4 w-4 mr-1' />
+                                            Edit
+                                          </Button>
+                                        </div>
+                                      )
+                                    }
+                                    </div>
+                                  </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
                                     {lightAndDrumList.map(equipmentKey => (
                                       <div
@@ -1282,24 +1396,36 @@ const BidItemsStep5 = ({
                                           >
                                             Quantity:
                                           </Label>
-                                          <Input
-                                            id={`quantity-light-${equipmentKey}-${index}`}
-                                            type='number'
-                                            min={getMinQuantity(equipmentKey)}
-                                            value={
-                                              phase.standardEquipment[
-                                                equipmentKey
-                                              ]?.quantity || ''
-                                            }
-                                            onChange={e =>
-                                              handleStandardInputChange(
-                                                parseFloat(e.target.value) || 0,
-                                                equipmentKey,
-                                                'quantity'
-                                              )
-                                            }
-                                            className='w-full'
-                                          />
+                                          {
+                                            modeEdit.lightAndDrum ?
+                                              <Input
+                                                id={`quantity-light-${equipmentKey}-${index}`}
+                                                type='number'
+                                                value={
+                                                  phase.standardEquipment[
+                                                    equipmentKey
+                                                  ]?.quantity || ''
+                                                }
+                                                min={getMinQuantity(equipmentKey)}
+                                                onChange={e => {
+                                                  const val = parseFloat(e.target.value) || 0;
+                                                  const min = getMinQuantity(equipmentKey) ?? 0;
+                                                  const newVal = val < min ? min : val;
+                                                  handleStandardInputChange(newVal, equipmentKey, 'quantity');
+                                                }}
+                                                className='w-full'
+                                              />
+                                              :
+                                              <Label
+                                                className='text-muted-foreground'
+                                              >
+                                                {
+                                                  phase.standardEquipment[
+                                                    equipmentKey
+                                                  ]?.quantity || '-'
+                                                }
+                                              </Label>
+                                          }
                                         </div>
                                         {adminData?.emergencyJob && (
                                           <div className='flex flex-col w-1/3 gap-2 mt-2'>
@@ -1309,54 +1435,37 @@ const BidItemsStep5 = ({
                                             >
                                               Emergency Rate:
                                             </Label>
-                                            <Input
-                                              id={`emergency-${equipmentKey}-${index}`}
-                                              inputMode='decimal'
-                                              pattern='^\d*(\.\d{0,2})?$'
-                                              className='w-full'
-                                              value={`$ ${formatDecimal(
-                                                getDigitsForEquipment(
-                                                  equipmentKey
-                                                )
-                                              )}`}
-                                              onChange={e => {
-                                                const ev =
-                                                  e.nativeEvent as InputEvent
-                                                const { inputType } = ev
-                                                const data = (
-                                                  ev.data || ''
-                                                ).replace(/\$/g, '')
+                                            {modeEdit.lightAndDrum ? (
+                                              <Input
+                                                id={`emergency-${equipmentKey}-${index}`}
+                                                inputMode='decimal'
+                                                pattern='^\d*(\.\d{0,2})?$'
+                                                className='w-full'
+                                                value={`$ ${formatDecimal(
+                                                  getDigitsForEquipment(equipmentKey)
+                                                )}`}
+                                                onChange={e => {
+                                                  const ev = e.nativeEvent as InputEvent
+                                                  const { inputType } = ev
+                                                  const data = (ev.data || '').replace(/\$/g, '')
 
-                                                const currentDigits =
-                                                  getDigitsForEquipment(
-                                                    equipmentKey
-                                                  )
-                                                const nextDigits =
-                                                  handleNextDigits(
-                                                    currentDigits,
-                                                    inputType,
-                                                    data
-                                                  )
-                                                updateDigitsForEquipment(
-                                                  equipmentKey,
-                                                  nextDigits
-                                                )
+                                                  const currentDigits = getDigitsForEquipment(equipmentKey)
+                                                  const nextDigits = handleNextDigits(currentDigits, inputType, data)
+                                                  updateDigitsForEquipment(equipmentKey, nextDigits)
 
-                                                const formatted = (
-                                                  parseInt(nextDigits, 10) / 100
-                                                ).toFixed(2)
-                                                const emergencyKey =
-                                                  emergencyFieldKeyMap[
-                                                    equipmentKey
-                                                  ] || equipmentKey
-                                                const fieldKey = `emergency${emergencyKey}`
-                                                handleRateChange(
-                                                  formatted,
-                                                  fieldKey,
-                                                  equipmentKey
-                                                )
-                                              }}
-                                            />
+                                                  const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
+                                                  const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey
+                                                  const fieldKey = `emergency${emergencyKey}`
+                                                  handleRateChange(formatted, fieldKey, equipmentKey)
+                                                }}
+                                              />
+                                            ) : (
+                                              <Label className='text-muted-foreground'>
+                                                {phase.standardEquipment[equipmentKey]?.quantity
+                                                  ? `$ ${formatDecimal(getDigitsForEquipment(equipmentKey))}`
+                                                  : '-'}
+                                              </Label>
+                                            )}
                                           </div>
                                         )}
                                       </div>
@@ -1364,7 +1473,6 @@ const BidItemsStep5 = ({
                                   </div>
                                 </div>
 
-                                {/* Custom Equipment Section */}
                                 <div>
                                   <div className='flex items-center my-8'>
                                     <div className='flex-grow border-t border-black'></div>
@@ -1373,214 +1481,283 @@ const BidItemsStep5 = ({
                                     </h3>
                                     <div className='flex-grow border-t border-black'></div>
                                   </div>
-                                  <div className='grid grid-cols-12 gap-4 mb-4'>
-                                    <div className='col-span-3'>
-                                      <Label
-                                        className='mb-2'
-                                        htmlFor='itemName'
-                                      >
-                                        Item Name
-                                      </Label>
-                                      <Input
-                                        id='itemName'
-                                        value={itemName}
-                                        onChange={e =>
-                                          setItemName(e.target.value)
-                                        }
-                                        placeholder='Enter item name'
-                                      />
+                                </div>
+                                <Drawer direction="right" open={draweStateEquipmanet} onClose={toggleDrawerAddEquipament}>
+                                  <DrawerOverlay />
+                                  <DrawerContent className="min-w-lg flex flex-col max-w-[600px] w-full">
+                                    {/* Header */}
+                                    <div className='flex flex-col gap-2 relative z-10 bg-background'>
+                                      <DrawerHeader>
+                                        <DrawerTitle>
+                                          Add Custom Equipment
+                                        </DrawerTitle>
+                                      </DrawerHeader>
+                                      <Separator className='w-full -mt-2' />
                                     </div>
-                                    <div className='col-span-3'>
-                                      <Label
-                                        className='mb-2'
-                                        htmlFor='quantity'
-                                      >
-                                        Quantity
-                                      </Label>
-                                      <Input
-                                        id='quantity'
-                                        type='number'
-                                        min={0}
-                                        value={newCustomItem.quantity || ''}
-                                        onChange={e =>
-                                          handleNewItemInputChange(
-                                            'quantity',
-                                            parseFloat(e.target.value) || 0
-                                          )
-                                        }
-                                        placeholder=''
-                                      />
+                                    {/* Body */}
+                                    <div className="px-4 space-y-6 mt-4">
+                                      <h4 className='font-medium'>Equipment Information</h4>
+                                      <div className="grid grid-cols-2 gap-6">
+                                        <div className="">
+                                          <Label htmlFor="itemName" className="mb-2 block font-medium text-gray-700">
+                                            Item Name
+                                          </Label>
+                                          <Input
+                                            id="itemName"
+                                            value={itemName}
+                                            onChange={e => setItemName(e.target.value)}
+                                            placeholder="Enter item name"
+                                          />
+                                        </div>
+                                        <div className="">
+                                          <Label htmlFor="quantity" className="mb-2 block font-medium text-gray-700">
+                                            Quantity
+                                          </Label>
+                                          <Input
+                                            id="quantity"
+                                            type="number"
+                                            min={0}
+                                            value={newCustomItem.quantity || ""}
+                                            onChange={e =>
+                                              handleNewItemInputChange("quantity", parseFloat(e.target.value) || 0)
+                                            }
+                                            placeholder=""
+                                          />
+                                        </div>
+                                        <div className="">
+                                          <Label htmlFor="cost" className="mb-2 block font-medium text-gray-700">
+                                            Cost
+                                          </Label>
+                                          <Input
+                                            id="cost"
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            value={newCustomItem.cost || ""}
+                                            onChange={e =>
+                                              handleNewItemInputChange("cost", parseFloat(e.target.value) || 0)
+                                            }
+                                            placeholder=""
+                                          />
+                                        </div>
+                                        <div className="">
+                                          <Label htmlFor="usefulLife" className="mb-2 block font-medium text-gray-700">
+                                            Useful Life (days)
+                                          </Label>
+                                          <Input
+                                            id="usefulLife"
+                                            type="number"
+                                            min={0}
+                                            value={newCustomItem.usefulLife || ""}
+                                            onChange={e =>
+                                              handleNewItemInputChange("usefulLife", parseFloat(e.target.value) || 0)
+                                            }
+                                            placeholder=""
+                                          />
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className='col-span-3'>
-                                      <Label className='mb-2' htmlFor='cost'>
-                                        Cost
-                                      </Label>
-                                      <Input
-                                        id='cost'
-                                        type='number'
-                                        min={0}
-                                        step={0.01}
-                                        value={newCustomItem.cost || ''}
-                                        onChange={e =>
-                                          handleNewItemInputChange(
-                                            'cost',
-                                            parseFloat(e.target.value) || 0
-                                          )
-                                        }
-                                        placeholder=''
-                                      />
-                                    </div>
-                                    <div className='col-span-3'>
-                                      <Label
-                                        className='mb-2'
-                                        htmlFor='usefulLife'
-                                      >
-                                        Useful Life (days)
-                                      </Label>
-                                      <Input
-                                        id='usefulLife'
-                                        type='number'
-                                        min={0}
-                                        value={newCustomItem.usefulLife || ''}
-                                        onChange={e =>
-                                          handleNewItemInputChange(
-                                            'usefulLife',
-                                            parseFloat(e.target.value) || 0
-                                          )
-                                        }
-                                        placeholder=''
-                                      />
-                                    </div>
-                                  </div>
+
+                                    {/* Footer */}
+                                    <DrawerFooter className="flex justify-end space-x-3 w-full">
+                                      <div className="flex justify-end space-x-3 w-full mx-auto">
+                                        <Button variant="outline" onClick={toggleDrawerAddEquipament}>
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          onClick={() => {
+                                            handleAddCustomItem(index)
+                                            toggleDrawerAddEquipament()
+                                          }}
+                                          disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                                        >
+                                          Save Equipament
+                                        </Button>
+                                      </div>
+                                    </DrawerFooter>
+                                  </DrawerContent>
+                                </Drawer>
+                                <div className='flex flex-row items-center justify-between'>
                                   <Button
-                                    onClick={handleAddCustomItem}
+                                    onClick={toggleDrawerAddEquipament}
                                     className='mt-2'
-                                    disabled={
-                                      !itemName ||
-                                      newCustomItem.quantity <= 0 ||
-                                      newCustomItem.cost <= 0
-                                    }
-                                    aria-disabled={
-                                      !itemName ||
-                                      newCustomItem.quantity <= 0 ||
-                                      newCustomItem.cost <= 0
-                                    }
                                   >
                                     <Plus className='mr-2 h-4 w-4' /> Add Custom
                                     Item
                                   </Button>
+
+                                  <div className=' flex flex-row gap-4'>
+                                    {
+                                      modeEdit.customEquipament ? (
+                                        <div className='flex gap-2'>
+                                          <Button
+                                            size='sm'
+                                            variant='default'
+                                            className='h-8'
+                                            onClick={() => {
+                                              toggleEditMode('customEquipament', false)
+                                            }}
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('customEquipament', false)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            className='h-8'
+                                            onClick={() => toggleEditMode('customEquipament', true)}
+                                          >
+                                            <Edit className='h-4 w-4 mr-1' />
+                                            Edit
+                                          </Button>
+                                        </div>
+                                      )
+                                    }
+                                  </div>
+
                                 </div>
 
                                 {/* Custom Items Display */}
-                                {phase.customLightAndDrumItems?.length > 0 && (
-                                  <div className='mt-6'>
-                                    <h3 className='text-base font-semibold mb-4'>
-                                      Custom Items
-                                    </h3>
-                                    <div className='grid grid-cols-12 gap-4 mb-4'>
-                                      <div className='col-span-2 font-medium'>
-                                        Item Name
+                                  {phase.customLightAndDrumItems?.length > 0 && (
+                                    <div className='mt-6'>
+                                      <h3 className='text-base font-semibold mb-4'>
+                                        Custom Items
+                                      </h3>
+                                      <div className='grid grid-cols-12 gap-4 mb-4'>
+                                        <div className='col-span-2 font-medium'>Item Name</div>
+                                        <div className='col-span-3 font-medium'>Quantity</div>
+                                        <div className='col-span-3 font-medium'>Cost</div>
+                                        <div className='col-span-2 font-medium'>Useful Life</div>
+                                        <div className='col-span-2 font-medium'>Daily Price</div>
                                       </div>
-                                      <div className='col-span-3 font-medium'>
-                                        Quantity
-                                      </div>
-                                      <div className='col-span-3 font-medium'>
-                                        Cost
-                                      </div>
-                                      <div className='col-span-2 font-medium'>
-                                        Useful Life
-                                      </div>
-                                      <div className='col-span-2 font-medium'>
-                                        Daily Price
-                                      </div>
-                                    </div>
-                                    <div className='space-y-4'>
-                                      {phase.customLightAndDrumItems.map(
-                                        item => (
+                                      <div className='space-y-6'>
+                                        {phase.customLightAndDrumItems.map(item => (
                                           <div
                                             key={item.id}
                                             className='grid grid-cols-12 gap-4 items-center'
                                           >
+                                            {/* Item Name */}
                                             <div className='col-span-2'>
-                                              {item.id}
+                                              {modeEdit.customEquipament
+                                                ? (
+                                                  <Input
+                                                    type='text'
+                                                    value={item.id}
+                                                    onChange={e =>
+                                                      dispatch({
+                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                        payload: {
+                                                          phaseNumber: index,
+                                                          id: item.id,
+                                                          key: 'id',
+                                                          value: e.target.value
+                                                        }
+                                                      })
+                                                    }
+                                                  />
+                                                )
+                                                : item.id || '-'
+                                              }
                                             </div>
+
+                                            {/* Quantity */}
                                             <div className='col-span-3'>
-                                              <Input
-                                                type='number'
-                                                min={0}
-                                                value={item.quantity}
-                                                onChange={e =>
-                                                  dispatch({
-                                                    type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                    payload: {
-                                                      phaseNumber: index,
-                                                      id: item.id,
-                                                      key: 'quantity',
-                                                      value:
-                                                        parseFloat(
-                                                          e.target.value
-                                                        ) || 0
+                                              {modeEdit.customEquipament
+                                                ? (
+                                                  <Input
+                                                    type='number'
+                                                    min={0}
+                                                    value={item.quantity}
+                                                    onChange={e =>
+                                                      dispatch({
+                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                        payload: {
+                                                          phaseNumber: index,
+                                                          id: item.id,
+                                                          key: 'quantity',
+                                                          value: parseFloat(e.target.value) || 0
+                                                        }
+                                                      })
                                                     }
-                                                  })
-                                                }
-                                              />
+                                                  />
+                                                )
+                                                : (item.quantity > 0 ? item.quantity : '-')
+                                              }
                                             </div>
+
+                                            {/* Cost */}
                                             <div className='col-span-3'>
-                                              <Input
-                                                type='number'
-                                                min={0}
-                                                step={0.01}
-                                                value={item.cost}
-                                                onChange={e =>
-                                                  dispatch({
-                                                    type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                    payload: {
-                                                      phaseNumber: index,
-                                                      id: item.id,
-                                                      key: 'cost',
-                                                      value:
-                                                        parseFloat(
-                                                          e.target.value
-                                                        ) || 0
+                                              {modeEdit.customEquipament
+                                                ? (
+                                                  <Input
+                                                    type='number'
+                                                    min={0}
+                                                    step={0.01}
+                                                    value={item.cost}
+                                                    onChange={e =>
+                                                      dispatch({
+                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                        payload: {
+                                                          phaseNumber: index,
+                                                          id: item.id,
+                                                          key: 'cost',
+                                                          value: parseFloat(e.target.value) || 0
+                                                        }
+                                                      })
                                                     }
-                                                  })
-                                                }
-                                              />
+                                                  />
+                                                )
+                                                : (item.cost > 0 ? item.cost.toFixed(2) : '-')
+                                              }
                                             </div>
+
+                                            {/* Useful Life */}
                                             <div className='col-span-2'>
-                                              <Input
-                                                type='number'
-                                                min={0}
-                                                value={item.usefulLife}
-                                                onChange={e =>
-                                                  dispatch({
-                                                    type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                    payload: {
-                                                      phaseNumber: index,
-                                                      id: item.id,
-                                                      key: 'usefulLife',
-                                                      value:
-                                                        parseFloat(
-                                                          e.target.value
-                                                        ) || 0
+                                              {modeEdit.customEquipament
+                                                ? (
+                                                  <Input
+                                                    type='number'
+                                                    min={0}
+                                                    value={item.usefulLife}
+                                                    onChange={e =>
+                                                      dispatch({
+                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                        payload: {
+                                                          phaseNumber: index,
+                                                          id: item.id,
+                                                          key: 'usefulLife',
+                                                          value: parseFloat(e.target.value) || 0
+                                                        }
+                                                      })
                                                     }
-                                                  })
-                                                }
-                                              />
+                                                  />
+                                                )
+                                                : (item.usefulLife > 0 ? item.usefulLife : '-')
+                                              }
                                             </div>
+
+                                            {/* Daily Price */}
                                             <div className='col-span-2'>
-                                              $
-                                              {calculateLightDailyRateCosts(
-                                                mptRental,
-                                                item.cost
-                                              ).toFixed(2)}
+                                              {item.cost > 0
+                                                ? `$${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}`
+                                                : '-'
+                                              }
                                             </div>
                                           </div>
-                                        )
-                                      )}
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1674,9 +1851,8 @@ const BidItemsStep5 = ({
                       onChange={e =>
                         handlePhaseFormUpdate('name', e.target.value)
                       }
-                      placeholder={`Phase ${
-                        (editingPhaseIndex ?? mptRental.phases.length) + 1
-                      }`}
+                      placeholder={`Phase ${(editingPhaseIndex ?? mptRental.phases.length) + 1
+                        }`}
                     />
                   </div>
 
