@@ -22,15 +22,8 @@ import {
 } from "@/components/ui/drawer";
 import { 
   Plus,
-  Edit,
   Trash2,
   Clock, 
-  DollarSign, 
-  User, 
-  Truck, 
-  CornerDownRight, 
-  Keyboard, 
-  Car
 } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
@@ -484,8 +477,8 @@ const ServiceWorkTab = () => {
 
               {/* Cost Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                <div>Total Hours: {getTotalHours(item)}</div>
-                <div>Overtime Hours: {getOvertimeHours(item)}</div>
+                <div>Total Hours: {getTotalHours(item)} ({getTotalHours(item) * 60} minutes)</div>
+                <div>Overtime Hours: {getOvertimeHours(item)} ({getOvertimeHours(item) * 60} minutes)</div>
               </div>
             </div>
 
@@ -846,8 +839,8 @@ const ServiceWorkTab = () => {
                     </div>
                     
                     <div className="flex justify-between">
-                      <span>Round Trip Travel Time Hours:</span>
-                      <span>{Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}</span>
+                      <span>Round Trip Travel Time:</span>
+                      <span>Hours: {Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)} ({safeNumber(adminData.owTravelTimeMins) * 2} minutes)</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Travel Time Cost:</span>

@@ -49,7 +49,7 @@ const step: Step = {
     { name: "srRoute", label: "SR Route*", type: "text", placeholder: "SR Route" },
     { name: "dbePercentage", label: "DBE %*", type: "text", placeholder: "DBE %" },
     { name: "workType", label: "Work Type", type: "select", placeholder: "Choose", options: ['RATED', 'NON-RATED'] },
-    { name: "oneWayTravelTime", label: "One Way Travel Time (Mins)*", type: "number", placeholder: "One Way Travel Time (Mins)" },
+    { name: "oneWayTravelTime", label: "One Way Travel Time*", type: "number" },
     { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
     { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "text", placeholder: "Diesel Cost Per Gallon" },
     { name: "laborRate", label: "Labor Rate*", type: "text", placeholder: "0", hasToggle: true },
@@ -191,7 +191,7 @@ const AdminInformationStep1 = () => {
       }
 
       if (availableJobId && source && source === 'available-jobs') {
-        try {          
+        try {
           const data = await fetchBidById(parseInt(availableJobId), true);
 
           dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'contractNumber', value: data.contract_number } });
@@ -700,106 +700,132 @@ const AdminInformationStep1 = () => {
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="relative space-y-2">
+                  ) : field.name === "oneWayTravelTime" ?
+                    <div className="relative flex space-x-2">
                       <Input
                         id={field.name}
                         type={field.type}
                         inputMode="decimal"
                         pattern="^\\d*(\\.\\d{0,2})?$"
-                        placeholder={field.placeholder}
-                        value={
-                          field.name === "contractNumber" ? adminData.contractNumber || "" :
-                            field.name === "township" ? adminData.location || "" :
-                              field.name === "srRoute" ? adminData.srRoute || "" :
-                                field.name === "dbePercentage" ? adminData.dbe || "" :
-                                  field.name === "lettingDate" ?
-                                    adminData.lettingDate ?
-                                      (typeof adminData.lettingDate === 'string' ?
-                                        adminData.lettingDate :
-                                        adminData.lettingDate.toISOString().split('T')[0])
-                                      : "" :
-                                    field.name === "startDate" ?
-                                      adminData.startDate ?
-                                        (typeof adminData.startDate === 'string' ?
-                                          adminData.startDate :
-                                          adminData.startDate.toISOString().split('T')[0])
+                        placeholder={'Minutes'}
+                        value={adminData.owTravelTimeMins?.toFixed(0)}
+                        onChange={(e) => handleInputChange('oneWayTravelTime', parseFloat(e.target.value))}
+                        className="h-10"
+                      />
+                      <Input
+                        id={field.name}
+                        type={field.type}
+                        inputMode="decimal"
+                        step='0.01'
+                        pattern="^\\d*(\\.\\d{0,2})?$"
+                        placeholder='Hours'
+                        value={adminData.owTravelTimeMins ? (adminData.owTravelTimeMins / 60).toLocaleString('en-US', { maximumFractionDigits: 2}) : 'Hours'}
+                        onChange={(e) => handleInputChange('oneWayTravelTime', parseFloat(e.target.value) * 60)}
+                        className="h-10"
+                      />
+                    </div>
+                    : (
+                      <div className="relative space-y-2">
+                        <Input
+                          id={field.name}
+                          type={field.type}
+                          inputMode="decimal"
+                          pattern="^\\d*(\\.\\d{0,2})?$"
+                          placeholder={field.placeholder}
+                          value={
+                            field.name === "contractNumber" ? adminData.contractNumber || "" :
+                              field.name === "township" ? adminData.location || "" :
+                                field.name === "srRoute" ? adminData.srRoute || "" :
+                                  field.name === "dbePercentage" ? adminData.dbe || "" :
+                                    //date handling to parse a date if necessary
+                                    field.name === "lettingDate" ?
+                                      adminData.lettingDate ?
+                                        (typeof adminData.lettingDate === 'string' ?
+                                          adminData.lettingDate :
+                                          adminData.lettingDate.toISOString().split('T')[0])
                                         : "" :
-                                      field.name === "endDate" ?
-                                        adminData.endDate ?
-                                          (typeof adminData.endDate === 'string' ?
-                                            adminData.endDate :
-                                            adminData.endDate.toISOString().split('T')[0])
+                                      //date handling to parse a date if necessary
+                                      field.name === "startDate" ?
+                                        adminData.startDate ?
+                                          (typeof adminData.startDate === 'string' ?
+                                            adminData.startDate :
+                                            adminData.startDate.toISOString().split('T')[0])
                                           : "" :
-                                        field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
+                                        //date handling to parse a date if necessary
+                                        field.name === "endDate" ?
+                                          adminData.endDate ?
+                                            (typeof adminData.endDate === 'string' ?
+                                              adminData.endDate :
+                                              adminData.endDate.toISOString().split('T')[0])
+                                            : "" :
                                           field.name === "oneWayMileage" ? adminData.owMileage || "" :
                                             field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
                                               field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
                                                 field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
                                                   field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
                                                     ""
-                        }
-                        onBlur={async () => {
-                          if (field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp) {
-                            try {
-                              // add 0 to simulate saving state
-                              dispatch({ type: 'SET_FIRST_SAVE', payload: 0 })
-                              const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject,
-                                serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
-                              dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
-                              dispatch({ type: 'SET_ID', payload: createResponse.id })
-                            } catch (err) {
-                              toast.error('Failed to save bid' + err)
-                            }
                           }
-                        }}
-                        onChange={(e) => {
-                          const ev = e.nativeEvent as InputEvent;
-                          const { inputType } = ev;
-                          const data = (ev.data || "").replace(/\$/g, "");
+                          onBlur={async () => {
+                            if (field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp) {
+                              try {
+                                // add 0 to simulate saving state
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 0 })
+                                const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject,
+                                  serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
+                                dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
+                                dispatch({ type: 'SET_ID', payload: createResponse.id })
+                              } catch (err) {
+                                toast.error('Failed to save bid' + err)
+                              }
+                            }
+                          }}
+                          onChange={(e) => {
+                            const ev = e.nativeEvent as InputEvent;
+                            const { inputType } = ev;
+                            const data = (ev.data || "").replace(/\$/g, "");
 
-                          if (
-                            field.name === "dieselCost" ||
-                            field.name === "laborRate" ||
-                            field.name === "fringeRate" ||
-                            field.name === "shopRate"
-                          ) {
-                            const nextDigits = handleNextDigits(digits[field.name], inputType, data);
-                            setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
+                            if (
+                              field.name === "dieselCost" ||
+                              field.name === "laborRate" ||
+                              field.name === "fringeRate" ||
+                              field.name === "shopRate"
+                            ) {
+                              const nextDigits = handleNextDigits(digits[field.name], inputType, data);
+                              setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
 
-                            const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
 
-                            if (field.name === "dieselCost") {
-                              handleInputChange("dieselCost", formatted);
+                              if (field.name === "dieselCost") {
+                                handleInputChange("dieselCost", formatted);
+                              } else {
+                                handleRateChange(field.name, formatted);
+                              }
                             } else {
-                              handleRateChange(field.name, formatted);
+                              const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
+                              handleInputChange(field.name, valueToUse);
                             }
-                          } else {
-                            const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
-                            handleInputChange(field.name, valueToUse);
-                          }
-                        }}
-                        className="h-10"
-                      />
-                      {field.hasToggle && (
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor={`${field.name}-toggle`}
-                            className="text-sm text-muted-foreground"
-                          >
-                            Use this rate?
-                          </Label>
-                          <input
-                            id={`${field.name}-toggle`}
-                            type="checkbox"
-                            checked={!!toggleStates[field.name]}
-                            onChange={() => handleToggleChange(field.name)}
-                            className="h-4 w-4"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                          }}
+                          className="h-10"
+                        />
+                        {field.hasToggle && (
+                          <div className="flex items-center gap-2">
+                            <Label
+                              htmlFor={`${field.name}-toggle`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              Use this rate?
+                            </Label>
+                            <input
+                              id={`${field.name}-toggle`}
+                              type="checkbox"
+                              checked={!!toggleStates[field.name]}
+                              onChange={() => handleToggleChange(field.name)}
+                              className="h-4 w-4"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
