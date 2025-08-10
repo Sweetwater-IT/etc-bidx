@@ -720,58 +720,57 @@ const AdminInformationStep1 = () => {
                       )}
                     </div>
                   ) : field.name === "oneWayTravelTime" ? (
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          One Way Travel Time*
-                        </Label>
-                        <div className="flex space-x-4">
-                          <div className="flex-1 flex flex-col space-y-2">
-                            <Label htmlFor="owHoursInput" className="text-sm font-medium">
-                              Hours
-                            </Label>
-                            <Input
-                              id="owHoursInput"
-                              type="number"
-                              min="0"
-                              value={owHours}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                const numValue = value === "" ? 0 : parseInt(value);
-                                if (!isNaN(numValue)) {
-                                  handleOwTravelTimeChange("hours", numValue);
-                                }
-                              }}
-                              placeholder="00"
-                              className="h-10"
-                            />
+                        <div className="space-y-2">
+                          <div className="flex space-x-4">
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owHoursInput" className="text-sm font-medium">
+                                Hours
+                              </Label>
+                              <Input
+                                id="owHoursInput"
+                                type="number"
+                                min="0"
+                                value={owHours === 0 ? "" : owHours}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const numValue = value === "" ? 0 : parseInt(value);
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("hours", numValue);
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                              />
+                            </div>
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owMinutesInput" className="text-sm font-medium">
+                                Minutes
+                              </Label>
+                              <Input
+                                id="owMinutesInput"
+                                type="number"
+                                min="0"
+                                max="59"
+                                value={owMinutes === 0 ? "" : owMinutes}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("minutes", numValue);
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                              />
+                            </div>
                           </div>
-                          <div className="flex-1 flex flex-col space-y-2">
-                            <Label htmlFor="owMinutesInput" className="text-sm font-medium">
-                              Minutes
-                            </Label>
-                            <Input
-                              id="owMinutesInput"
-                              type="number"
-                              min="0"
-                              max="59"
-                              value={owMinutes}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
-                                if (!isNaN(numValue)) {
-                                  handleOwTravelTimeChange("minutes", numValue);
-                                }
-                              }}
-                              placeholder="00"
-                              className="h-10"
-                            />
+                          <div className="text-sm text-muted-foreground">
+                            {owHours || 0} hr{owHours !== 1 ? "s" : ""} {owMinutes || 0} min{owMinutes !== 1 ? "s" : ""}
                           </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {owHours || 0} hr{owHours !== 1 ? "s" : ""} {owMinutes || 0} min{owMinutes !== 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    ) : (
+                      ) : (
                       <div className="relative space-y-2">
                         <Input
                           id={field.name}
