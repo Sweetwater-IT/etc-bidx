@@ -719,8 +719,11 @@ const AdminInformationStep1 = () => {
                         </div>
                       )}
                     </div>
-                  ) : field.name === "oneWayTravelTime" ? (
+                      ) : field.name === "oneWayTravelTime" ? (
                         <div className="space-y-2">
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            One Way Travel Time*
+                          </Label>
                           <div className="flex space-x-4">
                             <div className="flex-1 flex flex-col space-y-2">
                               <Label htmlFor="owHoursInput" className="text-sm font-medium">
@@ -766,8 +769,13 @@ const AdminInformationStep1 = () => {
                               />
                             </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {owHours || 0} hr{owHours !== 1 ? "s" : ""} {owMinutes || 0} min{owMinutes !== 1 ? "s" : ""}
+                          <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                            <span>
+                              {owHours || 0} hr{owHours !== 1 ? "s" : ""} {owMinutes || 0} min{owMinutes !== 1 ? "s" : ""}
+                            </span>
+                            <span>
+                              ({(owHours * 60 + owMinutes) || 0} min{((owHours * 60 + owMinutes) !== 1) ? "s" : ""})
+                            </span>
                           </div>
                         </div>
                       ) : (
