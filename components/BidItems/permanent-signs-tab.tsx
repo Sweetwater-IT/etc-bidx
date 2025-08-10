@@ -230,6 +230,25 @@ const PermanentSignsSummaryStep = () => {
     formData?.personnel,
   ]);
 
+  const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
+  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
+    const extraMinutes = currentOwMinutes % 60;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) +  value;
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMins',
+        value: newOwMinutes
+      }
+    })
+
+    setOwHours(Math.floor(newOwMinutes / 60))
+    setOwMinutes(newOwMinutes % 60);
+  }
+
   // Update totalTrips and days, when change quantity
   useEffect(() => {
     if (!editOpened || !permanentSigns || !formData || !selectedType) return;
@@ -543,38 +562,28 @@ const PermanentSignsSummaryStep = () => {
         )}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
-          <div className="relative flex space-x-2">
-            <Input
-              type='number'
-              inputMode="decimal"
-              pattern="^\\d*(\\.\\d{0,2})?$"
-              placeholder={'Minutes'}
-              value={adminData.owTravelTimeMins?.toFixed(0)}
-              onChange={(e) => dispatch({
-                type: 'UPDATE_ADMIN_DATA',
-                payload: {
-                  key: 'owTravelTimeMins',
-                  value: parseInt(e.target.value)
-                }
-              })}
-              className="h-10"
-            />
-            <Input
-              type='number'
-              inputMode="decimal"
-              step='0.01'
-              pattern="^\\d*(\\.\\d{0,2})?$"
-              placeholder='Hours'
-              value={adminData.owTravelTimeMins ? (adminData.owTravelTimeMins / 60).toLocaleString('en-US', { maximumFractionDigits: 2}) : 'Hours'}
-              onChange={(e) => dispatch({
-                type: 'UPDATE_ADMIN_DATA',
-                payload: {
-                  key: 'owTravelTimeMins',
-                  value: parseInt(e.target.value) * 60
-                }
-              })}
-              className="h-10"
-            />
+          <div>
+            <div className="relative flex space-x-2">
+              <Input
+                id='owHoursInput'
+                type='number'
+                pattern="^\\d*(\\.\\d{0,2})?$"
+                placeholder='Hours'
+                value={owHours === 0 ? '' : owHours}
+                onChange={(e) => handleOwTravelTimeChange('hours', safeNumber(Number(e.target.value)))}
+                className="h-10"
+              />
+              <Input
+                id='owMinutesInput'
+                pattern="^\\d*(\\.\\d{0,2})?$"
+                placeholder='Minutes'
+                value={owMinutes === 0 ? '' : owMinutes}
+                type='number'
+                onChange={(e) => handleOwTravelTimeChange('minutes', safeNumber(Number(e.target.value)))}
+                className="h-10"
+              />
+            </div>
+            <div>{owHours} hr{owHours !== 1 && 's'} {owMinutes} min{owMinutes !== 1 && 's'}</div>
           </div>
         </div>
         <div className="flex-1">

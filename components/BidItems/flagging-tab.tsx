@@ -29,6 +29,7 @@ import { Flagging } from '@/types/TFlagging'
 import { Plus, Edit, Trash2, Clock, User } from 'lucide-react'
 import EmptyContainer from './empty-container'
 import { AdminData } from '@/types/TAdminData'
+import { formatHoursAndMinutes } from '@/lib/utils'
 
 // Markup percentages arrays for rated and non-rated jobs
 const NON_RATED_MARKUP_PERCENTAGES = [
@@ -1416,9 +1417,7 @@ const FlaggingServicesTab = () => {
                         <div className='flex justify-between'>
                           <span>Round Trip Travel Time:</span>
                           <span>
-                            Hours: {Math.ceil(
-                              (safeNumber(adminData?.owTravelTimeMins) * 2) / 60
-                            )} ({safeNumber(adminData?.owTravelTimeMins) * 2} minutes)
+                            {formatHoursAndMinutes(safeNumber(adminData?.owTravelTimeMins) * 2)}
                           </span>
                         </div>
                         <div className='flex justify-between'>
@@ -1437,13 +1436,13 @@ const FlaggingServicesTab = () => {
 
                         <div className='flex justify-between'>
                           <span>Over Time Hours:</span>
-                          <span>{getOvertimeHours(formData)} ({getOvertimeHours(formData) * 60} minutes)</span>
+                          <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
                         </div>
                         <div></div>
                         <div className='flex justify-between'>
                           <span>Total Hours:</span>
                           <span className='font-medium'>
-                            {getTotalHours(formData)} ({getTotalHours(formData) * 60} minutes)
+                            {formatHoursAndMinutes(getTotalHours(formData))}
                           </span>
                         </div>
                         <div className='flex justify-between'>
