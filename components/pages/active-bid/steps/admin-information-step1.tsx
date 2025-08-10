@@ -93,6 +93,25 @@ const AdminInformationStep1 = () => {
     dieselCost: "000",
   });
 
+  const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
+  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
+    const extraMinutes = currentOwMinutes % 60;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) +  value;
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMins',
+        value: newOwMinutes
+      }
+    })
+
+    setOwHours(Math.floor(newOwMinutes / 60))
+    setOwMinutes(newOwMinutes % 60);
+  }
+
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
@@ -701,28 +720,28 @@ const AdminInformationStep1 = () => {
                       )}
                     </div>
                   ) : field.name === "oneWayTravelTime" ?
-                    <div className="relative flex space-x-2">
-                      <Input
-                        id={field.name}
-                        type={field.type}
-                        inputMode="decimal"
-                        pattern="^\\d*(\\.\\d{0,2})?$"
-                        placeholder={'Minutes'}
-                        value={adminData.owTravelTimeMins?.toFixed(0)}
-                        onChange={(e) => handleInputChange('oneWayTravelTime', parseFloat(e.target.value))}
-                        className="h-10"
-                      />
-                      <Input
-                        id={field.name}
-                        type={field.type}
-                        inputMode="decimal"
-                        step='0.01'
-                        pattern="^\\d*(\\.\\d{0,2})?$"
-                        placeholder='Hours'
-                        value={adminData.owTravelTimeMins ? (adminData.owTravelTimeMins / 60).toLocaleString('en-US', { maximumFractionDigits: 2}) : 'Hours'}
-                        onChange={(e) => handleInputChange('oneWayTravelTime', parseFloat(e.target.value) * 60)}
-                        className="h-10"
-                      />
+                    <div>
+                      <div className="relative flex space-x-2">
+                        <Input
+                          id='owHoursInput'
+                          type='number'
+                          pattern="^\\d*(\\.\\d{0,2})?$"
+                          placeholder='Hours'
+                          value={owHours === 0 ? '' : owHours}
+                          onChange={(e) => handleOwTravelTimeChange('hours', safeNumber(Number(e.target.value)))}
+                          className="h-10"
+                        />
+                        <Input
+                          id='owMinutesInput'
+                          type='number'
+                          pattern="^\\d*(\\.\\d{0,2})?$"
+                          placeholder='Minutes'
+                          value={owMinutes === 0 ? '' : owMinutes}
+                          onChange={(e) => handleOwTravelTimeChange('minutes', safeNumber(Number(e.target.value)))}
+                          className="h-10"
+                        />
+                      </div>
+                      <div>{owHours || 0} hr{owHours !== 1 && 's'} {owMinutes || 0} min{owMinutes !== 1 && 's'}</div>
                     </div>
                     : (
                       <div className="relative space-y-2">

@@ -31,6 +31,7 @@ import { safeNumber } from "@/lib/safe-number";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
 import { Flagging } from "@/types/TFlagging";
 import EmptyContainer from "./empty-container";
+import { formatHoursAndMinutes } from "@/lib/utils";
 
 // Markup percentages arrays for rated and non-rated jobs
 const NON_RATED_MARKUP_PERCENTAGES = [50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70, 72.5, 75, 77.5];
@@ -840,7 +841,7 @@ const ServiceWorkTab = () => {
                     
                     <div className="flex justify-between">
                       <span>Round Trip Travel Time:</span>
-                      <span>Hours: {Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)} ({safeNumber(adminData.owTravelTimeMins) * 2} minutes)</span>
+                      <span>{formatHoursAndMinutes(safeNumber(adminData?.owTravelTimeMins) * 2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Travel Time Cost:</span>
@@ -849,13 +850,13 @@ const ServiceWorkTab = () => {
 
                     <div className="flex justify-between">
                       <span>Over Time Hours:</span>
-                      <span>{getOvertimeHours(formData)}</span>
+                      <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
                     </div>
                     <div></div>
                     
                     <div className="flex justify-between">
                       <span>Total Hours:</span>
-                      <span className="font-medium">{getTotalHours(formData)}</span>
+                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(formData))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Labor Cost:</span>
