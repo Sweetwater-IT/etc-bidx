@@ -71,6 +71,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     return (
         <>
             <WorksheetDialog
+                key={`pdf-${open}`}
                 open={openPdfDialog}
                 onOpenChange={setOpenPdfDialog}
                 selectedPdfType={selectedPdfType}
@@ -126,7 +127,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                 </Button>
                 {mode === 'view' && status !== 'WON' && status !== 'LOST' && <Button className='p-4' size='sm' onClick={() => router.push(`/active-bid/edit?${params?.toString()}`)}>Edit{status === 'DRAFT' ? ' Draft' : ' Bid'}</Button>}
                 {mode !== 'view' && <Button disabled={!ratesAcknowledged} className='p-4' size='sm' onClick={handleSubmit}>{(mode === 'new' || status === 'DRAFT') ? 'Create' : 'Update'} bid</Button>}
-                {mode !== 'view' && <BidSummaryDrawer disableDiscounts={true} open={isViewSummaryOpen} onOpenChange={setIsViewSummaryOpen} />}
+                <BidSummaryDrawer disableDiscounts={true} open={isViewSummaryOpen} onOpenChange={setIsViewSummaryOpen} />
             </div>
         </>
     )

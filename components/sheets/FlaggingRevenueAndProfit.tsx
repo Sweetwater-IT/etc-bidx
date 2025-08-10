@@ -32,16 +32,16 @@ const FlaggingRevenueAndProfit = () => {
         )
 
         setRows({
-            cost: `$${flaggingTotals.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            revenue: `$${flaggingTotals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfit: `$${(flaggingTotals.totalRevenue - flaggingTotals.totalFlaggingCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            cost: `$${safeNumber(flaggingTotals.totalFlaggingCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            revenue: `$${safeNumber(flaggingTotals.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfit: `$${safeNumber((flaggingTotals.totalRevenue - flaggingTotals.totalFlaggingCost)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             grossProfitPercent: `${safeNumber(((flaggingTotals.totalRevenue - flaggingTotals.totalFlaggingCost) / flaggingTotals.totalRevenue) * 100).toFixed(2)}%`
         })
 
         setServiceWorkRows({
-            cost: `$${serviceWorkTotals.totalFlaggingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            revenue: `$${serviceWorkTotals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfit: `$${(serviceWorkTotals.totalRevenue - serviceWorkTotals.totalFlaggingCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            cost: `$${safeNumber(serviceWorkTotals.totalFlaggingCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            revenue: `$${safeNumber(serviceWorkTotals.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfit: `$${safeNumber((serviceWorkTotals.totalRevenue - serviceWorkTotals.totalFlaggingCost)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             grossProfitPercent: `${safeNumber(((serviceWorkTotals.totalRevenue - serviceWorkTotals.totalFlaggingCost) / serviceWorkTotals.totalRevenue) * 100).toFixed(2)}%`
         })
     }, [flagging, serviceWork, adminData])
