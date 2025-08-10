@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useEstimate } from '@/contexts/EstimateContext'
 import { calculateRentalSummary } from '@/lib/mptRentalHelperFunctions'
 import { formatCurrency } from '@/lib/utils'
+import { safeNumber } from '@/lib/safe-number'
 
 interface RentalRevenueRow {
     rental: string
@@ -25,18 +26,18 @@ const RentalRevenueAndProfit = () => {
         const rentalSummary = calculateRentalSummary(equipmentRental)
         const itemRows = rentalSummary.items.map((item) => ({
             rental: item.name,
-            cost: `$${item.depreciation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            revenue: `$${item.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfit: `$${item.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfitPercent: `${(item.grossProfitMargin * 100).toFixed(2)}%`,
+            cost: `$${safeNumber(item.depreciation).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            revenue: `$${safeNumber(item.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfit: `$${safeNumber(item.grossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfitPercent: `${(safeNumber(item.grossProfitMargin * 100)).toFixed(2)}%`,
         }))
 
         itemRows.push({
             rental: 'Total',
-            cost: `$${rentalSummary.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            revenue: `$${rentalSummary.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfit: `$${rentalSummary.totalGrossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            grossProfitPercent: `${(rentalSummary.totalGrossProfitMargin * 100).toFixed(2)}%`,
+            cost: `$${safeNumber(rentalSummary.totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            revenue: `$${safeNumber(rentalSummary.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfit: `$${safeNumber(rentalSummary.totalGrossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            grossProfitPercent: `${(safeNumber(rentalSummary.totalGrossProfitMargin * 100)).toFixed(2)}%`,
         })
 
         setRows(itemRows)

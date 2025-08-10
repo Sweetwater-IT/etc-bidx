@@ -8,10 +8,6 @@ import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPerm
 import { determineItemType } from '@/types/TPermanentSigns'
 import { getDisplayName } from '@/types/TPermanentSigns'
 
-interface BasicSummaryTotals {
-    totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin: number
-}
-
 const PermSignsRevenueAndProfit = () => {
     const { adminData, mptRental, equipmentRental, flagging, serviceWork, permanentSigns } = useEstimate()
     const [permSignItemTotals, setPermSignItemTotals] = useState<{
@@ -20,7 +16,6 @@ const PermSignsRevenueAndProfit = () => {
         grossProfit: number
         grossMargin: number
     } | null>(null)
-    const [totalPermSignsStats, setTotalPermSignsStats] = React.useState<BasicSummaryTotals | null>(null);
     const [permSignItemRows, setPermSignItemRows] = useState<
         {
             name: string
@@ -35,17 +30,10 @@ const PermSignsRevenueAndProfit = () => {
 
     useEffect(() => {
         if (!permanentSigns || !mptRental || !adminData) {
-            setTotalPermSignsStats(null);
             return;
         }
 
         const permSignsSummary = getPermanentSignsCostSummary(permanentSigns, adminData, mptRental);
-        setTotalPermSignsStats({
-            totalRevenue: permSignsSummary.totalRevenue,
-            totalCost: permSignsSummary.totalCost,
-            totalGrossProfit: permSignsSummary.totalRevenue - permSignsSummary.totalCost,
-            grossProfitMargin: permSignsSummary.grossMargin
-        })
     }, [permanentSigns, mptRental, adminData])
 
     const [allTotals, setAllTotals] = useState<{
@@ -141,9 +129,9 @@ const PermSignsRevenueAndProfit = () => {
                         <div key={index} className="grid grid-cols-5 text-sm py-1">
                             <div className="whitespace-normal break-words pr-2">
                                 {getDisplayName(sign.name as any)}
-                            </div>                            <div>${sign.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div>${sign.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div>${sign.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            </div>                            <div>${safeNumber(sign.revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div>${safeNumber(sign.cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div>${safeNumber(sign.grossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             <div>{(safeNumber(sign.grossMargin) * 100).toFixed(2)}%</div>
                         </div>
                     ))}
@@ -151,13 +139,13 @@ const PermSignsRevenueAndProfit = () => {
                     <div className="grid grid-cols-5 border-t border-gray-300 py-1 bg-green-50">
                         <div className="text-sm font-medium">Total</div>
                         <div className="text-sm font-medium">
-                            ${permSignItemTotals?.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(permSignItemTotals?.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${permSignItemTotals?.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(permSignItemTotals?.totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${permSignItemTotals?.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(permSignItemTotals?.grossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
                             {(safeNumber(permSignItemTotals?.grossMargin || 0) * 100).toFixed(2)}%
@@ -168,13 +156,13 @@ const PermSignsRevenueAndProfit = () => {
                     <div className="grid grid-cols-5 border-t border-gray-300 mt-2" style={{ backgroundColor: '#ed7d31' }}>
                         <div className="text-sm font-medium">BID TOTAL</div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalGrossProfit?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalGrossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
                             {(safeNumber(allTotals?.totalGrossMargin || 0)).toFixed(2)}%
@@ -193,13 +181,13 @@ const PermSignsRevenueAndProfit = () => {
                     <div className="grid grid-cols-5 border-t border-gray-300 mt-2" style={{ backgroundColor: '#ed7d31' }}>
                         <div className="text-sm font-medium">BID TOTAL</div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
-                            ${allTotals?.totalGrossProfit?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            ${safeNumber(allTotals?.totalGrossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
                         <div className="text-sm font-medium">
                             {(safeNumber(allTotals?.totalGrossMargin || 0)).toFixed(2)}%
