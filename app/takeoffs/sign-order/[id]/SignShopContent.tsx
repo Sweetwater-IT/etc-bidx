@@ -51,6 +51,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
+import { FileMetadata } from '@/types/FileTypes'
 
 interface Props {
   id: number
@@ -64,6 +65,7 @@ const SignShopContent = ({ id }: Props) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const [files, setFiles] = useState<FileMetadata[]>([]);
   // const [shopSigns, setShopSigns] = useState<(ExtendedPrimarySign | ExtendedSecondarySign)[]>([])
 
   const { isLoading, startLoading, stopLoading } = useLoading()
@@ -535,6 +537,8 @@ const SignShopContent = ({ id }: Props) => {
               signOrder={signOrder}
               setSignOrder={setSignOrder}
               id={id}
+              files={files}
+              setFiles={setFiles}
             />
             <div className='w-full bg-white p-8 rounded-md shadow-sm border border-gray-100 mb-8'>
               <div className='flex justify-between items-center mb-4'>

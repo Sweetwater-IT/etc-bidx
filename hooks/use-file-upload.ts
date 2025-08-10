@@ -124,14 +124,14 @@ export function useFileUpload({
     try {
       // Files that haven't been successfully uploaded yet
       const filesToUpload = files.filter(file => !successes.includes(file.name))
-      
+
       const formData = new FormData()
-      
+
       // Add each file to the FormData
       filesToUpload.forEach(file => {
         formData.append('file', file)
       })
-      
+
       formData.append('uniqueIdentifier', typeof uniqueIdentifier === 'number' ? uniqueIdentifier.toString() : uniqueIdentifier)
       formData.append('folder', folder ?? 'jobs');
       // Make API request
@@ -139,21 +139,21 @@ export function useFileUpload({
         method: 'POST',
         body: formData
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to upload files')
       }
-      
+
       const result = await response.json()
-      
+
       // Process results
       if (result.results) {
         // Add successful uploads to the successes array
         const newSuccesses = result.results
           .filter(r => r.success)
           .map(r => r.filename)
-        
+
         // Add errors for failed uploads
         const newErrors = result.results
           .filter(r => !r.success)
@@ -161,10 +161,10 @@ export function useFileUpload({
             name: r.filename,
             message: r.error || 'Upload failed'
           }))
-        
+
         setSuccesses(prev => [...prev, ...newSuccesses])
         setErrors(newErrors)
-        
+
         // Set overall success if all files were uploaded
         if (newSuccesses.length === filesToUpload.length) {
           setIsSuccess(true)
@@ -205,6 +205,19 @@ export function useFileUpload({
       }
     }
   }, [files, maxFiles, setFiles])
+
+  //remove success message after a few seconds
+  useEffect(() => {
+    if (isSuccess && successes.length > 0) {
+      const timeoutId = setTimeout(() => {
+        setFiles([]);
+        setSuccesses([]);
+        setIsSuccess(false);
+      }, 5000);
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isSuccess, successes.length])
 
   return {
     files,
