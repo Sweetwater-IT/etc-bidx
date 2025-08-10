@@ -36,7 +36,7 @@ export default function CustomersPage() {
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
-                <SiteHeader />
+                <SiteHeader customTitle="Customer" />
                 <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6">
                     <CustomersContent />
                 </div>

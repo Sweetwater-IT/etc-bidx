@@ -95,7 +95,7 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
         itemNumber: "0941-0001",
         days: 0,
         numberTrips: 0,
-    }
+      }
       break;
     case "resetTypeF":
       defaultObjectToBeAdded = {
@@ -344,7 +344,7 @@ const PermanentSignsSummaryStep = () => {
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignCostSqFt = baseCost;
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignPriceSqFt = basePrice;
     }
-    if(isCustomName){
+    if (isCustomName) {
       handleFieldUpdate('customItemTypeName', '')
     }
     setSelectedType(value);
@@ -447,7 +447,7 @@ const PermanentSignsSummaryStep = () => {
 
   const getTotalDays = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.days, 0)
   const getTotalTrips = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.numberTrips, 0)
-  
+
   function hasPermSignSqFtFields(item: PMSItemNumbers): item is PostMountedInstall | PostMountedInstallTypeC {
     return 'permSignCostSqFt' in item && 'permSignPriceSqFt' in item;
   }
@@ -543,22 +543,39 @@ const PermanentSignsSummaryStep = () => {
         )}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
-          <Input
-            type="number"
-            value={Math.round((safeNumber(adminData?.owTravelTimeMins) / 60) * 100) / 100}
-            onChange={(e) => {
-              dispatch({
-                type: "UPDATE_ADMIN_DATA",
+          <div className="relative flex space-x-2">
+            <Input
+              type='number'
+              inputMode="decimal"
+              pattern="^\\d*(\\.\\d{0,2})?$"
+              placeholder={'Minutes'}
+              value={adminData.owTravelTimeMins?.toFixed(0)}
+              onChange={(e) => dispatch({
+                type: 'UPDATE_ADMIN_DATA',
                 payload: {
-                  key: "owTravelTimeMins",
-                  value: parseFloat(e.target.value) * 60,
-                },
-              });
-            }}
-            min={0}
-            step="0.01"
-            className="w-full"
-          />
+                  key: 'owTravelTimeMins',
+                  value: parseInt(e.target.value)
+                }
+              })}
+              className="h-10"
+            />
+            <Input
+              type='number'
+              inputMode="decimal"
+              step='0.01'
+              pattern="^\\d*(\\.\\d{0,2})?$"
+              placeholder='Hours'
+              value={adminData.owTravelTimeMins ? (adminData.owTravelTimeMins / 60).toLocaleString('en-US', { maximumFractionDigits: 2}) : 'Hours'}
+              onChange={(e) => dispatch({
+                type: 'UPDATE_ADMIN_DATA',
+                payload: {
+                  key: 'owTravelTimeMins',
+                  value: parseInt(e.target.value) * 60
+                }
+              })}
+              className="h-10"
+            />
+          </div>
         </div>
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Distance</Label>
@@ -977,7 +994,7 @@ const PermanentSignsSummaryStep = () => {
                     ) : (
                       <div className="flex gap-x-2 items-center">
                         <label className="text-red-400 text-sm font-medium">Price Per Sign: $</label>
-                        <div className="text-sm text-red-500"> 
+                        <div className="text-sm text-red-500">
                           {formatCurrencyValue(
                             getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental)
                               .revenue / pmsItem.quantity

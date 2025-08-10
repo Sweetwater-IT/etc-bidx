@@ -1414,11 +1414,11 @@ const FlaggingServicesTab = () => {
                           </span>
                         </div>
                         <div className='flex justify-between'>
-                          <span>Round Trip Travel Time Hours:</span>
+                          <span>Round Trip Travel Time:</span>
                           <span>
-                            {Math.ceil(
+                            Hours: {Math.ceil(
                               (safeNumber(adminData?.owTravelTimeMins) * 2) / 60
-                            )}
+                            )} ({safeNumber(adminData?.owTravelTimeMins) * 2} minutes)
                           </span>
                         </div>
                         <div className='flex justify-between'>
@@ -1437,13 +1437,13 @@ const FlaggingServicesTab = () => {
 
                         <div className='flex justify-between'>
                           <span>Over Time Hours:</span>
-                          <span>{getOvertimeHours(formData)}</span>
+                          <span>{getOvertimeHours(formData)} ({getOvertimeHours(formData) * 60} minutes)</span>
                         </div>
                         <div></div>
                         <div className='flex justify-between'>
                           <span>Total Hours:</span>
                           <span className='font-medium'>
-                            {getTotalHours(formData)}
+                            {getTotalHours(formData)} ({getTotalHours(formData) * 60} minutes)
                           </span>
                         </div>
                         <div className='flex justify-between'>
