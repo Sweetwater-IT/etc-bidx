@@ -710,7 +710,7 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'price',
-                value: parseFloat(item.price) || 0
+                value: parseFloat(item.price)
               }
             })
 
@@ -720,7 +720,7 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'usefulLife',
-                value: item.depreciation_rate_useful_life || 365
+                value: item.depreciation_rate_useful_life
               }
             })
 
@@ -730,7 +730,7 @@ const BidItemsStep5 = ({
               payload: {
                 type: equipmentType,
                 property: 'paybackPeriod',
-                value: item.payback_period || DEFAULT_PAYBACK_PERIOD
+                value: item.payback_period
               }
             })
 
@@ -771,7 +771,7 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'usefulLife',
-                  value: matchedItem.depreciation_rate_useful_life || 365
+                  value: matchedItem.depreciation_rate_useful_life
                 }
               })
 
@@ -781,7 +781,7 @@ const BidItemsStep5 = ({
                 payload: {
                   type: sign.key,
                   property: 'paybackPeriod',
-                  value: matchedItem.payback_period || DEFAULT_PAYBACK_PERIOD
+                  value: matchedItem.payback_period
                 }
               })
 
