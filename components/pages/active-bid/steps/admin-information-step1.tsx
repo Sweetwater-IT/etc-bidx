@@ -722,20 +722,26 @@ const AdminInformationStep1 = () => {
                   ) : field.name === "oneWayTravelTime" ?
                     <div>
                       <div className="relative flex space-x-2">
+                      <Label htmlFor="owHoursInput" className="mb-2 block text-sm font-medium">
+                        Hours
+                      </Label>                        
                         <Input
                           id='owHoursInput'
                           type='number'
                           pattern="^\\d*(\\.\\d{0,2})?$"
-                          placeholder='Hours'
+                          placeholder='00'
                           value={owHours === 0 ? '' : owHours}
                           onChange={(e) => handleOwTravelTimeChange('hours', safeNumber(Number(e.target.value)))}
                           className="h-10"
                         />
+                        <Label htmlFor="owMinutesInput" className="mb-2 block text-sm font-medium">
+                          Minutes
+                        </Label>
                         <Input
                           id='owMinutesInput'
                           type='number'
                           pattern="^\\d*(\\.\\d{0,2})?$"
-                          placeholder='Minutes'
+                          placeholder='00'
                           value={owMinutes === 0 ? '' : owMinutes}
                           onChange={(e) => handleOwTravelTimeChange('minutes', safeNumber(Number(e.target.value)))}
                           className="h-10"
