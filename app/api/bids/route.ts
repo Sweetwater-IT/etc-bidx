@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
     const pageCount = Math.ceil(totalCount / limit);
 
     // Process alreadyBid information
-    let processedData = dataResult.data || [];
+    const processedData = dataResult.data || [];
 
     const response: any = {
       success: true,
