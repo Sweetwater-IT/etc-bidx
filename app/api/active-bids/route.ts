@@ -552,32 +552,21 @@ notes: { text: string, timestamp: number }[]
       bidEstimateId = newBid.id;
     }
 
-    if (notes && notes.length > 0) {
-      if (id) {
-        await supabase
-          .from('bid_notes')
-          .delete()
-          .eq('bid_id', bidEstimateId);
-      }
+  if (!id && notes && notes.length > 0) {
+    const noteInserts = notes.map(note => ({
+      bid_id: bidEstimateId,
+      text: note.text,
+      created_at: new Date(note.timestamp).toISOString()
+    }));
 
-      const noteInserts = notes.map(note => {
-        const isoTimestamp = new Date(note.timestamp).toISOString();
+    const { error: notesError } = await supabase
+      .from('bid_notes')
+      .insert(noteInserts);
 
-        return {
-          bid_id: bidEstimateId,  
-          text: note.text,
-          created_at: isoTimestamp
-        }
-      });
-
-      const { error: notesError } = await supabase
-        .from('bid_notes')
-        .insert(noteInserts);
-
-      if (notesError) {
-        throw new Error(`Failed to insert bid notes: ${notesError.message}`);
-      }
+    if (notesError) {
+      throw new Error(`Failed to insert bid notes: ${notesError.message}`);
     }
+  }
     
     // Upsert admin data
     const { error: adminError } = await supabase

@@ -1,11 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import AdminInfoViewOnly from './admin-info-view-only'
-import PhasesViewOnly from './phases-view-only'
-import SignsViewOnly from './signs-view-only'
-import TripAndLaborViewOnlyAll from './trip-and-labor-view-only'
 import BidItemsViewOnly from './bid-items-view-only'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
   Dropzone,
@@ -59,7 +55,6 @@ const SUBCONTRACTOR_OPTIONS = [
 const BidViewOnlyContainer = () => {
   const searchParams = useSearchParams()
   const bidId = searchParams?.get('bidId')
-  const [localNotes, setLocalNotes] = useState<{ id: number; text: string; created_at: Date }[]>([])
   const [contractor, setContractor] = useState<Customer>()
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [subcontractor, setSubcontractor] = useState<{
@@ -98,20 +93,22 @@ const BidViewOnlyContainer = () => {
     }
   }
 
-  // Fetch bid data including notes
   useEffect(() => {
     const fetchBidData = async () => {
       if (!bidId) return
-
       try {
         const response = await fetch(`/api/active-bids/${bidId}`)
         if (response.ok) {
           const result = await response.json()
 
           if (result.success && result.data) {
-            const notes = result.data.bid_notes || []
-            if (notes.length > 0) {
-              setLocalNotes(notes)
+            const notesResult = result.data.bid_notes || []            
+            if (notesResult.length > 0) {
+              setNotes(notesResult.map(note => ({
+                timestamp: new Date(note.created_at).getTime(),
+                text: note.text,
+                id: note.id
+              })))
             }
           }
         }
@@ -123,34 +120,6 @@ const BidViewOnlyContainer = () => {
     fetchBidData()
   }, [bidId])
 
-  // const handleSaveNotes = async () => {
-  //   if (!bidId) return
-
-  //   setIsSavingNotes(true)
-  //   try {
-  //     const response = await fetch(`/api/active-bids/${bidId}`, {
-  //       method: 'PATCH',
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       },
-  //       body: JSON.stringify({ notes: localNotes })
-  //     })
-
-  //     if (!response.ok) {
-  //       const errorData = await response.json()
-  //       toast.error(errorData.message || 'Failed to save notes')
-  //     } else {
-  //       const result = await response.json()
-  //       toast.success('Notes saved successfully')
-  //       setSavedNotes(localNotes)
-  //     }
-  //   } catch (error) {
-  //     console.error('Error saving notes:', error)
-  //     toast.error('Failed to save notes')
-  //   } finally {
-  //     setIsSavingNotes(false)
-  //   }
-  // }
 
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024, // 50MB
@@ -262,58 +231,70 @@ const BidViewOnlyContainer = () => {
   // Check if notes have changed
 
   // Fetch notes for the bid on mount
-  useEffect(() => {
-    async function fetchNotes() {
-      setLoadingNotes(true)
-      try {
-        if (!bidId) return
-        const res = await fetch(`/api/active-bids/${bidId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setNotes(Array.isArray(data.notes) ? data.notes : [])
-        }
-      } finally {
-        setLoadingNotes(false)
-      }
-    }
-    fetchNotes()
-  }, [bidId])
+
 
   const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notes, note]
-    setNotes(updatedNotes)
     if (bidId) {
-      await fetch(`/api/active-bids/${bidId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: updatedNotes })
-      })
+      const resp = await fetch('/api/active-bids/addNotes',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: note.text,
+            bid_id: bidId
+          })
+        }
+      )
+      const response = await resp.json()
+
+      if (response.ok) {
+        
+        setNotes((prev) => [...prev, {...note, id: response.data.id}])
+      }
     }
   }
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
-    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
-    setNotes(updatedNotes)
-    if (bidId) {
-      await fetch(`/api/active-bids/${bidId}`, {
-        method: 'PATCH',
+    try {
+      const resp = await fetch('/api/active-bids/addNotes', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: updatedNotes })
-      })
+        body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
+      });
+      const data = await resp.json();
+
+      if (data.ok) {        
+        setNotes((prev) =>
+          prev.map((n, i) => (i === index ? {...data.data, timestamp: data.data.created_at} : n))
+        );
+      }
+    } catch (err) {
+      console.error('Error editando nota:', err);
     }
-  }
+  };
 
   const handleDeleteNote = async (index: number) => {
-    const updatedNotes = notes.filter((_, i) => i !== index)
-    setNotes(updatedNotes)
-    if (bidId) {
-      await fetch(`/api/active-bids/${bidId}`, {
-        method: 'PATCH',
+    try {
+      const noteId = notes[index]?.id;
+
+      const resp = await fetch('/api/active-bids/addNotes', {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: updatedNotes })
-      })
+        body: JSON.stringify({ id: noteId })
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        setNotes((prev) => prev.filter((_, i) => i !== index));
+      }
+    } catch (err) {
+      console.error('Error eliminando nota:', err);
     }
-  }
+  };
+
+
 
   return (
     <>
@@ -494,16 +475,13 @@ const BidViewOnlyContainer = () => {
             </div>
           </div>
           <QuoteNotes
-            notes={localNotes.map(note => ({
-              timestamp: new Date(note.created_at).getTime(), // convertir fecha ISO a timestamp numérico
-              text: note.text
-            }))}
+            notes={notes}
             title='Notes'
             onSave={handleSaveNote}
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
             loading={loadingNotes}
-            canEdit={false}
+            canEdit={true}
           />
           <div className='rounded-lg border p-6'>
             <h2 className='mb-4 text-lg font-semibold'>Files</h2>

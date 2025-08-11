@@ -8,6 +8,7 @@ import { SaleItem } from "./TSaleItem";
 export interface INote {
     text:string;
     timestamp: number;
+    id?: number
 }
 
 export type Estimate = {

@@ -7,7 +7,7 @@ type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 
 // GET: Fetch all bids with optional filtering, plus counts and stats
 export async function GET(request: NextRequest) {
-  try {
+  try {    
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
@@ -168,6 +168,7 @@ export async function GET(request: NextRequest) {
     // Process alreadyBid information
     let processedData = dataResult.data || [];
     if (processedData.length > 0) {
+      // Primer paso: setear alreadyBid
       const contractNumbers = processedData
         .map(item => item.contract_number)
         .filter(contractNumber => contractNumber && contractNumber.trim() !== '');
@@ -199,7 +200,38 @@ export async function GET(request: NextRequest) {
           alreadyBid: false
         }));
       }
+
+      // Segundo paso: agregar bid_notes a cada bid
+      const bidIds = processedData.map(bid => bid.id).filter(id => id != null);
+
+      if (bidIds.length > 0) {
+        const { data: notesData, error: notesError } = await supabase
+          .from('bid_notes')
+          .select('id, bid_id, text, created_at')
+          .in('bid_id', bidIds);
+
+        if (!notesError && notesData) {
+          // Agrupar notas por bid_id
+          const notesByBidId = notesData.reduce<Record<number, any[]>>((acc, note) => {
+            if (!acc[note.bid_id]) acc[note.bid_id] = [];
+            acc[note.bid_id].push(note);
+            return acc;
+          }, {});
+
+          processedData = processedData.map(bid => ({
+            ...bid,
+            bid_notes: notesByBidId[bid.id] || []
+          }));
+        } else {
+          console.error('Error fetching bid notes:', notesError);
+          processedData = processedData.map(bid => ({
+            ...bid,
+            bid_notes: []
+          }));
+        }
+      }
     }
+
 
     const response: any = {
       success: true,

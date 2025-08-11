@@ -13,8 +13,9 @@ import { MoreVertical } from 'lucide-react'
 import { useAuth } from "@/contexts/auth-context";
 
 export interface Note {
-  text: string
-  timestamp: number
+  id?: number;
+  text: string;
+  timestamp: number;
 }
 
 interface QuoteNotesProps {

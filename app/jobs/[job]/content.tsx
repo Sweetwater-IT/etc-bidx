@@ -608,10 +608,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }
             const result = await response.json();
             //raw data has all the info we need
-            const { data, stats, pagination } = result;
-
+            const { data, stats, pagination } = result;            
             const transformedData = data.map(e => ({
                 id: e.id,
+                bid_notes: e.bid_notes || [],
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',

@@ -19,6 +19,7 @@ import { useEstimate } from "@/contexts/EstimateContext";
 import { QuoteNotes } from "./quote-form/QuoteNotes";
 import { createDropdownMenuScope } from "@radix-ui/react-dropdown-menu";
 import { INote } from "@/types/TEstimate";
+import { Note } from "@react-pdf/renderer";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   return (
@@ -46,6 +47,9 @@ const StepsMain = () => {
 
   const { notes, dispatch } = useEstimate()
   const searchParams = useSearchParams();
+  const bidId = searchParams?.get('bidId');
+  const isEditingBid = !!bidId;
+
   const initialStepParam = searchParams?.get("initialStep");
   const tuckedSidebar = searchParams?.get('tuckSidebar')
   const setFullscreen = searchParams?.get('fullscreen')
@@ -58,23 +62,71 @@ const StepsMain = () => {
   const [notesInfo, setNoteInfo] = React.useState<INote[]>([])
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
-  
-  const handleSave = (note: INote) => {
+
+
+  const handleSave = async (note: INote, index: number) => {
     const updated = [...notesInfo, note];
     setNoteInfo(updated);
-    dispatch({ type: 'COPY_NOTES', payload: updated });
+
+    if (!isEditingBid) {
+      dispatch({ type: 'COPY_NOTES', payload: updated });
+    }
+
+    if (isEditingBid) {
+      const response = await fetch('/api/active-bids/addNotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bid_id: bidId, text: note.text })
+      });
+      const result = await response.json();
+
+      if (result.ok) {
+        setNoteInfo((prev) =>
+          prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+        );
+      }
+    }
   };
 
-  const handleEdit = (index: number, updatedNote: INote) => {
+  const handleEdit = async (index: number, updatedNote: INote) => {
     const updated = notesInfo.map((n, i) => (i === index ? updatedNote : n));
     setNoteInfo(updated);
-    dispatch({ type: 'COPY_NOTES', payload: updated });
+    if (!isEditingBid) {
+      dispatch({ type: 'COPY_NOTES', payload: updated });
+    }
+
+    if (isEditingBid) {
+      const resp = await fetch('/api/active-bids/addNotes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
+      });
+
+      const result = await resp.json()
+
+      if (result.ok) {
+        setNoteInfo((prev) =>
+          prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+        );
+
+      }
+    }
   };
 
-  const handleDelete = (index: number) => {
+  const handleDelete = async (index: number) => {
     const updated = notesInfo.filter((_, i) => i !== index);
     setNoteInfo(updated);
-    dispatch({ type: 'COPY_NOTES', payload: updated });
+    if (!isEditingBid) {
+      dispatch({ type: 'COPY_NOTES', payload: updated });
+    }
+
+    if (isEditingBid) {
+      await fetch('/api/active-bids/addNotes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: notesInfo[index].id })
+      });
+    }
   };
 
   useEffect(() => {
@@ -91,11 +143,11 @@ const StepsMain = () => {
 
         const formattedNotes = notesFromBid.map((note: any) => ({
           text: note.text,
-          timestamp: new Date(note.created_at).getTime() 
+          timestamp: new Date(note.created_at).getTime(),
+          id: note.id,
         }));
 
         setNoteInfo(formattedNotes);
-        dispatch({ type: 'COPY_NOTES', payload: formattedNotes });
       } catch (error) {
         console.error('Error fetching bid notes:', error);
       }
@@ -236,7 +288,7 @@ const StepsMain = () => {
             />
             <QuoteNotes
               notes={notesInfo}
-              onSave={handleSave}
+              onSave={(note: INote) => handleSave(note, notesInfo.length)}
               onEdit={handleEdit}
               onDelete={handleDelete}
               title="Notes"

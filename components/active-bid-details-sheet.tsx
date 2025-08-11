@@ -45,6 +45,8 @@ import { Customer } from "@/types/Customer";
 import { updateBid } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Separator } from "./ui/separator";
+import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
+import { INote } from "@/types/TEstimate";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -53,7 +55,7 @@ interface ActiveBidDetailsSheetProps {
   onEdit?: (item: ActiveBid) => void;
   onNavigate?: (direction: "up" | "down") => void;
   onRefresh?: () => void; // Callback to refresh the data table
-  onViewBidSummary: (item : ActiveBid) => void;
+  onViewBidSummary: (item: ActiveBid) => void;
   onUpdateStatus?: (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => void;
 }
 
@@ -104,6 +106,8 @@ export function ActiveBidDetailsSheet({
     contractor: false,
     subContractor: false
   });
+  const [notesInfo, setNoteInfo] = useState<INote[]>([])
+
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -164,10 +168,43 @@ export function ActiveBidDetailsSheet({
   }, [open, onNavigate]);
 
   useEffect(() => {
-    if (open) {
-      fetchCustomers();
+    if (!open) {
+      setNoteInfo([]);
+      return;
     }
-  }, [open, fetchCustomers]);
+
+    fetchCustomers();
+
+    if (!bid?.id) {
+      setNoteInfo([]);
+      return;
+    }
+
+    // Llamamos al endpoint GET para traer las notas actuales
+    const fetchBidNotes = async () => {
+      try {
+        const response = await fetch(`/api/active-bids/addNotes?bid_id=${bid.id}`);
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          const parsedNotes: INote[] = result.data.map((note: any) => ({
+            ...note,
+            timestamp: new Date(note.created_at).getTime(),
+          }));
+
+          setNoteInfo(parsedNotes);
+        } else {
+          setNoteInfo([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bid notes:", error);
+        setNoteInfo([]);
+      }
+    };
+
+    fetchBidNotes();
+  }, [open, bid?.id]);
+
 
   useEffect(() => {
     const fetchContractors = async () => {
@@ -290,16 +327,64 @@ export function ActiveBidDetailsSheet({
     const contractorChanged = !originalContractor ? !!contractor : contractor?.id !== originalContractor.id;
     const subcontractorChanged = !originalSubcontractor ? !!subcontractor : subcontractor?.id !== originalSubcontractor.id;
     const statusChanged = originalStatus !== (status || selectedStatus);
-    
+
     setHasChanges(contractorChanged || subcontractorChanged || statusChanged);
   };
+
+
+  const handleSave = async (note: INote) => {
+    if (!bid?.id) {
+      return;
+    }
+    const response = await fetch('/api/active-bids/addNotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bid_id: bid.id, text: note.text }),
+    });
+    const result = await response.json();
+
+    if (result.ok) {
+      setNoteInfo((prev) => [...prev, { ...result.data, timestamp: result.data.created_at }]);
+    }
+  };
+
+  const handleEditNotes = async (index: number, updatedNote: INote) => {
+    const resp = await fetch('/api/active-bids/addNotes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text }),
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+      setNoteInfo((prev) =>
+        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+      );
+    }
+  };
+
+  const handleDelete = async (index: number) => {
+    const resp = await fetch('/api/active-bids/addNotes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notesInfo[index].id }),
+    });
+
+    const result = await resp.json();
+
+    if (result.ok) {
+      const updated = notesInfo.filter((_, i) => i !== index);
+      setNoteInfo(updated);
+    }
+  };
+
 
   const saveChanges = async () => {
     if (!bid?.id || !hasChanges) return;
 
     setSaving(true);
     try {
-      const promises : any[] = [];
+      const promises: any[] = [];
 
       // Update contractors if changed
       const contractorChanged = !originalContractor ? !!selectedContractor : selectedContractor?.id !== originalContractor.id;
@@ -396,8 +481,8 @@ export function ActiveBidDetailsSheet({
                   ? `: ${bid.originalContractNumber}`
                   : ""}
               </SheetTitle>
-              <span 
-                className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer" 
+              <span
+                className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -513,7 +598,7 @@ export function ActiveBidDetailsSheet({
                         className="w-full justify-between text-muted-foreground"
                       >
                         <span className="truncate">
-                        {selectedSubcontractor ? selectedSubcontractor.name : "Select subcontractor..."}
+                          {selectedSubcontractor ? selectedSubcontractor.name : "Select subcontractor..."}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -672,6 +757,15 @@ export function ActiveBidDetailsSheet({
                 </div>
               </div>
             </div>
+          </div>
+          <div className="w-full">
+            <QuoteNotes
+              notes={notesInfo}
+              onSave={(note: INote) => handleSave(note)}
+              onEdit={handleEditNotes}
+              onDelete={handleDelete}
+              title="Notes"
+            />
           </div>
 
           <SheetFooter className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10">
