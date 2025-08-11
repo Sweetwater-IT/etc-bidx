@@ -71,7 +71,6 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
     return (
         <>
             <WorksheetDialog
-                key={`pdf-${open}`}
                 open={openPdfDialog}
                 onOpenChange={setOpenPdfDialog}
                 selectedPdfType={selectedPdfType}
