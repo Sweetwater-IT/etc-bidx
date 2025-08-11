@@ -162,15 +162,15 @@ const DiscountChecks = ({ editableDiscounts = true }: Props) => {
                   />
                 </div>
                 <div className="flex items-center text-sm">
-                  {`${row.swingDiscountRate.toFixed(2)}%`}
+                  {`${safeNumber(row.swingDiscountRate).toFixed(2)}%`}
                 </div>
                 <div className="flex items-center text-sm">
-                  {`${row.floorDiscountRate.toFixed(2)}%`}
+                  {`${safeNumber(row.floorDiscountRate).toFixed(2)}%`}
                 </div>
                 <div className="flex items-center text-sm">
                   {row.maxDiscountRate === -1
                     ? '-'
-                    : `${row.maxDiscountRate.toFixed(2)}%`}
+                    : `${safeNumber(row.maxDiscountRate).toFixed(2)}%`}
                 </div>
               </div>
             );

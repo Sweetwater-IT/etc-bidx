@@ -95,7 +95,7 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
         itemNumber: "0941-0001",
         days: 0,
         numberTrips: 0,
-    }
+      }
       break;
     case "resetTypeF":
       defaultObjectToBeAdded = {
@@ -230,6 +230,25 @@ const PermanentSignsSummaryStep = () => {
     formData?.personnel,
   ]);
 
+  const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
+  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
+    const extraMinutes = currentOwMinutes % 60;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) +  value;
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMins',
+        value: newOwMinutes
+      }
+    })
+
+    setOwHours(Math.floor(newOwMinutes / 60))
+    setOwMinutes(newOwMinutes % 60);
+  }
+
   // Update totalTrips and days, when change quantity
   useEffect(() => {
     if (!editOpened || !permanentSigns || !formData || !selectedType) return;
@@ -344,7 +363,7 @@ const PermanentSignsSummaryStep = () => {
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignCostSqFt = baseCost;
       (defaultItem as PostMountedInstall | PostMountedInstallTypeC).permSignPriceSqFt = basePrice;
     }
-    if(isCustomName){
+    if (isCustomName) {
       handleFieldUpdate('customItemTypeName', '')
     }
     setSelectedType(value);
@@ -447,7 +466,7 @@ const PermanentSignsSummaryStep = () => {
 
   const getTotalDays = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.days, 0)
   const getTotalTrips = () => permanentSigns?.signItems.reduce((acc, item) => acc + item.numberTrips, 0)
-  
+
   function hasPermSignSqFtFields(item: PMSItemNumbers): item is PostMountedInstall | PostMountedInstallTypeC {
     return 'permSignCostSqFt' in item && 'permSignPriceSqFt' in item;
   }
@@ -543,22 +562,29 @@ const PermanentSignsSummaryStep = () => {
         )}
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Time</Label>
-          <Input
-            type="number"
-            value={Math.round((safeNumber(adminData?.owTravelTimeMins) / 60) * 100) / 100}
-            onChange={(e) => {
-              dispatch({
-                type: "UPDATE_ADMIN_DATA",
-                payload: {
-                  key: "owTravelTimeMins",
-                  value: parseFloat(e.target.value) * 60,
-                },
-              });
-            }}
-            min={0}
-            step="0.01"
-            className="w-full"
-          />
+          <div>
+            <div className="relative flex space-x-2">
+              <Input
+                id='owHoursInput'
+                type='number'
+                pattern="^\\d*(\\.\\d{0,2})?$"
+                placeholder='Hours'
+                value={owHours === 0 ? '' : owHours}
+                onChange={(e) => handleOwTravelTimeChange('hours', safeNumber(Number(e.target.value)))}
+                className="h-10"
+              />
+              <Input
+                id='owMinutesInput'
+                pattern="^\\d*(\\.\\d{0,2})?$"
+                placeholder='Minutes'
+                value={owMinutes === 0 ? '' : owMinutes}
+                type='number'
+                onChange={(e) => handleOwTravelTimeChange('minutes', safeNumber(Number(e.target.value)))}
+                className="h-10"
+              />
+            </div>
+            <div>{owHours} hr{owHours !== 1 && 's'} {owMinutes} min{owMinutes !== 1 && 's'}</div>
+          </div>
         </div>
         <div className="flex-1">
           <Label className="text-sm font-medium mb-2 block">O/W Travel Distance</Label>
@@ -977,7 +1003,7 @@ const PermanentSignsSummaryStep = () => {
                     ) : (
                       <div className="flex gap-x-2 items-center">
                         <label className="text-red-400 text-sm font-medium">Price Per Sign: $</label>
-                        <div className="text-sm text-red-500"> 
+                        <div className="text-sm text-red-500">
                           {formatCurrencyValue(
                             getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental)
                               .revenue / pmsItem.quantity

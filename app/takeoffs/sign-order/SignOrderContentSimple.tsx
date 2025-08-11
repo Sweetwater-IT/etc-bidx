@@ -17,7 +17,7 @@ import { useFileUpload } from '@/hooks/use-file-upload'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
-import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
 import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
@@ -28,6 +28,8 @@ import {
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
+import FileViewingContainer from '@/components/file-viewing-container'
+import { FileMetadata } from '@/types/FileTypes'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -72,7 +74,7 @@ export default function SignOrderContentSimple ({
 
   const { startLoading, stopLoading } = useLoading()
 
-  const [localFiles, setLocalFiles] = useState<File[]>([])
+  const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
@@ -370,7 +372,7 @@ export default function SignOrderContentSimple ({
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024, // 50MB
     maxFiles: 10, // Allow multiple files to be uploaded
-    uniqueIdentifier: 100000,
+    uniqueIdentifier: signOrderId ?? '',
     apiEndpoint: '/api/files/sign-orders',
     accept: {
       'application/pdf': ['.pdf'],
@@ -389,24 +391,28 @@ export default function SignOrderContentSimple ({
   })
 
   // Destructure needed properties
-  const { files, successes, isSuccess } = fileUploadProps
+  const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps;
+
+  useEffect(() => {
+    if(!fileErrors || fileErrors.length === 0) return;
+    if(fileErrors.some(err => err.name === 'identifier')){
+      toast.error('Sign order needs to be saved as draft in order to being associating files. Please add admin data, then click upload files again.')
+    }
+  }, [fileErrors])
+
+  const fetchFiles =() => {
+    if (!signOrderId) return
+    fetchAssociatedFiles(signOrderId, 'sign-orders?sign_order_id', setLocalFiles)
+  }
+
+  useEffect(() => {
+    fetchFiles();
+  }, [signOrderId])
 
   // Use useEffect to update parent component's files state when upload is successful
   useEffect(() => {
     if (isSuccess && files.length > 0) {
-      const successfulFiles = files.filter(file =>
-        successes.includes(file.name)
-      )
-      if (successfulFiles.length > 0) {
-        setLocalFiles(prevFiles => {
-          // Filter out duplicates
-          const filteredPrevFiles = prevFiles.filter(
-            prevFile =>
-              !successfulFiles.some(newFile => newFile.name === prevFile.name)
-          )
-          return [...filteredPrevFiles, ...successfulFiles]
-        })
-      }
+      fetchFiles();
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
@@ -566,11 +572,12 @@ export default function SignOrderContentSimple ({
             <h2 className='mb-2 text-lg font-semibold'>Files</h2>
             <Dropzone
               {...fileUploadProps}
-              className='p-8 cursor-pointer space-y-4'
+              className='p-8 cursor-pointer space-y-4 mb-4'
             >
               <DropzoneContent />
               <DropzoneEmptyState />
             </Dropzone>
+            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles}/>
           </div>
           <QuoteNotes
             notes={notes}

@@ -22,15 +22,8 @@ import {
 } from "@/components/ui/drawer";
 import { 
   Plus,
-  Edit,
   Trash2,
   Clock, 
-  DollarSign, 
-  User, 
-  Truck, 
-  CornerDownRight, 
-  Keyboard, 
-  Car
 } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
@@ -38,6 +31,7 @@ import { safeNumber } from "@/lib/safe-number";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
 import { Flagging } from "@/types/TFlagging";
 import EmptyContainer from "./empty-container";
+import { formatHoursAndMinutes } from "@/lib/utils";
 
 // Markup percentages arrays for rated and non-rated jobs
 const NON_RATED_MARKUP_PERCENTAGES = [50, 52.5, 55, 57.5, 60, 62.5, 65, 67.5, 70, 72.5, 75, 77.5];
@@ -484,8 +478,8 @@ const ServiceWorkTab = () => {
 
               {/* Cost Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                <div>Total Hours: {getTotalHours(item)}</div>
-                <div>Overtime Hours: {getOvertimeHours(item)}</div>
+                <div>Total Hours: {getTotalHours(item)} ({getTotalHours(item) * 60} minutes)</div>
+                <div>Overtime Hours: {getOvertimeHours(item)} ({getOvertimeHours(item) * 60} minutes)</div>
               </div>
             </div>
 
@@ -846,8 +840,8 @@ const ServiceWorkTab = () => {
                     </div>
                     
                     <div className="flex justify-between">
-                      <span>Round Trip Travel Time Hours:</span>
-                      <span>{Math.ceil((safeNumber(adminData?.owTravelTimeMins) * 2) / 60)}</span>
+                      <span>Round Trip Travel Time:</span>
+                      <span>{formatHoursAndMinutes(safeNumber(adminData?.owTravelTimeMins) * 2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Travel Time Cost:</span>
@@ -856,13 +850,13 @@ const ServiceWorkTab = () => {
 
                     <div className="flex justify-between">
                       <span>Over Time Hours:</span>
-                      <span>{getOvertimeHours(formData)}</span>
+                      <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
                     </div>
                     <div></div>
                     
                     <div className="flex justify-between">
                       <span>Total Hours:</span>
-                      <span className="font-medium">{getTotalHours(formData)}</span>
+                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(formData))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Labor Cost:</span>

@@ -46,3 +46,21 @@ export function formatPhoneNumber(phoneNumber: string): string {
     return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
   }
 }
+
+export const formatHoursAndMinutes = (totalMinutes) => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  const hourText = hours === 1 ? 'hr' : 'hrs';
+  const minuteText = minutes === 1 ? 'min' : 'mins';
+  
+  if (hours === 0) {
+    return `0 hrs ${minutes} ${minuteText}`;
+  }
+  
+  if (minutes === 0) {
+    return `${hours} ${hourText} 0 mins`;
+  }
+  
+  return `${hours} ${hourText} ${minutes} ${minuteText}`;
+};

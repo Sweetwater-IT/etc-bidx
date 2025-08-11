@@ -37,7 +37,7 @@ import {
   Minus,
   MoreHorizontal
 } from 'lucide-react'
-import { IconPlus } from '@tabler/icons-react'
+import { IconChevronRight, IconPlus } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -170,7 +170,7 @@ export interface DataTableProps<TData extends object> {
   onUnarchive?: (item: TData) => void
 }
 
-function formatCellValue (value: any, key: string) {
+function formatCellValue(value: any, key: string) {
   if (
     value === undefined ||
     value === null ||
@@ -250,26 +250,26 @@ function formatCellValue (value: any, key: string) {
         {key === 'projectStatus' || key === 'billingStatus'
           ? value.replace('_', ' ')
           : key === 'shop_status'
-          ? value === 'not-started'
-            ? 'Not Started'
-            : value === 'in-progress'
-            ? 'In-Process'
-            : value === 'in-process'
-            ? 'In-Process'
-            : value === 'complete'
-            ? 'Complete'
-            : value === 'on-hold'
-            ? 'On Hold'
-            : value === 'on-order'
-            ? 'On Order'
-            : value
-          : key === 'order_status'
-          ? value === 'submitted' || value === 'SUBMITTED'
-            ? 'Submitted'
-            : value === 'draft' || value === 'DRAFT'
-            ? 'Draft'
-            : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-          : value}
+            ? value === 'not-started'
+              ? 'Not Started'
+              : value === 'in-progress'
+                ? 'In-Process'
+                : value === 'in-process'
+                  ? 'In-Process'
+                  : value === 'complete'
+                    ? 'Complete'
+                    : value === 'on-hold'
+                      ? 'On Hold'
+                      : value === 'on-order'
+                        ? 'On Order'
+                        : value
+            : key === 'order_status'
+              ? value === 'submitted' || value === 'SUBMITTED'
+                ? 'Submitted'
+                : value === 'draft' || value === 'DRAFT'
+                  ? 'Draft'
+                  : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+              : value}
       </Badge>
     )
   }
@@ -349,7 +349,7 @@ function formatCellValue (value: any, key: string) {
   return value
 }
 
-function isRowSelected<T extends object> (
+function isRowSelected<T extends object>(
   row: T,
   selectedItem: T | undefined
 ): boolean {
@@ -364,7 +364,7 @@ function isRowSelected<T extends object> (
   return JSON.stringify(row) === JSON.stringify(selectedItem)
 }
 
-export function DataTable<TData extends object> ({
+export function DataTable<TData extends object>({
   columns: legacyColumns,
   data,
   segments,
@@ -684,17 +684,17 @@ export function DataTable<TData extends object> ({
                   )}
 
                   {onViewDetails && (
-                      <DropdownMenuItem 
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              onViewDetails(row.original as TData);
-                          }}
-                      >
-                          View details
-                      </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onViewDetails(row.original as TData);
+                      }}
+                    >
+                      View details
+                    </DropdownMenuItem>
                   )}
-                  
+
 
                   {onEdit && (
                     <DropdownMenuItem
@@ -1011,7 +1011,7 @@ export function DataTable<TData extends object> ({
                           )}
                         >
                           {header.isPlaceholder ||
-                          header.column.id === 'actions' ? null : header.column
+                            header.column.id === 'actions' ? null : header.column
                               .id === 'select' ? (
                             flexRender(
                               header.column.columnDef.header,
@@ -1119,10 +1119,11 @@ export function DataTable<TData extends object> ({
                                 : ''
                             )}
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
+                              {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground"/>}{
+                                flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
                           </TableCell>
                         )
                       })}

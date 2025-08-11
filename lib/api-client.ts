@@ -17,6 +17,7 @@ import { Flagging } from '@/types/TFlagging';
 import { PermanentSigns } from '@/types/TPermanentSigns';
 import { SaleItem } from '@/types/TSaleItem';
 import { User } from '@/types/User';
+import { Dispatch, SetStateAction } from 'react';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -1124,4 +1125,21 @@ export const saveSignOrder = async (signOrderData: {
 
   // Return the ID instead of the response object
   return { id: data.id };
+}
+
+export const fetchAssociatedFiles = async (uniqueIdentifier : number, slug : string, setFiles: Dispatch<SetStateAction<FileMetadata[]>>) => {
+  if (!uniqueIdentifier) return
+  try {
+    const filesResponse = await fetch(
+      //example contract-management?job_id
+      `/api/files/${slug}=${uniqueIdentifier}`
+    )
+    if (filesResponse.ok) {
+      const filesData = await filesResponse.json()
+      console.log(filesData)
+      setFiles(filesData.data)
+    }
+  } catch (error) {
+    console.error('Error fetching files:', error)
+  }
 }

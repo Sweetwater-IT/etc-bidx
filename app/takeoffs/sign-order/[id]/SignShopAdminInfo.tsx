@@ -7,41 +7,76 @@ import { useFileUpload } from '@/hooks/use-file-upload'
 import { formatDate } from '@/lib/formatUTCDate'
 import { SignOrder } from '@/types/TSignOrder'
 import { MoreVertical } from 'lucide-react'
-import React, { Dispatch, SetStateAction, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import SignShopAdminInfoSheet from './SignShopAdminInfoSheet' // Import the sheet component
+import { FileMetadata } from '@/types/FileTypes'
+import { fetchAssociatedFiles } from '@/lib/api-client'
+import { toast } from 'sonner'
+import FileViewingContainer from '@/components/file-viewing-container'
 
 interface Props {
     signOrder: SignOrder
     setSignOrder: Dispatch<SetStateAction<SignOrder | undefined>>
     id: number
+    files: FileMetadata[]
+    setFiles: Dispatch<SetStateAction<FileMetadata[]>>
 }
 
-const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
+const SignShopAdminInfo = ({ signOrder, setSignOrder, id, files, setFiles }: Props) => {
 
     const [open, setOpen] = useState<boolean>(false)
 
     const fileUploadProps = useFileUpload({
         maxFileSize: 50 * 1024 * 1024, // 50MB
-        maxFiles: 5, // Allow multiple files to be uploaded
-        uniqueIdentifier: id,
-        folder: 'bid_estimates',
-        apiEndpoint: '/api/files',
+        maxFiles: 10, // Allow multiple files to be uploaded
+        uniqueIdentifier: id ?? '',
+        apiEndpoint: '/api/files/sign-orders',
         accept: {
             'application/pdf': ['.pdf'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                ['.docx'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
+                '.xlsx'
+            ],
             'image/jpeg': ['.jpg', '.jpeg'],
             'image/png': ['.png'],
             'image/gif': ['.gif'],
             'application/zip': ['.zip'],
             'text/plain': ['.txt'],
             'text/csv': ['.csv']
-        },
-    });
+        }
+    })
+
+    // Destructure needed properties
+    const { successes, isSuccess, errors: fileErrors } = fileUploadProps;
+
+    useEffect(() => {
+        if (!fileErrors || fileErrors.length === 0) return;
+        if (fileErrors.some(err => err.name === 'identifier')) {
+            toast.error('Sign order needs to be saved as draft in order to being associating files. Please add admin data, then click upload files again.')
+        }
+    }, [fileErrors])
+
+    const fetchFiles = () => {
+        if (!id) return
+        fetchAssociatedFiles(id, 'sign-orders?sign_order_id', setFiles)
+    }
+
+    useEffect(() => {
+        fetchFiles();
+    }, [id])
 
     const handleOpenChange = () => {
         setOpen(!open);
     };
+
+
+
+    useEffect(() => {
+        if (isSuccess && files.length > 0) {
+            fetchFiles();
+        }
+    }, [isSuccess, files, successes, setFiles])
 
     return (
         <>
@@ -142,7 +177,7 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
                                         .join(', ').toUpperCase() || '-'}
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <div className='text-sm text-muted-foreground'>
                                     Assigned to
@@ -157,13 +192,13 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
                                     Shop Status
                                 </div>
                                 <div className='text-base mt-1'>
-                                    {signOrder.shop_status === 'not-started' ? 'Not Started' : 
-                                     signOrder.shop_status === 'in-progress' ? 'In-Process' : 
-                                     signOrder.shop_status === 'in-process' ? 'In-Process' : 
-                                     signOrder.shop_status === 'complete' ? 'Complete' : 
-                                     signOrder.shop_status === 'on-hold' ? 'On Hold' : 
-                                     signOrder.shop_status === 'on-order' ? 'On Order' :
-                                     signOrder.shop_status || '-'}
+                                    {signOrder.shop_status === 'not-started' ? 'Not Started' :
+                                        signOrder.shop_status === 'in-progress' ? 'In-Process' :
+                                            signOrder.shop_status === 'in-process' ? 'In-Process' :
+                                                signOrder.shop_status === 'complete' ? 'Complete' :
+                                                    signOrder.shop_status === 'on-hold' ? 'On Hold' :
+                                                        signOrder.shop_status === 'on-order' ? 'On Order' :
+                                                            signOrder.shop_status || '-'}
                                 </div>
                             </div>
 
@@ -179,10 +214,16 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id }: Props) => {
                     </div>
 
                     {/* Upload Files - Takes 1/3 of the row */}
-                    <Dropzone {...fileUploadProps}>
-                        <DropzoneEmptyState />
-                        <DropzoneContent />
-                    </Dropzone>
+                    <div className='flex flex-col gap-y-4'>
+                        <Dropzone className='grow' {...fileUploadProps}>
+                            <DropzoneEmptyState />
+                            <DropzoneContent />
+                        </Dropzone>
+                        <FileViewingContainer
+                            files={files}
+                            onFilesChange={fetchFiles}
+                        />
+                    </div>
                 </div>
             </div>
 

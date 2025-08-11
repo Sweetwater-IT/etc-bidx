@@ -69,6 +69,7 @@ const SignsViewOnly = ({ phaseNumber }: Props) => {
                     <div className="text-sm font-semibold mb-2 pl-6">Phase {phaseNumber + 1} {mptRental.phases[phaseNumber].name.trim() !== '' && ''} {mptRental.phases[phaseNumber].name}</div>
                     <DataTable<ExtendedSign>
                         data={mptRental.phases[phaseNumber].signs.length === 0 ? [{ description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-' } as any] :
+                        //sort signs by secondary and if they are, add a > in front of the designation
                             sortSignsBySecondary(mptRental.phases[phaseNumber].signs).map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}` } as ExtendedSign))}
                         columns={SIGN_COLUMNS}
                         hideDropdown
