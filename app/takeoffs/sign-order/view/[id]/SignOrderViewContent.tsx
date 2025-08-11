@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table'
 import EquipmentTotalsAccordion from './EquipmentTotalsAccordion'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import { formatDate } from '@/lib/formatUTCDate'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
@@ -19,6 +19,8 @@ import {
 } from '@/types/default-objects/defaultMPTObject'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { Badge } from '@/components/ui/badge'
+import { FileMetadata } from '@/types/FileTypes'
+import FileViewingContainer from '@/components/file-viewing-container'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -89,6 +91,7 @@ export default function SignOrderViewContent () {
   const [loading, setLoading] = useState(true)
   const [orderDate, setOrderDate] = useState<Date | undefined>(undefined)
   const [needDate, setNeedDate] = useState<Date | undefined>(undefined)
+  const [files, setFiles] = useState<FileMetadata[]>([]);
 
   // Order type checkboxes state
   const [isSale, setIsSale] = useState(false)
@@ -379,6 +382,15 @@ export default function SignOrderViewContent () {
     }
   }, [params, dispatch])
 
+  const fetchFiles =() => {
+    if (!params?.id) return
+    fetchAssociatedFiles(Number(params.id!), 'sign-orders?sign_order_id', setFiles)
+  }
+
+  useEffect(() => {
+    fetchFiles();
+  }, [params])
+
   // Handle saving/submitting the sign order (same logic as SignOrderContentSimple)
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     // Prevent multiple submissions
@@ -587,7 +599,10 @@ export default function SignOrderViewContent () {
               </div>
 
               {/* Equipment Totals - Takes 1/3 of the row */}
+              <div className='flex flex-col gap-y-2'>
               <EquipmentTotalsAccordion key={signItems.length} />
+              <FileViewingContainer files={files} onFilesChange={setFiles} />
+              </div>
             </div>
 
             {/* Sign Details Table - Full width below */}

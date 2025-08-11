@@ -502,7 +502,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     noBidReason,
                     stateRoute,
                     services,
-                    alreadyBid: job.alreadyBid || false,
                     archived: job.archived === true
                 };
             });
@@ -1165,7 +1164,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     'Perm Signs': job.perm_signs || false,
                     'Other': job.other || false
                 },
-                alreadyBid: job.alreadyBid || false,
                 archived: job.archived === true
             };
         });
