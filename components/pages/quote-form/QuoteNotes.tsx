@@ -28,8 +28,9 @@ interface QuoteNotesProps {
   canEdit?: boolean
 }
 
-function formatDateTime (ts: number) {
+function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -40,7 +41,7 @@ function formatDateTime (ts: number) {
 }
 
 // Inline SVG for a subtle document icon
-function NoteIcon () {
+function NoteIcon() {
   return (
     <svg
       className='w-5 h-5 text-gray-400 flex-shrink-0'
@@ -69,7 +70,7 @@ function NoteIcon () {
   )
 }
 
-export function QuoteNotes ({
+export function QuoteNotes({
   notes,
   onSave,
   onEdit,
@@ -94,7 +95,7 @@ export function QuoteNotes ({
 
   const handleSaveNote = () => {
     if (newNote.trim() === '') return
-    const noteObj = { text: newNote.trim(), timestamp: Date.now() }
+    const noteObj = { text: newNote.trim(), timestamp: new Date().getTime() }
     onSave(noteObj)
     setIsAdding(false)
     setNewNote('')

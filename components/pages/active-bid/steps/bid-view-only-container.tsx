@@ -228,10 +228,6 @@ const BidViewOnlyContainer = () => {
     }
   }
 
-  // Check if notes have changed
-
-  // Fetch notes for the bid on mount
-
 
   const handleSaveNote = async (note: Note) => {
     if (bidId) {
@@ -251,7 +247,7 @@ const BidViewOnlyContainer = () => {
 
       if (response.ok) {
         
-        setNotes((prev) => [...prev, {...note, id: response.data.id}])
+        setNotes((prev) => [...prev, {...note, id: response.data.id, timestamp: response.data.created_at}])
       }
     }
   }
