@@ -53,7 +53,7 @@ const PhaseInfoTable: React.FC<PhaseInfoTableProps> = ({ phase, index }) => {
             <TableRow>
               <TableHead>Personnel</TableHead>
               <TableHead>Trucks</TableHead>
-              <TableHead>Additional Trips</TableHead>
+              <TableHead>Additional Mobilizations</TableHead>
               <TableHead>Additional Rated Hours</TableHead>
               <TableHead>Additional Non-Rated Hours</TableHead>
             </TableRow>
