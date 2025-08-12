@@ -91,19 +91,19 @@ export const TripAndLaborSummary = ({
   
         {/* Row 2 */}
         <div className='flex flex-col'>
-          <label className='text-sm font-semibold'>Base Trips</label>
+          <label className='text-sm font-semibold'>Base Mobilizations</label>
           <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
             {safeNumber(baseTrips)}
           </div>
         </div>      
         <div className='flex flex-col'>
-          <label className='text-sm font-semibold'>Additional Trips</label>
+          <label className='text-sm font-semibold'>Additional Mobilizations</label>
           <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
             {safeNumber(phase.maintenanceTrips)}
           </div>
         </div>
         <div className='flex flex-col'>
-          <label className='text-sm font-semibold'>Total Trips</label>
+          <label className='text-sm font-semibold'>Total Mobilizations</label>
           <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
             {safeNumber(baseTrips + safeNumber(phase.maintenanceTrips))}
           </div>
