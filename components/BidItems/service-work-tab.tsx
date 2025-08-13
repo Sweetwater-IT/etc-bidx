@@ -20,10 +20,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { 
+import {
   Plus,
   Trash2,
-  Clock, 
+  Clock,
 } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
@@ -75,6 +75,96 @@ const ServiceWorkTab = () => {
   const [arrowBoardCost, setArrowBoardCost] = useState('');
   const [messageBoardCost, setMessageBoardCost] = useState('');
   const [tmaCost, setTMACost] = useState('');
+  const [customGrossMargin, setCustomGrossMargin] = useState<{
+    customGrossMargin: number,
+    lumpSum: number,
+    hourlyRate: number,
+    item: any;
+  }>({
+    customGrossMargin: 35,
+    lumpSum: 0,
+    hourlyRate: 0,
+    item: {}
+  })
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const item = customGrossMargin?.item;
+
+      if (!item || !adminData || !serviceWork) return;
+
+      const { hourlyRate, lumpSumWithEquipment } = calculateCustomGrossMarginValues({
+        item,
+        adminData,
+        serviceWork,
+        markupRate: customGrossMargin.customGrossMargin
+      });
+
+      setCustomGrossMargin(prev => ({
+        ...prev,
+        lumpSum: lumpSumWithEquipment,
+        hourlyRate
+      }));
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [customGrossMargin.customGrossMargin, serviceWorkItems, adminData, serviceWork]);
+
+  function calculateCustomGrossMarginValues({
+    item,
+    adminData,
+    serviceWork,
+    markupRate
+  }: {
+    item: ServiceWorkItem,
+    adminData,
+    serviceWork,
+    markupRate: number
+  }) {
+    if (!adminData || !serviceWork) return { lumpSumWithEquipment: 0, hourlyRate: 0 };
+
+    const tempServiceWork: Flagging = {
+      ...serviceWork,
+      standardPricing: false,
+      standardLumpSum: 0,
+      markupRate: 0,
+      fuelEconomyMPG: serviceWork?.fuelEconomyMPG ?? 0,
+      truckDispatchFee: serviceWork?.truckDispatchFee ?? 0,
+      workerComp: serviceWork?.workerComp ?? 0,
+      generalLiability: serviceWork?.generalLiability ?? 0,
+      personnel: item.personnel,
+      numberTrucks: item.numberTrucks,
+      onSiteJobHours: item.onSiteJobHours,
+      fuelCostPerGallon: item.fuelCostPerGallon,
+      arrowBoards: item.arrowBoards,
+      messageBoards: item.messageBoards,
+      TMA: item.TMA,
+      additionalEquipmentCost: item.additionalEquipmentCost
+    };
+
+    const summary = calculateFlaggingCostSummary(adminData, tempServiceWork, true);
+    if (!summary) return { lumpSumWithEquipment: 0, hourlyRate: 0 };
+
+    const arrowBoardsCost = item.arrowBoards.includeInLumpSum
+      ? safeNumber(item.arrowBoards.quantity) * item.arrowBoards.cost
+      : 0;
+
+    const messageBoardsCost = item.messageBoards.includeInLumpSum
+      ? safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
+      : 0;
+
+    const tmaCost = item.TMA.includeInLumpSum
+      ? safeNumber(item.TMA.quantity) * item.TMA.cost
+      : 0;
+
+    const lumpSum = summary.totalFlaggingCost / (1 - markupRate / 100);
+    const lumpSumWithEquipment = lumpSum + arrowBoardsCost + messageBoardsCost + tmaCost;
+
+    const totalHours = Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + item.onSiteJobHours;
+    const hourlyRate = item.personnel > 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0;
+
+    return { lumpSumWithEquipment, hourlyRate };
+  }
 
   // Initialize service work if needed
   useEffect(() => {
@@ -84,78 +174,78 @@ const ServiceWorkTab = () => {
         if (flaggingResponse.ok) {
           const flaggingData = await flaggingResponse.json();
           const flaggingObject = flaggingData.data[0];
-          
-          dispatch({ 
-            type: 'UPDATE_SERVICE_WORK', 
-            payload: { 
-              key: 'fuelEconomyMPG', 
-              value: Number(flaggingObject.fuel_economy_mpg) 
-            } 
+
+          dispatch({
+            type: 'UPDATE_SERVICE_WORK',
+            payload: {
+              key: 'fuelEconomyMPG',
+              value: Number(flaggingObject.fuel_economy_mpg)
+            }
           });
-          
-          dispatch({ 
-            type: 'UPDATE_SERVICE_WORK', 
-            payload: { 
-              key: 'truckDispatchFee', 
-              value: Number(flaggingObject.truck_dispatch_fee) 
-            } 
+
+          dispatch({
+            type: 'UPDATE_SERVICE_WORK',
+            payload: {
+              key: 'truckDispatchFee',
+              value: Number(flaggingObject.truck_dispatch_fee)
+            }
           });
-          
-          dispatch({ 
-            type: 'UPDATE_SERVICE_WORK', 
-            payload: { 
-              key: 'workerComp', 
-              value: Number(flaggingObject.worker_comp) 
-            } 
+
+          dispatch({
+            type: 'UPDATE_SERVICE_WORK',
+            payload: {
+              key: 'workerComp',
+              value: Number(flaggingObject.worker_comp)
+            }
           });
-          
-          dispatch({ 
-            type: 'UPDATE_SERVICE_WORK', 
-            payload: { 
-              key: 'generalLiability', 
-              value: Number(flaggingObject.general_liability) 
-            } 
+
+          dispatch({
+            type: 'UPDATE_SERVICE_WORK',
+            payload: {
+              key: 'generalLiability',
+              value: Number(flaggingObject.general_liability)
+            }
           });
         }
       } catch (error) {
         console.error('Error fetching flagging data:', error);
       }
     };
-    
+
     fetchFlaggingStaticData();
   }, [dispatch]);
 
   //Add
   useEffect(() => {
-  if (serviceWork && (serviceWork.personnel > 0 || serviceWork.numberTrucks > 0)) {
-    setServiceWorkItems([{
-      id: 'service-work',
-      personnel: serviceWork.personnel || 0,
-      numberTrucks: serviceWork.numberTrucks || 0,
-      onSiteJobHours: serviceWork.onSiteJobHours || 0,
-      fuelCostPerGallon: serviceWork.fuelCostPerGallon || 0,
-      arrowBoards: {
-        quantity: serviceWork.arrowBoards?.quantity || 0,
-        cost: serviceWork.arrowBoards?.cost || 50,
-        includeInLumpSum: serviceWork.arrowBoards?.includeInLumpSum || false
-      },
-      messageBoards: {
-        quantity: serviceWork.messageBoards?.quantity || 0,
-        cost: serviceWork.messageBoards?.cost || 100,
-        includeInLumpSum: serviceWork.messageBoards?.includeInLumpSum || false
-      },
-      TMA: {
-        quantity: serviceWork.TMA?.quantity || 0,
-        cost: serviceWork.TMA?.cost || 500,
-        includeInLumpSum: serviceWork.TMA?.includeInLumpSum || false
-      },
-      additionalEquipmentCost: serviceWork.additionalEquipmentCost || 0,
-      markupRate: serviceWork.markupRate || 50
-    }]);
-  } else {
-    setServiceWorkItems([]);
-  }
-}, [serviceWork]);
+    if (serviceWork && (serviceWork.personnel > 0 || serviceWork.numberTrucks > 0)) {
+      setServiceWorkItems([{
+        id: 'service-work',
+        personnel: serviceWork.personnel || 0,
+        numberTrucks: serviceWork.numberTrucks || 0,
+        onSiteJobHours: serviceWork.onSiteJobHours || 0,
+        fuelCostPerGallon: serviceWork.fuelCostPerGallon || 0,
+        arrowBoards: {
+          quantity: serviceWork.arrowBoards?.quantity || 0,
+          cost: serviceWork.arrowBoards?.cost || 50,
+          includeInLumpSum: serviceWork.arrowBoards?.includeInLumpSum || false
+        },
+        messageBoards: {
+          quantity: serviceWork.messageBoards?.quantity || 0,
+          cost: serviceWork.messageBoards?.cost || 100,
+          includeInLumpSum: serviceWork.messageBoards?.includeInLumpSum || false
+        },
+        TMA: {
+          quantity: serviceWork.TMA?.quantity || 0,
+          cost: serviceWork.TMA?.cost || 500,
+          includeInLumpSum: serviceWork.TMA?.includeInLumpSum || false
+        },
+        additionalEquipmentCost: serviceWork.additionalEquipmentCost || 0,
+        markupRate: serviceWork.markupRate || 50
+      }]);
+    } else {
+      setServiceWorkItems([]);
+    }
+  }, [serviceWork]);
 
   // Calculate service work cost summary for current form data
   useEffect(() => {
@@ -218,7 +308,7 @@ const ServiceWorkTab = () => {
   const handleDeleteServiceWork = (index: number) => {
     const newItems = serviceWorkItems.filter((_, i) => i !== index);
     setServiceWorkItems(newItems);
-    dispatch({type: 'DELETE_SERVICE_WORK'})
+    dispatch({ type: 'DELETE_SERVICE_WORK' })
   };
 
   const handleFormUpdate = (field: keyof ServiceWorkItem, value: any) => {
@@ -392,7 +482,6 @@ const ServiceWorkTab = () => {
     newItems[itemIndex].markupRate = rate;
     setServiceWorkItems(newItems);
 
-    // Dispatch the markup rate to global state
     dispatch({
       type: 'UPDATE_SERVICE_WORK',
       payload: {
@@ -491,6 +580,48 @@ const ServiceWorkTab = () => {
                 <div>Lump Sum</div>
                 <div>Hourly Rate / Man</div>
                 <div className="text-center">Use this price?</div>
+              </div>
+
+              <div className='grid grid-cols-4 gap-4 py-2 border-t text-sm items-center'>
+                <div className='w-full flex flex-row items-center gap-2'>
+                  <Input
+                    value={customGrossMargin.customGrossMargin}
+                    max={100}
+                    min={0}
+                    placeholder='Custom gross margin'
+                    className='bg-muted/50 w-12'
+                    onChange={(e: any) =>
+                      setCustomGrossMargin(prev => ({
+                        ...prev,
+                        customGrossMargin: Number(e.target.value),
+                        item: item
+                      }))
+                    }
+                  />
+                  <p>%</p>
+                </div>
+                <div>
+                  ${safeNumber(customGrossMargin.lumpSum).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div>
+                  ${customGrossMargin.hourlyRate.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div className='flex justify-center'>
+                  <Checkbox
+                    checked={item.markupRate === customGrossMargin.customGrossMargin}
+                    onCheckedChange={checked => {
+                      if (checked) {
+                        handleMarkupSelection(index, customGrossMargin.customGrossMargin)
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {(adminData?.rated === 'RATED' ? RATED_MARKUP_PERCENTAGES : NON_RATED_MARKUP_PERCENTAGES).map(rate => {
@@ -838,7 +969,7 @@ const ServiceWorkTab = () => {
                       <span>On Site Job Hours Cost:</span>
                       <span>${serviceWorkSummary.onSiteJobHoursCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}</span>
                     </div>
-                    
+
                     <div className="flex justify-between">
                       <span>Round Trip Travel Time:</span>
                       <span>{formatHoursAndMinutes(safeNumber(adminData?.owTravelTimeMins) * 2)}</span>
@@ -853,7 +984,7 @@ const ServiceWorkTab = () => {
                       <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
                     </div>
                     <div></div>
-                    
+
                     <div className="flex justify-between">
                       <span>Total Hours:</span>
                       <span className="font-medium">{formatHoursAndMinutes(getTotalHours(formData))}</span>
@@ -862,7 +993,7 @@ const ServiceWorkTab = () => {
                       <span>Total Labor Cost:</span>
                       <span className="font-medium">${serviceWorkSummary.totalLaborCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}</span>
                     </div>
-                    
+
                     <div></div>
                     <div className="flex justify-between">
                       <span>Truck and Fuel Cost:</span>
