@@ -95,11 +95,13 @@ const AdminInformationStep1 = () => {
 
   const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
   const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+  const owDecimalHours = (owHours + owMinutes / 60).toFixed(1); 
+  const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
     const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
     const extraMinutes = currentOwMinutes % 60;
-    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) +  value;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
     dispatch({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
@@ -111,6 +113,13 @@ const AdminInformationStep1 = () => {
     setOwHours(Math.floor(newOwMinutes / 60))
     setOwMinutes(newOwMinutes % 60);
   }
+
+  useEffect(() => {
+    const totalMins = safeNumber(adminData.owTravelTimeMins); 
+    setOwHours(Math.floor(totalMins / 60));
+    setOwMinutes(totalMins % 60);
+  }, [adminData.owTravelTimeMins]);
+
 
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
@@ -719,164 +728,161 @@ const AdminInformationStep1 = () => {
                         </div>
                       )}
                     </div>
-                      ) : field.name === "oneWayTravelTime" ? (
-                        <div className="space-y-2">
-                          <div className="flex space-x-4">
-                            <div className="flex-1 flex flex-col space-y-2">
-                              <Label htmlFor="owHoursInput" className="text-sm font-medium">
-                                Hours
-                              </Label>
-                              <Input
-                                id="owHoursInput"
-                                type="number"
-                                min="0"
-                                value={owHours === 0 ? "" : owHours}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  const numValue = value === "" ? 0 : parseInt(value);
-                                  if (!isNaN(numValue)) {
-                                    handleOwTravelTimeChange("hours", numValue);
-                                  }
-                                }}
-                                placeholder="00"
-                                className="h-10"
-                                onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
-                              />
-                            </div>
-                            <div className="flex-1 flex flex-col space-y-2">
-                              <Label htmlFor="owMinutesInput" className="text-sm font-medium">
-                                Minutes
-                              </Label>
-                              <Input
-                                id="owMinutesInput"
-                                type="number"
-                                min="0"
-                                max="59"
-                                value={owMinutes === 0 ? "" : owMinutes}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
-                                  if (!isNaN(numValue)) {
-                                    handleOwTravelTimeChange("minutes", numValue);
-                                  }
-                                }}
-                                placeholder="00"
-                                className="h-10"
-                                onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center space-x-2">
-                            <span>
-                              {owHours || 0} hr{owHours !== 1 ? "s" : ""} {owMinutes || 0} min{owMinutes !== 1 ? "s" : ""}
-                            </span>
-                            <span>
-                              ({(owHours * 60 + owMinutes) || 0} min{((owHours * 60 + owMinutes) !== 1) ? "s" : ""})
-                            </span>
-                          </div>
+                  ) : field.name === "oneWayTravelTime" ? (
+                    <div className="space-y-2">
+                      <div className="flex space-x-4">
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="owHoursInput" className="text-sm font-medium">
+                            Hours
+                          </Label>
+                          <Input
+                            id="owHoursInput"
+                            type="number"
+                            min="0"
+                            value={owHours === 0 ? "" : owHours}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : parseInt(value);
+                              if (!isNaN(numValue)) {
+                                handleOwTravelTimeChange("hours", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                          />
                         </div>
-                      ) : (
-                      <div className="relative space-y-2">
-                        <Input
-                          id={field.name}
-                          type={field.type}
-                          inputMode="decimal"
-                          pattern="^\\d*(\\.\\d{0,2})?$"
-                          placeholder={field.placeholder}
-                          value={
-                            field.name === "contractNumber" ? adminData.contractNumber || "" :
-                              field.name === "township" ? adminData.location || "" :
-                                field.name === "srRoute" ? adminData.srRoute || "" :
-                                  field.name === "dbePercentage" ? adminData.dbe || "" :
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="owMinutesInput" className="text-sm font-medium">
+                            Minutes
+                          </Label>
+                          <Input
+                            id="owMinutesInput"
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={owMinutes === 0 ? "" : owMinutes}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
+                              if (!isNaN(numValue)) {
+                                handleOwTravelTimeChange("minutes", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                        <p className="text-sm text-gray-500">
+                          ({owTotalMinutes} mins, {owDecimalHours} hrs)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative space-y-2">
+                      <Input
+                        id={field.name}
+                        type={field.type}
+                        inputMode="decimal"
+                        pattern="^\\d*(\\.\\d{0,2})?$"
+                        placeholder={field.placeholder}
+                        value={
+                          field.name === "contractNumber" ? adminData.contractNumber || "" :
+                            field.name === "township" ? adminData.location || "" :
+                              field.name === "srRoute" ? adminData.srRoute || "" :
+                                field.name === "dbePercentage" ? adminData.dbe || "" :
+                                  //date handling to parse a date if necessary
+                                  field.name === "lettingDate" ?
+                                    adminData.lettingDate ?
+                                      (typeof adminData.lettingDate === 'string' ?
+                                        adminData.lettingDate :
+                                        adminData.lettingDate.toISOString().split('T')[0])
+                                      : "" :
                                     //date handling to parse a date if necessary
-                                    field.name === "lettingDate" ?
-                                      adminData.lettingDate ?
-                                        (typeof adminData.lettingDate === 'string' ?
-                                          adminData.lettingDate :
-                                          adminData.lettingDate.toISOString().split('T')[0])
+                                    field.name === "startDate" ?
+                                      adminData.startDate ?
+                                        (typeof adminData.startDate === 'string' ?
+                                          adminData.startDate :
+                                          adminData.startDate.toISOString().split('T')[0])
                                         : "" :
                                       //date handling to parse a date if necessary
-                                      field.name === "startDate" ?
-                                        adminData.startDate ?
-                                          (typeof adminData.startDate === 'string' ?
-                                            adminData.startDate :
-                                            adminData.startDate.toISOString().split('T')[0])
+                                      field.name === "endDate" ?
+                                        adminData.endDate ?
+                                          (typeof adminData.endDate === 'string' ?
+                                            adminData.endDate :
+                                            adminData.endDate.toISOString().split('T')[0])
                                           : "" :
-                                        //date handling to parse a date if necessary
-                                        field.name === "endDate" ?
-                                          adminData.endDate ?
-                                            (typeof adminData.endDate === 'string' ?
-                                              adminData.endDate :
-                                              adminData.endDate.toISOString().split('T')[0])
-                                            : "" :
-                                          field.name === "oneWayMileage" ? adminData.owMileage || "" :
-                                            field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
-                                              field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
-                                                field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
-                                                  field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
-                                                    ""
+                                        field.name === "oneWayMileage" ? adminData.owMileage || "" :
+                                          field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
+                                            field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
+                                              field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
+                                                field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
+                                                  ""
+                        }
+                        onBlur={async () => {
+                          if (field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp) {
+                            try {
+                              // add 0 to simulate saving state
+                              dispatch({ type: 'SET_FIRST_SAVE', payload: 0 })
+                              const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject,
+                                serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
+                              dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
+                              dispatch({ type: 'SET_ID', payload: createResponse.id })
+                            } catch (err) {
+                              toast.error('Failed to save bid' + err)
+                            }
                           }
-                          onBlur={async () => {
-                            if (field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp) {
-                              try {
-                                // add 0 to simulate saving state
-                                dispatch({ type: 'SET_FIRST_SAVE', payload: 0 })
-                                const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject,
-                                  serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
-                                dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
-                                dispatch({ type: 'SET_ID', payload: createResponse.id })
-                              } catch (err) {
-                                toast.error('Failed to save bid' + err)
-                              }
-                            }
-                          }}
-                          onChange={(e) => {
-                            const ev = e.nativeEvent as InputEvent;
-                            const { inputType } = ev;
-                            const data = (ev.data || "").replace(/\$/g, "");
+                        }}
+                        onChange={(e) => {
+                          const ev = e.nativeEvent as InputEvent;
+                          const { inputType } = ev;
+                          const data = (ev.data || "").replace(/\$/g, "");
 
-                            if (
-                              field.name === "dieselCost" ||
-                              field.name === "laborRate" ||
-                              field.name === "fringeRate" ||
-                              field.name === "shopRate"
-                            ) {
-                              const nextDigits = handleNextDigits(digits[field.name], inputType, data);
-                              setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
+                          if (
+                            field.name === "dieselCost" ||
+                            field.name === "laborRate" ||
+                            field.name === "fringeRate" ||
+                            field.name === "shopRate"
+                          ) {
+                            const nextDigits = handleNextDigits(digits[field.name], inputType, data);
+                            setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
 
-                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+                            const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
 
-                              if (field.name === "dieselCost") {
-                                handleInputChange("dieselCost", formatted);
-                              } else {
-                                handleRateChange(field.name, formatted);
-                              }
+                            if (field.name === "dieselCost") {
+                              handleInputChange("dieselCost", formatted);
                             } else {
-                              const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
-                              handleInputChange(field.name, valueToUse);
+                              handleRateChange(field.name, formatted);
                             }
-                          }}
-                          className="h-10"
-                        />
-                        {field.hasToggle && (
-                          <div className="flex items-center gap-2">
-                            <Label
-                              htmlFor={`${field.name}-toggle`}
-                              className="text-sm text-muted-foreground"
-                            >
-                              Use this rate?
-                            </Label>
-                            <input
-                              id={`${field.name}-toggle`}
-                              type="checkbox"
-                              checked={!!toggleStates[field.name]}
-                              onChange={() => handleToggleChange(field.name)}
-                              className="h-4 w-4"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          } else {
+                            const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
+                            handleInputChange(field.name, valueToUse);
+                          }
+                        }}
+                        className="h-10"
+                      />
+                      {field.hasToggle && (
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor={`${field.name}-toggle`}
+                            className="text-sm text-muted-foreground"
+                          >
+                            Use this rate?
+                          </Label>
+                          <input
+                            id={`${field.name}-toggle`}
+                            type="checkbox"
+                            checked={!!toggleStates[field.name]}
+                            onChange={() => handleToggleChange(field.name)}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
