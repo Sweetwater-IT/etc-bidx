@@ -35,6 +35,8 @@ const Dropzone = ({
   getInputProps,
   ...restProps
 }: PropsWithChildren<DropzoneProps>) => {
+  const { loading } = restProps; // tu state de carga ya viene del hook
+
   const isSuccess = restProps.isSuccess
   const isActive = restProps.isDragActive
   const isInvalid =
@@ -44,24 +46,31 @@ const Dropzone = ({
 
   return (
     <DropzoneContext.Provider value={{ ...restProps }}>
-      <div
-        {...getRootProps({
-          className: cn(
-            'border-2 border-gray-300 cursor-pointer rounded-lg p-6 text-center bg-card transition-colors duration-300 text-foreground',
-            className,
-            isSuccess ? 'border-solid' : 'border-dashed',
-            isActive && 'border-primary bg-primary/10',
-            isInvalid && 'border-destructive bg-destructive/10'
-          ),
-        })}
-      >
-        <input {...getInputProps()} />
-        {children}
+      <div className="relative">
+        {loading && (
+          <div className="absolute inset-0 bg-black/10 bg-opacity-50 z-50 flex items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-white" />
+          </div>
+        )}
+
+        <div
+          {...getRootProps({
+            className: cn(
+              'border-2 border-gray-300 cursor-pointer rounded-lg p-6 text-center bg-card transition-colors duration-300 text-foreground',
+              className,
+              isSuccess ? 'border-solid' : 'border-dashed',
+              isActive && 'border-primary bg-primary/10',
+              isInvalid && 'border-destructive bg-destructive/10'
+            ),
+          })}
+        >
+          <input {...getInputProps()} />
+          {children}
+        </div>
       </div>
     </DropzoneContext.Provider>
   )
 }
-
 const DropzoneContent = ({ className }: { className?: string }) => {
   const {
     files,
@@ -160,7 +169,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
           {files.length - maxFiles > 1 ? 's' : ''}.
         </p>
       )}
-      
+
       {/* Display general errors (not tied to specific files) */}
       {errors.some(err => !files.some(file => file.name === err.name)) && (
         <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded text-sm">
@@ -169,7 +178,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
           ))}
         </div>
       )}
-      
+
       {files.length > 0 && !exceedMaxFiles && (
         <div className="mt-2 mb-2">
           <Button

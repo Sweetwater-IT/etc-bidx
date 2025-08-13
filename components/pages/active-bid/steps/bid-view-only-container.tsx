@@ -104,7 +104,7 @@ const BidViewOnlyContainer = () => {
           const result = await response.json()
 
           if (result.success && result.data) {
-            const notesResult = result.data.bid_notes || []                        
+            const notesResult = result.data.bid_notes || []
             if (notesResult.length > 0) {
               setNotes(notesResult.map(note => ({
                 timestamp: new Date(note.created_at).getTime(),
@@ -229,9 +229,9 @@ const BidViewOnlyContainer = () => {
       console.error('Error updating contractors:', error)
       toast.error('Failed to save contractors')
     }
-  }  
+  }
 
-  const handleSaveNote = async (note: Note) => {    
+  const handleSaveNote = async (note: Note) => {
     if (bidId) {
       const resp = await fetch('/api/active-bids/addNotes',
         {
@@ -248,8 +248,8 @@ const BidViewOnlyContainer = () => {
       )
       const response = await resp.json()
 
-      if (response.ok) {        
-        setNotes((prev) => [...prev, {...note, user_email:response.data.user_email, id: response.data.id, timestamp: response.data.created_at}])
+      if (response.ok) {
+        setNotes((prev) => [...prev, { ...note, user_email: response.data.user_email, id: response.data.id, timestamp: response.data.created_at }])
       }
     }
   }
@@ -263,9 +263,9 @@ const BidViewOnlyContainer = () => {
       });
       const data = await resp.json();
 
-      if (data.ok) {                
+      if (data.ok) {
         setNotes((prev) =>
-          prev.map((n, i) => (i === index ? {...data.data, timestamp: data.data.created_at} : n))
+          prev.map((n, i) => (i === index ? { ...data.data, timestamp: data.data.created_at } : n))
         );
       }
     } catch (err) {
@@ -292,10 +292,13 @@ const BidViewOnlyContainer = () => {
     }
   };
 
-
-
   return (
     <>
+      {fileUploadProps.loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <span className="text-white text-lg">Uploading files...</span>
+        </div>
+      )}
       <Dialog
         open={contractorsModalOpen}
         onOpenChange={setContractorsModalOpen}
