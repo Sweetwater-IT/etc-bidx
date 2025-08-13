@@ -92,6 +92,21 @@ const FlaggingServicesTab = () => {
     item: {}
   })
 
+  const owTotalMinutes = safeNumber(formData?.onSiteJobHours) || 0
+  const owHours = Math.floor(owTotalMinutes / 60)
+  const owMinutes = owTotalMinutes % 60
+  const owDecimalHours = (owTotalMinutes / 60).toFixed(1)
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    if (!formData) return
+
+    const newTotalMinutes =
+      type === 'hours' ? value * 60 + (owTotalMinutes % 60) : owHours * 60 + value
+
+    setFormData({ ...formData, onSiteJobHours: newTotalMinutes })
+  }
+
+
   // Initialize flagging services if needed
   useEffect(() => {
     const fetchFlaggingStaticData = async () => {
@@ -1386,20 +1401,62 @@ const FlaggingServicesTab = () => {
                       <h4 className='font-medium'>Cost Summary</h4>
 
                       <div className='grid grid-cols-2 gap-4 text-sm'>
-                        <div>
-                          <Input
-                            id='on-site-hours'
-                            type='number'
-                            min={0}
-                            value={formData.onSiteJobHours || ''}
-                            onChange={e =>
-                              handleFormUpdate(
-                                'onSiteJobHours',
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            placeholder='On Site Job Hours'
-                          />
+                        <div className="space-y-2">
+                          <div className="flex space-x-4">
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owHoursInput" className="text-sm font-medium">
+                                Hours
+                              </Label>
+                              <Input
+                                id="owHoursInput"
+                                type="number"
+                                min={0}
+                                value={owHours === 0 ? "" : owHours}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  const numValue = value === "" ? 0 : parseInt(value)
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("hours", numValue)
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) =>
+                                  ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                                }
+                              />
+                            </div>
+
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owMinutesInput" className="text-sm font-medium">
+                                Minutes
+                              </Label>
+                              <Input
+                                id="owMinutesInput"
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={owMinutes === 0 ? "" : owMinutes}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  const numValue = value === "" ? 0 : Math.min(parseInt(value), 59)
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("minutes", numValue)
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) =>
+                                  ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                            <p className="text-sm text-gray-500">
+                              ({owTotalMinutes} mins, {owDecimalHours} hrs)
+                            </p>
+                          </div>
                         </div>
                         <div className='flex justify-between'>
                           <span>On Site Job Hours Cost:</span>

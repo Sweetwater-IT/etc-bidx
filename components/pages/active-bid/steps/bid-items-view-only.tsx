@@ -157,7 +157,7 @@ const FlaggingViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    On Site Job Hours
+                    On Site Job Hour
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {flagging?.onSiteJobHours || "-"}
@@ -311,7 +311,7 @@ const ServiceWorkViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    On Site Job Hours
+                    On Site Job Hour
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {serviceWork?.onSiteJobHours || "-"}
