@@ -16,6 +16,7 @@ export interface Note {
   id?: number;
   text: string;
   timestamp: number;
+  user_email?: string
 }
 
 interface QuoteNotesProps {
@@ -217,12 +218,11 @@ export function QuoteNotes({
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-
                           }
                         </div>
                         <div className='text-xs text-muted-foreground'>
                           {formatDateTime(note.timestamp)} by{' '}
-                          {user?.email || ''}
+                          {note.user_email || ''}
                         </div>
                       </>
                     )}

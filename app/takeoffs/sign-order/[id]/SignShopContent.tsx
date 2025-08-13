@@ -343,7 +343,6 @@ const SignShopContent = ({ id }: Props) => {
     })
   }
 
-  // Handler to save a new note
   const handleSaveNote = async (newNote: Note) => {
     const updatedNotes = [...notes, newNote]
     setNotes(updatedNotes)

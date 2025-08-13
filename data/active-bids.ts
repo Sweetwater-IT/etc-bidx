@@ -20,7 +20,7 @@ export type ActiveBid = {
   rentalValue: string | number;
   createdAt: string;
   total?: string | number; // Add total field
-  bid_notes: {bid_id: number; text:string, created_at:Date, id: number}[]
+  bid_notes: {bid_id: number; text:string, created_at:Date, id: number, user_email?: string}[]
 }
 
 export const ACTIVE_BIDS_COLUMNS = [

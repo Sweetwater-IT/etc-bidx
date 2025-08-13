@@ -8,7 +8,7 @@ import TripAndLaborSummaryAccordion from "./active-bid/trip-and-labor-summary-ac
 import { Button } from "../ui/button";
 import PhaseSummaryAccordion from "./active-bid/phase-summary-accordion/phase-summary-accordion";
 import AddPhaseButton from "./active-bid/steps/add-phase-button";
-import { Expand, Minimize, PanelRight, PanelLeftClose } from "lucide-react";
+import { Expand, Minimize, PanelRight, PanelLeftClose, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 import AdminInformationStep1 from "./active-bid/steps/admin-information-step1";
@@ -20,6 +20,7 @@ import { QuoteNotes } from "./quote-form/QuoteNotes";
 import { createDropdownMenuScope } from "@radix-ui/react-dropdown-menu";
 import { INote } from "@/types/TEstimate";
 import { Note } from "@react-pdf/renderer";
+import { useAuth } from "@/contexts/auth-context";
 
 const renderStepWithoutNavigation = (stepElement: ReactElement) => {
   return (
@@ -49,7 +50,7 @@ const StepsMain = () => {
   const searchParams = useSearchParams();
   const bidId = searchParams?.get('bidId');
   const isEditingBid = !!bidId;
-
+  const {user} = useAuth()
   const initialStepParam = searchParams?.get("initialStep");
   const tuckedSidebar = searchParams?.get('tuckSidebar')
   const setFullscreen = searchParams?.get('fullscreen')
@@ -65,7 +66,7 @@ const StepsMain = () => {
 
 
   const handleSave = async (note: INote, index: number) => {
-    const updated = [...notesInfo, note];
+    const updated = [...notesInfo, {...note, user_email: user.email}];
     setNoteInfo(updated);
 
     if (!isEditingBid) {
@@ -76,11 +77,11 @@ const StepsMain = () => {
       const response = await fetch('/api/active-bids/addNotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bid_id: bidId, text: note.text })
+        body: JSON.stringify({ bid_id: bidId, text: note.text, user_email: user.email })
       });
       const result = await response.json();
 
-      if (result.ok) {
+      if (result.ok) {        
         setNoteInfo((prev) =>
           prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
         );
@@ -140,11 +141,12 @@ const StepsMain = () => {
 
         const data = await res.json();
         const notesFromBid = data?.data?.bid_notes || [];
-
+        
         const formattedNotes = notesFromBid.map((note: any) => ({
           text: note.text,
           timestamp: new Date(note.created_at).getTime(),
           id: note.id,
+          user_email: note.user_email
         }));
 
         setNoteInfo(formattedNotes);

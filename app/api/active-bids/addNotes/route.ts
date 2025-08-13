@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('bid_notes')
-      .select('id, bid_id, text, created_at')
+      .select('id, bid_id, text, created_at, user_email')
       .eq('bid_id', bid_id)
       .order('created_at', { ascending: true });
 
@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bid_id, text } = body;
+    const { bid_id, text, user_email } = body;
 
-    if (!bid_id || !text) {
+    if (!bid_id || !text || !user_email) {
       return NextResponse.json(
         { success: false, message: 'bid_id and text are required' },
         { status: 400 }
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('bid_notes')
-      .insert([{ bid_id, text }])
-      .select('id, text, created_at');
+      .insert([{ bid_id, text, user_email }])
+      .select('id, text, created_at, user_email');
 
     if (error) {
       return NextResponse.json(
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest) {
         created_at: new Date().toISOString()
       })
       .eq('id', id)
-      .select('id, text, created_at');
+      .select('id, text, created_at, user_email');
 
     if (error) {
       return NextResponse.json(

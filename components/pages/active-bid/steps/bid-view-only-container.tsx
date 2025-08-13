@@ -42,6 +42,7 @@ import {
 } from '@/lib/api-client'
 import { FileMetadata } from '@/types/FileTypes'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
+import { useAuth } from '@/contexts/auth-context'
 
 const SUBCONTRACTOR_OPTIONS = [
   { name: 'ETC', id: 1 },
@@ -53,6 +54,7 @@ const SUBCONTRACTOR_OPTIONS = [
 ]
 
 const BidViewOnlyContainer = () => {
+  const { user } = useAuth();
   const searchParams = useSearchParams()
   const bidId = searchParams?.get('bidId')
   const [contractor, setContractor] = useState<Customer>()
@@ -102,12 +104,13 @@ const BidViewOnlyContainer = () => {
           const result = await response.json()
 
           if (result.success && result.data) {
-            const notesResult = result.data.bid_notes || []            
+            const notesResult = result.data.bid_notes || []                        
             if (notesResult.length > 0) {
               setNotes(notesResult.map(note => ({
                 timestamp: new Date(note.created_at).getTime(),
                 text: note.text,
-                id: note.id
+                id: note.id,
+                user_email: note.user_email
               })))
             }
           }
@@ -226,10 +229,9 @@ const BidViewOnlyContainer = () => {
       console.error('Error updating contractors:', error)
       toast.error('Failed to save contractors')
     }
-  }
+  }  
 
-
-  const handleSaveNote = async (note: Note) => {
+  const handleSaveNote = async (note: Note) => {    
     if (bidId) {
       const resp = await fetch('/api/active-bids/addNotes',
         {
@@ -239,15 +241,15 @@ const BidViewOnlyContainer = () => {
           },
           body: JSON.stringify({
             text: note.text,
-            bid_id: bidId
+            bid_id: bidId,
+            user_email: user.email
           })
         }
       )
       const response = await resp.json()
 
-      if (response.ok) {
-        
-        setNotes((prev) => [...prev, {...note, id: response.data.id, timestamp: response.data.created_at}])
+      if (response.ok) {        
+        setNotes((prev) => [...prev, {...note, user_email:response.data.user_email, id: response.data.id, timestamp: response.data.created_at}])
       }
     }
   }
@@ -261,7 +263,7 @@ const BidViewOnlyContainer = () => {
       });
       const data = await resp.json();
 
-      if (data.ok) {        
+      if (data.ok) {                
         setNotes((prev) =>
           prev.map((n, i) => (i === index ? {...data.data, timestamp: data.data.created_at} : n))
         );

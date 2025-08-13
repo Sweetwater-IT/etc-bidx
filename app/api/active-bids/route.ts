@@ -496,7 +496,7 @@ export async function POST(request: NextRequest) {
       saleItems: SaleItem[];
       permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
-notes: { text: string, timestamp: number }[]
+      notes: { text: string, timestamp: number, user_email: number}[]
     };
 
     // Calculate totals
@@ -552,21 +552,22 @@ notes: { text: string, timestamp: number }[]
       bidEstimateId = newBid.id;
     }
 
-  if (!id && notes && notes.length > 0) {
-    const noteInserts = notes.map(note => ({
-      bid_id: bidEstimateId,
-      text: note.text,
-      created_at: new Date(note.timestamp).toISOString()
-    }));
+    if (!id && notes && notes.length > 0) {
+      const noteInserts = notes.map(note => ({
+        bid_id: bidEstimateId,
+        text: note.text,
+        created_at: new Date(note.timestamp).toISOString(),
+        user_email: note.user_email, 
+      }));
 
-    const { error: notesError } = await supabase
-      .from('bid_notes')
-      .insert(noteInserts);
+      const { error: notesError } = await supabase
+        .from('bid_notes')
+        .insert(noteInserts);
 
-    if (notesError) {
-      throw new Error(`Failed to insert bid notes: ${notesError.message}`);
+      if (notesError) {
+        throw new Error(`Failed to insert bid notes: ${notesError.message}`);
+      }
     }
-  }
     
     // Upsert admin data
     const { error: adminError } = await supabase

@@ -30,6 +30,7 @@ import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-s
 import { formatDate } from '@/lib/formatUTCDate'
 import FileViewingContainer from '@/components/file-viewing-container'
 import { FileMetadata } from '@/types/FileTypes'
+import { useAuth } from '@/contexts/auth-context'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -73,7 +74,7 @@ export default function SignOrderContentSimple ({
   })
 
   const { startLoading, stopLoading } = useLoading()
-
+  const {user} = useAuth()
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
   const [localNotes, setLocalNotes] = useState<string>()
   const [savedNotes, setSavedNotes] = useState<string>()
@@ -441,7 +442,7 @@ export default function SignOrderContentSimple ({
       await fetch(`/api/sign-orders`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes, user_email: user.email })
       })
     }
   }

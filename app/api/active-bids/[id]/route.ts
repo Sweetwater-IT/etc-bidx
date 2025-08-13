@@ -32,7 +32,7 @@ export async function GET(
 
       const { data: bidNotes, error: notesError } = await supabase
         .from('bid_notes')
-        .select('id, text, created_at')
+        .select('id, text, created_at, user_email')
         .eq('bid_id', resolvedParams.id);
 
       if (!estimateError && !notesError) {

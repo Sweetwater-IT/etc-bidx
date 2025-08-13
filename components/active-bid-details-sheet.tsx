@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import { Separator } from "./ui/separator";
 import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
 import { INote } from "@/types/TEstimate";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -89,6 +90,7 @@ export function ActiveBidDetailsSheet({
   onViewBidSummary,
   onUpdateStatus
 }: ActiveBidDetailsSheetProps) {
+  const { user } = useAuth()
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -332,14 +334,14 @@ export function ActiveBidDetailsSheet({
   };
 
 
-  const handleSave = async (note: INote) => {
+  const handleSaveNote = async (note: INote) => {
     if (!bid?.id) {
       return;
     }
     const response = await fetch('/api/active-bids/addNotes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bid_id: bid.id, text: note.text }),
+      body: JSON.stringify({ bid_id: bid.id, text: note.text, user_email: user.email }),
     });
     const result = await response.json();
 
@@ -761,7 +763,7 @@ export function ActiveBidDetailsSheet({
           <div className="w-full">
             <QuoteNotes
               notes={notesInfo}
-              onSave={(note: INote) => handleSave(note)}
+              onSave={(note: INote) => handleSaveNote(note)}
               onEdit={handleEditNotes}
               onDelete={handleDelete}
               title="Notes"

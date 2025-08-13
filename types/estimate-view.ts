@@ -7,6 +7,7 @@ export interface EstimateCompleteView {
       id: string;
       text: string;
       created_at: string;
+      user_email?: string;
     }>;
     status: Database['public']['Enums']['bid_estimate_status'];
     total_revenue: number;
