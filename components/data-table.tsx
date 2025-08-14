@@ -831,7 +831,7 @@ export function DataTable<TData extends object>({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    enableRowSelection: true,
+    enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
     state: {
       pagination: {
         pageIndex,
