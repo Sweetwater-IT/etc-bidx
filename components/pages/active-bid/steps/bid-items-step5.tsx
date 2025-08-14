@@ -2014,12 +2014,12 @@ const BidItemsStep5 = ({
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='maintenance-trips'>
-                      Additional Trips
+                      Additional Mobilizations
                     </Label>
                     <Input
                       id='maintenance-trips'
                       type='number'
-                      step={0.1}
+                      step={1}
                       value={phaseFormData.maintenanceTrips || ''}
                       onChange={e =>
                         handlePhaseFormUpdate(
