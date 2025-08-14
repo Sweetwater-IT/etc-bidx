@@ -745,6 +745,7 @@ export function DataTable<TData extends object>({
       })
     }
     // fix checkbox column > if onArchiveSelected or onDeleteSelected is provided
+if (onArchiveSelected || onDeleteSelected) {    
     cols.unshift({
       id: 'select',
       header: ({ table }) => (
@@ -803,7 +804,8 @@ export function DataTable<TData extends object>({
       enableSorting: false,
       enableHiding: false
     });
-
+}
+    
     return cols
   }, [
     legacyColumns,
@@ -831,7 +833,7 @@ export function DataTable<TData extends object>({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    enableRowSelection: true,
+    enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
     state: {
       pagination: {
         pageIndex,
