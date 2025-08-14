@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label"
 
 interface CustomerDetailsProps {
   customer: Customer
-  canEdit: boolean
-  handleChangeValues: (key: string, value: any) => void
+  canEdit?: boolean
+  handleChangeValues?: (key: string, value: any) => void
 }
 
 export const CustomerDetails = memo(function CustomerDetails({
   customer,
-  canEdit,
+  canEdit = false,
   handleChangeValues
 }: CustomerDetailsProps) {
 
@@ -31,7 +31,7 @@ export const CustomerDetails = memo(function CustomerDetails({
             <Input
               id="name"
               value={customer.name || ""}
-              onChange={(e) => handleChangeValues("name", e.target.value)}
+              onChange={(e) => handleChangeValues?.("name", e.target.value)}
               placeholder="Customer name"
             />
           ) : (
@@ -45,7 +45,7 @@ export const CustomerDetails = memo(function CustomerDetails({
             <Input
               id="displayName"
               value={customer.displayName || ""}
-              onChange={(e) => handleChangeValues("displayName", e.target.value)}
+              onChange={(e) => handleChangeValues?.("displayName", e.target.value)}
               placeholder="Display name"
             />
           ) : (
@@ -62,7 +62,7 @@ export const CustomerDetails = memo(function CustomerDetails({
               <Input
                 id="address"
                 value={customer.address || ""}
-                onChange={(e) => handleChangeValues("address", e.target.value)}
+                onChange={(e) => handleChangeValues?.("address", e.target.value)}
                 placeholder="Address"
               />
             ) : (
@@ -77,7 +77,7 @@ export const CustomerDetails = memo(function CustomerDetails({
                 <Input
                   id="city"
                   value={customer.city || ""}
-                  onChange={(e) => handleChangeValues("city", e.target.value)}
+                  onChange={(e) => handleChangeValues?.("city", e.target.value)}
                   placeholder="City"
                 />
               </div>
@@ -87,7 +87,7 @@ export const CustomerDetails = memo(function CustomerDetails({
                 <Input
                   id="state"
                   value={customer.state || ""}
-                  onChange={(e) => handleChangeValues("state", e.target.value)}
+                  onChange={(e) => handleChangeValues?.("state", e.target.value)}
                   placeholder="State"
                 />
               </div>
@@ -97,7 +97,7 @@ export const CustomerDetails = memo(function CustomerDetails({
                 <Input
                   id="zip"
                   value={customer.zip || ""}
-                  onChange={(e) => handleChangeValues("zip", e.target.value)}
+                  onChange={(e) => handleChangeValues?.("zip", e.target.value)}
                   placeholder="ZIP code"
                 />
               </div>
@@ -119,7 +119,7 @@ export const CustomerDetails = memo(function CustomerDetails({
               <Input
                 id="mainPhone"
                 value={customer.mainPhone || ""}
-                onChange={(e) => handleChangeValues("mainPhone", e.target.value)}
+                onChange={(e) => handleChangeValues?.("mainPhone", e.target.value)}
                 placeholder="Phone"
               />
             ) : (
@@ -135,7 +135,7 @@ export const CustomerDetails = memo(function CustomerDetails({
               <Input
                 id="url"
                 value={customer.url || ""}
-                onChange={(e) => handleChangeValues("url", e.target.value)}
+                onChange={(e) => handleChangeValues?.("url", e.target.value)}
                 placeholder="Website URL"
               />
             ) : (
@@ -157,7 +157,7 @@ export const CustomerDetails = memo(function CustomerDetails({
           <Input
             id="paymentTerms"
             value={customer.paymentTerms || ""}
-            onChange={(e) => handleChangeValues("paymentTerms", e.target.value)}
+            onChange={(e) => handleChangeValues?.("paymentTerms", e.target.value)}
             placeholder="Payment terms"
           />
         ) : (
