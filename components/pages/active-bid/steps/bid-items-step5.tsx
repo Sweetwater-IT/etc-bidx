@@ -247,7 +247,7 @@ const BidItemsStep5 = ({
       }
     })
   }
-
+// console.log('BidItemsStep5 component rendered', lightAndDrumList)
   useEffect(() => {
     if (adminData?.emergencyFields) {
       const newDigits: Record<string, string> = {}
@@ -295,6 +295,8 @@ const BidItemsStep5 = ({
     setDrawerOpen(true)
   }
 
+  
+
   const handleEditPhase = (phaseIndex: number) => {
     const phase = mptRental.phases[phaseIndex]
     setPhaseFormData({
@@ -326,6 +328,7 @@ const BidItemsStep5 = ({
       setPhaseFormData({ ...phaseFormData, [field]: value })
     }
   }
+  // console.log('mptRental.phases:', mptRental.phases)
 
   const handleDateChange = (
     value: Date | undefined,
@@ -658,6 +661,8 @@ const BidItemsStep5 = ({
     setEditingPhaseIndex(null)
   }
 
+    // console.log('  mptRental.phases:',  mptRental.phases)
+
   // Fetch equipment data (keeping the same useEffect as before)
   useEffect(() => {
     const initializeEquipmentData = async () => {
@@ -867,6 +872,7 @@ const BidItemsStep5 = ({
               })
             }
           )
+          
 
         // Set default values for signs
         signList.forEach(sign => {
@@ -888,6 +894,7 @@ const BidItemsStep5 = ({
             }
           })
 
+          console.log("Setting default payback period for sign:" , lightAndDrumList)
           dispatch({
             type: 'UPDATE_STATIC_EQUIPMENT_INFO',
             payload: {
@@ -994,6 +1001,9 @@ const BidItemsStep5 = ({
     currentPhase
   ])
 
+   
+
+
   // Handle equipment input changes
   const handleStandardInputChange = (
     value: number,
@@ -1070,7 +1080,9 @@ const BidItemsStep5 = ({
 
     const associatedEquipment = getAssociatedSignEquipment(
       mptRental.phases[currentPhase]
+        
     )
+   
 
     switch (equipmentKey) {
       case 'covers':

@@ -176,6 +176,8 @@ export interface SecondarySign extends DynamicSignInfo {
   primarySignId: string
 }
 
+
+
 export interface CustomLightAndDrumItem {
   id: string;
   quantity: number;
