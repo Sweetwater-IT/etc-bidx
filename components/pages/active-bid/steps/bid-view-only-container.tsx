@@ -240,6 +240,7 @@ const BidViewOnlyContainer = () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
+            timestamp: note.timestamp,
             text: note.text,
             bid_id: bidId,
             user_email: user.email
