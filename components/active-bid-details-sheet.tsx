@@ -767,7 +767,7 @@ export function ActiveBidDetailsSheet({
                 </div>
                 <div className="space-y-1 w-full">
                   <Label className="font-semibold">
-                    Flaggin Value
+                    Flagging Value
                   </Label>
                   <div className="text-muted-foreground">
                     {formatCurrency(Number(flaggingTotals.totalRevenue)) ?? '-'}
