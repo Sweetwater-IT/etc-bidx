@@ -877,7 +877,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
 
   // Sanitize inputs
   const personnel = toNumber(flagging?.personnel);
-  const onSiteJobHours = toNumber(flagging?.onSiteJobHours);
+  const onSiteJobHours = toNumber(flagging?.onSiteJobHours) / 60; // Convert minutes to hours
   // Calculate total travel time in minutes, fall back to owTravelTimeMins
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? toNumber(adminData.owTravelTimeHours) * 60 + toNumber(adminData.owTravelTimeMinutes)
@@ -902,8 +902,8 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   // Calculate costs
   const payRateToUse = adminData.rated === 'RATED' ? laborRate + fringeRate : flaggingRate;
 
-  // On-site hours cost (exclude travel time)
-  const totalOnSiteHours = onSiteJobHours; // Only use onSiteJobHours
+  // On-site hours cost (use converted onSiteJobHours)
+  const totalOnSiteHours = onSiteJobHours; // Already in hours
   const onSiteJobHoursNoOvertime = totalOnSiteHours > 8 ? 8 : totalOnSiteHours;
   const onSiteJobHoursNoOvertimeCost = onSiteJobHoursNoOvertime * personnel * payRateToUse;
   const timeAndAHalfRate = payRateToUse * 1.5;
@@ -911,7 +911,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel;
   const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost;
 
-  // Round-trip travel time cost (use flaggingRate, separate from onSiteJobHoursCost)
+  // Round-trip travel time cost
   const travelPayRate = totalOnSiteHours > 8 ? flaggingRate * 1.5 : flaggingRate;
   const rtTravelTimeHoursCost = rtTravelTimeHours * travelPayRate * personnel;
 
