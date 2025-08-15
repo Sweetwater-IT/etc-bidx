@@ -978,7 +978,7 @@ const ServiceWorkTab = () => {
                       <div className="flex space-x-4">
                         <div className="flex-1 flex flex-col space-y-2">
                           <Label htmlFor="onSiteHoursInput" className="text-sm font-medium">
-                            On-Site Job Hours
+                            Hours
                           </Label>
                           <Input
                             id="onSiteHoursInput"
@@ -1002,7 +1002,7 @@ const ServiceWorkTab = () => {
 
                         <div className="flex-1 flex flex-col space-y-2">
                           <Label htmlFor="onSiteMinutesInput" className="text-sm font-medium">
-                            On-Site Job Minutes
+                            Minutes
                           </Label>
                           <Input
                             id="onSiteMinutesInput"
