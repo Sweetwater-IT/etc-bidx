@@ -869,7 +869,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
-  // Helper function to ensure values are valid numbers
+  // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {
     const num = Number(value);
     return isNaN(num) ? 0 : num;
@@ -891,7 +891,11 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const truckDispatchFee = toNumber(flagging?.truckDispatchFee);
   const additionalEquipmentCost = toNumber(flagging?.additionalEquipmentCost);
   const arrowBoardsCost = flagging?.arrowBoards?.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
-  const messageBoardsCost = flagging.messageBoards.includeInLumpSum ? toNumber(safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost) : 0;
+  const messageBoardsCost = toNumber(
+    flagging?.messageBoards?.includeInLumpSum
+      ? safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost
+      : 0
+  )  
   const tmaCost = flagging.TMA.includeInLumpSum ? toNumber(safeNumber(flagging.TMA.quantity) * flagging.TMA.cost) : 0;
 
   // Calculate costs

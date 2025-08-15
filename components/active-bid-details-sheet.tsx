@@ -48,6 +48,8 @@ import { Separator } from "./ui/separator";
 import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
+import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -91,6 +93,8 @@ export function ActiveBidDetailsSheet({
   onUpdateStatus
 }: ActiveBidDetailsSheetProps) {
   const { user } = useAuth()
+  const { adminData, flagging, serviceWork } = useEstimate()
+
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -110,6 +114,8 @@ export function ActiveBidDetailsSheet({
   });
   const [notesInfo, setNoteInfo] = useState<INote[]>([])
 
+  const flaggingTotals = calculateFlaggingCostSummary(adminData, bid?.flagging, false)
+  const serviceWorkTotals = calculateFlaggingCostSummary(adminData, bid?.service_work, true)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -341,7 +347,7 @@ export function ActiveBidDetailsSheet({
     const response = await fetch('/api/active-bids/addNotes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bid_id: bid.id, timestamp:note.timestamp, text: note.text, user_email: user.email }),
+      body: JSON.stringify({ bid_id: bid.id, timestamp: note.timestamp, text: note.text, user_email: user.email }),
     });
     const result = await response.json();
 
@@ -747,17 +753,39 @@ export function ActiveBidDetailsSheet({
                     {formatCurrency(bid?.permSignValue) || "-"}
                   </div>
                 </div>
+
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Rental Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(bid?.rentalValue) || "-"}
+                  </div>
+                </div>
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Flaggin Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(Number(flaggingTotals.totalRevenue)) ?? '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-semibold">
+                  Patterns Value
+                </Label>
+                <div className="text-muted-foreground">
+                  {formatCurrency(Number(serviceWorkTotals.totalRevenue)) ?? '-'}
+                </div>
               </div>
 
               {/* Rental Value */}
-              <div className="space-y-1 w-full">
-                <Label className="font-semibold">
-                  Rental Value
-                </Label>
-                <div className="text-muted-foreground">
-                  {formatCurrency(bid?.rentalValue) || "-"}
-                </div>
-              </div>
+
             </div>
           </div>
           <div className="w-full">
