@@ -882,7 +882,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? toNumber(adminData.owTravelTimeHours) * 60 + toNumber(adminData.owTravelTimeMinutes)
     : toNumber(adminData.owTravelTimeMins);
-  const owTravelTimeHours = totalTravelTimeMins / 60; // Convert to hours for onSiteJobHoursCost
+  const owTravelTimeHours = totalTravelTimeMins / 60; // Convert to hours for rtTravelTimeHoursCost
   const rtTravelTimeHours = owTravelTimeHours * 2; // Round-trip in hours
   const laborRate = isServiceWork ? toNumber(adminData?.county.laborRate) : toNumber(adminData?.county.flaggingBaseRate);
   const fringeRate = isServiceWork ? toNumber(adminData?.county.fringeRate) : toNumber(adminData?.county.flaggingFringeRate);
@@ -902,8 +902,8 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   // Calculate costs
   const payRateToUse = adminData.rated === 'RATED' ? laborRate + fringeRate : flaggingRate;
 
-  // Include one-way travel time in on-site hours cost
-  const totalOnSiteHours = onSiteJobHours + owTravelTimeHours;
+  // On-site hours cost (exclude travel time)
+  const totalOnSiteHours = onSiteJobHours; // Only use onSiteJobHours
   const onSiteJobHoursNoOvertime = totalOnSiteHours > 8 ? 8 : totalOnSiteHours;
   const onSiteJobHoursNoOvertimeCost = onSiteJobHoursNoOvertime * personnel * payRateToUse;
   const timeAndAHalfRate = payRateToUse * 1.5;
@@ -911,7 +911,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel;
   const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost;
 
-  // Round-trip travel time cost (separate to avoid double-counting)
+  // Round-trip travel time cost (use flaggingRate, separate from onSiteJobHoursCost)
   const travelPayRate = totalOnSiteHours > 8 ? flaggingRate * 1.5 : flaggingRate;
   const rtTravelTimeHoursCost = rtTravelTimeHours * travelPayRate * personnel;
 
