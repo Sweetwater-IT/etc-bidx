@@ -1339,15 +1339,14 @@ const BidItemsStep5 = ({
                                       />
                                     </div>
                                     <div className='mb-4'>
-                                    {
-                                      modeEdit.lightAndDrum ? (
+                                      {modeEdit.lightAndDrum ? (
                                         <div className='flex gap-2'>
                                           <Button
                                             size='sm'
                                             variant='default'
                                             className='h-8'
                                             onClick={() => {
-                                              toggleEditMode('lightAndDrum', false)
+                                              toggleEditMode('lightAndDrum', false);
                                             }}
                                           >
                                             Save
@@ -1373,36 +1372,36 @@ const BidItemsStep5 = ({
                                             Edit
                                           </Button>
                                         </div>
-                                      )
-                                    }
+                                      )}
                                     </div>
                                   </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
-                                    {lightAndDrumList.map(equipmentKey => (
-                                      <div
-                                        key={equipmentKey}
-                                        className='p-2 rounded-md'
-                                      >
-                                        <div className='font-medium mb-2'>
-                                          {formatLabel(equipmentKey)}
-                                        </div>
-                                        <div className='flex flex-col gap-2 mb-2'>
-                                          <Label
-                                            htmlFor={`quantity-light-${equipmentKey}-${index}`}
-                                            className='text-muted-foreground'
-                                          >
-                                            Quantity:
-                                          </Label>
-                                          {
-                                            modeEdit.lightAndDrum ?
+                                    {lightAndDrumList.map(equipmentKey => {
+                                      // Calculate the daily rate cost for the equipment
+                                      const dailyRateCost = calculateLightDailyRateCosts(
+                                        mptRental,
+                                        mptRental.staticEquipmentInfo[equipmentKey]?.price || 0
+                                      );
+                                      // Get the emergency rate, defaulting to dailyRateCost if not set
+                                      const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+                                      const fieldKey = `emergency${emergencyKey}`;
+                                      const emergencyRate = adminData?.emergencyFields?.[fieldKey] ?? dailyRateCost;
+                                
+                                      return (
+                                        <div key={equipmentKey} className='p-2 rounded-md'>
+                                          <div className='font-medium mb-2'>{formatLabel(equipmentKey)}</div>
+                                          <div className='flex flex-col gap-2 mb-2'>
+                                            <Label
+                                              htmlFor={`quantity-light-${equipmentKey}-${index}`}
+                                              className='text-muted-foreground'
+                                            >
+                                              Quantity:
+                                            </Label>
+                                            {modeEdit.lightAndDrum ? (
                                               <Input
                                                 id={`quantity-light-${equipmentKey}-${index}`}
                                                 type='number'
-                                                value={
-                                                  phase.standardEquipment[
-                                                    equipmentKey
-                                                  ]?.quantity || ''
-                                                }
+                                                value={phase.standardEquipment[equipmentKey]?.quantity || ''}
                                                 min={getMinQuantity(equipmentKey)}
                                                 onChange={e => {
                                                   const val = parseFloat(e.target.value) || 0;
@@ -1412,61 +1411,55 @@ const BidItemsStep5 = ({
                                                 }}
                                                 className='w-full'
                                               />
-                                              :
-                                              <Label
-                                                className='text-muted-foreground'
-                                              >
-                                                {
-                                                  phase.standardEquipment[
-                                                    equipmentKey
-                                                  ]?.quantity || '-'
-                                                }
-                                              </Label>
-                                          }
-                                        </div>
-                                        {adminData?.emergencyJob && (
-                                          <div className='flex flex-col w-1/3 gap-2 mt-2'>
-                                            <Label
-                                              htmlFor={`emergency-${equipmentKey}-${index}`}
-                                              className='text-muted-foreground'
-                                            >
-                                              Emergency Rate:
-                                            </Label>
-                                            {modeEdit.lightAndDrum ? (
-                                              <Input
-                                                id={`emergency-${equipmentKey}-${index}`}
-                                                inputMode='decimal'
-                                                pattern='^\d*(\.\d{0,2})?$'
-                                                className='w-full'
-                                                value={`$ ${formatDecimal(
-                                                  getDigitsForEquipment(equipmentKey)
-                                                )}`}
-                                                onChange={e => {
-                                                  const ev = e.nativeEvent as InputEvent
-                                                  const { inputType } = ev
-                                                  const data = (ev.data || '').replace(/\$/g, '')
-
-                                                  const currentDigits = getDigitsForEquipment(equipmentKey)
-                                                  const nextDigits = handleNextDigits(currentDigits, inputType, data)
-                                                  updateDigitsForEquipment(equipmentKey, nextDigits)
-
-                                                  const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
-                                                  const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey
-                                                  const fieldKey = `emergency${emergencyKey}`
-                                                  handleRateChange(formatted, fieldKey, equipmentKey)
-                                                }}
-                                              />
                                             ) : (
                                               <Label className='text-muted-foreground'>
-                                                {phase.standardEquipment[equipmentKey]?.quantity
-                                                  ? `$ ${formatDecimal(getDigitsForEquipment(equipmentKey))}`
-                                                  : '-'}
+                                                {phase.standardEquipment[equipmentKey]?.quantity || '-'}
                                               </Label>
                                             )}
                                           </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                          {adminData?.emergencyJob && (
+                                            <div className='flex flex-col w-1/3 gap-2 mt-2'>
+                                              <Label
+                                                htmlFor={`emergency-${equipmentKey}-${index}`}
+                                                className='text-muted-foreground'
+                                              >
+                                                Emergency Rate:
+                                              </Label>
+                                              {modeEdit.lightAndDrum ? (
+                                                <Input
+                                                  id={`emergency-${equipmentKey}-${index}`}
+                                                  inputMode='decimal'
+                                                  pattern='^\d*(\.\d{0,2})?$'
+                                                  className='w-full'
+                                                  value={`$${formatDecimal(emergencyRate * 100)}`}
+                                                  min={dailyRateCost} // Enforce minimum as daily rate cost
+                                                  onChange={e => {
+                                                    const ev = e.nativeEvent as InputEvent;
+                                                    const { inputType } = ev;
+                                                    const data = (ev.data || '').replace(/\$/g, '');
+                                
+                                                    const currentDigits = (emergencyRate * 100).toFixed(0).padStart(3, '0');
+                                                    const nextDigits = handleNextDigits(currentDigits, inputType, data);
+                                                    const newValue = parseInt(nextDigits, 10) / 100;
+                                
+                                                    // Ensure the new value is not below the daily rate cost
+                                                    const finalValue = Math.max(newValue, dailyRateCost);
+                                                    updateDigitsForEquipment(equipmentKey, (finalValue * 100).toFixed(0).padStart(3, '0'));
+                                                    handleRateChange(finalValue.toFixed(2), fieldKey, equipmentKey);
+                                                  }}
+                                                />
+                                              ) : (
+                                                <Label className='text-muted-foreground'>
+                                                  {phase.standardEquipment[equipmentKey]?.quantity
+                                                    ? `$${formatDecimal(emergencyRate * 100)}`
+                                                    : '-'}
+                                                </Label>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
 
