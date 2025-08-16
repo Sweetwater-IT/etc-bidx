@@ -1431,27 +1431,27 @@ const BidItemsStep5 = ({
                                                   inputMode='decimal'
                                                   pattern='^\d*(\.\d{0,2})?$'
                                                   className='w-full'
-                                                  value={`$${formatDecimal(emergencyRate * 100)}`}
-                                                  min={dailyRateCost} // Enforce minimum as daily rate cost
+                                                  value={`$${formatDecimal(emergencyRate.toFixed(2))}`}
+                                                  min={dailyRateCost}
                                                   onChange={e => {
                                                     const ev = e.nativeEvent as InputEvent;
                                                     const { inputType } = ev;
                                                     const data = (ev.data || '').replace(/\$/g, '');
                                 
-                                                    const currentDigits = (emergencyRate * 100).toFixed(0).padStart(3, '0');
+                                                    const currentDigits = emergencyRate.toFixed(2);
                                                     const nextDigits = handleNextDigits(currentDigits, inputType, data);
-                                                    const newValue = parseInt(nextDigits, 10) / 100;
+                                                    const newValue = parseFloat(nextDigits) || 0;
                                 
                                                     // Ensure the new value is not below the daily rate cost
                                                     const finalValue = Math.max(newValue, dailyRateCost);
-                                                    updateDigitsForEquipment(equipmentKey, (finalValue * 100).toFixed(0).padStart(3, '0'));
+                                                    updateDigitsForEquipment(equipmentKey, finalValue.toFixed(2));
                                                     handleRateChange(finalValue.toFixed(2), fieldKey, equipmentKey);
                                                   }}
                                                 />
                                               ) : (
                                                 <Label className='text-muted-foreground'>
                                                   {phase.standardEquipment[equipmentKey]?.quantity
-                                                    ? `$${formatDecimal(emergencyRate * 100)}`
+                                                    ? `$${formatDecimal(emergencyRate.toFixed(2))}`
                                                     : '-'}
                                                 </Label>
                                               )}
