@@ -1052,8 +1052,30 @@ const BidItemsStep5 = ({
         key: 'emergencyJob',
         value: checked
       }
-    })
-  }
+    });
+    if (checked) {
+      const updatedEmergencyFields = { ...adminData?.emergencyFields };
+      lightAndDrumList.forEach(equipmentKey => {
+        const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+        const fieldKey = `emergency${emergencyKey}`;
+        // Only set if not already defined to avoid overwriting user changes
+        if (!updatedEmergencyFields[fieldKey]) {
+          const dailyRateCost = calculateLightDailyRateCosts(
+            mptRental,
+            mptRental.staticEquipmentInfo[equipmentKey]?.price || 0
+          );
+          updatedEmergencyFields[fieldKey] = dailyRateCost;
+        }
+      });
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: {
+          key: 'emergencyFields',
+          value: updatedEmergencyFields
+        }
+      });
+    }
+  };
 
   const getEquipmentQuantity = (
     equipmentKey: EquipmentType
