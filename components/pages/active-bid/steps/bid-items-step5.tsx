@@ -1003,6 +1003,7 @@ const BidItemsStep5 = ({
 
 
 
+
 useEffect(() => {
   const phases = mptRental?.phases;
   if (!phases) return;
@@ -1027,6 +1028,8 @@ useEffect(() => {
     }
   });
 }, [mptRental?.phases, dispatch]);
+
+
 
   // Handle equipment input changes
   const handleStandardInputChange = (
