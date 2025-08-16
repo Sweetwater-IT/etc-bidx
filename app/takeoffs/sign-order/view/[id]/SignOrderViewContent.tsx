@@ -180,7 +180,7 @@ export default function SignOrderViewContent () {
           console.error('No sign order ID provided')
           return
         }
-
+        
         console.log(`Fetching sign order with ID: ${params.id}`)
         const response = await fetch(`/api/sign-orders/${params.id}`)
         const data = await response.json()

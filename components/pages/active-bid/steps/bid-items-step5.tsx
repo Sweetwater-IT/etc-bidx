@@ -1001,8 +1001,32 @@ const BidItemsStep5 = ({
     currentPhase
   ])
 
-   
 
+
+useEffect(() => {
+  const phases = mptRental?.phases;
+  if (!phases) return;
+
+  phases.forEach((phase, phaseIndex) => {
+    const signs = phase.signs;
+    if (!signs || !signs.length) return;
+
+    const currentBLights = phase.standardEquipment.BLights?.quantity;
+    const { BLights: requiredBLights } = getAssociatedSignEquipment(phase);
+    
+    if (currentBLights !== requiredBLights && requiredBLights > 0) {
+      dispatch({
+        type: 'ADD_MPT_ITEM_NOT_SIGN',
+        payload: {
+          phaseNumber: phaseIndex,
+          equipmentType: 'BLights',
+          equipmentProperty: 'quantity',
+          value: requiredBLights
+        }
+      });
+    }
+  });
+}, [mptRental?.phases, dispatch]);
 
   // Handle equipment input changes
   const handleStandardInputChange = (

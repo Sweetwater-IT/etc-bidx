@@ -542,7 +542,7 @@ export function SignOrderList({
                               </div>
                             ) : sc.key === 'quantity' ? (
                               Object.hasOwn(sign, 'primarySignId') ? (
-                                formatColumnValue(sign, 'quantity')
+                               <div className='text-center w-full'>  {formatColumnValue(sign, 'quantity') }</div>
                               ) : (
                                 <div className="inline-flex items-center">
                                   <button
