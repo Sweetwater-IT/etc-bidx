@@ -128,26 +128,28 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
     'PERM_SIGN_PRICE_SQ_FT': 'permSignPriceSqFt'
 };
 
+
+
 export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
-    //delineators
-    if (Object.hasOwn(item, 'flexibleDelineatorCost')) {
-        return 'flexibleDelineator'
+    // Delineadores: Verifica existencia Y valor numérico > 0
+    if ('flexibleDelineatorCost' in item && Number(item.flexibleDelineatorCost) > 0) {
+        return 'flexibleDelineator';
     }
-    //post mounted installs
-    else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
-        if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
-            return 'pmsTypeC'
-        } else if ((item as PostMountedInstall).type === 'B') {
-            return 'pmsTypeB'
-        } else return 'pmsTypeF'
+    // Post Mount Type C: Verifica existencia Y ausencia de otras props
+    else if ('hiReflectiveStrips' in item && !('streetNameCrossBrackets' in item)) {
+        return 'pmsTypeC';
     }
-    //removals
-    else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
-        return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
-    } else {
-        return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
+    // Post Mount Type B/F
+    else if ('hiReflectiveStrips' in item) {
+        return (item as PostMountedInstall).type === 'B' ? 'pmsTypeB' : 'pmsTypeF';
     }
-}
+    // Removals
+    else if ('isRemove' in item && item.isRemove) {
+        return (item as PostMountedResetOrRemove).type === 'B' ? 'removeTypeB' : 'removeTypeF';
+    }
+    // Resets (default)
+    return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF';
+};
 
 export const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
     'Type B Post Mount': 'pmsTypeB',
