@@ -201,22 +201,7 @@ const SaleItemsRevenueAndProfit = () => {
             </p>
           </div>
 
-          {/* ALL TOTALS in orange (even when no sale items) */}
-          <div className="grid grid-cols-5 border-t border-gray-300 mt-2" style={{ backgroundColor: '#ed7d31' }}>
-            <div className="text-sm font-medium">BID TOTAL</div>
-            <div className="text-sm font-medium">
-              ${allTotals?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="text-sm font-medium">
-              ${allTotals?.totalCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="text-sm font-medium">
-              ${allTotals?.totalGrossProfit?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="text-sm font-medium">
-              {(safeNumber(allTotals?.totalGrossMargin || 0)).toFixed(2)}%
-            </div>
-          </div>
+          
         </>
       )}
     </div>

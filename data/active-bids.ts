@@ -8,10 +8,12 @@ export type ActiveBid = {
   owner: string;
   county: string | { main: string; secondary: string };
   branch: string;
+  service_work: any;
   estimator: string;
   status: string;
   division: string;
   startDate: string;
+  flagging: any;
   endDate: string;
   projectDays: number;
   totalHours: number;

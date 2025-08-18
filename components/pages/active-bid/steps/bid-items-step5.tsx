@@ -1,4 +1,4 @@
-'use client'
+'use client' 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -1207,35 +1207,32 @@ useEffect(() => {
                             </AccordionTrigger>
                             <AccordionContent className='px-4 pb-4'>
                               <div className='space-y-6'>
-                                {/* Action Buttons */}
-                                <div className='grid grid-cols-2'>
-                                  <div></div>
-                                  <div className='ml-auto'>
-                                    <PhaseActionButtons
-                                      onDelete={handleDeletePhase}
-                                      onEdit={handleEditPhase}
-                                      totalPhases={mptRental.phases.length}
-                                      phaseIndex={index}
-                                    />
-                                  </div>
-                                </div>
 
-                                {/* Trip and Labor Summary */}
-                                <div className='border-none p-4'>
-                                  <div className='flex items-center my-8'>
-                                    <div className='flex-grow border-t border-black'></div>
-                                    <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
-                                      Trip and Labor
-                                    </h3>
-                                    <div className='flex-grow border-t border-black'></div>
-                                  </div>
-                                  <TripAndLaborSummary
-                                    phase={phase}
+
+                            {/* Trip and Labor Summary */}
+                              <div className='border-none p-4'>
+                                <div className='flex items-center my-8'>
+                                  <div className='flex-grow border-t border-black'></div>
+                                  <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                                    Trip and Labor
+                                  </h3>
+                                  <div className='flex-grow border-t border-black'></div>
+                                </div>
+                                <div className='flex flex-row items-center mb-4 justify-end'>
+                                  <PhaseActionButtons
+                                    onEdit={handleEditPhase}
+                                    onDelete={handleDeletePhase}
+                                    totalPhases={mptRental.phases.length}
                                     phaseIndex={index}
-                                    adminData={adminData}
-                                    mptRental={mptRental}
                                   />
                                 </div>
+                                <TripAndLaborSummary
+                                  phase={phase}
+                                  phaseIndex={index}
+                                  adminData={adminData}
+                                  mptRental={mptRental}
+                                />
+                              </div>
 
                                 {/* PENNDOT Signs Section */}
                                 <div className='flex items-center my-8'>
@@ -2056,12 +2053,12 @@ useEffect(() => {
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='maintenance-trips'>
-                      Additional Trips
+                      Additional Mobilizations
                     </Label>
                     <Input
                       id='maintenance-trips'
                       type='number'
-                      step={0.1}
+                      step={1}
                       value={phaseFormData.maintenanceTrips || ''}
                       onChange={e =>
                         handlePhaseFormUpdate(

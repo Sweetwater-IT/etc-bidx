@@ -73,3 +73,62 @@ export async function GET(
     );
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: any
+) {
+  try {
+    const resolvedParams = await params;
+    const customerId = resolvedParams.id;
+
+    if (!customerId) {
+      return NextResponse.json(
+        { error: 'Customer ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+
+    const updateData: any = {
+      name: body.name ?? null,
+      display_name: body.displayName ?? null,
+      address: body.address ?? null,
+      city: body.city ?? null,
+      state: body.state ?? null,
+      zip: body.zip ?? null,
+      web: body.url ?? null,
+      main_phone: body.mainPhone ?? null,
+      payment_terms: body.paymentTerms ?? null,
+      updated: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('contractors')
+      .update(updateData)
+      .eq('id', customerId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating customer:', error);
+      return NextResponse.json(
+        { error: 'Failed to update customer' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      message: 'Customer updated successfully',
+      customer: data,
+      ok:true
+    });
+  } catch (error) {
+    console.error('Error in customer update:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

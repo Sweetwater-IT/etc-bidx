@@ -77,7 +77,7 @@ const StepsMain = () => {
       const response = await fetch('/api/active-bids/addNotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bid_id: bidId, text: note.text, user_email: user.email })
+        body: JSON.stringify({ bid_id: bidId, timestamp:note.timestamp, text: note.text, user_email: user.email })
       });
       const result = await response.json();
 

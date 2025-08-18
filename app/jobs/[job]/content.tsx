@@ -607,9 +607,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }
             const result = await response.json();
             //raw data has all the info we need
-            const { data, stats, pagination } = result;            
+            const { data, stats, pagination } = result;     
+                        console.log('el resultado es', data );
+       
             const transformedData = data.map(e => ({
+                flagging: e.flagging ?? {},
                 id: e.id,
+                service_work: e.service_work ?? {},
                 bid_notes: e.bid_notes || [],
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
@@ -1834,6 +1838,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                 const result = await response.json();
                 const allJobs = result.data.map((job: any) => {
+                    
                     // Use the same transformation logic from loadAvailableJobs
                     const isEffectivelyUnknown = (value: any): boolean => {
                         if (value === undefined || value === null) return true;

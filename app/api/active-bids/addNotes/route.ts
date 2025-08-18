@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bid_id, text, user_email } = body;
+    const { bid_id, text, user_email, timestamp} = body;
 
     if (!bid_id || !text || !user_email) {
       return NextResponse.json(
@@ -54,11 +54,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    const created_at = new Date(timestamp).toISOString();
+    
     const { data, error } = await supabase
       .from('bid_notes')
-      .insert([{ bid_id, text, user_email }])
-      .select('id, text, created_at, user_email');
+      .insert([{ bid_id, text, user_email, created_at }])
+      .select('id, text, created_at, user_email',);
 
     if (error) {
       return NextResponse.json(

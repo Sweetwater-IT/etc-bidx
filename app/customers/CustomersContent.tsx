@@ -39,7 +39,7 @@ const CustomersContent = () => {
   const [currentPage, setCurrentPage] = useState(0); // DataTable uses 0-indexed pages
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [selectedSegment, setSelectedSegment] = useState('all');
-  
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -85,7 +85,7 @@ const CustomersContent = () => {
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
   }, []);
-  
+
 
   const handlePageSizeChange = useCallback((size: number) => {
     setPageSize(size);
@@ -95,7 +95,7 @@ const CustomersContent = () => {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!customers.length || !drawerOpen) return;
-    
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex(prev => {
@@ -116,7 +116,7 @@ const CustomersContent = () => {
     }
   }, [customers, drawerOpen]);
 
-    // Add this handler
+  // Add this handler
   const handleDeleteSelected = useCallback((selectedRows: Customer[]) => {
     console.log('Selected customers for deletion:', selectedRows);
     // Minimal handler to trigger checkbox rendering
@@ -143,7 +143,7 @@ const CustomersContent = () => {
           onCreateClick={handleCreateCustomer}
         />
       </div>
-      
+
       {!isLoading && (
         <div className='w-full mt-3'>
           <DataTable<Customer>
@@ -164,7 +164,7 @@ const CustomersContent = () => {
           />
         </div>
       )}
-      
+
       <CustomerDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
