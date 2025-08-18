@@ -130,12 +130,18 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
 
 
 
+
+
+
+
 export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
-    // Delineadores: Verifica existencia Y valor numérico > 0
+
+    // Delineator: Check existence and numerical value > 0
+
     if ('flexibleDelineatorCost' in item && Number(item.flexibleDelineatorCost) > 0) {
         return 'flexibleDelineator';
     }
-    // Post Mount Type C: Verifica existencia Y ausencia de otras props
+    // Post Mount Type C: Checks for the existence and absence of other props
     else if ('hiReflectiveStrips' in item && !('streetNameCrossBrackets' in item)) {
         return 'pmsTypeC';
     }
@@ -176,4 +182,4 @@ export const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
     'Hi-Reflective Strips': 'hiReflectiveStrips',
     'FYG Reflective Strips': 'fygReflectiveStrips',
     'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
-  };
+};
