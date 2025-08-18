@@ -1,4 +1,4 @@
-'use client' 
+'use client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -177,31 +177,25 @@ const BidItemsStep5 = ({
   const [phaseFormData, setPhaseFormData] = useState<PhaseDrawerData | null>(
     null
   )
-  const [modeEdit, setModeEdit] = React.useState<{
-    lightAndDrum: boolean,
-    MPTEquipament: boolean,
-    customEquipament: boolean
-  }>({
-    lightAndDrum: false,
-    MPTEquipament: false,
-    customEquipament: false
-  })
-
+  const [emergencyJobState, setEmergencyJobState] = useState<{ [phaseIndex: number]: boolean }>({});
+  const [modeEdit, setModeEdit] = useState<{ [phaseIndex: number]: { MPTEquipament: boolean; lightAndDrum: boolean, customEquipament: boolean } }>({});
   const [activeTab, setActiveTab] = useState('mpt')
 
-  const toggleEditMode = (key: 'lightAndDrum' | 'MPTEquipament' | 'customEquipament', value: any) => {
-    setModeEdit((prev) => ({
+  const toggleEditMode = (phaseIndex: number, section: 'MPTEquipament' | 'lightAndDrum' | 'customEquipament', value: boolean) => {
+    setModeEdit(prev => ({
       ...prev,
-      [key]: value
-    }))
-  }
+      [phaseIndex]: {
+        ...prev[phaseIndex],
+        [section]: value,
+      }
+    }));
+  };
+
 
   const toggleDrawerAddEquipament = () => [
     setDraweStateEquipmanet((prev) => !prev)
   ]
 
-
-  // Ensure activeTab is always a visible tab
   useEffect(() => {
     if (!activeTab) {
       setActiveTab('mpt')
@@ -247,7 +241,8 @@ const BidItemsStep5 = ({
       }
     })
   }
-// console.log('BidItemsStep5 component rendered', lightAndDrumList)
+
+  // console.log('BidItemsStep5 component rendered', lightAndDrumList)
   useEffect(() => {
     if (adminData?.emergencyFields) {
       const newDigits: Record<string, string> = {}
@@ -295,7 +290,7 @@ const BidItemsStep5 = ({
     setDrawerOpen(true)
   }
 
-  
+
 
   const handleEditPhase = (phaseIndex: number) => {
     const phase = mptRental.phases[phaseIndex]
@@ -328,7 +323,6 @@ const BidItemsStep5 = ({
       setPhaseFormData({ ...phaseFormData, [field]: value })
     }
   }
-  // console.log('mptRental.phases:', mptRental.phases)
 
   const handleDateChange = (
     value: Date | undefined,
@@ -661,7 +655,7 @@ const BidItemsStep5 = ({
     setEditingPhaseIndex(null)
   }
 
-    // console.log('  mptRental.phases:',  mptRental.phases)
+  // console.log('  mptRental.phases:',  mptRental.phases)
 
   // Fetch equipment data (keeping the same useEffect as before)
   useEffect(() => {
@@ -872,7 +866,7 @@ const BidItemsStep5 = ({
               })
             }
           )
-          
+
 
         // Set default values for signs
         signList.forEach(sign => {
@@ -894,7 +888,7 @@ const BidItemsStep5 = ({
             }
           })
 
-          console.log("Setting default payback period for sign:" , lightAndDrumList)
+          console.log("Setting default payback period for sign:", lightAndDrumList)
           dispatch({
             type: 'UPDATE_STATIC_EQUIPMENT_INFO',
             payload: {
@@ -1002,45 +996,43 @@ const BidItemsStep5 = ({
   ])
 
 
+  useEffect(() => {
+    const phases = mptRental?.phases;
+    if (!phases) return;
 
+    phases.forEach((phase, phaseIndex) => {
+      const signs = phase.signs;
+      if (!signs || !signs.length) return;
 
-useEffect(() => {
-  const phases = mptRental?.phases;
-  if (!phases) return;
+      const currentBLights = phase.standardEquipment.BLights?.quantity;
+      const { BLights: requiredBLights } = getAssociatedSignEquipment(phase);
 
-  phases.forEach((phase, phaseIndex) => {
-    const signs = phase.signs;
-    if (!signs || !signs.length) return;
-
-    const currentBLights = phase.standardEquipment.BLights?.quantity;
-    const { BLights: requiredBLights } = getAssociatedSignEquipment(phase);
-    
-    if (currentBLights !== requiredBLights && requiredBLights > 0) {
-      dispatch({
-        type: 'ADD_MPT_ITEM_NOT_SIGN',
-        payload: {
-          phaseNumber: phaseIndex,
-          equipmentType: 'BLights',
-          equipmentProperty: 'quantity',
-          value: requiredBLights
-        }
-      });
-    }
-  });
-}, [mptRental?.phases, dispatch]);
+      if (currentBLights !== requiredBLights && requiredBLights > 0) {
+        dispatch({
+          type: 'ADD_MPT_ITEM_NOT_SIGN',
+          payload: {
+            phaseNumber: phaseIndex,
+            equipmentType: 'BLights',
+            equipmentProperty: 'quantity',
+            value: requiredBLights
+          }
+        });
+      }
+    });
+  }, [mptRental?.phases, dispatch]);
 
 
 
-  // Handle equipment input changes
   const handleStandardInputChange = (
     value: number,
     equipmentKey: EquipmentType,
-    property: keyof DynamicEquipmentInfo
+    property: keyof DynamicEquipmentInfo,
+    phaseNumber: number // usar el que llega como argumento
   ) => {
     dispatch({
       type: 'ADD_MPT_ITEM_NOT_SIGN',
       payload: {
-        phaseNumber: currentPhase,
+        phaseNumber,
         equipmentType: equipmentKey,
         equipmentProperty: property,
         value: safeNumber(value)
@@ -1082,15 +1074,36 @@ useEffect(() => {
   }
 
   // Handle emergency job toggle
-  const handleEmergencyJobChange = (checked: boolean) => {
+  const handleEmergencyJobChange = (checked: boolean, phase: any, index: number) => {
     dispatch({
-      type: 'UPDATE_ADMIN_DATA',
-      payload: {
-        key: 'emergencyJob',
-        value: checked
-      }
-    })
-  }
+      type: 'UPDATE_MPT_PHASE_EMERGENCY',
+      payload: { phase: index, value: checked }
+    });
+
+    if (!checked || !phase.standardEquipment) return;
+
+    const newEmergencyFields: Record<string, number> = { ...adminData.emergencyFields };
+
+    Object.keys(phase.standardEquipment).forEach(equipmentKey => {
+      const item = mptRental.staticEquipmentInfo[equipmentKey];
+      if (!item) return;
+
+      const baseValue = calculateLightDailyRateCosts(mptRental, item.price);
+      const fieldKey = `emergency${emergencyFieldKeyMap[equipmentKey] || equipmentKey}`;
+
+      const currentValue = newEmergencyFields[fieldKey] || 0;
+      newEmergencyFields[fieldKey] = Math.max(currentValue, baseValue);
+    });
+
+    console.log(newEmergencyFields);
+
+    Object.keys(newEmergencyFields).forEach(fieldKey => {
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: `emergencyFields.${fieldKey}`, value: newEmergencyFields[fieldKey] }
+      });
+    });
+  };
 
   const getEquipmentQuantity = (
     equipmentKey: EquipmentType
@@ -1107,9 +1120,9 @@ useEffect(() => {
 
     const associatedEquipment = getAssociatedSignEquipment(
       mptRental.phases[currentPhase]
-        
+
     )
-   
+
 
     switch (equipmentKey) {
       case 'covers':
@@ -1209,30 +1222,30 @@ useEffect(() => {
                               <div className='space-y-6'>
 
 
-                            {/* Trip and Labor Summary */}
-                              <div className='border-none p-4'>
-                                <div className='flex items-center my-8'>
-                                  <div className='flex-grow border-t border-black'></div>
-                                  <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
-                                    Trip and Labor
-                                  </h3>
-                                  <div className='flex-grow border-t border-black'></div>
-                                </div>
-                                <div className='flex flex-row items-center mb-4 justify-end'>
-                                  <PhaseActionButtons
-                                    onEdit={handleEditPhase}
-                                    onDelete={handleDeletePhase}
-                                    totalPhases={mptRental.phases.length}
+                                {/* Trip and Labor Summary */}
+                                <div className='border-none p-4'>
+                                  <div className='flex items-center my-8'>
+                                    <div className='flex-grow border-t border-black'></div>
+                                    <h3 className='mx-4 text-base font-semibold whitespace-nowrap'>
+                                      Trip and Labor
+                                    </h3>
+                                    <div className='flex-grow border-t border-black'></div>
+                                  </div>
+                                  <div className='flex flex-row items-center mb-4 justify-end'>
+                                    <PhaseActionButtons
+                                      onEdit={handleEditPhase}
+                                      onDelete={handleDeletePhase}
+                                      totalPhases={mptRental.phases.length}
+                                      phaseIndex={index}
+                                    />
+                                  </div>
+                                  <TripAndLaborSummary
+                                    phase={phase}
                                     phaseIndex={index}
+                                    adminData={adminData}
+                                    mptRental={mptRental}
                                   />
                                 </div>
-                                <TripAndLaborSummary
-                                  phase={phase}
-                                  phaseIndex={index}
-                                  adminData={adminData}
-                                  mptRental={mptRental}
-                                />
-                              </div>
 
                                 {/* PENNDOT Signs Section */}
                                 <div className='flex items-center my-8'>
@@ -1255,14 +1268,14 @@ useEffect(() => {
                                   </div>
                                   <div className='flex flex-row items-center mb-4 justify-end'>
                                     {
-                                      modeEdit.MPTEquipament ? (
+                                      modeEdit[index]?.MPTEquipament ? (
                                         <div className='flex gap-2'>
                                           <Button
                                             size='sm'
                                             variant='default'
                                             className='h-8'
                                             onClick={() => {
-                                              toggleEditMode('MPTEquipament', false)
+                                              toggleEditMode(index, 'MPTEquipament', false)
                                             }}
                                           >
                                             Save
@@ -1271,7 +1284,7 @@ useEffect(() => {
                                             size='sm'
                                             variant='outline'
                                             className='h-8'
-                                            onClick={() => toggleEditMode('MPTEquipament', false)}
+                                            onClick={() => toggleEditMode(index, 'MPTEquipament', false)}
                                           >
                                             Cancel
                                           </Button>
@@ -1282,7 +1295,7 @@ useEffect(() => {
                                             size='sm'
                                             variant='outline'
                                             className='h-8'
-                                            onClick={() => toggleEditMode('MPTEquipament', true)}
+                                            onClick={() => toggleEditMode(index, 'MPTEquipament', true)}
                                           >
                                             <Edit className='h-4 w-4 mr-1' />
                                             Edit
@@ -1321,27 +1334,27 @@ useEffect(() => {
                                               htmlFor={`quantity-${equipmentKey}-${index}`}
                                               className='flex text-muted-foreground'
                                             >
-                                              Quantity:
+                                              Quantityy:
                                             </Label>
                                             {
-                                              modeEdit.MPTEquipament ?
+                                              modeEdit[index]?.MPTEquipament ?
                                                 <Input
-                                                  id={`quantity-${equipmentKey}-${index}`}
-                                                  type='number'
-                                                  min={getMinQuantity(equipmentKey)}
-                                                  value={
-                                                    phase.standardEquipment[
-                                                      equipmentKey
-                                                    ]?.quantity || ''
+                                                  type="number"
+                                                  id={`quantity-light-${equipmentKey}-${index}`}
+                                                  name={`quantity-light-${equipmentKey}-${index}`}
+                                                  className="form-input"
+                                                  min={0}
+                                                  value={phase.standardEquipment[equipmentKey]?.quantity ?? 0}
+                                                  onChange={e =>
+                                                    handleStandardInputChange(
+                                                      Number(e.target.value),
+                                                      equipmentKey,
+                                                      'quantity',
+                                                      index
+                                                    )
                                                   }
-                                                  onChange={e => {
-                                                    const val = parseFloat(e.target.value) || 0;
-                                                    const min = getMinQuantity(equipmentKey) ?? 0;
-                                                    const newVal = val < min ? min : val;
-                                                    handleStandardInputChange(newVal, equipmentKey, 'quantity');
-                                                  }}
-                                                  className='w-full'
                                                 />
+
                                                 :
                                                 <Label
                                                   className='flex text-muted-foreground'
@@ -1373,47 +1386,47 @@ useEffect(() => {
                                     <div className='flex flex-col gap-2 mb-4'>
                                       <span className='text-sm font-medium'>Emergency Job?</span>
                                       <Switch
-                                        checked={adminData?.emergencyJob || false}
-                                        onCheckedChange={handleEmergencyJobChange}
+                                        checked={phase?.emergency || false}
+                                        onCheckedChange={(value: boolean) => handleEmergencyJobChange(value, phase, index)}
                                       />
                                     </div>
                                     <div className='mb-4'>
-                                    {
-                                      modeEdit.lightAndDrum ? (
-                                        <div className='flex gap-2'>
-                                          <Button
-                                            size='sm'
-                                            variant='default'
-                                            className='h-8'
-                                            onClick={() => {
-                                              toggleEditMode('lightAndDrum', false)
-                                            }}
-                                          >
-                                            Save
-                                          </Button>
-                                          <Button
-                                            size='sm'
-                                            variant='outline'
-                                            className='h-8'
-                                            onClick={() => toggleEditMode('lightAndDrum', false)}
-                                          >
-                                            Cancel
-                                          </Button>
-                                        </div>
-                                      ) : (
-                                        <div>
-                                          <Button
-                                            size='sm'
-                                            variant='outline'
-                                            className='h-8'
-                                            onClick={() => toggleEditMode('lightAndDrum', true)}
-                                          >
-                                            <Edit className='h-4 w-4 mr-1' />
-                                            Edit
-                                          </Button>
-                                        </div>
-                                      )
-                                    }
+                                      {
+                                        modeEdit[index]?.lightAndDrum ? (
+                                          <div className='flex gap-2'>
+                                            <Button
+                                              size='sm'
+                                              variant='default'
+                                              className='h-8'
+                                              onClick={() => {
+                                                toggleEditMode(index, 'lightAndDrum', false)
+                                              }}
+                                            >
+                                              Save
+                                            </Button>
+                                            <Button
+                                              size='sm'
+                                              variant='outline'
+                                              className='h-8'
+                                              onClick={() => toggleEditMode(index, 'lightAndDrum', false)}
+                                            >
+                                              Cancel
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div>
+                                            <Button
+                                              size='sm'
+                                              variant='outline'
+                                              className='h-8'
+                                              onClick={() => toggleEditMode(index, 'lightAndDrum', true)}
+                                            >
+                                              <Edit className='h-4 w-4 mr-1' />
+                                              Edit
+                                            </Button>
+                                          </div>
+                                        )
+                                      }
                                     </div>
                                   </div>
                                   <div className='grid grid-cols-2 md:grid-cols-3'>
@@ -1433,7 +1446,7 @@ useEffect(() => {
                                             Quantity:
                                           </Label>
                                           {
-                                            modeEdit.lightAndDrum ?
+                                            modeEdit[index]?.lightAndDrum ?
                                               <Input
                                                 id={`quantity-light-${equipmentKey}-${index}`}
                                                 type='number'
@@ -1447,7 +1460,7 @@ useEffect(() => {
                                                   const val = parseFloat(e.target.value) || 0;
                                                   const min = getMinQuantity(equipmentKey) ?? 0;
                                                   const newVal = val < min ? min : val;
-                                                  handleStandardInputChange(newVal, equipmentKey, 'quantity');
+                                                  handleStandardInputChange(newVal, equipmentKey, 'quantity', index);
                                                 }}
                                                 className='w-full'
                                               />
@@ -1463,7 +1476,7 @@ useEffect(() => {
                                               </Label>
                                           }
                                         </div>
-                                        {adminData?.emergencyJob && (
+                                        {phase.emergency && (
                                           <div className='flex flex-col w-1/3 gap-2 mt-2'>
                                             <Label
                                               htmlFor={`emergency-${equipmentKey}-${index}`}
@@ -1471,7 +1484,7 @@ useEffect(() => {
                                             >
                                               Emergency Rate:
                                             </Label>
-                                            {modeEdit.lightAndDrum ? (
+                                            {modeEdit[index]?.lightAndDrum ? (
                                               <Input
                                                 id={`emergency-${equipmentKey}-${index}`}
                                                 inputMode='decimal'
@@ -1497,11 +1510,12 @@ useEffect(() => {
                                               />
                                             ) : (
                                               <Label className='text-muted-foreground'>
-                                                {phase.standardEquipment[equipmentKey]?.quantity
+                                                {getDigitsForEquipment(equipmentKey) !== '000'
                                                   ? `$ ${formatDecimal(getDigitsForEquipment(equipmentKey))}`
                                                   : '-'}
                                               </Label>
-                                            )}
+                                            )
+                                            }
                                           </div>
                                         )}
                                       </div>
@@ -1624,14 +1638,14 @@ useEffect(() => {
 
                                   <div className=' flex flex-row gap-4'>
                                     {
-                                      modeEdit.customEquipament ? (
+                                      modeEdit[index]?.customEquipament ? (
                                         <div className='flex gap-2'>
                                           <Button
                                             size='sm'
                                             variant='default'
                                             className='h-8'
                                             onClick={() => {
-                                              toggleEditMode('customEquipament', false)
+                                              toggleEditMode(index, 'customEquipament', false)
                                             }}
                                           >
                                             Save
@@ -1640,7 +1654,7 @@ useEffect(() => {
                                             size='sm'
                                             variant='outline'
                                             className='h-8'
-                                            onClick={() => toggleEditMode('customEquipament', false)}
+                                            onClick={() => toggleEditMode(index, 'customEquipament', false)}
                                           >
                                             Cancel
                                           </Button>
@@ -1651,7 +1665,7 @@ useEffect(() => {
                                             size='sm'
                                             variant='outline'
                                             className='h-8'
-                                            onClick={() => toggleEditMode('customEquipament', true)}
+                                            onClick={() => toggleEditMode(index, 'customEquipament', true)}
                                           >
                                             <Edit className='h-4 w-4 mr-1' />
                                             Edit
@@ -1664,136 +1678,136 @@ useEffect(() => {
                                 </div>
 
                                 {/* Custom Items Display */}
-                                  {phase.customLightAndDrumItems?.length > 0 && (
-                                    <div className='mt-6'>
-                                      <h3 className='text-base font-semibold mb-4'>
-                                        Custom Items
-                                      </h3>
-                                      <div className='grid grid-cols-12 gap-4 mb-4'>
-                                        <div className='col-span-2 font-medium'>Item Name</div>
-                                        <div className='col-span-3 font-medium'>Quantity</div>
-                                        <div className='col-span-3 font-medium'>Cost</div>
-                                        <div className='col-span-2 font-medium'>Useful Life</div>
-                                        <div className='col-span-2 font-medium'>Daily Price</div>
-                                      </div>
-                                      <div className='space-y-6'>
-                                        {phase.customLightAndDrumItems.map(item => (
-                                          <div
-                                            key={item.id}
-                                            className='grid grid-cols-12 gap-4 items-center'
-                                          >
-                                            {/* Item Name */}
-                                            <div className='col-span-2'>
-                                              {modeEdit.customEquipament
-                                                ? (
-                                                  <Input
-                                                    type='text'
-                                                    value={item.id}
-                                                    onChange={e =>
-                                                      dispatch({
-                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                        payload: {
-                                                          phaseNumber: index,
-                                                          id: item.id,
-                                                          key: 'id',
-                                                          value: e.target.value
-                                                        }
-                                                      })
-                                                    }
-                                                  />
-                                                )
-                                                : item.id || '-'
-                                              }
-                                            </div>
-
-                                            {/* Quantity */}
-                                            <div className='col-span-3'>
-                                              {modeEdit.customEquipament
-                                                ? (
-                                                  <Input
-                                                    type='number'
-                                                    min={0}
-                                                    value={item.quantity}
-                                                    onChange={e =>
-                                                      dispatch({
-                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                        payload: {
-                                                          phaseNumber: index,
-                                                          id: item.id,
-                                                          key: 'quantity',
-                                                          value: parseFloat(e.target.value) || 0
-                                                        }
-                                                      })
-                                                    }
-                                                  />
-                                                )
-                                                : (item.quantity > 0 ? item.quantity : '-')
-                                              }
-                                            </div>
-
-                                            {/* Cost */}
-                                            <div className='col-span-3'>
-                                              {modeEdit.customEquipament
-                                                ? (
-                                                  <Input
-                                                    type='number'
-                                                    min={0}
-                                                    step={0.01}
-                                                    value={item.cost}
-                                                    onChange={e =>
-                                                      dispatch({
-                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                        payload: {
-                                                          phaseNumber: index,
-                                                          id: item.id,
-                                                          key: 'cost',
-                                                          value: parseFloat(e.target.value) || 0
-                                                        }
-                                                      })
-                                                    }
-                                                  />
-                                                )
-                                                : (item.cost > 0 ? item.cost.toFixed(2) : '-')
-                                              }
-                                            </div>
-
-                                            {/* Useful Life */}
-                                            <div className='col-span-2'>
-                                              {modeEdit.customEquipament
-                                                ? (
-                                                  <Input
-                                                    type='number'
-                                                    min={0}
-                                                    value={item.usefulLife}
-                                                    onChange={e =>
-                                                      dispatch({
-                                                        type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
-                                                        payload: {
-                                                          phaseNumber: index,
-                                                          id: item.id,
-                                                          key: 'usefulLife',
-                                                          value: parseFloat(e.target.value) || 0
-                                                        }
-                                                      })
-                                                    }
-                                                  />
-                                                )
-                                                : (item.usefulLife > 0 ? item.usefulLife : '-')
-                                              }
-                                            </div>
-
-                                            {/* Daily Price */}
-                                            <div className='col-span-2'>
-                                              {item.cost > 0
-                                                ? `$${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}`
-                                                : '-'
-                                              }
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
+                                {phase.customLightAndDrumItems?.length > 0 && (
+                                  <div className='mt-6'>
+                                    <h3 className='text-base font-semibold mb-4'>
+                                      Custom Items
+                                    </h3>
+                                    <div className='grid grid-cols-12 gap-4 mb-4'>
+                                      <div className='col-span-2 font-medium'>Item Name</div>
+                                      <div className='col-span-3 font-medium'>Quantity</div>
+                                      <div className='col-span-3 font-medium'>Cost</div>
+                                      <div className='col-span-2 font-medium'>Useful Life</div>
+                                      <div className='col-span-2 font-medium'>Daily Price</div>
                                     </div>
-                                  )}
+                                    <div className='space-y-6'>
+                                      {phase.customLightAndDrumItems.map(item => (
+                                        <div
+                                          key={item.id}
+                                          className='grid grid-cols-12 gap-4 items-center'
+                                        >
+                                          {/* Item Name */}
+                                          <div className='col-span-2'>
+                                            {modeEdit[index]?.customEquipament
+                                              ? (
+                                                <Input
+                                                  type='text'
+                                                  value={item.id}
+                                                  onChange={e =>
+                                                    dispatch({
+                                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                      payload: {
+                                                        phaseNumber: index,
+                                                        id: item.id,
+                                                        key: 'id',
+                                                        value: e.target.value
+                                                      }
+                                                    })
+                                                  }
+                                                />
+                                              )
+                                              : item.id || '-'
+                                            }
+                                          </div>
+
+                                          {/* Quantity */}
+                                          <div className='col-span-3'>
+                                            {modeEdit[index]?.customEquipament
+                                              ? (
+                                                <Input
+                                                  type='number'
+                                                  min={0}
+                                                  value={item.quantity}
+                                                  onChange={e =>
+                                                    dispatch({
+                                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                      payload: {
+                                                        phaseNumber: index,
+                                                        id: item.id,
+                                                        key: 'quantity',
+                                                        value: parseFloat(e.target.value) || 0
+                                                      }
+                                                    })
+                                                  }
+                                                />
+                                              )
+                                              : (item.quantity > 0 ? item.quantity : '-')
+                                            }
+                                          </div>
+
+                                          {/* Cost */}
+                                          <div className='col-span-3'>
+                                            {modeEdit[index]?.customEquipament
+                                              ? (
+                                                <Input
+                                                  type='number'
+                                                  min={0}
+                                                  step={0.01}
+                                                  value={item.cost}
+                                                  onChange={e =>
+                                                    dispatch({
+                                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                      payload: {
+                                                        phaseNumber: index,
+                                                        id: item.id,
+                                                        key: 'cost',
+                                                        value: parseFloat(e.target.value) || 0
+                                                      }
+                                                    })
+                                                  }
+                                                />
+                                              )
+                                              : (item.cost > 0 ? item.cost.toFixed(2) : '-')
+                                            }
+                                          </div>
+
+                                          {/* Useful Life */}
+                                          <div className='col-span-2'>
+                                            {modeEdit[index]?.customEquipament
+                                              ? (
+                                                <Input
+                                                  type='number'
+                                                  min={0}
+                                                  value={item.usefulLife}
+                                                  onChange={e =>
+                                                    dispatch({
+                                                      type: 'UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM',
+                                                      payload: {
+                                                        phaseNumber: index,
+                                                        id: item.id,
+                                                        key: 'usefulLife',
+                                                        value: parseFloat(e.target.value) || 0
+                                                      }
+                                                    })
+                                                  }
+                                                />
+                                              )
+                                              : (item.usefulLife > 0 ? item.usefulLife : '-')
+                                            }
+                                          </div>
+
+                                          {/* Daily Price */}
+                                          <div className='col-span-2'>
+                                            {item.cost > 0
+                                              ? `$${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}`
+                                              : '-'
+                                            }
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </AccordionContent>
                           </AccordionItem>

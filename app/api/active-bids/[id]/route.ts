@@ -6,7 +6,7 @@ export async function GET(
   request: NextRequest,
   { params }: any
 ) {
-  try {
+  try {    
     const resolvedParams = await params;
     const type = request.nextUrl.searchParams.get('type')
     
@@ -60,7 +60,7 @@ export async function GET(
           contractNumber : data.admin_data.contractNumber.endsWith('-DRAFT') ? data.admin_data.contractNumber : data.admin_data.contractNumber + '-DRAFT'
         }
       }
-    }
+    }     
     
     return NextResponse.json({ success: true, data });
     
