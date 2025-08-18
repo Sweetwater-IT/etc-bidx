@@ -606,13 +606,14 @@ const FlaggingServicesTab = () => {
   }
 
   // Calculate total hours
-  const getTotalHours = (item: FlaggingItem, formData?: FlaggingItem | null) => {
+  const getTotalHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
     const source = formData || item;
+    if (!source) return 0;
     return safeNumber(source.onSiteJobHours) + safeNumber(adminData.owTravelTimeMins) * 2;
   };
 
   // Calculate overtime hours
-  const getOvertimeHours = (item: FlaggingItem, formData?: FlaggingItem | null) => {
+  const getOvertimeHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
     return Math.max(0, getTotalHours(item, formData) - 8 * 60);
   };
 
