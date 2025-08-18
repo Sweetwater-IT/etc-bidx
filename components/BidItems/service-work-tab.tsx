@@ -553,7 +553,7 @@ const ServiceWorkTab = () => {
                 <div className="flex items-center space-x-4">
                   <div className="font-medium">Service Work</div>
                   <div className="text-sm text-muted-foreground">
-                    Personnel: {item.personnel} • Trucks: {item.numberTrucks} • Hours: {item.onSiteJobHours}
+                    Personnel: {item.personnel} • Trucks: {item.numberTrucks} • Hours: {formatHoursAndMinutes(item.onSiteJobHours)}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -591,8 +591,8 @@ const ServiceWorkTab = () => {
 
               {/* Cost Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                <div>Total Hours: {getTotalHours(item)} ({getTotalHours(item) * 60} minutes)</div>
-                <div>Overtime Hours: {getOvertimeHours(item)} ({getOvertimeHours(item) * 60} minutes)</div>
+                <div>Total Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} ({(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} minutes)</div>
+                <div>Overtime Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} ({(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} minutes)</div>
               </div>
             </div>
 
