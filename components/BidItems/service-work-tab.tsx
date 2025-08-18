@@ -511,13 +511,18 @@ const ServiceWorkTab = () => {
   };
 
   // Calculate total hours
-  const getTotalHours = (item: ServiceWorkItem) => {
-    return safeNumber(item.onSiteJobHours) + Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60);
+  const getTotalHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
+    const source = formData || item;
+    if (!source) return 0;
+    const onSiteHours = safeNumber(source.onSiteJobHours) / 60;
+    const travelHours = safeNumber(adminData.owTravelTimeMins) / 30; // Double and convert to hours
+    return onSiteHours + travelHours;
   };
 
   // Calculate overtime hours
-  const getOvertimeHours = (item: ServiceWorkItem) => {
-    return Math.max(0, (safeNumber(item.onSiteJobHours) + Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) - 8));
+  const getOvertimeHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
+    const totalHours = getTotalHours(item, formData);
+    return Math.max(0, totalHours - 8);
   };
 
   return (
