@@ -510,19 +510,19 @@ const ServiceWorkTab = () => {
     });
   };
 
-  // Calculate total hours
+  // Calculate Total Hours
   const getTotalHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
     const source = formData || item;
     if (!source) return 0;
-    const onSiteHours = safeNumber(source.onSiteJobHours) / 60;
-    const travelHours = safeNumber(adminData.owTravelTimeMins) / 30; // Double and convert to hours
-    return onSiteHours + travelHours;
+    const onSiteMinutes = safeNumber(source.onSiteJobHours); // Already in minutes
+    const travelMinutes = safeNumber(adminData.owTravelTimeMins) * 2; // Double one-way minutes
+    return onSiteMinutes + travelMinutes; // Return total minutes
   };
 
-  // Calculate overtime hours
+  // Calculate Overtime Hours
   const getOvertimeHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
-    const totalHours = getTotalHours(item, formData);
-    return Math.max(0, totalHours - 8);
+    const totalMinutes = getTotalHours(item, formData);
+    return Math.max(0, totalMinutes - 8 * 60); // Convert 8 hours to minutes
   };
 
   return (
