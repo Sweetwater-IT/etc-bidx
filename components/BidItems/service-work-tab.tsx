@@ -1052,13 +1052,13 @@ const ServiceWorkTab = () => {
 
                     <div className="flex justify-between">
                       <span>Over Time Hours:</span>
-                      <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
+                      <span>{formatHoursAndMinutes(getOvertimeHours(null, formData))}</span>
                     </div>
                     <div></div>
 
                     <div className="flex justify-between">
                       <span>Total Hours:</span>
-                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(formData))}</span>
+                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(null, formData))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Labor Cost:</span>
