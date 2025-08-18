@@ -1488,7 +1488,7 @@ const FlaggingServicesTab = () => {
                         <div className='flex justify-between'>
                           <span>Over Time Hours:</span>
                           <span>
-                            {formatHoursAndMinutes(getTotalHours(null, formData))}
+                            {formatHoursAndMinutes(getOvertimeHours(null, formData))}
                           </span>
                         </div>
                         <div></div>
