@@ -37,90 +37,71 @@ export async function GET(request: NextRequest) {
     //   });
     // }
 
+if (counts) {
+  try {
+    const includeDrafts = searchParams.get('includeDrafts') === 'true';
+    const statuses = includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'];
+    const shopStatuses = ['not-started', 'in-process', 'on-order', 'complete'];
+    const branchMap: Record<string, number> = { turbotville: 1, hatfield: 2, bedford: 3 };
 
-    if (counts) {
-      try {
-        const includeDrafts = searchParams.get('includeDrafts') === 'true';
-        const statuses = includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'];
-        const shopStatuses = ['not-started', 'in-process', 'on-order', 'complete'];
+    // i bring all active and archived orders
+    const { data: allOrders } = await supabase
+      .from('sign_orders')
+      .select('requestor, archived, shop_status, order_status')
+      .in('order_status', statuses);
 
-        // Total activas
-        const { count: allActive } = await supabase
-          .from('sign_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('archived', false)
-          .in('order_status', statuses);
+    if (!allOrders) throw new Error('Failed to fetch orders');
 
-        // Total archivadas
-        const { count: archived } = await supabase
-          .from('sign_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('archived', true)
-          .in('order_status', statuses);
+    // i bring the users
+    const { data: users } = await supabase.from('users').select('name, branch_id');
+    if (!users) throw new Error('Failed to fetch users');
 
-        // Traer usuarios para branch mapping
-        const { data: users } = await supabase
-          .from('users')
-          .select('name, branch_id');
+    const userBranchMap = users.reduce((acc: Record<string, number>, u: any) => {
+      acc[u.name] = u.branch_id;
+      return acc;
+    }, {});
 
-        const userBranchMap = (users || []).reduce((acc: Record<string, number>, u: any) => {
-          acc[u.name] = u.branch_id;
-          return acc;
-        }, {});
+    // Initialize counters
+    const result = {
+      all_active: 0,
+      archived: 0,
+      turbotville: 0,
+      hatfield: 0,
+      bedford: 0,
+      not_started: 0,
+      in_process: 0,
+      on_order: 0,
+      complete: 0
+    };
 
-        // Conteo por branch
-        const branchCounts: Record<string, number> = {};
-        const branchMap: Record<string, number> = { turbotville: 1, hatfield: 2, bedford: 3 };
-        for (const [branchName, branchId] of Object.entries(branchMap)) {
-          const branchUsers = (users || []).filter(u => u.branch_id === branchId).map(u => u.name);
-          if (branchUsers.length === 0) {
-            branchCounts[branchName] = 0;
-            continue;
-          }
-          const { count } = await supabase
-            .from('sign_orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('archived', false)
-            .in('order_status', statuses)
-            .in('requestor', branchUsers);
-          branchCounts[branchName] = count || 0;
-        }
 
-        // Conteo por shop_status
-        const shopStatusCounts: Record<string, number> = {};
-        for (const status of shopStatuses) {
-          const { count } = await supabase
-            .from('sign_orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('archived', false)
-            .in('order_status', statuses)
-            .eq('shop_status', status);
-          shopStatusCounts[status] = count || 0;
-        }
+    for (const order of allOrders) {
+      const isArchived = order.archived;
+      const branchId = userBranchMap[order.requestor];
 
-        console.log('Counts:', {
-          all_active: allActive,
-          archived,
-          branchCounts,
-          shopStatusCounts
-        });
-        return NextResponse.json({
-          success: true,
-          counts: {
-            all_active: allActive || 0,
-            archived: archived || 0,
-            turbotville: branchCounts.turbotville,
-            hatfield: branchCounts.hatfield,
-            bedford: branchCounts.bedford,
-            ...shopStatusCounts
-          }
-        });
-      } catch (err) {
-        console.error('Error fetching counts:', err);
-        return NextResponse.json({ success: false, error: 'Failed to fetch counts' }, { status: 500 });
+      // totales
+      if (!isArchived) result.all_active += 1;
+      if (isArchived) result.archived += 1;
+
+      // the totals for branches
+      if (!isArchived && branchId) {
+        if (branchId === branchMap.turbotville) result.turbotville += 1;
+        if (branchId === branchMap.hatfield) result.hatfield += 1;
+        if (branchId === branchMap.bedford) result.bedford += 1;
+      }
+
+      // for shop_status
+      if (!isArchived && shopStatuses.includes(order.shop_status)) {
+        result[order.shop_status as keyof typeof result] += 1;
       }
     }
 
+    return NextResponse.json({ success: true, counts: result });
+  } catch (err) {
+    console.error('Error fetching counts:', err);
+    return NextResponse.json({ success: false, error: 'Failed to fetch counts' }, { status: 500 });
+  }
+}
 
 
 
