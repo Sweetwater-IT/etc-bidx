@@ -696,7 +696,7 @@ const SaleItemsViewOnly = () => {
 
 const PermanentSignsViewOnly = () => {
     const { permanentSigns, adminData, mptRental } = useEstimate();
-
+    console.log('PermanentSignsViewOnly rendered with:', { permanentSigns });
     const formatCurrency = (value: number | null | undefined): string => {
         if (!value) return "-";
         return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -723,15 +723,7 @@ const PermanentSignsViewOnly = () => {
                 const revenue = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue;
                 const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
                 const grossMargin = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin;
-                const type = determineItemType(pmsItem);
-                console.log(`Item ${pmsItem.id} classified as:`, type);
-                console.log('grossMargin:', grossMargin);
-                console.log('pmsItem:', {
-                    id: pmsItem.id,
-                    type: (pmsItem as any).type,
-                    hasFlexibleCost: 'flexibleDelineatorCost' in pmsItem,
-                    flexibleDelineatorCost: (pmsItem as InstallFlexibleDelineators).flexibleDelineatorCost
-                });
+               
 
                 return (
                     <div
