@@ -94,7 +94,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
       height: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].height : 0,
       sheeting: selectedDesignation.sheeting,
       description: selectedDesignation.description,
-    };
+    };    
 
     setLocalSign(updatedSign);
 
@@ -117,6 +117,38 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
           <CommandEmpty>No designation found.</CommandEmpty>
           <CommandList>
             <CommandGroup>
+              <CommandItem
+                key="custom"
+                value="custom"
+                onSelect={() => {
+                  const updatedSign = {
+                    ...localSign,
+                    designation: "",
+                    width: 0,
+                    height: 0,
+                    sheeting: localSign.sheeting,
+                    description: "",
+                    isCustom:true,
+                  };
+                  setLocalSign(updatedSign);
+                  if (onDesignationSelected) {
+                    onDesignationSelected(updatedSign);
+                  }
+                  setOpen(false);
+                }}
+              >
+                <div className="flex items-center w-full">
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      localSign.designation === "Custom designation" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="font-medium italic">+ Custom designation</span>
+                </div>
+              </CommandItem>
+
+
               {filteredDesignations.map((item) => (
                 <CommandItem
                   key={item.designation}

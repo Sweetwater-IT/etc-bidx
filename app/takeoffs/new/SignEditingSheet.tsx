@@ -54,7 +54,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
-    const [isCustom, setIsCustom] = useState(sign.isCustom || false);
+    const [isCustom, setIsCustom] = useState(sign.isCustom || false);    
 
     const isSecondary = isSecondarySign(sign);
 
@@ -362,7 +362,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 <div className="flex flex-col gap-2 relative z-10 bg-background">
                     <SheetHeader className="pb-4 p-6">
                         <SheetTitle>
-                            {`${mode === 'create' ? 'Add' : 'Edit'} ${localSign.designation || 'Sign'} details`}
+                            {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom? 'Custom sign' : (localSign.designation || 'Sign')} details`}
                         </SheetTitle>
                         {isSecondary && primarySign && (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
