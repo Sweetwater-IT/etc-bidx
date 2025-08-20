@@ -42,7 +42,6 @@ const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccor
       return getNonRatedHoursPerPhase(adminData, mptRental.phases[currentPhase])
     }
 
-    // Todas las claves restantes son numéricas garantizadas
     return mptRental.phases[currentPhase][key] || 0;
   };
 
