@@ -848,9 +848,12 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   if (!phase.personnel || phase.personnel === 0) {
     return 0;
   }
-  const totalTrips = getTotalTripsPerPhase(phase)
-  const nonRatedHours = (((adminData.owTravelTimeMins ?? 0) * 2) / 60) * totalTrips * phase.personnel
-  return nonRatedHours
+  const totalTrips = getTotalTripsPerPhase(phase);
+  const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
+    ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
+    : safeNumber(adminData.owTravelTimeMins);
+  const nonRatedHours = ((totalTravelTimeMins * 2) / 60) * totalTrips * phase.personnel;
+  return nonRatedHours;
 }
 export function getTotalTripsPerPhase(phase: Phase): number {
   // Check if phase or standardEquipment is undefined
