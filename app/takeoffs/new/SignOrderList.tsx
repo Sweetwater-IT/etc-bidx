@@ -754,10 +754,10 @@ export function SignOrderList({
           </div>
           <div className="mt-6 flex justify-end space-y-1 text-sm">
             <div className="text-right">
-              <div>Unique Signs: {mptRental.phases[currentPhase].signs.length}</div>
-              <div>Total Signs: {mptRental.phases[currentPhase].signs.reduce((sum, sign) => sum + safeNumber(sign.quantity), 0)}</div>
+              <div>Unique Signs: {mptRental.phases[currentPhase].signs.length} sign types</div>
+              <div>Total Signs: {mptRental.phases[currentPhase].signs.reduce((sum, sign) => sum + safeNumber(sign.quantity), 0)} signs</div>
               <div className="font-medium">
-                Total Square Footage: {squareFootageTotal.toFixed(2)}
+                Total Square Footage: {squareFootageTotal.toFixed(2)} sq.ft
               </div>
             </div>
           </div>
