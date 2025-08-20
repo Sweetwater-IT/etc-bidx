@@ -282,12 +282,12 @@ export default function SignOrderPage() {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&archived=false`);
+      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&includeDrafts=true`);
       const segmentData = await segmentResponse.json();
 
       if (segmentData.success) {
         setBranchCounts({
-          all: segmentData.counts.all || 0,
+          all: segmentData.counts.all_active || 0,
           hatfield: segmentData.counts.hatfield || 0,
           turbotville: segmentData.counts.turbotville || 0,
           bedford: segmentData.counts.bedford || 0,
