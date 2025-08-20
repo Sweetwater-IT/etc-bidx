@@ -66,9 +66,9 @@ export function SignOrderAdminInfo({
             console.error('Error fetching users:', error);
             toast.error('Error fetching users');
         }
-    };
+    };    
 
-    const handleJobCreated = (newJob: Job) => {
+    const handleJobCreated = (newJob: Job) => {        
         // Add the new job to the jobs list (optional - for immediate availability in dropdown)
         setAllJobs(prev => [...prev, newJob]);
 
@@ -185,6 +185,7 @@ export function SignOrderAdminInfo({
                 orderType={adminInfo.orderType}
                 contractNumber={adminInfo.contractNumber}
                 showInitialAdminState={showInitialAdminState}
+                contact={adminInfo.contact}
                 // jobNumber={adminInfo.jobNumber}        // Add this
             />
             <SignOrderDetailsSheet
@@ -195,7 +196,7 @@ export function SignOrderAdminInfo({
                 allUsers={allUsers}
                 customers={customers}
                 mode={sheetMode}
-                onJobCreated={handleJobCreated} // Add this prop
+                onJobCreated={handleJobCreated}
             />
         </div>
     );

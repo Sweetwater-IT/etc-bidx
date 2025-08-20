@@ -11,11 +11,14 @@ import { getNonRatedHoursPerPhase, getRatedHoursPerPhase, getTotalTripsPerPhase 
 import { safeNumber } from "@/lib/safe-number";
 import { Pencil, Check, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Phase } from "@/types/MPTEquipment";
 
 interface TripAndLaborSummaryAccordionProps {
   currentPhase: number;
 }
+
+type NumericPhaseKey = 'personnel' | 'days' | 'numberTrucks' |
+  'additionalRatedHours' | 'additionalNonRatedHours' |
+  'maintenanceTrips';
 
 const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccordionProps) => {
   const [value, setValue] = useState<string[]>([]);
@@ -24,25 +27,25 @@ const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccor
   const [tempPersonnel, setTempPersonnel] = useState<number>();
   const [tempTrucks, setTempTrucks] = useState<number>();
 
-  const getPhaseValue = (key: keyof Phase | 'trips' | 'nonRatedHours' | 'ratedHours'): number => {
-    if(key === 'customLightAndDrumItems' || key === 'signs' || 
-    key === 'standardEquipment' || key === 'name' || key === 'endDate' || key === 'startDate'){
-      return 0;
-    }
+  const getPhaseValue = (key: NumericPhaseKey | 'trips' | 'nonRatedHours' | 'ratedHours'): number => {
     if (!mptRental || !mptRental.phases || !mptRental.phases[currentPhase]) {
       return 0;
     }
+
     if (key === 'trips') {
       return getTotalTripsPerPhase(mptRental.phases[currentPhase])
     }
-    if (key === 'ratedHours'){
+    if (key === 'ratedHours') {
       return getRatedHoursPerPhase(mptRental.phases[currentPhase])
     }
-    if (key === 'nonRatedHours'){
+    if (key === 'nonRatedHours') {
       return getNonRatedHoursPerPhase(adminData, mptRental.phases[currentPhase])
     }
+
+    // Todas las claves restantes son numéricas garantizadas
     return mptRental.phases[currentPhase][key] || 0;
   };
+
 
   const formatCurrency = (value: number | undefined): string => {
     if (value === undefined || Number.isNaN(value)) {
@@ -109,8 +112,8 @@ const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccor
                 variant="ghost"
                 className="h-8 w-8 block ml-auto p-0"
                 onClick={() => {
-                  dispatch({ type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR', payload: {key: 'personnel', value: tempPersonnel || 0, phase: currentPhase}})
-                  dispatch({ type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR', payload: {key: 'numberTrucks', value: tempTrucks || 0, phase: currentPhase}})
+                  dispatch({ type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR', payload: { key: 'personnel', value: tempPersonnel || 0, phase: currentPhase } })
+                  dispatch({ type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR', payload: { key: 'numberTrucks', value: tempTrucks || 0, phase: currentPhase } })
                   setEditing(false)
                 }}
               >

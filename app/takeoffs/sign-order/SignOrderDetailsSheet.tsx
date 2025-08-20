@@ -57,11 +57,20 @@ const BRANCHES = [
   { value: 'Bedford', label: 'Bedford' }
 ]
 
+interface IContact {
+  id: number
+  name: string
+  role: string
+  email: string
+  phone: string
+}
+
 interface Job {
   job_number: string
   branch: string
   contractNumber?: string
   contractorName?: string
+  contact: IContact
 }
 
 interface SignOrderDetailsSheetProps {
@@ -77,7 +86,7 @@ interface SignOrderDetailsSheetProps {
   onJobCreated?: (job: Job) => void // Add this callback
 }
 
-export function SignOrderDetailsSheet ({
+export function SignOrderDetailsSheet({
   open,
   onOpenChange,
   adminInfo,
@@ -221,16 +230,17 @@ export function SignOrderDetailsSheet ({
       jobNumber: localJobNumber,
       contractNumber: localContractNumber,
       startDate: localStartDate,
-      endDate: localEndDate
+      endDate: localEndDate,
+      contact: localContact
     }))
 
-    // If creating a new job, call the callback to update the job selector
     if (mode === 'create' && onJobCreated) {
       const newJob: Job = {
         job_number: localJobNumber,
         branch: localSelectedBranch,
         contractNumber: localContractNumber,
-        contractorName: localCustomer?.name
+        contractorName: localCustomer?.name,
+        contact: localContact
       }
       onJobCreated(newJob)
     }
@@ -260,7 +270,7 @@ export function SignOrderDetailsSheet ({
   const isCreateMode = mode === 'create'
 
   // Add this helper function inside the component
-  async function fetchCustomerById (id: number) {
+  async function fetchCustomerById(id: number) {
     const res = await fetch(`/api/customers/${id}`)
     if (res.ok) {
       return await res.json()
