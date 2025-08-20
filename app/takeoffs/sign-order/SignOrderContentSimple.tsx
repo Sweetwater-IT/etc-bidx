@@ -442,7 +442,7 @@ export default function SignOrderContentSimple ({
       await fetch(`/api/sign-orders`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes, user_email: user.email })
+        body: JSON.stringify({ id: signOrderId, timestamp: note.timestamp, notes: updatedNotes, user_email: user.email })
       })
     }
   }

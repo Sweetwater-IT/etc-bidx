@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
           .from('jobs')
           .select('id, admin_data_entries(county), archived, deleted')
           .eq('deleted', false)
-
         if (allJobsError) {
           return NextResponse.json(
             { error: 'Failed to fetch job counts', details: allJobsError },
@@ -79,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate actual counts for stats
     const totalActive = allJobsForStats.filter(job => job.project_status === 'IN_PROGRESS').length;
-    const totalPendingBilling = allJobsForStats.filter(job => 
+    const totalPendingBilling = allJobsForStats.filter(job =>
       job.billing_status === 'NOT_STARTED' || job.billing_status === 'IN_PROGRESS'
     ).length;
     const overdaysCount = allJobsForStats.filter(job => job.overdays > 0).length;
@@ -222,7 +221,7 @@ export async function GET(request: NextRequest) {
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
-    
+
     // Execute query
     const { data, count, error } = await query;
 
@@ -499,7 +498,6 @@ export async function POST(req: NextRequest) {
     const requestData = await req.json();
     console.log('Request data:', requestData);
 
-    // Validate required fields
     const requiredFields = ['customer', 'contractNumber', 'estimator', 'owner', 'county', 'township', 'division'];
     for (const field of requiredFields) {
       if (!requestData[field]) {
@@ -510,94 +508,63 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Always generate a P-XXXXXX job number
-    function generatePendingJobNumber(): string {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = 'P-';
-      for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return result;
-    }
-    // Generate unique P- job number
-    const fullJobNumberParsed = `${requestData.branchCode ?? '10'}-${requestData.division === 'PUBLIC' ? '21' : '22'}-${requestData.customJobNumber}`;
-    const year = parseInt(requestData.customJobNumber.slice(0, 4), 10);
-    const sequential = parseInt(requestData.customJobNumber.slice(4), 10);
+    const { data: countyData, error: countyError } = await supabase
+      .from('counties')
+      .select('branch')
+      .eq('name', requestData.county.name)
+      .single();
 
-    let jobNumber = '';
-    let isUnique = false;
-
-    if (requestData.customJobNumber) {
-      const fullJobNumber = `${requestData.branchCode ?? '10'}${requestData.division === 'PUBLIC' ? '21' : '22'}${requestData.customJobNumber}`;
-
-      const { data: existing } = await supabase
-        .from('job_numbers')
-        .select('id')
-        .eq('year', year)
-        .eq('sequential_number', sequential)
-        .single();
-
-      if (existing) {
-        return NextResponse.json(
-          { error: 'Job number already exists' },
-          { status: 400 }
-        );
-      }
-
-      jobNumber = fullJobNumber;
-      isUnique = true;
-    }
-
-
-    let attempts = 0;
-    const maxAttempts = 10;
-    while (!isUnique && attempts < maxAttempts) {
-      jobNumber = generatePendingJobNumber();
-      const { data: existingJobNumber } = await supabase
-        .from('job_numbers')
-        .select('id')
-        .eq('job_number', jobNumber)
-        .single();
-      if (!existingJobNumber) {
-        isUnique = true;
-      }
-      attempts++;
-    }
-    if (!isUnique) {
+    if (countyError || !countyData?.branch) {
       return NextResponse.json(
-        { error: 'Failed to generate unique job number after multiple attempts' },
-        { status: 500 }
+        { error: 'Invalid county selected or missing branch' },
+        { status: 400 }
       );
     }
 
-    
-    const payload: any = {
-      job_number: fullJobNumberParsed,
-      year,
-      owner_type:requestData.division === 'PUBLIC' ? '21' : '22',
-      branch_code: requestData.branchCode ?? 20
+    const branchCode = countyData.branch;
 
-    };
+    let year: number;
+    let sequential: number;
 
-    if (requestData.customJobNumber) {
-      payload.sequential_number = sequential
+    if (requestData.customJobNumber) {      
+      const str = String(requestData.customJobNumber);
+      year = parseInt(str.slice(0, 4), 10);
+      sequential = parseInt(str.slice(4), 10); 
+    } else {
+      year = new Date().getFullYear();
+
+      const { data: lastJob } = await supabase
+        .from('job_numbers')
+        .select('sequential_number')
+        .eq('year', year)
+        .order('sequential_number', { ascending: false })
+        .limit(1)
+        .single();      
+
+      sequential = lastJob ? lastJob.sequential_number + 1 : 1;
     }
 
-    // Insert the generated job number
+    const jobNumberStr = `${branchCode}-${requestData.division === 'PUBLIC' ? '21' : '22'}-${year}${String(sequential).padStart(4, '0')}`;
+    
+    const payload: any = {
+      job_number: jobNumberStr,
+      year,
+      owner_type: requestData.division === 'PUBLIC' ? '21' : '22',
+      branch_code: branchCode,
+      sequential_number: sequential
+    };  
+
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
       .insert(payload)
       .select('id')
       .single();
+
     if (jobNumberError || !jobNumberData) {
       console.error('Error inserting job number:', jobNumberError);
-      return NextResponse.json(
-        { error: 'Failed to create job number' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create job number' }, { status: 500 });
     }
 
-    // Step 2: Insert into jobs table
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .insert({
@@ -609,13 +576,10 @@ export async function POST(req: NextRequest) {
 
     if (jobError || !jobData) {
       console.error('Error inserting job:', jobError);
-      return NextResponse.json(
-        { error: 'Failed to create job' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create job' }, { status: 500 });
     }
 
-    // Step 7: Insert admin_data
+    // Insert admin_data
     const adminDataEntry = {
       job_id: jobData.id,
       contract_number: requestData.contractNumber,
@@ -647,15 +611,10 @@ export async function POST(req: NextRequest) {
 
     if (adminError || !adminData) {
       console.error('Error inserting admin data:', adminError);
-      return NextResponse.json(
-        { error: 'Failed to create admin data' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create admin data' }, { status: 500 });
     }
 
-    console.log('Created admin data with ID:', adminData.id);
-
-    // Step 8: Insert project metadata
+    // Insert project metadata
     const projectMetadataEntry = {
       job_id: jobData.id,
       contractor_id: parseInt(requestData.customer),
@@ -675,18 +634,12 @@ export async function POST(req: NextRequest) {
 
     if (projectMetadataError || !projectMetadata) {
       console.error('Error inserting project metadata:', projectMetadataError);
-      return NextResponse.json(
-        { error: 'Failed to create project metadata' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create project metadata' }, { status: 500 });
     }
 
-    console.log('Created project metadata with ID:', projectMetadata.id);
-
-    // Return success response
     return NextResponse.json({
       success: true,
-      job_number: jobNumber,
+      job_number: jobNumberStr,
       job_id: jobData.id,
       message: 'Job created successfully'
     }, { status: 201 });

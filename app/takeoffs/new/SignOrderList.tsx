@@ -226,7 +226,6 @@ export function SignOrderList({
       };
       setLocalSign(defaultSign);
       setMode('create');
-      setOpen(false);
     } catch (error) {
       console.error('Error in handleSignAddition:', error);
     }
@@ -314,16 +313,6 @@ export function SignOrderList({
       });
     }
   }, [mptRental.phases, currentPhase, dispatch, getCurrentEquipmentQuantity, updateEquipmentQuantity, updateSecondarySignQuantities]);
-
-  useEffect(() => {
-    if (localSign && localSign.designation !== '') {
-      console.log('Opening SignEditingSheet for sign:', localSign.id);
-      setOpen(true);
-    } else {
-      console.log('Closing SignEditingSheet, no designation');
-      setOpen(false);
-    }
-  }, [localSign]);
 
   useEffect(() => {
     if (!open) {
@@ -542,7 +531,7 @@ export function SignOrderList({
                               </div>
                             ) : sc.key === 'quantity' ? (
                               Object.hasOwn(sign, 'primarySignId') ? (
-                                formatColumnValue(sign, 'quantity')
+                                <div className='text-center w-full'>  {formatColumnValue(sign, 'quantity')}</div>
                               ) : (
                                 <div className="inline-flex items-center">
                                   <button
@@ -714,7 +703,13 @@ export function SignOrderList({
                                 </Tooltip>
                               </TooltipProvider>
                             ) : sc.key === 'bLights' ?
-                              Number((sign as any).bLights) + " " + getBLightColorCode(sign.bLightsColor)
+                              (Number((sign as any).bLights) === 0 ? 0 :
+
+
+                                !sign[sc.key] ? '-' :
+                                  Number((sign as any).bLights) + " " + getBLightColorCode(sign.bLightsColor)
+                              )
+
                               :
                               (
                                 formatColumnValue(sign, sc.key as keyof PrimarySign)

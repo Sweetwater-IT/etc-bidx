@@ -686,6 +686,7 @@ export async function POST(request: NextRequest) {
           metal_stands_quantity: phase.standardEquipment.metalStands?.quantity || 0,
           six_foot_wings_quantity: phase.standardEquipment.sixFootWings?.quantity || 0,
           four_foot_type_iii_quantity: phase.standardEquipment.fourFootTypeIII?.quantity || 0,
+          emergency: phase.emergency ?? false,
           // Custom equipment
           custom_light_and_drum_items: phase.customLightAndDrumItems
         })

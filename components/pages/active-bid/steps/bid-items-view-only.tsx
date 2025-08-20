@@ -715,6 +715,7 @@ const PermanentSignsViewOnly = () => {
         );
     }
 
+
     return (
         <div className="space-y-4">
             {permanentSigns.signItems.map(pmsItem => {
@@ -722,6 +723,15 @@ const PermanentSignsViewOnly = () => {
                 const revenue = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue;
                 const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
                 const grossMargin = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin;
+                const type = determineItemType(pmsItem);
+                console.log(`Item ${pmsItem.id} classified as:`, type);
+                console.log('grossMargin:', grossMargin);
+                console.log('pmsItem:', {
+                    id: pmsItem.id,
+                    type: (pmsItem as any).type,
+                    hasFlexibleCost: 'flexibleDelineatorCost' in pmsItem,
+                    flexibleDelineatorCost: (pmsItem as InstallFlexibleDelineators).flexibleDelineatorCost
+                });
 
                 return (
                     <div
@@ -776,6 +786,8 @@ const PermanentSignsViewOnly = () => {
                                     </div>
                                 </div>
                             )}
+
+                            
 
                             {/* Perm Sign Bolts (if applicable) */}
                             {pmsItem.permSignBolts && (
@@ -862,7 +874,9 @@ const PermanentSignsViewOnly = () => {
                                         Gross Margin
                                     </label>
                                     <div className="pr-3 py-1 text-blue-600 font-medium">
-                                        {(grossMargin * 100).toFixed(2)}%
+                                        {(!grossMargin && grossMargin !== 0) || isNaN(grossMargin) ?
+                                            "N/A" :
+                                            `${(grossMargin * 100).toFixed(2)}%`}
                                     </div>
                                 </div>
 

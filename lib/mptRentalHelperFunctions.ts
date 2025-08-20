@@ -120,11 +120,11 @@ export function returnPhaseTotals(mptRental: MPTRentalEstimating): PhaseTotals {
 
   let totalPersonnel = 0;
   let totalDays = 0;
-  let totalTrips = Math.ceil((allEquipmentTotals.fourFootTypeIII.totalQuantity 
-     + allEquipmentTotals.sixFootWings.totalQuantity
+  let totalTrips = Math.ceil((allEquipmentTotals.fourFootTypeIII.totalQuantity
+    + allEquipmentTotals.sixFootWings.totalQuantity
     // allEquipmentTotals.post.totalQuantity +
     // allEquipmentTotals.hStand.totalQuantity
-    ) / 30);
+  ) / 30);
   let totalTrucks = 0;
   let totalAdditionalRatedHours = 0;
   let totalAdditionalNonRatedHours = 0
@@ -206,42 +206,41 @@ interface AssociatedSignTotals {
   ACLights: number
 }
 
+
+
 export function getAssociatedSignEquipment(phase: Phase): AssociatedSignTotals {
-  const structureCounts = phase.signs
-    .filter(sign => sign.width > 0 && sign.height > 0 && sign.quantity > 0)
-    .reduce((acc, sign) => {
-      if ('associatedStructure' in sign) {
-        // Add covers and lights (these are still simple multiplications)
-        acc.covers += (sign.cover ? sign.quantity : 0);
-        // acc.ACLights += (sign.aLights * sign.quantity);
-        acc.BLights += (sign.bLights * sign.quantity);
+  return phase.signs.reduce((acc, sign) => {
+    if ('associatedStructure' in sign) {
+      acc.BLights += (sign.bLights * sign.quantity);
 
-        // Map base equipment types to the totals object
-        switch (sign.associatedStructure) {
-          case 'fourFootTypeIII':
-            acc.fourFootTypeIII += sign.quantity;
-            break;
-          case 'hStand':
-            acc.hStand += sign.quantity;
-            break;
-          case 'post':
-            acc.post += sign.quantity;
-            break;
-          case 'none':
-            // Don't add anything for loose signs
-            break;
-          default:
-            // Handle any unexpected equipment types
-            console.warn(`Unknown base equipment type: ${sign.associatedStructure} for structure: ${sign.associatedStructure}`);
-            break;
-        }
+
+      acc.covers += (sign.cover ? sign.quantity : 0);
+
+
+      switch (sign.associatedStructure) {
+        case 'fourFootTypeIII':
+          acc.fourFootTypeIII += sign.quantity;
+          break;
+        case 'hStand':
+          acc.hStand += sign.quantity;
+          break;
+        case 'post':
+          acc.post += sign.quantity;
+          break;
+        case 'none':
+          break;
+        default:
+          console.warn(`Tipo de equipo base desconocido: ${sign.associatedStructure}`);
+          break;
       }
-      return acc;
-    }, { fourFootTypeIII: 0, hStand: 0, post: 0, covers: 0, BLights: 0, ACLights: 0 });
+    }
 
-  // Return the object with EquipmentType-compatible property names
-  return structureCounts;
+
+    return acc;
+  }, { fourFootTypeIII: 0, hStand: 0, post: 0, covers: 0, BLights: 0, ACLights: 0 });
 }
+
+
 
 // Function to calculate total sign cost summary
 export function calculateTotalSignCostSummary(equipmentRental: MPTRentalEstimating): Record<SheetingType, MPTEquipmentCost> {
@@ -869,7 +868,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
-  // Helper function to ensure values are valid numbers
+  // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {
     const num = Number(value);
     return isNaN(num) ? 0 : num;
@@ -979,9 +978,9 @@ export const getPermSignTrips = (
   let totalTrips = 0;
   let remainingHours = 0;
   const updatedItems: PMSItemNumbers[] = [];
-  
+
   const regularItems = signItems.filter(item => !item.separateMobilization);
-  
+
   const separateMobilizationItems = signItems.filter(item => item.separateMobilization);
 
   for (const item of regularItems) {
@@ -1059,7 +1058,7 @@ export const getPermSignMaterialCost = (itemType: PMSItemKeys, permanentSigns: P
       (typeBItem.jennyBrackets * jennyBracketsPrice) +
       (typeBItem.stiffenerInches * stiffenerPrice) +
       (typeBItem.fygReflectiveStrips * fygReflectiveStripsPrice);
-      return itemType === 'pmsTypeF' ? totalCost : totalCost + postCost
+    return itemType === 'pmsTypeF' ? totalCost : totalCost + postCost
   }
   //=+(F211*$T$19)+(J211*$T$8)+(F214*$T$9)+(F217*$T$13)+(J217*$T$14)+(J214*$T$15)+(N214*$T$17)
   else if (itemType === 'pmsTypeC') {
@@ -1143,7 +1142,7 @@ export const getPermanentSignRevenueAndMargin = (permanentSigns: PermanentSigns,
     const laborCostWithMarkup = getPermSignLaborCost(pmsItem, adminData) * 2;
     const materialCostWithMarkup = getPermSignMaterialCost(itemType, permanentSigns, pmsItem) * (1 + (permanentSigns.itemMarkup / 100));
     const fuelCost = getPermSignFuelCost(pmsItem, adminData, mptRental);
-    if(itemType === 'pmsTypeB' || itemType === 'pmsTypeC' || itemType === 'pmsTypeF'){
+    if (itemType === 'pmsTypeB' || itemType === 'pmsTypeC' || itemType === 'pmsTypeF') {
       const signPrice = safeNumber(permanentSigns.equipmentData.find(equip => equip.name === 'permSignPriceSqFt')?.cost) * (pmsItem as PostMountedInstall).signSqFootage;
       revenue = laborCostWithMarkup + signPrice + materialCostWithMarkup + fuelCost
     } else {
@@ -1163,8 +1162,8 @@ export const getPermanentSignsCostSummary = (permanentSigns: PermanentSigns, adm
   totalCost: number,
   grossMargin: number
 } => {
-  const totalRevenue = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermanentSignRevenueAndMargin(permanentSigns, signItem, adminData, mptRental).revenue , 0)
-  const totalCost = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermSignTotalCost(determineItemType(signItem), permanentSigns, signItem, adminData, mptRental) , 0)
+  const totalRevenue = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermanentSignRevenueAndMargin(permanentSigns, signItem, adminData, mptRental).revenue, 0)
+  const totalCost = permanentSigns.signItems.reduce((acc, signItem) => acc += getPermSignTotalCost(determineItemType(signItem), permanentSigns, signItem, adminData, mptRental), 0)
 
   return {
     totalRevenue,

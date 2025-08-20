@@ -31,7 +31,6 @@ interface QuoteNotesProps {
 
 function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString('en-US', {
-    timeZone: 'America/New_York',
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -93,7 +92,7 @@ export function QuoteNotes({
     setNewNote('')
     setEditIndex(null)
   }
-
+  
   const handleSaveNote = () => {
     if (newNote.trim() === '') return
     const noteObj = { text: newNote.trim(), timestamp: new Date().getTime() }
