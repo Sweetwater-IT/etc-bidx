@@ -876,8 +876,13 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
 
   // Sanitize inputs
   const personnel = toNumber(flagging?.personnel);
-  const onSiteJobHours = toNumber(flagging?.onSiteJobHours);
-  const rtTravelTimeHours = Math.ceil((toNumber(adminData.owTravelTimeMins) * 2) / 60);
+  const onSiteJobHours = toNumber(flagging?.onSiteJobHours) / 60; // Convert minutes to hours
+  // Calculate total travel time in minutes, fall back to owTravelTimeMins
+  const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
+    ? toNumber(adminData.owTravelTimeHours) * 60 + toNumber(adminData.owTravelTimeMinutes)
+    : toNumber(adminData.owTravelTimeMins);
+  const owTravelTimeHours = totalTravelTimeMins / 60; // Convert to hours for rtTravelTimeHoursCost
+  const rtTravelTimeHours = owTravelTimeHours * 2; // Round-trip in hours
   const laborRate = isServiceWork ? toNumber(adminData?.county.laborRate) : toNumber(adminData?.county.flaggingBaseRate);
   const fringeRate = isServiceWork ? toNumber(adminData?.county.fringeRate) : toNumber(adminData?.county.flaggingFringeRate);
   const flaggingRate = isServiceWork ? toNumber(adminData.county.shopRate) : toNumber(adminData.county.flaggingRate);
@@ -889,50 +894,44 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const fuelEconomyMPG = toNumber(flagging?.fuelEconomyMPG);
   const truckDispatchFee = toNumber(flagging?.truckDispatchFee);
   const additionalEquipmentCost = toNumber(flagging?.additionalEquipmentCost);
-  const arrowBoardsCost = flagging?.arrowBoards?.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
-  const messageBoardsCost = toNumber(
-    flagging?.messageBoards?.includeInLumpSum
-      ? safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost
-      : 0
-  )  
+  const arrowBoardsCost = flagging.arrowBoards.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
+  const messageBoardsCost = flagging.messageBoards.includeInLumpSum ? toNumber(safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost) : 0;
   const tmaCost = flagging.TMA.includeInLumpSum ? toNumber(safeNumber(flagging.TMA.quantity) * flagging.TMA.cost) : 0;
 
   // Calculate costs
   const payRateToUse = adminData.rated === 'RATED' ? laborRate + fringeRate : flaggingRate;
 
-  //this is correct up to v7 of flagging
-  const onSiteJobHoursNoOvertime = onSiteJobHours > 8 ? 8 : onSiteJobHours
+  // On-site hours cost (use converted onSiteJobHours)
+  const totalOnSiteHours = onSiteJobHours; // Already in hours
+  const onSiteJobHoursNoOvertime = totalOnSiteHours > 8 ? 8 : totalOnSiteHours;
   const onSiteJobHoursNoOvertimeCost = onSiteJobHoursNoOvertime * personnel * payRateToUse;
-
-  //new calcs
   const timeAndAHalfRate = payRateToUse * 1.5;
-  const onSiteJobHoursOvertime = onSiteJobHours > 8 ? onSiteJobHours - onSiteJobHoursNoOvertime : 0
-  const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel
+  const onSiteJobHoursOvertime = totalOnSiteHours > 8 ? totalOnSiteHours - onSiteJobHoursNoOvertime : 0;
+  const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel;
+  const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost;
 
-  //new travel time calcs
-  const travelPayRate = ((onSiteJobHours > 8) || (onSiteJobHours + rtTravelTimeHours > 8)) ? flaggingRate * 1.5 : flaggingRate;
-  const travelTimeCost = travelPayRate * rtTravelTimeHours * personnel
+  // Round-trip travel time cost
+  const travelPayRate = totalOnSiteHours > 8 ? flaggingRate * 1.5 : flaggingRate;
+  const rtTravelTimeHoursCost = rtTravelTimeHours * travelPayRate * personnel;
 
-  // get the total labor cost
-  const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost
-  // get the total travel time cost
-  const rtTravelTimeHoursCost = onSiteJobHours + rtTravelTimeHours <= 8 ? (rtTravelTimeHours * flaggingRate * personnel) : travelTimeCost
-
+  // Total labor cost
   const totalHoursCost = onSiteJobHoursCost + rtTravelTimeHoursCost;
   const totalLaborCost = totalHoursCost + ((totalHoursCost / 1000) * (generalLiability === 0 ? 113.55 : generalLiability)) + ((totalHoursCost / 100) * (workerComp === 0 ? 4.96 : workerComp));
 
-  // Fix fuel cost calculation
-  const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 18.75 : truckDispatchFee) : 0
+  // Fuel cost calculation
+  const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 18.75 : truckDispatchFee) : 0;
 
+  // Total flagging cost
   const totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
 
-  // Prevent division by zero for cost per hour
+  // Total hours (on-site + round-trip travel)
   const totalHours = onSiteJobHours + rtTravelTimeHours;
   const totalCostPerHour = totalHours > 0 && personnel > 0 ? totalFlaggingCost / (totalHours * personnel) : 0;
 
-  const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost
-  const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
-  const totalRevenue = totalRevenueNoEquip + totalEquipCost
+  // Equipment and revenue
+  const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost;
+  const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100));
+  const totalRevenue = totalRevenueNoEquip + totalEquipCost;
 
   return {
     onSiteJobHoursCost,
@@ -945,7 +944,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
     totalCostPerHour,
     totalRevenue,
     totalHours,
-    totalEquipCost
+    totalEquipCost,
   };
 }
 

@@ -215,7 +215,7 @@ async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], er
   const lettingDate = findFieldValue(job, ['Let Date', 'Letting Date', 'Letting']);
   const entryDate = findFieldValue(job, ['Entry Date', 'Date Added', 'Created Date']);
   const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);
-  const owner = findFieldValue(job, ['Owner', 'Client', 'Agency']);
+  const owner = 'PENNDOT';
   const platform = 'ECMS';
   const requestor = findFieldValue(job, ['Requestor', 'Estimator', 'Contact']);
   const mpt = findFieldValue(job, ['MPT', 'Maintenance and Protection of Traffic']);

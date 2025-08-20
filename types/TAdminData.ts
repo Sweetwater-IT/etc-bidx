@@ -16,7 +16,9 @@ export type AdminData = {
     endDate: Date | null,
     winterStart?: Date | undefined,
     winterEnd?: Date | undefined,
-    owTravelTimeMins?: number;
+    owTravelTimeHours?: number
+    owTravelTimeMinutes?: number
+    owTravelTimeMins?: number // For backward compatibility
     owMileage?: number;
     fuelCostPerGallon?: number;
     emergencyJob: boolean;
