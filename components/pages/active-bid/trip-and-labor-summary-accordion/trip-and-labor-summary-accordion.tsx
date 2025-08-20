@@ -41,7 +41,8 @@ const TripAndLaborSummaryAccordion = ({ currentPhase }: TripAndLaborSummaryAccor
     if (key === 'nonRatedHours'){
       return getNonRatedHoursPerPhase(adminData, mptRental.phases[currentPhase])
     }
-    return mptRental.phases[currentPhase][key] || 0;
+    const value = mptRental.phases[currentPhase][key];
+    return typeof value === 'number' ? value : 0; // Ensure number return type
   };
 
   const formatCurrency = (value: number | undefined): string => {
