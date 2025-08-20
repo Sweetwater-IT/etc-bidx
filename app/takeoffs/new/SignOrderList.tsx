@@ -754,7 +754,8 @@ export function SignOrderList({
           </div>
           <div className="mt-6 flex justify-end space-y-1 text-sm">
             <div className="text-right">
-              <div>Total Signs: {mptRental.phases[currentPhase].signs.length}</div>
+              <div>Unique Signs: {mptRental.phases[currentPhase].signs.length}</div>
+              <div>Total Signs: {mptRental.phases[currentPhase].signs.reduce((sum, sign) => sum + safeNumber(sign.quantity), 0)}</div>
               <div className="font-medium">
                 Total Square Footage: {squareFootageTotal.toFixed(2)}
               </div>
