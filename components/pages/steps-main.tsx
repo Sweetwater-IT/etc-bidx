@@ -140,6 +140,7 @@ const StepsMain = () => {
         if (!res.ok) return;
 
         const data = await res.json();
+                
         const notesFromBid = data?.data?.bid_notes || [];
         
         const formattedNotes = notesFromBid.map((note: any) => ({

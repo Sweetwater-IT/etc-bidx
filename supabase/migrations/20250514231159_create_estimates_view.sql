@@ -19,6 +19,7 @@ WITH phase_aggregations AS (
         'additionalRatedHours', additional_rated_hours,
         'additionalNonRatedHours', additional_non_rated_hours,
         'maintenanceTrips', maintenance_trips,
+        'emergency', emergency,
         'standardEquipment', json_build_object(
           'fourFootTypeIII', json_build_object('quantity', four_foot_type_iii_quantity),
           'hStand', json_build_object('quantity', h_stand_quantity),
