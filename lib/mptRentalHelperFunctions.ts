@@ -715,8 +715,25 @@ function calculateStandardLightEquipmentCosts(
 
       let dailyRate: number;
       if (phase.emergency) {
-        const emergencyKey = `emergency${emergencyFieldKeyMap[equipmentType] || equipmentType}`;
-        dailyRate = safeNumber(adminData.emergencyFields?.[emergencyKey]) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+        switch (equipmentType) {
+          case 'BLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyBLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'ACLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyACLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'HIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyHIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'TypeXIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyTypeXIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'sharps':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencySharps) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          default:
+            dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+        }
       } else {
         dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
       }
