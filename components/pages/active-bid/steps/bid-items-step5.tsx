@@ -1487,18 +1487,23 @@ const BidItemsStep5 = ({
                                             {modeEdit[index]?.lightAndDrum ? (
                                               <Input
                                                 id={`emergency-${equipmentKey}-${index}`}
-                                                type='number'
-                                                step='0.01'
-                                                min={calculateLightDailyRateCosts(mptRental, mptRental.staticEquipmentInfo[equipmentKey]?.price || getDefaultPrice(equipmentKey)).toFixed(2)}
+                                                type='text'
+                                                inputMode='decimal'
+                                                pattern='^\\d*(\\.\\d{0,2})?$'
                                                 className='w-full'
-                                                value={(parseInt(getDigitsForEquipment(equipmentKey), 10) / 100).toFixed(2)}
+                                                value={`$ ${formatDecimal(getDigitsForEquipment(equipmentKey))}`}
                                                 onChange={e => {
-                                                  const value = parseFloat(e.target.value) || 0;
+                                                  const ev = e.nativeEvent as InputEvent;
+                                                  const { inputType } = ev;
+                                                  const data = (ev.data || "").replace(/\$/g, "");
+                                                  const currentDigits = getDigitsForEquipment(equipmentKey);
+                                                  const nextDigits = handleNextDigits(currentDigits, inputType, data);
+                                                  const newValue = parseInt(nextDigits, 10) / 100;
                                                   const minValue = calculateLightDailyRateCosts(mptRental, mptRental.staticEquipmentInfo[equipmentKey]?.price || getDefaultPrice(equipmentKey));
-                                                  const newValue = Math.max(value, minValue);
-                                                  const nextDigits = Math.round(newValue * 100).toString().padStart(3, "0");
-                                                  updateDigitsForEquipment(equipmentKey, nextDigits);
-                                                  const formatted = newValue.toFixed(2);
+                                                  const finalValue = Math.max(newValue, minValue);
+                                                  const finalDigits = Math.round(finalValue * 100).toString().padStart(3, "0");
+                                                  updateDigitsForEquipment(equipmentKey, finalDigits);
+                                                  const formatted = finalValue.toFixed(2);
                                                   const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
                                                   const fieldKey = `emergency${emergencyKey}`;
                                                   handleRateChange(formatted, fieldKey, equipmentKey);
@@ -1507,12 +1512,23 @@ const BidItemsStep5 = ({
                                                   if (["e", "E", "+", "-"].includes(e.key)) {
                                                     e.preventDefault();
                                                   }
-                                                  if (e.key === "ArrowDown") {
-                                                    const currentValue = parseFloat((parseInt(getDigitsForEquipment(equipmentKey), 10) / 100).toFixed(2)) || 0;
+                                                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                                                    e.preventDefault();
+                                                    const currentDigits = getDigitsForEquipment(equipmentKey);
+                                                    const currentValue = parseInt(currentDigits, 10) / 100;
                                                     const minValue = calculateLightDailyRateCosts(mptRental, mptRental.staticEquipmentInfo[equipmentKey]?.price || getDefaultPrice(equipmentKey));
-                                                    if (currentValue - 0.01 < minValue) {
-                                                      e.preventDefault();
+                                                    let newValue = currentValue;
+                                                    if (e.key === "ArrowUp") {
+                                                      newValue = currentValue + 0.01;
+                                                    } else if (e.key === "ArrowDown" && currentValue - 0.01 >= minValue) {
+                                                      newValue = currentValue - 0.01;
                                                     }
+                                                    const newDigits = Math.round(newValue * 100).toString().padStart(3, "0");
+                                                    updateDigitsForEquipment(equipmentKey, newDigits);
+                                                    const formatted = newValue.toFixed(2);
+                                                    const emergencyKey = emergencyFieldKeyMap[equipmentKey] || equipmentKey;
+                                                    const fieldKey = `emergency${emergencyKey}`;
+                                                    handleRateChange(formatted, fieldKey, equipmentKey);
                                                   }
                                                 }}
                                               />
