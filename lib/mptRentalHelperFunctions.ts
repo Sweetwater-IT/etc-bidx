@@ -703,56 +703,49 @@ function calculateStandardLightEquipmentCosts(
   let totalRevenue = 0;
   let totalDepreciationCost = 0;
 
-  //destructure the type (first record) and totals (days and quantity) of each entry in the passed lightEquipment Record
-  for (const [equipmentType, totals] of Object.entries(lightEquipmentTotals)) {
+  equipmentRental.phases.forEach(phase => {
+    LIGHT_EQUIPMENT_TYPES.forEach(equipmentType => {
+      const quantity = phase.standardEquipment[equipmentType]?.quantity || 0;
+      const days = phase.days || 0;
+      const staticInfo = equipmentRental.staticEquipmentInfo[equipmentType];
+      if (!staticInfo || quantity === 0 || days === 0) return;
 
-    //grab the price from the equipmentRental object static equipment info
-    const staticInfo = equipmentRental.staticEquipmentInfo[equipmentType as LightEquipmentType];
-    if (!staticInfo) continue;
+      const itemCost = quantity * staticInfo.price;
+      totalCost += itemCost;
 
-    //get the item's cost
-    const itemCost = totals.totalQuantity * staticInfo.price;
-    totalCost += itemCost;
-
-    // Calculate daily rate based on whether it's an emergency job or not
-    let dailyRate: number;
-    if (adminData.emergencyJob) {
-      // Use emergency rates for standard items
-      switch (equipmentType) {
-        case 'BLights':
-          dailyRate = adminData.emergencyFields.emergencyBLites ?? 0;
-          break;
-        case 'ACLights':
-          dailyRate = adminData.emergencyFields.emergencyACLites ?? 0;
-          break;
-        case 'HIVP':
-          dailyRate = adminData.emergencyFields.emergencyHIVerticalPanels ?? 0;
-          break;
-        case 'TypeXIVP':
-          dailyRate = adminData.emergencyFields.emergencyTypeXIVerticalPanels ?? 0;
-          break;
-        case 'sharps':
-          dailyRate = adminData.emergencyFields.emergencySharps ?? 0;
-          break;
-        default:
-          dailyRate = 0;
+      let dailyRate: number;
+      if (phase.emergency) {
+        switch (equipmentType) {
+          case 'BLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyBLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'ACLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyACLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'HIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyHIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'TypeXIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyTypeXIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'sharps':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencySharps) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          default:
+            dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+        }
+      } else {
+        dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
       }
-    } else {
-      // Calculate daily rate using the formula:
-      // daily rate = (unit cost * target MOIC) / days to recover
-      // where days to recover = payback period * annual utilization * 365
-      dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price)
-    }
 
-    // Calculate revenue using daily rate
-    const itemRevenue = totals.totalQuantity * totals.totalDaysRequired * dailyRate;
-    totalRevenue += itemRevenue;
+      const itemRevenue = quantity * days * dailyRate;
+      totalRevenue += itemRevenue;
 
-    // Calculate depreciation
-    const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
-    const itemDepreciationCost = dailyDepreciation * totals.totalDaysRequired * totals.totalQuantity;
-    totalDepreciationCost += itemDepreciationCost;
-  }
+      const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
+      const itemDepreciationCost = dailyDepreciation * days * quantity;
+      totalDepreciationCost += itemDepreciationCost;
+    });
+  });
 
   const grossProfit = totalRevenue - totalDepreciationCost;
   const grossMargin = totalRevenue !== 0 ? (grossProfit / totalRevenue) * 100 : 0;
@@ -848,9 +841,12 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   if (!phase.personnel || phase.personnel === 0) {
     return 0;
   }
-  const totalTrips = getTotalTripsPerPhase(phase)
-  const nonRatedHours = (((adminData.owTravelTimeMins ?? 0) * 2) / 60) * totalTrips * phase.personnel
-  return nonRatedHours
+  const totalTrips = getTotalTripsPerPhase(phase);
+  const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
+    ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
+    : safeNumber(adminData.owTravelTimeMins);
+  const nonRatedHours = ((totalTravelTimeMins * 2) / 60) * totalTrips * phase.personnel;
+  return nonRatedHours;
 }
 export function getTotalTripsPerPhase(phase: Phase): number {
   // Check if phase or standardEquipment is undefined
@@ -876,8 +872,13 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
 
   // Sanitize inputs
   const personnel = toNumber(flagging?.personnel);
-  const onSiteJobHours = toNumber(flagging?.onSiteJobHours);
-  const rtTravelTimeHours = Math.ceil((toNumber(adminData.owTravelTimeMins) * 2) / 60);
+  const onSiteJobHours = toNumber(flagging?.onSiteJobHours) / 60; // Convert minutes to hours
+  // Calculate total travel time in minutes, fall back to owTravelTimeMins
+  const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
+    ? toNumber(adminData.owTravelTimeHours) * 60 + toNumber(adminData.owTravelTimeMinutes)
+    : toNumber(adminData.owTravelTimeMins);
+  const owTravelTimeHours = totalTravelTimeMins / 60; // Convert to hours for rtTravelTimeHoursCost
+  const rtTravelTimeHours = owTravelTimeHours * 2; // Round-trip in hours
   const laborRate = isServiceWork ? toNumber(adminData?.county.laborRate) : toNumber(adminData?.county.flaggingBaseRate);
   const fringeRate = isServiceWork ? toNumber(adminData?.county.fringeRate) : toNumber(adminData?.county.flaggingFringeRate);
   const flaggingRate = isServiceWork ? toNumber(adminData.county.shopRate) : toNumber(adminData.county.flaggingRate);
@@ -889,50 +890,44 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const fuelEconomyMPG = toNumber(flagging?.fuelEconomyMPG);
   const truckDispatchFee = toNumber(flagging?.truckDispatchFee);
   const additionalEquipmentCost = toNumber(flagging?.additionalEquipmentCost);
-  const arrowBoardsCost = flagging?.arrowBoards?.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
-  const messageBoardsCost = toNumber(
-    flagging?.messageBoards?.includeInLumpSum
-      ? safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost
-      : 0
-  )  
+  const arrowBoardsCost = flagging.arrowBoards.includeInLumpSum ? toNumber(safeNumber(flagging.arrowBoards.quantity) * flagging.arrowBoards.cost) : 0;
+  const messageBoardsCost = flagging.messageBoards.includeInLumpSum ? toNumber(safeNumber(flagging.messageBoards.quantity) * flagging.messageBoards.cost) : 0;
   const tmaCost = flagging.TMA.includeInLumpSum ? toNumber(safeNumber(flagging.TMA.quantity) * flagging.TMA.cost) : 0;
 
   // Calculate costs
   const payRateToUse = adminData.rated === 'RATED' ? laborRate + fringeRate : flaggingRate;
 
-  //this is correct up to v7 of flagging
-  const onSiteJobHoursNoOvertime = onSiteJobHours > 8 ? 8 : onSiteJobHours
+  // On-site hours cost (use converted onSiteJobHours)
+  const totalOnSiteHours = onSiteJobHours; // Already in hours
+  const onSiteJobHoursNoOvertime = totalOnSiteHours > 8 ? 8 : totalOnSiteHours;
   const onSiteJobHoursNoOvertimeCost = onSiteJobHoursNoOvertime * personnel * payRateToUse;
-
-  //new calcs
   const timeAndAHalfRate = payRateToUse * 1.5;
-  const onSiteJobHoursOvertime = onSiteJobHours > 8 ? onSiteJobHours - onSiteJobHoursNoOvertime : 0
-  const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel
+  const onSiteJobHoursOvertime = totalOnSiteHours > 8 ? totalOnSiteHours - onSiteJobHoursNoOvertime : 0;
+  const onSiteJobHoursOvertimeCost = timeAndAHalfRate * onSiteJobHoursOvertime * personnel;
+  const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost;
 
-  //new travel time calcs
-  const travelPayRate = ((onSiteJobHours > 8) || (onSiteJobHours + rtTravelTimeHours > 8)) ? flaggingRate * 1.5 : flaggingRate;
-  const travelTimeCost = travelPayRate * rtTravelTimeHours * personnel
+  // Round-trip travel time cost
+  const travelPayRate = totalOnSiteHours > 8 ? flaggingRate * 1.5 : flaggingRate;
+  const rtTravelTimeHoursCost = rtTravelTimeHours * travelPayRate * personnel;
 
-  // get the total labor cost
-  const onSiteJobHoursCost = onSiteJobHoursNoOvertimeCost + onSiteJobHoursOvertimeCost
-  // get the total travel time cost
-  const rtTravelTimeHoursCost = onSiteJobHours + rtTravelTimeHours <= 8 ? (rtTravelTimeHours * flaggingRate * personnel) : travelTimeCost
-
+  // Total labor cost
   const totalHoursCost = onSiteJobHoursCost + rtTravelTimeHoursCost;
   const totalLaborCost = totalHoursCost + ((totalHoursCost / 1000) * (generalLiability === 0 ? 113.55 : generalLiability)) + ((totalHoursCost / 100) * (workerComp === 0 ? 4.96 : workerComp));
 
-  // Fix fuel cost calculation
-  const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 18.75 : truckDispatchFee) : 0
+  // Fuel cost calculation
+  const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 18.75 : truckDispatchFee) : 0;
 
+  // Total flagging cost
   const totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
 
-  // Prevent division by zero for cost per hour
+  // Total hours (on-site + round-trip travel)
   const totalHours = onSiteJobHours + rtTravelTimeHours;
   const totalCostPerHour = totalHours > 0 && personnel > 0 ? totalFlaggingCost / (totalHours * personnel) : 0;
 
-  const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost
-  const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100))
-  const totalRevenue = totalRevenueNoEquip + totalEquipCost
+  // Equipment and revenue
+  const totalEquipCost = arrowBoardsCost + messageBoardsCost + tmaCost;
+  const totalRevenueNoEquip = flagging.standardPricing ? flagging.standardLumpSum : totalFlaggingCost / (1 - (flagging.markupRate / 100));
+  const totalRevenue = totalRevenueNoEquip + totalEquipCost;
 
   return {
     onSiteJobHoursCost,
@@ -945,7 +940,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
     totalCostPerHour,
     totalRevenue,
     totalHours,
-    totalEquipCost
+    totalEquipCost,
   };
 }
 

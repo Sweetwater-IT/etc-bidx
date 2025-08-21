@@ -26,9 +26,11 @@ export const defaultPhaseObject : Phase = {
         ACLights: { quantity: 0, emergencyRate: 0 },
         sharps: { quantity: 0, emergencyRate: 0 }
     },
+  
     customLightAndDrumItems: [],
     signs: [],
 }
+
 
 export const defaultMPTObject: MPTRentalEstimating = {
     mpgPerTruck: 8,
