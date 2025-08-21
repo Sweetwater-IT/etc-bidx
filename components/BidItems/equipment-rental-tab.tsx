@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Edit } from 'lucide-react';
 import { useEstimate } from '@/contexts/EstimateContext';
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import {
@@ -27,6 +27,8 @@ import {
 import { fetchReferenceData } from '@/lib/api-client';
 import { isEquipmentType } from '@/lib/is-rental-equipment';
 import EmptyContainer from './empty-container';
+import { DataTable } from '@/components/data-table';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 
 interface StaticPriceData {
   usefulLife: number;
@@ -41,13 +43,16 @@ type EquipmentType =
 
 const EquipmentSummaryStep = () => {
   const { equipmentRental, dispatch } = useEstimate();
-  const [selectedType, setSelectedType] = useState<EquipmentType | 'custom' | undefined>(undefined); // Changed to undefined
+  const [selectedType, setSelectedType] = useState<EquipmentType | 'custom' | undefined>(undefined);
   const [customName, setCustomName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<EquipmentRentalItem | null>(null);
   const [defaultPrices, setDefaultPrices] =
     useState<Record<EquipmentType, StaticPriceData>>();
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ item: any, index: number } | null>(null);
 
   useEffect(() => {
     const setItemPrices = async () => {
@@ -56,6 +61,7 @@ const EquipmentSummaryStep = () => {
       const mBoardData = itemData.find(item => item.name === 'M.BOARD');
       const aBoardData = itemData.find(item => item.name === 'A.BOARD');
       const sTrailerData = itemData.find(item => item.name === 'S.TRAILER');
+
 
       if (tmaData && mBoardData && aBoardData && sTrailerData) {
         setDefaultPrices({
@@ -82,8 +88,7 @@ const EquipmentSummaryStep = () => {
   }, []);
 
   const handleAddEquipment = () => {
-    // Reset form state for new item
-    setSelectedType(undefined); // Changed to undefined
+    setSelectedType(undefined);
     setCustomName('');
     setFormData({
       name: '',
@@ -223,7 +228,7 @@ const EquipmentSummaryStep = () => {
     setDrawerOpen(false);
     setFormData(null);
     setEditingIndex(null);
-    setSelectedType(undefined); // Changed to undefined
+    setSelectedType(undefined);
     setCustomName('');
   };
 
@@ -231,8 +236,25 @@ const EquipmentSummaryStep = () => {
     setDrawerOpen(false);
     setFormData(null);
     setEditingIndex(null);
-    setSelectedType(undefined); // Changed to undefined
+    setSelectedType(undefined);
     setCustomName('');
+  };
+
+  const handleDeleteClick = (item: any) => {
+    const index = equipmentRental.findIndex(equip => equip.name === item.name);
+    if (index !== -1) {
+      setItemToDelete({ item, index });
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (itemToDelete) {
+      handleEquipmentDelete(itemToDelete.index); 
+
+    }
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
   };
 
   const handleEquipmentDelete = (index: number) => {
@@ -241,6 +263,48 @@ const EquipmentSummaryStep = () => {
       payload: { index },
     });
   };
+
+
+  const EQUIPMENT_COLUMNS = [
+    {
+      key: 'name',
+      title: 'Equipment',
+      className: 'text-left'
+    },
+    {
+      key: 'quantity',
+      title: 'Quantity',
+      className: 'text-left'
+    },
+    {
+      key: 'months',
+      title: 'Months',
+      className: 'text-left'
+    },
+    {
+      key: 'rentPrice',
+      title: 'Rent Price',
+      className: 'text-left'
+    },
+    {
+      key: 'reRentPrice',
+      title: 'Re-rent Price',
+      className: 'text-left'
+    }
+  ];
+
+  // Formatear los datos para la tabla
+  const formatCurrency = (value: number | null | undefined): string => {
+    if (!value) return "-";
+    return `$${value.toFixed(2)}`;
+  };
+
+  const formattedData = equipmentRental.map(item => ({
+    ...item,
+    rentPrice: formatCurrency(item.rentPrice),
+    reRentPrice: formatCurrency(item.reRentPrice)
+  }));
+
 
   return (
     <div>
@@ -253,45 +317,37 @@ const EquipmentSummaryStep = () => {
       </div>
 
       <div className='relative'>
-        {equipmentRental.length === 0 && (
+        {equipmentRental.length === 0 ? (
           <EmptyContainer
             topText='No rental items added yet'
             subtext='When you add rental items, they will appear here.'
           />
+        ) : (
+          <DataTable
+            data={formattedData}
+            columns={EQUIPMENT_COLUMNS}
+            onDelete={handleDeleteClick}
+            hideDropdown={true}
+            onEdit={(item) => {
+              const index = equipmentRental.findIndex(equip => equip.name === item.name);
+              if (index !== -1) handleEditEquipment(index);
+            }}
+          />
+
+
         )}
-        {equipmentRental.map((item, index) => (
-          <div
-            key={`equipment-${index}`}
-            className='rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4'
-          >
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-4'>
-                <div className='font-medium'>{item.name}</div>
-                <div className='text-sm text-muted-foreground'>
-                  Qty: {item.quantity} • Months: {item.months} • Rent: $
-                  {item.rentPrice}
-                </div>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => handleEditEquipment(index)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => handleEquipmentDelete(index)}
-                >
-                  <Trash2 className='h-4 w-4' />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
+
       </div>
+      <ConfirmDeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        itemCount={1}
+        itemType="equipment" 
+      />
 
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
         <DrawerContent>
@@ -318,7 +374,7 @@ const EquipmentSummaryStep = () => {
                   disabled={editingIndex !== null && isEquipmentType(formData.name)}
                 >
                   <SelectTrigger className='w-full'>
-                    <SelectValue placeholder='Choose equipment rental item' /> {/* Changed placeholder */}
+                    <SelectValue placeholder='Choose equipment rental item' />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value='Truck Mounted Attenuator'>
