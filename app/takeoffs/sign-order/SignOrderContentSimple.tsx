@@ -31,6 +31,7 @@ import { formatDate } from '@/lib/formatUTCDate'
 import FileViewingContainer from '@/components/file-viewing-container'
 import { FileMetadata } from '@/types/FileTypes'
 import { useAuth } from '@/contexts/auth-context'
+import { AuthAdminApi } from '@supabase/supabase-js'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -47,13 +48,14 @@ export interface SignOrderAdminInformation {
   orderNumber?: string
   startDate?: Date
   endDate?: Date
+  contact?: any | null
 }
 
 interface Props {
   signOrderId?: number
 }
 
-export default function SignOrderContentSimple ({
+export default function SignOrderContentSimple({
   signOrderId: initialSignOrderId
 }: Props) {
   const { dispatch, mptRental } = useEstimate()
@@ -70,14 +72,13 @@ export default function SignOrderContentSimple ({
     jobNumber: '',
     isSubmitting: false,
     contractNumber: '',
-    orderNumber: undefined
+    orderNumber: undefined,
+    contact: null
   })
 
   const { startLoading, stopLoading } = useLoading()
-  const {user} = useAuth()
+  const { user } = useAuth()
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
-  const [localNotes, setLocalNotes] = useState<string>()
-  const [savedNotes, setSavedNotes] = useState<string>()
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
   const [signOrderId, setSignOrderId] = useState<number | null>(
     initialSignOrderId ?? null
@@ -327,7 +328,8 @@ export default function SignOrderContentSimple ({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status: 'DRAFT' as const,
-        order_number: adminInfo.orderNumber
+        order_number: adminInfo.orderNumber,
+        contact: adminInfo.contact
       }
 
       const result = await saveSignOrder(signOrderData)
@@ -354,19 +356,16 @@ export default function SignOrderContentSimple ({
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `${
-        alreadySubmitted ? 'Sign order updates' : 'Draft'
-      } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
+        } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `${
-        alreadySubmitted ? 'Sign order updates' : 'Draft'
-      } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
+        } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `${
-        alreadySubmitted ? 'Sign order ' : 'Draft'
-      } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order ' : 'Draft'
+        } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
@@ -395,13 +394,13 @@ export default function SignOrderContentSimple ({
   const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps;
 
   useEffect(() => {
-    if(!fileErrors || fileErrors.length === 0) return;
-    if(fileErrors.some(err => err.name === 'identifier')){
+    if (!fileErrors || fileErrors.length === 0) return;
+    if (fileErrors.some(err => err.name === 'identifier')) {
       toast.error('Sign order needs to be saved as draft in order to being associating files. Please add admin data, then click upload files again.')
     }
   }, [fileErrors])
 
-  const fetchFiles =() => {
+  const fetchFiles = () => {
     if (!signOrderId) return
     fetchAssociatedFiles(signOrderId, 'sign-orders?sign_order_id', setLocalFiles)
   }
@@ -419,7 +418,7 @@ export default function SignOrderContentSimple ({
 
   // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
-    async function fetchNotes () {
+    async function fetchNotes() {
       setLoadingNotes(true)
       try {
         if (!signOrderId) return
@@ -499,7 +498,8 @@ export default function SignOrderContentSimple ({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status,
-        order_number: adminInfo.orderNumber
+        order_number: adminInfo.orderNumber,
+        contact: adminInfo.contact
       }
 
       // Submit data to the API
@@ -549,8 +549,8 @@ export default function SignOrderContentSimple ({
                 {adminInfo.isSubmitting
                   ? 'Saving...'
                   : initialSignOrderId
-                  ? 'Update order'
-                  : 'Done'}
+                    ? 'Update order'
+                    : 'Done'}
               </Button>
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function SignOrderContentSimple ({
               <DropzoneContent />
               <DropzoneEmptyState />
             </Dropzone>
-            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles}/>
+            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
           </div>
           <QuoteNotes
             notes={notes}

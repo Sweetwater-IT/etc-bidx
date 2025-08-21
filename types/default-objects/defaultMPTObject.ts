@@ -25,7 +25,8 @@ export const defaultPhaseObject : Phase = {
         BLights: { quantity: 0, emergencyRate: 0 },
         ACLights: { quantity: 0, emergencyRate: 0 },
         sharps: { quantity: 0, emergencyRate: 0 }
-},
+    },
+  
     customLightAndDrumItems: [],
     signs: [],
 }
