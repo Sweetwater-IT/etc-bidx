@@ -51,9 +51,7 @@ export const CustomerDrawer = memo(function CustomerDrawer({
   }, [initialCustomer]);
 
   useEffect(() => {
-    if (!open) {
-      console.log('entro');
-      
+    if (!open) {      
       setEditDataCustomer(false);
       setLoadingApi(false);
       setIsContactFormOpen(false);
