@@ -703,56 +703,49 @@ function calculateStandardLightEquipmentCosts(
   let totalRevenue = 0;
   let totalDepreciationCost = 0;
 
-  //destructure the type (first record) and totals (days and quantity) of each entry in the passed lightEquipment Record
-  for (const [equipmentType, totals] of Object.entries(lightEquipmentTotals)) {
+  equipmentRental.phases.forEach(phase => {
+    LIGHT_EQUIPMENT_TYPES.forEach(equipmentType => {
+      const quantity = phase.standardEquipment[equipmentType]?.quantity || 0;
+      const days = phase.days || 0;
+      const staticInfo = equipmentRental.staticEquipmentInfo[equipmentType];
+      if (!staticInfo || quantity === 0 || days === 0) return;
 
-    //grab the price from the equipmentRental object static equipment info
-    const staticInfo = equipmentRental.staticEquipmentInfo[equipmentType as LightEquipmentType];
-    if (!staticInfo) continue;
+      const itemCost = quantity * staticInfo.price;
+      totalCost += itemCost;
 
-    //get the item's cost
-    const itemCost = totals.totalQuantity * staticInfo.price;
-    totalCost += itemCost;
-
-    // Calculate daily rate based on whether it's an emergency job or not
-    let dailyRate: number;
-    if (adminData.emergencyJob) {
-      // Use emergency rates for standard items
-      switch (equipmentType) {
-        case 'BLights':
-          dailyRate = adminData.emergencyFields.emergencyBLites ?? 0;
-          break;
-        case 'ACLights':
-          dailyRate = adminData.emergencyFields.emergencyACLites ?? 0;
-          break;
-        case 'HIVP':
-          dailyRate = adminData.emergencyFields.emergencyHIVerticalPanels ?? 0;
-          break;
-        case 'TypeXIVP':
-          dailyRate = adminData.emergencyFields.emergencyTypeXIVerticalPanels ?? 0;
-          break;
-        case 'sharps':
-          dailyRate = adminData.emergencyFields.emergencySharps ?? 0;
-          break;
-        default:
-          dailyRate = 0;
+      let dailyRate: number;
+      if (phase.emergency) {
+        switch (equipmentType) {
+          case 'BLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyBLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'ACLights':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyACLites) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'HIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyHIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'TypeXIVP':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencyTypeXIVerticalPanels) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          case 'sharps':
+            dailyRate = safeNumber(adminData.emergencyFields?.emergencySharps) || calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+            break;
+          default:
+            dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
+        }
+      } else {
+        dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price);
       }
-    } else {
-      // Calculate daily rate using the formula:
-      // daily rate = (unit cost * target MOIC) / days to recover
-      // where days to recover = payback period * annual utilization * 365
-      dailyRate = calculateLightDailyRateCosts(equipmentRental, staticInfo.price)
-    }
 
-    // Calculate revenue using daily rate
-    const itemRevenue = totals.totalQuantity * totals.totalDaysRequired * dailyRate;
-    totalRevenue += itemRevenue;
+      const itemRevenue = quantity * days * dailyRate;
+      totalRevenue += itemRevenue;
 
-    // Calculate depreciation
-    const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
-    const itemDepreciationCost = dailyDepreciation * totals.totalDaysRequired * totals.totalQuantity;
-    totalDepreciationCost += itemDepreciationCost;
-  }
+      const dailyDepreciation = staticInfo.price / (staticInfo.usefulLife * 365);
+      const itemDepreciationCost = dailyDepreciation * days * quantity;
+      totalDepreciationCost += itemDepreciationCost;
+    });
+  });
 
   const grossProfit = totalRevenue - totalDepreciationCost;
   const grossMargin = totalRevenue !== 0 ? (grossProfit / totalRevenue) * 100 : 0;
