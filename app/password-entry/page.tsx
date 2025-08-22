@@ -1,15 +1,37 @@
 "use client";
-import { signIn } from "next-auth/react"; // Keep for now, but we'll replace the call
+import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-// Initialize Supabase client with your env variables
+// Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export default function GoogleAuthPage() {
+  const router = useRouter();
+
+  // Check for session and redirect if authenticated
+  useEffect(() => {
+    // Remove hash from URL if present
+    if (window.location.hash) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        console.log("Session found, redirecting to /");
+        router.push("/");
+      }
+    };
+    checkSession();
+  }, [router]);
+
   return (
     <div className="min-h-screen flex relative">
       {/* Top Left Brand */}
