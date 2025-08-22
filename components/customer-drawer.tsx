@@ -50,6 +50,16 @@ export const CustomerDrawer = memo(function CustomerDrawer({
     }
   }, [initialCustomer]);
 
+  useEffect(() => {
+    if (!open) {      
+      setEditDataCustomer(false);
+      setLoadingApi(false);
+      setIsContactFormOpen(false);
+      setCustomerData(null);
+    }
+  }, [open]);
+
+
   const refreshCustomerData = useCallback(async () => {
     if (customerData?.id) {
       try {
@@ -102,7 +112,7 @@ export const CustomerDrawer = memo(function CustomerDrawer({
           console.error('Failed to update customer:', errorData);
           return;
         }
-        
+
         onSuccess?.();
         toggleModeEditCustomer();
       } catch (error) {
@@ -249,9 +259,9 @@ export const CustomerDrawer = memo(function CustomerDrawer({
                 </Button>
                 <Button className="flex-1" onClick={handleEdit}>
                   {
-                    loadingApi? "Saving..."
-                    :
-                    editDataCustomer ? "Save" : "Edit"
+                    loadingApi ? "Saving..."
+                      :
+                      editDataCustomer ? "Save" : "Edit"
                   }
                 </Button>
               </div>

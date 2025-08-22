@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export const authOptions = { 
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -15,24 +15,28 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      // Only allow users in the Supabase users table
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", user.email)
-        .single();
-      if (error || !data) {
+      const { data, error } = await supabase.rpc("email_exists_in_auth", {
+        email_input: user.email,
+      });
+
+      if (error) {
+        console.error("Error to verify user:", error);
         return false;
       }
+
+      if (!data) {
+        console.warn("Email not exist :", user.email);
+        return false;
+      }
+
       return true;
     },
+    // Otros callbacks opcionales
     async session({ session, token }) {
-      // Optionally add user info from DB to session
       session.user.id = token.sub;
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Always redirect to home page after login
       return baseUrl + "/";
     },
   },
