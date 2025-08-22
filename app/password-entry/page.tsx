@@ -17,13 +17,20 @@ export default function GoogleAuthPage() {
   useEffect(() => {
     // Remove hash from URL if present
     if (window.location.hash) {
+      console.log("Removing hash from URL");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
+    // Check for session
     const checkSession = async () => {
       const {
         data: { session },
+        error,
       } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Session check error:", error.message);
+        return;
+      }
       if (session) {
         console.log("Session found, redirecting to /");
         router.push("/");
