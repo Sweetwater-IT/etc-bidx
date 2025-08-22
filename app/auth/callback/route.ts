@@ -7,9 +7,9 @@ const supabase = createClient(
 );
 
 export async function GET(request: Request) {
-  console.log("Callback URL:", request.url, "Next:", request.url.searchParams.get("next"));
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get("code");
+  const url = new URL(request.url);
+  console.log("Callback URL:", url.href, "Next:", url.searchParams.get("next"));
+  const code = url.searchParams.get("code");
   const next = "/"; // Force redirect to root
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
