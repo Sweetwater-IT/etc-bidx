@@ -1,19 +1,29 @@
-import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  console.log("Callback URL:", url.href, "Next:", url.searchParams.get("next"));
-  const code = url.searchParams.get("code");
-  const next = "/"; // Force redirect to root
+  console.log('Callback URL:', url.href, 'Search Params:', url.searchParams.toString());
+
+  const code = url.searchParams.get('code');
+  const origin = url.origin; // Dynamically get bidx-test.vercel.app or bidx-live.vercel.app
+  const next = '/'; // Redirect to root
+
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
+    try {
+      const supabase = createRouteHandlerClient({ cookies });
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        console.error('Auth error:', error.message);
+        return NextResponse.redirect(`${origin}/?error=auth`);
+      }
+      return NextResponse.redirect(`${origin}${next}`);
+    } catch (error) {
+      console.error('Unexpected error in auth callback:', error);
+      return NextResponse.redirect(`${origin}/?error=server`);
+    }
   }
-  return NextResponse.redirect(new URL("/?error=auth", request.url));
+
+  return NextResponse.redirect(`${origin}/?error=no-code`);
 }
