@@ -13,7 +13,7 @@ const supabase = createClient(
 export default function GoogleAuthPage() {
   const router = useRouter();
 
-  // Check for session and redirect if authenticated
+  // Check for auth state changes and redirect if signed in
   useEffect(() => {
     // Remove hash from URL if present
     if (window.location.hash) {
@@ -21,22 +21,19 @@ export default function GoogleAuthPage() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Check for session
-    const checkSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Session check error:", error.message);
-        return;
-      }
-      if (session) {
-        console.log("Session found, redirecting to /");
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event);
+      if (event === "SIGNED_IN" && session) {
+        console.log("Signed in, redirecting to /");
         router.push("/");
       }
+    });
+
+    // Cleanup listener
+    return () => {
+      authListener.subscription?.unsubscribe();
     };
-    checkSession();
   }, [router]);
 
   return (
