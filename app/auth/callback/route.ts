@@ -7,15 +7,13 @@ const supabase = createClient(
 );
 
 export async function GET(request: Request) {
+  console.log("Callback URL:", request.url, "Next:", request.url.searchParams.get("next"));
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/";
-
+  const next = "/"; // Force redirect to root
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(new URL(next, request.url));
-    }
+    if (!error) return NextResponse.redirect(new URL(next, request.url));
   }
-  return NextResponse.redirect(new URL("/password-entry?error=auth", request.url));
+  return NextResponse.redirect(new URL("/?error=auth", request.url));
 }
