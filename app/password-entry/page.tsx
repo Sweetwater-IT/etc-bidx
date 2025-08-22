@@ -1,6 +1,13 @@
 "use client";
-import { signIn } from "next-auth/react";
+import { signIn } from "next-auth/react"; // Keep for now, but we'll replace the call
+import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
+
+// Initialize Supabase client with your env variables
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function GoogleAuthPage() {
   return (
@@ -23,7 +30,12 @@ export default function GoogleAuthPage() {
           <button
             className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 px-4 bg-white text-gray-700 font-semibold shadow-sm transition-all duration-150 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 active:bg-gray-100"
             type="button"
-            onClick={() => signIn("google")}
+            onClick={() => supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+              },
+            })}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g clipPath="url(#clip0_17_40)">
@@ -55,4 +67,4 @@ export default function GoogleAuthPage() {
       </div>
     </div>
   );
-} 
+}
