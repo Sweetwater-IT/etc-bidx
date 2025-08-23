@@ -13,46 +13,30 @@ const supabase = createClient(
 export default function GoogleAuthPage() {
   const router = useRouter();
 
-  // Check for auth state changes and session
   useEffect(() => {
-    // Remove hash from URL if present
+    console.log("useEffect running");
     if (window.location.hash) {
       console.log("Removing hash from URL");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth event:", event);
-      if (event === "SIGNED_IN" && session) {
-        console.log("Signed in, redirecting to /");
-        router.push("/");
-      }
-    });
-
-    // Fallback session check with interval
     const checkSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error("Session check error:", error.message);
-        return;
-      }
-      if (session) {
+      } else if (session) {
         console.log("Session found, redirecting to /");
         router.push("/");
       }
     };
-    checkSession(); // Initial check
-    const interval = setInterval(checkSession, 1000); // Check every second
-    setTimeout(() => clearInterval(interval), 5000); // Stop after 5 seconds
 
-    // Cleanup listener and interval
+    checkSession();
+    const interval = setInterval(checkSession, 500); // Check every 0.5 seconds
+    const timeout = setTimeout(() => clearInterval(interval), 10000); // Stop after 10 seconds
+
     return () => {
-      authListener.subscription?.unsubscribe();
       clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [router]);
 
