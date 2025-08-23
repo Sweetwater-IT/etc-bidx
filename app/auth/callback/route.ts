@@ -13,4 +13,4 @@ export async function GET(req: Request) {
   console.log('session after redirect:', data.session);
   
   return NextResponse.redirect(new URL('/', req.url));
-}
+
