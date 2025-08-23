@@ -1,19 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export async function GET(req: Request) {
+  console.log('callback reached');
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  console.log("Callback URL:", url.href, "Next:", url.searchParams.get("next"));
-  const code = url.searchParams.get("code");
-  const next = "/"; // Force redirect to root
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
-  }
-  return NextResponse.redirect(new URL("/?error=auth", request.url));
+  const supabase = createRouteHandlerClient({
+    cookies: () => cookies()
+  });
+
+  const { data } = await supabase.auth.getSession();
+  console.log('session after redirect:', data.session);
+  
+  return NextResponse.redirect(new URL('/', req.url));
 }
