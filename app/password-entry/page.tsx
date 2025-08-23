@@ -30,7 +30,7 @@ export default function GoogleAuthPage() {
       }
     });
 
-    // Fallback session check
+    // Fallback session check with interval
     const checkSession = async () => {
       const {
         data: { session },
@@ -45,17 +45,20 @@ export default function GoogleAuthPage() {
         router.push("/");
       }
     };
-    checkSession();
+    checkSession(); // Initial check
+    const interval = setInterval(checkSession, 1000); // Check every second
+    setTimeout(() => clearInterval(interval), 5000); // Stop after 5 seconds
 
-    // Cleanup listener
+    // Cleanup listener and interval
     return () => {
       authListener.subscription?.unsubscribe();
+      clearInterval(interval);
     };
   }, [router]);
 
   return (
     <div className="min-h-screen flex relative">
-      <!-- Top Left Brand -->
+      {/* Top Left Brand */}
       <div className="absolute top-6 left-8 z-20 flex items-center gap-2">
         <Image
           src="/logo.jpg"
@@ -65,7 +68,7 @@ export default function GoogleAuthPage() {
           className="rounded"
         />
       </div>
-      <!-- Left: Login Box -->
+      {/* Left: Login Box */}
       <div className="flex flex-col justify-center w-full max-w-md px-8 py-12 bg-white z-10 mx-auto">
         <h1 className="text-2xl font-bold mb-2 text-center">Login to your account</h1>
         <p className="mb-6 text-gray-500 text-center text-[13px]">Use your gmail to login to your account</p>
@@ -97,7 +100,7 @@ export default function GoogleAuthPage() {
           </button>
         </form>
       </div>
-      <!-- Right: Truck Image -->
+      {/* Right: Truck Image */}
       <div className="hidden md:block flex-1 relative bg-gray-100">
         <Image
           src="/etc-truck.jpg"
