@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
-// Initialize Supabase client for server-side use (no cookies needed here, using request headers)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
+// Middleware function
 export async function middleware(request: NextRequest) {
+  // Create a Supabase client with the request and response
+  const supabase = createMiddlewareClient({ req: request, res: NextResponse.next() });
+
   // Check for Supabase session
   const {
     data: { session },
-  } = await supabase.auth.getSession({
-    headers: { Authorization: request.headers.get('Authorization') || '' },
-  });
+  } = await supabase.auth.getSession();
+
   const isAuthenticated = !!session;
 
   const { pathname } = request.nextUrl;
