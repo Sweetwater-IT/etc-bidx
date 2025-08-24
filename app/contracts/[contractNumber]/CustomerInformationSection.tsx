@@ -10,6 +10,7 @@ import { cn } from '../../../lib/utils';
 import { useCustomers } from '../../../hooks/use-customers';
 import { validateEmail } from '@/lib/emailValidation';
 import { handlePhoneInput } from '@/lib/phone-number-functions';
+import { ContactSelector } from '@/components/SelectContacts';
 
 interface FormInputProps {
     label: string;
@@ -21,7 +22,9 @@ interface FormInputProps {
     type?: 'text' | 'email' | 'phone';
     error?: string;
     onChange?: (value: string) => void;
+    isReadOnly?: boolean;
 }
+
 
 function FormInput({
     label,
@@ -32,8 +35,10 @@ function FormInput({
     prefix,
     type = 'text',
     error,
-    onChange
+    onChange,
+    isReadOnly = false
 }: FormInputProps) {
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (type === 'phone') {
             const ev = e.nativeEvent as InputEvent;
@@ -56,13 +61,14 @@ function FormInput({
                     </div>
                 )}
                 <Input
+                    readOnly={isReadOnly}
                     value={value}
                     placeholder={placeholder}
                     disabled={disabled}
                     type={type === 'phone' ? 'text' : type}
                     inputMode={type === 'phone' ? 'tel' : type === 'email' ? 'email' : 'text'}
                     className={cn(
-                        prefix && "rounded-l-none", 
+                        prefix && "rounded-l-none",
                         "bg-muted/50",
                         error && "border-red-500 focus:border-red-500 focus:ring-red-500"
                     )}
@@ -108,26 +114,39 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
 }) => {
     // Get customers from the context or hook
     const { customers = [] } = useCustomers();
-    
+    const [localContact, setLocalContact] = useState<any | null>(null);
+
+    // State para manejar apertura del drawer de nuevo contacto
+    const [contactModalOpen, setContactModalOpen] = useState(false);
+
     // State for popover open
     const [openCustomer, setOpenCustomer] = useState(false);
-    
+
     // State for validation errors
     const [emailError, setEmailError] = useState<string>();
-    
+
     // Handle email change with validation
     const handleEmailChange = (value: string) => {
         onPmEmailChange(value);
-        
+
         // Validate email on blur or when complete
         const validation = validateEmail(value);
         setEmailError(validation.isValid ? undefined : validation.message);
     };
-    
+
     // Handle phone change
     const handlePhoneChange = (formattedValue: string) => {
         onPmPhoneChange(formattedValue);
     };
+
+    React.useEffect(() => {        
+        if (localContact && localContact?.id) {
+            onProjectManagerChange(localContact.name)
+            onPmEmailChange(localContact.email)
+            onPmPhoneChange(localContact.phone)
+        }
+    }, [localContact])
+
 
     return (
         <div className="rounded-lg border bg-card p-6">
@@ -186,22 +205,36 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
                         </PopoverContent>
                     </Popover>
                 </div>
-                
+
+                <div className="space-y-2">
+                    <Label>Contact Name</Label>
+                    <ContactSelector
+                        localCustomer={customer}
+                        setLocalCustomer={(customer: any) => onCustomerChange(customer)}
+                        localContact={localContact}
+                        setLocalContact={setLocalContact}
+                        contactModalOpen={contactModalOpen}
+                        setContactModalOpen={setContactModalOpen}
+                    />
+                </div>
+
                 <FormInput
                     label="Customer Contract Number"
                     value={customerContractNumber}
                     onChange={(value) => onCustomerContractNumberChange(value.toUpperCase())}
                     placeholder="Contract number"
                 />
-                
+
                 <FormInput
+                    isReadOnly={true}
                     label="Project Manager"
                     value={projectManager}
                     onChange={onProjectManagerChange}
                     placeholder="Manager name"
                 />
-                
+
                 <FormInput
+                    isReadOnly={true}
                     label="PM Email"
                     type="email"
                     value={pmEmail}
@@ -209,8 +242,9 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
                     placeholder="Project manager email"
                     error={emailError}
                 />
-                
+
                 <FormInput
+                    isReadOnly={true}
                     label="PM Phone"
                     type="phone"
                     value={pmPhone}

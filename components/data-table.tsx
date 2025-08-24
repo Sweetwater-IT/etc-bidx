@@ -168,6 +168,8 @@ export interface DataTableProps<TData extends object> {
   viewBidSummaryOpen?: boolean
   onViewBidSummary?: (item: TData) => void
   onUnarchive?: (item: TData) => void
+  onDelete?: (item: TData, index: number) => void;
+
 }
 
 function formatCellValue(value: any, key: string) {
@@ -415,7 +417,8 @@ export function DataTable<TData extends object>({
   handleMultiDelete,
   viewBidSummaryOpen,
   onViewBidSummary,
-  onUnarchive
+  onUnarchive,
+  onDelete
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -695,6 +698,21 @@ export function DataTable<TData extends object>({
                     </DropdownMenuItem>
                   )}
 
+                  {onDelete && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onDelete(row.original as TData, row.index); 
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+
+
+
 
                   {onEdit && (
                     <DropdownMenuItem
@@ -745,67 +763,67 @@ export function DataTable<TData extends object>({
       })
     }
     // fix checkbox column > if onArchiveSelected or onDeleteSelected is provided
-if (onArchiveSelected || onDeleteSelected) {    
-    cols.unshift({
-      id: 'select',
-      header: ({ table }) => (
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
+    if (onArchiveSelected || onDeleteSelected) {
+      cols.unshift({
+        id: 'select',
+        header: ({ table }) => (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Checkbox
+                className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+                checked={table.getIsAllPageRowsSelected()}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label='Select all rows'
+                role='combobox'
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent avoidCollisions={false} align='start'>
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(false);
+                }}
+              >
+                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(true);
+                }}
+              >
+                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
+              </DropdownMenuItem>
+              <Separator />
+              <DropdownMenuItem
+                onClick={() => {
+                  table.toggleAllRowsSelected(false);
+                  onAllRowsSelectedChange?.(false);
+                }}
+              >
+                Deselect all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+        cell: ({ row }) => (
+          <div className='flex justify-center'>
             <Checkbox
-              className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
-              checked={table.getIsAllPageRowsSelected()}
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label='Select all rows'
-              role='combobox'
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label='Select row'
+              onClick={e => e.stopPropagation()}
             />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent avoidCollisions={false} align='start'>
-            <DropdownMenuItem
-              onClick={() => {
-                table.toggleAllPageRowsSelected(true);
-                onAllRowsSelectedChange?.(false);
-              }}
-            >
-              Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                table.toggleAllPageRowsSelected(true);
-                onAllRowsSelectedChange?.(true);
-              }}
-            >
-              Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
-            </DropdownMenuItem>
-            <Separator />
-            <DropdownMenuItem
-              onClick={() => {
-                table.toggleAllRowsSelected(false);
-                onAllRowsSelectedChange?.(false);
-              }}
-            >
-              Deselect all
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-      cell: ({ row }) => (
-        <div className='flex justify-center'>
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label='Select row'
-            onClick={e => e.stopPropagation()}
-          />
-        </div>
-      ),
-      meta: {
-        className: 'w-16 text-right'
-      },
-      enableSorting: false,
-      enableHiding: false
-    });
-}
-    
+          </div>
+        ),
+        meta: {
+          className: 'w-16 text-right'
+        },
+        enableSorting: false,
+        enableHiding: false
+      });
+    }
+
     return cols
   }, [
     legacyColumns,
@@ -1121,11 +1139,11 @@ if (onArchiveSelected || onDeleteSelected) {
                                 : ''
                             )}
                           >
-                              {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground"/>}{
-                                flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
+                            {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground" />}{
+                              flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
                           </TableCell>
                         )
                       })}
