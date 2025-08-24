@@ -25,7 +25,7 @@ import {
   Trash2,
   Clock,
 } from "lucide-react";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { safeNumber } from "@/lib/safe-number";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
@@ -85,7 +85,23 @@ const ServiceWorkTab = () => {
     lumpSum: 0,
     hourlyRate: 0,
     item: {}
-  })
+  });
+
+  // Add state for hours and minutes
+  const onSiteTotalMinutes = safeNumber(formData?.onSiteJobHours) || 0;
+  const onSiteHours = Math.floor(onSiteTotalMinutes / 60);
+  const onSiteMinutes = onSiteTotalMinutes % 60;
+  const onSiteDecimalHours = (onSiteTotalMinutes / 60).toFixed(1);
+
+  // Handler for hours and minutes inputs
+  const handleOnSiteJobTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    if (!formData) return;
+
+    const newTotalMinutes =
+      type === 'hours' ? value * 60 + (onSiteTotalMinutes % 60) : onSiteHours * 60 + value;
+
+    setFormData({ ...formData, onSiteJobHours: newTotalMinutes });
+  };
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -215,7 +231,7 @@ const ServiceWorkTab = () => {
     fetchFlaggingStaticData();
   }, [dispatch]);
 
-  //Add
+  // Sync service work items with global state
   useEffect(() => {
     if (serviceWork && (serviceWork.personnel > 0 || serviceWork.numberTrucks > 0)) {
       setServiceWorkItems([{
@@ -250,14 +266,15 @@ const ServiceWorkTab = () => {
   // Calculate service work cost summary for current form data
   useEffect(() => {
     if (formData && adminData && serviceWork) {
-      // Create a temporary service work object for calculation
       const tempServiceWork: Flagging = {
         ...serviceWork,
+        standardPricing: false,
+        standardLumpSum: 0,
+        markupRate: 0,
         fuelEconomyMPG: serviceWork?.fuelEconomyMPG ?? 0,
         truckDispatchFee: serviceWork?.truckDispatchFee ?? 0,
         workerComp: serviceWork?.workerComp ?? 0,
         generalLiability: serviceWork?.generalLiability ?? 0,
-        markupRate: 0,
         personnel: formData.personnel,
         numberTrucks: formData.numberTrucks,
         onSiteJobHours: formData.onSiteJobHours,
@@ -280,17 +297,17 @@ const ServiceWorkTab = () => {
       fuelCostPerGallon: 0,
       arrowBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 50, // Updated default cost to match FlaggingServicesTab
         includeInLumpSum: false,
       },
       messageBoards: {
         quantity: 0,
-        cost: 0,
+        cost: 100, // Updated default cost
         includeInLumpSum: false,
       },
       TMA: {
         quantity: 0,
-        cost: 0,
+        cost: 400, // Updated default cost
         includeInLumpSum: false,
       },
       additionalEquipmentCost: 0,
@@ -308,7 +325,7 @@ const ServiceWorkTab = () => {
   const handleDeleteServiceWork = (index: number) => {
     const newItems = serviceWorkItems.filter((_, i) => i !== index);
     setServiceWorkItems(newItems);
-    dispatch({ type: 'DELETE_SERVICE_WORK' })
+    dispatch({ type: 'DELETE_SERVICE_WORK' });
   };
 
   const handleFormUpdate = (field: keyof ServiceWorkItem, value: any) => {
@@ -350,7 +367,7 @@ const ServiceWorkTab = () => {
         key: 'markupRate',
         value: 50
       }
-    })
+    });
 
     dispatch({
       type: 'UPDATE_SERVICE_WORK',
@@ -434,11 +451,13 @@ const ServiceWorkTab = () => {
     // Create a temporary service work object for this specific item
     const tempServiceWork: Flagging = {
       ...serviceWork,
+      standardPricing: false,
+      standardLumpSum: 0,
+      markupRate: 0,
       fuelEconomyMPG: serviceWork?.fuelEconomyMPG ?? 0,
       truckDispatchFee: serviceWork?.truckDispatchFee ?? 0,
       workerComp: serviceWork?.workerComp ?? 0,
       generalLiability: serviceWork?.generalLiability ?? 0,
-      markupRate: 0,
       personnel: item.personnel,
       numberTrucks: item.numberTrucks,
       onSiteJobHours: item.onSiteJobHours,
@@ -491,14 +510,19 @@ const ServiceWorkTab = () => {
     });
   };
 
-  // Calculate total hours
-  const getTotalHours = (item: ServiceWorkItem) => {
-    return safeNumber(item.onSiteJobHours) + Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60);
+  // Calculate Total Hours
+  const getTotalHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
+    const source = formData || item;
+    if (!source) return 0;
+    const onSiteMinutes = safeNumber(source.onSiteJobHours); // Already in minutes
+    const travelMinutes = safeNumber(adminData.owTravelTimeMins) * 2; // Double one-way minutes
+    return onSiteMinutes + travelMinutes; // Return total minutes
   };
 
-  // Calculate overtime hours
-  const getOvertimeHours = (item: ServiceWorkItem) => {
-    return Math.max(0, (safeNumber(item.onSiteJobHours) + Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) - 8));
+  // Calculate Overtime Hours
+  const getOvertimeHours = (item: ServiceWorkItem | null, formData?: ServiceWorkItem | null) => {
+    const totalMinutes = getTotalHours(item, formData);
+    return Math.max(0, totalMinutes - 8 * 60); // Convert 8 hours to minutes
   };
 
   return (
@@ -529,7 +553,7 @@ const ServiceWorkTab = () => {
                 <div className="flex items-center space-x-4">
                   <div className="font-medium">Service Work</div>
                   <div className="text-sm text-muted-foreground">
-                    Personnel: {item.personnel} • Trucks: {item.numberTrucks} • Hours: {item.onSiteJobHours}
+                    Personnel: {item.personnel} • Trucks: {item.numberTrucks} • Hours: {formatHoursAndMinutes(item.onSiteJobHours)}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -567,8 +591,8 @@ const ServiceWorkTab = () => {
 
               {/* Cost Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                <div>Total Hours: {getTotalHours(item)} ({getTotalHours(item) * 60} minutes)</div>
-                <div>Overtime Hours: {getOvertimeHours(item)} ({getOvertimeHours(item) * 60} minutes)</div>
+                <div>Total Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} ({(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} minutes)</div>
+                <div>Overtime Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} ({(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} minutes)</div>
               </div>
             </div>
 
@@ -955,15 +979,62 @@ const ServiceWorkTab = () => {
                   <h4 className="font-medium">Service Work Cost Summary</h4>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <Input
-                        id="on-site-hours"
-                        type="number"
-                        min={0}
-                        value={formData.onSiteJobHours || ""}
-                        onChange={(e) => handleFormUpdate('onSiteJobHours', parseInt(e.target.value) || 0)}
-                        placeholder="On Site Job Hours"
-                      />
+                    <div className="space-y-2">
+                      <div className="flex space-x-4">
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="onSiteHoursInput" className="text-sm font-medium">
+                            Hours
+                          </Label>
+                          <Input
+                            id="onSiteHoursInput"
+                            type="number"
+                            min={0}
+                            value={onSiteHours === 0 ? "" : onSiteHours}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : parseInt(value);
+                              if (!isNaN(numValue)) {
+                                handleOnSiteJobTimeChange("hours", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) =>
+                              ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                            }
+                          />
+                        </div>
+
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="onSiteMinutesInput" className="text-sm font-medium">
+                            Minutes
+                          </Label>
+                          <Input
+                            id="onSiteMinutesInput"
+                            type="number"
+                            min={0}
+                            max={59}
+                            value={onSiteMinutes === 0 ? "" : onSiteMinutes}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
+                              if (!isNaN(numValue)) {
+                                handleOnSiteJobTimeChange("minutes", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) =>
+                              ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                        <p className="text-sm text-gray-500">
+                          ({onSiteTotalMinutes} mins, {onSiteDecimalHours} hrs)
+                        </p>
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <span>On Site Job Hours Cost:</span>
@@ -981,13 +1052,13 @@ const ServiceWorkTab = () => {
 
                     <div className="flex justify-between">
                       <span>Over Time Hours:</span>
-                      <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
+                      <span>{formatHoursAndMinutes(getOvertimeHours(null, formData))}</span>
                     </div>
                     <div></div>
 
                     <div className="flex justify-between">
                       <span>Total Hours:</span>
-                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(formData))}</span>
+                      <span className="font-medium">{formatHoursAndMinutes(getTotalHours(null, formData))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Labor Cost:</span>

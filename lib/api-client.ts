@@ -313,7 +313,7 @@ export async function createActiveBid(
 /**
  * Update an existing active bid
  */
-export async function updateActiveBid(id: number, data: any): Promise<BidEstimate> {  
+export async function updateActiveBid(id: number, data: any): Promise<BidEstimate> {
   try {
     // If the data contains adminData, ensure division and owner fields have valid values
     if (data.adminData && typeof data.adminData === 'object') {
@@ -1103,7 +1103,14 @@ export const saveSignOrder = async (signOrderData: {
   order_type: OrderTypes[],
   job_number: string,
   signs: (PrimarySign | SecondarySign)[],
-  status: 'DRAFT' | 'SUBMITTED'
+  status: 'DRAFT' | 'SUBMITTED',
+  contact?: {
+    id: number
+    name: string
+    role: string
+    email: string
+    phone: string
+  }
 }) => {
   const response = await fetch('/api/sign-orders', {
     method: 'POST',
@@ -1118,7 +1125,7 @@ export const saveSignOrder = async (signOrderData: {
   }
 
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.error || 'Failed to save sign order');
   }
@@ -1127,7 +1134,7 @@ export const saveSignOrder = async (signOrderData: {
   return { id: data.id };
 }
 
-export const fetchAssociatedFiles = async (uniqueIdentifier : number, slug : string, setFiles: Dispatch<SetStateAction<FileMetadata[]>>) => {
+export const fetchAssociatedFiles = async (uniqueIdentifier: number, slug: string, setFiles: Dispatch<SetStateAction<FileMetadata[]>>) => {
   if (!uniqueIdentifier) return
   try {
     const filesResponse = await fetch(
@@ -1136,7 +1143,6 @@ export const fetchAssociatedFiles = async (uniqueIdentifier : number, slug : str
     )
     if (filesResponse.ok) {
       const filesData = await filesResponse.json()
-      console.log(filesData)
       setFiles(filesData.data)
     }
   } catch (error) {

@@ -175,23 +175,6 @@ const SaleItemsRevenueAndProfit = () => {
               {(safeNumber(saleTotals?.grossMargin || 0) * 100).toFixed(2)}%
             </div>
           </div>
-
-          {/* ALL TOTALS in orange */}
-          <div className="grid grid-cols-5 border-t border-gray-300 py-2" style={{ backgroundColor: '#ed7d31' }}>
-            <div className="px-3 py-1 text-sm font-medium">BID TOTAL</div>
-            <div className="px-3 py-1 text-sm font-medium">
-              ${allTotals?.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="px-3 py-1 text-sm font-medium">
-              ${allTotals?.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="px-3 py-1 text-sm font-medium">
-              ${allTotals?.totalGrossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="px-3 py-1 text-sm font-medium">
-              {(safeNumber(allTotals?.totalGrossMargin || 0) * 100).toFixed(2)}%
-            </div>
-          </div>
         </>
       ) : (
         <>

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS mpt_phases (
     end_date TIMESTAMP,
     personnel INTEGER,
     days INTEGER,
+    emergency Boolean,
     number_trucks INTEGER,
     additional_rated_hours NUMERIC(10, 2),
     additional_non_rated_hours NUMERIC(10, 2),

@@ -606,22 +606,16 @@ const FlaggingServicesTab = () => {
   }
 
   // Calculate total hours
-  const getTotalHours = (item: FlaggingItem) => {
-    return (
-      safeNumber(item.onSiteJobHours) +
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60)
-    )
-  }
+  const getTotalHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
+    const source = formData || item;
+    if (!source) return 0;
+    return safeNumber(source.onSiteJobHours) + safeNumber(adminData.owTravelTimeMins) * 2;
+  };
 
   // Calculate overtime hours
-  const getOvertimeHours = (item: FlaggingItem) => {
-    return Math.max(
-      0,
-      safeNumber(item.onSiteJobHours) +
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) -
-      8
-    )
-  }
+  const getOvertimeHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
+    return Math.max(0, getTotalHours(item, formData) - 8 * 60);
+  };
 
   return (
     <div className='space-y-6'>
@@ -656,7 +650,7 @@ const FlaggingServicesTab = () => {
                   </div>
                   <div className='text-sm text-muted-foreground'>
                     Personnel: {item.personnel} • Trucks: {item.numberTrucks} •
-                    Hours: {item.onSiteJobHours}
+                    Hours: {formatHoursAndMinutes(item.onSiteJobHours)}
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
@@ -695,8 +689,8 @@ const FlaggingServicesTab = () => {
               {/* Cost Summary for Custom Pricing */}
               {!item.isStandardPricing && (
                 <div className='grid grid-cols-2 gap-4 text-sm border-t pt-4'>
-                  <div>Total Hours: {getTotalHours(item)}</div>
-                  <div>Overtime Hours: {getOvertimeHours(item)}</div>
+                  <div>Total Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} ({(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} minutes)</div>
+                  <div>Overtime Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} ({(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} minutes)</div>
                 </div>
               )}
             </div>
@@ -1493,13 +1487,15 @@ const FlaggingServicesTab = () => {
 
                         <div className='flex justify-between'>
                           <span>Over Time Hours:</span>
-                          <span>{formatHoursAndMinutes(getOvertimeHours(formData))}</span>
+                          <span>
+                            {formatHoursAndMinutes(getOvertimeHours(null, formData))}
+                          </span>
                         </div>
                         <div></div>
                         <div className='flex justify-between'>
                           <span>Total Hours:</span>
                           <span className='font-medium'>
-                            {formatHoursAndMinutes(getTotalHours(formData))}
+                            {formatHoursAndMinutes(getTotalHours(null, formData))}
                           </span>
                         </div>
                         <div className='flex justify-between'>

@@ -157,15 +157,16 @@ export async function POST(req: NextRequest) {
           .from('files')
           .getPublicUrl(storagePath);
 
-        // Insert file metadata into database
+        const columnName = FOLDER_TO_COLUMN_MAP[folder as keyof typeof FOLDER_TO_COLUMN_MAP];
+
         const { data: dbData, error: dbError } = await supabase
           .from('files')
           .insert({
             filename: filename,
             file_type: contentType,
-            file_path: storagePath, // Store the storage path
-            file_url: urlData.publicUrl, // Store the public URL
-            bid_estimate_id: parseInt(uniqueIdentifier),
+            file_path: storagePath,
+            file_url: urlData.publicUrl,
+            [columnName]: parseInt(uniqueIdentifier), // <- dinámico según folder
             upload_date: new Date().toISOString(),
             file_size: file.size
           })

@@ -3,7 +3,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import SignOrderContentSimple from "./SignOrderContentSimple";
 
-export default async function CreateSignOrderPage() {
+export default async function CreateSignOrderPage() {    
     return (
         <SidebarProvider
             style={

@@ -8,7 +8,7 @@ export async function GET(
   const params = await context.params;
   try {
     console.log(`Fetching sign order with ID: ${params.id}`);
-    
+
     if (!params.id) {
       return NextResponse.json(
         { success: false, message: 'Sign order ID is required' },
@@ -16,10 +16,9 @@ export async function GET(
       );
     }
 
-    // Query the sign_orders table for the specific ID
     const { data, error } = await supabase
       .from('sign_orders')
-      .select('*, contractors(name)')
+      .select('*, contractors(*), customer_contacts(*)')
       .eq('id', params.id)
       .single();
 
@@ -38,9 +37,20 @@ export async function GET(
       );
     }
 
+    const transformedData = {
+      ...data,
+      contact: data.customer_contacts ? {
+        id: data.customer_contacts.id,
+        name: data.customer_contacts.name || '',
+        role: data.customer_contacts.role || '',
+        email: data.customer_contacts.email || '',
+        phone: data.customer_contacts.phone || ''
+      } : undefined
+    };
+
     return NextResponse.json({
       success: true,
-      data
+      data: transformedData
     });
   } catch (error) {
     console.error('Unexpected error fetching sign order:', error);
@@ -58,7 +68,7 @@ export async function PATCH(
   const params = await context.params;
   try {
     console.log(`Updating sign order with ID: ${params.id}`);
-    
+
     if (!params.id) {
       return NextResponse.json(
         { success: false, message: 'Sign order ID is required' },
@@ -104,7 +114,7 @@ export async function DELETE(
   const params = await context.params;
   try {
     console.log(`Deleting sign order with ID: ${params.id}`);
-    
+
     if (!params.id) {
       return NextResponse.json(
         { success: false, message: 'Sign order ID is required' },

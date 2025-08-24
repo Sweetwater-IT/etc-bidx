@@ -48,6 +48,8 @@ import { Separator } from "./ui/separator";
 import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
+import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -91,6 +93,8 @@ export function ActiveBidDetailsSheet({
   onUpdateStatus
 }: ActiveBidDetailsSheetProps) {
   const { user } = useAuth()
+  const { adminData, flagging, serviceWork } = useEstimate()
+
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -110,6 +114,8 @@ export function ActiveBidDetailsSheet({
   });
   const [notesInfo, setNoteInfo] = useState<INote[]>([])
 
+  const flaggingTotals = calculateFlaggingCostSummary(adminData, bid?.flagging, false)
+  const serviceWorkTotals = calculateFlaggingCostSummary(adminData, bid?.service_work, true)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -152,22 +158,32 @@ export function ActiveBidDetailsSheet({
     }
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
+useEffect(() => {
+  if (!open) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown" && onNavigate) {
-        e.preventDefault();
-        onNavigate("down");
-      } else if (e.key === "ArrowUp" && onNavigate) {
-        e.preventDefault();
-        onNavigate("up");
-      }
-    };
+  const handleKeyDown = (e: KeyboardEvent) => {
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onNavigate]);
+   // Check if any dropdown is open
+
+    const dropdowns = document.querySelectorAll('[role="listbox"], [role="combobox"][aria-expanded="true"]');
+    const isAnyDropdownOpen = dropdowns.length > 0;
+    
+    if (isAnyDropdownOpen) {
+      return; // Do nothing if there are any open dropdowns
+    }
+
+    if (e.key === "ArrowDown" && onNavigate) {
+      e.preventDefault();
+      onNavigate("down");
+    } else if (e.key === "ArrowUp" && onNavigate) {
+      e.preventDefault();
+      onNavigate("up");
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [open, onNavigate, openStates.contractor, openStates.subContractor]);
 
   useEffect(() => {
     if (!open) {
@@ -341,7 +357,7 @@ export function ActiveBidDetailsSheet({
     const response = await fetch('/api/active-bids/addNotes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bid_id: bid.id, text: note.text, user_email: user.email }),
+      body: JSON.stringify({ bid_id: bid.id, timestamp: note.timestamp, text: note.text, user_email: user.email }),
     });
     const result = await response.json();
 
@@ -526,7 +542,15 @@ export function ActiveBidDetailsSheet({
               <div className="space-y-1 w-full">
                 <Label className="font-semibold">Status</Label>
                 <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger
+                    className="w-full"
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                      }
+                    }}
+
+                  >
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -546,13 +570,21 @@ export function ActiveBidDetailsSheet({
                   <Popover
                     open={openStates.contractor}
                     modal={true}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, contractor: open }))}
+                    onOpenChange={(open) =>
+                      setOpenStates((prev) => ({ ...prev, contractor: open }))
+                    }
                   >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         className='w-full justify-between text-muted-foreground'
+                        onKeyDown={(e) => {
+                          // Prevenir que el evento se propague cuando el dropdown está abierto
+                          if (openStates.contractor && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+                            e.stopPropagation();
+                          }
+                        }}
                       >
                         <span className="truncate">
                           {selectedContractor?.displayName ||
@@ -747,17 +779,39 @@ export function ActiveBidDetailsSheet({
                     {formatCurrency(bid?.permSignValue) || "-"}
                   </div>
                 </div>
+
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Rental Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(bid?.rentalValue) || "-"}
+                  </div>
+                </div>
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Flagging Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(Number(flaggingTotals.totalRevenue)) ?? '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-semibold">
+                  Patterns Value
+                </Label>
+                <div className="text-muted-foreground">
+                  {formatCurrency(Number(serviceWorkTotals.totalRevenue)) ?? '-'}
+                </div>
               </div>
 
               {/* Rental Value */}
-              <div className="space-y-1 w-full">
-                <Label className="font-semibold">
-                  Rental Value
-                </Label>
-                <div className="text-muted-foreground">
-                  {formatCurrency(bid?.rentalValue) || "-"}
-                </div>
-              </div>
+
             </div>
           </div>
           <div className="w-full">
