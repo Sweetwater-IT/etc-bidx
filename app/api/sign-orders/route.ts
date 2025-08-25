@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         branchNumber = 30;
       }
     }
+    console.log('el order date es', signOrderData.order_date);
     
     // Check if an ID is provided - if so, update instead of insert
     if (signOrderData.id ) {

@@ -170,7 +170,7 @@ export interface DataTableProps<TData extends object> {
   onUnarchive?: (item: TData) => void
 }
 
-function formatCellValue (value: any, key: string) {
+function formatCellValue(value: any, key: string) {
   if (
     value === undefined ||
     value === null ||
@@ -250,26 +250,26 @@ function formatCellValue (value: any, key: string) {
         {key === 'projectStatus' || key === 'billingStatus'
           ? value.replace('_', ' ')
           : key === 'shop_status'
-          ? value === 'not-started'
-            ? 'Not Started'
-            : value === 'in-progress'
-            ? 'In-Process'
-            : value === 'in-process'
-            ? 'In-Process'
-            : value === 'complete'
-            ? 'Complete'
-            : value === 'on-hold'
-            ? 'On Hold'
-            : value === 'on-order'
-            ? 'On Order'
-            : value
-          : key === 'order_status'
-          ? value === 'submitted' || value === 'SUBMITTED'
-            ? 'Submitted'
-            : value === 'draft' || value === 'DRAFT'
-            ? 'Draft'
-            : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-          : value}
+            ? value === 'not-started'
+              ? 'Not Started'
+              : value === 'in-progress'
+                ? 'In-Process'
+                : value === 'in-process'
+                  ? 'In-Process'
+                  : value === 'complete'
+                    ? 'Complete'
+                    : value === 'on-hold'
+                      ? 'On Hold'
+                      : value === 'on-order'
+                        ? 'On Order'
+                        : value
+            : key === 'order_status'
+              ? value === 'submitted' || value === 'SUBMITTED'
+                ? 'Submitted'
+                : value === 'draft' || value === 'DRAFT'
+                  ? 'Draft'
+                  : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+              : value}
       </Badge>
     )
   }
@@ -292,40 +292,35 @@ function formatCellValue (value: any, key: string) {
     return formatDate(value)
   }
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-    try {
-      // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(value)
+    if (typeof value !== 'string') return value
 
-      // Use local methods instead of UTC methods to get the date in user's timezone
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ]
-      const monthName = monthNames[utcDate.getMonth()]
-      const dayNum = utcDate.getDate()
-      const yearNum = utcDate.getFullYear()
-      const hoursValue = utcDate.getHours()
-      const minutesValue = utcDate.getMinutes()
-      const amOrPm = hoursValue >= 12 ? 'PM' : 'AM'
-      const hoursFormatted =
-        hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue
-      const minutesFormatted = minutesValue.toString().padStart(2, '0')
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ]
+
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number)
+        const timestamp = (key === 'created_at' || key === 'createdAt') ? ', 12:00 AM' : ''
+        return `${monthNames[month - 1]} ${day}, ${year}${timestamp}`
+      }
+
+      const date = new Date(value) 
+      const monthName = monthNames[date.getMonth()]
+      const dayNum = date.getDate()
+      const yearNum = date.getFullYear()
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const amOrPm = hours >= 12 ? 'PM' : 'AM'
+      const hoursFormatted = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+      const minutesFormatted = minutes.toString().padStart(2, '0')
       const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`
 
-      // Always show timestamp for created_at and createdAt
       if (key === 'created_at' || key === 'createdAt') {
         return `${monthName} ${dayNum}, ${yearNum}${timestamp}`
       }
+
       return `${monthName} ${dayNum}, ${yearNum}`
     } catch (e) {
       return value
@@ -349,7 +344,7 @@ function formatCellValue (value: any, key: string) {
   return value
 }
 
-function isRowSelected<T extends object> (
+function isRowSelected<T extends object>(
   row: T,
   selectedItem: T | undefined
 ): boolean {
@@ -364,7 +359,7 @@ function isRowSelected<T extends object> (
   return JSON.stringify(row) === JSON.stringify(selectedItem)
 }
 
-export function DataTable<TData extends object> ({
+export function DataTable<TData extends object>({
   columns: legacyColumns,
   data,
   segments,
@@ -739,11 +734,10 @@ export function DataTable<TData extends object> ({
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Checkbox
-                className={`translate-x-1 ${
-                  table.getIsAllPageRowsSelected()
+                className={`translate-x-1 ${table.getIsAllPageRowsSelected()
                     ? 'bg-black text-white border-black'
                     : ''
-                }`}
+                  }`}
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={value => {
                   // row.toggleSelected(!!value);
@@ -760,9 +754,8 @@ export function DataTable<TData extends object> ({
                 }}
               >
                 Select{' '}
-                {`${data.length} ${
-                  onMarkAsBidJob ? 'available jobs' : 'items'
-                }`}{' '}
+                {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'
+                  }`}{' '}
                 on this page
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -1013,7 +1006,7 @@ export function DataTable<TData extends object> ({
                           )}
                         >
                           {header.isPlaceholder ||
-                          header.column.id === 'actions' ? null : header.column
+                            header.column.id === 'actions' ? null : header.column
                               .id === 'select' ? (
                             flexRender(
                               header.column.columnDef.header,
@@ -1101,7 +1094,7 @@ export function DataTable<TData extends object> ({
                       className={cn(
                         'cursor-pointer',
                         isRowSelected(row.original, selectedItem) &&
-                          'bg-muted/50'
+                        'bg-muted/50'
                       )}
                       onClick={() => onRowClick && onRowClick(row.original)}
                     >

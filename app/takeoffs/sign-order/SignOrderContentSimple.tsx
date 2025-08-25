@@ -50,7 +50,7 @@ interface Props {
   signOrderId?: number
 }
 
-export default function SignOrderContentSimple ({
+export default function SignOrderContentSimple({
   signOrderId: initialSignOrderId
 }: Props) {
   const { dispatch, mptRental } = useEstimate()
@@ -351,19 +351,16 @@ export default function SignOrderContentSimple ({
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `${
-        alreadySubmitted ? 'Sign order updates' : 'Draft'
-      } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
+        } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `${
-        alreadySubmitted ? 'Sign order updates' : 'Draft'
-      } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
+        } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `${
-        alreadySubmitted ? 'Sign order ' : 'Draft'
-      } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${alreadySubmitted ? 'Sign order ' : 'Draft'
+        } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
@@ -412,7 +409,7 @@ export default function SignOrderContentSimple ({
 
   // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
-    async function fetchNotes () {
+    async function fetchNotes() {
       setLoadingNotes(true)
       try {
         if (!signOrderId) return
@@ -478,7 +475,9 @@ export default function SignOrderContentSimple ({
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: new Date(adminInfo.orderDate).toISOString(),
+        order_date: adminInfo.orderDate
+          ? new Date(adminInfo.orderDate).toISOString()
+          : '',
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
@@ -542,8 +541,8 @@ export default function SignOrderContentSimple ({
                 {adminInfo.isSubmitting
                   ? 'Saving...'
                   : initialSignOrderId
-                  ? 'Update order'
-                  : 'Done'}
+                    ? 'Update order'
+                    : 'Done'}
               </Button>
             </div>
           </div>

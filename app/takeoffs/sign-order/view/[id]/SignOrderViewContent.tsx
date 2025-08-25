@@ -80,7 +80,7 @@ const determineBranch = (id: number): string => {
   return 'Archived'
 }
 
-export default function SignOrderViewContent () {
+export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
   const { dispatch, mptRental } = useEstimate()
@@ -349,9 +349,8 @@ export default function SignOrderViewContent () {
                   structure: signData.structure || 'N/A',
                   bLights: Number(signData.bLights) || 0,
                   covers: Number(signData.covers) || 0,
-                  dimensions: `${signData.width || 0}" x ${
-                    signData.height || 0
-                  }"`
+                  dimensions: `${signData.width || 0}" x ${signData.height || 0
+                    }"`
                 }
               }
             )
@@ -396,7 +395,10 @@ export default function SignOrderViewContent () {
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: new Date(adminInfo.orderDate).toISOString(),
+        order_date: adminInfo.orderDate
+          ? new Date(adminInfo.orderDate).toISOString()
+          :
+          '',
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
@@ -416,8 +418,7 @@ export default function SignOrderViewContent () {
       const result = await saveSignOrder(signOrderData)
 
       toast.success(
-        `Sign order ${
-          status === 'SUBMITTED' ? 'submitted' : 'saved'
+        `Sign order ${status === 'SUBMITTED' ? 'submitted' : 'saved'
         } successfully`
       )
 
@@ -507,7 +508,7 @@ export default function SignOrderViewContent () {
                       {signOrder.job_number || '-'}
                       {signOrder.order_status &&
                         signOrder.order_status.trim().toLowerCase() ===
-                          'submitted' && (
+                        'submitted' && (
                           <Badge className='bg-green-100 text-green-800 border-green-200'>
                             Submitted
                           </Badge>
@@ -598,17 +599,17 @@ export default function SignOrderViewContent () {
                   data={
                     signItems.length === 0
                       ? [
-                          {
-                            designation: '-',
-                            description: '-',
-                            dimensions: '-',
-                            quantity: '-',
-                            sheeting: '-',
-                            structure: '-',
-                            bLights: '-',
-                            covers: '-'
-                          } as any
-                        ]
+                        {
+                          designation: '-',
+                          description: '-',
+                          dimensions: '-',
+                          quantity: '-',
+                          sheeting: '-',
+                          structure: '-',
+                          bLights: '-',
+                          covers: '-'
+                        } as any
+                      ]
                       : signItems
                   }
                   columns={SIGN_COLUMNS}
