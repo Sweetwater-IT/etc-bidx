@@ -15,18 +15,18 @@ const fetchDailyTrackerEntries = async ({ page = 1, pageSize = 10 }: FetchDailyT
   try {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    
+
     const query = supabase
       .from('daily_tracker_entries') // Assuming your table name is daily_tracker_entries
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false }); // Order by created date, latest first
-      
+
     const response = await query.range(from, to);
-      
+
     if (response.error) {
       throw new Error(response.error.message);
     }
-    
+
     const dailyTrackerEntries: DailyTrackerEntry[] = (response.data as any[]).map(entry => ({
       id: entry.id,
       created: entry.created_at,
@@ -34,7 +34,7 @@ const fetchDailyTrackerEntries = async ({ page = 1, pageSize = 10 }: FetchDailyT
       dimension: entry.dimension,
       quantity: entry.quantity,
     }));
-    
+
     return {
       dailyTrackerEntries,
       totalCount: response.count || 0
@@ -47,12 +47,12 @@ const fetchDailyTrackerEntries = async ({ page = 1, pageSize = 10 }: FetchDailyT
 
 export function useDailyTrackerSWR(params: FetchDailyTrackerParams = {}) {
   const { page = 1, pageSize = 10 } = params;
-  
+
   const key = ['dailyTrackerEntries', page, pageSize];
-  
+
   const { data, error, mutate, isLoading } = useSWR(
-    key, 
-    () => fetchDailyTrackerEntries({ page, pageSize }), 
+    key,
+    () => fetchDailyTrackerEntries({ page, pageSize }),
     {
       revalidateOnFocus: false,
       dedupingInterval: 0,
@@ -62,7 +62,7 @@ export function useDailyTrackerSWR(params: FetchDailyTrackerParams = {}) {
       shouldRetryOnError: true
     }
   );
-  
+
   return {
     data: data?.dailyTrackerEntries || [],
     totalCount: data?.totalCount || 0,
@@ -72,25 +72,22 @@ export function useDailyTrackerSWR(params: FetchDailyTrackerParams = {}) {
   };
 }
 
-export async function createDailyTrackerEntry(entryData: Omit<DailyTrackerEntry, 'id' | 'created'>) {
-  try {
-    const { data, error } = await supabase
-      .from('daily_tracker_entries')
-      .insert({
-        sign_designation: entryData.signDesignation,
-        dimension: entryData.dimension,
-        quantity: entryData.quantity,
-        created_at: new Date().toISOString(),
-      })
-      .select();
+export async function createDailyTrackerEntry(
+  entryData: Omit<DailyTrackerEntry, 'id' | 'created'>
+) {
+  const response = await fetch('/api/createDailyTrackerEntry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entryData),
+  });
 
-    if (error) {
-      throw error;
-    }
-
-    return data ? data[0] : null;
-  } catch (error) {
+  if (!response.ok) {
+    const error = await response.json();
     console.error('Error creating daily tracker entry:', error);
-    throw error;
+    throw new Error(error?.error || 'Unknown error');
   }
-} 
+
+  const data = await response.json();
+  console.log('New entry:', data);
+  return data;
+}

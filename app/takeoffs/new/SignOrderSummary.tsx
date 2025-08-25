@@ -101,7 +101,7 @@ const SignOrderSummary = ({ currentPhase }: SignSummaryAccordionProps) => {
             case 'covers':
                 return associatedEquipment.covers;
             case 'fourFootTypeIII':
-                return associatedEquipment.fourFootTypeIII;
+                return associatedEquipment?.fourFootTypeIII;
             case 'hStand':
                 return associatedEquipment.hStand;
             case 'post':

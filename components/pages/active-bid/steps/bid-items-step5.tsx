@@ -35,7 +35,7 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -55,6 +55,8 @@ import { safeNumber } from '@/lib/safe-number'
 import {
   calculateLightDailyRateCosts,
   getAssociatedSignEquipment,
+  getNonRatedHoursPerPhase,
+  getRatedHoursPerPhase,
 } from '@/lib/mptRentalHelperFunctions'
 import { fetchReferenceData } from '@/lib/api-client'
 import EquipmentRentalTab from '@/components/BidItems/equipment-rental-tab'
@@ -67,8 +69,6 @@ import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TripAndLaborSummary } from './trip-and-labor-summary'
-
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
 const DEFAULT_MPG_PER_TRUCK = 8
@@ -146,6 +146,191 @@ const PhaseActionButtons = ({
     )}
   </div>
 )
+
+
+// Trip and Labor Summary Component
+const TripAndLaborSummary = ({
+  phase,
+  phaseIndex,
+  adminData,
+  mptRental
+}: {
+  phase: Phase
+  phaseIndex: number
+  adminData: any
+  mptRental: any
+}) => {
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || Number.isNaN(value)) {
+      return '$0.00'
+    }
+    return `$${value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`
+  }
+
+   // Memoize cost calculations
+  const {
+    mobilizationCost,
+    fuelCost,
+    truckAndFuelCost,
+    baseTrips,
+    totalTrips,
+    ratedHours,
+    nonRatedHours,
+  } = useMemo(() => {
+    // Safely access equipment quantities from phase.standardEquipment
+    const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
+    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
+
+    // Calculate baseTrips based on equipment
+    const baseTrips = Math.ceil(((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30) * 2);
+
+    // Add additional trips from phase.maintenanceTrips
+    const additionalTrips = safeNumber(phase.maintenanceTrips);
+    const totalTrips = baseTrips + additionalTrips;
+
+    const rated = getRatedHoursPerPhase(phase);
+    const nonRated = getNonRatedHoursPerPhase(adminData, phase);
+
+    const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
+    const fuel =
+      (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
+        (mptRental?.mpgPerTruck || 1)) *
+      (adminData?.fuelCostPerGallon ?? 0);
+
+    return {
+      mobilizationCost: mobilization,
+      fuelCost: fuel,
+      truckAndFuelCost: mobilization + fuel,
+      baseTrips,
+      totalTrips,
+      ratedHours: rated,
+      nonRatedHours: nonRated,
+    };
+  }, [phase, adminData, mptRental]);
+
+
+  return (
+    <div className='grid grid-cols-3 gap-4 text-sm'>
+      {/* Row 1 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Number of Days</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.days)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Number of Personnel</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.personnel)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Number of Trucks</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.numberTrucks)}
+        </div>
+      </div>
+
+      {/* Row 2 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Base Trips</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(baseTrips)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Additional Trips</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.maintenanceTrips)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Total Trips</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(baseTrips + (safeNumber(phase.maintenanceTrips) * 2))}
+        </div>
+      </div>      
+
+      {/* Row 3 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Base Non-Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(nonRatedHours).toFixed(1)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>
+          Additional Non-Rated Hours
+        </label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Total Non-Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(
+            nonRatedHours + safeNumber(phase.additionalNonRatedHours)
+          ).toFixed(1)}
+        </div>
+      </div>      
+
+      {/* Row 4 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Base Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(ratedHours).toFixed(1)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Additional Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(phase.additionalRatedHours).toFixed(1)}
+        </div>
+      </div>      
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Total Rated Hours</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {safeNumber(
+            ratedHours + safeNumber(phase.additionalRatedHours)
+          ).toFixed(1)}
+        </div>
+      </div> 
+
+      {/* Row 5 */}
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Mobilization</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {formatCurrency(mobilizationCost)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Fuel Cost</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {formatCurrency(fuelCost)}
+        </div>
+      </div>
+      <div className='flex flex-col'>
+        <label className='text-sm font-semibold'>Truck & Fuel Cost</label>
+        <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
+          {formatCurrency(truckAndFuelCost)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const BID_ITEM_OPTIONS = [
+  { label: 'MPT', value: 'mpt' },
+  { label: 'Equipment Rental', value: 'equipment' },
+  { label: 'Perm Signs', value: 'permanent' },
+  { label: 'Flagging', value: 'flagging' },
+  { label: 'Sale Items', value: 'sale' },
+  { label: 'Patterns / Service Work', value: 'patterns' }
+]
 
 const BidItemsStep5 = ({
   currentPhase,
@@ -964,7 +1149,7 @@ const BidItemsStep5 = ({
       const phase = mptRental.phases[currentPhase]
       const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0
       const fourFootTypeIIIQuantity =
-        phase.standardEquipment.fourFootTypeIII?.quantity || 0
+        phase.standardEquipment?.fourFootTypeIII?.quantity || 0
       const sixFootWingsQuantity =
         phase.standardEquipment.sixFootWings?.quantity || 0
 

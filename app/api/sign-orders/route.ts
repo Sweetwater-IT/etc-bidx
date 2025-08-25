@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
         branchNumber = 30;
       }
     }
-
     const getValidContactId = async (contactData: any): Promise<number | null> => {
       if (!contactData) return null;
 

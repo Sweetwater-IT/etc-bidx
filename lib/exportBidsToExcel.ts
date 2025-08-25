@@ -292,7 +292,7 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
             totalHours: (laborSummary.ratedLaborHours + laborSummary.nonRatedLaborHours).toFixed(2),
             phases: dataRow.total_phases,
             // Equipment totals
-            fourFootTypeIII: equipmentTotals.fourFootTypeIII.totalQuantity,
+            fourFootTypeIII: equipmentTotals?.fourFootTypeIII?.totalQuantity,
             sixFootWings: equipmentTotals.sixFootWings.totalQuantity,
             hStand: equipmentTotals.hStand.totalQuantity,
             post: equipmentTotals.post.totalQuantity,
