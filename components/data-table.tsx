@@ -766,7 +766,6 @@ export function DataTable<TData extends object>({
             <DropdownMenuTrigger asChild>
               <Checkbox
                 className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
-
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label='Select all rows'
