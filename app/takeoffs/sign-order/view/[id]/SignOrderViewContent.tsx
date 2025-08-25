@@ -414,7 +414,10 @@ export default function SignOrderViewContent() {
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: new Date(adminInfo.orderDate).toISOString(),
+        order_date: adminInfo.orderDate
+          ? new Date(adminInfo.orderDate).toISOString()
+          :
+          '',
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
