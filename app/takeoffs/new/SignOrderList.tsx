@@ -84,8 +84,7 @@ export function SignOrderList({
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
   const [hasCopied, setHasCopied] = useState(false);
-
-  // Get phase options (exclude current phase)
+  
   const phaseOptions = useCallback(() => {
     return mptRental.phases
       ? mptRental.phases.map((_, idx) => idx).filter(idx => idx !== currentPhase)
