@@ -239,21 +239,21 @@ const ServiceWorkViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
                     Shop Rate
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(adminData.county?.shopRate)}
                 </div>
             </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Total Prevailing Wage
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
+                </div>
+            </div>            
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
@@ -287,7 +287,7 @@ const ServiceWorkViewOnly = () => {
                     Arrow Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.arrowBoards.quantity || 0} | Cost: {formatCurrency(serviceWork?.arrowBoards.cost)}
+                    Qty: {serviceWork?.arrowBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.arrowBoards.cost)}
                 </div>
             </div>
 
@@ -296,7 +296,7 @@ const ServiceWorkViewOnly = () => {
                     Message Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.messageBoards.quantity || 0} | Cost: {formatCurrency(serviceWork?.messageBoards.cost)}
+                    Qty: {serviceWork?.messageBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.messageBoards.cost)}
                 </div>
             </div>
 
@@ -305,7 +305,7 @@ const ServiceWorkViewOnly = () => {
                     TMA
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.TMA.quantity || 0} | Cost: {formatCurrency(serviceWork?.TMA.cost)}
+                    Qty: {serviceWork?.TMA.quantity || 0} | Price: {formatCurrency(serviceWork?.TMA.cost)}
                 </div>
             </div>
 
@@ -351,6 +351,15 @@ const ServiceWorkViewOnly = () => {
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(serviceWork?.additionalEquipmentCost)}
+                </div>
+            </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Gas Cost Per Gallon
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
                 </div>
             </div>
         </div>
