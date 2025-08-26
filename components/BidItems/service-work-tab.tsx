@@ -176,7 +176,10 @@ const ServiceWorkTab = () => {
     const lumpSum = summary.totalFlaggingCost / (1 - markupRate / 100);
     const lumpSumWithEquipment = lumpSum + arrowBoardsCost + messageBoardsCost + tmaCost;
 
-    const totalHours = Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + item.onSiteJobHours;
+    const totalHours =
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
+
     const hourlyRate = item.personnel > 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0;
 
     return { lumpSumWithEquipment, hourlyRate };
@@ -490,7 +493,10 @@ const ServiceWorkTab = () => {
     const lumpSumWithEquipment = arrowBoardsCost + messageBoardsCost + tmaCost + lumpSum;
 
     // Calculate hourly rate
-    const totalHours = Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + item.onSiteJobHours;
+    const totalHours =
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
+
     const hourlyRate = item.personnel !== 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0;
 
     return { lumpSumWithEquipment, hourlyRate };
