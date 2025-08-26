@@ -133,7 +133,7 @@ const FlaggingViewOnly = () => {
                     Arrow Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.arrowBoards.quantity || 0} | Cost: {formatCurrency(flagging?.arrowBoards.cost)}
+                    Qty: {flagging?.arrowBoards.quantity || 0} | Price: {formatCurrency(flagging?.arrowBoards.cost)}
                 </div>
             </div>
 
@@ -142,7 +142,7 @@ const FlaggingViewOnly = () => {
                     Message Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.messageBoards.quantity || 0} | Cost: {formatCurrency(flagging?.messageBoards.cost)}
+                    Qty: {flagging?.messageBoards.quantity || 0} | Price: {formatCurrency(flagging?.messageBoards.cost)}
                 </div>
             </div>
 
@@ -151,7 +151,7 @@ const FlaggingViewOnly = () => {
                     TMA
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.TMA.quantity || 0} | Cost: {formatCurrency(flagging?.TMA.cost)}
+                    Qty: {flagging?.TMA.quantity || 0} | Price: {formatCurrency(flagging?.TMA.cost)}
                 </div>
             </div>
 
