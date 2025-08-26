@@ -1,5 +1,9 @@
-import type { Database } from '@/types/database.types';
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 // Types for the query response structure
 export interface BidMetrics {
@@ -360,16 +364,16 @@ async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Pr
         rawData?.forEach(estimate => {
             // Check if admin_data exists (it's an object, not an array)
             if (!estimate.admin_data) return;
-            
+
             // Access the county data directly from the object
             //these seems to be a type mismatch here in supabase with what the query returns vs what the types expect
             //hence the any type
             const countyData = (estimate.admin_data as any).county;
             if (!countyData) return;
-            
+
             // Parse branch from county data
             let branch = '';
-            
+
             if (typeof countyData === 'string') {
                 try {
                     // Try to parse if it's a JSON string
@@ -383,13 +387,13 @@ async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Pr
                 // If it's already an object, try to access branch property
                 branch = countyData.branch;
             }
-            
+
             // Skip if branch is not in our tracked branches
             if (!branch || !branchCounts[branch]) return;
-            
+
             // Increment the appropriate counters
             branchCounts[branch].total++;
-            
+
             if (estimate.status === 'WON') {
                 branchCounts[branch].won++;
             } else if (estimate.status === 'LOST') {
@@ -447,14 +451,14 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
         estimatesData?.forEach(estimate => {
             // Check if admin_data exists (it's an object, not an array)
             if (!estimate.admin_data) return;
-            
+
             // Access county data directly
             const countyData = (estimate.admin_data as any).county;
             if (!countyData) return;
-            
+
             // Parse branch from county data
             let branch = '';
-            
+
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -465,12 +469,12 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
             } else if (typeof countyData === 'object') {
                 branch = countyData.branch;
             }
-            
+
             if (!branch || !branchJobTypes[branch]) return;
-            
+
             // Get division directly from admin_data
             const division = (estimate.admin_data as any).division;
-            
+
             // Increment the appropriate counter
             if (division === 'PUBLIC') {
                 branchJobTypes[branch].public_jobs++;
@@ -544,14 +548,14 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
         estimatesData?.forEach(estimate => {
             // Check if admin_data exists (it's an object, not an array)
             if (!estimate.admin_data) return;
-            
+
             // Access county data directly
             const countyData = (estimate.admin_data as any).county;
             if (!countyData) return;
-            
+
             // Parse branch from county data
             let branch = '';
-            
+
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -567,7 +571,7 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
 
             // Process jobs and won_bid_items
             if (!estimate.jobs || !estimate.jobs.length) return;
-            
+
             estimate.jobs.forEach(job => {
                 if (!job.won_bid_items || !job.won_bid_items.length) return;
 
@@ -576,11 +580,11 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
                     const contractValue = Number(item.contract_value) || 0;
                     const quantity = Number(item.quantity) || 1;
                     const revenue = contractValue * quantity;
-                    
+
                     // Make sure bid_item exists and has grouping
                     // It's now directly accessible as item.bid_item.grouping instead of item.bid_item[0].grouping
                     if (!item.bid_item || !item.bid_item.grouping) return;
-                    
+
                     const grouping = item.bid_item.grouping;
 
                     if (grouping === 'MPT') {
@@ -668,14 +672,14 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
         estimatesData?.forEach(estimate => {
             // Check if admin_data exists (it's an object, not an array)
             if (!estimate.admin_data) return;
-            
+
             // Access county data directly
             const countyData = (estimate.admin_data as any).county;
             if (!countyData) return;
-            
+
             // Parse branch from county data
             let branch = '';
-            
+
             if (typeof countyData === 'string') {
                 try {
                     const parsed = JSON.parse(countyData);
@@ -710,11 +714,11 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
                     const quantity = Number(item.quantity) || 1;
                     const revenue = contractValue * quantity;
                     const grossProfit = revenue * (1 - costRatio);
-                    
+
                     // Make sure bid_item exists and has grouping
                     // Accessing directly as item.bid_item.grouping
                     if (!item.bid_item || !item.bid_item.grouping) return;
-                    
+
                     const grouping = item.bid_item.grouping;
 
                     if (grouping === 'MPT') {
@@ -782,7 +786,7 @@ async function getProjectStarts(startDate?: string, endDate?: string): Promise<P
         estimatesData?.forEach(estimate => {
             // Check if admin_data exists (it's an object, not an array)
             if (!estimate.admin_data) return;
-            
+
             // Access start_date directly
             const startDateStr = (estimate.admin_data as any).start_date;
             if (!startDateStr) return;
@@ -915,7 +919,7 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
                 job.won_bid_items.forEach(item => {
                     // Access grouping directly from bid_item object
                     if (!item.bid_item || !item.bid_item.grouping) return;
-                    
+
                     if (item.bid_item.grouping === 'PERMANENT_SIGNS' || item.bid_item.grouping === 'Perm. Signs') {
                         hasPermanentSigns = true;
                     }
@@ -994,16 +998,16 @@ async function getCustomerRevenue(startDate?: string, endDate?: string): Promise
         jobsData?.forEach(job => {
             // Skip jobs without project data
             if (!job.project_data) return;
-            
+
             // Handle project_data as an array
             const projectData = job.project_data;
-            
+
             // Check if project data array exists and has elements
             if (!projectData || !Array.isArray(projectData) || projectData.length === 0) return;
-            
+
             // Check if contractor info exists
             if (!projectData[0].contractor || !Array.isArray(projectData[0].contractor) || projectData[0].contractor.length === 0) return;
-            
+
             // Handle contractor as an array
             const contractor = projectData[0].contractor[0];
             if (!contractor || !contractor.name) return;
@@ -1085,26 +1089,26 @@ async function getMPTBids(startDate?: string, endDate?: string): Promise<MPTBid[
         mptData?.forEach(entry => {
             // Skip entries without estimate data
             if (!entry.bid_estimate) return;
-            
+
             // Calculate gross profit margin
             const revenue = Number(entry.revenue) || 0;
             const grossProfit = Number(entry.gross_profit) || 0;
             const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-            
+
             // Get contract number from bid_estimate
             const contractNumber = (entry.bid_estimate as any).contract_number || '';
-            
+
             // Get status from bid_estimate
             let status: 'won' | 'lost' | 'pending' = 'pending';
             const bidStatus = (entry.bid_estimate as any).status;
             if (bidStatus === 'WON') status = 'won';
             else if (bidStatus === 'LOST') status = 'lost';
             else if (bidStatus === 'PENDING') status = 'pending';
-            
+
             // For now, use generic contractor info since we don't have it from the job
             const contractor = "Unknown Client";
             const startDate = "";
-            
+
             result.push({
                 bid_value: revenue,
                 gross_profit_margin: grossProfitMargin,
@@ -1114,13 +1118,13 @@ async function getMPTBids(startDate?: string, endDate?: string): Promise<MPTBid[
                 status: status
             });
         });
-        
+
         // Sort by bid value (descending)
         result.sort((a, b) => b.bid_value - a.bid_value);
-        
+
         console.log("Processed MPT bids:", result.length);
         return result;
-        
+
     } catch (err) {
         console.error('Error in getMPTBids:', err);
         return [];

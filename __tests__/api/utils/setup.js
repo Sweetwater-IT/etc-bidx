@@ -12,10 +12,10 @@ expect.extend({
    * Check if response is a success response
    */
   toBeSuccessResponse(received) {
-    const pass = received && 
-                received.success === true && 
-                received.data !== undefined;
-    
+    const pass = received &&
+      received.success === true &&
+      received.data !== undefined;
+
     if (pass) {
       return {
         message: () => `expected ${JSON.stringify(received)} not to be a success response`,
@@ -28,15 +28,15 @@ expect.extend({
       };
     }
   },
-  
+
   /**
    * Check if response is an error response
    */
   toBeErrorResponse(received) {
-    const pass = received && 
-                received.success === false && 
-                (received.error !== undefined || received.message !== undefined);
-    
+    const pass = received &&
+      received.success === false &&
+      (received.error !== undefined || received.message !== undefined);
+
     if (pass) {
       return {
         message: () => `expected ${JSON.stringify(received)} not to be an error response`,
@@ -62,10 +62,10 @@ if (supabaseUrl && supabaseKey) {
 // Add custom matchers if needed
 expect.extend({
   toBeSuccessResponse(received) {
-    const pass = received && 
-                 received.success === true && 
-                 received.data !== undefined;
-    
+    const pass = received &&
+      received.success === true &&
+      received.data !== undefined;
+
     if (pass) {
       return {
         message: () => `expected ${received} not to be a success response`,
@@ -78,12 +78,12 @@ expect.extend({
       };
     }
   },
-  
+
   toBeErrorResponse(received) {
-    const pass = received && 
-                 received.success === false && 
-                 received.error !== undefined;
-    
+    const pass = received &&
+      received.success === false &&
+      received.error !== undefined;
+
     if (pass) {
       return {
         message: () => `expected ${received} not to be an error response`,

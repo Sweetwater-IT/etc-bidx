@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     };
 
     const contactId = await getValidContactId(signOrderData.contact);
-
+    
     // Check if an ID is provided - if so, update instead of insert
     if (signOrderData.id) {
       // Prepare update fields

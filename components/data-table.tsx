@@ -294,40 +294,35 @@ function formatCellValue(value: any, key: string) {
     return formatDate(value)
   }
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-    try {
-      // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(value)
+    if (typeof value !== 'string') return value
 
-      // Use local methods instead of UTC methods to get the date in user's timezone
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ]
-      const monthName = monthNames[utcDate.getMonth()]
-      const dayNum = utcDate.getDate()
-      const yearNum = utcDate.getFullYear()
-      const hoursValue = utcDate.getHours()
-      const minutesValue = utcDate.getMinutes()
-      const amOrPm = hoursValue >= 12 ? 'PM' : 'AM'
-      const hoursFormatted =
-        hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue
-      const minutesFormatted = minutesValue.toString().padStart(2, '0')
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ]
+
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number)
+        const timestamp = (key === 'created_at' || key === 'createdAt') ? ', 12:00 AM' : ''
+        return `${monthNames[month - 1]} ${day}, ${year}${timestamp}`
+      }
+
+      const date = new Date(value) 
+      const monthName = monthNames[date.getMonth()]
+      const dayNum = date.getDate()
+      const yearNum = date.getFullYear()
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const amOrPm = hours >= 12 ? 'PM' : 'AM'
+      const hoursFormatted = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+      const minutesFormatted = minutes.toString().padStart(2, '0')
       const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`
 
-      // Always show timestamp for created_at and createdAt
       if (key === 'created_at' || key === 'createdAt') {
         return `${monthName} ${dayNum}, ${yearNum}${timestamp}`
       }
+
       return `${monthName} ${dayNum}, ${yearNum}`
     } catch (e) {
       return value
@@ -771,6 +766,7 @@ export function DataTable<TData extends object>({
             <DropdownMenuTrigger asChild>
               <Checkbox
                 className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label='Select all rows'
