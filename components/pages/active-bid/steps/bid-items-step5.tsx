@@ -1519,7 +1519,7 @@ const BidItemsStep5 = ({
                                               htmlFor={`quantity-${equipmentKey}-${index}`}
                                               className='flex text-muted-foreground'
                                             >
-                                              Quantityy:
+                                              Quantity:
                                             </Label>
                                             {
                                               modeEdit[index]?.MPTEquipament ?
