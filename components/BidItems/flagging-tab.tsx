@@ -353,8 +353,8 @@ const FlaggingServicesTab = () => {
     const lumpSumWithEquipment = lumpSum + arrowBoardsCost + messageBoardsCost + tmaCost
 
     const totalHours =
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) +
-      item.onSiteJobHours
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
 
     const hourlyRate =
       item.personnel > 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0
@@ -582,8 +582,8 @@ const FlaggingServicesTab = () => {
 
     // Calculate hourly rate
     const totalHours =
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) +
-      item.onSiteJobHours
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
     const hourlyRate =
       item.personnel !== 0
         ? safeNumber(lumpSum / (item.personnel * totalHours))
