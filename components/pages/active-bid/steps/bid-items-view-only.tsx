@@ -226,6 +226,11 @@ const ServiceWorkViewOnly = () => {
         return arrowBoardsCost + messageBoardsCost + tmaCost;
     };
 
+    const getTotalPrevailingWage = () => {
+        if (!adminData?.county) return 0;
+        return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
+    };    
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 mb-4 pb-4">
             <div className="flex flex-col">
@@ -251,7 +256,7 @@ const ServiceWorkViewOnly = () => {
                     Total Prevailing Wage
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
+                    {formatCurrency(getTotalPrevailingWage())}
                 </div>
             </div>            
 
