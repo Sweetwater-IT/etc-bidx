@@ -180,7 +180,7 @@ const FlaggingViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Markup Rate
+                    Gross Profit Margin
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {flagging?.markupRate ? `${flagging.markupRate}%` : "-"}
@@ -348,7 +348,7 @@ const ServiceWorkViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Markup Rate
+                    Gross Profit Margin
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {serviceWork?.markupRate ? `${serviceWork.markupRate}%` : "-"}
