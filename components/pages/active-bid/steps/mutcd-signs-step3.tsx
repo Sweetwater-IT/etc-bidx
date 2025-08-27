@@ -12,23 +12,29 @@ const step: Step = {
 };
 
 const MutcdSignsStep3 = ({
-  currentPhase
+  currentPhase,
+  isSignOrder = false,
+
+
 }: {
   currentPhase: number;
+  isSignOrder?: boolean;
+
 }) => {
 
   return (
     <div>
       <div className="relative">
         {/* Collapsible Content */}
-          <div className="mt-2 mb-6">
-            <div className="space-y-6">
-              {/* Signs List */}
-              <SignList 
-                currentPhase={currentPhase}
-              />
-            </div>
+        <div className="mt-2 mb-6">
+          <div className="space-y-6">
+            {/* Signs List */}
+            <SignList
+              currentPhase={currentPhase}
+              isSignOrder={isSignOrder}
+            />
           </div>
+        </div>
       </div>
     </div>
   );
