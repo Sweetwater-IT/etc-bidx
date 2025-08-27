@@ -72,6 +72,11 @@ const FlaggingViewOnly = () => {
         return arrowBoardsCost + messageBoardsCost + tmaCost;
     };
 
+    const getTotalPrevailingWage = () => {
+        if (!adminData?.county) return 0;
+        return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
+    }; 
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
             <div className="flex flex-col">
@@ -94,10 +99,10 @@ const FlaggingViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
+                    Total Prevailing Wage
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(flagging?.fuelCostPerGallon)}
+                    {formatCurrency(getTotalPrevailingWage())}
                 </div>
             </div>
 
@@ -199,6 +204,15 @@ const FlaggingViewOnly = () => {
                     {formatCurrency(flagging?.additionalEquipmentCost)}
                 </div>
             </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Gas Cost Per Gallon
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(flagging?.fuelCostPerGallon)}
+                </div>
+            </div>            
         </div>
     );
 };
