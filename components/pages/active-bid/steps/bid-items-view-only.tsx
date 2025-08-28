@@ -1,13 +1,15 @@
 'use client'
 
 import { useEstimate } from '@/contexts/EstimateContext'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ADDITIONAL_EQUIPMENT_OPTIONS, determineItemType, getDisplayName, InstallFlexibleDelineators, PostMountedInstall, PostMountedInstallTypeC, } from '@/types/TPermanentSigns';
 import { getPermanentSignRevenueAndMargin, getPermSignDaysRequired, getPermSignTotalCost } from '@/lib/mptRentalHelperFunctions';
 import PhasesViewOnly from './phases-view-only';
 import SignsViewOnly from './signs-view-only';
 import TripAndLaborViewOnlyAll from './trip-and-labor-view-only';
+import { LegacyColumn, EquipmentRentalTableData } from '@/types/LegacyColumn'
+import { DataTable } from '@/components/data-table'
 
 // Mapping for equipment labels
 const labelMapping: Record<string, string> = {
@@ -75,7 +77,7 @@ const FlaggingViewOnly = () => {
     const getTotalPrevailingWage = () => {
         if (!adminData?.county) return 0;
         return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
-    }; 
+    };
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
@@ -212,7 +214,7 @@ const FlaggingViewOnly = () => {
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(flagging?.fuelCostPerGallon)}
                 </div>
-            </div>            
+            </div>
         </div>
     );
 };
@@ -243,7 +245,7 @@ const ServiceWorkViewOnly = () => {
     const getTotalPrevailingWage = () => {
         if (!adminData?.county) return 0;
         return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
-    };    
+    };
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 mb-4 pb-4">
@@ -272,7 +274,7 @@ const ServiceWorkViewOnly = () => {
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(getTotalPrevailingWage())}
                 </div>
-            </div>            
+            </div>
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
@@ -501,116 +503,116 @@ const MPTViewOnly = () => {
 
 // Add these components to your BidItemsViewOnly file
 
-const EquipmentRentalViewOnly = () => {
-    const { equipmentRental } = useEstimate();
+// const EquipmentRentalViewOnly = () => {
+//     const { equipmentRental } = useEstimate();
 
-    const formatCurrency = (value: number | null | undefined): string => {
-        if (!value) return "-";
-        return `$${value.toFixed(2)}`;
-    };
+//     const formatCurrency = (value: number | null | undefined): string => {
+//         if (!value) return "-";
+//         return `$${value.toFixed(2)}`;
+//     };
 
-    const calculateTotal = (item: any) => {
-        const monthlyTotal = item.quantity * item.months * item.rentPrice;
-        const reRentTotal = item.reRentForCurrentJob ? (item.quantity * item.reRentPrice) : 0;
-        return monthlyTotal + reRentTotal;
-    };
+//     const calculateTotal = (item: any) => {
+//         const monthlyTotal = item.quantity * item.months * item.rentPrice;
+//         const reRentTotal = item.reRentForCurrentJob ? (item.quantity * item.reRentPrice) : 0;
+//         return monthlyTotal + reRentTotal;
+//     };
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-            {equipmentRental && equipmentRental.length > 0 ? (
-                equipmentRental.map((item, index) => (
-                    <React.Fragment key={index}>
-                        <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2">
-                            <label className="text-sm font-semibold">
-                                {item.name}
-                            </label>
-                        </div>
+//     return (
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
+//             {equipmentRental && equipmentRental.length > 0 ? (
+//                 equipmentRental.map((item, index) => (
+//                     <React.Fragment key={index}>
+//                         <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2">
+//                             <label className="text-sm font-semibold">
+//                                 {item.name}
+//                             </label>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Quantity
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.quantity || "-"}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Quantity
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {item.quantity || "-"}
+//                             </div>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Months
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.months || "-"}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Months
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {item.months || "-"}
+//                             </div>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Rent Price
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {formatCurrency(item.rentPrice)}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Rent Price
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {formatCurrency(item.rentPrice)}
+//                             </div>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Re-Rent Cost
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {formatCurrency(item.reRentPrice)}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Re-Rent Cost
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {formatCurrency(item.reRentPrice)}
+//                             </div>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Re-Rent for Current Job
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.reRentForCurrentJob ? 'Yes' : 'No'}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Re-Rent for Current Job
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {item.reRentForCurrentJob ? 'Yes' : 'No'}
+//                             </div>
+//                         </div>
 
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Total Cost
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {formatCurrency(calculateTotal(item))}
-                            </div>
-                        </div>
+//                         <div className="flex flex-col">
+//                             <label className="text-sm font-semibold">
+//                                 Total Cost
+//                             </label>
+//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                 {formatCurrency(calculateTotal(item))}
+//                             </div>
+//                         </div>
 
-                        {item.totalCost && (
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Equipment Cost
-                                </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {formatCurrency(item.totalCost)}
-                                </div>
-                            </div>
-                        )}
+//                         {item.totalCost && (
+//                             <div className="flex flex-col">
+//                                 <label className="text-sm font-semibold">
+//                                     Equipment Cost
+//                                 </label>
+//                                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                     {formatCurrency(item.totalCost)}
+//                                 </div>
+//                             </div>
+//                         )}
 
-                        {item.usefulLifeYrs && (
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Useful Life (Years)
-                                </label>
-                                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                    {item.usefulLifeYrs}
-                                </div>
-                            </div>
-                        )}
-                    </React.Fragment>
-                ))
-            ) : (
-                <div className="col-span-3 text-center py-8 text-muted-foreground">
-                    No equipment rental items configured
-                </div>
-            )}
-        </div>
-    );
-};
+//                         {item.usefulLifeYrs && (
+//                             <div className="flex flex-col">
+//                                 <label className="text-sm font-semibold">
+//                                     Useful Life (Years)
+//                                 </label>
+//                                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+//                                     {item.usefulLifeYrs}
+//                                 </div>
+//                             </div>
+//                         )}
+//                     </React.Fragment>
+//                 ))
+//             ) : (
+//                 <div className="col-span-3 text-center py-8 text-muted-foreground">
+//                     No equipment rental items configured
+//                 </div>
+//             )}
+//         </div>
+//     );
+// };
 
 const SaleItemsViewOnly = () => {
     const { saleItems } = useEstimate();
@@ -751,7 +753,7 @@ const PermanentSignsViewOnly = () => {
                 const revenue = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue;
                 const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
                 const grossMargin = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin;
-               
+
 
                 return (
                     <div
@@ -807,7 +809,7 @@ const PermanentSignsViewOnly = () => {
                                 </div>
                             )}
 
-                            
+
 
                             {/* Perm Sign Bolts (if applicable) */}
                             {pmsItem.permSignBolts && (
@@ -951,6 +953,56 @@ const PermanentSignsViewOnly = () => {
 
 const BidItemsViewOnly = () => {
     const [activeTab, setActiveTab] = useState("mpt");
+    const [equipmentData, setEquipmentData] = useState<EquipmentRentalTableData[]>([]);
+    const [loading, setLoading] = useState(false);
+    const { equipmentRental } = useEstimate(); // ← Obtén los datos del contexto
+
+
+
+    // Define las columnas para el DataTable
+    const equipmentColumns: LegacyColumn[] = [
+        { key: 'name', title: 'Equipment Name', sortable: true },
+        { key: 'quantity', title: 'Qty', sortable: true },
+        { key: 'months', title: 'Months', sortable: true },
+        { key: 'rentPrice', title: 'Rent Price', sortable: true },
+        { key: 'reRentPrice', title: 'Re-Rent Price', sortable: true },
+        { key: 'reRentForCurrentJob', title: 'Re-Rent Current Job', sortable: true },
+        { key: 'totalCost', title: 'Total Cost', sortable: true },
+        { key: 'equipmentCost', title: 'Equipment Cost', sortable: true },
+        { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
+    ];
+
+    // Función para calcular el total
+    const calculateTotal = (item: any): number => {
+        const monthlyTotal = (item.quantity || 0) * (item.months || 0) * (item.rentPrice || 0);
+        const reRentTotal = item.reRentForCurrentJob ? (item.quantity || 0) * (item.reRentPrice || 0) : 0;
+        return monthlyTotal + reRentTotal;
+    };
+
+    // Función para transformar los datos
+    const transformEquipmentData = (equipmentRental: any[]): EquipmentRentalTableData[] => {
+        return equipmentRental.map(item => ({
+            name: item.name || '-',
+            quantity: item.quantity || null,
+            months: item.months || null,
+            rentPrice: item.rentPrice || null,
+            reRentPrice: item.reRentPrice || null,
+            reRentForCurrentJob: item.reRentForCurrentJob ? 'Yes' : 'No',
+            totalCost: calculateTotal(item) || null,
+            equipmentCost: item.totalCost || null,
+            usefulLifeYrs: item.usefulLifeYrs || null
+        }));
+    };
+
+    // Obtener los datos del equipment rental cuando cambie el contexto
+    useEffect(() => {
+        if (equipmentRental && equipmentRental.length > 0) {
+            const transformedData = transformEquipmentData(equipmentRental);
+            setEquipmentData(transformedData);
+        } else {
+            setEquipmentData([]);
+        }
+    }, [equipmentRental]);
 
     return (
         <div className="space-y-6 px-6">
@@ -1012,11 +1064,24 @@ const BidItemsViewOnly = () => {
                     <MPTViewOnly />
                 </TabsContent>
 
-                {/* Equipment Rental Tab */}
+                {/* Equipment Rental Tab - MODIFICADO */}
                 <TabsContent value="equipment" className="mt-6">
-                    <div className="text-center py-6 text-muted-foreground pl-6">
-                        <EquipmentRentalViewOnly />
-                    </div>
+                    {equipmentData.length > 0 ? (
+                        <div className="px-6">
+                            <DataTable
+                                columns={equipmentColumns}
+                                data={equipmentData}
+                                pageSize={10}
+                                hideDropdown={true}
+                                totalCount={equipmentData.length}
+                                onRowClick={(item) => console.log('Equipment clicked:', item)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                            No equipment rental items configured
+                        </div>
+                    )}
                 </TabsContent>
 
                 {/* Permanent Signs Tab */}
