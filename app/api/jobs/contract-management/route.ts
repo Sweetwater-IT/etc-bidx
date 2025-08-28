@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // Get all job IDs that don't have contractor names for batch lookup
     const jobsWithoutContractors = data?.filter(job => !job.contractor_name).map(job => job.id) || [];
-    
+
     // Batch lookup contractor names for jobs missing them
     const contractorLookups = new Map();
     if (jobsWithoutContractors.length > 0) {
@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
       else finalContractorName = null;
     }
 
-    if(!job.admin_data || !job.admin_data.contractNumber){
+    if (!job.admin_data || !job.admin_data.contractNumber) {
 
     }
 
@@ -280,5 +280,64 @@ export async function POST(request: NextRequest) {
       { message: 'Internal server error', error: String(error) },
       { status: 500 }
     );
+  }
+}
+
+
+export async function PUT(request: NextRequest) {
+  try {
+    const reqBody = await request.json();
+    const { contractNumber, updates } = reqBody;
+
+    if (!contractNumber) {
+      return NextResponse.json({ message: 'Contract number is required' }, { status: 400 });
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json({ message: 'Updates object is required' }, { status: 400 });
+    }
+
+    const { data: adminDataEntry, error: fetchError } = await supabase
+      .from('admin_data_entries')
+      .select('*')
+      .eq('contract_number', contractNumber)
+      .single();
+
+    if (fetchError || !adminDataEntry) {
+      return NextResponse.json({ message: 'Admin data entry not found', error: fetchError?.message }, { status: 404 });
+    }
+
+    const newAdminData = {
+      ...adminDataEntry.admin_data,
+      ...updates,
+    };
+
+    const { error: updateError } = await supabase
+      .from('admin_data_entries')
+      .update({
+        owner: updates.owner,
+        county: updates.county,
+        division: updates.division,
+        location: updates.location,
+        start_date: updates.startDate,
+        end_date: updates.endDate,
+        bid_date: updates.lettingDate,
+        sr_route: updates.srRoute,
+        dbe: updates.dbe,
+      })
+      .eq('id', adminDataEntry.id);
+
+    if (updateError) {
+      console.error('Error updating admin_data:', updateError);
+      return NextResponse.json({ message: 'Error updating admin_data', error: updateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      message: 'Admin data updated successfully',
+      adminData: newAdminData,
+    });
+  } catch (error) {
+    console.error('Error in update endpoint:', error);
+    return NextResponse.json({ message: 'Internal server error', error: String(error) }, { status: 500 });
   }
 }
