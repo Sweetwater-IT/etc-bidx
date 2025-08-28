@@ -1,4 +1,5 @@
-import React from 'react'
+'use client'
+import React, { useState, useEffect } from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { styles as baseStyles } from './styles/bidSummaryPDFStyle'
 import Checkbox from './SheetCheckBox'
@@ -9,28 +10,20 @@ import { safeNumber } from "@/lib/safe-number";
 import { getEquipmentTotalsPerPhase } from "@/lib/mptRentalHelperFunctions";
 
 export interface SignItem {
-  designation: string
-  description: string
+  legend: string
   quantity: number
-  width: number
-  height: number
-  sheeting: string
-  substrate: string
-  stiffener: string | boolean
-  inStock?: number
-  order?: number
-  make?: number
-  unitPrice?: number
-  totalPrice?: number
-  primarySignId?: string
-  displayStructure?: string
-  bLights?: number
-  cover?: boolean
+  size: string
+  displayStructure: string
+  type?: 'trailblazers' | 'type3' | 'loose'
 }
 
 interface Props {
   adminInfo: SignOrderAdminInformation
-  signList: SignItem[]
+  signList: {
+    type3Signs: SignItem[];
+    trailblazersSigns: SignItem[];
+    looseSigns: SignItem[];
+  };
   mptRental: MPTRentalEstimating | undefined
   notes: Note[]
 }
@@ -93,11 +86,11 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     borderBottom: '1.5px solid black',
-    minHeight: 20
+    minHeight: 20,
   },
   lastHeaderRow: {
     flexDirection: 'row',
-    minHeight: 20
+    minHeight: 20,
   },
   headerCell: {
     flex: 1,
@@ -120,7 +113,21 @@ const styles = StyleSheet.create({
     borderTop: '1.5px solid black',
     minHeight: 18,
     alignItems: 'center',
-    padding: 2
+  },
+  firstRow: {
+    flex: 0.19,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  firstBody: {
+    flex: 0.8,
+    borderLeft: '1.5px solid black',
+  },
+  firstBodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cell: {
     flex: 1,
@@ -211,12 +218,13 @@ const Footer = ({
   </View>
 )
 
-const SignOrderWorksheetPDF: React.FC<Props> = ({
+const MPTOrderWorksheetPDF: React.FC<Props> = ({
   adminInfo,
   signList,
   mptRental,
   notes
-}) => (
+}) => {
+  return (
   <Document>
     <Page size='A4' style={styles.page}>
       <View style={styles.mainContainer}>
@@ -241,8 +249,20 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
                 {adminInfo.customer?.name || '-'}
               </Text>
             </View>
+            <View style={styles.headerCell}>
+              <Text style={styles.label}>Contact:</Text>
+              <Text style={styles.value}>
+                {adminInfo.customer?.mainPhone || '-'}
+              </Text>
+            </View>
+            <View style={styles.headerCell}>
+              <Text style={styles.label}>E-mail:</Text>
+              <Text style={styles.value}>
+                {adminInfo.customer?.emails[0] || '-'}
+              </Text>
+            </View>
             <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Customer Contact:</Text>
+              <Text style={styles.label}>Phone:</Text>
               <Text style={styles.value}>{adminInfo.customer?.phones[0] || '-'}</Text>
             </View>
           </View>
@@ -266,25 +286,13 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               </Text>
             </View>
           </View>
-          <View style={styles.headerRow}>
-            <View style={styles.headerCell}>
-              <Text style={styles.label}>Sale:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('sale')} />
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Rental:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('rental')} />
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Permanent:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('permanent signs')} />
-            </View>
-            <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Multiple:</Text>
-              <Checkbox checked={adminInfo.orderType.length > 1} />
-            </View>
-          </View>
           <View style={styles.lastHeaderRow}>
+            <View style={styles.headerCell}>
+              <Text style={styles.label}>Order Date:</Text>
+              <Text style={styles.value}>
+                {adminInfo.orderDate ? new Date(adminInfo.orderDate).toLocaleDateString() : '-'}
+              </Text>
+            </View>
             <View style={styles.headerCell}>
               <Text style={styles.label}>Need Date:</Text>
               <Text style={styles.value}>
@@ -308,91 +316,74 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
         {/* Section Title */}
         <Text style={styles.sectionTitle}>SIGN LIST</Text>
         {/* Sign List Table */}
-        <View style={[styles.container, { borderBottom: '4px solid black' }]}>
-          <View style={{ flex: 1 }}>
+        <View style={{ borderBottom: '4px solid black'}}>
             {/* Table Header */}
             <View style={[styles.row, { backgroundColor: '#F3F4F6' }]}>
-              <Text style={[styles.cell, styles.columnHeader]}>Designation</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Width</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Height</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Quantity</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Sheeting</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Structure</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>B Lights</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Covers</Text>
+              <Text style={[styles.cell, styles.columnHeader, { flex: 0.2}]}></Text>
+              <Text style={[styles.cell, styles.columnHeader, { flex: 0.1 }]}>Qty</Text>
+              <Text style={[styles.cell, styles.columnHeader, { flex: 0.1 }]}>Size</Text>
+              <Text style={[styles.cell, styles.columnHeader, { flex: 0.4 }]}>Legend</Text>
+              <Text style={[styles.cell, styles.columnHeader, { flex: 0.2 }]}>Structure</Text>
             </View>
-            {/* Table Rows */}
-            {signList.map((item, idx) => (
-              <View style={styles.row} key={idx}>
-                <Text style={styles.cell}>{item.designation}</Text>
-                <Text style={styles.cell}>{item.width} in.</Text>
-                <Text style={styles.cell}>{item.height} in.</Text>
-                <Text style={styles.cell}>{item.quantity}</Text>
-                <Text style={styles.cell}>{item.sheeting}</Text>
-                <Text style={styles.cell}>{item.displayStructure || '-'}</Text>
-                <Text style={styles.cell}>{item.bLights}</Text>
-                <Text style={styles.cell}>{item.cover ? 'Yes' : 'No'}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-        {/* EQUIPMENT SUMMARY */}
-        <View style={styles.equipmentContainer}>
-          <View style={{ flex: 0.33 }}>
-            <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>H-STANDS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>V/P&apos;S =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>SANDBAGS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>POSTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>6&apos; WINGS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>METAL STANDS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).metalStands.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity)}</Text>
-            </View>
-          </View>
-          <View style={styles.notesContainer}>  
-            {
-              notes.map((note, idx) => (
-                <View style={styles.notesRow} key={idx}>
-                  <Text>{note.text}</Text>
-                  <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>TRAILBLAZERS</Text>
                 </View>
-              ))
-            }
-          </View>
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.trailblazersSigns.map((item, idx) => (
+                      <View style={{borderBottom: signList.trailblazersSigns.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>TYPE III&apos;S</Text>
+                </View>
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.type3Signs.map((item, idx) => (
+                      <View style={{borderBottom: signList.type3Signs.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
+            <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
+                <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
+                  <Text style={styles.cell}>LOOSE</Text>
+                </View>
+                <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
+                {
+                  signList.looseSigns.map((item, idx) => (
+                      <View style={{borderBottom: signList.looseSigns.length-1 === idx? "": "1.5px solid black", flexDirection: "row"}} key={idx}>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.quantity || 0}</Text>
+                        <Text style={[styles.cell, { flex: 0.125 }]}>{item.size || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.5 }]}>{item.legend || ''}</Text>
+                        <Text style={[styles.cell, { flex: 0.25 }]}>{item.displayStructure || ''}</Text>
+                      </View>
+                  ))
+                }
+                </View>
+            </View>
         </View>
+        
         {/* Footer */}
         <Footer pageNumber={1} totalPages={1} />
       </View>
     </Page>
   </Document>
-)
+  )
+}
 
-export default SignOrderWorksheetPDF
+export default MPTOrderWorksheetPDF
