@@ -344,7 +344,7 @@ const MPTOrderWorksheetPDF: React.FC<Props> = ({
             </View>
             <View style={{flexDirection: "row", borderTop: "1.5px solid black", alignItems: "center", textAlign: "center"}}>
                 <View style={{flex: 0.2, flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
-                  <Text style={styles.cell}>TYPE III'S</Text>
+                  <Text style={styles.cell}>TYPE III&apos;S</Text>
                 </View>
                 <View style={{flex:0.8, borderLeft: "1.5px solid black"}}>
                 {
