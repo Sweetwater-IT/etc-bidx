@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { PrimarySign, SecondarySign, EquipmentType } from "@/types/MPTEquipment";
-import { SignOrderList } from "@/app/takeoffs/new/SignOrderList";
+import SignOrderList from "@/app/takeoffs/new/SignOrderList";
+
+
 
 interface SignListProps {
   currentPhase: number;
