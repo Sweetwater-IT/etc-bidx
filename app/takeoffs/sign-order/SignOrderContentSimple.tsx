@@ -446,6 +446,7 @@ export default function SignOrderContentSimple({
     }
   }
 
+
   const handleEditNote = async (index: number, updatedNote: Note) => {
     const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
     setNotes(updatedNotes)
@@ -566,7 +567,9 @@ export default function SignOrderContentSimple({
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
           />
-          <SignOrderList />
+          <SignOrderList
+            isSignOrder={true}
+          />
         </div>
         {/* Right Column (1/4) */}
         <div className='w-1/4 space-y-6'>

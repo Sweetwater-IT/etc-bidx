@@ -40,6 +40,7 @@ interface Props {
     sign: PrimarySign | SecondarySign;
     currentPhase?: number;
     isTakeoff?: boolean;
+    isSignOrder?: boolean;
 }
 
 // Type guard to check if sign is SecondarySign
@@ -47,7 +48,7 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
     return 'primarySignId' in sign;
 };
 
-const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true }: Props) => {
+const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useEstimate();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
@@ -58,6 +59,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const isSecondary = isSecondarySign(sign);
 
+    console.log( "isSignOrder:", isSignOrder);
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
@@ -500,8 +502,12 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         Aluminum Composite
                                     </SelectItem>
                                     <SelectItem value="Plastic">Plastic</SelectItem>
-                                    <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                    <SelectItem value="Face">Face</SelectItem>
+                                    {isSignOrder && (
+                                        <>
+                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                            <SelectItem value="Face">Face</SelectItem>
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
