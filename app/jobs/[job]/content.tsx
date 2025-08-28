@@ -160,6 +160,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
         fetchReferenceData();
     }, []);
 
+    console.log('availableJobs:', availableJobs);
+
     // Initialize filter options when reference data is loaded
     useEffect(() => {
         if (referenceData.counties.length > 0 || referenceData.owners.length > 0 || referenceData.branches.length > 0) {
@@ -979,6 +981,15 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
     const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
+
+    //borrar
+    // useEffect(() => {
+        
+    // console.log('Rendering JobsContent with', { data, activeSegment, activeFilters, sortBy, sortOrder
+    // });
+    // }, [data, activeSegment, activeFilters, sortBy, sortOrder]);
+
+
 
     const handleActiveBidViewDetails = (item: ActiveBid) => {
         console.log('View details clicked:', item);

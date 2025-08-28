@@ -2,7 +2,6 @@
 import { Button } from '@/components/ui/button'
 import { useEffect, useState, useRef } from 'react'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { exportSignListToExcel } from '@/lib/exportSignListToExcel'
 import { SignOrderList } from '../new/SignOrderList'
 import { SignOrderAdminInfo } from '../new/SignOrderAdminInfo'
 import { toast } from 'sonner'
@@ -14,12 +13,11 @@ import {
   DropzoneEmptyState
 } from '@/components/ui/dropzone'
 import { useFileUpload } from '@/hooks/use-file-upload'
-import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
-import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
-import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
+import EquipmentTotalsAccordion from '../sign-order/view/[id]/EquipmentTotalsAccordion'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import {
   defaultMPTObject,
@@ -28,15 +26,11 @@ import {
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
-import FileViewingContainer from '@/components/file-viewing-container'
-import { FileMetadata } from '@/types/FileTypes'
-import { useAuth } from '@/contexts/auth-context'
-import { AuthAdminApi } from '@supabase/supabase-js'
-import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
-import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
+import MPTOrderWorksheetPDF from '@/components/sheets/MPTOrderWorksheetPDF'
+import MPTOrderWorksheet from '@/components/sheets/MPTOrderWorksheet'
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
+import { SignItem } from '@/components/sheets/MPTOrderWorksheetPDF'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -53,14 +47,13 @@ export interface SignOrderAdminInformation {
   orderNumber?: string
   startDate?: Date
   endDate?: Date
-  contact?: any | null
 }
 
 interface Props {
   signOrderId?: number
 }
 
-export default function SignOrderContentSimple({
+export default function MPTOrderContentSimple ({
   signOrderId: initialSignOrderId
 }: Props) {
   const { dispatch, mptRental } = useEstimate()
@@ -77,14 +70,26 @@ export default function SignOrderContentSimple({
     jobNumber: '',
     isSubmitting: false,
     contractNumber: '',
-    orderNumber: undefined,
-    contact: null
+    orderNumber: undefined
   })
-  const [signList, setSignList] = useState<SignItem[]>([])
+  const [signList, setSignList] = useState<{
+    type3Signs: SignItem[];
+    trailblazersSigns: SignItem[];
+    looseSigns: SignItem[];
+  }>({
+    type3Signs: [],
+    trailblazersSigns: [],
+    looseSigns: []
+  })
+  const [type3Signs, setType3Signs] = useState<SignItem[]>([])
+  const [trailblazersSigns, setTrailblazersSigns] = useState<SignItem[]>([])
+  const [looseSigns, setLooseSigns] = useState<SignItem[]>([])
 
   const { startLoading, stopLoading } = useLoading()
-  const { user } = useAuth()
-  const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
+
+  const [localFiles, setLocalFiles] = useState<File[]>([])
+  const [localNotes, setLocalNotes] = useState<string>()
+  const [savedNotes, setSavedNotes] = useState<string>()
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
   const [signOrderId, setSignOrderId] = useState<number | null>(
     initialSignOrderId ?? null
@@ -103,6 +108,8 @@ export default function SignOrderContentSimple({
 
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const [shouldGeneratePDF, setShouldGeneratePDF] = useState(false)
+  const pdfDownloadRef = useRef<HTMLAnchorElement>(null)
 
   const isOrderInvalid = (): boolean => {
     return (
@@ -285,7 +292,13 @@ export default function SignOrderContentSimple({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      setSignList(mptRental.phases[0].signs.map(normalizeSign));
+      const normalizedSigns = mptRental.phases[0].signs.map(normalizeSign);
+      const { type3Signs, trailblazersSigns, looseSigns } = categorizeSigns(normalizedSigns);
+      setSignList({
+        type3Signs,
+        trailblazersSigns,
+        looseSigns
+      })
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
@@ -334,8 +347,7 @@ export default function SignOrderContentSimple({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status: 'DRAFT' as const,
-        order_number: adminInfo.orderNumber,
-        contact: adminInfo.contact
+        order_number: adminInfo.orderNumber
       }
 
       const result = await saveSignOrder(signOrderData)
@@ -362,23 +374,26 @@ export default function SignOrderContentSimple({
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
-        } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
-        } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `${alreadySubmitted ? 'Sign order ' : 'Draft'
-        } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order ' : 'Draft'
+      } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024, // 50MB
     maxFiles: 10, // Allow multiple files to be uploaded
-    uniqueIdentifier: signOrderId ?? '',
+    uniqueIdentifier: 100000,
     apiEndpoint: '/api/files/sign-orders',
     accept: {
       'application/pdf': ['.pdf'],
@@ -397,34 +412,30 @@ export default function SignOrderContentSimple({
   })
 
   // Destructure needed properties
-  const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps;
-
-  useEffect(() => {
-    if (!fileErrors || fileErrors.length === 0) return;
-    if (fileErrors.some(err => err.name === 'identifier')) {
-      toast.error('Sign order needs to be saved as draft in order to being associating files. Please add admin data, then click upload files again.')
-    }
-  }, [fileErrors])
-
-  const fetchFiles = () => {
-    if (!signOrderId) return
-    fetchAssociatedFiles(signOrderId, 'sign-orders?sign_order_id', setLocalFiles)
-  }
-
-  useEffect(() => {
-    fetchFiles();
-  }, [signOrderId])
+  const { files, successes, isSuccess } = fileUploadProps
 
   // Use useEffect to update parent component's files state when upload is successful
   useEffect(() => {
     if (isSuccess && files.length > 0) {
-      fetchFiles();
+      const successfulFiles = files.filter(file =>
+        successes.includes(file.name)
+      )
+      if (successfulFiles.length > 0) {
+        setLocalFiles(prevFiles => {
+          // Filter out duplicates
+          const filteredPrevFiles = prevFiles.filter(
+            prevFile =>
+              !successfulFiles.some(newFile => newFile.name === prevFile.name)
+          )
+          return [...filteredPrevFiles, ...successfulFiles]
+        })
+      }
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
   // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
-    async function fetchNotes() {
+    async function fetchNotes () {
       setLoadingNotes(true)
       try {
         if (!signOrderId) return
@@ -447,11 +458,10 @@ export default function SignOrderContentSimple({
       await fetch(`/api/sign-orders`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, timestamp: note.timestamp, notes: updatedNotes, user_email: user.email })
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
       })
     }
   }
-
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
     const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
@@ -491,9 +501,7 @@ export default function SignOrderContentSimple({
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: adminInfo.orderDate
-          ? new Date(adminInfo.orderDate).toISOString()
-          : '',
+        order_date: new Date(adminInfo.orderDate).toISOString(),
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
@@ -507,8 +515,7 @@ export default function SignOrderContentSimple({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status,
-        order_number: adminInfo.orderNumber,
-        contact: adminInfo.contact
+        order_number: adminInfo.orderNumber
       }
 
       // Submit data to the API
@@ -530,15 +537,27 @@ export default function SignOrderContentSimple({
     }
   }
 
-  const pdfDoc = useMemo(
-    () => <SignOrderWorksheetPDF adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />,
-    [adminInfo, signList, mptRental, notes]
-  );
+  const generatePDF = () => {
+    console.log("Generating PDF...")
+    return <MPTOrderWorksheetPDF adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />;
+  };
 
+  const handleDownloadPDF = () => {
+    setShouldGeneratePDF(true);
+    // Wait for the PDFDownloadLink to render, then click it
+    setTimeout(() => {
+      const downloadElement = document.getElementById('download') as HTMLAnchorElement;
+      if (downloadElement) {
+        downloadElement.click();
+      }
+      setShouldGeneratePDF(false);
+    }, 1500);
+  };
+  
   return mptRental.phases.length > 0 ? (
     <div className='flex flex-1 flex-col'>
       <PageHeaderWithSaving
-        heading='Create Sign Order'
+        heading='Create MPT Order'
         handleSubmit={() => {
           handleSave('DRAFT')
           router.push('/takeoffs/load-sheet')
@@ -563,38 +582,14 @@ export default function SignOrderContentSimple({
                 {adminInfo.isSubmitting
                   ? 'Saving...'
                   : initialSignOrderId
-                    ? 'Update order'
-                    : 'Done'}
+                  ? 'Update order'
+                  : 'Done'}
               </Button>
             </div>
           </div>
         }
       />
       <div className='flex gap-6 p-6 max-w-full'>
-        {/* Main Form Column (3/4) */}
-        <div className='w-3/4 space-y-6'>
-          <SignOrderAdminInfo
-            adminInfo={adminInfo}
-            setAdminInfo={setAdminInfo}
-            showInitialAdminState={!!initialSignOrderId}
-          />
-          <SignOrderList
-            isSignOrder={true}
-          />
-        </div>
-        {/* Right Column (1/4) */}
-        <div className='w-1/4 space-y-6'>
-          <EquipmentTotalsAccordion />
-          <div className='border rounded-lg p-4'>
-            <h2 className='mb-2 text-lg font-semibold'>Files</h2>
-            <Dropzone
-              {...fileUploadProps}
-              className='p-8 cursor-pointer space-y-4 mb-4'
-            >
-              <DropzoneContent />
-              <DropzoneEmptyState />
-            </Dropzone>
-            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
           {/* Left Section: expands if PDF preview is hidden */}
           <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
             {/* Main Form Column (3/4) */}
@@ -625,18 +620,23 @@ export default function SignOrderContentSimple({
                 loading={loadingNotes}
               />
           </div>
-          {/* PDF Preview Section: only render if visible */}
-          <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
-            <div className='flex justify-end'>
-              <PDFDownloadLink
-                document={pdfDoc}
-                fileName="sign-order.pdf"
-              >
-                <Button>Download PDF</Button>
-              </PDFDownloadLink>
-            </div>
+                     {/* PDF Preview Section: only render if visible */}
+           <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
+             <div className='flex justify-end'>
+                {shouldGeneratePDF ? (
+                  <PDFDownloadLink
+                    document={generatePDF()}
+                    fileName="mpt-order.pdf"
+                    id="download"
+                  >
+                      <Button>Generating...</Button>
+                  </PDFDownloadLink>
+                ) : (
+                  <Button onClick={handleDownloadPDF}>Download PDF</Button>
+                )}
+             </div>
             <div className='min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]'>
-              <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
+              <MPTOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
             </div>
           </div>
       </div>
@@ -647,21 +647,28 @@ export default function SignOrderContentSimple({
 }
 
 const normalizeSign = (sign: any): SignItem => ({
-  designation: sign.designation || '',
-  description: sign.description || '',
+  legend: sign.description || '',
   quantity: sign.quantity || 0,
-  width: sign.width || 0,
-  height: sign.height || 0,
-  sheeting: sign.sheeting || '',
-  substrate: sign.substrate || '', // ensure string, fallback to empty string
-  stiffener: typeof sign.stiffener === 'string' || typeof sign.stiffener === 'boolean' ? sign.stiffener : '',
-  inStock: sign.inStock ?? 0,
-  order: sign.order ?? 0,
+  size: `${sign.width || 0} x ${sign.height || 0}`,
   displayStructure: sign.displayStructure || '',
-  bLights: sign.bLights || 0,
-  cover: sign.cover || false,
-  make: sign.make ?? 0,
-  unitPrice: sign.unitPrice ?? undefined,
-  totalPrice: sign.totalPrice ?? undefined,
-  primarySignId: sign.primarySignId ?? undefined,
 });
+
+// Function to categorize signs based on displayStructure
+const categorizeSigns = (signs: SignItem[]) => {
+  const type3Signs: SignItem[] = [];
+  const trailblazersSigns: SignItem[] = [];
+  const looseSigns: SignItem[] = [];
+
+  signs.forEach(sign => {
+    const displayStructure = sign.displayStructure || '';
+    
+    if (displayStructure.includes('T-III')) {
+      type3Signs.push(sign);
+    } else if (displayStructure.includes('FOOT') || displayStructure.includes('POST')) {
+      trailblazersSigns.push(sign);
+    } else {
+      looseSigns.push(sign);
+    }
+  });
+  return { type3Signs, trailblazersSigns, looseSigns };
+};
