@@ -2,13 +2,16 @@
 import React, { useState, useEffect } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { PrimarySign, SecondarySign, EquipmentType } from "@/types/MPTEquipment";
-import { SignOrderList } from "@/app/takeoffs/new/SignOrderList";
+import SignOrderList from "@/app/takeoffs/new/SignOrderList";
+
+
 
 interface SignListProps {
   currentPhase: number;
+  isSignOrder: boolean;
 }
 
-const SignList = ({ currentPhase }: SignListProps) => {
+const SignList = ({ currentPhase, isSignOrder }: SignListProps) => {
   const { mptRental } = useEstimate();
   const [signs, setSigns] = useState<(PrimarySign | SecondarySign)[]>([]);
 
@@ -32,7 +35,7 @@ const SignList = ({ currentPhase }: SignListProps) => {
     const currentSigns = getSafeSignsArray();
     setSigns(currentSigns);
   }, [getSafeSignsArray, mptRental, currentPhase]);
-  
+
   // Filter to primary signs only
   const primarySigns = signs.filter(
     (sign): sign is PrimarySign => !("primarySignId" in sign)
@@ -41,14 +44,19 @@ const SignList = ({ currentPhase }: SignListProps) => {
   // Get secondary signs for a given primary sign
   const getSecondarySignsForPrimary = (primaryId: string) => {
     return signs.filter(
-      (sign): sign is SecondarySign => 
+      (sign): sign is SecondarySign =>
         "primarySignId" in sign && sign.primarySignId === primaryId
     );
   };
 
   return (
     <div className="space-y-6">
-      <SignOrderList currentPhase={currentPhase}/>
+      <SignOrderList
+
+        currentPhase={currentPhase}
+        isSignOrder={isSignOrder}
+
+      />
     </div>
   );
 };

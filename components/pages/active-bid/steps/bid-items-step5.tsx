@@ -224,6 +224,7 @@ const BidItemsStep5 = ({
     return title
   }
 
+
   const handleRateChange = (
     formattedValue: string,
     fieldKey: string,
