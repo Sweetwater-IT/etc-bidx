@@ -122,7 +122,7 @@ const MPTOrderWorksheet: React.FC<Props> = ({
             {signList.type3Signs.length > 0 ? signList.type3Signs.map((item, idx) => (
               <tr key={idx} className="border-b-2 border-black">
                 {idx === 0 && (
-                  <td className={cellClass + " w-2/10 border-r-2 border-black"} rowSpan={signList.type3Signs.length}>TYPE III'S</td>
+                  <td className={cellClass + " w-2/10 border-r-2 border-black"} rowSpan={signList.type3Signs.length}>TYPE III&apos;S</td>
                 )}
                 <td className={cellClass + " w-1/10"}>{item.quantity}</td>
                 <td className={cellClass + " w-1/10"}>{item.size}</td>
