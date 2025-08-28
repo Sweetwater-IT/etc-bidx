@@ -126,7 +126,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
         <div className="w-1/3">
           <div className="font-bold text-center py-2 bg-white border-black">EQUIPMENT SUMMARY</div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
-            <div className="font-bold">4' TYPE III =</div>
+            <div className="font-bold">4&apos; TYPE III =</div>
             <div className="font-bold">{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</div>
           </div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
@@ -134,7 +134,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
             <div className="font-bold">{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</div>
           </div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
-            <div className="font-bold">{`V/P'S`} =</div>
+            <div className="font-bold">V/P&apos;S =</div>
             <div className="font-bold">{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity) + safeNumber(getEquipmentTotalsPerPhase(mptRental).sharps.totalQuantity) + safeNumber(getEquipmentTotalsPerPhase(mptRental).TypeXIVP.totalQuantity)}</div>
           </div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
@@ -150,7 +150,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
             <div className="font-bold">{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</div>
           </div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
-            <div className="font-bold">{`6'`} WINGS =</div>
+            <div className="font-bold">6&apos; WINGS =</div>
             <div className="font-bold">{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</div>
           </div>
           <div className="flex justify-between border-black p-1 border-t-2 text-xs">
