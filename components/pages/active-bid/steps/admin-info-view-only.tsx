@@ -7,6 +7,7 @@ import { fetchActiveBidById } from '@/lib/api-client';
 import { useLoading } from '@/hooks/use-loading';
 import { Button } from '@/components/ui/button';
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
+import { INote } from '@/types/TEstimate';
 
 
 const AdminInfoViewOnly = () => {
@@ -31,10 +32,12 @@ const AdminInfoViewOnly = () => {
             startLoading();
             if (id) {
                 const data = await fetchActiveBidById(id);
+                const bidNotes: INote[] = data.bid_notes.map(note => ({
+                    text: note.text,
+                    timestamp: new Date(note.created_at).getTime()
+                }));
                 //estimate-view is not completley accurate yet, but eventually we could pass the whole down
                 //to one reducer functio nand update all the state at once
-                console.log('copying this')
-                console.log(data.mpt_rental)
                 dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });
                 dispatch({ type: 'COPY_MPT_RENTAL', payload: data.mpt_rental as any });
                 dispatch({ type: 'COPY_EQUIPMENT_RENTAL', payload: data.equipment_rental as any });
@@ -42,7 +45,7 @@ const AdminInfoViewOnly = () => {
                 dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
                 dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
                 dispatch({ type: 'COPY_PERMANENT_SIGNS', payload: data.permanent_signs ?? defaultPermanentSignsObject });
-                dispatch({ type: 'COPY_NOTES', payload: data.notes})
+                dispatch({ type: 'COPY_NOTES', payload: bidNotes })
             }
             stopLoading();
         }

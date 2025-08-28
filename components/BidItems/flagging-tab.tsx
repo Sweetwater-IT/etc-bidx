@@ -28,6 +28,8 @@ import { calculateFlaggingCostSummary } from '@/lib/mptRentalHelperFunctions'
 import { Flagging } from '@/types/TFlagging'
 import { Plus, Edit, Trash2, Clock, User } from 'lucide-react'
 import EmptyContainer from './empty-container'
+import { AdminData } from '@/types/TAdminData'
+import { formatHoursAndMinutes } from '@/lib/utils'
 
 // Markup percentages arrays for rated and non-rated jobs
 const NON_RATED_MARKUP_PERCENTAGES = [
@@ -78,6 +80,32 @@ const FlaggingServicesTab = () => {
   const [arrowBoardCost, setArrowBoardCost] = useState('')
   const [messageBoardCost, setMessageBoardCost] = useState('')
   const [tmaCost, setTMACost] = useState('')
+  const [customGrossMargin, setCustomGrossMargin] = useState<{
+    customGrossMargin: number,
+    lumpSum: number,
+    hourlyRate: number,
+    item: any;
+  }>({
+    customGrossMargin: 35,
+    lumpSum: 0,
+    hourlyRate: 0,
+    item: {}
+  })
+
+  const owTotalMinutes = safeNumber(formData?.onSiteJobHours) || 0
+  const owHours = Math.floor(owTotalMinutes / 60)
+  const owMinutes = owTotalMinutes % 60
+  const owDecimalHours = (owTotalMinutes / 60).toFixed(1)
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    if (!formData) return
+
+    const newTotalMinutes =
+      type === 'hours' ? value * 60 + (owTotalMinutes % 60) : owHours * 60 + value
+
+    setFormData({ ...formData, onSiteJobHours: newTotalMinutes })
+  }
+
 
   // Initialize flagging services if needed
   useEffect(() => {
@@ -158,13 +186,16 @@ const FlaggingServicesTab = () => {
 
   // On mount or when global flagging changes, sync local flaggingItems to always show the saved flagging
   useEffect(() => {
-  // Only add to array if flagging has meaningful data (e.g., personnel or numberTrucks set)
-  if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
-    setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
-  } else {
-    setFlaggingItems([]);
-  }
-}, [flagging]);
+    if (flagging && (flagging.personnel > 0 || flagging.numberTrucks > 0)) {
+      setFlaggingItems([{ ...flagging, id: 'flagging', isStandardPricing: flagging.standardPricing || false }]);
+      setCustomGrossMargin(prev => ({
+        ...prev,
+        item: flagging
+      }))
+    } else {
+      setFlaggingItems([]);
+    }
+  }, [flagging]);
 
   const handleAddFlagging = () => {
     setFormData({
@@ -247,6 +278,91 @@ const FlaggingServicesTab = () => {
     })
   }
 
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      const item = customGrossMargin?.item
+
+      if (!item || !adminData || !flagging) return;
+
+      const { hourlyRate, lumpSumWithEquipment } = calculateCustomGrossMarginValues({
+        item,
+        adminData,
+        flagging,
+        markupRate: customGrossMargin.customGrossMargin
+      })
+
+      setCustomGrossMargin(prev => ({
+        ...prev,
+        lumpSum: lumpSumWithEquipment,
+        hourlyRate
+      }))
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [customGrossMargin.customGrossMargin, flaggingItems, adminData, flagging])
+
+  function calculateCustomGrossMarginValues({
+    item,
+    adminData,
+    flagging,
+    markupRate
+  }: {
+    item: FlaggingItem
+    adminData: AdminData
+    flagging: Flagging
+    markupRate: number
+  }) {
+    if (!adminData || !flagging) return { lumpSumWithEquipment: 0, hourlyRate: 0 }
+
+    const tempFlagging: Flagging = {
+      ...flagging,
+      standardPricing: false,
+      standardLumpSum: 0,
+      markupRate: 0,
+      fuelEconomyMPG: flagging?.fuelEconomyMPG ?? 0,
+      truckDispatchFee: flagging?.truckDispatchFee ?? 0,
+      workerComp: flagging?.workerComp ?? 0,
+      generalLiability: flagging?.generalLiability ?? 0,
+      personnel: item.personnel,
+      numberTrucks: item.numberTrucks,
+      onSiteJobHours: item.onSiteJobHours,
+      fuelCostPerGallon: item.fuelCostPerGallon,
+      arrowBoards: item.arrowBoards,
+      messageBoards: item.messageBoards,
+      TMA: item.TMA,
+      additionalEquipmentCost: item.additionalEquipmentCost
+    }
+
+    const summary = calculateFlaggingCostSummary(adminData, tempFlagging, false)
+    if (!summary) return { lumpSumWithEquipment: 0, hourlyRate: 0 }
+
+    const lumpSum = summary.totalFlaggingCost / (1 - markupRate / 100)
+
+    const arrowBoardsCost = item.arrowBoards.includeInLumpSum
+      ? safeNumber(item.arrowBoards.quantity) * item.arrowBoards.cost
+      : 0
+
+    const messageBoardsCost = item.messageBoards.includeInLumpSum
+      ? safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
+      : 0
+
+    const tmaCost = item.TMA.includeInLumpSum
+      ? safeNumber(item.TMA.quantity) * item.TMA.cost
+      : 0
+
+    const lumpSumWithEquipment = lumpSum + arrowBoardsCost + messageBoardsCost + tmaCost
+
+    const totalHours =
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
+
+    const hourlyRate =
+      item.personnel > 0 ? safeNumber(lumpSum / (item.personnel * totalHours)) : 0
+
+    return { lumpSumWithEquipment, hourlyRate }
+  }
+
+
   // Standard pricing calculation functions
   const getPersonLumpSum = (numberPersonnel: number) => {
     if (!flagging || !adminData.county) return 0
@@ -259,7 +375,7 @@ const FlaggingServicesTab = () => {
     const hourlyRate =
       adminData.rated === 'RATED'
         ? adminData.county.flaggingFringeRate +
-          adminData.county.flaggingBaseRate
+        adminData.county.flaggingBaseRate
         : adminData.county.flaggingRate
 
     const dayRate = hourlyRate * 8
@@ -280,7 +396,7 @@ const FlaggingServicesTab = () => {
     const hourlyRate =
       adminData.rated === 'RATED'
         ? adminData.county.flaggingFringeRate +
-          adminData.county.flaggingBaseRate
+        adminData.county.flaggingBaseRate
         : adminData.county.flaggingRate
 
     const overTime = hourlyRate * 1.5
@@ -451,8 +567,8 @@ const FlaggingServicesTab = () => {
 
     const messageBoardsCost = item.messageBoards.includeInLumpSum
       ? Number(
-          safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
-        )
+        safeNumber(item.messageBoards.quantity) * item.messageBoards.cost
+      )
       : 0
 
     const tmaCost = item.TMA.includeInLumpSum
@@ -466,8 +582,8 @@ const FlaggingServicesTab = () => {
 
     // Calculate hourly rate
     const totalHours =
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) +
-      item.onSiteJobHours
+      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) + // Round-trip travel time in hours
+      safeNumber(item.onSiteJobHours) / 60; // Convert onSiteJobHours from minutes to hours
     const hourlyRate =
       item.personnel !== 0
         ? safeNumber(lumpSum / (item.personnel * totalHours))
@@ -480,7 +596,6 @@ const FlaggingServicesTab = () => {
     newItems[itemIndex].markupRate = rate
     setFlaggingItems(newItems)
 
-    // Dispatch the markup rate to global state
     dispatch({
       type: 'UPDATE_FLAGGING',
       payload: {
@@ -491,22 +606,16 @@ const FlaggingServicesTab = () => {
   }
 
   // Calculate total hours
-  const getTotalHours = (item: FlaggingItem) => {
-    return (
-      safeNumber(item.onSiteJobHours) +
-      Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60)
-    )
-  }
+  const getTotalHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
+    const source = formData || item;
+    if (!source) return 0;
+    return safeNumber(source.onSiteJobHours) + safeNumber(adminData.owTravelTimeMins) * 2;
+  };
 
   // Calculate overtime hours
-  const getOvertimeHours = (item: FlaggingItem) => {
-    return Math.max(
-      0,
-      safeNumber(item.onSiteJobHours) +
-        Math.ceil((safeNumber(adminData.owTravelTimeMins) * 2) / 60) -
-        8
-    )
-  }
+  const getOvertimeHours = (item: FlaggingItem | null, formData?: FlaggingItem | null) => {
+    return Math.max(0, getTotalHours(item, formData) - 8 * 60);
+  };
 
   return (
     <div className='space-y-6'>
@@ -541,7 +650,7 @@ const FlaggingServicesTab = () => {
                   </div>
                   <div className='text-sm text-muted-foreground'>
                     Personnel: {item.personnel} • Trucks: {item.numberTrucks} •
-                    Hours: {item.onSiteJobHours}
+                    Hours: {formatHoursAndMinutes(item.onSiteJobHours)}
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
@@ -566,22 +675,22 @@ const FlaggingServicesTab = () => {
               {(item.arrowBoards.quantity > 0 ||
                 item.messageBoards.quantity > 0 ||
                 item.TMA.quantity > 0) && (
-                <div className='grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-4'>
-                  {item.arrowBoards.quantity > 0 && (
-                    <div>Arrow Boards: {item.arrowBoards.quantity}</div>
-                  )}
-                  {item.messageBoards.quantity > 0 && (
-                    <div>Message Boards: {item.messageBoards.quantity}</div>
-                  )}
-                  {item.TMA.quantity > 0 && <div>TMA: {item.TMA.quantity}</div>}
-                </div>
-              )}
+                  <div className='grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-4'>
+                    {item.arrowBoards.quantity > 0 && (
+                      <div>Arrow Boards: {item.arrowBoards.quantity}</div>
+                    )}
+                    {item.messageBoards.quantity > 0 && (
+                      <div>Message Boards: {item.messageBoards.quantity}</div>
+                    )}
+                    {item.TMA.quantity > 0 && <div>TMA: {item.TMA.quantity}</div>}
+                  </div>
+                )}
 
               {/* Cost Summary for Custom Pricing */}
               {!item.isStandardPricing && (
                 <div className='grid grid-cols-2 gap-4 text-sm border-t pt-4'>
-                  <div>Total Hours: {getTotalHours(item)}</div>
-                  <div>Overtime Hours: {getOvertimeHours(item)}</div>
+                  <div>Total Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} ({(editingIndex === index && formData ? getTotalHours(null, formData) : getTotalHours(item))} minutes)</div>
+                  <div>Overtime Hours: {formatHoursAndMinutes(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} ({(editingIndex === index && formData ? getOvertimeHours(null, formData) : getOvertimeHours(item))} minutes)</div>
                 </div>
               )}
             </div>
@@ -594,6 +703,48 @@ const FlaggingServicesTab = () => {
                 <div>Lump Sum</div>
                 <div>Hourly Rate / Man</div>
                 <div className='text-center'>Use this price?</div>
+              </div>
+
+              <div className='grid grid-cols-4 gap-4 py-2 border-t text-sm items-center'>
+                <div className='w-full flex flex-row items-center gap-2'>
+                  <Input
+                    value={customGrossMargin.customGrossMargin}
+                    max={100}
+                    min={0}
+                    placeholder='Custom gross margin'
+                    className='bg-muted/50 w-12'
+                    onChange={(e: any) =>
+                      setCustomGrossMargin(prev => ({
+                        ...prev,
+                        customGrossMargin: Number(e.target.value),
+                        item: item
+                      }))
+                    }
+                  />
+                  <p>%</p>
+                </div>
+                <div>
+                  ${safeNumber(customGrossMargin.lumpSum).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div>
+                  ${customGrossMargin.hourlyRate.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+                <div className='flex justify-center'>
+                  <Checkbox
+                    checked={item.markupRate === customGrossMargin.customGrossMargin}
+                    onCheckedChange={checked => {
+                      if (checked) {
+                        handleMarkupSelection(index, customGrossMargin.customGrossMargin)
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {(adminData?.rated === 'RATED'
@@ -1244,20 +1395,62 @@ const FlaggingServicesTab = () => {
                       <h4 className='font-medium'>Cost Summary</h4>
 
                       <div className='grid grid-cols-2 gap-4 text-sm'>
-                        <div>
-                          <Input
-                            id='on-site-hours'
-                            type='number'
-                            min={0}
-                            value={formData.onSiteJobHours || ''}
-                            onChange={e =>
-                              handleFormUpdate(
-                                'onSiteJobHours',
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            placeholder='On Site Job Hours'
-                          />
+                        <div className="space-y-2">
+                          <div className="flex space-x-4">
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owHoursInput" className="text-sm font-medium">
+                                Hours
+                              </Label>
+                              <Input
+                                id="owHoursInput"
+                                type="number"
+                                min={0}
+                                value={owHours === 0 ? "" : owHours}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  const numValue = value === "" ? 0 : parseInt(value)
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("hours", numValue)
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) =>
+                                  ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                                }
+                              />
+                            </div>
+
+                            <div className="flex-1 flex flex-col space-y-2">
+                              <Label htmlFor="owMinutesInput" className="text-sm font-medium">
+                                Minutes
+                              </Label>
+                              <Input
+                                id="owMinutesInput"
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={owMinutes === 0 ? "" : owMinutes}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  const numValue = value === "" ? 0 : Math.min(parseInt(value), 59)
+                                  if (!isNaN(numValue)) {
+                                    handleOwTravelTimeChange("minutes", numValue)
+                                  }
+                                }}
+                                placeholder="00"
+                                className="h-10"
+                                onKeyDown={(e) =>
+                                  ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                            <p className="text-sm text-gray-500">
+                              ({owTotalMinutes} mins, {owDecimalHours} hrs)
+                            </p>
+                          </div>
                         </div>
                         <div className='flex justify-between'>
                           <span>On Site Job Hours Cost:</span>
@@ -1273,11 +1466,9 @@ const FlaggingServicesTab = () => {
                           </span>
                         </div>
                         <div className='flex justify-between'>
-                          <span>Round Trip Travel Time Hours:</span>
+                          <span>Round Trip Travel Time:</span>
                           <span>
-                            {Math.ceil(
-                              (safeNumber(adminData?.owTravelTimeMins) * 2) / 60
-                            )}
+                            {formatHoursAndMinutes(safeNumber(adminData?.owTravelTimeMins) * 2)}
                           </span>
                         </div>
                         <div className='flex justify-between'>
@@ -1296,13 +1487,15 @@ const FlaggingServicesTab = () => {
 
                         <div className='flex justify-between'>
                           <span>Over Time Hours:</span>
-                          <span>{getOvertimeHours(formData)}</span>
+                          <span>
+                            {formatHoursAndMinutes(getOvertimeHours(null, formData))}
+                          </span>
                         </div>
                         <div></div>
                         <div className='flex justify-between'>
                           <span>Total Hours:</span>
                           <span className='font-medium'>
-                            {getTotalHours(formData)}
+                            {formatHoursAndMinutes(getTotalHours(null, formData))}
                           </span>
                         </div>
                         <div className='flex justify-between'>
@@ -1387,9 +1580,9 @@ const FlaggingServicesTab = () => {
                             $
                             {(
                               formData.arrowBoards.quantity *
-                                formData.arrowBoards.cost +
+                              formData.arrowBoards.cost +
                               formData.messageBoards.quantity *
-                                formData.messageBoards.cost +
+                              formData.messageBoards.cost +
                               formData.TMA.quantity * formData.TMA.cost
                             ).toLocaleString('en-US', {
                               minimumFractionDigits: 2,

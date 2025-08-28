@@ -45,6 +45,11 @@ import { Customer } from "@/types/Customer";
 import { updateBid } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Separator } from "./ui/separator";
+import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
+import { INote } from "@/types/TEstimate";
+import { useAuth } from "@/contexts/auth-context";
+import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
+import { useEstimate } from "@/contexts/EstimateContext";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -53,7 +58,7 @@ interface ActiveBidDetailsSheetProps {
   onEdit?: (item: ActiveBid) => void;
   onNavigate?: (direction: "up" | "down") => void;
   onRefresh?: () => void; // Callback to refresh the data table
-  onViewBidSummary: (item : ActiveBid) => void;
+  onViewBidSummary: (item: ActiveBid) => void;
   onUpdateStatus?: (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => void;
 }
 
@@ -87,6 +92,9 @@ export function ActiveBidDetailsSheet({
   onViewBidSummary,
   onUpdateStatus
 }: ActiveBidDetailsSheetProps) {
+  const { user } = useAuth()
+  const { adminData, flagging, serviceWork } = useEstimate()
+
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -104,6 +112,10 @@ export function ActiveBidDetailsSheet({
     contractor: false,
     subContractor: false
   });
+  const [notesInfo, setNoteInfo] = useState<INote[]>([])
+
+  const flaggingTotals = calculateFlaggingCostSummary(adminData, bid?.flagging, false)
+  const serviceWorkTotals = calculateFlaggingCostSummary(adminData, bid?.service_work, true)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -146,28 +158,71 @@ export function ActiveBidDetailsSheet({
     }
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
+useEffect(() => {
+  if (!open) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown" && onNavigate) {
-        e.preventDefault();
-        onNavigate("down");
-      } else if (e.key === "ArrowUp" && onNavigate) {
-        e.preventDefault();
-        onNavigate("up");
+  const handleKeyDown = (e: KeyboardEvent) => {
+
+   // Check if any dropdown is open
+
+    const dropdowns = document.querySelectorAll('[role="listbox"], [role="combobox"][aria-expanded="true"]');
+    const isAnyDropdownOpen = dropdowns.length > 0;
+    
+    if (isAnyDropdownOpen) {
+      return; // Do nothing if there are any open dropdowns
+    }
+
+    if (e.key === "ArrowDown" && onNavigate) {
+      e.preventDefault();
+      onNavigate("down");
+    } else if (e.key === "ArrowUp" && onNavigate) {
+      e.preventDefault();
+      onNavigate("up");
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [open, onNavigate, openStates.contractor, openStates.subContractor]);
+
+  useEffect(() => {
+    if (!open) {
+      setNoteInfo([]);
+      return;
+    }
+
+    fetchCustomers();
+
+    if (!bid?.id) {
+      setNoteInfo([]);
+      return;
+    }
+
+    // Llamamos al endpoint GET para traer las notas actuales
+    const fetchBidNotes = async () => {
+      try {
+        const response = await fetch(`/api/active-bids/addNotes?bid_id=${bid.id}`);
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          const parsedNotes: INote[] = result.data.map((note: any) => ({
+            ...note,
+            timestamp: new Date(note.created_at).getTime(),
+          }));
+
+          setNoteInfo(parsedNotes);
+        } else {
+          setNoteInfo([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bid notes:", error);
+        setNoteInfo([]);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onNavigate]);
+    fetchBidNotes();
+  }, [open, bid?.id]);
 
-  useEffect(() => {
-    if (open) {
-      fetchCustomers();
-    }
-  }, [open, fetchCustomers]);
 
   useEffect(() => {
     const fetchContractors = async () => {
@@ -290,16 +345,64 @@ export function ActiveBidDetailsSheet({
     const contractorChanged = !originalContractor ? !!contractor : contractor?.id !== originalContractor.id;
     const subcontractorChanged = !originalSubcontractor ? !!subcontractor : subcontractor?.id !== originalSubcontractor.id;
     const statusChanged = originalStatus !== (status || selectedStatus);
-    
+
     setHasChanges(contractorChanged || subcontractorChanged || statusChanged);
   };
+
+
+  const handleSaveNote = async (note: INote) => {
+    if (!bid?.id) {
+      return;
+    }
+    const response = await fetch('/api/active-bids/addNotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bid_id: bid.id, timestamp: note.timestamp, text: note.text, user_email: user.email }),
+    });
+    const result = await response.json();
+
+    if (result.ok) {
+      setNoteInfo((prev) => [...prev, { ...result.data, timestamp: result.data.created_at }]);
+    }
+  };
+
+  const handleEditNotes = async (index: number, updatedNote: INote) => {
+    const resp = await fetch('/api/active-bids/addNotes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text }),
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+      setNoteInfo((prev) =>
+        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+      );
+    }
+  };
+
+  const handleDelete = async (index: number) => {
+    const resp = await fetch('/api/active-bids/addNotes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notesInfo[index].id }),
+    });
+
+    const result = await resp.json();
+
+    if (result.ok) {
+      const updated = notesInfo.filter((_, i) => i !== index);
+      setNoteInfo(updated);
+    }
+  };
+
 
   const saveChanges = async () => {
     if (!bid?.id || !hasChanges) return;
 
     setSaving(true);
     try {
-      const promises : any[] = [];
+      const promises: any[] = [];
 
       // Update contractors if changed
       const contractorChanged = !originalContractor ? !!selectedContractor : selectedContractor?.id !== originalContractor.id;
@@ -396,8 +499,8 @@ export function ActiveBidDetailsSheet({
                   ? `: ${bid.originalContractNumber}`
                   : ""}
               </SheetTitle>
-              <span 
-                className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer" 
+              <span
+                className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -439,7 +542,15 @@ export function ActiveBidDetailsSheet({
               <div className="space-y-1 w-full">
                 <Label className="font-semibold">Status</Label>
                 <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger
+                    className="w-full"
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                      }
+                    }}
+
+                  >
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -459,13 +570,21 @@ export function ActiveBidDetailsSheet({
                   <Popover
                     open={openStates.contractor}
                     modal={true}
-                    onOpenChange={(open) => setOpenStates(prev => ({ ...prev, contractor: open }))}
+                    onOpenChange={(open) =>
+                      setOpenStates((prev) => ({ ...prev, contractor: open }))
+                    }
                   >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         className='w-full justify-between text-muted-foreground'
+                        onKeyDown={(e) => {
+                          // Prevenir que el evento se propague cuando el dropdown está abierto
+                          if (openStates.contractor && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+                            e.stopPropagation();
+                          }
+                        }}
                       >
                         <span className="truncate">
                           {selectedContractor?.displayName ||
@@ -513,7 +632,7 @@ export function ActiveBidDetailsSheet({
                         className="w-full justify-between text-muted-foreground"
                       >
                         <span className="truncate">
-                        {selectedSubcontractor ? selectedSubcontractor.name : "Select subcontractor..."}
+                          {selectedSubcontractor ? selectedSubcontractor.name : "Select subcontractor..."}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -660,18 +779,49 @@ export function ActiveBidDetailsSheet({
                     {formatCurrency(bid?.permSignValue) || "-"}
                   </div>
                 </div>
+
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Rental Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(bid?.rentalValue) || "-"}
+                  </div>
+                </div>
+                <div className="space-y-1 w-full">
+                  <Label className="font-semibold">
+                    Flagging Value
+                  </Label>
+                  <div className="text-muted-foreground">
+                    {formatCurrency(Number(flaggingTotals.totalRevenue)) ?? '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 w-full">
+                <Label className="font-semibold">
+                  Patterns Value
+                </Label>
+                <div className="text-muted-foreground">
+                  {formatCurrency(Number(serviceWorkTotals.totalRevenue)) ?? '-'}
+                </div>
               </div>
 
               {/* Rental Value */}
-              <div className="space-y-1 w-full">
-                <Label className="font-semibold">
-                  Rental Value
-                </Label>
-                <div className="text-muted-foreground">
-                  {formatCurrency(bid?.rentalValue) || "-"}
-                </div>
-              </div>
+
             </div>
+          </div>
+          <div className="w-full">
+            <QuoteNotes
+              notes={notesInfo}
+              onSave={(note: INote) => handleSaveNote(note)}
+              onEdit={handleEditNotes}
+              onDelete={handleDelete}
+              title="Notes"
+            />
           </div>
 
           <SheetFooter className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10">

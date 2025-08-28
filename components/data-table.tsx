@@ -37,7 +37,7 @@ import {
   Minus,
   MoreHorizontal
 } from 'lucide-react'
-import { IconPlus } from '@tabler/icons-react'
+import { IconChevronRight, IconPlus } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -168,9 +168,11 @@ export interface DataTableProps<TData extends object> {
   viewBidSummaryOpen?: boolean
   onViewBidSummary?: (item: TData) => void
   onUnarchive?: (item: TData) => void
+  onDelete?: (item: TData, index: number) => void;
+
 }
 
-function formatCellValue (value: any, key: string) {
+function formatCellValue(value: any, key: string) {
   if (
     value === undefined ||
     value === null ||
@@ -250,26 +252,26 @@ function formatCellValue (value: any, key: string) {
         {key === 'projectStatus' || key === 'billingStatus'
           ? value.replace('_', ' ')
           : key === 'shop_status'
-          ? value === 'not-started'
-            ? 'Not Started'
-            : value === 'in-progress'
-            ? 'In-Process'
-            : value === 'in-process'
-            ? 'In-Process'
-            : value === 'complete'
-            ? 'Complete'
-            : value === 'on-hold'
-            ? 'On Hold'
-            : value === 'on-order'
-            ? 'On Order'
-            : value
-          : key === 'order_status'
-          ? value === 'submitted' || value === 'SUBMITTED'
-            ? 'Submitted'
-            : value === 'draft' || value === 'DRAFT'
-            ? 'Draft'
-            : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-          : value}
+            ? value === 'not-started'
+              ? 'Not Started'
+              : value === 'in-progress'
+                ? 'In-Process'
+                : value === 'in-process'
+                  ? 'In-Process'
+                  : value === 'complete'
+                    ? 'Complete'
+                    : value === 'on-hold'
+                      ? 'On Hold'
+                      : value === 'on-order'
+                        ? 'On Order'
+                        : value
+            : key === 'order_status'
+              ? value === 'submitted' || value === 'SUBMITTED'
+                ? 'Submitted'
+                : value === 'draft' || value === 'DRAFT'
+                  ? 'Draft'
+                  : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+              : value}
       </Badge>
     )
   }
@@ -292,40 +294,35 @@ function formatCellValue (value: any, key: string) {
     return formatDate(value)
   }
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-    try {
-      // Create a Date object directly from the ISO string - this will be interpreted as UTC
-      const utcDate = new Date(value)
+    if (typeof value !== 'string') return value
 
-      // Use local methods instead of UTC methods to get the date in user's timezone
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ]
-      const monthName = monthNames[utcDate.getMonth()]
-      const dayNum = utcDate.getDate()
-      const yearNum = utcDate.getFullYear()
-      const hoursValue = utcDate.getHours()
-      const minutesValue = utcDate.getMinutes()
-      const amOrPm = hoursValue >= 12 ? 'PM' : 'AM'
-      const hoursFormatted =
-        hoursValue === 0 ? 12 : hoursValue > 12 ? hoursValue - 12 : hoursValue
-      const minutesFormatted = minutesValue.toString().padStart(2, '0')
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ]
+
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number)
+        const timestamp = (key === 'created_at' || key === 'createdAt') ? ', 12:00 AM' : ''
+        return `${monthNames[month - 1]} ${day}, ${year}${timestamp}`
+      }
+
+      const date = new Date(value) 
+      const monthName = monthNames[date.getMonth()]
+      const dayNum = date.getDate()
+      const yearNum = date.getFullYear()
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const amOrPm = hours >= 12 ? 'PM' : 'AM'
+      const hoursFormatted = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+      const minutesFormatted = minutes.toString().padStart(2, '0')
       const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`
 
-      // Always show timestamp for created_at and createdAt
       if (key === 'created_at' || key === 'createdAt') {
         return `${monthName} ${dayNum}, ${yearNum}${timestamp}`
       }
+
       return `${monthName} ${dayNum}, ${yearNum}`
     } catch (e) {
       return value
@@ -349,7 +346,7 @@ function formatCellValue (value: any, key: string) {
   return value
 }
 
-function isRowSelected<T extends object> (
+function isRowSelected<T extends object>(
   row: T,
   selectedItem: T | undefined
 ): boolean {
@@ -364,7 +361,7 @@ function isRowSelected<T extends object> (
   return JSON.stringify(row) === JSON.stringify(selectedItem)
 }
 
-export function DataTable<TData extends object> ({
+export function DataTable<TData extends object>({
   columns: legacyColumns,
   data,
   segments,
@@ -415,7 +412,8 @@ export function DataTable<TData extends object> ({
   handleMultiDelete,
   viewBidSummaryOpen,
   onViewBidSummary,
-  onUnarchive
+  onUnarchive,
+  onDelete
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -683,6 +681,34 @@ export function DataTable<TData extends object> ({
                     </DropdownMenuItem>
                   )}
 
+                  {onViewDetails && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onViewDetails(row.original as TData);
+                      }}
+                    >
+                      View details
+                    </DropdownMenuItem>
+                  )}
+
+                  {onDelete && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onDelete(row.original as TData, row.index); 
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+
+
+
+
                   {onEdit && (
                     <DropdownMenuItem
                       onClick={e => {
@@ -731,23 +757,18 @@ export function DataTable<TData extends object> ({
           : ''
       })
     }
-    // Add checkbox column if onArchiveSelected or onDeleteSelected is provided
+    // fix checkbox column > if onArchiveSelected or onDeleteSelected is provided
     if (onArchiveSelected || onDeleteSelected) {
       cols.unshift({
         id: 'select',
-        header: ({ table }: any) => (
+        header: ({ table }) => (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Checkbox
-                className={`translate-x-1 ${
-                  table.getIsAllPageRowsSelected()
-                    ? 'bg-black text-white border-black'
-                    : ''
-                }`}
+                className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+
                 checked={table.getIsAllPageRowsSelected()}
-                onCheckedChange={value => {
-                  // row.toggleSelected(!!value);
-                }}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label='Select all rows'
                 role='combobox'
               />
@@ -755,30 +776,25 @@ export function DataTable<TData extends object> ({
             <DropdownMenuContent avoidCollisions={false} align='start'>
               <DropdownMenuItem
                 onClick={() => {
-                  table.toggleAllPageRowsSelected(true)
-                  onAllRowsSelectedChange?.(false)
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(false);
                 }}
               >
-                Select{' '}
-                {`${data.length} ${
-                  onMarkAsBidJob ? 'available jobs' : 'items'
-                }`}{' '}
-                on this page
+                Select {`${data.length} ${onMarkAsBidJob ? 'available jobs' : 'items'}`} on this page
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  table.toggleAllRowsSelected(true)
-                  onAllRowsSelectedChange?.(true)
+                  table.toggleAllPageRowsSelected(true);
+                  onAllRowsSelectedChange?.(true);
                 }}
               >
-                Select all{' '}
-                {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
+                Select all {`${totalCount} ${onMarkAsBidJob ? 'available jobs' : 'items'}`}
               </DropdownMenuItem>
               <Separator />
               <DropdownMenuItem
                 onClick={() => {
-                  table.toggleAllRowsSelected(false)
-                  onAllRowsSelectedChange?.(false)
+                  table.toggleAllRowsSelected(false);
+                  onAllRowsSelectedChange?.(false);
                 }}
               >
                 Deselect all
@@ -786,15 +802,13 @@ export function DataTable<TData extends object> ({
             </DropdownMenuContent>
           </DropdownMenu>
         ),
-        cell: ({ row }: any) => (
+        cell: ({ row }) => (
           <div className='flex justify-center'>
             <Checkbox
               checked={row.getIsSelected()}
-              onCheckedChange={value => {
-                row.toggleSelected(!!value)
-              }}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
               aria-label='Select row'
-              onClick={e => e.stopPropagation()} // Prevent row click when checkbox is clicked
+              onClick={e => e.stopPropagation()}
             />
           </div>
         ),
@@ -803,7 +817,7 @@ export function DataTable<TData extends object> ({
         },
         enableSorting: false,
         enableHiding: false
-      })
+      });
     }
 
     return cols
@@ -1013,7 +1027,7 @@ export function DataTable<TData extends object> ({
                           )}
                         >
                           {header.isPlaceholder ||
-                          header.column.id === 'actions' ? null : header.column
+                            header.column.id === 'actions' ? null : header.column
                               .id === 'select' ? (
                             flexRender(
                               header.column.columnDef.header,
@@ -1093,17 +1107,21 @@ export function DataTable<TData extends object> ({
                   table.getRowModel().rows.map(row => (
                     <TableRow
                       key={row.id}
-                      data-state={
-                        isRowSelected(row.original, selectedItem)
-                          ? 'selected'
-                          : ''
-                      }
+                      data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
                       className={cn(
                         'cursor-pointer',
-                        isRowSelected(row.original, selectedItem) &&
-                          'bg-muted/50'
+                        isRowSelected(row.original, selectedItem) && 'bg-muted/50'
                       )}
-                      onClick={() => onRowClick && onRowClick(row.original)}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.dataset.slot === 'checkbox') return;
+                        const checkbox = target.closest('[data-slot="checkbox"]');
+                        if (checkbox) return;
+                        if (onViewDetails) {
+                          console.log('Row clicked, calling onViewDetails:', row.original);
+                          onViewDetails(row.original as TData);
+                        }
+                      }}
                     >
                       {row.getVisibleCells().map(cell => {
                         const isActions = cell.column.id === 'actions'
@@ -1117,10 +1135,11 @@ export function DataTable<TData extends object> ({
                                 : ''
                             )}
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
+                            {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground" />}{
+                              flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
                           </TableCell>
                         )
                       })}

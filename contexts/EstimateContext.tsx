@@ -16,7 +16,7 @@ const defaultBidState: EstimateContextType = {
   permanentSigns: defaultPermanentSignsObject,
   saleItems: [],
   ratesAcknowledged: false,
-  notes: '',
+  notes: [],
   firstSaveTimestamp: null,
   id: null
 };
@@ -40,6 +40,7 @@ export const EstimateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useEstimate = (): EstimateContextType => {
   const context = useContext(EstimateContext);
+
   if (!context) {
     throw new Error('useEstimate must be used within a EstimateProvider');
   }

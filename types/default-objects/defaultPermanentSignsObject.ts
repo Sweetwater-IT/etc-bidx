@@ -11,6 +11,8 @@ export const defaultPMSTypeB: PostMountedInstall = {
     installHoursRequired: 0,
     quantity: 0,
     standardPricing: true,
+    permSignCostSqFt: 0,
+    permSignPriceSqFt: 0,
     separateMobilization: false,
     customMargin: 0,
     permSignBolts: 0,
@@ -22,7 +24,8 @@ export const defaultPMSTypeB: PostMountedInstall = {
     tmzBrackets: 0,
     antiTheftBolts: 0,
     chevronBrackets: 0,
-    streetNameCrossBrackets: 0
+    streetNameCrossBrackets: 0,
+    days: 0,
 }
 
 // Default for Post Mounted Install Type C
@@ -39,12 +42,14 @@ export const defaultPMSTypeC: PostMountedInstallTypeC = {
     quantity: 0,
     permSignBolts: 0,
     signSqFootage: 0, 
-    signPriceSqFt: 0,
+    permSignCostSqFt: 0,
+    permSignPriceSqFt: 0,    
     hiReflectiveStrips: 0,
     fygReflectiveStrips: 0,
     stiffenerInches: 0,
     tmzBrackets: 0,
-    antiTheftBolts: 0
+    antiTheftBolts: 0,
+    days: 0,
 }
 
 // Default for Post Mounted Reset Type B
@@ -62,7 +67,8 @@ export const defaultPMSResetB: PostMountedResetOrRemove = {
     quantity: 0,
     permSignBolts: 0,
     isRemove: false,
-    additionalItems: []
+    additionalItems: [],
+    days: 0,
 }
 
 // Default for Flexible Delineators
@@ -78,7 +84,8 @@ export const defaultFlexibleDelineators: InstallFlexibleDelineators = {
     customMargin: 0,
     quantity: 0,
     flexibleDelineatorCost: 0,
-    additionalItems: []
+    additionalItems: [],
+    days: 0,
 }
 
 // Default main PermanentSigns object

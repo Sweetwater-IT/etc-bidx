@@ -95,8 +95,11 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     project_manager: projectManager || '',
     project_email: pmEmail || '',
     project_phone: pmPhone || '',
+    customJobId: jobId,
     items: [] as JobItem[]
   })
+  const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
+  const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
 
   // State for decimal masking - track digits for each contract value field
   const [contractValueDigits, setContractValueDigits] = useState<
@@ -118,7 +121,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       customer_contract_number: customerContractNumber || '',
       project_manager: projectManager || '',
       project_email: pmEmail || '',
-      project_phone: pmPhone || ''
+      project_phone: pmPhone || '',
+      customJobId: jobId
     }))
   }, [customer, customerContractNumber, projectManager, pmEmail, pmPhone])
 
@@ -269,7 +273,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   }
 
   // Handle next digits for contract values (higher limit than standard rates)
-  function handleNextDigitsContractValue (
+  function handleNextDigitsContractValue(
     current: string,
     inputType: string,
     data: string
@@ -384,6 +388,34 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     })
   }
 
+    useEffect(() => {            
+      if (!formValues.customJobId) return;
+  
+      const timeout = setTimeout(() => {
+        validateCustomJobNumber();
+      }, 500);
+  
+      return () => clearTimeout(timeout);
+    }, [formValues.customJobId]);
+    
+    const validateCustomJobNumber = async () => {
+      const jobNumber = formValues?.customJobId?.toString();
+  
+      if (!jobNumber || jobNumber.length !== 7) {
+        return;
+      }
+  
+      try {
+        const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
+        const data = await res.json();
+  
+        setIsValidJobNumber(!data.exists);
+      } catch (error) {
+        console.error('Error validating job number:', error);
+        setIsValidJobNumber(false);
+      }
+    };
+
   // Check if form is valid
   const isFormValid = () => {
     // Basic form validation
@@ -424,7 +456,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       // Prepare the request data
       const requestData = {
         data: {
-          jobId,
+          jobId: jobId,
           contractNumber,
           ...formValues,
           items: formValues.items.filter(item => item.onJob),
@@ -458,8 +490,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     } catch (error) {
       console.error('Error creating job:', error)
       toast.error(
-        `Failed to create job: ${
-          error instanceof Error ? error.message : 'Unknown error'
+        `Failed to create job: ${error instanceof Error ? error.message : 'Unknown error'
         }`
       )
     } finally {
@@ -482,6 +513,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     if (isOpen) setJobCreated(false)
   }, [isOpen])
 
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
@@ -494,6 +526,44 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
           </TabsList>
 
           <TabsContent value='details' className='space-y-4 py-4'>
+            <div className='w-full'>
+              <div className='w-full mb-1.5'>
+                <Label className='text-sm font-medium mb-1.5' >Enter number manually</Label>
+                <Switch
+                  checked={customJobNumber}
+                  onCheckedChange={() => setCustomJobNumber((prev) => {
+                    if(!prev === false) {
+                      handleInputChange('customJobId', jobId ?? '')
+                    }
+                    return !prev
+                  })}
+                />
+              </div>
+              {
+                customJobNumber &&
+                <div className='w-full mb-4'>
+                  <Label htmlFor='custom_job_number' className='text-sm font-medium mb-1.5' >Number Job</Label>
+                  <Input
+                    id='custom_job_number'
+                    placeholder='Enter Custom ID'
+                    className='h-10 border-gray-200'
+                    value={formValues.customJobId}
+                    onChange={e => {
+                      handleInputChange('customJobId', e.target.value)
+                      if (!isValidJobNumber) {
+                        setIsValidJobNumber(true)
+                      }
+                    }}
+                  />
+                  {
+                    !isValidJobNumber &&
+                    <Label className='text-[12px] font-medium my-2 mx-2 text-red-400' >There is already a job with this number</Label>
+                  }
+
+                </div>
+              }
+            </div>
+
             <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='contractor'>Contractor</Label>
@@ -695,7 +765,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                               pattern='^\\d*(\\.\\d{0,2})?$'
                               value={`$ ${formatCurrencyValue(
                                 formValues.items[formItemIndex].contractValue ||
-                                  0
+                                0
                               )}`}
                               readOnly
                               placeholder='$ 0.00'
@@ -906,7 +976,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isFormValid() || isSubmitting || jobCreated}
+            disabled={!isFormValid() || isSubmitting || jobCreated || isValidJobNumber === false}
             className='min-w-[120px]'
           >
             {isSubmitting ? (

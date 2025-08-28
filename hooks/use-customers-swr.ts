@@ -96,46 +96,14 @@ export function useCustomersSWR(params: FetchCustomersParams = {}) {
   };
 }
 
-export async function createCustomer(customerData: any) {
-  try {
-    const { data: maxIdData, error: maxIdError } = await supabase
-      .from('contractors')
-      .select('id')
-      .order('id', { ascending: false })
-      .limit(1);
-      
-    if (maxIdError) {
-      throw maxIdError;
-    }
-    
-    const newId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
-    
-    const { data, error } = await supabase
-      .from('contractors')
-      .insert([{
-        id: newId,
-        name: customerData.name,
-        display_name: customerData.display_name,
-        customer_number: customerData.customer_number,
-        web: customerData.web,
-        main_phone: customerData.main_phone,
-        address: customerData.address,
-        city: customerData.city,
-        state: customerData.state,
-        zip: customerData.zip,
-        payment_terms: customerData.payment_terms,
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-        active: true
-      }]);
-      
-    if (error) {
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error creating customer:', error);
-    throw error;
-  }
+export async function createCustomer(customerData : any) {
+  const response = await fetch('/api/customers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(customerData)
+  });
+
+  const data = await response.json();
+  console.log('Created customer:', data);
+  return data;
 }

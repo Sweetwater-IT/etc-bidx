@@ -26,6 +26,7 @@ import { TagsInput } from '../../../components/ui/tags-input'
 import EmailSendingModal from './EmailSendingModal'
 import CreateJobModal from './CreateJobModal'
 import { FileMetadata } from '@/types/FileTypes'
+import { fetchAssociatedFiles } from '@/lib/api-client'
 
 interface Props {
   contractNumber: string
@@ -200,19 +201,9 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
     fetchData()
   }, [contractNumber, customers, isLoadingCustomers])
 
-  const fetchFiles = async () => {
+  const fetchFiles =() => {
     if (!jobId) return
-    try {
-      const filesResponse = await fetch(
-        `/api/files/contract-management?job_id=${jobId}`
-      )
-      if (filesResponse.ok) {
-        const filesData = await filesResponse.json()
-        setFiles(filesData.data)
-      }
-    } catch (error) {
-      console.error('Error fetching files:', error)
-    }
+    fetchAssociatedFiles(jobId, 'contract-management?job_id', setFiles)
   }
 
   useEffect(() => {

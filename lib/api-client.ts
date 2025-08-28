@@ -12,10 +12,12 @@ import { QuoteItem } from '@/types/IQuoteItem';
 import { MPTRentalEstimating, PrimarySign, SecondarySign } from '@/types/MPTEquipment';
 import { AdminData } from '@/types/TAdminData';
 import { County } from '@/types/TCounty';
+import { INote } from '@/types/TEstimate';
 import { Flagging } from '@/types/TFlagging';
 import { PermanentSigns } from '@/types/TPermanentSigns';
 import { SaleItem } from '@/types/TSaleItem';
 import { User } from '@/types/User';
+import { Dispatch, SetStateAction } from 'react';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Row'];
 type AvailableJobInsert = Database['public']['Tables']['available_jobs']['Insert'];
@@ -268,7 +270,7 @@ export async function createActiveBid(
   saleItems: SaleItem[],
   permanentSigns: PermanentSigns,
   status: 'PENDING' | 'DRAFT',
-  notes: string,
+  notes: INote[],
   id?: number,
 ): Promise<{ id: number }> {
   // Ensure division and owner fields have valid values
@@ -1101,7 +1103,14 @@ export const saveSignOrder = async (signOrderData: {
   order_type: OrderTypes[],
   job_number: string,
   signs: (PrimarySign | SecondarySign)[],
-  status: 'DRAFT' | 'SUBMITTED'
+  status: 'DRAFT' | 'SUBMITTED',
+  contact?: {
+    id: number
+    name: string
+    role: string
+    email: string
+    phone: string
+  }
 }) => {
   const response = await fetch('/api/sign-orders', {
     method: 'POST',
@@ -1116,11 +1125,27 @@ export const saveSignOrder = async (signOrderData: {
   }
 
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.error || 'Failed to save sign order');
   }
 
   // Return the ID instead of the response object
   return { id: data.id };
+}
+
+export const fetchAssociatedFiles = async (uniqueIdentifier: number, slug: string, setFiles: Dispatch<SetStateAction<FileMetadata[]>>) => {
+  if (!uniqueIdentifier) return
+  try {
+    const filesResponse = await fetch(
+      //example contract-management?job_id
+      `/api/files/${slug}=${uniqueIdentifier}`
+    )
+    if (filesResponse.ok) {
+      const filesData = await filesResponse.json()
+      setFiles(filesData.data)
+    }
+  } catch (error) {
+    console.error('Error fetching files:', error)
+  }
 }

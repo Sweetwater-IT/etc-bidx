@@ -3,7 +3,12 @@ import { Database } from "./database.types";
 //types for estimate views
 export interface EstimateCompleteView {
     id: number;
-    notes: string;
+    bid_notes: Array<{
+      id: string;
+      text: string;
+      created_at: string;
+      user_email?: string;
+    }>;
     status: Database['public']['Enums']['bid_estimate_status'];
     total_revenue: number;
     total_cost: number;

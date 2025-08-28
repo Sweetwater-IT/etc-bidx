@@ -3,9 +3,9 @@ import { EstimateAction } from "@/types/TEstimateAction";
 import { defaultMPTObject, defaultPhaseObject } from "@/types/default-objects/defaultMPTObject";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
-import { ExtendedPrimarySign, MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
+import { DynamicEquipmentInfo, EquipmentType, ExtendedPrimarySign, MPTRentalEstimating, Phase } from "@/types/MPTEquipment";
 import { AdminData } from "@/types/TAdminData";
-import { defaultPermanentSignsObject,  } from "@/types/default-objects/defaultPermanentSignsObject";
+import { defaultPermanentSignsObject, } from "@/types/default-objects/defaultPermanentSignsObject";
 
 // Define the reducer's context type
 export interface EstimateContextType extends Estimate {
@@ -23,7 +23,6 @@ export const estimateReducer = (
 				const [parent, child] = action.payload.key.split(".");
 
 				if (parent === 'county') {
-					// Handle county nested properties
 					return {
 						...state,
 						adminData: {
@@ -32,10 +31,9 @@ export const estimateReducer = (
 								...state.adminData.county,
 								[child]: action.payload.value
 							}
-						}
+						},
 					};
 				} else if (parent === 'emergencyFields') {
-					// Handle emergencyFields nested properties
 					return {
 						...state,
 						adminData: {
@@ -48,8 +46,6 @@ export const estimateReducer = (
 					};
 				}
 			}
-
-			// Handle top-level adminData updates
 			return {
 				...state,
 				adminData: {
@@ -137,6 +133,49 @@ export const estimateReducer = (
 							: phase
 					),
 				},
+			};
+
+		case "UPDATE_MPT_PHASE_EMERGENCY_RATE":
+			if (!state.mptRental) return state;
+			
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) =>
+						index === action.payload.phase
+							? {
+								...phase,
+								standardEquipment: {
+									...phase.standardEquipment,
+									[action.payload.equipmentKey]: {
+										...phase.standardEquipment[action.payload.equipmentKey],
+										emergencyRate: action.payload.value,
+									},
+								},
+							}
+							: phase
+					),
+				},
+			};
+
+		case "UPDATE_MPT_PHASE_EMERGENCY":			
+			if (!state.mptRental) return state;
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) => {
+						return index === action.payload.phase
+							? {
+								...phase,
+								emergency: action.payload.value
+							}
+							: phase
+
+					}
+					)
+				}
 			};
 
 		case "UPDATE_TRUCK_AND_FUEL_COSTS": {
@@ -548,9 +587,10 @@ export const estimateReducer = (
 				saleItems: [],
 				mptRental: defaultMPTObject,
 				flagging: defaultFlaggingObject,
+				serviceWork: defaultFlaggingObject,
 				equipmentRental: [],
 				ratesAcknowledged: false,
-				notes: '',
+				notes: [],
 				firstSaveTimestamp: null,
 				id: null
 				// permanentSigns: defaultPermanentSignsObject, 
@@ -577,7 +617,7 @@ export const estimateReducer = (
 			//null check to make sure if phases are not returned from the db or the phases array length is 0,
 			//to just return the default mpt state
 			/****FIX */
-			if(!action.payload.phases || action.payload.phases.length === 0){
+			if (!action.payload.phases || action.payload.phases.length === 0) {
 				return {
 					...state,
 					mptRental: defaultMPTObject
@@ -602,8 +642,8 @@ export const estimateReducer = (
 					endDate: p.endDate ? new Date(p.endDate) : null,
 					signs: p.signs.map(s => {
 						//add quantity based on primary sign
-						let additionalProperties : any = {}
-						if ('make' in s){
+						let additionalProperties: any = {}
+						if ('make' in s) {
 							additionalProperties.make = (s as ExtendedPrimarySign).make;
 							additionalProperties.inStock = (s as ExtendedPrimarySign).inStock;
 							additionalProperties.order = (s as ExtendedPrimarySign).order
@@ -614,7 +654,7 @@ export const estimateReducer = (
 								quantity: primarySignMap[s.primarySignId],
 								...additionalProperties
 							}
-						} else return {...s, ...additionalProperties};
+						} else return { ...s, ...additionalProperties };
 					})
 				}))
 			}
@@ -639,7 +679,7 @@ export const estimateReducer = (
 		case 'COPY_SERVICE_WORK':
 			return {
 				...state,
-				flagging: action.payload
+				serviceWork: action.payload
 			};
 
 		case 'COPY_SALE_ITEMS':
@@ -659,16 +699,18 @@ export const estimateReducer = (
 				notes: action.payload
 			}
 
-		case 'SET_RATES_ACKNOWLEDGED':
-			return {
-				...state,
-				ratesAcknowledged: action.payload
-			}
 		case 'UPDATE_NOTES':
 			return {
 				...state,
 				notes: action.payload
 			}
+
+		case 'SET_RATES_ACKNOWLEDGED':
+			return {
+				...state,
+				ratesAcknowledged: action.payload
+			}
+
 
 		case 'SET_FIRST_SAVE':
 			return {
@@ -685,7 +727,7 @@ export const estimateReducer = (
 		case "UPDATE_SIGN_SHOP_TRACKING":
 			if (!state.mptRental) return state;
 
-			const { phaseNumber: shopPhase, signId : signShopId, field : shopField, value: shopValue } = action.payload;
+			const { phaseNumber: shopPhase, signId: signShopId, field: shopField, value: shopValue } = action.payload;
 
 			return {
 				...state,
@@ -717,16 +759,16 @@ export const estimateReducer = (
 					}),
 				},
 			};
-		
+
 		case "DELETE_SERVICE_WORK":
 			if (!state.mptRental) return state;
 			return {
 				...state,
 				serviceWork: defaultFlaggingObject
 			}
-		
+
 		case "DELETE_FLAGGING":
-			if(!state.mptRental) return state;
+			if (!state.mptRental) return state;
 			return {
 				...state,
 				flagging: defaultFlaggingObject
@@ -762,7 +804,7 @@ export const estimateReducer = (
 					}),
 				},
 			};
-			
+
 		default:
 			return state;
 	}

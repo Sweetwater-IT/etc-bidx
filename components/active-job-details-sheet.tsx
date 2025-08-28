@@ -28,6 +28,12 @@ import {
 import { type ActiveJob } from "@/data/active-jobs";
 import { Separator } from "./ui/separator";
 import { formatDate } from "@/lib/formatUTCDate";
+import FileViewingContainer from "./file-viewing-container";
+import { DropzoneContent, DropzoneEmptyState, Dropzone } from "./ui/dropzone";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { FileMetadata } from "@/types/FileTypes";
+import { toast } from "sonner";
+import { fetchFileMetadataByFolder } from "@/lib/api-client";
 
 interface ActiveJobDetailsSheetProps {
   open: boolean;
@@ -46,6 +52,45 @@ export function ActiveJobDetailsSheet({
 }: ActiveJobDetailsSheetProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [files, setFiles] = useState<FileMetadata[]>([])
+
+  const getFiles = async () => {
+    const fileResponse = await fetchFileMetadataByFolder(
+      Number(job?.id),
+      'jobs'
+    )
+    if (fileResponse.success) {
+      setFiles(fileResponse.files)
+    } else {
+      toast.error("Couldn't fetch files for this bid: " + fileResponse.error)
+    }
+  }
+
+  useEffect(() => {
+    if (job && job?.id && open) {
+      getFiles()
+    }
+  }, [job, open])
+
+  const fileUploadProps = useFileUpload({
+    maxFileSize: 50 * 1024 * 1024, 
+    maxFiles: 5, 
+    uniqueIdentifier: job?.id,
+    folder: 'jobs',
+    apiEndpoint: '/api/files',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'application/zip': ['.zip'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv']
+    },
+    onSuccess: getFiles
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -233,6 +278,16 @@ export function ActiveJobDetailsSheet({
                   </div>
                 </div>
 
+                <div className="space-y-1 w-full">
+                  <div className='rounded-lg border p-6'>
+                    <h2 className='mb-4 text-lg font-semibold'>Files</h2>
+                    <FileViewingContainer files={files} onFilesChange={setFiles} />
+                    <Dropzone {...fileUploadProps}>
+                      <DropzoneContent />
+                      <DropzoneEmptyState />
+                    </Dropzone>
+                  </div>
+                </div>
                 {job?.overdays && job?.overdays > 0 && (
                   <div className="space-y-2 w-full">
                     <Label>Overdays</Label>
@@ -242,20 +297,21 @@ export function ActiveJobDetailsSheet({
                     </div>
                   </div>
                 )}
+
               </div>
             </div>
             <div className="flex justify-end p-6 pt-0 gap-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </Button>
-                <Button className="flex-1" onClick={handleEdit}>
-                  Edit
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleEdit}>
+                Edit
+              </Button>
+            </div>
           </div>
         )}
       </SheetContent>

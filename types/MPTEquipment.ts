@@ -149,6 +149,7 @@ export interface StaticEquipmentInfo {
 // Dynamic Information for Each Equipment in a Phase
 export interface DynamicEquipmentInfo {
   quantity: number;
+  emergencyRate: number;
 }
 
 // Sign Interface
@@ -176,6 +177,8 @@ export interface SecondarySign extends DynamicSignInfo {
   primarySignId: string
 }
 
+
+
 export interface CustomLightAndDrumItem {
   id: string;
   quantity: number;
@@ -190,6 +193,7 @@ export interface Phase {
   endDate: Date | null;
   personnel: number;
   days: number;
+  emergency?: boolean
   numberTrucks: number;
   additionalRatedHours: number;
   additionalNonRatedHours: number;

@@ -78,15 +78,15 @@ const BidSummaryByItem = () => {
     setDiscountSummary([
       {
         item: 'MPT',
-        discountRate: mptDiscount
+        discountRate: safeNumber(mptDiscount)
       },
       {
         item: 'SIGNS',
-        discountRate: signDiscount
+        discountRate: safeNumber(signDiscount)
       },
       {
         item: 'Total',
-        discountRate: totalDiscount
+        discountRate: safeNumber(totalDiscount)
       }
     ])
   }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
@@ -135,7 +135,7 @@ const BidSummaryByItem = () => {
             <div className="px-3 py-1 text-sm">
               {/* <Tooltip>
                 <TooltipTrigger className="cursor-help"> */}
-                  ${row.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  ${safeNumber(row.total).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 {/* </TooltipTrigger>
                 <TooltipContent>
                   {row.item === 'MPT Mobilization' && <p>MPT Mobilization = Total MPT Revenue × 0.35</p>}
@@ -151,7 +151,7 @@ const BidSummaryByItem = () => {
             <div className="px-3 py-1 text-sm">
               {/* <Tooltip>
                 <TooltipTrigger className="cursor-help"> */}
-                  {row.percentage.toFixed(2)}%
+                  {safeNumber(row.percentage).toFixed(2)}%
                 {/* </TooltipTrigger>
                 <TooltipContent>
                   {row.item !== 'Total' ? 

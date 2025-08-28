@@ -6,6 +6,7 @@ import { EquipmentRentalItem } from "./IEquipmentRentalItem";
 import { Flagging } from "./TFlagging";
 import { County } from "./TCounty";
 import { PMSItemNumbers, AllPMSItemKeys, PMSEquipmentPiece, PMSItemKeys, PermanentSigns } from "./TPermanentSigns";
+import { INote } from "./TEstimate";
 
 interface AddMPTItemNotSignPayload {
 	phaseNumber: number;
@@ -23,10 +24,22 @@ type MPTSignUpdatePayload =
 	| { phase: number; signId: string; key: 'displayStructure'; value: string };  // Secondary-only property
 
 export type EstimateAction =
+	|
+	{
+		type: "UPDATE_MPT_PHASE_EMERGENCY_RATE";
+		payload: {
+			phase: number;
+			equipmentKey: EquipmentType;
+			value: number;
+		};
+	}
 	| {
 		type: "UPDATE_ADMIN_DATA";
 		payload: {
-			key: keyof AdminData | `emergencyFields.${keyof EmergencyFields}` | `county.${keyof County}`; //handle nested objects by requiring a keyof AdminData
+			key:
+			| keyof AdminData
+			| `emergencyFields.${string}`
+			| `county.${keyof County}`;
 			value: any;
 		};
 	}
@@ -40,6 +53,11 @@ export type EstimateAction =
 	| {
 		type: "UPDATE_MPT_PHASE_START_END";
 		payload: { key: "startDate" | "endDate"; value: Date; phase: number };
+	}
+	|
+	{
+		type: "UPDATE_MPT_PHASE_EMERGENCY";
+		payload: { value: boolean; phase: number };
 	}
 	| { type: "UPDATE_PHASE_NAME"; payload: { value: string; phase: number } }
 	| { type: "DELETE_MPT_PHASE"; payload: number }
@@ -155,10 +173,10 @@ export type EstimateAction =
 	| { type: 'COPY_FLAGGING', payload: Flagging }
 	| { type: 'COPY_SERVICE_WORK', payload: Flagging }
 	| { type: 'COPY_SALE_ITEMS', payload: SaleItem[] }
-	| { type: 'COPY_PERMANENT_SIGNS', payload: PermanentSigns}
+	| { type: 'COPY_PERMANENT_SIGNS', payload: PermanentSigns }
 	| { type: 'SET_RATES_ACKNOWLEDGED', payload: boolean }
-	| { type: 'UPDATE_NOTES', payload: string }
-	| { type: 'COPY_NOTES', payload: string }
+	| { type: 'UPDATE_NOTES', payload: INote[] }
+	| { type: 'COPY_NOTES', payload: INote[] }
 	| { type: 'SET_FIRST_SAVE', payload: number }
 	| { type: 'SET_ID', payload: number }
 	| {

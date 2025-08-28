@@ -8,10 +8,12 @@ export type ActiveBid = {
   owner: string;
   county: string | { main: string; secondary: string };
   branch: string;
+  service_work: any;
   estimator: string;
   status: string;
   division: string;
   startDate: string;
+  flagging: any;
   endDate: string;
   projectDays: number;
   totalHours: number;
@@ -20,6 +22,7 @@ export type ActiveBid = {
   rentalValue: string | number;
   createdAt: string;
   total?: string | number; // Add total field
+  bid_notes: {bid_id: number; text:string, created_at:Date, id: number, user_email?: string}[]
 }
 
 export const ACTIVE_BIDS_COLUMNS = [

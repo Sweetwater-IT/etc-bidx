@@ -23,6 +23,7 @@ export type AllPMSItemKeys =
     | 'quantity'
     | 'permSignBolts'
     | 'productivityRate'
+    | 'days' // Added new field
     // PostMountedInstall specific keys
     | 'type'
     | 'signSqFootage'
@@ -43,7 +44,8 @@ export type AllPMSItemKeys =
     | 'isRemove'
     | 'additionalItems'
     // InstallFlexibleDelineators specific key
-    | 'flexibleDelineatorCost';
+    | 'flexibleDelineatorCost'
+    | 'customItemTypeName'
 
 export interface PMSEquipmentPiece {
     name: PMSEquipmentItems
@@ -63,11 +65,15 @@ interface PermanentSignItem {
     quantity: number;
     //pms reset type f is the only one without perm sign bolts
     permSignBolts?: number
+    customItemTypeName?: string;
+    days: number; // Added new field
 }
 
 export interface PostMountedInstall extends PermanentSignItem {
     type: 'B' | 'F'
     signSqFootage: number;
+    permSignPriceSqFt: number;
+    permSignCostSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     jennyBrackets: number;
@@ -87,7 +93,8 @@ export interface PostMountedResetOrRemove extends PermanentSignItem {
 
 export interface PostMountedInstallTypeC extends PermanentSignItem {
     signSqFootage: number;
-    signPriceSqFt: number;
+    permSignPriceSqFt: number;
+    permSignCostSqFt: number;
     hiReflectiveStrips: number;
     fygReflectiveStrips: number;
     stiffenerInches: number;
@@ -121,26 +128,83 @@ export const permSignsDbMap: Record<string, PMSEquipmentItems> = {
     'PERM_SIGN_PRICE_SQ_FT': 'permSignPriceSqFt'
 };
 
+
+
+
+
+
 export const determineItemType = (item: PMSItemNumbers): PMSItemKeys => {
-    //delineators
-    if (Object.hasOwn(item, 'flexibleDelineatorCost')) {
-        return 'flexibleDelineator'
+    // Helper function to check if a value exists and is truthy/not null
+    const hasValue = (value: any): boolean => value !== null && value !== undefined;
+
+    // Type guard for InstallFlexibleDelineators
+    const isFlexibleDelineator = (item: PMSItemNumbers): item is InstallFlexibleDelineators => {
+        return 'flexibleDelineatorCost' in item && hasValue(item.flexibleDelineatorCost);
+    };
+
+    // Type guard for PostMountedInstallTypeC
+    const isTypeC = (item: PMSItemNumbers): item is PostMountedInstallTypeC => {
+        return 'hiReflectiveStrips' in item && hasValue(item.hiReflectiveStrips) &&
+            !('streetNameCrossBrackets' in item);
+    };
+
+    // Type guard for PostMountedInstall (B/F with reflective strips)
+    const isPostMountedInstall = (item: PMSItemNumbers): item is PostMountedInstall => {
+        return 'hiReflectiveStrips' in item && hasValue(item.hiReflectiveStrips);
+    };
+
+    // Type guard for PostMountedResetOrRemove
+    const isResetOrRemove = (item: PMSItemNumbers): item is PostMountedResetOrRemove => {
+        return 'isRemove' in item;
+    };
+
+    // 1. Flexible liner - top priority
+    if (isFlexibleDelineator(item) && Number(item.flexibleDelineatorCost) > 0) {
+        return 'flexibleDelineator';
     }
-    //post mounted installs
-    else if (Object.hasOwn(item, 'hiReflectiveStrips')) {
-        if (!Object.hasOwn(item, 'streetNameCrossBrackets')) {
-            return 'pmsTypeC'
-        } else if ((item as PostMountedInstall).type === 'B') {
-            return 'pmsTypeB'
-        } else return 'pmsTypeF'
+
+    // 2. Type C - has high reflective strips but NO street name brackets
+    if (isTypeC(item)) {
+        return 'pmsTypeC';
     }
-    //removals
-    else if (Object.hasOwn(item, 'isRemove') && (item as PostMountedResetOrRemove).isRemove) {
-        return (item as PostMountedResetOrRemove).type === 'B' ? "removeTypeB" : 'removeTypeF'
-    } else {
-        return (item as PostMountedResetOrRemove).type === 'B' ? 'resetTypeB' : 'resetTypeF'
+
+    // 3. Type B/F with reflective strips - normal installation
+    if (isPostMountedInstall(item)) {
+        return item.type === 'B' ? 'pmsTypeB' : 'pmsTypeF';
     }
-}
+
+    // 4. Remociones - tiene isRemove = true
+    if (isResetOrRemove(item) && item.isRemove === true) {
+        return item.type === 'B' ? 'removeTypeB' : 'removeTypeF';
+    }
+
+    // 5. Verification by item code as backup
+    if (item.itemNumber) {
+        const itemCode = item.itemNumber.substring(0, 4);
+        const itemTypeMap: Record<string, PMSItemKeys> = {
+            '0931': 'pmsTypeB',
+            '0941': 'resetTypeB',
+            '0971': 'removeTypeB',
+            '0935': 'pmsTypeF',
+            '0945': 'resetTypeF',
+            '0975': 'removeTypeF',
+            '0932': 'pmsTypeC'
+        };
+
+        if (itemTypeMap[itemCode]) {
+            return itemTypeMap[itemCode];
+        }
+    }
+
+    // 6. Default: Resets (when it's not a removal and doesn't have reflective strips)
+    // We need to verify that the item has the 'type' property
+    if ('type' in item) {
+        return item.type === 'B' ? 'resetTypeB' : 'resetTypeF';
+    }
+
+    // 7. Extreme Fallback - should be very rare
+    return 'resetTypeB';
+};
 
 export const PERMANENT_SIGN_ITEMS: Record<string, PMSItemKeys> = {
     'Type B Post Mount': 'pmsTypeB',
@@ -167,4 +231,4 @@ export const ADDITIONAL_EQUIPMENT_OPTIONS: Record<string, PMSEquipmentItems> = {
     'Hi-Reflective Strips': 'hiReflectiveStrips',
     'FYG Reflective Strips': 'fygReflectiveStrips',
     'Wood Post Metal Sleeves': 'woodPostMetalSleeves'
-  };
+};

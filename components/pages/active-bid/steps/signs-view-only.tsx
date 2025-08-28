@@ -1,5 +1,6 @@
 import { DataTable } from '@/components/data-table'
 import { useEstimate } from '@/contexts/EstimateContext'
+import { sortSignsBySecondary } from '@/lib/sortSignsBySecondary'
 import { AssociatedStructures, DisplayStructures, PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 import React from 'react'
 
@@ -68,7 +69,8 @@ const SignsViewOnly = ({ phaseNumber }: Props) => {
                     <div className="text-sm font-semibold mb-2 pl-6">Phase {phaseNumber + 1} {mptRental.phases[phaseNumber].name.trim() !== '' && ''} {mptRental.phases[phaseNumber].name}</div>
                     <DataTable<ExtendedSign>
                         data={mptRental.phases[phaseNumber].signs.length === 0 ? [{ description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-' } as any] :
-                            mptRental.phases[phaseNumber].signs.map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}` } as ExtendedSign))}
+                        //sort signs by secondary and if they are, add a > in front of the designation
+                            sortSignsBySecondary(mptRental.phases[phaseNumber].signs).map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}` } as ExtendedSign))}
                         columns={SIGN_COLUMNS}
                         hideDropdown
                     />
@@ -78,7 +80,7 @@ const SignsViewOnly = ({ phaseNumber }: Props) => {
                     <div className="text-sm font-semibold mb-2 pl-6">Phase {index + 1} {phase.name.trim() !== '' && ''} {phase.name}</div>
                     <DataTable<ExtendedSign>
                         data={phase.signs.length === 0 ? [{ description: '-', designation: '-', associatedStructure: '-', bLights: '-', covers: '-', sheeting: '-', dimensions: '-' } as any] :
-                            phase.signs.map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}`, 
+                        sortSignsBySecondary(phase.signs).map(sign => ({ ...sign, dimensions: `${sign.width} x ${sign.height}`, 
                             //for historical data where displayStructure does not exist
                             displayStructure: Object.hasOwn(sign, 'associatedStructure') ? (sign as PrimarySign).displayStructure ? (sign as PrimarySign).displayStructure : getDisplayFromStructure((sign as PrimarySign).associatedStructure)  : '' } as ExtendedSign))}
                         columns={SIGN_COLUMNS}

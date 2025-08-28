@@ -38,7 +38,14 @@ interface SignOrderJobSelectorProps {
   endDate?: string;
   orderType?: string[];
   contractNumber?: string
-  showInitialAdminState: boolean
+  showInitialAdminState: boolean;
+  contact?: {
+    id: number
+    name: string
+    role: string
+    email: string
+    phone: string
+  }
 }
 
 export function SignOrderJobSelector({
@@ -58,7 +65,8 @@ export function SignOrderJobSelector({
   startDate,
   endDate,
   orderType,
-  showInitialAdminState
+  showInitialAdminState,
+  contact
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const inputRef = useRef(null);
@@ -68,14 +76,14 @@ export function SignOrderJobSelector({
   };
 
   const filteredJobs = allJobs.filter(
-    (j) => !searchValue || j.job_number.toLowerCase().includes(searchValue.toLowerCase()) || 
-    (j.contractNumber && j.contractNumber.toLowerCase().includes(searchValue.toLowerCase()))
+    (j) => !searchValue || j.job_number.toLowerCase().includes(searchValue.toLowerCase()) ||
+      (j.contractNumber && j.contractNumber.toLowerCase().includes(searchValue.toLowerCase()))
   );
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-xl font-semibold">Job Information</div>
+        <div className="text-xl font-semibold">Job Informatio</div>
         {(selectedContractJob || showInitialAdminState) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -95,7 +103,7 @@ export function SignOrderJobSelector({
 
       <div className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          {(!contractNumber || contractNumber === '')  && <div className="md:col-span-2 col-span-1">
+          {(!contractNumber || contractNumber === '') && <div className="md:col-span-2 col-span-1">
             <div className={`${selectedContractJob ? "" : "mb-2"} font-medium text-sm`}>
               Contract / Job Number
             </div>
@@ -103,9 +111,8 @@ export function SignOrderJobSelector({
               <input
                 ref={inputRef}
                 disabled={!!selectedContractJob}
-                className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${
-                  selectedContractJob ? "" : "border border-border px-2"
-                }`}
+                className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${selectedContractJob ? "" : "border border-border px-2"
+                  }`}
                 placeholder="Search or add a contract/job..."
                 value={
                   selectedContractJob
@@ -175,7 +182,7 @@ export function SignOrderJobSelector({
               {customer || "-"}
             </div>
           </div>
-          
+
           <div className="flex flex-col">
             <label className="text-sm font-semibold">
               Branch
@@ -190,9 +197,9 @@ export function SignOrderJobSelector({
               Contract Number
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {!selectedContractJob ? contractNumber : "contract_number" in selectedContractJob 
+              {!selectedContractJob ? contractNumber : "contract_number" in selectedContractJob
                 ? selectedContractJob.contract_number : 'contractNumber' in selectedContractJob ?
-                selectedContractJob.contractNumber : "-"}
+                  selectedContractJob.contractNumber : "-"}
             </div>
           </div>
 
@@ -220,6 +227,34 @@ export function SignOrderJobSelector({
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
               {needDate || "-"}
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold">
+              Contact Name
+            </label>
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+              {contact?.name ?? "-"}
+            </div>
+          </div>
+
+
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold">
+              Contact Phone
+            </label>
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+              {contact?.phone ?? "-"}
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold">
+              Contact Email
+            </label>
+            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+              {contact?.email ?? "-"}
             </div>
           </div>
 

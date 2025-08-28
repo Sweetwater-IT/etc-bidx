@@ -29,6 +29,7 @@ import { formatDecimal } from "@/lib/formatDecimals";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 import { useAuth } from "@/contexts/auth-context";
 import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
+import { INote } from "@/types/TEstimate";
 
 
 const step: Step = {
@@ -48,7 +49,7 @@ const step: Step = {
     { name: "srRoute", label: "SR Route*", type: "text", placeholder: "SR Route" },
     { name: "dbePercentage", label: "DBE %*", type: "text", placeholder: "DBE %" },
     { name: "workType", label: "Work Type", type: "select", placeholder: "Choose", options: ['RATED', 'NON-RATED'] },
-    { name: "oneWayTravelTime", label: "One Way Travel Time (Mins)*", type: "number", placeholder: "One Way Travel Time (Mins)" },
+    { name: "oneWayTravelTime", label: "One Way Travel Time*", type: "number" },
     { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
     { name: "dieselCost", label: "Diesel Cost Per Gallon*", type: "text", placeholder: "Diesel Cost Per Gallon" },
     { name: "laborRate", label: "Labor Rate*", type: "text", placeholder: "0", hasToggle: true },
@@ -60,7 +61,7 @@ const step: Step = {
 
 const AdminInformationStep1 = () => {
 
-  const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental, 
+  const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental,
     flagging, serviceWork, saleItems, equipmentRental, notes, permanentSigns } = useEstimate();
 
   const searchParams = useSearchParams();
@@ -91,6 +92,34 @@ const AdminInformationStep1 = () => {
     shopRate: "000",
     dieselCost: "000",
   });
+
+  const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
+  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+  const owDecimalHours = (owHours + owMinutes / 60).toFixed(1); 
+  const owTotalMinutes = owHours * 60 + owMinutes;
+
+  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
+    const extraMinutes = currentOwMinutes % 60;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMins',
+        value: newOwMinutes
+      }
+    })
+
+    setOwHours(Math.floor(newOwMinutes / 60))
+    setOwMinutes(newOwMinutes % 60);
+  }
+
+  useEffect(() => {
+    const totalMins = safeNumber(adminData.owTravelTimeMins); 
+    setOwHours(Math.floor(totalMins / 60));
+    setOwMinutes(totalMins % 60);
+  }, [adminData.owTravelTimeMins]);
+
 
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
@@ -214,6 +243,11 @@ const AdminInformationStep1 = () => {
       }
       else if (bidId) {
         const data = await fetchActiveBidById(bidId);
+        const bidNotes: INote[] = data.bid_notes.map(note => ({
+          text: note.text,
+          timestamp: new Date(note.created_at).getTime()
+        }));
+
         //estimate-view is not completley accurate yet, but eventually we could pass the whole down
         //to one reducer functio nand update all the state at once
         dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });
@@ -223,8 +257,8 @@ const AdminInformationStep1 = () => {
         dispatch({ type: 'COPY_SERVICE_WORK', payload: data.service_work as any });
         dispatch({ type: 'COPY_SALE_ITEMS', payload: data.sale_items as any });
         dispatch({ type: 'COPY_PERMANENT_SIGNS', payload: data.permanent_signs ?? defaultPermanentSignsObject });
-        dispatch({ type: 'COPY_NOTES', payload: data.notes});
-        dispatch({ type: 'SET_FIRST_SAVE', payload: new Date(data.created_at).getTime()})
+        dispatch({ type: 'COPY_NOTES', payload: bidNotes });
+        dispatch({ type: 'SET_FIRST_SAVE', payload: new Date(data.created_at).getTime() })
       }
       stopLoading();
     };
@@ -442,374 +476,429 @@ const AdminInformationStep1 = () => {
     <div>
       <div className="relative">
         {/* Collapsible Content */}
-          <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
-            <div className="space-y-8">
+        <div className="mt-2 mb-6 ml-12 text-sm text-muted-foreground">
+          <div className="space-y-8">
             {adminData.startDate && (
-                  <div className="bg-muted w-fit px-4 py-2 rounded-md">
-                    <div className="flex flex-col gap-4">
-                      <div className="text-sm font-medium">
-                        Set project end date as number of days out from start date:
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          className="px-3 py-1 cursor-pointer hover:bg-primary"
-                          onClick={() => setProjectEndDateFromDays(30)}
-                        >
-                          30
-                        </Badge>
-                        <Badge
-                          className="px-3 py-1 cursor-pointer hover:bg-primary"
-                          onClick={() => setProjectEndDateFromDays(60)}
-                        >
-                          60
-                        </Badge>
-                        <Badge
-                          className="px-3 py-1 cursor-pointer hover:bg-primary"
-                          onClick={() => setProjectEndDateFromDays(90)}
-                        >
-                          90
-                        </Badge>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            className="w-20"
-                            onChange={(e) => setProjectEndDateFromDays(safeNumber(parseInt(e.target.value)))}
-                            placeholder="Days"
-                            type="number"
-                            min="1"
-                          />
-                        </div>
-                      </div>
+              <div className="bg-muted w-fit px-4 py-2 rounded-md">
+                <div className="flex flex-col gap-4">
+                  <div className="text-sm font-medium">
+                    Set project end date as number of days out from start date:
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      className="px-3 py-1 cursor-pointer hover:bg-primary"
+                      onClick={() => setProjectEndDateFromDays(30)}
+                    >
+                      30
+                    </Badge>
+                    <Badge
+                      className="px-3 py-1 cursor-pointer hover:bg-primary"
+                      onClick={() => setProjectEndDateFromDays(60)}
+                    >
+                      60
+                    </Badge>
+                    <Badge
+                      className="px-3 py-1 cursor-pointer hover:bg-primary"
+                      onClick={() => setProjectEndDateFromDays(90)}
+                    >
+                      90
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className="w-20"
+                        onChange={(e) => setProjectEndDateFromDays(safeNumber(parseInt(e.target.value)))}
+                        placeholder="Days"
+                        type="number"
+                        min="1"
+                      />
                     </div>
                   </div>
-                )}
-              <div className="max-w-xl grid grid-cols-2 gap-6">
-                {step.fields.map((field) => (
-                  <div key={field.name} className="space-y-2.5">
-                    <Label
-                      htmlFor={field.name}
-                      className="text-sm font-medium text-muted-foreground"
-                    >
-                      {field.label}
-                    </Label>
-                    {field.name === "county" ? (
-                      <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={openStates.county}
-                            className="w-full justify-between"
-                          >
-                            {adminData.county?.name || "Select county..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-full p-0"
-                          avoidCollisions={false} // Prevents auto-repositioning
+                </div>
+              </div>
+            )}
+            <div className="max-w-xl grid grid-cols-2 gap-6">
+              {step.fields.map((field) => (
+                <div key={field.name} className="space-y-2.5">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    {field.label}
+                  </Label>
+                  {field.name === "county" ? (
+                    <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openStates.county}
+                          className="w-full justify-between"
                         >
-                          <Command>
-                            <CommandInput placeholder="Search county..." />
-                            <CommandEmpty>No county found.</CommandEmpty>
-                            <CommandGroup className="h-80 overflow-y-auto">
-                              {counties.map((county) => (
-                                <CommandItem
-                                  key={county.id}
-                                  value={county.name}
-                                  onSelect={() => handleCountyChange(county.id.toString())}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      adminData.county?.name === county.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {county.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    ) : field.name === "estimator" ? (
-                      <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={openStates.estimator}
-                            className="w-full justify-between"
-                          >
-                            {adminData.estimator || "Select estimator..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Search estimator..." />
-                            <CommandEmpty>No estimator found.</CommandEmpty>
-                            <CommandGroup>
-                              {estimators.map((estimator) => (
-                                <CommandItem
-                                  key={estimator.id}
-                                  value={estimator.name}
-                                  onSelect={() => handleEstimatorChange(estimator.name)}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      adminData.estimator === estimator.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {estimator.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    ) : field.name === "owner" ? (
-                      <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={openStates.owner}
-                            className="w-full justify-between"
-                          >
-                            {adminData.owner || "Select owner..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Search owner..." />
-                            <CommandEmpty>No owner found.</CommandEmpty>
-                            <CommandGroup>
-                              {owners.map((owner) => (
-                                <CommandItem
-                                  key={owner.id}
-                                  value={owner.name}
-                                  onSelect={() => handleOwnerChange(owner.name)}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      adminData.owner === owner.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {owner.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    ) : field.name === "division" || field.name === "workType" ? (
-                      <RadioGroup
-                        value={field.name === "division" ? adminData.division || undefined : adminData.rated}
-                        onValueChange={(value) =>
-                          field.name === "division"
-                            ? dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'division', value } })
-                            : dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'rated', value } })
-                        }
-                        className="flex flex-col space-y-1"
+                          {adminData.county?.name || "Select county..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-full p-0"
+                        avoidCollisions={false} // Prevents auto-repositioning
                       >
-                        {field.options?.map((option) => (
-                          <div key={option} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option} id={`${field.name}-${option.value}`} />
-                            <Label
-                              htmlFor={`${field.name}-${option}`}
-                              className="text-sm font-normal"
-                            >
-                              {option}
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    ) : field.name === "winterShutdown" ? (
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={field.name}
-                            checked={toggleStates.winterShutdown}
-                            onCheckedChange={(checked) => {
-                              setToggleStates(prev => ({
-                                ...prev,
-                                winterShutdown: checked
-                              }));
-                            }}
-                          />
-                          <Label htmlFor={field.name} className="text-sm">
-                            {field.label}
+                        <Command>
+                          <CommandInput placeholder="Search county..." />
+                          <CommandEmpty>No county found.</CommandEmpty>
+                          <CommandGroup className="h-80 overflow-y-auto">
+                            {counties.map((county) => (
+                              <CommandItem
+                                key={county.id}
+                                value={county.name}
+                                onSelect={() => handleCountyChange(county.id.toString())}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    adminData.county?.name === county.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {county.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : field.name === "estimator" ? (
+                    <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openStates.estimator}
+                          className="w-full justify-between"
+                        >
+                          {adminData.estimator || "Select estimator..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search estimator..." />
+                          <CommandEmpty>No estimator found.</CommandEmpty>
+                          <CommandGroup>
+                            {estimators.map((estimator) => (
+                              <CommandItem
+                                key={estimator.id}
+                                value={estimator.name}
+                                onSelect={() => handleEstimatorChange(estimator.name)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    adminData.estimator === estimator.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {estimator.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : field.name === "owner" ? (
+                    <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openStates.owner}
+                          className="w-full justify-between"
+                        >
+                          {adminData.owner || "Select owner..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search owner..." />
+                          <CommandEmpty>No owner found.</CommandEmpty>
+                          <CommandGroup>
+                            {owners.map((owner) => (
+                              <CommandItem
+                                key={owner.id}
+                                value={owner.name}
+                                onSelect={() => handleOwnerChange(owner.name)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    adminData.owner === owner.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {owner.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : field.name === "division" || field.name === "workType" ? (
+                    <RadioGroup
+                      value={field.name === "division" ? adminData.division || undefined : adminData.rated}
+                      onValueChange={(value) =>
+                        field.name === "division"
+                          ? dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'division', value } })
+                          : dispatch({ type: 'UPDATE_ADMIN_DATA', payload: { key: 'rated', value } })
+                      }
+                      className="flex flex-col space-y-1"
+                    >
+                      {field.options?.map((option) => (
+                        <div key={option} className="flex items-center space-x-2">
+                          <RadioGroupItem value={option} id={`${field.name}-${option.value}`} />
+                          <Label
+                            htmlFor={`${field.name}-${option}`}
+                            className="text-sm font-normal"
+                          >
+                            {option}
                           </Label>
                         </div>
-
-                        {toggleStates.winterShutdown && (
-                          <div className="mt-4 grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="winterStart" className="text-sm">Winter Start Date</Label>
-                              <Input
-                                id="winterStart"
-                                type="date"
-                                value={adminData.winterStart
-                                  ? (typeof adminData.winterStart === 'string'
-                                    ? adminData.winterStart
-                                    : adminData.winterStart.toISOString().split('T')[0])
-                                  : ""}
-                                onChange={(e) => {
-                                  dispatch({
-                                    type: 'UPDATE_ADMIN_DATA',
-                                    payload: {
-                                      key: 'winterStart',
-                                      value: e.target.value ? new Date(e.target.value) : null
-                                    }
-                                  });
-                                }}
-                                className="h-10"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="winterEnd" className="text-sm">Winter End Date</Label>
-                              <Input
-                                id="winterEnd"
-                                type="date"
-                                value={adminData.winterEnd
-                                  ? (typeof adminData.winterEnd === 'string'
-                                    ? adminData.winterEnd
-                                    : adminData.winterEnd.toISOString().split('T')[0])
-                                  : ""}
-                                onChange={(e) => {
-                                  dispatch({
-                                    type: 'UPDATE_ADMIN_DATA',
-                                    payload: {
-                                      key: 'winterEnd',
-                                      value: e.target.value ? new Date(e.target.value) : null
-                                    }
-                                  });
-                                }}
-                                className="h-10"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="relative space-y-2">
-                        <Input
+                      ))}
+                    </RadioGroup>
+                  ) : field.name === "winterShutdown" ? (
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
                           id={field.name}
-                          type={field.type}
-                          inputMode="decimal"
-                          pattern="^\\d*(\\.\\d{0,2})?$"
-                          placeholder={field.placeholder}
-                          value={
-                            field.name === "contractNumber" ? adminData.contractNumber || "" :
-                              field.name === "township" ? adminData.location || "" :
-                                field.name === "srRoute" ? adminData.srRoute || "" :
-                                  field.name === "dbePercentage" ? adminData.dbe || "" :
-                                    field.name === "lettingDate" ?
-                                      adminData.lettingDate ?
-                                        (typeof adminData.lettingDate === 'string' ?
-                                          adminData.lettingDate :
-                                          adminData.lettingDate.toISOString().split('T')[0])
-                                        : "" :
-                                      field.name === "startDate" ?
-                                        adminData.startDate ?
-                                          (typeof adminData.startDate === 'string' ?
-                                            adminData.startDate :
-                                            adminData.startDate.toISOString().split('T')[0])
-                                          : "" :
-                                        field.name === "endDate" ?
-                                          adminData.endDate ?
-                                            (typeof adminData.endDate === 'string' ?
-                                              adminData.endDate :
-                                              adminData.endDate.toISOString().split('T')[0])
-                                            : "" :
-                                          field.name === "oneWayTravelTime" ? adminData.owTravelTimeMins || "" :
-                                            field.name === "oneWayMileage" ? adminData.owMileage || "" :
-                                              field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
-                                                field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
-                                                  field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
-                                                    field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
-                                                      ""
-                          }
-                          onBlur={async () => {
-                            if(field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp){
-                              try{
-                                // add 0 to simulate saving state
-                                dispatch({ type: 'SET_FIRST_SAVE', payload: 0})
-                                const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
-                                  serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
-                                dispatch({ type: 'SET_FIRST_SAVE', payload: 1})
-                                dispatch({ type: 'SET_ID', payload: createResponse.id })
-                              } catch(err){
-                                toast.error('Failed to save bid' + err)
-                              }
-                            }
+                          checked={toggleStates.winterShutdown}
+                          onCheckedChange={(checked) => {
+                            setToggleStates(prev => ({
+                              ...prev,
+                              winterShutdown: checked
+                            }));
                           }}
-                          onChange={(e) => {
-                            const ev = e.nativeEvent as InputEvent;
-                            const { inputType } = ev;
-                            const data = (ev.data || "").replace(/\$/g, "");
-
-                            if (
-                              field.name === "dieselCost" ||
-                              field.name === "laborRate" ||
-                              field.name === "fringeRate" ||
-                              field.name === "shopRate"
-                            ) {
-                              const nextDigits = handleNextDigits(digits[field.name], inputType, data);
-                              setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
-
-                              const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
-
-                              if (field.name === "dieselCost") {
-                                handleInputChange("dieselCost", formatted);
-                              } else {
-                                handleRateChange(field.name, formatted);
-                              }
-                            } else {
-                              const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
-                              handleInputChange(field.name, valueToUse);
-                            }
-                          }}
-                          className="h-10"
                         />
-                        {field.hasToggle && (
-                          <div className="flex items-center gap-2">
-                            <Label
-                              htmlFor={`${field.name}-toggle`}
-                              className="text-sm text-muted-foreground"
-                            >
-                              Use this rate?
-                            </Label>
-                            <input
-                              id={`${field.name}-toggle`}
-                              type="checkbox"
-                              checked={!!toggleStates[field.name]}
-                              onChange={() => handleToggleChange(field.name)}
-                              className="h-4 w-4"
+                        <Label htmlFor={field.name} className="text-sm">
+                          {field.label}
+                        </Label>
+                      </div>
+
+                      {toggleStates.winterShutdown && (
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="winterStart" className="text-sm">Winter Start Date</Label>
+                            <Input
+                              id="winterStart"
+                              type="date"
+                              value={adminData.winterStart
+                                ? (typeof adminData.winterStart === 'string'
+                                  ? adminData.winterStart
+                                  : adminData.winterStart.toISOString().split('T')[0])
+                                : ""}
+                              onChange={(e) => {
+                                dispatch({
+                                  type: 'UPDATE_ADMIN_DATA',
+                                  payload: {
+                                    key: 'winterStart',
+                                    value: e.target.value ? new Date(e.target.value) : null
+                                  }
+                                });
+                              }}
+                              className="h-10"
                             />
                           </div>
-                        )}
+                          <div>
+                            <Label htmlFor="winterEnd" className="text-sm">Winter End Date</Label>
+                            <Input
+                              id="winterEnd"
+                              type="date"
+                              value={adminData.winterEnd
+                                ? (typeof adminData.winterEnd === 'string'
+                                  ? adminData.winterEnd
+                                  : adminData.winterEnd.toISOString().split('T')[0])
+                                : ""}
+                              onChange={(e) => {
+                                dispatch({
+                                  type: 'UPDATE_ADMIN_DATA',
+                                  payload: {
+                                    key: 'winterEnd',
+                                    value: e.target.value ? new Date(e.target.value) : null
+                                  }
+                                });
+                              }}
+                              className="h-10"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : field.name === "oneWayTravelTime" ? (
+                    <div className="space-y-2">
+                      <div className="flex space-x-4">
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="owHoursInput" className="text-sm font-medium">
+                            Hours
+                          </Label>
+                          <Input
+                            id="owHoursInput"
+                            type="number"
+                            min="0"
+                            value={owHours === 0 ? "" : owHours}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : parseInt(value);
+                              if (!isNaN(numValue)) {
+                                handleOwTravelTimeChange("hours", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col space-y-2">
+                          <Label htmlFor="owMinutesInput" className="text-sm font-medium">
+                            Minutes
+                          </Label>
+                          <Input
+                            id="owMinutesInput"
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={owMinutes === 0 ? "" : owMinutes}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = value === "" ? 0 : Math.min(parseInt(value), 59);
+                              if (!isNaN(numValue)) {
+                                handleOwTravelTimeChange("minutes", numValue);
+                              }
+                            }}
+                            placeholder="00"
+                            className="h-10"
+                            onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col gap-4">
-                {!areAllRatesAcknowledged() && (
-                  <div className="flex items-center gap-2 text-amber-500">
-                    <AlertCircle size={16} />
-                    <span>
-                      Please ensure all rate fields have values and are
-                      acknowledged by checking the boxes before proceeding.
-                    </span>
-                  </div>
-                )}
-              </div>
+                      <div className="text-sm text-muted-foreground flex items-center space-x-2">
+                        <p className="text-sm text-gray-500">
+                          ({owTotalMinutes} mins, {owDecimalHours} hrs)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative space-y-2">
+                      <Input
+                        id={field.name}
+                        type={field.type}
+                        inputMode="decimal"
+                        pattern="^\\d*(\\.\\d{0,2})?$"
+                        placeholder={field.placeholder}
+                        value={
+                          field.name === "contractNumber" ? adminData.contractNumber || "" :
+                            field.name === "township" ? adminData.location || "" :
+                              field.name === "srRoute" ? adminData.srRoute || "" :
+                                field.name === "dbePercentage" ? adminData.dbe || "" :
+                                  //date handling to parse a date if necessary
+                                  field.name === "lettingDate" ?
+                                    adminData.lettingDate ?
+                                      (typeof adminData.lettingDate === 'string' ?
+                                        adminData.lettingDate :
+                                        adminData.lettingDate.toISOString().split('T')[0])
+                                      : "" :
+                                    //date handling to parse a date if necessary
+                                    field.name === "startDate" ?
+                                      adminData.startDate ?
+                                        (typeof adminData.startDate === 'string' ?
+                                          adminData.startDate :
+                                          adminData.startDate.toISOString().split('T')[0])
+                                        : "" :
+                                      //date handling to parse a date if necessary
+                                      field.name === "endDate" ?
+                                        adminData.endDate ?
+                                          (typeof adminData.endDate === 'string' ?
+                                            adminData.endDate :
+                                            adminData.endDate.toISOString().split('T')[0])
+                                          : "" :
+                                        field.name === "oneWayMileage" ? adminData.owMileage || "" :
+                                          field.name === "dieselCost" ? `$ ${formatDecimal(digits.dieselCost)}` || "" :
+                                            field.name === "laborRate" ? `$ ${formatDecimal(digits.laborRate)}` || "" :
+                                              field.name === "fringeRate" ? `$ ${formatDecimal(digits.fringeRate)}` || "" :
+                                                field.name === "shopRate" ? `$ ${formatDecimal(digits.shopRate)}` || "" :
+                                                  ""
+                        }
+                        onBlur={async () => {
+                          if (field.name === 'contractNumber' && (!bidId || bidId.trim() === '') && !firstSaveTimestamp) {
+                            try {
+                              // add 0 to simulate saving state
+                              dispatch({ type: 'SET_FIRST_SAVE', payload: 0 })
+                              const createResponse = await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject,
+                                serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
+                              dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
+                              dispatch({ type: 'SET_ID', payload: createResponse.id })
+                            } catch (err) {
+                              toast.error('Failed to save bid' + err)
+                            }
+                          }
+                        }}
+                        onChange={(e) => {
+                          const ev = e.nativeEvent as InputEvent;
+                          const { inputType } = ev;
+                          const data = (ev.data || "").replace(/\$/g, "");
+
+                          if (
+                            field.name === "dieselCost" ||
+                            field.name === "laborRate" ||
+                            field.name === "fringeRate" ||
+                            field.name === "shopRate"
+                          ) {
+                            const nextDigits = handleNextDigits(digits[field.name], inputType, data);
+                            setDigits((prev) => ({ ...prev, [field.name]: nextDigits, }));
+
+                            const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2);
+
+                            if (field.name === "dieselCost") {
+                              handleInputChange("dieselCost", formatted);
+                            } else {
+                              handleRateChange(field.name, formatted);
+                            }
+                          } else {
+                            const valueToUse = (field.name === "contractNumber" || field.name === "township" || field.name === "srRoute") ? e.target.value.toUpperCase() : e.target.value
+                            handleInputChange(field.name, valueToUse);
+                          }
+                        }}
+                        className="h-10"
+                      />
+                      {field.hasToggle && (
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor={`${field.name}-toggle`}
+                            className="text-sm text-muted-foreground"
+                          >
+                            Use this rate?
+                          </Label>
+                          <input
+                            id={`${field.name}-toggle`}
+                            type="checkbox"
+                            checked={!!toggleStates[field.name]}
+                            onChange={() => handleToggleChange(field.name)}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4">
+              {!areAllRatesAcknowledged() && (
+                <div className="flex items-center gap-2 text-amber-500">
+                  <AlertCircle size={16} />
+                  <span>
+                    Please ensure all rate fields have values and are
+                    acknowledged by checking the boxes before proceeding.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
+        </div>
       </div>
     </div>
   );

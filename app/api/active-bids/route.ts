@@ -409,9 +409,12 @@ export async function GET(request: NextRequest) {
       if (detailed) {
         return {
           ...bid,
-          contractNumber: (actualStatus === 'draft' && !bid.admin_data.contractNumber.endsWith('-DRAFT')) ? bid.admin_data.contractNumber + '-DRAFT' : bid.admin_data.contractNumber,
-          status: actualStatus,
-        };
+          contractNumber:
+            (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT'))
+              ? bid.admin_data?.contractNumber + '-DRAFT'
+              : bid.admin_data?.contractNumber,
+                    status: actualStatus,
+                  };
       } else {
         return {
           id: bid.id,
@@ -493,7 +496,7 @@ export async function POST(request: NextRequest) {
       saleItems: SaleItem[];
       permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
-      notes: string;
+      notes: { text: string, timestamp: number, user_email: number}[]
     };
 
     // Calculate totals
@@ -549,6 +552,23 @@ export async function POST(request: NextRequest) {
       bidEstimateId = newBid.id;
     }
 
+    if (!id && notes && notes.length > 0) {
+      const noteInserts = notes.map(note => ({
+        bid_id: bidEstimateId,
+        text: note.text,
+        created_at: new Date(note.timestamp).toISOString(),
+        user_email: note.user_email, 
+      }));
+
+      const { error: notesError } = await supabase
+        .from('bid_notes')
+        .insert(noteInserts);
+
+      if (notesError) {
+        throw new Error(`Failed to insert bid notes: ${notesError.message}`);
+      }
+    }
+    
     // Upsert admin data
     const { error: adminError } = await supabase
       .from('admin_data_entries')
@@ -666,6 +686,7 @@ export async function POST(request: NextRequest) {
           metal_stands_quantity: phase.standardEquipment.metalStands?.quantity || 0,
           six_foot_wings_quantity: phase.standardEquipment.sixFootWings?.quantity || 0,
           four_foot_type_iii_quantity: phase.standardEquipment.fourFootTypeIII?.quantity || 0,
+          emergency: phase.emergency ?? false,
           // Custom equipment
           custom_light_and_drum_items: phase.customLightAndDrumItems
         })

@@ -19,6 +19,8 @@ import RentalRevenueAndProfit from './RentalRevenueAndProfit'
 import SaleItemsRevenueAndProfit from './SaleItemsRevenueAndProfit'
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
 import PermanentSignsSummaryStep from '../BidItems/permanent-signs-tab'
+import PermSignsRevenueAndProfit from './PermSignsRevenueAndProfit'
+import { safeNumber } from '@/lib/safe-number'
 
 interface BasicSummaryTotals {
   totalCost: number;
@@ -83,66 +85,66 @@ const RevenueAndProfitSummary = () => {
     return [
       {
         mptRevenueAndGP: "MPT Equipment",
-        cost: mptRentalStats?.depreciationCost || 0,
-        revenue: mptRentalStats?.revenue || 0,
-        grossProfit: mptRentalStats?.grossProfit || 0,
-        grossMargin: mptRentalStats?.grossMargin || 0,
+        cost: safeNumber(mptRentalStats?.depreciationCost),
+        revenue: safeNumber(mptRentalStats?.revenue),
+        grossProfit: safeNumber(mptRentalStats?.grossProfit),
+        grossMargin: safeNumber(mptRentalStats?.grossMargin),
       },
       {
         mptRevenueAndGP: "Light & Drum Rental",
-        cost: lightAndDrumRentalStats?.depreciationCost || 0,
-        revenue: lightAndDrumRentalStats?.revenue || 0,
-        grossProfit: lightAndDrumRentalStats?.grossProfit || 0,
-        grossMargin: lightAndDrumRentalStats?.grossMargin || 0,
+        cost: safeNumber(lightAndDrumRentalStats?.depreciationCost),
+        revenue: safeNumber(lightAndDrumRentalStats?.revenue),
+        grossProfit: safeNumber(lightAndDrumRentalStats?.grossProfit),
+        grossMargin: safeNumber(lightAndDrumRentalStats?.grossMargin),
       },
       {
         mptRevenueAndGP: "HI Signs",
-        cost: totalSignCostStats?.HI.depreciationCost || 0,
-        revenue: totalSignCostStats?.HI.revenue || 0,
-        grossProfit: totalSignCostStats?.HI.grossProfit || 0,
-        grossMargin: totalSignCostStats?.HI.grossMargin || 0,
+        cost: safeNumber(totalSignCostStats?.HI.depreciationCost),
+        revenue: safeNumber(totalSignCostStats?.HI.revenue),
+        grossProfit: safeNumber(totalSignCostStats?.HI.grossProfit),
+        grossMargin: safeNumber(totalSignCostStats?.HI.grossMargin),
       },
       {
         mptRevenueAndGP: "DG Signs",
-        cost: totalSignCostStats?.DG.depreciationCost || 0,
-        revenue: totalSignCostStats?.DG.revenue || 0,
-        grossProfit: totalSignCostStats?.DG.grossProfit || 0,
-        grossMargin: totalSignCostStats?.DG.grossMargin || 0,
+        cost: safeNumber(totalSignCostStats?.DG.depreciationCost),
+        revenue: safeNumber(totalSignCostStats?.DG.revenue),
+        grossProfit: safeNumber(totalSignCostStats?.DG.grossProfit),
+        grossMargin: safeNumber(totalSignCostStats?.DG.grossMargin),
       },
       {
         mptRevenueAndGP: "Special Signs",
-        cost: totalSignCostStats?.Special.depreciationCost || 0,
-        revenue: totalSignCostStats?.Special.revenue || 0,
-        grossProfit: totalSignCostStats?.Special.grossProfit || 0,
-        grossMargin: totalSignCostStats?.Special.grossMargin || 0,
+        cost: safeNumber(totalSignCostStats?.Special.depreciationCost),
+        revenue: safeNumber(totalSignCostStats?.Special.revenue),
+        grossProfit: safeNumber(totalSignCostStats?.Special.grossProfit),
+        grossMargin: safeNumber(totalSignCostStats?.Special.grossMargin),
       },
       {
         mptRevenueAndGP: "Rate Labor",
-        cost: totalRatedLaborStats?.totalRatedLaborCost || 0,
-        revenue: Number.isNaN(totalRatedLaborStats?.totalRatedLaborRevenue) ? 0 : (totalRatedLaborStats?.totalRatedLaborRevenue || 0),
-        grossProfit: Number.isNaN(totalRatedLaborStats?.totalRatedLaborCost) ? 0 : totalRatedLaborStats?.totalRatedLaborCost,
-        grossMargin: Number.isNaN(totalRatedLaborStats?.grossMargin) ? 0 : (totalRatedLaborStats?.grossMargin || 0),
+        cost: safeNumber(totalRatedLaborStats?.totalRatedLaborCost),
+        revenue: safeNumber(totalRatedLaborStats?.totalRatedLaborRevenue),
+        grossProfit: safeNumber(totalRatedLaborStats?.totalRatedLaborCost),
+        grossMargin: safeNumber(totalRatedLaborStats?.grossMargin),
       },
       {
         mptRevenueAndGP: "Shop Labor",
-        cost: totalRatedLaborStats?.totalNonRateLaborCost || 0,
-        revenue: Number.isNaN(totalRatedLaborStats?.nonRateLaborRevenue) ? 0 : (totalRatedLaborStats?.nonRateLaborRevenue || 0),
-        grossProfit: Number.isNaN(totalRatedLaborStats?.nonRateGrossProfit) ? 0 : (totalRatedLaborStats?.nonRateGrossProfit || 0),
-        grossMargin: Number.isNaN(totalRatedLaborStats?.nonRateGrossMargin) ? 0 : (totalRatedLaborStats?.nonRateGrossMargin || 0),
+        cost: safeNumber(totalRatedLaborStats?.totalNonRateLaborCost),
+        revenue: safeNumber(totalRatedLaborStats?.nonRateLaborRevenue),
+        grossProfit: safeNumber(totalRatedLaborStats?.nonRateGrossProfit),
+        grossMargin: safeNumber(totalRatedLaborStats?.nonRateGrossMargin),
       },
       {
         mptRevenueAndGP: "Truck & Fuel Costs",
-        cost: totalTruckAndFuelStats?.totalCost || 0,
-        revenue: totalTruckAndFuelStats?.totalRevenue || 0,
-        grossProfit: totalTruckAndFuelStats?.totalGrossProfit || 0,
-        grossMargin: totalTruckAndFuelStats?.grossProfitMargin || 0,
+        cost: safeNumber(totalTruckAndFuelStats?.totalCost),
+        revenue: safeNumber(totalTruckAndFuelStats?.totalRevenue),
+        grossProfit: safeNumber(totalTruckAndFuelStats?.totalGrossProfit),
+        grossMargin: safeNumber(totalTruckAndFuelStats?.grossProfitMargin),
       },
       {
         mptRevenueAndGP: "MPT Total",
-        cost: allTotals?.totalCost || 0,
-        revenue: allTotals?.totalRevenue || 0,
-        grossProfit: allTotals?.totalGrossProfit || 0,
-        grossMargin: ((allTotals?.totalGrossProfit || 0) / (allTotals?.totalRevenue || 1) * 100),
+        cost: safeNumber(allTotals?.totalCost),
+        revenue: safeNumber(allTotals?.totalRevenue),
+        grossProfit: safeNumber(allTotals?.totalGrossProfit),
+        grossMargin: safeNumber(((allTotals?.totalGrossProfit || 0) / (allTotals?.totalRevenue || 1) * 100)),
       }
     ]
   }, [mptRentalStats, lightAndDrumRentalStats, totalSignCostStats, totalRatedLaborStats, totalTruckAndFuelStats, allTotals])
@@ -278,6 +280,7 @@ const RevenueAndProfitSummary = () => {
       <FlaggingRevenueAndProfit />
       <RentalRevenueAndProfit />
       <SaleItemsRevenueAndProfit />
+      <PermSignsRevenueAndProfit/>
     </div>
   )
 }

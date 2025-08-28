@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
@@ -67,7 +68,6 @@ export function CustomerContactForm({
         phone: contactToEdit.phone || ""
       })
     } else {
-      // Reset form when not editing
       setFormData({
         name: "",
         role: "",
@@ -79,7 +79,7 @@ export function CustomerContactForm({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    
+
     // Apply phone number formatting if the phone field is being updated
     if (name === 'phone') {
       setFormData(prev => ({
@@ -98,17 +98,17 @@ export function CustomerContactForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error("Name is required")
       return
     }
-    
+
     try {
       setIsSubmitting(true)
-      
+
       let success = false;
-      
+
       if (isEditMode && contactToEdit) {
         success = await updateContact(contactToEdit.id, {
           name: formData.name,
@@ -124,7 +124,7 @@ export function CustomerContactForm({
           phone: formData.phone
         })
       }
-      
+
       if (success) {
         setFormData({
           name: "",
@@ -132,7 +132,7 @@ export function CustomerContactForm({
           email: "",
           phone: ""
         })
-        
+
         onClose()
         onSuccess()
         toast.success(isEditMode ? 'Contact updated successfully' : 'Contact created successfully');
@@ -154,12 +154,12 @@ export function CustomerContactForm({
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? 'Update the contact details below.' 
+            {isEditMode
+              ? 'Update the contact details below.'
               : 'Create a new contact for this customer. Fill in the details below.'}
           </DialogDescription>
         </DialogHeader>
-        
+
         {/* Customer Details Section */}
         <div className="border rounded-md p-4 mb-4 bg-gray-50">
           <h3 className="text-lg font-semibold mb-2">{customer.displayName || customer.name}</h3>
@@ -182,9 +182,9 @@ export function CustomerContactForm({
             {customer.url && (
               <div>
                 <span className="font-medium">Website: </span>
-                <a 
-                  href={customer.url.startsWith('http') ? customer.url : `https://${customer.url}`} 
-                  target="_blank" 
+                <a
+                  href={customer.url.startsWith('http') ? customer.url : `https://${customer.url}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
                 >
@@ -194,7 +194,7 @@ export function CustomerContactForm({
             )}
           </div>
         </div>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -210,20 +210,30 @@ export function CustomerContactForm({
                 required
               />
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Role
               </Label>
-              <Input
-                id="role"
-                name="role"
+              <Select
                 value={formData.role}
-                onChange={handleChange}
-                className="col-span-3"
-              />
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, role: value }))
+                }
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ESTIMATOR">ESTIMATOR</SelectItem>
+                  <SelectItem value="PROJECT MANAGER">PROJECT MANAGER</SelectItem>
+                  <SelectItem value="ADMIN">ADMIN</SelectItem>
+                  <SelectItem value="FIELD / SUPERVISOR">FIELD / SUPERVISOR</SelectItem>
+                  <SelectItem value="OTHER">OTHER</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
                 Email
@@ -237,7 +247,7 @@ export function CustomerContactForm({
                 className="col-span-3"
               />
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
                 Phone
@@ -252,22 +262,22 @@ export function CustomerContactForm({
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting 
-                ? (isEditMode ? "Updating..." : "Creating...") 
+              {isSubmitting
+                ? (isEditMode ? "Updating..." : "Creating...")
                 : (isEditMode ? "Update Contact" : "Create Contact")
               }
             </Button>

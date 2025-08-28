@@ -16,7 +16,7 @@ interface ConfirmDeleteDialogProps {
   onClose: () => void
   onConfirm: () => void
   itemCount: number
-  itemType: "job" | "bid" | "branch" | "user" | "county" | "bid item" | "payback calculation" | 'sign order'
+  itemType: "job" | "bid" | "branch" | "user" | "county" | "bid item" | "payback calculation" | 'sign order' | 'equipment'
 }
 
 export function ConfirmDeleteDialog({
@@ -49,9 +49,9 @@ export function ConfirmDeleteDialog({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleConfirm} 
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
             disabled={isLoading}
           >
             {isLoading ? "Deleting..." : "Delete"}

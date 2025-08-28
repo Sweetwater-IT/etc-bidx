@@ -7,7 +7,7 @@ type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 
 // GET: Fetch all bids with optional filtering, plus counts and stats
 export async function GET(request: NextRequest) {
-  try {
+  try {    
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
@@ -47,13 +47,25 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const archived = searchParams.get('archived') === 'true';
 
-    // Build base queries
-    let countQuery = supabase.from(tableName).select('id', { count: 'exact', head: true });
+    // First, get all contract numbers that exist in bid_estimates
+    const existingBidsResult = await supabase
+      .from('bid_estimates')
+      .select('contract_number')
+
+    const existingBidContracts = existingBidsResult.data?.map(item => item.contract_number) || [];
+
+    // Build base queries with exclusion of jobs that already have bid estimates
+    let countQuery = supabase
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+
     let dataQuery = supabase
       .from(tableName)
       .select('*')
       .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + limit - 1)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
 
     // Default: Exclude archived jobs unless explicitly requested
     if (!archived) {
@@ -166,40 +178,7 @@ export async function GET(request: NextRequest) {
     const pageCount = Math.ceil(totalCount / limit);
 
     // Process alreadyBid information
-    let processedData = dataResult.data || [];
-    if (processedData.length > 0) {
-      const contractNumbers = processedData
-        .map(item => item.contract_number)
-        .filter(contractNumber => contractNumber && contractNumber.trim() !== '');
-
-      if (contractNumbers.length > 0) {
-        const bidEstimatesResult = await supabase
-          .from('bid_estimates')
-          .select('contract_number')
-          .in('contract_number', contractNumbers);
-
-        if (!bidEstimatesResult.error) {
-          const existingBids = new Set(
-            bidEstimatesResult.data?.map(item => item.contract_number) || []
-          );
-          processedData = processedData.map(item => ({
-            ...item,
-            alreadyBid: existingBids.has(item.contract_number)
-          }));
-        } else {
-          console.error('Error fetching bid estimates:', bidEstimatesResult.error);
-          processedData = processedData.map(item => ({
-            ...item,
-            alreadyBid: false
-          }));
-        }
-      } else {
-        processedData = processedData.map(item => ({
-          ...item,
-          alreadyBid: false
-        }));
-      }
-    }
+    const processedData = dataResult.data || [];
 
     const response: any = {
       success: true,
@@ -214,11 +193,16 @@ export async function GET(request: NextRequest) {
 
     // Execute count queries if stats are requested
     if (includeStats) {
-      const allCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', false); // Exclude archived for 'all' count
-      const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false);
-      const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false);
-      const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false);
-      const archivedCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', true);
+      const allCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`); // Exclude archived for 'all' count
+      const unsetCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+      const bidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+      const noBidCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+      const archivedCountResult = await supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('archived', true)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -226,16 +210,20 @@ export async function GET(request: NextRequest) {
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
       sevenDaysFromNow.setHours(23, 59, 59, 999);
 
-      let filteredUnsetQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false);
-      let filteredBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false);
-      let filteredNoBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false);
+      let filteredUnsetQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Unset').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+      let filteredBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'Bid').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
+      let filteredNoBidQuery = supabase.from('available_jobs').select('id', { count: 'exact', head: true }).eq('status', 'No Bid').eq('archived', false)
+      .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
       let filteredDueSoonQuery = supabase
         .from('available_jobs')
         .select('id', { count: 'exact', head: true })
         .in('status', ['Unset', 'Bid'])
         .eq('archived', false)
         .gte('due_date', today.toISOString())
-        .lte('due_date', sevenDaysFromNow.toISOString());
+        .lte('due_date', sevenDaysFromNow.toISOString())
+        .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
 
       if (startDate && endDate) {
         filteredUnsetQuery = filteredUnsetQuery.gte('letting_date', startDate).lte('letting_date', endDate);

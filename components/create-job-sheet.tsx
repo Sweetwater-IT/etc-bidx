@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -35,6 +35,7 @@ import { fetchReferenceData } from '@/lib/api-client'
 import { County } from '@/types/TCounty'
 import { toast } from 'sonner'
 import { useAuth } from "@/contexts/auth-context";
+import { Switch } from './ui/switch'
 
 interface CreateJobSheetProps {
   open: boolean
@@ -43,15 +44,19 @@ interface CreateJobSheetProps {
   onSuccess?: () => void
 }
 
-export function CreateJobSheet ({
+export function CreateJobSheet({
   open,
   onOpenChange,
   customSequentialNumber,
   onSuccess
 }: CreateJobSheetProps) {
   // Form data
+  const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
+  const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
+
   const [formData, setFormData] = useState({
     customer: '',
+    customJobNumber: 0,
     contractNumber: '',
     estimator: '',
     owner: '',
@@ -112,12 +117,12 @@ export function CreateJobSheet ({
   const { user } = useAuth();
 
   // Format decimal function (from admin component)
-  function formatDecimal (value: string): string {
+  function formatDecimal(value: string): string {
     return (parseInt(value, 10) / 100).toFixed(2)
   }
 
   // Handle next digits function (from admin component)
-  function handleNextDigits (
+  function handleNextDigits(
     current: string,
     inputType: string,
     data: string
@@ -133,6 +138,34 @@ export function CreateJobSheet ({
 
     return digits.padStart(3, '0')
   }
+
+  useEffect(() => {
+    if (!formData.customJobNumber) return;
+
+    const timeout = setTimeout(() => {
+      validateCustomJobNumber();
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [formData.customJobNumber, formData.division, branch]);
+
+  const validateCustomJobNumber = async () => {
+    const jobNumber = formData.customJobNumber.toString();
+
+    if (!jobNumber || jobNumber.length !== 7) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
+      const data = await res.json();
+
+      setIsValidJobNumber(!data.exists);
+    } catch (error) {
+      console.error('Error validating job number:', error);
+      setIsValidJobNumber(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -178,7 +211,7 @@ export function CreateJobSheet ({
           const usersDb = await fetchReferenceData("users");
           const dbUser = usersDb.find((u: any) => u.email === user.email);
           if (dbUser) name = dbUser.name;
-        } catch (err) {}
+        } catch (err) { }
         setFormData(prev => ({ ...prev, estimator: name }));
       }
     }
@@ -321,6 +354,37 @@ export function CreateJobSheet ({
 
         <div className='p-6 space-y-6'>
           <div>
+            <div className='w-full mb-1.5'>
+              <Label className='text-sm font-medium mb-1.5' >Enter number manually</Label>
+              <Switch
+                checked={customJobNumber}
+                onCheckedChange={() => setCustomJobNumber((prev) => !prev)}
+              />
+            </div>
+            {
+              customJobNumber &&
+              <div className='w-full mb-4'>
+                <Label htmlFor='custom_job_number' className='text-sm font-medium mb-1.5' >Number Job</Label>
+                <Input
+                  id='custom_job_number'
+                  placeholder='Enter contract number'
+                  className='h-10 border-gray-200'
+                  value={formData.customJobNumber}
+                  onChange={e => {
+                    handleInputChange('customJobNumber', e.target.value)
+
+                    if (!isValidJobNumber) {
+                      setIsValidJobNumber(true)
+                    }
+                  }}
+                />
+                {
+                  !isValidJobNumber &&
+                  <Label className='text-[12px] font-medium my-2 mx-2 text-red-400' >There is already a job with this number</Label>
+                }
+
+              </div>
+            }
             <div className='grid grid-cols-2 gap-4'>
               <div>
                 <Label
@@ -822,6 +886,7 @@ export function CreateJobSheet ({
               Cancel
             </Button>
             <Button
+              disabled={!isValidJobNumber}
               onClick={handleSubmit}
               className='flex-1 bg-black text-white hover:bg-gray-800'
             >

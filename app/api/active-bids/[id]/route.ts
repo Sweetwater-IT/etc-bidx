@@ -6,7 +6,7 @@ export async function GET(
   request: NextRequest,
   { params }: any
 ) {
-  try {
+  try {    
     const resolvedParams = await params;
     const type = request.nextUrl.searchParams.get('type')
     
@@ -25,13 +25,21 @@ export async function GET(
       }
     } else {
       const { data: estimateData, error: estimateError } = await supabase
-      .from('estimate_complete')
-      .select('*')
-      .eq('id', resolvedParams.id)
-      .single();
+        .from('estimate_complete')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single();
 
-      if (!estimateError) {
-        data = estimateData;
+      const { data: bidNotes, error: notesError } = await supabase
+        .from('bid_notes')
+        .select('id, text, created_at, user_email')
+        .eq('bid_id', resolvedParams.id);
+
+      if (!estimateError && !notesError) {
+        data = {
+          ...estimateData,
+          bid_notes: bidNotes
+        };
         error = null;
       }
     }
@@ -52,7 +60,7 @@ export async function GET(
           contractNumber : data.admin_data.contractNumber.endsWith('-DRAFT') ? data.admin_data.contractNumber : data.admin_data.contractNumber + '-DRAFT'
         }
       }
-    }
+    }     
     
     return NextResponse.json({ success: true, data });
     
@@ -84,7 +92,6 @@ export async function PATCH(
     
     const body = await request.json();
     
-    // First, update the bid estimate
     const { data: updatedBid, error: updateError } = await supabase
       .from('bid_estimates')
       .update(body)

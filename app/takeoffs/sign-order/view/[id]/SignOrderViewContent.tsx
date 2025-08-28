@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table'
 import EquipmentTotalsAccordion from './EquipmentTotalsAccordion'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import { formatDate } from '@/lib/formatUTCDate'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
@@ -19,6 +19,8 @@ import {
 } from '@/types/default-objects/defaultMPTObject'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { Badge } from '@/components/ui/badge'
+import { FileMetadata } from '@/types/FileTypes'
+import FileViewingContainer from '@/components/file-viewing-container'
 import { SendEmailDialog } from './SendEmailDialog'
 import { Note } from '@/components/pages/quote-form/QuoteNotes'
 
@@ -58,6 +60,13 @@ interface SignOrder {
   shop_status?: string
   assigned_to?: string
   signs?: any // The JSONB field containing sign data
+  contact: {
+    id: number
+    name: string
+    role: string
+    email: string
+    phone: string
+  }
 }
 
 interface SignItem {
@@ -82,7 +91,7 @@ const determineBranch = (id: number): string => {
   return 'Archived'
 }
 
-export default function SignOrderViewContent () {
+export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
   const { dispatch, mptRental } = useEstimate()
@@ -91,6 +100,7 @@ export default function SignOrderViewContent () {
   const [loading, setLoading] = useState(true)
   const [orderDate, setOrderDate] = useState<Date | undefined>(undefined)
   const [needDate, setNeedDate] = useState<Date | undefined>(undefined)
+  const [files, setFiles] = useState<FileMetadata[]>([]);
   const [openEmailDialog, setOpenEmailDialog] = useState(false)
   const [notes, setNotes] = useState<Note[]>([])
   // Order type checkboxes state
@@ -352,9 +362,8 @@ export default function SignOrderViewContent () {
                   structure: signData.structure || 'N/A',
                   bLights: Number(signData.bLights) || 0,
                   covers: Number(signData.covers) || 0,
-                  dimensions: `${signData.width || 0}" x ${
-                    signData.height || 0
-                  }"`
+                  dimensions: `${signData.width || 0}" x ${signData.height || 0
+                    }"`
                 }
               }
             )
@@ -394,6 +403,15 @@ export default function SignOrderViewContent () {
     }
   }, [params, dispatch])
 
+  const fetchFiles = () => {
+    if (!params?.id) return
+    fetchAssociatedFiles(Number(params.id!), 'sign-orders?sign_order_id', setFiles)
+  }
+
+  useEffect(() => {
+    fetchFiles();
+  }, [params])
+
   // Handle saving/submitting the sign order (same logic as SignOrderContentSimple)
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     // Prevent multiple submissions
@@ -411,7 +429,10 @@ export default function SignOrderViewContent () {
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: new Date(adminInfo.orderDate).toISOString(),
+        order_date: adminInfo.orderDate
+          ? new Date(adminInfo.orderDate).toISOString()
+          :
+          '',
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
@@ -431,8 +452,7 @@ export default function SignOrderViewContent () {
       const result = await saveSignOrder(signOrderData)
 
       toast.success(
-        `Sign order ${
-          status === 'SUBMITTED' ? 'submitted' : 'saved'
+        `Sign order ${status === 'SUBMITTED' ? 'submitted' : 'saved'
         } successfully`
       )
 
@@ -471,6 +491,9 @@ export default function SignOrderViewContent () {
       </div>
     )
   }
+
+  console.log(signOrder);
+
 
   return (
     <>
@@ -526,7 +549,7 @@ export default function SignOrderViewContent () {
                       {signOrder.job_number || '-'}
                       {signOrder.order_status &&
                         signOrder.order_status.trim().toLowerCase() ===
-                          'submitted' && (
+                        'submitted' && (
                           <Badge className='bg-green-100 text-green-800 border-green-200'>
                             Submitted
                           </Badge>
@@ -602,11 +625,41 @@ export default function SignOrderViewContent () {
                         .join(', ') || '-'}
                     </div>
                   </div>
+
+                  <div>
+                    <div className='text-sm text-muted-foreground'>
+                      Contact Name
+                    </div>
+                    <div className='text-base mt-1'>
+                      {signOrder.contact?.name ?? '-'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className='text-sm text-muted-foreground'>
+                      Contact Phone
+                    </div>
+                    <div className='text-base mt-1'>
+                      {signOrder.contact?.phone ?? '-'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className='text-sm text-muted-foreground'>
+                      Contact Email
+                    </div>
+                    <div className='text-base mt-1'>
+                      {signOrder.contact?.email ?? '-'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Equipment Totals - Takes 1/3 of the row */}
-              <EquipmentTotalsAccordion key={signItems.length} />
+              <div className='flex flex-col gap-y-2'>
+                <EquipmentTotalsAccordion key={signItems.length} />
+                <FileViewingContainer files={files} onFilesChange={setFiles} />
+              </div>
             </div>
 
             {/* Sign Details Table - Full width below */}
@@ -617,17 +670,17 @@ export default function SignOrderViewContent () {
                   data={
                     signItems.length === 0
                       ? [
-                          {
-                            designation: '-',
-                            description: '-',
-                            dimensions: '-',
-                            quantity: '-',
-                            sheeting: '-',
-                            structure: '-',
-                            bLights: '-',
-                            covers: '-'
-                          } as any
-                        ]
+                        {
+                          designation: '-',
+                          description: '-',
+                          dimensions: '-',
+                          quantity: '-',
+                          sheeting: '-',
+                          structure: '-',
+                          bLights: '-',
+                          covers: '-'
+                        } as any
+                      ]
                       : signItems
                   }
                   columns={SIGN_COLUMNS}
