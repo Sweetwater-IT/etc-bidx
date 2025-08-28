@@ -341,7 +341,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
           <View style={{ flex: 0.33 }}>
             <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
             <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>4' TYPE III =</Text>
+              <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
               <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</Text>
             </View>
             <View style={styles.equipmentRow}>
@@ -349,7 +349,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</Text>
             </View>
             <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>V/P'S =</Text>
+              <Text style={styles.equipmentCell}>V/P&apos;S =</Text>
               <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity)}</Text>
             </View>
             <View style={styles.equipmentRow}>
@@ -365,7 +365,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</Text>
             </View>
             <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>6' WINGS =</Text>
+              <Text style={styles.equipmentCell}>6&apos; WINGS =</Text>
               <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</Text>
             </View>
             <View style={styles.equipmentRow}>
