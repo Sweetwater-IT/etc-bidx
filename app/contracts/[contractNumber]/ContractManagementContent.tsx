@@ -72,9 +72,6 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
   const [projectManager, setProjectManager] = useState('')
   const [pmEmail, setPmEmail] = useState('')
   const [pmPhone, setPmPhone] = useState('')
-  const [selectedEmails, setSelectedEmails] = useState<string[]>([])
-  const [subject, setSubject] = useState<string>()
-  const [body, setBody] = useState<string>()
 
   // Initialize sender with current user if available
   const [sender, setSender] = useState<User>({
@@ -125,7 +122,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         return
       }
 
-      const response = await jobResponse.json()
+      const response = await jobResponse.json()      
 
       // Update admin data
       if (response.adminData) {
@@ -316,6 +313,8 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
           onProjectManagerChange={setProjectManager}
           onPmEmailChange={setPmEmail}
           onPmPhoneChange={setPmPhone}
+          contractNumber={contractNumber}
+          jobId={jobId}
         />
 
         {/* Contract Upload */}
@@ -371,7 +370,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         />
 
         {/* Admin Information */}
-        <AdminInformationSection adminData={adminData} />
+        <AdminInformationSection canEdit={true} adminData={adminData} />
       </div>
     </div>
   )
