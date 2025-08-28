@@ -131,7 +131,7 @@ const MPTOrderWorksheet: React.FC<Props> = ({
               </tr>
             )) : (
               <tr className="border-b-2 border-black">
-                <td className={cellClass  + " border-r-2 border-black"}>TYPE III'S</td>
+                <td className={cellClass  + " border-r-2 border-black"}>TYPE III&apos;S</td>
               </tr>
             )}
             {/* LOOSE */}
