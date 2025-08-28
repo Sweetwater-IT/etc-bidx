@@ -67,6 +67,8 @@ interface Props {
   shopSigns?: (ExtendedPrimarySign | ExtendedSecondarySign)[];
   updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void;
   adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void;
+  isSignOrder?: boolean;
+
 }
 
 export function SignOrderList({
@@ -76,10 +78,12 @@ export function SignOrderList({
   shopSigns,
   updateShopTracking,
   adjustShopValue,
+  isSignOrder,
 }: Props) {
   const { mptRental, dispatch } = useEstimate();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
+
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
@@ -737,6 +741,7 @@ export function SignOrderList({
             mode={mode}
             sign={localSign}
             currentPhase={currentPhase}
+            isSignOrder={isSignOrder}
           />
         )}
       </div>

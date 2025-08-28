@@ -16,6 +16,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import EmptyContainer from "@/components/BidItems/empty-container";
 
 const SaleItemsStep = () => {
@@ -23,6 +31,7 @@ const SaleItemsStep = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItemNumber, setEditingItemNumber] = useState<string | null>(null);
   const [formData, setFormData] = useState<SaleItem | null>(null);
+  const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
 
   const calculateMargin = (quotePrice: number, markupPercentage: number) => {
     if (!quotePrice || !markupPercentage) return 0;
@@ -41,16 +50,29 @@ const SaleItemsStep = () => {
     });
     setEditingItemNumber(null);
     setDrawerOpen(true);
+    fetchItems(); 
   };
 
-  const handleEditItem = (itemNumber: string) => {
-    const item = saleItems.find(item => item.itemNumber === itemNumber);
-    if (item) {
-      setFormData({ ...item });
-      setEditingItemNumber(itemNumber);
-      setDrawerOpen(true);
-    }
-  };
+const handleEditItem = (itemNumber: string) => {
+  const item = saleItems.find(item => item.itemNumber === itemNumber);
+  if (item) {
+    setFormData({ ...item });
+    setEditingItemNumber(itemNumber);
+    setDrawerOpen(true);
+    fetchItems(); 
+  }
+};
+
+const fetchItems = async () => {
+  try {
+    const res = await fetch("/api/bid-items/sale-items");
+    const data = await res.json();
+    if (data.items) setAvailableItems(data.items);
+  } catch (error) {
+    console.error("Error fetching sale items:", error);
+  }
+};
+
 
   const handleFormUpdate = (field: keyof SaleItem, value: any) => {
     if (formData) {
@@ -99,9 +121,7 @@ const SaleItemsStep = () => {
   return (
     <div>
       <div className="flex items-center justify-between pb-2 border-b mb-6">
-        <h3 className="text-xl text-black font-semibold">
-          Sale Items
-        </h3>
+        <h3 className="text-xl text-black font-semibold">Sale Items</h3>
         <Button onClick={handleAddItem}>
           <Plus className="mr-2 h-4 w-4" />
           Add Sale Item
@@ -111,7 +131,10 @@ const SaleItemsStep = () => {
       <div className="relative">
         {/* Sale Items List */}
         {saleItems.length === 0 && (
-          <EmptyContainer topText="No sale items added yet" subtext="When you add sale items, they will appear here." />
+          <EmptyContainer
+            topText="No sale items added yet"
+            subtext="When you add sale items, they will appear here."
+          />
         )}
         {saleItems.map((item) => (
           <div
@@ -156,46 +179,62 @@ const SaleItemsStep = () => {
             <DrawerDescription>
               {editingItemNumber
                 ? 'Update the sale item details below.'
-                : 'Configure the details for your new sale item.'
-              }
+                : 'Configure the details for your new sale item.'}
             </DrawerDescription>
           </DrawerHeader>
 
           {formData && (
             <div className="px-4 space-y-4">
-              {/* Item Number - Full width */}
+              {/* Item Number Dropdown */}
               <div className="w-full">
                 <Label className="text-sm font-medium mb-2 block">Item Number</Label>
+                <Select
+                  value={formData.itemNumber || ""}
+                  onValueChange={(value) => {
+                    const selected = availableItems.find(i => i.item_number === value);
+                    if (selected && formData) {
+                      setFormData({ ...formData, itemNumber: selected.item_number, name: selected.name });
+                    } else if (formData) {
+                      setFormData({ ...formData, itemNumber: "", name: "" });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select an item number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableItems.map((item) => (
+                      <SelectItem key={item.item_number} value={item.item_number}>
+                        {item.item_number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Name Autocomplete */}
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Name</Label>
                 <Input
-                  value={formData.itemNumber}
-                  onChange={(e) => handleFormUpdate("itemNumber", e.target.value)}
-                  className="w-full"
-                  placeholder="Enter item number"
+                  value={formData.name || ""}
+                  readOnly
+                  className="w-full bg-gray-100"
+                  placeholder="Name will auto-fill"
                 />
               </div>
 
-              {/* Other fields in 2-column grid */}
+              {/* Other fields */}
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Vendor</Label>
+                <Input
+                  value={formData.vendor}
+                  onChange={(e) => handleFormUpdate("vendor", e.target.value)}
+                  className="w-full"
+                  placeholder="Enter vendor name (optional)"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Name</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleFormUpdate("name", e.target.value)}
-                    className="w-full"
-                    placeholder="Enter item name"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Vendor</Label>
-                  <Input
-                    value={formData.vendor}
-                    onChange={(e) => handleFormUpdate("vendor", e.target.value)}
-                    className="w-full"
-                    placeholder="Enter vendor name"
-                  />
-                </div>
-
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Quantity</Label>
                   <Input
@@ -248,7 +287,7 @@ const SaleItemsStep = () => {
                   Cancel
                 </Button>
               </DrawerClose>
-              <Button 
+              <Button
                 onClick={handleSave}
                 disabled={!formData?.itemNumber.trim()}
               >
@@ -260,6 +299,8 @@ const SaleItemsStep = () => {
       </Drawer>
     </div>
   );
+
+
 };
 
 export default SaleItemsStep;

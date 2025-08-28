@@ -72,6 +72,11 @@ const FlaggingViewOnly = () => {
         return arrowBoardsCost + messageBoardsCost + tmaCost;
     };
 
+    const getTotalPrevailingWage = () => {
+        if (!adminData?.county) return 0;
+        return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
+    }; 
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
             <div className="flex flex-col">
@@ -94,10 +99,10 @@ const FlaggingViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
+                    Total Prevailing Wage
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(flagging?.fuelCostPerGallon)}
+                    {formatCurrency(getTotalPrevailingWage())}
                 </div>
             </div>
 
@@ -133,7 +138,7 @@ const FlaggingViewOnly = () => {
                     Arrow Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.arrowBoards.quantity || 0} | Cost: {formatCurrency(flagging?.arrowBoards.cost)}
+                    Qty: {flagging?.arrowBoards.quantity || 0} | Price: {formatCurrency(flagging?.arrowBoards.cost)}
                 </div>
             </div>
 
@@ -142,7 +147,7 @@ const FlaggingViewOnly = () => {
                     Message Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.messageBoards.quantity || 0} | Cost: {formatCurrency(flagging?.messageBoards.cost)}
+                    Qty: {flagging?.messageBoards.quantity || 0} | Price: {formatCurrency(flagging?.messageBoards.cost)}
                 </div>
             </div>
 
@@ -151,7 +156,7 @@ const FlaggingViewOnly = () => {
                     TMA
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.TMA.quantity || 0} | Cost: {formatCurrency(flagging?.TMA.cost)}
+                    Qty: {flagging?.TMA.quantity || 0} | Price: {formatCurrency(flagging?.TMA.cost)}
                 </div>
             </div>
 
@@ -175,7 +180,7 @@ const FlaggingViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Markup Rate
+                    Gross Profit Margin
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {flagging?.markupRate ? `${flagging.markupRate}%` : "-"}
@@ -199,6 +204,15 @@ const FlaggingViewOnly = () => {
                     {formatCurrency(flagging?.additionalEquipmentCost)}
                 </div>
             </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Gas Cost Per Gallon
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(flagging?.fuelCostPerGallon)}
+                </div>
+            </div>            
         </div>
     );
 };
@@ -226,6 +240,11 @@ const ServiceWorkViewOnly = () => {
         return arrowBoardsCost + messageBoardsCost + tmaCost;
     };
 
+    const getTotalPrevailingWage = () => {
+        if (!adminData?.county) return 0;
+        return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
+    };    
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 mb-4 pb-4">
             <div className="flex flex-col">
@@ -239,21 +258,21 @@ const ServiceWorkViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
                     Shop Rate
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(adminData.county?.shopRate)}
                 </div>
             </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Total Prevailing Wage
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(getTotalPrevailingWage())}
+                </div>
+            </div>            
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
@@ -287,7 +306,7 @@ const ServiceWorkViewOnly = () => {
                     Arrow Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.arrowBoards.quantity || 0} | Cost: {formatCurrency(serviceWork?.arrowBoards.cost)}
+                    Qty: {serviceWork?.arrowBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.arrowBoards.cost)}
                 </div>
             </div>
 
@@ -296,7 +315,7 @@ const ServiceWorkViewOnly = () => {
                     Message Boards
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.messageBoards.quantity || 0} | Cost: {formatCurrency(serviceWork?.messageBoards.cost)}
+                    Qty: {serviceWork?.messageBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.messageBoards.cost)}
                 </div>
             </div>
 
@@ -305,7 +324,7 @@ const ServiceWorkViewOnly = () => {
                     TMA
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.TMA.quantity || 0} | Cost: {formatCurrency(serviceWork?.TMA.cost)}
+                    Qty: {serviceWork?.TMA.quantity || 0} | Price: {formatCurrency(serviceWork?.TMA.cost)}
                 </div>
             </div>
 
@@ -329,7 +348,7 @@ const ServiceWorkViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
-                    Markup Rate
+                    Gross Profit Margin
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {serviceWork?.markupRate ? `${serviceWork.markupRate}%` : "-"}
@@ -351,6 +370,15 @@ const ServiceWorkViewOnly = () => {
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
                     {formatCurrency(serviceWork?.additionalEquipmentCost)}
+                </div>
+            </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
+                    Gas Cost Per Gallon
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
                 </div>
             </div>
         </div>
