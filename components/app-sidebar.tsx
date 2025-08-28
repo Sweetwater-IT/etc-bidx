@@ -80,11 +80,11 @@ export const data = {
         },
       ],
     },
-    {
+   /* {
       title: "Inventory",
       url: "",
       icon: IconChartBar,
-    },
+    }, */
     {
       title: "Quote Form",
       url: "/quotes",
@@ -125,7 +125,7 @@ export const data = {
     // },
   ] as NavItem[],
   navAdmin: [
-    {
+   /* {
       title: "Admin Portal",
       url: "/portal",
       icon: IconUsers,
@@ -155,27 +155,27 @@ export const data = {
           url: "/portal/payback-calculations",
         },
       ],
-    },
+    }, */
     {
       title: "Customers",
       url: "/customers",
       icon: IconUsers,
     },
-    {
+  /*  {
       title: "Reporting",
       url: "/reports",
       icon: IconUsers,
-    },
+    }, */
     {
       title: "Contract Manager",
       url: "/contracts",
       icon: IconUsers,
     },
-    {
+ /*   {
       title: "Billing Tracker",
       url: "",
       icon: IconFileWord,
-    },
+    }, */
   ] as NavItem[],
   navClouds: [
     {
@@ -242,7 +242,7 @@ export const data = {
       icon: IconSearch,
     },
   ] as NavItem[],
-  documents: [
+ /* documents: [
     {
       name: "Job List",
       url: "/documents/jobs",
@@ -258,7 +258,7 @@ export const data = {
       url: "",
       icon: IconFileWord,
     },
-  ] as Document[],
+  ] as Document[], */
 };
 
 export const quickActions = [
