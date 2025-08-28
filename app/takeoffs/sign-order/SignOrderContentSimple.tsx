@@ -535,115 +535,69 @@ export default function SignOrderContentSimple({
     [adminInfo, signList, mptRental, notes]
   );
 
-  return mptRental.phases.length > 0 ? (
-    <div className='flex flex-1 flex-col'>
+    return mptRental.phases.length > 0 ? (
+    <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading='Create Sign Order'
+        heading="Create Sign Order"
         handleSubmit={() => {
-          handleSave('DRAFT')
-          router.push('/takeoffs/load-sheet')
+          handleSave("DRAFT");
+          router.push("/takeoffs/load-sheet");
         }}
         showX
-        saveButtons={
-          <div className='flex items-center gap-4'>
-            <div className='text-sm text-muted-foreground'>
-              {getSaveStatusMessage()}
-            </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                onClick={() =>
-                  handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')
-                }
-                disabled={
-                  adminInfo.isSubmitting ||
-                  mptRental.phases[0].signs.length === 0 ||
-                  isOrderInvalid()
-                }
-              >
-                {adminInfo.isSubmitting
-                  ? 'Saving...'
-                  : initialSignOrderId
-                    ? 'Update order'
-                    : 'Done'}
-              </Button>
-            </div>
-          </div>
-        }
+        saveButtons={/* ... */}
       />
-      <div className='flex gap-6 p-6 max-w-full'>
+      <div className="flex gap-6 p-6 max-w-full">
         {/* Main Form Column (3/4) */}
-        <div className='w-3/4 space-y-6'>
+        <div className="w-3/4 space-y-6">
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
           />
-          <SignOrderList
-            isSignOrder={true}
-          />
+          <SignOrderList />
         </div>
         {/* Right Column (1/4) */}
-        <div className='w-1/4 space-y-6'>
+        <div className="w-1/4 space-y-6">
           <EquipmentTotalsAccordion />
-          <div className='border rounded-lg p-4'>
-            <h2 className='mb-2 text-lg font-semibold'>Files</h2>
+          <div className="border rounded-lg p-4">
+            <h2 className="mb-2 text-lg font-semibold">Files</h2>
             <Dropzone
               {...fileUploadProps}
-              className='p-8 cursor-pointer space-y-4 mb-4'
+              className="p-8 cursor-pointer space-y-4 mb-4"
             >
               <DropzoneContent />
               <DropzoneEmptyState />
             </Dropzone>
             <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
-          {/* Left Section: expands if PDF preview is hidden */}
-          <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
-            {/* Main Form Column (3/4) */}
-              <SignOrderAdminInfo
-                adminInfo={adminInfo}
-                setAdminInfo={setAdminInfo}
-                showInitialAdminState={!!initialSignOrderId}
-              />
-              <SignOrderList />
-            {/* Right Column (1/4) */}
-              {/* Toggle Button for PDF Preview (floated to the right, outside preview) */}
-              <EquipmentTotalsAccordion />
-              <div className='border rounded-lg p-4'>
-                <h2 className='mb-2 text-lg font-semibold'>Files</h2>
-                <Dropzone
-                  {...fileUploadProps}
-                  className='p-8 cursor-pointer space-y-4'
-                >
-                  <DropzoneContent />
-                  <DropzoneEmptyState />
-                </Dropzone>
-              </div>
-              <QuoteNotes
-                notes={notes}
-                onSave={handleSaveNote}
-                onEdit={handleEditNote}
-                onDelete={handleDeleteNote}
-                loading={loadingNotes}
-              />
           </div>
-          {/* PDF Preview Section: only render if visible */}
-          <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
-            <div className='flex justify-end'>
-              <PDFDownloadLink
-                document={pdfDoc}
-                fileName="sign-order.pdf"
-              >
+          <QuoteNotes
+            notes={notes}
+            onSave={handleSaveNote}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            loading={loadingNotes}
+          />
+          <div className="bg-[#F4F5F7] p-6 rounded-lg">
+            <div className="flex justify-end">
+              <PDFDownloadLink document={pdfDoc} fileName="sign-order.pdf">
                 <Button>Download PDF</Button>
               </PDFDownloadLink>
             </div>
-            <div className='min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]'>
-              <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
+              <SignOrderWorksheet
+                adminInfo={adminInfo}
+                signList={signList}
+                mptRental={mptRental}
+                notes={notes}
+              />
             </div>
           </div>
+        </div>
       </div>
     </div>
   ) : (
     <></>
-  )
+  );
 }
 
 const normalizeSign = (sign: any): SignItem => ({
