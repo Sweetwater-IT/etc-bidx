@@ -118,8 +118,8 @@ export default function QuotesPage() {
     fetchQuotes();
   }, []);
 
-  const handleRowClick = (quote: QuoteGridView) => {
-    router.push(`/quotes/${quote.id}`);
+  const handleRowClick = (quote: QuoteGridView) => {    
+    router.push(`/quotes/view/${quote.id}`);
   };
 
   return (
@@ -153,9 +153,8 @@ export default function QuotesPage() {
                 segmentValue={activeSegment}
                 segmentCounts={quoteCounts}
                 onSegmentChange={handleSegmentChange}
-                onRowClick={handleRowClick}
+                onViewDetails={handleRowClick}
                 stickyLastColumn
-                // Pagination props
                 pageCount={pageCount}
                 pageIndex={pageIndex}
                 pageSize={pageSize}

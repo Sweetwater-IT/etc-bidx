@@ -11,6 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import FileViewingContainer from "@/components/file-viewing-container";
 import { FileMetadata } from "@/types/FileTypes";
 import { Note, QuoteNotes } from "@/components/pages/quote-form/QuoteNotes";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { INote } from "@/types/TEstimate";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Quote {
   id: number;
@@ -43,14 +47,14 @@ interface QuoteItem {
   total?: number;
 }
 
-export default function QuoteViewContent() {
-  const params = useParams();
+export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth()
 
   const QUOTE_COLUMNS = [
     { key: "description", title: "Description", sortable: false },
@@ -62,9 +66,9 @@ export default function QuoteViewContent() {
   useEffect(() => {
     const fetchQuote = async () => {
       try {
-        if (!params?.id) return;
+        if (!quoteId) return;
 
-        const res = await fetch(`/api/quotes/${params.id}`);
+        const res = await fetch(`/api/quotes/${quoteId}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -75,12 +79,12 @@ export default function QuoteViewContent() {
         setQuoteItems(
           Array.isArray(data.items)
             ? data.items.map((item: any, idx: number) => ({
-                id: idx + 1,
-                description: item.description || "N/A",
-                quantity: item.quantity || 0,
-                unitPrice: item.unitPrice || 0,
-                total: (item.quantity || 0) * (item.unitPrice || 0),
-              }))
+              id: idx + 1,
+              description: item.description || "N/A",
+              quantity: item.quantity || 0,
+              unitPrice: item.unitPrice || 0,
+              total: (item.quantity || 0) * (item.unitPrice || 0),
+            }))
             : []
         );
         setNotes(Array.isArray(data.notes) ? data.notes : []);
@@ -94,14 +98,14 @@ export default function QuoteViewContent() {
     };
 
     fetchQuote();
-  }, [params]);
+  }, [quoteId]);
 
   const handleExport = () => {
     alert("Export functionality not implemented yet");
   };
 
   const handleEditQuote = () => {
-    router.push(`/quotes/edit/${params?.id}`);
+    router.push(`/quotes/edit/${quoteId}`);
   };
 
   if (loading) {
@@ -118,35 +122,95 @@ export default function QuoteViewContent() {
     );
   }
 
-  return (
-    <>
-      <SiteHeader>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold mt-2 ml-0">View Quote</h1>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleEditQuote}
-              className="bg-primary text-white hover:bg-primary/90"
-            >
-              Edit
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              Export
-            </Button>
-            <Button variant="outline" onClick={() => alert("Send Email pending")}>
-              Send Email
-            </Button>
-          </div>
-        </div>
-      </SiteHeader>
+  const handleSave = async (note: INote, index: number) => {
+    const updated = [...notes, { ...note, user_email: user.email }];
+    setNotes(updated);
 
-      <div className="flex flex-1 flex-col">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
-            {/* Customer Info and Files */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Customer Information */}
-              <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
+    const response = await fetch('/api/quotes/addNotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quote_id: quoteId,
+        timestamp: note.timestamp,
+        text: note.text,
+        user_email: user.email
+      })
+    });
+    const result = await response.json();
+
+    if (result.ok) {
+      setNotes((prev) =>
+        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+      );
+    }
+  };
+
+  const handleEdit = async (index: number, updatedNote: INote) => {
+    const updated = notes.map((n, i) => (i === index ? updatedNote : n));
+    setNotes(updated);
+
+    const resp = await fetch('/api/quotes/addNotes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+      setNotes((prev) =>
+        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
+      );
+    }
+  };
+
+  const handleDelete = async (index: number) => {
+    const noteToDelete = notes[index];
+    const updated = notes.filter((_, i) => i !== index);
+    setNotes(updated);
+
+    await fetch('/api/quotes/addNotes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: noteToDelete.id })
+    });
+  };
+
+
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+
+      <SidebarInset>
+        <SiteHeader>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold mt-2 ml-0">View Quote</h1>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleEditQuote}
+                className="bg-primary text-white hover:bg-primary/90"
+              >
+                Edit
+              </Button>
+              <Button variant="outline" onClick={handleExport}>
+                Export
+              </Button>
+              <Button variant="outline" onClick={() => alert("Send Email pending")}>
+                Send Email
+              </Button>
+            </div>
+          </div>
+        </SiteHeader>
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">                <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
                 <h2 className="text-xl font-semibold mb-4">
                   Quote Information
                 </h2>
@@ -229,20 +293,27 @@ export default function QuoteViewContent() {
                 </div>
               </div>
 
-              {/* Files */}
-              <div className="flex flex-col gap-y-2">
-                <FileViewingContainer files={files} onFilesChange={setFiles} />
-              </div>
-            </div>
+                <div className="flex flex-col gap-y-2">
+                  <FileViewingContainer files={files} onFilesChange={setFiles} />
 
-            {/* Items */}
-            <div className="grid grid-cols-1 gap-8">
-              <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
-                <DataTable
-                  data={
-                    quoteItems.length === 0
-                      ? [
+                  <QuoteNotes
+                    notes={notes}
+                    onSave={(note: INote) => handleSave(note, notes.length)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    title="Notes"
+                  />
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="grid grid-cols-1 gap-8">
+                <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                  <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
+                  <DataTable
+                    data={
+                      quoteItems.length === 0
+                        ? [
                           {
                             description: "-",
                             quantity: "-",
@@ -250,23 +321,18 @@ export default function QuoteViewContent() {
                             total: "-",
                           } as any,
                         ]
-                      : quoteItems
-                  }
-                  columns={QUOTE_COLUMNS}
-                  hideDropdown
-                />
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="grid grid-cols-1 gap-8">
-              <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                <h2 className="text-xl font-semibold mb-4">Notes</h2>
+                        : quoteItems
+                    }
+                    columns={QUOTE_COLUMNS}
+                    hideDropdown
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </>
+      </SidebarInset>
+    </SidebarProvider>
+
   );
 }
