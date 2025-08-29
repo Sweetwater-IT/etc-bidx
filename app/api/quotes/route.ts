@@ -1,19 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
 export interface QuoteGridView {
   id: number;
-  quote_number: string;
-  status: 'Not Sent' | 'Sent' | 'Accepted';
-  date_sent: string;
-  customer_name: string;
-  point_of_contact: string;
+  quote_number: string | null;
+  status: "Not Sent" | "Sent" | "Accepted" | null;
+  date_sent: string | null;
+  customer_name: string; // queda vacío porque hay que join con quotes_customers + contractors
+  point_of_contact: string; // idem con quote_recipients
   point_of_contact_email: string;
-  total_items: number;
-  county: string;
-  // created_at: string;
-  updated_at: string;
-  has_attachments: boolean;
+  total_items: number; // idem con quote_items
+  county: string | null;
+  updated_at: string | null;
+  has_attachments: boolean; // idem con files
   estimate_contract_number?: string;
   job_number?: string;
 }
@@ -21,216 +20,167 @@ export interface QuoteGridView {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
-    const orderBy = searchParams.get('orderBy') || 'date_sent';
-    const ascending = searchParams.get('ascending') === 'true';
-    const counts = searchParams.get('counts') === 'true';
-    const nextNumber = searchParams.get('nextNumber') === 'true';
-    const detailed = searchParams.get('detailed') === 'true';
-    
-    // If only requesting counts, return count of quotes by status
+    const status = searchParams.get("status");
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
+    const orderBy = "date_sent";
+    const ascending = searchParams.get("ascending") === "true";
+    const counts = searchParams.get("counts") === "true";
+    const nextNumber = searchParams.get("nextNumber") === "true";
+    const detailed = searchParams.get("detailed") === "true";
+
+    // -------------------
+    // 📊 Counts
+    // -------------------
     if (counts) {
-      try {
-        const { data: allQuotes, error: countError } = await supabase
-          .from('quotes')
-          .select('quote_id, status');
-        
-        if (countError || !allQuotes) {
-          return NextResponse.json(
-            { error: 'Failed to fetch quote counts', details: countError },
-            { status: 500 }
-          );
-        }
-        
-        const countData = {
-          all: allQuotes.length,
-          not_sent: allQuotes.filter(quote => quote.status === 'Not Sent').length,
-          sent: allQuotes.filter(quote => quote.status === 'Sent').length,
-          accepted: allQuotes.filter(quote => quote.status === 'Accepted').length
-        };
-        
-        return NextResponse.json(countData);
-      } catch (error) {
-        console.error('Error fetching quote counts:', error);
+      const { data: allQuotes, error: countError } = await supabase
+        .from("quotes")
+        .select("id, status");
+
+      if (countError || !allQuotes) {
         return NextResponse.json(
-          { error: 'Unexpected error fetching quote counts' },
+          { error: "Failed to fetch quote counts", details: countError },
           { status: 500 }
         );
       }
+
+      const countData = {
+        all: allQuotes.length,
+        not_sent: allQuotes.filter((q) => q.status === "Not Sent").length,
+        sent: allQuotes.filter((q) => q.status === "Sent").length,
+        accepted: allQuotes.filter((q) => q.status === "Accepted").length,
+      };
+
+      return NextResponse.json(countData);
     }
-    
-    // If requesting next quote number
+
+    // -------------------
+    // 🔢 Next Quote Number
+    // -------------------
     if (nextNumber) {
-      try {
-        // Get the highest current quote number
-        const { data: latestQuote, error: quoteError } = await supabase
-          .from('quotes')
-          .select('quote_number')
-          .order('quote_number', { ascending: false })
-          .limit(1);
-        
-        if (quoteError) {
-          return NextResponse.json(
-            { error: 'Failed to fetch latest quote number', details: quoteError },
-            { status: 500 }
-          );
-        }
-        
-        let nextQuoteNumber = 'Q-1001'; // Default starting number
-        
-        if (latestQuote && latestQuote.length > 0) {
-          // Extract the number part and increment
-          const currentNumber = latestQuote[0].quote_number;
-          if (currentNumber && currentNumber.startsWith('Q-')) {
-            const numericPart = parseInt(currentNumber.substring(2));
-            if (!isNaN(numericPart)) {
-              nextQuoteNumber = `Q-${numericPart + 1}`;
-            }
+      const { data: latestQuote, error: quoteError } = await supabase
+        .from("quotes")
+        .select("quote_number")
+        .order("quote_number", { ascending: false })
+        .limit(1);
+
+      if (quoteError) {
+        return NextResponse.json(
+          { error: "Failed to fetch latest quote number", details: quoteError },
+          { status: 500 }
+        );
+      }
+
+      let nextQuoteNumber = "Q-1001";
+      if (latestQuote && latestQuote.length > 0) {
+        const currentNumber = latestQuote[0].quote_number;
+        if (currentNumber && currentNumber.startsWith("Q-")) {
+          const numericPart = parseInt(currentNumber.substring(2));
+          if (!isNaN(numericPart)) {
+            nextQuoteNumber = `Q-${numericPart + 1}`;
           }
         }
-        
-        return NextResponse.json({ nextQuoteNumber });
-      } catch (error) {
-        console.error('Error generating next quote number:', error);
-        return NextResponse.json(
-          { error: 'Unexpected error generating quote number' },
-          { status: 500 }
-        );
       }
+
+      return NextResponse.json({ nextQuoteNumber });
     }
-    
-    // Calculate offset for pagination
+
+    // -------------------
+    // 📑 Pagination
+    // -------------------
     const offset = (page - 1) * limit;
 
     if (detailed) {
-      // For detailed view, get everything
+      // 🔎 Detailed → get all raw fields
       let query = supabase
-        .from('quotes')
-        .select('*')
+        .from("quotes")
+        .select("*")
         .order(orderBy, { ascending })
         .range(offset, offset + limit - 1);
 
-      console.log(query)
-
-      // Apply status filter if provided
-      if (status && status !== 'all') {
-        query = query.eq('status', status);
+      if (status && status !== "all") {
+        query = query.eq("status", status);
       }
 
       const { data, error } = await query;
-      
+
       if (error || !data) {
         return NextResponse.json(
-          { success: false, message: 'Failed to fetch quotes', error: error?.message },
+          { success: false, message: "Failed to fetch quotes", error: error?.message },
           { status: 500 }
         );
       }
 
-      // Get count for pagination
       const { count } = await supabase
-        .from('quotes')
-        .select('quote_id', { count: 'exact', head: true });
-      
+        .from("quotes")
+        .select("id", { count: "exact", head: true });
+
       return NextResponse.json({
-        success: true, 
+        success: true,
         data,
         pagination: {
           page,
           pageSize: limit,
           pageCount: Math.ceil((count || 0) / limit),
-          totalCount: count || 0
-        }
+          totalCount: count || 0,
+        },
       });
     } else {
-      // For grid view, select and transform specific fields
+      // 📊 Grid view (simplificado, solo con campos nativos de quotes)
       let query = supabase
-        .from('quotes')
-        .select(`
-          quote_id,
-          quote_number,
-          status,
-          date_sent,
-          customers,
-          point_of_contact,
-          quote_items,
-          county,
-          date_sent,
-          attached_files,
-          estimate_contract_number,
-          job_number
-        `)
+        .from("quotes")
+        .select("id, quote_number, status, date_sent, county, updated_at")
         .order(orderBy, { ascending })
         .range(offset, offset + limit - 1);
 
-      // Apply status filter if provided
-      if (status && status !== 'all') {
-        query = query.eq('status', status);
+      if (status && status !== "all") {
+        query = query.eq("status", status);
       }
 
       const { data: rawData, error } = await query;
-      
+
       if (error || !rawData) {
         return NextResponse.json(
-          { success: false, message: 'Failed to fetch quotes', error: error?.message },
+          { success: false, message: "Failed to fetch quotes", error: error?.message },
           { status: 500 }
         );
       }
 
-      // Transform the data for the grid view
-      const transformedData: QuoteGridView[] = rawData.map((row: any) => {
-        // Extract first customer name if available
-        const customerName = row.customers && row.customers.length > 0 
-          ? row.customers[0].name 
-          : '';
-        
-        // Extract point of contact info
-        const poc = row.point_of_contact || {};
-        
-        // Count items
-        const itemCount = row.quote_items ? row.quote_items.length : 0;
-        
-        // Check if there are attachments
-        const hasAttachments = row.attached_files && row.attached_files.length > 0;
-        
-        return {
-          id: row.quote_id,
-          quote_number: row.quote_number,
-          status: row.status,
-          date_sent: row.date_sent,
-          customer_name: customerName,
-          point_of_contact: poc.contact_name || poc.email || '',
-          point_of_contact_email: poc.email || '',
-          total_items: itemCount,
-          county: row.county || '',
-          updated_at: row.quote_updated_at,
-          has_attachments: hasAttachments,
-          estimate_contract_number: row.estimate_contract_number || undefined,
-          job_number: row.job_number || undefined
-        };
-      });
+      const transformedData: QuoteGridView[] = rawData.map((row: any) => ({
+        id: row.id,
+        quote_number: row.quote_number,
+        status: row.status,
+        date_sent: row.date_sent,
+        customer_name: "", // acá deberías join con contractors via quotes_customers
+        point_of_contact: "", // join con quote_recipients
+        point_of_contact_email: "",
+        total_items: 0, // join con quote_items
+        county: row.county,
+        updated_at: row.updated_at,
+        has_attachments: false, // join con files
+        estimate_contract_number: undefined,
+        job_number: undefined,
+      }));
 
-      // Get count for pagination
       const { count } = await supabase
-        .from('quotes')
-        .select('quote_id', { count: 'exact', head: true });
-      
+        .from("quotes")
+        .select("id", { count: "exact", head: true });
+
       return NextResponse.json({
-        success: true, 
+        success: true,
         data: transformedData,
         pagination: {
           page,
           pageSize: limit,
           pageCount: Math.ceil((count || 0) / limit),
-          totalCount: count || 0
-        }
+          totalCount: count || 0,
+        },
       });
     }
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error("Unexpected error:", error);
     return NextResponse.json(
-      { success: false, message: 'Unexpected error', error: String(error) },
+      { success: false, message: "Unexpected error", error: String(error) },
       { status: 500 }
     );
   }

@@ -1,10 +1,10 @@
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+// app/quotes/create/page.tsx
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import QuoteFormProvider from "./QuoteFormProvider";
 import QuoteFormContent from "./QuoteFormContent";
 
-export default async function CreateQuotePage() {
+export default function CreateQuotePage() {
   return (
     <SidebarProvider
       style={
@@ -14,13 +14,13 @@ export default async function CreateQuotePage() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <QuoteFormProvider>
-          <QuoteFormContent />
-        </QuoteFormProvider>
-      </SidebarInset>
+      <div className="flex flex-col h-screen w-screen">
+        <div className="flex-1 overflow-auto">
+          <QuoteFormProvider>
+            <QuoteFormContent />
+          </QuoteFormProvider>
+        </div>
+      </div>
     </SidebarProvider>
   );
 }
