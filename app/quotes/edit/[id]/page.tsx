@@ -5,6 +5,11 @@ import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
 import { useEffect } from "react";
 import QuoteEditLoader from "./QuoteEditLoader";
+
+interface EditQuotePageProps {
+  params: { id: string };
+}
+
 export default function EditQuotePage({ params }: { params: { id: string } }) {
     const quoteId = params.id;
 
