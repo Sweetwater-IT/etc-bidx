@@ -1,9 +1,6 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import QuoteFormProvider from "../../create/QuoteFormProvider";
-import QuoteFormContent from "../../create/QuoteFormContent";
-import QuoteEditLoader from "./QuoteEditLoader";
 
 export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: quoteId } = await params; // Await the params Promise
