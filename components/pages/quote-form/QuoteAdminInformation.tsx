@@ -258,21 +258,22 @@ export function QuoteAdminInformation() {
     setSheetMode("edit");
     setSheetOpen(true);
   };
-  const handleSelect = (job) => {
-    setSelectedContractJob(job);
-    setSheetMode("edit");
-    setSheetOpen(false);
+  
+  const handleSelect = (jobOrEstimate) => {
+  setSelectedContractJob(jobOrEstimate);
+  setSheetMode("edit");
+  setSheetOpen(false);
 
-    if (job) {
-      if ("contract_number" in job) {
-        setAssociatedContractNumber(job.contract_number);
-        setQuoteType("estimate");
-      } else if ("job_number" in job) {
-        setAssociatedContractNumber(job.job_number);
-        setQuoteType("job");
-      }
-    }
-  };
+  if (!jobOrEstimate) return;
+
+  if ("contract_number" in jobOrEstimate) {
+    setAssociatedContractNumber(jobOrEstimate.contract_number || "");
+    setQuoteType("estimate");
+  } else if ("job_number" in jobOrEstimate) {
+    setAssociatedContractNumber(jobOrEstimate.job_number || "");
+    setQuoteType("job");
+  }
+};
 
   return (
     <>

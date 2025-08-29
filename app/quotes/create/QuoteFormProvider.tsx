@@ -1,75 +1,124 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import { Customer } from "@/types/Customer";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { format } from "date-fns";
 import { AdminData } from "@/types/TAdminData";
 import { PaymentTerms } from "@/components/pages/quote-form/QuoteAdminInformation";
 import { User } from "@/types/User";
+import { DefaultQuote, defaultQuote } from "@/types/default-objects/defaultQuoteObject";
+
+export type QuoteStatus = "Not Sent" | "Sent" | "Accepted";
+
+export type AttachmentNames =
+  | "flagging-price-list"
+  | "flagging-service-area"
+  | "bedford-branch";
+
+export type TermsNames =
+  | "standard-terms"
+  | "rental-agreements"
+  | "equipment-sale"
+  | "flagging-terms"
+  | "custom-terms";
 
 interface PointOfContact {
   name: string;
   email: string;
 }
 
-export type QuoteStatus = 'Not Sent' | 'Sent' | 'Accepted';
-
 interface QuoteFormState {
   selectedCustomers: Customer[];
-  setSelectedCustomers: (customers: Customer[] | ((prev: Customer[]) => Customer[])) => void;
+  setSelectedCustomers: Dispatch<SetStateAction<Customer[]>>;
+
   pointOfContact?: PointOfContact;
-  setPointOfContact: (poc: PointOfContact) => void;
+  setPointOfContact: Dispatch<SetStateAction<PointOfContact | undefined>>;
+
   ccEmails: string[];
-  setCcEmails: (emails: string[]) => void;
+  setCcEmails: Dispatch<SetStateAction<string[]>>;
+
   bccEmails: string[];
-  setBccEmails: (emails: string[]) => void;
+  setBccEmails: Dispatch<SetStateAction<string[]>>;
+
   status: QuoteStatus;
-  setStatus: (type: QuoteStatus) => void;
+  setStatus: Dispatch<SetStateAction<QuoteStatus>>;
+
   quoteType: "new" | "estimate" | "job";
-  setQuoteType: (type: "new" | "estimate" | "job") => void;
+  setQuoteType: Dispatch<SetStateAction<"new" | "estimate" | "job">>;
+
   paymentTerms: PaymentTerms;
-  setPaymentTerms: (terms: PaymentTerms) => void;
+  setPaymentTerms: Dispatch<SetStateAction<PaymentTerms>>;
+
   digitalSignature: boolean;
-  setDigitalSignature: (value: boolean) => void;
+  setDigitalSignature: Dispatch<SetStateAction<boolean>>;
+
   quoteDate: string;
-  setQuoteDate: (date: string) => void;
+  setQuoteDate: Dispatch<SetStateAction<string>>;
+
   county: string;
-  setCounty: (county: string) => void;
+  setCounty: Dispatch<SetStateAction<string>>;
+
   ecmsPoNumber: string;
-  setEcmsPoNumber: (number: string) => void;
+  setEcmsPoNumber: Dispatch<SetStateAction<string>>;
+
   stateRoute: string;
-  setStateRoute: (route: string) => void;
+  setStateRoute: Dispatch<SetStateAction<string>>;
+
   subject: string;
-  setSubject: (subject: string) => void;
+  setSubject: Dispatch<SetStateAction<string>>;
+
   emailBody: string;
-  setEmailBody: (body: string) => void;
+  setEmailBody: Dispatch<SetStateAction<string>>;
+
   quoteItems: QuoteItem[];
-  setQuoteItems: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
+  setQuoteItems: Dispatch<SetStateAction<QuoteItem[]>>;
+
   includeFiles: Record<AttachmentNames, boolean>;
-  setIncludeFiles: (files: Record<AttachmentNames, boolean> | ((prev: Record<AttachmentNames, boolean>) => Record<AttachmentNames, boolean>)) => void;
+  setIncludeFiles: Dispatch<
+    SetStateAction<Record<AttachmentNames, boolean>>
+  >;
+
   includeTerms: Record<TermsNames, boolean>;
-  setIncludeTerms: (terms: Record<TermsNames, boolean> | ((prev: Record<TermsNames, boolean>) => Record<TermsNames, boolean>)) => void;
+  setIncludeTerms: Dispatch<SetStateAction<Record<TermsNames, boolean>>>;
+
   customTerms: string;
-  setCustomTerms: (customTerms: string | ((prev: string) => string)) => void;
+  setCustomTerms: Dispatch<SetStateAction<string>>;
+
   sending: boolean;
-  setSending: (value: boolean) => void;
+  setSending: Dispatch<SetStateAction<boolean>>;
+
   emailSent: boolean;
-  setEmailSent: (value: boolean) => void;
+  setEmailSent: Dispatch<SetStateAction<boolean>>;
+
   emailError: string | null;
-  setEmailError: (error: string | null) => void;
+  setEmailError: Dispatch<SetStateAction<string | null>>;
+
   associatedContractNumber?: string;
-  setAssociatedContractNumber: (contractNumber: string) => void;
+  setAssociatedContractNumber: Dispatch<SetStateAction<string | undefined>>;
+
   adminData?: AdminData;
   setAdminData: Dispatch<SetStateAction<AdminData | undefined>>;
-  notes: string;
-  setNotes: Dispatch<SetStateAction<string>>;
+
+  notes: string[];
+  setNotes: Dispatch<SetStateAction<string[]>>;
+
   additionalFiles: File[];
   setAdditionalFiles: Dispatch<SetStateAction<File[]>>;
+
   uniqueToken: string;
   setUniqueToken: Dispatch<SetStateAction<string>>;
+
   quoteId: string;
   setQuoteId: Dispatch<SetStateAction<string>>;
+
   sender: User;
   setSender: Dispatch<SetStateAction<User>>;
 }
@@ -78,72 +127,95 @@ const QuoteFormContext = createContext<QuoteFormState | undefined>(undefined);
 
 export function useQuoteForm() {
   const context = useContext(QuoteFormContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useQuoteForm must be used within a QuoteFormProvider");
   }
   return context;
 }
 
-export type AttachmentNames = "flagging-price-list" | "flagging-service-area" | 'bedford-branch';
-export type TermsNames = "standard-terms" | 'rental-agreements' | 'equipment-sale' | 'flagging-terms' | 'custom-terms';
-
 interface QuoteFormProviderProps {
   children: React.ReactNode;
-  initialData?: Partial<QuoteFormState>;
+  initialData?: Partial<DefaultQuote>;
 }
 
-export default function QuoteFormProvider({ children, initialData }: QuoteFormProviderProps) {
+export default function QuoteFormProvider({
+  children,
+  initialData,
+}: QuoteFormProviderProps) {
+  // merge defaults + overrides
+  const mergedData: DefaultQuote = {
+    ...defaultQuote,
+    ...initialData,
+    customers: initialData?.customers || defaultQuote.customers,
+    items: initialData?.items || defaultQuote.items,
+    includedTerms: initialData?.includedTerms || defaultQuote.includedTerms,
+  };
 
-  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>(initialData?.selectedCustomers || []);
-  const [pointOfContact, setPointOfContact] = useState<PointOfContact | undefined>(initialData?.pointOfContact);
-  const [ccEmails, setCcEmails] = useState<string[]>(initialData?.ccEmails || []);
-  const [bccEmails, setBccEmails] = useState<string[]>(initialData?.bccEmails || []);
-  const [customTerms, setCustomTerms] = useState<string>(initialData?.customTerms || '');
-  const [status, setStatus] = useState<QuoteStatus>(initialData?.status || 'Not Sent');
-  const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">(initialData?.quoteType || 'new');
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(initialData?.paymentTerms || 'NET30');
-  const [digitalSignature, setDigitalSignature] = useState(initialData?.digitalSignature || false);
-  const [quoteDate, setQuoteDate] = useState(initialData?.quoteDate || format(new Date(), "yyyy-MM-dd"));
-  const [associatedContractNumber, setAssociatedContractNumber] = useState<string | undefined>(initialData?.associatedContractNumber);
-  const [county, setCounty] = useState(initialData?.county || '');
-  const [ecmsPoNumber, setEcmsPoNumber] = useState(initialData?.ecmsPoNumber || '');
-  const [stateRoute, setStateRoute] = useState(initialData?.stateRoute || '');
-  const [subject, setSubject] = useState(initialData?.subject || '');
-  const [emailBody, setEmailBody] = useState(initialData?.emailBody || '');
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(initialData?.quoteItems || []);
-  const [adminData, setAdminData] = useState<AdminData | undefined>(initialData?.adminData);
-  const [includeFiles, setIncludeFiles] = useState<Record<AttachmentNames, boolean>>(initialData?.includeFiles || {
+  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>(
+    mergedData.customers
+  );
+  const [pointOfContact, setPointOfContact] = useState<
+    PointOfContact | undefined
+  >(undefined);
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([]);
+  const [customTerms, setCustomTerms] = useState<string>(
+    mergedData.includedTerms["custom-terms"] ? mergedData.notes.join("\n") : ""
+  );
+  const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
+  const [quoteType, setQuoteType] =
+    useState<"new" | "estimate" | "job">("new");
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("NET30");
+  const [digitalSignature, setDigitalSignature] = useState(false);
+  const [quoteDate, setQuoteDate] = useState(
+    format(mergedData.quoteDate, "yyyy-MM-dd")
+  );
+  const [associatedContractNumber, setAssociatedContractNumber] =
+    useState<string | undefined>(undefined);
+  const [county, setCounty] = useState(mergedData.county);
+  const [ecmsPoNumber, setEcmsPoNumber] = useState(mergedData.ecmsPoNumber);
+  const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
+  const [subject, setSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(mergedData.items);
+  const [adminData, setAdminData] = useState<AdminData | undefined>(
+    mergedData.adminData
+  );
+  const [includeFiles, setIncludeFiles] = useState<
+    Record<AttachmentNames, boolean>
+  >({
     "flagging-price-list": false,
     "flagging-service-area": false,
-    "bedford-branch": false
+    "bedford-branch": false,
   });
-  const [includeTerms, setIncludeTerms] = useState<Record<TermsNames, boolean>>(initialData?.includeTerms || {
-    "standard-terms": false,
-    "rental-agreements": false,
-    "equipment-sale": false,
-    "flagging-terms": false,
-    "custom-terms": false
-  });
-  const [sending, setSending] = useState(initialData?.sending || false);
-  const [emailSent, setEmailSent] = useState(initialData?.emailSent || false);
-  const [emailError, setEmailError] = useState<string | null>(initialData?.emailError || null);
-  const [quoteId, setQuoteId] = useState<string>(initialData?.quoteId || '');
-  const [notes, setNotes] = useState<string>(initialData?.notes || '');
-  const [additionalFiles, setAdditionalFiles] = useState<File[]>(initialData?.additionalFiles || []);
-  const [uniqueToken, setUniqueToken] = useState<string>(initialData?.uniqueToken || '');
-  const [sender, setSender] = useState<User>(initialData?.sender || {
-    name: 'Napoleon Dunn',
-    email: 'it@establishedtraffic.com',
-    role: 'President'
+  const [includeTerms, setIncludeTerms] = useState<Record<TermsNames, boolean>>(
+    mergedData.includedTerms
+  );
+  const [sending, setSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [quoteId, setQuoteId] = useState<string>(mergedData.id);
+  const [notes, setNotes] = useState<string[]>(mergedData.notes);
+  const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
+  const [uniqueToken, setUniqueToken] = useState<string>(
+    mergedData.id === "NEW" ? "" : mergedData.id
+  );
+  const [sender, setSender] = useState<User>({
+    name: "Napoleon Dunn",
+    email: "it@establishedtraffic.com",
+    role: "President",
   });
 
-  // Ajustes automáticos al cambiar clientes
+  // 👉 cuando seleccionás cliente, ajusta automáticamente payment terms
   useEffect(() => {
     if (selectedCustomers.length > 0) {
-      setPaymentTerms(selectedCustomers[0].paymentTerms as PaymentTerms);
+      setPaymentTerms(
+        (selectedCustomers[0].paymentTerms as PaymentTerms) || "NET30"
+      );
     }
   }, [selectedCustomers]);
 
+  // 👉 reset emails al cambiar clientes
   useEffect(() => {
     setPointOfContact(undefined);
     setCcEmails([]);
@@ -206,7 +278,7 @@ export default function QuoteFormProvider({ children, initialData }: QuoteFormPr
     uniqueToken,
     setUniqueToken,
     sender,
-    setSender
+    setSender,
   };
 
   return (

@@ -6,13 +6,13 @@ export interface QuoteGridView {
   quote_number: string | null;
   status: "Not Sent" | "Sent" | "Accepted" | null;
   date_sent: string | null;
-  customer_name: string; // queda vacío porque hay que join con quotes_customers + contractors
-  point_of_contact: string; // idem con quote_recipients
+  customer_name: string;
+  point_of_contact: string;
   point_of_contact_email: string;
-  total_items: number; // idem con quote_items
+  total_items: number;
   county: string | null;
   updated_at: string | null;
-  has_attachments: boolean; // idem con files
+  has_attachments: boolean;
   estimate_contract_number?: string;
   job_number?: string;
 }
@@ -21,8 +21,12 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
-    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
-    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
+    const limit = searchParams.get("limit")
+      ? parseInt(searchParams.get("limit")!)
+      : 25;
+    const page = searchParams.get("page")
+      ? parseInt(searchParams.get("page")!)
+      : 1;
     const orderBy = "date_sent";
     const ascending = searchParams.get("ascending") === "true";
     const counts = searchParams.get("counts") === "true";
@@ -106,7 +110,11 @@ export async function GET(request: NextRequest) {
 
       if (error || !data) {
         return NextResponse.json(
-          { success: false, message: "Failed to fetch quotes", error: error?.message },
+          {
+            success: false,
+            message: "Failed to fetch quotes",
+            error: error?.message,
+          },
           { status: 500 }
         );
       }
@@ -126,10 +134,28 @@ export async function GET(request: NextRequest) {
         },
       });
     } else {
-      // 📊 Grid view (simplificado, solo con campos nativos de quotes)
+      // 📊 Grid view con joins
       let query = supabase
         .from("quotes")
-        .select("id, quote_number, status, date_sent, county, updated_at")
+        .select(
+          `
+          id,
+          quote_number,
+          status,
+          date_sent,
+          county,
+          updated_at,
+          quotes_customers (
+            contractors ( name )
+          ),
+          quote_recipients (
+            email,
+            point_of_contact
+          ),
+          quote_items ( id ),
+          files ( id )
+        `
+        )
         .order(orderBy, { ascending })
         .range(offset, offset + limit - 1);
 
@@ -141,7 +167,11 @@ export async function GET(request: NextRequest) {
 
       if (error || !rawData) {
         return NextResponse.json(
-          { success: false, message: "Failed to fetch quotes", error: error?.message },
+          {
+            success: false,
+            message: "Failed to fetch quotes",
+            error: error?.message,
+          },
           { status: 500 }
         );
       }
@@ -151,13 +181,16 @@ export async function GET(request: NextRequest) {
         quote_number: row.quote_number,
         status: row.status,
         date_sent: row.date_sent,
-        customer_name: "", // acá deberías join con contractors via quotes_customers
-        point_of_contact: "", // join con quote_recipients
-        point_of_contact_email: "",
-        total_items: 0, // join con quote_items
+        customer_name:
+          row.quotes_customers?.[0]?.contractors?.name || "Unknown Customer",
+        point_of_contact:
+          row.quote_recipients?.find((r: any) => r.point_of_contact)?.email ||
+          "",
+        point_of_contact_email: row.quote_recipients?.[0]?.email || "",
+        total_items: row.quote_items?.length || 0,
         county: row.county,
         updated_at: row.updated_at,
-        has_attachments: false, // join con files
+        has_attachments: (row.files?.length || 0) > 0,
         estimate_contract_number: undefined,
         job_number: undefined,
       }));

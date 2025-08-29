@@ -134,16 +134,17 @@ export function AdminInformationSheet({
     selectedCustomers,
   ]);
 
-  const handleCustomerSelection = (customerNames: string[] | undefined) => {
-    if (!customerNames) {
-      setLocalSelectedCustomers([]);
-      return;
-    }
-    const selectedCustomerObjects = customerNames
-      .map((name) => customers.find((c) => c.name === name))
-      .filter((customer): customer is Customer => !!customer);
-    setLocalSelectedCustomers(selectedCustomerObjects);
-  };
+const handleCustomerSelection = (customerIds: string[] | undefined) => {
+  if (!customerIds) {
+    setLocalSelectedCustomers([]);
+    return;
+  }
+  const selectedCustomerObjects = customerIds
+    .map((id) => customers.find((c) => c.id.toString() === id)) // 👈 Buscamos por id
+    .filter((customer): customer is Customer => !!customer);
+
+  setLocalSelectedCustomers(selectedCustomerObjects);
+};
 
   const handleSave = () => {
     setAssociatedContractNumber(localContractNumber);
