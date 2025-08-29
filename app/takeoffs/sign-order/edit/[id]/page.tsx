@@ -1,28 +1,30 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { EstimateProvider } from "@/contexts/EstimateContext";
-import SignOrderContentSimple from "../../SignOrderContentSimple";
+import { SiteHeader } from "@/components/site-header";
+import QuoteFormProvider from "../../create/QuoteFormProvider";
+import QuoteFormContent from "../../create/QuoteFormContent";
+import QuoteEditLoader from "./QuoteEditLoader";
 
-export default async function EditSignOrderPage({ params} : {params: any}) {
+export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: quoteId } = await params; // Await the params Promise
 
-    const resolvedParams = await params;
-    const signId = resolvedParams.id
-
-    return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <EstimateProvider>
-                    <SignOrderContentSimple signOrderId={signId}/>
-                </EstimateProvider>
-            </SidebarInset>
-        </SidebarProvider>
-    );
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <QuoteFormProvider>
+          <QuoteEditLoader quoteId={quoteId} />
+          <QuoteFormContent />
+        </QuoteFormProvider>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
