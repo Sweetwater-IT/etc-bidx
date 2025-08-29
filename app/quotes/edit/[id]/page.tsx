@@ -5,6 +5,7 @@ import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
 import { useEffect } from "react";
 import QuoteEditLoader from "./QuoteEditLoader";
+import { type PageProps } from "next";
 
 interface EditQuotePageProps {
   params: { id: string };
