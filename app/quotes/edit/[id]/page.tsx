@@ -3,9 +3,13 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
-import { useEffect } from "react";
 import QuoteEditLoader from "./QuoteEditLoader";
-export default function EditQuotePage({ params }: { params: { id: string } }) {
+
+type EditQuotePageProps = {
+  params: { id: string }
+}
+
+export default function EditQuotePage({ params }: EditQuotePageProps) {
     const quoteId = params.id;
 
     return (
