@@ -3,28 +3,28 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
-import { useEffect } from "react";
 import QuoteEditLoader from "./QuoteEditLoader";
-export default function EditQuotePage({ params }: { params: { id: string } }) {
-    const quoteId = params.id;
 
-    return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <QuoteFormProvider>
-                    <QuoteEditLoader />
-                    <QuoteFormContent />
-                </QuoteFormProvider>
-            </SidebarInset>
-        </SidebarProvider>
-    );
+export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: quoteId } = await params; // Await the params Promise
+
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <QuoteFormProvider>
+          <QuoteEditLoader quoteId={quoteId} />
+          <QuoteFormContent />
+        </QuoteFormProvider>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
