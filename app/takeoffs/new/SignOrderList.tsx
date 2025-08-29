@@ -88,7 +88,23 @@ export function SignOrderList({
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
   const [hasCopied, setHasCopied] = useState(false);
-  
+
+
+  const getAllJobsWithSigns = async () => {
+    try {
+
+      const response = await fetch('/api/jobs/getSignsJobs')
+
+      const resp = await response.json()
+
+      if (resp) {
+        console.log('resp es',resp)
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   const phaseOptions = useCallback(() => {
     return mptRental.phases
       ? mptRental.phases.map((_, idx) => idx).filter(idx => idx !== currentPhase)
@@ -332,12 +348,17 @@ export function SignOrderList({
 
   useEffect(() => {
     const signTotals = returnSignTotalsSquareFootage(mptRental);
+    getAllJobsWithSigns()
     setSquareFootageTotal(
       signTotals.HI.totalSquareFootage +
       signTotals.DG.totalSquareFootage +
       signTotals.Special.totalSquareFootage
     );
   }, [mptRental]);
+
+  useEffect(() => {
+    getAllJobsWithSigns()
+  }, []);
 
   useEffect(() => {
     const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
@@ -349,12 +370,15 @@ export function SignOrderList({
     }
   }, [mptRental.phases, currentPhase, onlyTable]);
 
+
+
   function getBLightColorCode(bLightsColor?: string): string {
     if (!bLightsColor) return '';
     if (bLightsColor === 'Red') return 'R';
     if (bLightsColor === 'White') return 'W';
     return 'Y';
   }
+
 
   const formatColumnValue = useCallback((
     sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign,
@@ -395,7 +419,7 @@ export function SignOrderList({
         <h2 className="text-lg font-semibold mt-[35px]">Sign List</h2>
         <div className="flex items-center gap-2">
           <div className="flex flex-col items-start mr-4">
-            <label className="text-[14px] font-medium mb-1 ml-1">Copy from Phase</label>
+            <label className="text-[14px] font-medium mb-1 ml-1">Import from job</label>
             <div className="flex items-center gap-2">
               <select
                 className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"

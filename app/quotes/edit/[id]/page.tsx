@@ -5,30 +5,26 @@ import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
 import QuoteEditLoader from "./QuoteEditLoader";
 
-type EditQuotePageProps = {
-  params: { id: string }
-}
+export default async function EditQuotePage({ params }: any) {
+  const quoteId = params.id;
 
-export default function EditQuotePage({ params }: EditQuotePageProps) {
-    const quoteId = params.id;
-
-    return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <QuoteFormProvider>
-                    <QuoteEditLoader />
-                    <QuoteFormContent />
-                </QuoteFormProvider>
-            </SidebarInset>
-        </SidebarProvider>
-    );
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <QuoteFormProvider>
+          <QuoteEditLoader />
+          <QuoteFormContent />
+        </QuoteFormProvider>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
