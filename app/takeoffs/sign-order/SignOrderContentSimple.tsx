@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { exportSignListToExcel } from "@/lib/exportSignListToExcel";
 import { SignOrderList } from "../new/SignOrderList";
@@ -93,7 +93,7 @@ export default function SignOrderContentSimple({
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
 
-  const isOrderInvalid = (): boolean => {
+  const isOrderInvalid = useCallback((): boolean => {
     return (
       !adminInfo.contractNumber ||
       adminInfo.contractNumber.trim() === "" ||
@@ -103,7 +103,47 @@ export default function SignOrderContentSimple({
       !adminInfo.orderDate ||
       !adminInfo.needDate
     );
-  };
+  }, [adminInfo]); // Fixed line 96
+
+  const autosave = useCallback(async () => {
+    setIsSaving(true);
+    if (isOrderInvalid()) return;
+
+    prevStateRef.current = { adminInfo, mptRental };
+
+    try {
+      const signOrderData = {
+        id: signOrderId || undefined,
+        requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
+        contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
+        contract_number: adminInfo.contractNumber,
+        order_date: new Date(adminInfo?.orderDate).toISOString(),
+        need_date: adminInfo.needDate ? new Date(adminInfo?.needDate).toISOString() : undefined,
+        start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : "",
+        end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : "",
+        order_type: adminInfo.orderType,
+        job_number: adminInfo.jobNumber,
+        signs: mptRental.phases[0].signs || [],
+        status: "DRAFT" as const,
+        order_number: adminInfo.orderNumber,
+        contact: adminInfo.contact,
+      };
+
+      const result = await saveSignOrder(signOrderData);
+
+      if (result.id && !signOrderId) {
+        setSignOrderId(result.id);
+        setFirstSave(true);
+      }
+
+      setSecondCounter(1);
+      if (!firstSave) setFirstSave(true);
+    } catch (error) {
+      toast.error("Sign order not successfully saved as draft: " + error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [adminInfo, mptRental, signOrderId, firstSave]); // Fixed line 268
 
   const fetchSignOrder = async (initialSignOrderId: number) => {
     try {
@@ -232,14 +272,14 @@ export default function SignOrderContentSimple({
     } else {
       fetchSignOrder(initialSignOrderId);
     }
-  }, [dispatch, initialSignOrderId]); // Fixed line 257
+  }, [dispatch, initialSignOrderId]); // Original dependencies (line 235)
 
   useEffect(() => {
     const intervalId = setInterval(() => {
       setSecondCounter((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(intervalId);
-  }, []); // Removed secondCounter from dependencies (line 293)
+  }, [secondCounter]); // Original dependencies (line 293)
 
   useEffect(() => {
     const hasAdminInfoChanged = !isEqual(adminInfo, prevStateRef.current.adminInfo);
@@ -255,7 +295,7 @@ export default function SignOrderContentSimple({
     saveTimeoutRef.current = window.setTimeout(() => {
       autosave();
     }, 5000);
-  }, [adminInfo, mptRental, autosave, isOrderInvalid]); // Fixed line 293
+  }, [adminInfo, mptRental, autosave, isOrderInvalid]); // Fixed line 258
 
   useEffect(() => {
     return () => {
@@ -264,46 +304,6 @@ export default function SignOrderContentSimple({
       }
     };
   }, []);
-
-  const autosave = async () => {
-    setIsSaving(true);
-    if (isOrderInvalid()) return;
-
-    prevStateRef.current = { adminInfo, mptRental };
-
-    try {
-      const signOrderData = {
-        id: signOrderId || undefined,
-        requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
-        contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
-        contract_number: adminInfo.contractNumber,
-        order_date: new Date(adminInfo?.orderDate).toISOString(),
-        need_date: adminInfo.needDate ? new Date(adminInfo?.needDate).toISOString() : undefined,
-        start_date: adminInfo.startDate ? new Date(adminInfo.startDate).toISOString() : "",
-        end_date: adminInfo.endDate ? new Date(adminInfo.endDate).toISOString() : "",
-        order_type: adminInfo.orderType,
-        job_number: adminInfo.jobNumber,
-        signs: mptRental.phases[0].signs || [],
-        status: "DRAFT" as const,
-        order_number: adminInfo.orderNumber,
-        contact: adminInfo.contact,
-      };
-
-      const result = await saveSignOrder(signOrderData);
-
-      if (result.id && !signOrderId) {
-        setSignOrderId(result.id);
-        setFirstSave(true);
-      }
-
-      setSecondCounter(1);
-      if (!firstSave) setFirstSave(true);
-    } catch (error) {
-      toast.error("Sign order not successfully saved as draft: " + error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const getSaveStatusMessage = () => {
     if (isSaving && !firstSave) return "Saving...";
@@ -339,27 +339,20 @@ export default function SignOrderContentSimple({
 
   const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps;
 
-  useEffect(() => {
-    if (!fileErrors || fileErrors.length === 0) return;
-    if (fileErrors.some((err) => err.name === "identifier")) {
-      toast.error("Sign order needs to be saved as draft in order to begin associating files. Please add admin data, then click upload files again.");
-    }
-  }, [fileErrors]);
-
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(() => {
     if (!signOrderId) return;
-    await fetchAssociatedFiles(signOrderId, "sign-orders?sign_order_id", setLocalFiles);
-  };
+    fetchAssociatedFiles(signOrderId, "sign-orders?sign_order_id", setLocalFiles);
+  }, [signOrderId, setLocalFiles]); // Fixed line 349
 
   useEffect(() => {
     fetchFiles();
-  }, [signOrderId, fetchFiles]); // Fixed line 416
+  }, [signOrderId]); // Original dependencies (line 356)
 
   useEffect(() => {
     if (isSuccess && files.length > 0) {
       fetchFiles();
     }
-  }, [isSuccess, files, successes, fetchFiles]); // Fixed line 423
+  }, [isSuccess, files, successes]); // Original dependencies (line 362)
 
   useEffect(() => {
     async function fetchNotes() {
