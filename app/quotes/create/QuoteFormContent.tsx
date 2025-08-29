@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useQuoteForm } from './QuoteFormProvider'
 import {
   PaymentTerms,
-  QuoteAdminInformation
+  QuoteAdminInformation,
 } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
 import { QuoteEmailDetails } from '@/components/pages/quote-form/QuoteEmailDetails'
@@ -15,12 +15,22 @@ import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import { QuotePreviewButton } from '@/components/pages/quote-form/PreviewButton'
 import { sendQuoteEmail } from '@/lib/api-client'
 import { toast } from 'sonner'
-import ReactPDF from '@react-pdf/renderer'
+import ReactPDF, { PDFDownloadLink } from '@react-pdf/renderer'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
+import { useRouter } from 'next/navigation'
+import { Document, Page, Text } from "@react-pdf/renderer";
+import { BidDetailsResponse } from '@/types/TBidDetails';
 
-export default function QuoteFormContent () {
+
+// ========================
+// Componente Principal
+// ========================
+export default function QuoteFormContent() {
+  const router = useRouter()
+
   const {
     selectedCustomers,
     emailSent,
@@ -53,30 +63,52 @@ export default function QuoteFormContent () {
     setStatus,
     quoteType,
     associatedContractNumber,
-    sender
+    sender,
   } = useQuoteForm()
 
   const [notesState, setNotesState] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
 
-  // Fetch notes for the quote on mount (if editing an existing quote)
+  // Autosave states
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [secondCounter, setSecondCounter] = useState<number>(0)
+  const saveTimeoutRef = useRef<number | null>(null)
+  const [firstSave, setFirstSave] = useState<boolean>(false)
+
+  // ========================
+  // Fetch notas
+  // ========================
   useEffect(() => {
-    async function fetchNotes () {
-      setLoadingNotes(true)
+    async function fetchNotes() {
+      setLoadingNotes(true);
       try {
-        if (!quoteId) return
-        const res = await fetch(`/api/quotes?id=${quoteId}`)
+        if (!quoteId) return;
+        const res = await fetch(`/api/quotes/bid-details`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contractNumber: quoteId,
+            type: "estimate" // o "job" según tu caso
+          }),
+        });
+
         if (res.ok) {
-          const data = await res.json()
-          setNotesState(Array.isArray(data.notes) ? data.notes : [])
+          const data: BidDetailsResponse = await res.json();
+          if (data?.data) {
+            console.log("Bid details:", data.data);
+            // ahora TS ya sabe qué propiedades tiene data.data
+          }
         }
       } finally {
-        setLoadingNotes(false)
+        setLoadingNotes(false);
       }
     }
-    fetchNotes()
-  }, [quoteId])
+    fetchNotes();
+  }, [quoteId]);
 
+  // ========================
+  // Notas handlers
+  // ========================
   const handleSaveNote = async (note: Note) => {
     const updatedNotes = [...notesState, note]
     setNotesState(updatedNotes)
@@ -84,7 +116,7 @@ export default function QuoteFormContent () {
       await fetch(`/api/quotes`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes })
+        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
       })
     }
   }
@@ -98,7 +130,7 @@ export default function QuoteFormContent () {
       await fetch(`/api/quotes`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes })
+        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
       })
     }
   }
@@ -110,11 +142,14 @@ export default function QuoteFormContent () {
       await fetch(`/api/quotes`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes })
+        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
       })
     }
   }
 
+  // ========================
+  // Función enviar Quote (PDF + email)
+  // ========================
   const handleSendQuote = async () => {
     if (!pointOfContact) {
       toast.error('Please select a point of contact before sending the quote')
@@ -124,7 +159,6 @@ export default function QuoteFormContent () {
     setSending(true)
     setEmailError(null)
 
-    // Generate a unique token if not already set
     if (!uniqueToken) {
       const newToken =
         Math.random().toString(36).substring(2, 15) +
@@ -133,7 +167,6 @@ export default function QuoteFormContent () {
     }
 
     try {
-      // Create recipients array with proper contact IDs
       const recipients: {
         email: string
         contactId: number | undefined
@@ -142,34 +175,21 @@ export default function QuoteFormContent () {
         bcc?: boolean
       }[] = []
 
-      // Add point of contact
       if (pointOfContact) {
         recipients.push({
           email: pointOfContact.email,
           contactId: getContactIdFromEmail(pointOfContact.email),
-          point_of_contact: true
+          point_of_contact: true,
         })
       }
 
-      // Add CC recipients
-      ccEmails.forEach(email => {
-        recipients.push({
-          email,
-          contactId: getContactIdFromEmail(email),
-          cc: true
-        })
-      })
+      ccEmails.forEach((email) =>
+        recipients.push({ email, contactId: getContactIdFromEmail(email), cc: true })
+      )
+      bccEmails.forEach((email) =>
+        recipients.push({ email, contactId: getContactIdFromEmail(email), bcc: true })
+      )
 
-      // Add BCC recipients
-      bccEmails.forEach(email => {
-        recipients.push({
-          email,
-          contactId: getContactIdFromEmail(email),
-          bcc: true
-        })
-      })
-
-      // Generate the PDF quote document
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
           adminData={adminData ?? defaultAdminObject}
@@ -177,7 +197,10 @@ export default function QuoteFormContent () {
           customers={selectedCustomers}
           quoteDate={new Date(quoteDate)}
           quoteNumber={quoteId}
-          pointOfContact={pointOfContact}
+          pointOfContact={{
+            name: pointOfContact?.name || '',
+            email: pointOfContact?.email || '',
+          }}
           sender={sender}
           paymentTerms={paymentTerms as PaymentTerms}
           includedTerms={includeTerms}
@@ -188,51 +211,47 @@ export default function QuoteFormContent () {
         />
       ).toBlob()
 
-      // Create a File object from the blob for attachment
       const pdfFile = new File([pdfBlob], `Quote-${quoteId}.pdf`, {
-        type: 'application/pdf'
+        type: 'application/pdf',
       })
-
-      // Add the PDF to additional files
       const allFiles = [pdfFile, ...(additionalFiles || [])]
 
       const success = await sendQuoteEmail(
         {
-          adminData: adminData,
-          date: new Date(quoteDate), // Use the date from the form
+          adminData,
+          date: new Date(quoteDate),
           quoteNumber: quoteId,
           customerName: pointOfContact?.name || '',
           customers: selectedCustomers,
           totalAmount: calculateQuoteTotal(quoteItems),
           items: quoteItems,
-          createdBy: 'User', // This should be the logged-in user
+          createdBy: 'User',
           createdAt: new Date().toISOString(),
           paymentTerms: paymentTerms as PaymentTerms,
           includedTerms: includeTerms,
-          ecmsPoNumber: ecmsPoNumber,
-          stateRoute: stateRoute,
-          county: county,
-          notes: notesState.map(n => n.text).join('\n'),
-          status: status,
-          customTerms: customTerms,
+          ecmsPoNumber,
+          stateRoute,
+          county,
+          notes: notesState.map((n) => n.text).join('\n'),
+          status,
+          customTerms,
           attachmentFlags: includeFiles,
           uniqueToken:
             uniqueToken ||
-            Math.random().toString(36).substring(2, 15) +
-              Math.random().toString(36).substring(2, 15),
+            Math.random().toString(36).substring(2, 15),
           quoteType,
-          associatedContract: associatedContractNumber ?? ''
+          associatedContract: associatedContractNumber ?? '',
         },
         {
-          pointOfContact: pointOfContact,
+          pointOfContact,
           fromEmail: sender.email || 'it@establishedtraffic.com',
-          recipients: recipients,
+          recipients,
           cc: ccEmails,
           bcc: bccEmails,
-          subject: subject,
+          subject,
           body: emailBody,
-          files: allFiles, // Include the PDF and any additional files
-          standardDocs: getStandardDocsFromFlags(includeFiles)
+          files: allFiles,
+          standardDocs: getStandardDocsFromFlags(includeFiles),
         }
       )
 
@@ -255,18 +274,17 @@ export default function QuoteFormContent () {
     }
   }
 
-  // Helper function to get contact ID from email
+  // ========================
+  // Helpers
+  // ========================
   const getContactIdFromEmail = (email: string): number | undefined => {
-    // Look through all selected customers' contacts
     for (const customer of selectedCustomers) {
-      // Check if customer has contactIds array and it matches the number of emails
       if (
         customer.contactIds &&
         customer.emails &&
         customer.emails.length === customer.contactIds.length
       ) {
-        // Find the index of the matching email
-        const emailIndex = customer.emails.findIndex(e => e === email)
+        const emailIndex = customer.emails.findIndex((e) => e === email)
         if (emailIndex >= 0 && emailIndex < customer.contactIds.length) {
           return customer.contactIds[emailIndex]
         }
@@ -275,88 +293,138 @@ export default function QuoteFormContent () {
     return undefined
   }
 
-  // Helper function to calculate the total quote amount
   const calculateQuoteTotal = (items: any[]): number => {
     if (!items?.length) return 0
 
     return items.reduce((total, item) => {
       const discount = item.discount || 0
       const discountType = item.discountType || 'percentage'
-
-      // Calculate parent item value
       const quantity = item.quantity || 0
       const unitPrice = item.unitPrice || 0
       const basePrice = quantity * unitPrice
 
-      // Calculate discount amount based on type
       const discountAmount =
         discountType === 'dollar' ? discount : basePrice * (discount / 100)
 
-      // Calculate composite items total if they exist
       const compositeTotal =
         item.associatedItems && item.associatedItems.length > 0
           ? item.associatedItems.reduce(
-              (subSum, compositeItem) =>
-                subSum +
-                (compositeItem.quantity || 0) * (compositeItem.unitPrice || 0),
-              0
-            )
+            (subSum, compositeItem) =>
+              subSum +
+              (compositeItem.quantity || 0) * (compositeItem.unitPrice || 0),
+            0
+          )
           : 0
 
-      // Apply discount to the combined total
       return total + (basePrice + compositeTotal - discountAmount)
     }, 0)
   }
 
-  // Helper function to get standard docs from flags
   const getStandardDocsFromFlags = (
     flags: Record<string, boolean>
   ): string[] => {
     const docs: string[] = []
-
-    if (flags['flagging-price-list']) {
-      docs.push('Flagging Price List')
-    }
-
-    if (flags['flagging-service-area']) {
-      docs.push('Flagging Service Area')
-    }
-
-    if (flags['bedford-branch']) {
-      docs.push('Sell Sheet')
-    }
-
+    if (flags['flagging-price-list']) docs.push('Flagging Price List')
+    if (flags['flagging-service-area']) docs.push('Flagging Service Area')
+    if (flags['bedford-branch']) docs.push('Sell Sheet')
     return docs
   }
 
-  return (
-    <div className='flex flex-1 flex-col'>
-      <div className='flex items-center justify-between border-b px-6 py-3'>
-        <div className='flex items-center gap-2'>
-          <h1 className='text-2xl font-semibold'>Quote Form</h1>
-        </div>
-        <div className='flex items-center gap-2'>
-          <QuotePreviewButton />
-          <Button
-            onClick={handleSendQuote}
-            disabled={sending || !pointOfContact}
-          >
-            {sending ? 'Sending...' : 'Send Quote'}
-          </Button>
-          <Button variant='outline'>Download</Button>
-        </div>
-      </div>
+  const getSaveStatusMessage = () => {
+    if (isSaving && !firstSave) return 'Saving...'
+    if (!firstSave) return ''
+    if (secondCounter < 60) {
+      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+    } else if (secondCounter < 3600) {
+      const minutesAgo = Math.floor(secondCounter / 60)
+      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+    } else {
+      const hoursAgo = Math.floor(secondCounter / 3600)
+      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+    }
+  }
 
-      <div className='flex gap-6 p-6 max-w-full'>
-        {/* Main Form Column (2/3) */}
-        <div className='flex-3/4 space-y-6'>
+  // ========================
+  // PDF Document Memo
+  // ========================
+  const pdfDoc = useMemo(() => {
+    if (!pointOfContact) {
+      return (
+        <Document>
+          <Page>
+            <Text>No contact selected</Text>
+          </Page>
+        </Document>
+      );
+    }
+
+    return (
+      <BidProposalReactPDF
+        adminData={adminData ?? defaultAdminObject}
+        items={quoteItems}
+        customers={selectedCustomers}
+        quoteDate={new Date(quoteDate)}
+        quoteNumber={quoteId}
+        pointOfContact={pointOfContact}
+        sender={sender}
+        paymentTerms={paymentTerms as PaymentTerms}
+        includedTerms={includeTerms}
+        customTaC={includeTerms["custom-terms"] ? customTerms : ""}
+        county={county}
+        sr={stateRoute}
+        ecms={ecmsPoNumber}
+      />
+    );
+  }, [
+    adminData,
+    quoteItems,
+    selectedCustomers,
+    quoteDate,
+    quoteId,
+    pointOfContact,
+    sender,
+    paymentTerms,
+    includeTerms,
+    customTerms,
+    county,
+    stateRoute,
+    ecmsPoNumber,
+  ]);
+
+
+  // ========================
+  // Render
+  // ========================
+  return (
+    <div className="flex flex-1 flex-col">
+      <PageHeaderWithSaving
+        heading="Quote Form"
+        handleSubmit={() => router.push('/quotes')}
+        showX
+        saveButtons={
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              {getSaveStatusMessage()}
+            </div>
+            <PDFDownloadLink document={pdfDoc} fileName={`Quote-${quoteId}.pdf`}>
+              <Button variant="outline">Download PDF</Button>
+            </PDFDownloadLink>
+            <QuotePreviewButton />
+            <Button onClick={handleSendQuote} disabled={sending || !pointOfContact}>
+              {sending ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="flex gap-6 p-6 max-w-full">
+        <div className="flex-3/4 space-y-6">
           <QuoteAdminInformation />
           <QuoteItems />
           <QuoteEmailDetails />
         </div>
 
-        {/* Right Column (1/3) */}
-        <div className='flex-1/4 space-y-6'>
+        <div className="flex-1/4 space-y-6">
           <QuoteNumber />
           <QuoteAdditionalFiles />
           <QuoteTermsAndConditions />

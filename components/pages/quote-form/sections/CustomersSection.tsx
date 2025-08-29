@@ -21,10 +21,14 @@ export function CustomersSection({
       <MultiSelect
         options={customers.map((customer) => ({
           label: customer.name,
-          value: customer.name,
+          value: String(customer.id),
         }))}
-        selected={selectedCustomers.map((customer) => customer.name)}
-        onChange={handleCustomerSelection}
+        selected={selectedCustomers.map((customer) => String(customer.id))}
+        onChange={(ids) => {
+          // mapear de vuelta los IDs seleccionados a Customer[]
+          const selected = customers.filter(c => ids?.includes(String(c.id)));
+          handleCustomerSelection(selected.map(c => c.name));
+        }}
         placeholder="Select customers"
         disabled={isLoading}
       />
