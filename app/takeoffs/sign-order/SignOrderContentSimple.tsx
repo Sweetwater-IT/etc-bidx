@@ -49,6 +49,7 @@ export interface SignOrderAdminInformation {
   orderNumber?: string
   startDate?: Date
   endDate?: Date
+  contact?: any | null
 }
 
 interface Props {
