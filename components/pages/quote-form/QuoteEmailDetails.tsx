@@ -14,6 +14,15 @@ import {
 } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+
 
 export function QuoteEmailDetails() {
   const {
@@ -26,10 +35,17 @@ export function QuoteEmailDetails() {
     emailBody,
     setEmailBody,
     selectedCustomers,
+    setSelectedCustomers,
     pointOfContact,
     setPointOfContact,
-    sending,
+    quoteId
   } = useQuoteForm();
+
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [saving, setSaving] = useState(false); // 👈 nuevo estado
+
 
   // Create contact options from all selected customers
   const getContactOptions = () => {
@@ -45,11 +61,10 @@ export function QuoteEmailDetails() {
         if (email) {
           options.push({
             value: email,
-            label: `${customer.names[index] || "Unknown"} (${email}) - ${
-              customer.name
-            }`,
+            label: `${customer.names?.[index] || "Unknown"} (${email}) - ${customer.name
+              }`,
             customer: customer.name,
-            name: customer.names[index] || "Unknown",
+            name: customer.names?.[index] || "Unknown",
           });
         }
       });
@@ -61,6 +76,12 @@ export function QuoteEmailDetails() {
   const contactOptions = getContactOptions();
 
   const handleToChange = (value: string) => {
+    // 👉 Si el usuario selecciona "Add New Contact"
+    if (value === "__add_new__") {
+      setOpen(true);
+      return;
+    }
+
     const selectedContact = contactOptions.find(
       (option) => option.value === value
     );
@@ -72,17 +93,54 @@ export function QuoteEmailDetails() {
     }
   };
 
-  const handleAddContact = () => {
-    // TODO: Implement adding new contact modal/form
-    console.log("Add new contact");
-  };
+ const handleSaveContact = async () => {
+  if (!newEmail || selectedCustomers.length === 0) return;
+
+  setSaving(true);
+  try {
+    const contractorId = selectedCustomers[0].id; // 👈 asegúrate de que Customer tenga `id`
+    const res = await fetch("/api/customer-contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contractor_id: contractorId,
+        name: newName,
+        email: newEmail,
+        quoteId: quoteId, // 👈 lo mandamos también
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to save contact");
+    const newContact = await res.json();
+
+    // ✅ actualizar estado local de customers
+    const updatedCustomer = { ...selectedCustomers[0] };
+    updatedCustomer.emails = [...(updatedCustomer.emails || []), newContact.email];
+    updatedCustomer.names = [...(updatedCustomer.names || []), newContact.name];
+
+    setSelectedCustomers([updatedCustomer]);
+    setPointOfContact({ name: newContact.name, email: newContact.email });
+
+    toast.success(`Contact ${newContact.name} added!`);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to add new contact");
+  } finally {
+    setSaving(false);
+    setNewName("");
+    setNewEmail("");
+    setOpen(false);
+  }
+};
+
+
 
   return (
     <div className="rounded-lg border p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Email Details</h2>
         <div className="flex gap-2">
-          <Button onClick={handleAddContact}>Add New Contact</Button>
+          <Button onClick={() => setOpen(true)}>Add New Contact</Button>
         </div>
       </div>
 
@@ -102,6 +160,8 @@ export function QuoteEmailDetails() {
                   {option.label}
                 </SelectItem>
               ))}
+              {/* 👉 Opción extra al final */}
+              <SelectItem value="__add_new__">➕ Add New Contact</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -156,6 +216,36 @@ export function QuoteEmailDetails() {
           />
         </div>
       </div>
+
+      {/* Modal para añadir contacto */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Contact</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <Input
+              placeholder="Email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveContact} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

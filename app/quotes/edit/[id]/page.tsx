@@ -4,13 +4,13 @@ import QuoteFormContent from "../../create/QuoteFormContent";
 import QuoteEditLoader from "./QuoteEditLoader";
 
 export default function EditQuotePage({ params }: { params: { id: string } }) {
-  const quoteId = params.id;
+  const numericId = parseInt(params.id, 10);
 
   return (
     <div className="flex flex-col h-screen w-screen">
       <div className="flex-1 overflow-auto">
         <QuoteFormProvider>
-          <QuoteEditLoader quoteId={quoteId} />
+          <QuoteEditLoader quoteId={numericId} />
           <QuoteFormContent />
         </QuoteFormProvider>
       </div>

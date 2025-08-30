@@ -134,6 +134,37 @@ export function AdminInformationSheet({
     selectedCustomers,
   ]);
 
+useEffect(() => {
+  console.log("county en AdminInformationSheet:", localCounty);
+}, [localCounty]);
+
+useEffect(() => {
+  console.log("county actualizado en AdminInformationSheet:", county);
+}, [county]);
+
+  useEffect(() => {
+  if (open) {
+    console.log("🟩 Initializing modal with county:", county); // Log del valor al abrir el modal
+    setLocalContractNumber(associatedContractNumber);
+    setLocalCounty(county);
+    setLocalEcmsPoNumber(ecmsPoNumber);
+    setLocalStateRoute(stateRoute);
+    setLocalPaymentTerms(paymentTerms);
+    setLocalQuoteDate(quoteDate);
+    setLocalDigitalSignature(digitalSignature);
+    setLocalSelectedCustomers(selectedCustomers);
+  }
+}, [
+  open,
+  associatedContractNumber,
+  county, // Verifica que este valor sea correcto
+  ecmsPoNumber,
+  stateRoute,
+  paymentTerms,
+  quoteDate,
+  digitalSignature,
+  selectedCustomers,
+]);
 const handleCustomerSelection = (customerIds: string[] | undefined) => {
   if (!customerIds) {
     setLocalSelectedCustomers([]);
@@ -146,17 +177,18 @@ const handleCustomerSelection = (customerIds: string[] | undefined) => {
   setLocalSelectedCustomers(selectedCustomerObjects);
 };
 
-  const handleSave = () => {
-    setAssociatedContractNumber(localContractNumber);
-    setCounty(localCounty);
-    setEcmsPoNumber(localEcmsPoNumber);
-    setStateRoute(localStateRoute);
-    setPaymentTerms(localPaymentTerms);
-    setQuoteDate(localQuoteDate);
-    setDigitalSignature(localDigitalSignature);
-    setSelectedCustomers(localSelectedCustomers);
-    onOpenChange(false);
-  };
+const handleSave = () => {
+  console.log("Saving with county:", localCounty); // Verifica el valor de `county`
+  setAssociatedContractNumber(localContractNumber);
+  setCounty(localCounty); // Verifica que se guarda el valor de `county`
+  setEcmsPoNumber(localEcmsPoNumber);
+  setStateRoute(localStateRoute);
+  setPaymentTerms(localPaymentTerms);
+  setQuoteDate(localQuoteDate);
+  setDigitalSignature(localDigitalSignature);
+  setSelectedCustomers(localSelectedCustomers);
+  onOpenChange(false);  // Cierra el modal
+};
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

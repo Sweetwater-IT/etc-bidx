@@ -7,6 +7,7 @@ export const defaultAdminObject: AdminData = {
   lettingDate: null,
   owner: null,
   county: {
+    country: "",  // Aquí debe estar el campo country
     id: 0,
     name: "",
     district: 0,

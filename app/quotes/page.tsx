@@ -68,6 +68,8 @@ export default function QuotesPage() {
       const data = await response.json();
 
       if (data.success) {
+              console.log("Fetched quotes from API:", data.data);  // Log para ver los registros de la BD
+
         setQuotes(data.data);
         setPageCount(data.pagination.pageCount);
         setTotalCount(data.pagination.totalCount);
@@ -81,16 +83,16 @@ export default function QuotesPage() {
     }
   };
 
-  // Fetch quote counts
-  const fetchQuoteCounts = async () => {
-    try {
-      const response = await fetch('/api/quotes?counts=true');
-      const data = await response.json();
-      setQuoteCounts(data);
-    } catch (error) {
-      console.error("Error fetching quote counts:", error);
-    }
-  };
+const fetchQuoteCounts = async () => {
+  try {
+    const response = await fetch('/api/quotes?counts=true');
+    const data = await response.json();
+    console.log("Fetched quote counts:", data);  // Log para ver los conteos de las cotizaciones
+    setQuoteCounts(data);
+  } catch (error) {
+    console.error("Error fetching quote counts:", error);
+  }
+};
 
   // Handle segment change
   const handleSegmentChange = (value: string) => {
@@ -118,9 +120,17 @@ export default function QuotesPage() {
     fetchQuotes();
   }, []);
 
+  // Agrega un log al final del useEffect para ver los resultados al inicio
+useEffect(() => {
+  console.log("Quotes state after fetching:", quotes);
+}, [quotes]); // Este useEffect se ejecutará cada vez que 'quotes' cambie
+
   const handleRowClick = (quote: QuoteGridView) => {    
     router.push(`/quotes/view/${quote.id}`);
   };
+
+  console.log("Data passed to DataTable:", quotes) // Log para ver los datos que se pasan a la tabla
+
 
   return (
     <SidebarProvider
@@ -161,7 +171,10 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
+                
               />
+             
+
             </div>
           </div>
         </div>

@@ -14,7 +14,10 @@ import { format } from "date-fns";
 import { AdminData } from "@/types/TAdminData";
 import { PaymentTerms } from "@/components/pages/quote-form/QuoteAdminInformation";
 import { User } from "@/types/User";
-import { DefaultQuote, defaultQuote } from "@/types/default-objects/defaultQuoteObject";
+import {
+  DefaultQuote,
+  defaultQuote,
+} from "@/types/default-objects/defaultQuoteObject";
 
 export type QuoteStatus = "Not Sent" | "Sent" | "Accepted";
 
@@ -63,9 +66,6 @@ interface QuoteFormState {
   quoteDate: string;
   setQuoteDate: Dispatch<SetStateAction<string>>;
 
-  county: string;
-  setCounty: Dispatch<SetStateAction<string>>;
-
   ecmsPoNumber: string;
   setEcmsPoNumber: Dispatch<SetStateAction<string>>;
 
@@ -82,9 +82,7 @@ interface QuoteFormState {
   setQuoteItems: Dispatch<SetStateAction<QuoteItem[]>>;
 
   includeFiles: Record<AttachmentNames, boolean>;
-  setIncludeFiles: Dispatch<
-    SetStateAction<Record<AttachmentNames, boolean>>
-  >;
+  setIncludeFiles: Dispatch<SetStateAction<Record<AttachmentNames, boolean>>>;
 
   includeTerms: Record<TermsNames, boolean>;
   setIncludeTerms: Dispatch<SetStateAction<Record<TermsNames, boolean>>>;
@@ -116,8 +114,12 @@ interface QuoteFormState {
   uniqueToken: string;
   setUniqueToken: Dispatch<SetStateAction<string>>;
 
-  quoteId: string;
-  setQuoteId: Dispatch<SetStateAction<string>>;
+  // 👇 separación entre ID numérico y código quote_number
+  quoteId: number | null;
+  setQuoteId: Dispatch<SetStateAction<number | null>>;
+
+  quoteNumber: string;
+  setQuoteNumber: Dispatch<SetStateAction<string>>;
 
   sender: User;
   setSender: Dispatch<SetStateAction<User>>;
@@ -160,27 +162,32 @@ export default function QuoteFormProvider({
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>(
-    mergedData.includedTerms["custom-terms"] ? mergedData.notes.join("\n") : ""
+    mergedData.includedTerms["custom-terms"]
+      ? mergedData.notes.join("\n")
+      : ""
   );
   const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
-  const [quoteType, setQuoteType] =
-    useState<"new" | "estimate" | "job">("new");
+  const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("NET30");
   const [digitalSignature, setDigitalSignature] = useState(false);
   const [quoteDate, setQuoteDate] = useState(
     format(mergedData.quoteDate, "yyyy-MM-dd")
   );
-  const [associatedContractNumber, setAssociatedContractNumber] =
-    useState<string | undefined>(undefined);
-  const [county, setCounty] = useState(mergedData.county);
+  const [associatedContractNumber, setAssociatedContractNumber] = useState<
+    string | undefined
+  >(undefined);
+
   const [ecmsPoNumber, setEcmsPoNumber] = useState(mergedData.ecmsPoNumber);
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(mergedData.items);
+
+  // ✅ única fuente de verdad para county ahora está dentro de adminData
   const [adminData, setAdminData] = useState<AdminData | undefined>(
     mergedData.adminData
   );
+
   const [includeFiles, setIncludeFiles] = useState<
     Record<AttachmentNames, boolean>
   >({
@@ -188,17 +195,31 @@ export default function QuoteFormProvider({
     "flagging-service-area": false,
     "bedford-branch": false,
   });
-  const [includeTerms, setIncludeTerms] = useState<Record<TermsNames, boolean>>(
-    mergedData.includedTerms
-  );
+  const [includeTerms, setIncludeTerms] = useState<
+    Record<TermsNames, boolean>
+  >(mergedData.includedTerms);
   const [sending, setSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [quoteId, setQuoteId] = useState<string>(mergedData.id);
+
+  // 👇 aquí separamos id numérico y código
+  const [quoteId, setQuoteId] = useState<number | null>(
+    typeof mergedData.id === "number" ? mergedData.id : null
+  );
+  const [quoteNumber, setQuoteNumber] = useState<string>(
+    typeof mergedData.quote_number === "string"
+      ? mergedData.quote_number
+      : ""
+  );
+
   const [notes, setNotes] = useState<string[]>(mergedData.notes);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
   const [uniqueToken, setUniqueToken] = useState<string>(
-    mergedData.id === "NEW" ? "" : mergedData.id
+    mergedData.id &&
+      typeof mergedData.id === "string" &&
+      mergedData.id === "NEW"
+      ? ""
+      : String(mergedData.id || "")
   );
   const [sender, setSender] = useState<User>({
     name: "Napoleon Dunn",
@@ -228,6 +249,7 @@ export default function QuoteFormProvider({
     pointOfContact,
     setPointOfContact,
     ccEmails,
+    
     setCcEmails,
     bccEmails,
     setBccEmails,
@@ -239,8 +261,6 @@ export default function QuoteFormProvider({
     setDigitalSignature,
     quoteDate,
     setQuoteDate,
-    county,
-    setCounty,
     ecmsPoNumber,
     setEcmsPoNumber,
     stateRoute,
@@ -265,6 +285,8 @@ export default function QuoteFormProvider({
     setEmailError,
     quoteId,
     setQuoteId,
+    quoteNumber,
+    setQuoteNumber,
     associatedContractNumber,
     setAssociatedContractNumber,
     status,
