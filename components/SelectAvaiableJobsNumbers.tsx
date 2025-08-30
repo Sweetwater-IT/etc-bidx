@@ -33,7 +33,7 @@ export default function JobNumberPicker({
     setvalidatingExistJob,
     validatingExistJob
 }: IJobNumberPicker) {
-    const [year, setYear] = useState<number | null>(null)
+    const [year, setYear] = useState<number | null>(2025)
     const [range, setRange] = useState(100)
     const [selectedNumber, setSelectedNumber] = useState<number | null>(null)
     const [jobDetails, setJobDetails] = useState<JobDetails | null>(null)
@@ -148,31 +148,6 @@ export default function JobNumberPicker({
                     value={customJobNumber || initialValueNumber || ""}
                 />
                 {inputError && <p className="text-red-500 text-sm">{inputError}</p>}
-                {jobDetails && (
-                    <div className="text-sm border p-2 rounded bg-muted w-full">
-                        <p>
-                            <b>Job Number:</b> {jobDetails.jobNumber ?? "-"}
-                        </p>
-                        <p>
-                            <b>Contract:</b> {jobDetails.contractNumber ?? "-"}
-                        </p>
-                        <p>
-                            <b>Contractor:</b> {jobDetails.contractor ?? "-"}
-                        </p>
-                        <p>
-                            <b>Status:</b> {jobDetails.projectStatus ?? "-"}
-                        </p>
-                        <p>
-                            <b>Billing:</b> {jobDetails.billingStatus ?? "-"}
-                        </p>
-                        <p>
-                            <b>Start:</b> {jobDetails.startDate ?? "-"}
-                        </p>
-                        <p>
-                            <b>End:</b> {jobDetails.endDate ?? "-"}
-                        </p>
-                    </div>
-                )}
                 <Button variant="outline" onClick={toggleModal}>
                     Build number
                 </Button>
@@ -267,12 +242,39 @@ export default function JobNumberPicker({
                         </div>
                     </div>
 
-                    {
-                        jobDetails &&
-                        <p className="text-center mt-2 text-red-500">
-                            Sorry, this work number already exists.
-                        </p>
-                    }
+                    {jobDetails && (
+                        <div>
+                            {
+                                jobDetails &&
+                                <p className="text-center mb-4 text-red-500">
+                                    Sorry, this work number already exists.
+                                </p>
+                            }
+                            <div className="text-sm border p-2 rounded bg-muted w-full">
+                                <p>
+                                    <b>Job Number:</b> {jobDetails.jobNumber ?? "-"}
+                                </p>
+                                <p>
+                                    <b>Contract:</b> {jobDetails.contractNumber ?? "-"}
+                                </p>
+                                <p>
+                                    <b>Contractor:</b> {jobDetails.contractor ?? "-"}
+                                </p>
+                                <p>
+                                    <b>Status:</b> {jobDetails.projectStatus ?? "-"}
+                                </p>
+                                <p>
+                                    <b>Billing:</b> {jobDetails.billingStatus ?? "-"}
+                                </p>
+                                <p>
+                                    <b>Start:</b> {jobDetails.startDate ?? "-"}
+                                </p>
+                                <p>
+                                    <b>End:</b> {jobDetails.endDate ?? "-"}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
