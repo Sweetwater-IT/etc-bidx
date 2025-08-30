@@ -106,7 +106,6 @@ export function SignOrderList({
     const selectedJob = jobs.find(job => job.id === Number(selectedPhase));
     if (!selectedJob) return;
 
-    // Copiar todos los primary y secondary signs de las entries
     const allSigns = [
       ...(selectedJob.entries?.flatMap(entry =>
         entry.mpt_phases?.flatMap(phase => [
@@ -118,7 +117,7 @@ export function SignOrderList({
     ];
 
     allSigns.forEach(sign => {
-      const newSign = { ...sign, id: generateUniqueId() }; // asignar nuevo id único
+      const newSign = { ...sign, id: generateUniqueId() };
       dispatch({
         type: 'ADD_MPT_SIGN',
         payload: {

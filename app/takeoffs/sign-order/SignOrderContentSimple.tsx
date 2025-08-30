@@ -35,8 +35,10 @@ import { AuthAdminApi } from '@supabase/supabase-js'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
+import { usePDF } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -415,14 +417,12 @@ export default function SignOrderContentSimple({
     fetchFiles();
   }, [signOrderId])
 
-  // Use useEffect to update parent component's files state when upload is successful
   useEffect(() => {
     if (isSuccess && files.length > 0) {
       fetchFiles();
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
     async function fetchNotes() {
       setLoadingNotes(true)
@@ -511,10 +511,8 @@ export default function SignOrderContentSimple({
         contact: adminInfo.contact
       }
 
-      // Submit data to the API
       const result = await saveSignOrder(signOrderData)
 
-      // Store the ID for future updates
       if (result.id) {
         setSignOrderId(result.id)
       }
@@ -530,18 +528,47 @@ export default function SignOrderContentSimple({
     }
   }
 
-  const pdfData = useMemo(() => {
-    return {
-      adminInfo: JSON.parse(JSON.stringify(adminInfo)),
-      signList: JSON.parse(JSON.stringify(signList)),
-      mptRental: JSON.parse(JSON.stringify(mptRental)),
-      notes: JSON.parse(JSON.stringify(notes)),
-    };
-  }, [adminInfo, signList, mptRental, notes]);
+  const handleDownloadPdf = async () => {
+    try {
+      const pdfElement = (
+        <SignOrderWorksheetPDF
+          adminInfo={adminInfo || {
+            requestor: null,
+            customer: null,
+            orderDate: new Date(),
+            needDate: null,
+            orderType: [],
+            selectedBranch: 'All',
+            jobNumber: '',
+            isSubmitting: false,
+            contractNumber: '',
+            orderNumber: undefined,
+            startDate: undefined,
+            endDate: undefined,
+            contact: null
+          }}
+          signList={signList || []}
+          mptRental={mptRental}
+          notes={notes || []}
+        />
+      );
 
-  const pdfDoc = useMemo(() => {
-    return <SignOrderWorksheetPDF {...pdfData} />;
-  }, [pdfData]);
+      const blob = await pdf(pdfElement).toBlob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sign-order.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Error generating PDF');
+    }
+  };
 
   return mptRental.phases.length > 0 ? (
     <div className="flex flex-1 flex-col">
@@ -611,13 +638,9 @@ export default function SignOrderContentSimple({
           />
           <div className="bg-[#F4F5F7] p-6 rounded-lg">
             <div className="flex justify-end">
-              {pdfDoc ? (
-                <PDFDownloadLink document={pdfDoc} fileName="sign-order.pdf">
-                  <Button>Download PDF</Button>
-                </PDFDownloadLink>
-              ) : (
-                <Button disabled>Download PDF</Button>
-              )}
+              <Button onClick={handleDownloadPdf}>
+                Download PDF
+              </Button>
             </div>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
               <SignOrderWorksheet

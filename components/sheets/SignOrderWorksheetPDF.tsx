@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { styles as baseStyles } from './styles/bidSummaryPDFStyle'
 import Checkbox from './SheetCheckBox'
@@ -218,28 +218,52 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
   notes
 }) => {
 
-  const safeSignList: SignItem[] = (Array.isArray(signList) ? signList : []).map(item => ({
-    designation: item?.designation ?? '-',
-    description: item?.description ?? '-',
-    quantity: item?.quantity ?? 0,
-    width: item?.width ?? 0,
-    height: item?.height ?? 0,
-    sheeting: item?.sheeting ?? '-',
-    substrate: item?.substrate ?? '-',
-    stiffener: item?.stiffener ?? '',
-    inStock: item?.inStock ?? 0,
-    order: item?.order ?? 0,
-    make: item?.make ?? 0,
-    unitPrice: item?.unitPrice ?? 0,
-    totalPrice: item?.totalPrice ?? 0,
-    primarySignId: item?.primarySignId ?? '-',
-    displayStructure: item?.displayStructure ?? '-',
-    bLights: item?.bLights ?? 0,
-    cover: !!item?.cover
-  }));
+  const contentKey = useMemo(() => {
+    return JSON.stringify({
+      adminInfo,
+      signListLength: signList.length,
+      notesLength: notes.length,
+      mptRental: !!mptRental
+    });
+  }, [adminInfo, signList, mptRental, notes]);
 
+  const safeSignList: SignItem[] = (Array.isArray(signList) ? signList : [])
+    .filter(item => {
+      if (!item || typeof item !== 'object') return false;
+      const hasRequiredProps =
+        'designation' in item &&
+        'quantity' in item &&
+        'width' in item &&
+        'height' in item;
+
+      if (!hasRequiredProps) {
+        console.warn('Filtering invalid sign item:', item);
+        return false;
+      }
+      return true;
+    })
+    .map(item => ({
+      designation: item.designation ?? '-',
+      description: item.description ?? '-',
+      quantity: item.quantity ?? 0,
+      width: item.width ?? 0,
+      height: item.height ?? 0,
+      sheeting: item.sheeting ?? '-',
+      substrate: item.substrate ?? '-',
+      stiffener: item.stiffener ?? '',
+      inStock: item.inStock ?? 0,
+      order: item.order ?? 0,
+      make: item.make ?? 0,
+      unitPrice: item.unitPrice ?? 0,
+      totalPrice: item.totalPrice ?? 0,
+      primarySignId: item.primarySignId ?? '-',
+      displayStructure: item.displayStructure ?? '-',
+      bLights: item.bLights ?? 0,
+      cover: !!item?.cover
+    }));
+    
   return (
-    <Document>
+    <Document key={contentKey}>
       <Page size='A4' style={styles.page}>
         <View style={styles.mainContainer}>
           {/* Title Bar */}
