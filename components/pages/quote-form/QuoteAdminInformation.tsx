@@ -59,12 +59,7 @@ export function QuoteAdminInformation() {
   const [searchValue, setSearchValue] = useState("");
 
   const countyString = adminData?.county?.country ?? "";
-  console.log("countyString:", countyString); // Verifica que el valor sea correcto
 
-  useEffect(() => {
-  const countyString = adminData?.county?.country ?? "";
-  console.log("countyString updated:", countyString);
-}, [adminData]); // Escucha cambios en adminData
 
 
 

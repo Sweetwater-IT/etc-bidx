@@ -134,17 +134,11 @@ export function AdminInformationSheet({
     selectedCustomers,
   ]);
 
-useEffect(() => {
-  console.log("county en AdminInformationSheet:", localCounty);
-}, [localCounty]);
 
-useEffect(() => {
-  console.log("county actualizado en AdminInformationSheet:", county);
-}, [county]);
 
   useEffect(() => {
   if (open) {
-    console.log("🟩 Initializing modal with county:", county); // Log del valor al abrir el modal
+    
     setLocalContractNumber(associatedContractNumber);
     setLocalCounty(county);
     setLocalEcmsPoNumber(ecmsPoNumber);
@@ -178,7 +172,6 @@ const handleCustomerSelection = (customerIds: string[] | undefined) => {
 };
 
 const handleSave = () => {
-  console.log("Saving with county:", localCounty); // Verifica el valor de `county`
   setAssociatedContractNumber(localContractNumber);
   setCounty(localCounty); // Verifica que se guarda el valor de `county`
   setEcmsPoNumber(localEcmsPoNumber);
