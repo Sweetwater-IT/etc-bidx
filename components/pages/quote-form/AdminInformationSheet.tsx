@@ -151,7 +151,7 @@ export function AdminInformationSheet({
 }, [
   open,
   associatedContractNumber,
-  county, // Verifica que este valor sea correcto
+  county, 
   ecmsPoNumber,
   stateRoute,
   paymentTerms,
@@ -165,7 +165,7 @@ const handleCustomerSelection = (customerIds: string[] | undefined) => {
     return;
   }
   const selectedCustomerObjects = customerIds
-    .map((id) => customers.find((c) => c.id.toString() === id)) // 👈 Buscamos por id
+    .map((id) => customers.find((c) => c.id.toString() === id)) 
     .filter((customer): customer is Customer => !!customer);
 
   setLocalSelectedCustomers(selectedCustomerObjects);
@@ -173,7 +173,7 @@ const handleCustomerSelection = (customerIds: string[] | undefined) => {
 
 const handleSave = () => {
   setAssociatedContractNumber(localContractNumber);
-  setCounty(localCounty); // Verifica que se guarda el valor de `county`
+  setCounty(localCounty); 
   setEcmsPoNumber(localEcmsPoNumber);
   setStateRoute(localStateRoute);
   setPaymentTerms(localPaymentTerms);

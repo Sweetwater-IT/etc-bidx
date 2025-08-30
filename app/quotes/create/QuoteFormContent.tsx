@@ -160,64 +160,67 @@ export default function QuoteFormContent() {
     return () => clearInterval(intervalId)
   }, [])
 
-  const autosave = async () => {
-
-
-  
-    if (!quoteId) {
-      console.log('⏭️ Skipping autosave because no quoteId yet')
-      return false
-    }
-
-    prevStateRef.current = { quoteItems, adminData }
-
-
-    // 🔎 Log para ver qué valores tenemos antes de enviar
-    console.log("📝 [AUTOSAVE] quoteId:", quoteId)
-    console.log("📝 [AUTOSAVE] adminData BEFORE mapping:", adminData)
-    console.log("📝 [AUTOSAVE] adminData AFTER mapping:", mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId))
-
-
-    try {
-      const payload = {
-        id: quoteId,
-        items: quoteItems,
-        admin_data: mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId),
-        status: 'DRAFT',
-        notes: notesState,
-        subject,
-        body: emailBody,
-        from_email: sender?.email || null,
-        recipients: [
-          ...(pointOfContact
-            ? [{ email: pointOfContact.email, point_of_contact: true }]
-            : []),
-          ...ccEmails.map((email) => ({ email, cc: true })),
-          ...bccEmails.map((email) => ({ email, bcc: true })),
-        ],
-      }
-
-      const res = await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || 'Failed to save draft')
-      }
-
-      setSecondCounter(1)
-      if (!firstSave) setFirstSave(true)
-
-      return true
-    } catch (error) {
-      console.error("💥 [AUTOSAVE] Exception:", error)
-      toast.error('Quote not successfully saved as draft: ' + error)
-      return false
-    }
+ const autosave = async () => {
+  if (!quoteId) {
+    console.log('⏭️ Skipping autosave because no quoteId yet')
+    return false
   }
+
+  prevStateRef.current = { quoteItems, adminData }
+
+  // 🔎 Log para ver qué valores tenemos antes de enviar
+  console.log("📝 [AUTOSAVE] quoteId:", quoteId)
+  console.log("📝 [AUTOSAVE] quoteItems:", quoteItems)
+  console.log("📝 [AUTOSAVE] adminData BEFORE mapping:", adminData)
+  console.log("📝 [AUTOSAVE] adminData AFTER mapping:", mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId))
+  console.log("📝 [AUTOSAVE] notesState:", notesState)
+  console.log("📝 [AUTOSAVE] recipients:", [
+    ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+    ...ccEmails.map((email) => ({ email, cc: true })),
+    ...bccEmails.map((email) => ({ email, bcc: true })),
+  ])
+
+  try {
+    const payload = {
+      id: quoteId,
+      items: quoteItems,
+      admin_data: mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId),
+      status: 'DRAFT',
+      notes: notesState,
+      subject,
+      body: emailBody,
+      from_email: sender?.email || null,
+      recipients: [
+        ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+        ...ccEmails.map((email) => ({ email, cc: true })),
+        ...bccEmails.map((email) => ({ email, bcc: true })),
+      ],
+    }
+
+    console.log("📝 [AUTOSAVE] Payload to send:", payload)
+
+    const res = await fetch(`/api/quotes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(errText || 'Failed to save draft')
+    }
+
+    setSecondCounter(1)
+    if (!firstSave) setFirstSave(true)
+
+    return true
+  } catch (error) {
+    console.error("💥 [AUTOSAVE] Exception:", error)
+    toast.error('Quote not successfully saved as draft: ' + error)
+    return false
+  }
+}
+
 
   const handleSaveAndExit = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)

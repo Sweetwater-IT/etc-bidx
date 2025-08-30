@@ -33,21 +33,15 @@ export async function GET(request: NextRequest) {
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
 
-    console.log("[GET /quotes] params:", { status, limit, page, orderBy, ascending, counts, nextNumber, detailed });
-
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
     // 📊 Counts
     if (counts) {
-      console.log("[GET /quotes] Fetching counts...");
-
       const { data: allQuotes, error: countError } = await supabase
         .from("quotes")
         .select("id, status");
 
       if (countError || !allQuotes) {
-        console.error("[GET /quotes] Count error:", countError);
-
         return NextResponse.json(
           { success: false, message: "Failed to fetch quote counts", error: countError },
           { status: 500 }
@@ -61,16 +55,11 @@ export async function GET(request: NextRequest) {
         accepted: allQuotes.filter((q) => q.status === "Accepted").length,
       };
 
-      console.log("[GET /quotes] Count data:", countData);
-
-
       return NextResponse.json({ success: true, data: countData });
     }
 
     // 🔢 Next Quote Number (solo vista previa, no inserta)
     if (nextNumber) {
-      console.log("[GET /quotes] Fetching next quote number...");
-
       const { data: latestQuote, error: quoteError } = await supabase
         .from("quotes")
         .select("quote_number")
@@ -78,17 +67,11 @@ export async function GET(request: NextRequest) {
         .limit(1);
 
       if (quoteError) {
-
-        console.error("[GET /quotes] Error fetching latest quote:", quoteError);
-
         return NextResponse.json(
           { success: false, message: "Failed to fetch latest quote number", error: quoteError },
           { status: 500 }
         );
       }
-
-
-      console.log("[GET /quotes] Latest quote:", latestQuote);
 
       let nextQuoteNumber = "Q-1001";
       if (latestQuote && latestQuote.length > 0) {
@@ -100,8 +83,6 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-
-      console.log("[GET /quotes] Next quote number will be:", nextQuoteNumber);
 
       return NextResponse.json({ success: true, data: { nextQuoteNumber } });
     }
@@ -146,25 +127,44 @@ export async function GET(request: NextRequest) {
     } else {
       let query = supabase
         .from("quotes")
-        .select(
-          `
-          id,
-          quote_number,
-          status,
-          date_sent,
-          county,
-          updated_at,
-          quotes_customers (
-            contractors ( name )
-          ),
-          quote_recipients (
-            email,
-            point_of_contact
-          ),
-          quote_items ( id ),
-          files ( id )
-        `
-        )
+        .select(`
+    id,
+    quote_number,
+    status,
+    date_sent,
+    county,
+    updated_at,
+    quotes_customers (
+      contractors ( name )
+    ),
+    quote_recipients (
+      email,
+      point_of_contact
+    ),
+    quote_items ( id ),
+    files ( id ),
+    admin_data_entries ( 
+      contract_number,
+      estimator,
+      division,
+      owner,
+      county,
+      sr_route,
+      location,
+      dbe,
+      start_date,
+      end_date,
+      winter_start,
+      winter_end,
+      ow_travel_time_mins,
+      ow_mileage,
+      fuel_cost_per_gallon,
+      emergency_job,
+      rated,
+      emergency_fields
+    )
+  `)
+
         .order(orderBy, { ascending })
         .range(offset, offset + limit - 1);
 
@@ -260,7 +260,9 @@ export async function POST() {
           status: "DRAFT",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+
         },
+
       ])
       .select("id, quote_number")
       .single();
@@ -290,20 +292,32 @@ export async function POST() {
   }
 }
 
+
 // --------------------
-// PATCH → update draft
+// PATCH → update draft (quotes + recipients + items + admin_data)
 // --------------------
 export async function PATCH(request: NextRequest) {
-
-
   try {
     const body = await request.json();
-    const { id, items, admin_data, status, notes, subject, body: emailBody, from_email, recipients } = body;
+    const {
+      id,
+      items,
+      admin_data,
+      status,
+      notes,
+      subject,
+      body: emailBody,
+      from_email,
+      recipients,
+    } = body;
 
     const numericId = Number(id);
 
+    console.log("🛠️ [PATCH] Incoming payload (trimmed):", JSON.stringify(body)?.slice(0, 2000));
+
     // 👉 Skip si todavía no hay id asignado
     if (!id || isNaN(numericId)) {
+      console.log("⏭️ [PATCH] Skipping update because quote has no valid ID yet:", id);
       return NextResponse.json(
         { success: false, message: "Skipping update because quote has no valid ID yet" },
         { status: 200 }
@@ -311,37 +325,54 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 1️⃣ Actualizar quotes
+    const allowedStatuses = new Set(["Not Sent", "Sent", "Accepted", "DRAFT"]);
+    const safeStatus = allowedStatuses.has(status) ? status : "DRAFT";
+    const notesValue = Array.isArray(notes) ? JSON.stringify(notes) : notes ?? null;
+
+    const quoteUpdate = {
+      status: safeStatus,
+      notes: notesValue,
+      subject: subject ?? null,
+      body: emailBody ?? null,
+      from_email: from_email ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log("🧾 [PATCH] Updating quotes:", { id: numericId, quoteUpdate });
+
     const { error: quoteError } = await supabase
       .from("quotes")
-      .update({
-        status: status || "Not Sent",
-        notes: Array.isArray(notes) ? JSON.stringify(notes) : notes,
-        subject,
-        body: emailBody,
-        from_email,
-        updated_at: new Date().toISOString(),
-      })
+      .update(quoteUpdate)
       .eq("id", numericId);
 
     if (quoteError) {
-      console.error("Error updating quote:", quoteError);
+      console.error("💥 [PATCH] Error updating quote:", quoteError);
       return NextResponse.json(
         { success: false, message: "Failed to update quote", error: quoteError.message },
         { status: 500 }
       );
     }
 
-    // 2️⃣ recipients
+    // 2️⃣ Recipients (delete → insert snapshot)
     if (Array.isArray(recipients)) {
-      await supabase.from("quote_recipients").delete().eq("quote_id", numericId);
+      console.log("👥 [PATCH] Replacing recipients for quote:", numericId);
+
+      const { error: delRecErr } = await supabase
+        .from("quote_recipients")
+        .delete()
+        .eq("quote_id", numericId);
+
+      if (delRecErr) {
+        console.error("💥 [PATCH] Error deleting recipients:", delRecErr);
+      }
 
       const recipientsToInsert = recipients.map((r: any) => ({
         quote_id: numericId,
         email: r.email,
-        cc: r.cc || false,
-        bcc: r.bcc || false,
-        point_of_contact: r.point_of_contact || false,
-        customer_contacts_id: r.contactId || null,
+        cc: !!r.cc,
+        bcc: !!r.bcc,
+        point_of_contact: !!r.point_of_contact,
+        customer_contacts_id: r.contactId ?? null,
       }));
 
       if (recipientsToInsert.length > 0) {
@@ -350,76 +381,149 @@ export async function PATCH(request: NextRequest) {
           .insert(recipientsToInsert);
 
         if (recipientsError) {
-          console.error("Error saving recipients:", recipientsError);
+          console.error("💥 [PATCH] Error inserting recipients:", recipientsError);
+        } else {
+          console.log("✅ [PATCH] Recipients saved:", recipientsToInsert.length);
         }
       }
     }
 
-    // 3️⃣ items
+    // 3️⃣ Items (delete → insert snapshot)
     if (Array.isArray(items)) {
-      await supabase.from("quote_items").delete().eq("quote_id", numericId);
+      console.log("📦 [PATCH] Replacing items for quote:", numericId);
+
+      const { error: delItemsErr } = await supabase
+        .from("quote_items")
+        .delete()
+        .eq("quote_id", numericId);
+
+      if (delItemsErr) {
+        console.error("💥 [PATCH] Error deleting items:", delItemsErr);
+      }
 
       const itemsToInsert = items.map((item: any) => ({
         quote_id: numericId,
-        item_number: item.itemNumber,
-        description: item.description,
-        uom: item.uom,
-        notes: item.notes,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        discount: item.discount,
-        discount_type: item.discountType,
+        item_number: item.itemNumber ?? item.item_number ?? null,
+        description: item.description ?? null,
+        uom: item.uom ?? null,
+        notes: item.notes ?? null,
+        quantity: item.quantity ?? null,
+        unit_price: item.unitPrice ?? item.unit_price ?? null,
+        discount: item.discount ?? null,
+        discount_type: item.discountType ?? item.discount_type ?? null,
       }));
 
       if (itemsToInsert.length > 0) {
-        const { error: itemsError } = await supabase.from("quote_items").insert(itemsToInsert);
+        const { error: itemsError } = await supabase
+          .from("quote_items")
+          .insert(itemsToInsert);
 
         if (itemsError) {
-          console.error("Error saving items:", itemsError);
+          console.error("💥 [PATCH] Error inserting items:", itemsError);
+        } else {
+          console.log("✅ [PATCH] Items saved:", itemsToInsert.length);
         }
       }
     }
 
-    // 4️⃣ admin_data
-  if (admin_data) {
-  const { error: adminError } = await supabase.from("admin_data_entries").upsert(
-    {
-      quote_id: numericId, // 👈 relación directa
-      contract_number: admin_data.contract_number,
-      estimator: admin_data.estimator,
-      division: admin_data.division,
-      letting_date: admin_data.letting_date,
-      owner: admin_data.owner,
-      county: admin_data.county,
-      sr_route: admin_data.sr_route,
-      location: admin_data.location,
-      dbe: admin_data.dbe,
-      start_date: admin_data.start_date,
-      end_date: admin_data.end_date,
-      winter_start: admin_data.winter_start,
-      winter_end: admin_data.winter_end,
-      ow_travel_time_mins: admin_data.ow_travel_time_minutes,
-      ow_mileage: admin_data.ow_mileage,
-      fuel_cost_per_gallon: admin_data.fuel_cost_per_gallon,
-      emergency_job: admin_data.emergency_job,
-      rated: admin_data.rated,
-      emergency_fields: admin_data.emergency_fields,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "quote_id" } // 👈 mejor clave que contract_number
-  )
+    // 4️⃣ Admin data (upsert por quote_id → fallback select/update|insert)
+    if (admin_data) {
+      // Normalización de campos para que calcen con la BDD
+      const adminPayload = {
+        quote_id: numericId,
+        contract_number: admin_data.contract_number ?? admin_data.contractNumber ?? null,
+        estimator: admin_data.estimator ?? null,
+        division: admin_data.division ?? null,
+        // DB usa bid_date (no letting_date). Si viene letting_date desde el front, lo mapeamos:
+        bid_date: admin_data.bid_date ?? admin_data.letting_date ?? null,
+        owner: admin_data.owner ?? null,
+        county: admin_data.county ?? null, // jsonb en DB; si mandás string/obj, Supabase lo guarda como json
+        sr_route: admin_data.sr_route ?? admin_data.srRoute ?? null,
+        location: admin_data.location ?? null,
+        dbe: admin_data.dbe ?? null,
+        start_date: admin_data.start_date ?? admin_data.startDate ?? null,
+        end_date: admin_data.end_date ?? admin_data.endDate ?? null,
+        winter_start: admin_data.winter_start ?? admin_data.winterStart ?? null,
+        winter_end: admin_data.winter_end ?? admin_data.winterEnd ?? null,
+        ow_travel_time_mins:
+          admin_data.ow_travel_time_mins ??
+          admin_data.ow_travel_time_minutes ??
+          admin_data.owTravelTimeMinutes ??
+          admin_data.owTravelTimeMins ??
+          null,
+        ow_mileage: admin_data.ow_mileage ?? admin_data.owMileage ?? null,
+        fuel_cost_per_gallon:
+          admin_data.fuel_cost_per_gallon ?? admin_data.fuelCostPerGallon ?? null,
+        emergency_job: admin_data.emergency_job ?? admin_data.emergencyJob ?? false,
+        rated: admin_data.rated ?? null,
+        emergency_fields: admin_data.emergency_fields ?? admin_data.emergencyFields ?? null,
+      };
 
-  if (adminError) {
-    console.error("Error saving admin data:", adminError)
-  }
-}
+      console.log("🗂️ [PATCH] Admin payload (normalized):", adminPayload);
 
+      // Intento de upsert (requiere UNIQUE (quote_id))
+      let adminSaved = false;
+      const { error: adminUpsertErr } = await supabase
+        .from("admin_data_entries")
+        .upsert(adminPayload, { onConflict: "quote_id" });
+
+      if (adminUpsertErr) {
+        console.warn(
+          "⚠️ [PATCH] upsert by quote_id failed (likely missing UNIQUE on quote_id). Fallback to select→update|insert.",
+          adminUpsertErr
+        );
+
+        // Fallback: ¿existe ya un registro para esta quote?
+        const { data: existing, error: selErr } = await supabase
+          .from("admin_data_entries")
+          .select("id")
+          .eq("quote_id", numericId)
+          .maybeSingle();
+
+        if (selErr) {
+          console.error("💥 [PATCH] Error selecting admin_data_entries:", selErr);
+        } else if (existing?.id) {
+          const { error: updErr } = await supabase
+            .from("admin_data_entries")
+            .update(adminPayload)
+            .eq("id", existing.id);
+
+          if (updErr) {
+            console.error("💥 [PATCH] Error updating admin_data_entries:", updErr);
+          } else {
+            console.log("✅ [PATCH] Admin updated. id:", existing.id);
+            adminSaved = true;
+          }
+        } else {
+          const { error: insErr } = await supabase
+            .from("admin_data_entries")
+            .insert(adminPayload);
+
+          if (insErr) {
+            console.error("💥 [PATCH] Error inserting admin_data_entries:", insErr);
+          } else {
+            console.log("✅ [PATCH] Admin inserted for quote:", numericId);
+            adminSaved = true;
+          }
+        }
+      } else {
+        console.log("✅ [PATCH] Admin upserted by quote_id");
+        adminSaved = true;
+      }
+
+      if (!adminSaved) {
+        console.warn("⚠️ [PATCH] Admin data was not saved (see logs above).");
+      }
+    }
+
+    console.log("🎉 [PATCH] Quote draft saved OK → id:", numericId);
     return NextResponse.json({ success: true, message: "Quote draft saved" });
   } catch (error) {
-    console.error("Unexpected error PATCH /quotes:", error);
+    console.error("❌ [PATCH] Unexpected error /quotes:", error);
     return NextResponse.json(
       { success: false, message: "Unexpected error", error: String(error) },
       { status: 500 }
     );
   }
 }
+

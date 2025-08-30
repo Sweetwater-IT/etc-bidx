@@ -40,14 +40,14 @@ export default function QuotesPage() {
     sent: 0,
     accepted: 0
   });
-  
+
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  const {startLoading, stopLoading, isLoading} = useLoading();
+  const { startLoading, stopLoading, isLoading } = useLoading();
 
   // Fetch quotes
   const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
@@ -60,15 +60,15 @@ export default function QuotesPage() {
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-      params.append("orderBy", "quote_created_at");
+      params.append("orderBy", "created_at"); // Cambié de "quote_created_at" a "created_at"
       params.append("ascending", "false");
-      params.append('detailed', "true");
+      params.append('detailed', "false");
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
-              console.log("Fetched quotes from API:", data.data);  // Log para ver los registros de la BD
+        console.log("Fetched quotes from API:", data.data);  // Log para ver los registros de la BD
 
         setQuotes(data.data);
         setPageCount(data.pagination.pageCount);
@@ -83,16 +83,16 @@ export default function QuotesPage() {
     }
   };
 
-const fetchQuoteCounts = async () => {
-  try {
-    const response = await fetch('/api/quotes?counts=true');
-    const data = await response.json();
-    console.log("Fetched quote counts:", data);  // Log para ver los conteos de las cotizaciones
-    setQuoteCounts(data);
-  } catch (error) {
-    console.error("Error fetching quote counts:", error);
-  }
-};
+  const fetchQuoteCounts = async () => {
+    try {
+      const response = await fetch('/api/quotes?counts=true');
+      const data = await response.json();
+      console.log("Fetched quote counts:", data);  // Log para ver los conteos de las cotizaciones
+      setQuoteCounts(data);
+    } catch (error) {
+      console.error("Error fetching quote counts:", error);
+    }
+  };
 
   // Handle segment change
   const handleSegmentChange = (value: string) => {
@@ -121,11 +121,11 @@ const fetchQuoteCounts = async () => {
   }, []);
 
   // Agrega un log al final del useEffect para ver los resultados al inicio
-useEffect(() => {
-  console.log("Quotes state after fetching:", quotes);
-}, [quotes]); // Este useEffect se ejecutará cada vez que 'quotes' cambie
+  useEffect(() => {
+    console.log("Quotes state after fetching:", quotes);
+  }, [quotes]); // Este useEffect se ejecutará cada vez que 'quotes' cambie
 
-  const handleRowClick = (quote: QuoteGridView) => {    
+  const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
   };
 
@@ -171,9 +171,9 @@ useEffect(() => {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-                
+
               />
-             
+
 
             </div>
           </div>
