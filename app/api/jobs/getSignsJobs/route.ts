@@ -1,59 +1,90 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export async function GET(request: NextRequest) {
-    try {
-        const { data, error } = await supabase
-            .from("jobs")
-            .select(`
-    id,
-    job_number_id,
-    bid_number,
-    project_status,
-    archived,
-    deleted,
-    mpt_rental_entries!mpt_rental_entries_job_id_fkey (
-      id,
-      mpt_phases!mpt_phases_mpt_rental_entry_id_fkey (
-        id,
-        name,
-        mpt_primary_signs!mpt_primary_signs_phase_id_fkey (
-          id,
-          description,
-          designation,
-          quantity
-        ),
-        mpt_secondary_signs!mpt_secondary_signs_phase_id_fkey (
-          id,
-          description,
-          designation
+export async function GET() {
+  try {
+    // 1. Todos los available_jobs activos
+    const { data: availableJobs, error: jobsError } = await supabase
+      .from("available_jobs")
+      .select("*")
+      .eq("archived", false);
+
+    if (jobsError) throw jobsError;
+    if (!availableJobs || availableJobs.length === 0)
+      return NextResponse.json({ success: true, data: [] });
+
+    // 2. Traer bid_estimates correspondientes a estos available_jobs
+    const contractNumbers = availableJobs.map(j => j.contract_number);
+
+    const { data: bidEstimates, error: bidError } = await supabase
+      .from("bid_estimates")
+      .select("id, contract_number")
+      .in("contract_number", contractNumbers);
+
+    if (bidError) throw bidError;
+    const bidEstimateIds = bidEstimates.map(b => b.id);
+
+    // 3. Traer todos los jobs relacionados
+    const { data: linkedJobs, error: linkedJobsError } = await supabase
+      .from("jobs")
+      .select("id, estimate_id")
+      .in("estimate_id", bidEstimateIds)
+      .eq("archived", false);
+
+    if (linkedJobsError) throw linkedJobsError;
+
+    // 4. Traer mpt_rental_entries con fases y signs
+    const { data: entries, error: entriesError } = await supabase
+      .from("mpt_rental_entries")
+      .select(`
+        *,
+        mpt_phases!left (
+          *,
+          mpt_primary_signs!left (*),
+          mpt_secondary_signs!left (*)
         )
-      )
-    )
-  `)
-            .or("archived.is.null,archived.eq.false") // <- incluye null y false
-            .or("deleted.is.null,deleted.eq.false");  // <- igual para deleted
+      `)
+      .in("bid_estimate_id", bidEstimateIds);
 
-        if (error) {
-            console.error("Error fetching jobs with signs:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+    if (entriesError) throw entriesError;
 
-        const jobsWithSigns = (data || []).filter(job => {
-            return job.mpt_rental_entries?.some(entry =>
-                entry.mpt_phases?.some(phase =>
-                    (phase.mpt_primary_signs && phase.mpt_primary_signs.length > 0) ||
-                    (phase.mpt_secondary_signs && phase.mpt_secondary_signs.length > 0)
-                )
-            );
-        });
+    // 5. Traer permanent_signs_entries con permanent_signs (left join)
+    const { data: permEntries, error: permError } = await supabase
+      .from("permanent_signs_entries")
+      .select(`
+        *,
+        permanent_signs:permanent_signs!left(*)
+      `)
+      .in("bid_estimate_id", bidEstimateIds);
 
-        return NextResponse.json({ data: jobsWithSigns });
-    } catch (err) {
-        console.error("Unexpected error:", err);
-        return NextResponse.json(
-            { error: "Unexpected error fetching jobs with signs" },
-            { status: 500 }
-        );
-    }
+    if (permError) throw permError;
+
+    // 6. Mapear todo junto
+    const jobsWithSigns = availableJobs.map(job => {
+      const bid = bidEstimates.find(b => b.contract_number === job.contract_number);
+      if (!bid) return { ...job, entries: [], permanent_signs_entries: [] };
+
+      const jobPermEntries = permEntries.filter(p => p.bid_estimate_id === bid.id);
+
+      const jobEntries = entries.filter(entry => entry.bid_estimate_id === bid.id);
+
+      return {
+        ...job,
+        entries: jobEntries,
+        permanent_signs_entries: jobPermEntries
+      };
+    });
+
+    return NextResponse.json({ success: true, data: jobsWithSigns });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unexpected error fetching jobs with signs",
+        error: String(err),
+      },
+      { status: 500 }
+    );
+  }
 }

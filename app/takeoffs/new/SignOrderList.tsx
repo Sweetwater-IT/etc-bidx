@@ -83,43 +83,42 @@ export function SignOrderList({
   const { mptRental, dispatch } = useEstimate();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
-
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
   const [hasCopied, setHasCopied] = useState(false);
-
+  const [jobs, setJobs] = useState<any[]>([]);
 
   const getAllJobsWithSigns = async () => {
     try {
-
-      const response = await fetch('/api/jobs/getSignsJobs')
-
-      const resp = await response.json()
-
-      if (resp) {
-        console.log('resp es',resp)
+      const response = await fetch('/api/jobs/getSignsJobs/');
+      const resp = await response.json();
+      if (resp.success) {
+        setJobs(resp.data);
       }
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  const phaseOptions = useCallback(() => {
-    return mptRental.phases
-      ? mptRental.phases.map((_, idx) => idx).filter(idx => idx !== currentPhase)
-      : [];
-  }, [mptRental.phases, currentPhase]);
+  const handleCopySignsFromJob = useCallback(() => {
+    if (!selectedPhase) return; // no hay job seleccionado
+    const selectedJob = jobs.find(job => job.id === Number(selectedPhase));
+    if (!selectedJob) return;
 
-  const handleCopySigns = useCallback(() => {
-    console.log('Copying signs from phase:', selectedPhase);
-    if (selectedPhase === '' || Number(selectedPhase) === currentPhase) return;
-    const phaseIdx = Number(selectedPhase);
-    const signsToCopy = mptRental.phases[phaseIdx]?.signs || [];
-    const equipmentUpdates: { [key in EquipmentType]?: number } = {};
+    // Copiar todos los primary y secondary signs de las entries
+    const allSigns = [
+      ...(selectedJob.entries?.flatMap(entry =>
+        entry.mpt_phases?.flatMap(phase => [
+          ...(phase.mpt_primary_signs || []),
+          ...(phase.mpt_secondary_signs || [])
+        ]) || []
+      ) || []),
+      ...(selectedJob.permanent_signs_entries?.flatMap(p => p.permanent_signs || []) || [])
+    ];
 
-    signsToCopy.forEach(sign => {
-      const newSign = { ...sign, id: generateUniqueId() };
+    allSigns.forEach(sign => {
+      const newSign = { ...sign, id: generateUniqueId() }; // asignar nuevo id único
       dispatch({
         type: 'ADD_MPT_SIGN',
         payload: {
@@ -127,38 +126,10 @@ export function SignOrderList({
           sign: newSign,
         },
       });
-
-      if ('associatedStructure' in sign && sign.quantity > 0) {
-        const primarySign = sign as PrimarySign;
-        if (primarySign.cover) {
-          equipmentUpdates.covers = (equipmentUpdates.covers || 0) + primarySign.quantity;
-        }
-        if (primarySign.associatedStructure !== 'none') {
-          equipmentUpdates[primarySign.associatedStructure as EquipmentType] =
-            (equipmentUpdates[primarySign.associatedStructure as EquipmentType] || 0) +
-            primarySign.quantity;
-        }
-        if (primarySign.bLights > 0) {
-          equipmentUpdates.BLights =
-            (equipmentUpdates.BLights || 0) + primarySign.quantity * primarySign.bLights;
-        }
-      }
     });
 
-    Object.entries(equipmentUpdates).forEach(([equipmentType, quantity]) => {
-      const currentQuantity =
-        mptRental.phases[currentPhase].standardEquipment[equipmentType as EquipmentType]?.quantity || 0;
-      dispatch({
-        type: 'ADD_MPT_ITEM_NOT_SIGN',
-        payload: {
-          phaseNumber: currentPhase,
-          equipmentType: equipmentType as EquipmentType,
-          equipmentProperty: 'quantity',
-          value: currentQuantity + quantity,
-        },
-      });
-    });
-  }, [selectedPhase, currentPhase, mptRental.phases, dispatch]);
+    setHasCopied(true);
+  }, [selectedPhase, jobs, dispatch, currentPhase]);
 
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
@@ -360,6 +331,7 @@ export function SignOrderList({
     getAllJobsWithSigns()
   }, []);
 
+  
   useEffect(() => {
     const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
     if (onlyTable && latestSign && latestSign.quantity === 0) {
@@ -413,6 +385,16 @@ export function SignOrderList({
     return valueToReturn;
   }, []);
 
+  const handleDeleteSign = (sign: any) => {
+    console.log('Before deleting:', sign.id, mptRental.phases[currentPhase].signs.length);
+
+    dispatch({
+      type: 'DELETE_MPT_SIGN',
+      payload: { phaseNumber: currentPhase, signId: sign.id }
+    });
+
+    console.log('After deleting:', mptRental.phases[currentPhase].signs.length);
+  };
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -423,19 +405,20 @@ export function SignOrderList({
             <div className="flex items-center gap-2">
               <select
                 className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={selectedPhase}
+                value={selectedPhase} // ahora sería selectedJob
                 onChange={e => {
                   setSelectedPhase(e.target.value);
                   setHasCopied(false);
                 }}
               >
-                <option value="">Select phase</option>
-                {phaseOptions().map(idx => (
-                  <option key={idx} value={idx}>
-                    Phase {idx + 1}
+                <option value="">Select job</option>
+                {jobs.map(job => (
+                  <option key={job.id} value={job.id}>
+                    {job.contract_number} - {job.location}
                   </option>
                 ))}
               </select>
+
               <button
                 type="button"
                 className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase !== '' && !hasCopied
@@ -444,7 +427,7 @@ export function SignOrderList({
                   }`}
                 disabled={selectedPhase === '' || hasCopied}
                 onClick={() => {
-                  handleCopySigns();
+                  handleCopySignsFromJob();
                   setHasCopied(true);
                 }}
               >
@@ -692,24 +675,7 @@ export function SignOrderList({
                                     </>
                                   )}
                                   <DropdownMenuItem
-                                    onClick={() => {
-                                      console.log('Deleting sign:', sign.id, 'from phase:', currentPhase);
-                                      deleteAssociatedEquipmentInfo(sign.id);
-                                      dispatch({
-                                        type: 'DELETE_MPT_SIGN',
-                                        payload: { phaseNumber: currentPhase, signId: sign.id },
-                                      });
-                                      if (Object.hasOwn(sign, 'associatedStructure')) {
-                                        mptRental.phases[currentPhase].signs.forEach(s => {
-                                          if ('primarySignId' in s && s.primarySignId === sign.id) {
-                                            dispatch({
-                                              type: 'DELETE_MPT_SIGN',
-                                              payload: { phaseNumber: currentPhase, signId: s.id },
-                                            });
-                                          }
-                                        });
-                                      }
-                                    }}
+                                    onClick={() => handleDeleteSign(sign)}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
