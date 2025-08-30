@@ -15,7 +15,7 @@ export async function GET(
     );
   }
 
-  // 🔹 1. Quote base
+  // 1️⃣ Quote base
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select(`
@@ -39,13 +39,13 @@ export async function GET(
     );
   }
 
-  // 🔹 2. Items
+  // 2️⃣ Items
   const { data: items } = await supabase
     .from("quote_items")
     .select("id, description, quantity, unit_price")
     .eq("quote_id", quoteId);
 
-  // 🔹 3. Customer
+  // 3️⃣ Customer
   const { data: customerJoin } = await supabase
     .from("quotes_customers")
     .select(`
@@ -56,7 +56,7 @@ export async function GET(
       )
     `)
     .eq("quote_id", quoteId)
-    .single();
+    .maybeSingle();
 
   const contractor = Array.isArray(customerJoin?.contractor)
     ? customerJoin.contractor[0]
@@ -70,7 +70,7 @@ export async function GET(
       }
     : null;
 
-  // 🔹 4. Contact (recipients)
+  // 4️⃣ Contact (recipients)
   const { data: contactJoin } = await supabase
     .from("quote_recipients")
     .select(`
@@ -89,12 +89,19 @@ export async function GET(
     ? contactData[0]
     : contactData || null;
 
+  // 5️⃣ Admin Data
+  const { data: adminData } = await supabase
+    .from("admin_data_entries")
+    .select("*")
+    .eq("quote_id", quoteId)
+    .maybeSingle();
+
   const files: any[] = [];
   const notes = quote.notes ? JSON.parse(quote.notes) : [];
 
-  // 🔹 5. Response
+  // 🔹 Final Response
   return NextResponse.json({
-    id: quote.id, // 👈 garantizamos que sea numérico
+    id: quote.id,
     quote_number: quote.quote_number,
     contract_number: quote.ecms_po_number,
     status: quote.status,
@@ -117,6 +124,7 @@ export async function GET(
       quantity: i.quantity,
       unitPrice: i.unit_price,
     })),
+    admin_data: adminData || null, // 👈 ahora también devuelve admin_data
     files,
     notes,
   });

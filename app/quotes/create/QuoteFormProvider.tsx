@@ -202,6 +202,8 @@ export default function QuoteFormProvider({
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
+
+
   // 👇 aquí separamos id numérico y código
   const [quoteId, setQuoteId] = useState<number | null>(
     typeof mergedData.id === "number" ? mergedData.id : null
@@ -211,6 +213,13 @@ export default function QuoteFormProvider({
       ? mergedData.quote_number
       : ""
   );
+
+
+  useEffect(() => {
+    console.log("🆔 [QuoteFormProvider] quoteId actualizado:", quoteId);
+  }, [quoteId]);
+
+
 
   const [notes, setNotes] = useState<string[]>(mergedData.notes);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
@@ -236,6 +245,24 @@ export default function QuoteFormProvider({
     }
   }, [selectedCustomers]);
 
+  // 👇 LOG también al inicio para ver qué entra desde initialData
+  useEffect(() => {
+    console.log("🚀 [QuoteFormProvider] Inicializado con:", {
+      initialId: mergedData.id,
+      initialQuoteNumber: mergedData.quote_number,
+      resolvedQuoteId: quoteId,
+    });
+  }, []);
+
+
+  useEffect(() => {
+  console.log("🆔 [QuoteFormProvider] quoteId updated:", quoteId, typeof quoteId);
+}, [quoteId]);
+
+useEffect(() => {
+  console.log("🔢 [QuoteFormProvider] quoteNumber updated:", quoteNumber, typeof quoteNumber);
+}, [quoteNumber]);
+
   // 👉 reset emails al cambiar clientes
   useEffect(() => {
     setPointOfContact(undefined);
@@ -249,7 +276,7 @@ export default function QuoteFormProvider({
     pointOfContact,
     setPointOfContact,
     ccEmails,
-    
+
     setCcEmails,
     bccEmails,
     setBccEmails,

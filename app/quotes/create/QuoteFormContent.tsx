@@ -23,8 +23,8 @@ import { AdminData } from '@/types/TAdminData'
 
 // Mapper para enviar al backend en snake_case
 function mapAdminDataToApi(adminData: AdminData, quoteId: number) {
-  return {
-    quote_id: quoteId,
+  const mapped = {
+    quote_id: Number(quoteId),
     contract_number: adminData.contractNumber,
     estimator: adminData.estimator,
     division: adminData.division,
@@ -47,6 +47,19 @@ function mapAdminDataToApi(adminData: AdminData, quoteId: number) {
     rated: adminData.rated,
     emergency_fields: adminData.emergencyFields,
   }
+  console.log('[mapAdminDataToApi] mapped:', mapped)
+  return mapped
+}
+
+// helper: garantiza que trabajamos SOLO con IDs numéricos
+const useNumericQuoteId = (rawId: unknown) => {
+  const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
+  useEffect(() => {
+    if (rawId != null && typeof rawId !== 'number') {
+      console.warn('[QuoteFormContent] Non-numeric quoteId detected:', rawId)
+    }
+  }, [rawId])
+  return id
 }
 
 export default function QuoteFormContent() {
@@ -78,10 +91,15 @@ export default function QuoteFormContent() {
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
   const prevStateRef = useRef({ quoteItems, adminData })
+  const numericQuoteId = useNumericQuoteId(quoteId)
 
-  // Crear draft apenas entro
+  const initCalled = useRef(false);
+
   useEffect(() => {
     async function initDraft() {
+      if (initCalled.current) return; // 👈 evita la segunda ejecución
+      initCalled.current = true;
+
       if (!quoteId) {
         try {
           const res = await fetch('/api/quotes', { method: 'POST' })
@@ -89,6 +107,8 @@ export default function QuoteFormContent() {
           const data = await res.json()
           setQuoteId(data.data.id)
           setQuoteNumber(data.data.quote_number || '')
+
+          console.log("🚀 Draft initialized with ID:", data.data.id, "and Number:", data.data.quote_number)
         } catch (err) {
           console.error('Error creating draft', err)
           toast.error('Could not start a new draft')
@@ -96,15 +116,17 @@ export default function QuoteFormContent() {
       }
     }
     initDraft()
-  }, [quoteId, setQuoteId, setQuoteNumber])
+  }, [])
+
+
 
   // Notes
   useEffect(() => {
     async function fetchNotes() {
       setLoadingNotes(true)
       try {
-        if (!quoteId) return
-        const res = await fetch(`/api/quotes?id=${quoteId}`)
+        if (!numericQuoteId) return
+        const res = await fetch(`/api/quotes/${numericQuoteId}`)
         if (res.ok) {
           const data = await res.json()
           setNotesState(Array.isArray(data.notes) ? data.notes : [])
@@ -114,7 +136,7 @@ export default function QuoteFormContent() {
       }
     }
     fetchNotes()
-  }, [quoteId])
+  }, [numericQuoteId])
 
   const handleSaveNote = async (note: Note) => {
     const updatedNotes = [...notesState, note]
@@ -130,17 +152,10 @@ export default function QuoteFormContent() {
 
   // Autosave effect
   useEffect(() => {
-    if (!quoteId) return
+    if (!numericQuoteId) return
 
-    const hasQuoteItemsChanged = !isEqual(
-      quoteItems,
-      prevStateRef.current.quoteItems
-    )
-    const hasAdminDataChanged = !isEqual(
-      adminData,
-      prevStateRef.current.adminData
-    )
-
+    const hasQuoteItemsChanged = !isEqual(quoteItems, prevStateRef.current.quoteItems)
+    const hasAdminDataChanged = !isEqual(adminData, prevStateRef.current.adminData)
     if (!hasQuoteItemsChanged && !hasAdminDataChanged) return
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -151,8 +166,7 @@ export default function QuoteFormContent() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [quoteItems, adminData, quoteId])
-
+  }, [quoteItems, adminData, numericQuoteId])
   useEffect(() => {
     const intervalId = setInterval(() => {
       setSecondCounter((prev) => prev + 1)
@@ -160,31 +174,22 @@ export default function QuoteFormContent() {
     return () => clearInterval(intervalId)
   }, [])
 
- const autosave = async () => {
-  if (!quoteId) {
-    console.log('⏭️ Skipping autosave because no quoteId yet')
+const autosave = async () => {
+  if (!numericQuoteId) {
+    console.log('⏭️ Skipping autosave because no numeric quoteId yet', { quoteId })
     return false
   }
 
   prevStateRef.current = { quoteItems, adminData }
 
-  // 🔎 Log para ver qué valores tenemos antes de enviar
-  console.log("📝 [AUTOSAVE] quoteId:", quoteId)
-  console.log("📝 [AUTOSAVE] quoteItems:", quoteItems)
-  console.log("📝 [AUTOSAVE] adminData BEFORE mapping:", adminData)
-  console.log("📝 [AUTOSAVE] adminData AFTER mapping:", mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId))
-  console.log("📝 [AUTOSAVE] notesState:", notesState)
-  console.log("📝 [AUTOSAVE] recipients:", [
-    ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
-    ...ccEmails.map((email) => ({ email, cc: true })),
-    ...bccEmails.map((email) => ({ email, bcc: true })),
-  ])
+  console.log("📝 [AUTOSAVE] quoteId:", numericQuoteId)
+  console.log("📝 [AUTOSAVE] adminData AFTER mapping:", mapAdminDataToApi(adminData ?? defaultAdminObject, numericQuoteId))
 
   try {
     const payload = {
-      id: quoteId,
+      id: numericQuoteId,
       items: quoteItems,
-      admin_data: mapAdminDataToApi(adminData ?? defaultAdminObject, quoteId),
+      admin_data: mapAdminDataToApi(adminData ?? defaultAdminObject, numericQuoteId),
       status: 'DRAFT',
       notes: notesState,
       subject,
@@ -212,7 +217,6 @@ export default function QuoteFormContent() {
 
     setSecondCounter(1)
     if (!firstSave) setFirstSave(true)
-
     return true
   } catch (error) {
     console.error("💥 [AUTOSAVE] Exception:", error)
@@ -220,6 +224,7 @@ export default function QuoteFormContent() {
     return false
   }
 }
+
 
 
   const handleSaveAndExit = async () => {

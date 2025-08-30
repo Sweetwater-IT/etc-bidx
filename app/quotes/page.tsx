@@ -125,9 +125,10 @@ export default function QuotesPage() {
     console.log("Quotes state after fetching:", quotes);
   }, [quotes]); // Este useEffect se ejecutará cada vez que 'quotes' cambie
 
-  const handleRowClick = (quote: QuoteGridView) => {
-    router.push(`/quotes/view/${quote.id}`);
-  };
+ const handleRowClick = (quote: QuoteGridView) => {
+  console.log("🔎 Row clicked → id:", quote.id, "quote_number:", quote.quote_number);
+  router.push(`/quotes/view/${quote.id}`);
+};
 
   console.log("Data passed to DataTable:", quotes) // Log para ver los datos que se pasan a la tabla
 

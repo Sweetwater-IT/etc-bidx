@@ -7,6 +7,7 @@ import { toast } from "sonner";
 export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
   const {
     setQuoteId,
+    setQuoteNumber,
     setSelectedCustomers,
     setQuoteItems,
     setPaymentTerms,
@@ -30,40 +31,22 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
 
-        const mappedData = {
-          id: data.id,
-          quoteNumber: data.quote_number,
-          status: data.status,
-          createdAt: data.created_at,
-          dateSent: data.date_sent,
-          jobId: data.job_id,
-          estimateId: data.estimate_id,
-          notes: data.notes,
-          ecmsPoNumber: data.contract_number, // alias que devolvimos en la API
-          adminData: data.admin_data,
-          customers: data.customer ? [data.customer] : [],
-          items: data.items || [],
-          subject: data.subject || "",
-          body: data.body || "",
-          customTerms: data.custom_terms_conditions || "",
-          includeTerms: data.include_terms || {},
-          includeFiles: data.include_files || {},
-          associatedContractNumber: data.associated_contract_number || "",
-        };
-
-        setQuoteId(mappedData.id);
-        setSelectedCustomers(mappedData.customers);
-        setQuoteItems(mappedData.items);
+        // 🚀 Usamos directamente lo que viene del backend
+        console.log("Setting quoteId:", data.id); // log agregado
+        setQuoteId(data.id);
+        setQuoteNumber(data.quote_number);
+        setSelectedCustomers(data.customer ? [data.customer] : []);
+        setQuoteItems(data.items || []);
         setPaymentTerms(data.payment_terms || "NET30");
-        setAdminData(mappedData.adminData);
-        setQuoteDate(mappedData.dateSent || mappedData.createdAt);
-        setStatus(mappedData.status || "Not Sent");
-        setSubject(mappedData.subject);
-        setEmailBody(mappedData.body);
-        setCustomTerms(mappedData.customTerms);
-        setIncludeTerms(mappedData.includeTerms);
-        setIncludeFiles(mappedData.includeFiles);
-        setAssociatedContractNumber(mappedData.associatedContractNumber);
+        setAdminData(data.admin_data || null); // 👈 ya viene de la API
+        setQuoteDate(data.date_sent || data.created_at);
+        setStatus(data.status || "Not Sent");
+        setSubject(data.subject || "");
+        setEmailBody(data.body || "");
+        setCustomTerms(data.custom_terms_conditions || "");
+        setIncludeTerms(data.include_terms || {});
+        setIncludeFiles(data.include_files || {});
+        setAssociatedContractNumber(data.associated_contract_number || "");
       } catch (err) {
         console.error(err);
         toast.error("Could not load quote for editing");

@@ -336,6 +336,9 @@ export async function PATCH(request: NextRequest) {
       body: emailBody ?? null,
       from_email: from_email ?? null,
       updated_at: new Date().toISOString(),
+      county: admin_data?.county?.country ?? null,
+
+
     };
 
     console.log("🧾 [PATCH] Updating quotes:", { id: numericId, quoteUpdate });
