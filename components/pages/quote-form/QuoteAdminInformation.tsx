@@ -68,24 +68,23 @@ export function QuoteAdminInformation() {
 
 
 
-  const setCountyString = (name: string) => {
-    console.log("🟩 setCountyString called with:", name);
+const setCountyString = (name: string) => {
+  console.log("🟩 setCountyString called with:", name);
 
-    setAdminData((prev) => {
-      const base = prev ?? defaultAdminObject;
-      const updated: AdminData = {
-        ...base,
-        contractNumber: base.contractNumber || associatedContractNumber || "", // 👈 preserva contractNumber
-        county: {
-          ...(base.county ?? defaultAdminObject.county),
-          name,
-        },
-      };
-      console.log("🟩 adminData after county change:", updated);
-      return updated;
-    });
-  };
-
+  setAdminData((prev) => {
+    const base = prev ?? defaultAdminObject;
+    const updated: AdminData = {
+      ...base,
+      contractNumber: base.contractNumber || associatedContractNumber || "", // 👈 preserva contractNumber
+      county: {
+        ...(base.county ?? defaultAdminObject.county),
+        country: name,  // Actualiza 'country' en lugar de 'name'
+      },
+    };
+    console.log("🟩 adminData after county change:", updated);
+    return updated;
+  });
+};
 
   // 🪵 debug adminData y county
   useEffect(() => {

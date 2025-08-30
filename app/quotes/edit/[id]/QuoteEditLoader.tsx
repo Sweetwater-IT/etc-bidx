@@ -30,7 +30,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
 
-        // 👇 Mapear snake_case → camelCase
         const mappedData = {
           id: data.id,
           quoteNumber: data.quote_number,
@@ -52,7 +51,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           associatedContractNumber: data.associated_contract_number || "",
         };
 
-        // 👇 Cargar en el provider
         setQuoteId(mappedData.id);
         setSelectedCustomers(mappedData.customers);
         setQuoteItems(mappedData.items);
