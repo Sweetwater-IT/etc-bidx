@@ -242,6 +242,7 @@ export const data = {
       icon: IconSearch,
     },
   ] as NavItem[],
+  /*
   documents: [
     {
       name: "Job List",
@@ -259,6 +260,7 @@ export const data = {
       icon: IconFileWord,
     },
   ] as Document[],
+  */
 };
 
 export const quickActions = [
@@ -329,7 +331,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} label={'Project Estimating'} />
         <NavMain items={data.navAdmin} label={'Project Admin'} />
         <NavMain items={data.navSignShop} label={'Sign Shop'} />
-        <NavDocuments items={data.documents} />
+        {/* <NavDocuments items={data.documents} /> */}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
