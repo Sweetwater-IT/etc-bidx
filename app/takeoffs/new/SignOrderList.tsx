@@ -41,6 +41,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
+import SelectJobOrBid from './SelectJobOrBid';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -85,50 +86,7 @@ export function SignOrderList({
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
-  const [selectedPhase, setSelectedPhase] = useState<string>('');
-  const [hasCopied, setHasCopied] = useState(false);
-  const [jobs, setJobs] = useState<any[]>([]);
 
-  const getAllJobsWithSigns = async () => {
-    try {
-      const response = await fetch('/api/jobs/getSignsJobs/');
-      const resp = await response.json();
-      if (resp.success) {
-        setJobs(resp.data);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const handleCopySignsFromJob = useCallback(() => {
-    if (!selectedPhase) return; // no hay job seleccionado
-    const selectedJob = jobs.find(job => job.id === Number(selectedPhase));
-    if (!selectedJob) return;
-
-    const allSigns = [
-      ...(selectedJob.entries?.flatMap(entry =>
-        entry.mpt_phases?.flatMap(phase => [
-          ...(phase.mpt_primary_signs || []),
-          ...(phase.mpt_secondary_signs || [])
-        ]) || []
-      ) || []),
-      ...(selectedJob.permanent_signs_entries?.flatMap(p => p.permanent_signs || []) || [])
-    ];
-
-    allSigns.forEach(sign => {
-      const newSign = { ...sign, id: generateUniqueId() };
-      dispatch({
-        type: 'ADD_MPT_SIGN',
-        payload: {
-          phaseNumber: currentPhase,
-          sign: newSign,
-        },
-      });
-    });
-
-    setHasCopied(true);
-  }, [selectedPhase, jobs, dispatch, currentPhase]);
 
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
@@ -318,7 +276,6 @@ export function SignOrderList({
 
   useEffect(() => {
     const signTotals = returnSignTotalsSquareFootage(mptRental);
-    getAllJobsWithSigns()
     setSquareFootageTotal(
       signTotals.HI.totalSquareFootage +
       signTotals.DG.totalSquareFootage +
@@ -326,11 +283,6 @@ export function SignOrderList({
     );
   }, [mptRental]);
 
-  useEffect(() => {
-    getAllJobsWithSigns()
-  }, []);
-
-  
   useEffect(() => {
     const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
     if (onlyTable && latestSign && latestSign.quantity === 0) {
@@ -401,39 +353,7 @@ export function SignOrderList({
         <div className="flex items-center gap-2">
           <div className="flex flex-col items-start mr-4">
             <label className="text-[14px] font-medium mb-1 ml-1">Import from job</label>
-            <div className="flex items-center gap-2">
-              <select
-                className="border rounded-[10px] px-2 h-10 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={selectedPhase} // ahora sería selectedJob
-                onChange={e => {
-                  setSelectedPhase(e.target.value);
-                  setHasCopied(false);
-                }}
-              >
-                <option value="">Select job</option>
-                {jobs.map(job => (
-                  <option key={job.id} value={job.id}>
-                    {job.contract_number} - {job.location}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase !== '' && !hasCopied
-                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                  }`}
-                disabled={selectedPhase === '' || hasCopied}
-                onClick={() => {
-                  handleCopySignsFromJob();
-                  setHasCopied(true);
-                }}
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copy Signs From Phase
-              </button>
-            </div>
+            <SelectJobOrBid currentPhase={currentPhase} />
           </div>
           <Button onClick={handleSignAddition} className="mt-[22px] ml-[-10px]">
             <Plus className="h-4 w-4 mr-2" />
