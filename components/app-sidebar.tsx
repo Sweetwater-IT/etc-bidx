@@ -80,11 +80,11 @@ export const data = {
         },
       ],
     },
-   /* {
-      title: "Inventory",
-      url: "",
-      icon: IconChartBar,
-    }, */
+    /* {
+       title: "Inventory",
+       url: "",
+       icon: IconChartBar,
+     }, */
     {
       title: "Quote Form",
       url: "/quotes",
@@ -95,18 +95,18 @@ export const data = {
       url: "/takeoffs/load-sheet",
       icon: IconUsers,
       // items: [
-        // {
-        //   title: "Sign Order List",
-        //   url: "/takeoffs/load-sheet",
-        // },
-        // {
-        //   title: "Build Takeoff",
-        //   url: "/takeoffs/new",
-        // },
-        // {
-        //   title: "Load Sheet",
-        //   url: "/takeoffs/load-sheet",
-        // },
+      // {
+      //   title: "Sign Order List",
+      //   url: "/takeoffs/load-sheet",
+      // },
+      // {
+      //   title: "Build Takeoff",
+      //   url: "/takeoffs/new",
+      // },
+      // {
+      //   title: "Load Sheet",
+      //   url: "/takeoffs/load-sheet",
+      // },
       // ],
     },
   ] as NavItem[],
@@ -115,67 +115,67 @@ export const data = {
       title: "Sign Shop Orders",
       url: "/takeoffs/sign-shop-orders",
     },
-   // {
-   //   title: "Daily Tracker",
-   //   url: "/daily-tracker",
-   // },
+    // {
+    //   title: "Daily Tracker",
+    //   url: "/daily-tracker",
+    // },
     // {
     //   title: "Takeoffs",
     //   url: "#",
     // },
   ] as NavItem[],
   navAdmin: [
-   /* {
-      title: "Admin Portal",
-      url: "/portal",
-      icon: IconUsers,
-      items: [
-        {
-          title: "Branches",
-          url: "/portal/branches",
-        },
-        {
-          title: "Counties",
-          url: "/portal/counties",
-        },
-        {
-          title: "Bid items",
-          url: "/portal/bid-items",
-        },
-        {
-          title: "Users",
-          url: "/portal/users",
-        },
-        {
-          title: "Flagging Rates",
-          url: "/portal/flagging-rates",
-        },
-        {
-          title: "Payback calculations",
-          url: "/portal/payback-calculations",
-        },
-      ],
-    }, */
+    /* {
+       title: "Admin Portal",
+       url: "/portal",
+       icon: IconUsers,
+       items: [
+         {
+           title: "Branches",
+           url: "/portal/branches",
+         },
+         {
+           title: "Counties",
+           url: "/portal/counties",
+         },
+         {
+           title: "Bid items",
+           url: "/portal/bid-items",
+         },
+         {
+           title: "Users",
+           url: "/portal/users",
+         },
+         {
+           title: "Flagging Rates",
+           url: "/portal/flagging-rates",
+         },
+         {
+           title: "Payback calculations",
+           url: "/portal/payback-calculations",
+         },
+       ],
+     }, */
     {
       title: "Customers",
       url: "/customers",
       icon: IconUsers,
     },
-  /*  {
-      title: "Reporting",
-      url: "/reports",
-      icon: IconUsers,
-    }, */
+    /*  {
+        title: "Reporting",
+        url: "/reports",
+        icon: IconUsers,
+      }, */
     {
       title: "Contract Manager",
       url: "/contracts",
       icon: IconUsers,
     },
- /*   {
-      title: "Billing Tracker",
-      url: "",
-      icon: IconFileWord,
-    }, */
+    /*   {
+         title: "Billing Tracker",
+         url: "",
+         icon: IconFileWord,
+       }, */
   ] as NavItem[],
   navClouds: [
     {
@@ -242,7 +242,7 @@ export const data = {
       icon: IconSearch,
     },
   ] as NavItem[],
- /* documents: [
+  documents: [
     {
       name: "Job List",
       url: "/documents/jobs",
@@ -258,7 +258,7 @@ export const data = {
       url: "",
       icon: IconFileWord,
     },
-  ] as Document[], */
+  ] as Document[],
 };
 
 export const quickActions = [
@@ -295,46 +295,46 @@ export const quickActions = [
     icon: IconClipboard,
     route: "/takeoffs/sign-order",
   },
-//  {
- //   label: "Build Takeoff",
+  //  {
+  //   label: "Build Takeoff",
   //  icon: IconBuilding,
-   // route: "/sign-orders/build-takeoff",
+  // route: "/sign-orders/build-takeoff",
   //},
   //{
-   // label: "Load Sheet",
-    //icon: IconFileText,
-    //route: "/sign-orders/load-sheet",
+  // label: "Load Sheet",
+  //icon: IconFileText,
+  //route: "/sign-orders/load-sheet",
   //},
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-      <Sidebar collapsible="offcanvas" {...props}>
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                  asChild
-                  className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
-              >
-                <Link href="/">
-                  <span className="text-base font-semibold">BidX</span>
-                  {/* <ModeToggle /> */}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <NavMain items={data.navMain} label={'Project Estimating'} />
-          <NavMain items={data.navAdmin} label={'Project Admin'} />
-          <NavMain items={data.navSignShop} label={'Sign Shop'} />
-         /* <NavDocuments items={data.documents} /> */
-          <NavSecondary items={data.navSecondary} className="mt-auto" />
-        </SidebarContent>
-        <SidebarFooter>
-          <NavUser />
-        </SidebarFooter>
-      </Sidebar>
+    <Sidebar collapsible="offcanvas" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
+            >
+              <Link href="/">
+                <span className="text-base font-semibold">BidX</span>
+                {/* <ModeToggle /> */}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={data.navMain} label={'Project Estimating'} />
+        <NavMain items={data.navAdmin} label={'Project Admin'} />
+        <NavMain items={data.navSignShop} label={'Sign Shop'} />
+        <NavDocuments items={data.documents} />
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser />
+      </SidebarFooter>
+    </Sidebar>
   );
 }
