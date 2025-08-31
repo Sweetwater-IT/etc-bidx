@@ -301,7 +301,7 @@ async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], er
     due_date: parsedDueDate || currentDate, // Default to current date
     county: countyName,
     branch: branchName || 'turbotville', // Default to turbotville if branch lookup fails
-    location: null,
+    location: '',
  /*location: cleanValue(location) || '',*/
     platform: cleanValue(platform),
     created_at: parsedEntryDate || new Date().toISOString(),
