@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog"
@@ -39,17 +39,25 @@ export default function JobNumberPicker({
     const [jobDetails, setJobDetails] = useState<JobDetails | null>(null)
     const [modalState, setModalState] = useState(false)
     const [inputError, setInputError] = useState<string>("")
+    const [existingSeqs, setExistingSeqs] = useState<number[]>([])
 
     const currentYear = new Date().getFullYear()
     const [yearStart, setYearStart] = useState(currentYear - 2)
-    const years = Array.from({ length: 6 }, (_, i) => yearStart + i)
 
     const handlePrevYears = () => setYearStart(yearStart - 6)
     const handleNextYears = () => setYearStart(yearStart + 6)
 
     const toggleModal = () => setModalState((prev) => !prev)
 
-    const numbers = Array.from({ length: 100 }, (_, i) => i + (range - 99))
+    const years = useMemo(
+        () => Array.from({ length: 6 }, (_, i) => yearStart + i),
+        [yearStart]
+    );
+
+    const numbers = useMemo(
+        () => Array.from({ length: 100 }, (_, i) => i + (range - 99)),
+        [range]
+    );
 
     const existJobNumber = async (yr: number, sequential: number) => {
         setvalidatingExistJob(true)
@@ -102,26 +110,31 @@ export default function JobNumberPicker({
         }
     }
 
-    useEffect(() => {
-        if (!customJobNumber) return
+    function useDebounce<T>(value: T, delay = 500) {
+        const [debounced, setDebounced] = useState(value);
+        useEffect(() => {
+            const handler = setTimeout(() => setDebounced(value), delay);
+            return () => clearTimeout(handler);
+        }, [value, delay]);
+        return debounced;
+    }
 
-        const val = customJobNumber.toString()
+    const debouncedJobNumber = useDebounce(customJobNumber, 500);
+
+    useEffect(() => {
+        if (!debouncedJobNumber) return;
+
+        const val = debouncedJobNumber.toString();
         if (val.length < 5) return;
 
-        const yr = parseInt(val.substring(0, 4))
-        const seq = parseInt(val.substring(4))
+        const yr = parseInt(val.substring(0, 4));
+        const seq = parseInt(val.substring(4));
+        if (isNaN(yr) || isNaN(seq)) return;
 
-        if (isNaN(yr) || isNaN(seq)) return
-
-        setYear(yr)
-        setSelectedNumber(seq)
-
-        const timer = setTimeout(() => {
-            existJobNumber(yr, seq)
-        }, 500)
-
-        return () => clearTimeout(timer)
-    }, [customJobNumber])
+        setYear(yr);
+        setSelectedNumber(seq);
+        existJobNumber(yr, seq);
+    }, [debouncedJobNumber]);
 
     const handleSelectNumber = (num: number) => {
         if (!year) return
@@ -138,6 +151,27 @@ export default function JobNumberPicker({
     const handleNextRange = () => {
         if (range < 1000) setRange(range + 100)
     }
+
+    const fetchExistingSeqs = async (yr: number, start: number, end: number) => {
+        try {
+            const res = await fetch(`/api/jobs/jobs_numbers?year=${yr}&start=${start}&end=${end}`)
+            const data = await res.json()
+            console.log('la data es');
+
+            if (data.ok) {
+                setExistingSeqs(data.data.map((d: any) => d.sequential_number))
+            }
+        } catch (err) {
+            console.error("Error fetching seqs:", err)
+        }
+    }
+
+    useEffect(() => {
+        if (!year) return
+        const start = range - 99
+        const end = range
+        fetchExistingSeqs(year, start, end)
+    }, [year, range])
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-4">
@@ -233,7 +267,7 @@ export default function JobNumberPicker({
                                         variant={selectedNumber === num ? "default" : "outline"}
                                         onClick={() => handleSelectNumber(num)}
                                         disabled={!year}
-                                        className="h-8 px-1 text-xs w-full"
+                                        className={`h-8 px-1 text-xs w-full ${existingSeqs.includes(num) ? "text-red-300" : ""}`}
                                     >
                                         {num}
                                     </Button>
