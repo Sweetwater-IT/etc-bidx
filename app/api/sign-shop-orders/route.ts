@@ -61,7 +61,7 @@ if (counts) {
       return acc;
     }, {});
 
-    // Initialize counters (claves iguales a la DB)
+    
     const result = {
       all: 0,
       archived: 0,
@@ -78,7 +78,7 @@ if (counts) {
       const isArchived = order.archived;
       const branchId = userBranchMap[order.requestor];
 
-      // totales
+      // the total count
       if (!isArchived) result.all += 1;
       if (isArchived) result.archived += 1;
 
