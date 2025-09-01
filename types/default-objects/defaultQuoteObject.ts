@@ -10,7 +10,7 @@ export const defaultAdminObject: AdminData = {
   lettingDate: null,
   owner: null,
   county: {
-    country: "", 
+    country: "",
     id: 0,
     name: "",
     district: 0,
@@ -97,6 +97,8 @@ export interface DefaultQuote {
   includedTerms: Record<TermsNames, boolean>;
   quoteDate: Date;
   createdBy: string;
+  estimate_id?: number | null;
+  job_id?: number | null;      
 }
 
 export const defaultQuote: DefaultQuote = {

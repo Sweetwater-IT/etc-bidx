@@ -1,11 +1,9 @@
-"use client";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
-import QuoteFormProvider from "../../create/QuoteFormProvider";
-import QuoteViewContent from "./QuoteViewContent";
-import QuoteEditLoader from "../../edit/[id]/QuoteEditLoader";
 
-export default function QuoteViewPage({ params }: { params: { id: string } }) {  
-  return <QuoteViewContent quoteId={params.id} />;
+import QuoteViewContent from "./QuoteViewContent";
+
+export default async function QuoteViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;     
+  const numericId = parseInt(id, 10);
+
+  return <QuoteViewContent quoteId={numericId} />;
 }

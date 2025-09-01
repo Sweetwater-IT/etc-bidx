@@ -3,7 +3,9 @@ import { County } from "./TCounty";
 export type Branches = 'Bedford' | 'Hatfield' | 'Turbotville'
 
 export type AdminData = {
+    id?: number;
     contractNumber: string,
+    contract_number: string,
     estimator: string,
     division: 'PUBLIC' | 'PRIVATE' | null,
     lettingDate: Date | null,
@@ -11,8 +13,11 @@ export type AdminData = {
     county: County,
     srRoute: string,
     location: string,
-    
+    jobNumber?: string;      
+    branch?: string;         
+    paymentTerms?: string;  
     dbe: string,
+    job_id?: number | null;
     startDate: Date | null,
     endDate: Date | null,
     winterStart?: Date | undefined,

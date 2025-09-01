@@ -45,6 +45,12 @@ interface QuoteFormState {
   pointOfContact?: PointOfContact;
   setPointOfContact: Dispatch<SetStateAction<PointOfContact | undefined>>;
 
+  estimateId: number | null
+  setEstimateId: Dispatch<SetStateAction<number | null>>
+
+  jobId: number | null;
+  setJobId: Dispatch<SetStateAction<number | null>>;
+
   ccEmails: string[];
   setCcEmails: Dispatch<SetStateAction<string[]>>;
 
@@ -114,7 +120,6 @@ interface QuoteFormState {
   uniqueToken: string;
   setUniqueToken: Dispatch<SetStateAction<string>>;
 
-  // 👇 separación entre ID numérico y código quote_number
   quoteId: number | null;
   setQuoteId: Dispatch<SetStateAction<number | null>>;
 
@@ -144,7 +149,6 @@ export default function QuoteFormProvider({
   children,
   initialData,
 }: QuoteFormProviderProps) {
-  // merge defaults + overrides
   const mergedData: DefaultQuote = {
     ...defaultQuote,
     ...initialData,
@@ -156,6 +160,7 @@ export default function QuoteFormProvider({
   const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>(
     mergedData.customers
   );
+
   const [pointOfContact, setPointOfContact] = useState<
     PointOfContact | undefined
   >(undefined);
@@ -177,13 +182,21 @@ export default function QuoteFormProvider({
     string | undefined
   >(undefined);
 
+
+  const [estimateId, setEstimateId] = useState<number | null>(
+    typeof mergedData.estimate_id === "number" ? mergedData.estimate_id : null
+  );
+  
+ const [jobId, setJobId] = useState<number | null>(
+  typeof mergedData.job_id === "number" ? mergedData.job_id : null
+);
+
   const [ecmsPoNumber, setEcmsPoNumber] = useState(mergedData.ecmsPoNumber);
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(mergedData.items);
 
-  // ✅ única fuente de verdad para county ahora está dentro de adminData
   const [adminData, setAdminData] = useState<AdminData | undefined>(
     mergedData.adminData
   );
@@ -204,7 +217,6 @@ export default function QuoteFormProvider({
 
 
 
-  // 👇 aquí separamos id numérico y código
   const [quoteId, setQuoteId] = useState<number | null>(
     typeof mergedData.id === "number" ? mergedData.id : null
   );
@@ -215,10 +227,7 @@ export default function QuoteFormProvider({
   );
 
 
-  useEffect(() => {
-    console.log("🆔 [QuoteFormProvider] quoteId actualizado:", quoteId);
-  }, [quoteId]);
-
+ 
 
 
   const [notes, setNotes] = useState<string[]>(mergedData.notes);
@@ -236,7 +245,10 @@ export default function QuoteFormProvider({
     role: "President",
   });
 
-  // 👉 cuando seleccionás cliente, ajusta automáticamente payment terms
+  useEffect(() => {
+  console.log("🔍 [Provider] adminData cambió:", adminData)
+}, [adminData])
+
   useEffect(() => {
     if (selectedCustomers.length > 0) {
       setPaymentTerms(
@@ -245,25 +257,9 @@ export default function QuoteFormProvider({
     }
   }, [selectedCustomers]);
 
-  // 👇 LOG también al inicio para ver qué entra desde initialData
-  useEffect(() => {
-    console.log("🚀 [QuoteFormProvider] Inicializado con:", {
-      initialId: mergedData.id,
-      initialQuoteNumber: mergedData.quote_number,
-      resolvedQuoteId: quoteId,
-    });
-  }, []);
 
 
-  useEffect(() => {
-  console.log("🆔 [QuoteFormProvider] quoteId updated:", quoteId, typeof quoteId);
-}, [quoteId]);
 
-useEffect(() => {
-  console.log("🔢 [QuoteFormProvider] quoteNumber updated:", quoteNumber, typeof quoteNumber);
-}, [quoteNumber]);
-
-  // 👉 reset emails al cambiar clientes
   useEffect(() => {
     setPointOfContact(undefined);
     setCcEmails([]);
@@ -271,12 +267,16 @@ useEffect(() => {
   }, [selectedCustomers]);
 
   const value: QuoteFormState = {
+
     selectedCustomers,
     setSelectedCustomers,
     pointOfContact,
     setPointOfContact,
     ccEmails,
-
+    estimateId,
+    setEstimateId,
+    jobId,
+    setJobId,
     setCcEmails,
     bccEmails,
     setBccEmails,

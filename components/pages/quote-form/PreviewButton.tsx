@@ -33,9 +33,25 @@ export const QuotePreviewButton = () => {
     pointOfContact,
   } = useQuoteForm();
 
-  // ✅ Memoizar el PDF para evitar render constante
-  const pdfDocument = useMemo(
-    () => (
+
+  const pdfDocument = useMemo(() => {
+    console.log("📄 Datos que se envían al PDF:", {
+      adminData: adminData ?? defaultAdminObject,
+      items: quoteItems,
+      customers: selectedCustomers,
+      quoteDate: quoteDate ? new Date(quoteDate) : new Date(),
+      quoteNumber: quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A",
+      sender,
+      pointOfContact: pointOfContact ?? { name: "", email: "" },
+      paymentTerms,
+      includedTerms: includeTerms,
+      customTaC: includeTerms["custom-terms"] ? customTerms : "",
+      county: typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? "",
+      sr: stateRoute,
+      ecms: ecmsPoNumber,
+    });
+
+    return (
       <BidProposalReactPDF
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
@@ -48,26 +64,24 @@ export const QuotePreviewButton = () => {
         includedTerms={includeTerms}
         customTaC={includeTerms["custom-terms"] ? customTerms : ""}
         county={typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? ""}
-
         sr={stateRoute}
         ecms={ecmsPoNumber}
       />
-    ),
-    [
-      adminData,
-      quoteItems,
-      selectedCustomers,
-      quoteDate,
-      quoteId,
-      pointOfContact,
-      sender,
-      paymentTerms,
-      includeTerms,
-      customTerms,
-      stateRoute,
-      ecmsPoNumber,
-    ]
-  );
+    );
+  }, [
+    adminData,
+    quoteItems,
+    selectedCustomers,
+    quoteDate,
+    quoteId,
+    pointOfContact,
+    sender,
+    paymentTerms,
+    includeTerms,
+    customTerms,
+    stateRoute,
+    ecmsPoNumber,
+  ]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

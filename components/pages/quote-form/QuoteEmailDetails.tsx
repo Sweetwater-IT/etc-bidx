@@ -44,10 +44,10 @@ export function QuoteEmailDetails() {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [saving, setSaving] = useState(false); // 👈 nuevo estado
+  const [saving, setSaving] = useState(false); 
 
 
-  // Create contact options from all selected customers
+
   const getContactOptions = () => {
     const options: {
       value: string;
@@ -56,14 +56,14 @@ export function QuoteEmailDetails() {
       name: string;
     }[] = [];
 
-    selectedCustomers.forEach((customer) => {
-      customer.emails.forEach((email, index) => {
+    (selectedCustomers || []).forEach((customer) => {
+      (customer.emails || []).forEach((email, index) => {
         if (email) {
           options.push({
             value: email,
-            label: `${customer.names?.[index] || "Unknown"} (${email}) - ${customer.name
+            label: `${customer.names?.[index] || "Unknown"} (${email}) - ${customer.name || "Unknown Customer"
               }`,
-            customer: customer.name,
+            customer: customer.name || "Unknown Customer",
             name: customer.names?.[index] || "Unknown",
           });
         }
@@ -73,11 +73,16 @@ export function QuoteEmailDetails() {
     return options;
   };
 
+
   const contactOptions = getContactOptions();
 
   const handleToChange = (value: string) => {
-    // 👉 Si el usuario selecciona "Add New Contact"
+    
     if (value === "__add_new__") {
+      if (selectedCustomers.length === 0) {
+        toast.error("Select a customer before adding a contact");
+        return;
+      }
       setOpen(true);
       return;
     }
@@ -85,6 +90,7 @@ export function QuoteEmailDetails() {
     const selectedContact = contactOptions.find(
       (option) => option.value === value
     );
+
     if (selectedContact) {
       setPointOfContact({
         email: selectedContact.value,
@@ -93,45 +99,49 @@ export function QuoteEmailDetails() {
     }
   };
 
- const handleSaveContact = async () => {
-  if (!newEmail || selectedCustomers.length === 0) return;
 
-  setSaving(true);
-  try {
-    const contractorId = selectedCustomers[0].id; // 👈 asegúrate de que Customer tenga `id`
-    const res = await fetch("/api/customer-contacts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contractor_id: contractorId,
-        name: newName,
-        email: newEmail,
-        quoteId: quoteId, // 👈 lo mandamos también
-      }),
-    });
 
-    if (!res.ok) throw new Error("Failed to save contact");
-    const newContact = await res.json();
 
-    // ✅ actualizar estado local de customers
-    const updatedCustomer = { ...selectedCustomers[0] };
-    updatedCustomer.emails = [...(updatedCustomer.emails || []), newContact.email];
-    updatedCustomer.names = [...(updatedCustomer.names || []), newContact.name];
+  const handleSaveContact = async () => {
+    if (!newEmail || selectedCustomers.length === 0) return;
 
-    setSelectedCustomers([updatedCustomer]);
-    setPointOfContact({ name: newContact.name, email: newContact.email });
+    setSaving(true);
+    try {
+      const contractorId = selectedCustomers[0].id;
 
-    toast.success(`Contact ${newContact.name} added!`);
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to add new contact");
-  } finally {
-    setSaving(false);
-    setNewName("");
-    setNewEmail("");
-    setOpen(false);
-  }
-};
+      const res = await fetch("/api/customer-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractor_id: contractorId,
+          name: newName,
+          email: newEmail,
+          quoteId: quoteId,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save contact");
+      const newContact = await res.json();
+
+      const updatedCustomer = { ...selectedCustomers[0] };
+      updatedCustomer.emails = [...(updatedCustomer.emails || []), newContact.email];
+      updatedCustomer.names = [...(updatedCustomer.names || []), newContact.name];
+
+      setSelectedCustomers([updatedCustomer]);
+      setPointOfContact({ name: newContact.name, email: newContact.email });
+
+      toast.success(`Contact ${newContact.name} added!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to add new contact");
+    } finally {
+      setSaving(false);
+      setNewName("");
+      setNewEmail("");
+      setOpen(false);
+    }
+  };
+
 
 
 
@@ -160,7 +170,7 @@ export function QuoteEmailDetails() {
                   {option.label}
                 </SelectItem>
               ))}
-              {/* 👉 Opción extra al final */}
+
               <SelectItem value="__add_new__">➕ Add New Contact</SelectItem>
             </SelectContent>
           </Select>
@@ -217,7 +227,7 @@ export function QuoteEmailDetails() {
         </div>
       </div>
 
-      {/* Modal para añadir contacto */}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>

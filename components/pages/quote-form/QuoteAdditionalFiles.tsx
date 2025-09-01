@@ -14,25 +14,25 @@ export function QuoteAdditionalFiles() {
   };
 
   const fileUploadProps = useFileUpload({
-    maxFileSize: 50 * 1024 * 1024, // 50MB
-    maxFiles: 10, // Allow multiple files to be uploaded
-    uniqueIdentifier: quoteId,
+    maxFileSize: 50 * 1024 * 1024, 
+    maxFiles: 10, 
+    uniqueIdentifier: quoteId ?? undefined,
     apiEndpoint: '/api/files/quotes',
     accept: {
-        'application/pdf': ['.pdf'],
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-        'image/jpeg': ['.jpg', '.jpeg'],
-        'image/png': ['.png'],
-        'image/gif': ['.gif'],
-        'application/zip': ['.zip'],
-        'text/plain': ['.txt'],
-        'text/csv': ['.csv']
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'application/zip': ['.zip'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv']
     }
-});
+  });
 
-// Destructure needed properties
-const { files, successes, isSuccess } = fileUploadProps;
+
+  const { files, successes, isSuccess } = fileUploadProps;
 
   return (
     <div className="rounded-lg border p-6">

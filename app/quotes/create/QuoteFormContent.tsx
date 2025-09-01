@@ -20,11 +20,15 @@ import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSavin
 import isEqual from 'lodash/isEqual'
 import { useRouter } from 'next/navigation'
 import { AdminData } from '@/types/TAdminData'
+import ReactPDF from '@react-pdf/renderer'
+import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
 // Mapper para enviar al backend en snake_case
-function mapAdminDataToApi(adminData: AdminData, quoteId: number) {
+function mapAdminDataToApi(adminData: AdminData, quoteId: number, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
-    quote_id: Number(quoteId),
+
+    bid_estimate_id: estimateId ?? null,
+    job_id: jobId ?? null,
     contract_number: adminData.contractNumber,
     estimator: adminData.estimator,
     division: adminData.division,
@@ -56,20 +60,27 @@ const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
   useEffect(() => {
     if (rawId != null && typeof rawId !== 'number') {
-      console.warn('[QuoteFormContent] Non-numeric quoteId detected:', rawId)
     }
   }, [rawId])
   return id
 }
 
-export default function QuoteFormContent() {
+export default function QuoteFormContent({ showInitialAdminState = false }: { showInitialAdminState?: boolean }) {
   const router = useRouter()
   const {
     selectedCustomers,
     sending,
     setSending,
     quoteId,
+    jobId,
+    includeTerms,
+    customTerms,
+    setSelectedCustomers,
+    setPointOfContact,
+    setJobId,
     setQuoteId,
+    estimateId,
+    setEstimateId,
     quoteNumber,
     setQuoteNumber,
     quoteItems,
@@ -97,30 +108,33 @@ export default function QuoteFormContent() {
 
   useEffect(() => {
     async function initDraft() {
-      if (initCalled.current) return; // 👈 evita la segunda ejecución
+      if (initCalled.current) return;
       initCalled.current = true;
 
       if (!quoteId) {
         try {
-          const res = await fetch('/api/quotes', { method: 'POST' })
-          if (!res.ok) throw new Error('Failed to create draft')
-          const data = await res.json()
-          setQuoteId(data.data.id)
-          setQuoteNumber(data.data.quote_number || '')
+          const res = await fetch("/api/quotes", { method: "POST" });
+          if (!res.ok) throw new Error("Failed to create draft");
+          const data = await res.json();
+          setQuoteId(data.data.id);
+          setQuoteNumber(data.data.quote_number || "");
 
-          console.log("🚀 Draft initialized with ID:", data.data.id, "and Number:", data.data.quote_number)
+          console.log("🚀 Draft initialized with:", data.data.id, data.data.quote_number);
         } catch (err) {
-          console.error('Error creating draft', err)
-          toast.error('Could not start a new draft')
+          console.error("Error creating draft", err);
+          toast.error("Could not start a new draft");
         }
       }
     }
-    initDraft()
-  }, [])
+    initDraft();
+
+  }, []);
 
 
 
-  // Notes
+
+
+
   useEffect(() => {
     async function fetchNotes() {
       setLoadingNotes(true)
@@ -150,7 +164,7 @@ export default function QuoteFormContent() {
     }
   }
 
-  // Autosave effect
+
   useEffect(() => {
     if (!numericQuoteId) return
 
@@ -174,56 +188,114 @@ export default function QuoteFormContent() {
     return () => clearInterval(intervalId)
   }, [])
 
-const autosave = async () => {
-  if (!numericQuoteId) {
-    console.log('⏭️ Skipping autosave because no numeric quoteId yet', { quoteId })
-    return false
+
+
+  const handleDownload = async () => {
+    try {
+      if (!quoteId) {
+        toast.error("No quote available to download")
+        return
+      }
+
+      // Generar el PDF como blob
+      const pdfBlob = await ReactPDF.pdf(
+        <BidProposalReactPDF
+          adminData={adminData ?? defaultAdminObject}
+          items={quoteItems}
+          customers={selectedCustomers}
+          quoteDate={new Date()}
+          quoteNumber={quoteId?.toString() ?? ""}
+          pointOfContact={pointOfContact ?? { name: "", email: "" }}
+          sender={sender}
+          paymentTerms={paymentTerms as PaymentTerms}
+          includedTerms={includeTerms}
+          customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+          county={adminData?.county?.country || ''}
+          sr={adminData?.srRoute || ''}
+          ecms={adminData?.contractNumber || ''}
+        />
+      ).toBlob()
+
+      // Forzar la descarga en el navegador
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Quote-${quoteId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+
+      toast.success("PDF downloaded successfully!")
+    } catch (err) {
+      console.error("Error downloading PDF:", err)
+      toast.error("Could not download PDF")
+    }
   }
 
-  prevStateRef.current = { quoteItems, adminData }
 
-  console.log("📝 [AUTOSAVE] quoteId:", numericQuoteId)
-  console.log("📝 [AUTOSAVE] adminData AFTER mapping:", mapAdminDataToApi(adminData ?? defaultAdminObject, numericQuoteId))
 
-  try {
-    const payload = {
-      id: numericQuoteId,
-      items: quoteItems,
-      admin_data: mapAdminDataToApi(adminData ?? defaultAdminObject, numericQuoteId),
-      status: 'DRAFT',
-      notes: notesState,
-      subject,
-      body: emailBody,
-      from_email: sender?.email || null,
-      recipients: [
-        ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
-        ...ccEmails.map((email) => ({ email, cc: true })),
-        ...bccEmails.map((email) => ({ email, bcc: true })),
-      ],
+  const autosave = async () => {
+    if (!numericQuoteId) {
+
+      return false
     }
 
-    console.log("📝 [AUTOSAVE] Payload to send:", payload)
+    prevStateRef.current = { quoteItems, adminData }
 
-    const res = await fetch(`/api/quotes`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
 
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(errText || 'Failed to save draft')
+
+    try {
+      const payload = {
+        id: numericQuoteId,
+        estimate_id: estimateId,
+        job_id: jobId,
+        items: quoteItems,
+        admin_data: mapAdminDataToApi(
+          adminData ?? defaultAdminObject,
+          numericQuoteId,
+          estimateId,
+          jobId
+        ),
+        status: 'DRAFT',
+        notes: notesState,
+        subject,
+        body: emailBody,
+        from_email: sender?.email || null,
+        recipients: [
+          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+          ...ccEmails.map((email) => ({ email, cc: true })),
+          ...bccEmails.map((email) => ({ email, bcc: true })),
+        ],
+        customers: selectedCustomers.map(c => ({ id: c.id })),
+        include_terms: includeTerms,
+        custom_terms: customTerms,
+      }
+
+
+
+      const res = await fetch(`/api/quotes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText || 'Failed to save draft')
+      }
+
+      setSecondCounter(1)
+      if (!firstSave) setFirstSave(true)
+      return true
+    } catch (error) {
+
+      toast.error('Quote not successfully saved as draft: ' + error)
+      return false
     }
-
-    setSecondCounter(1)
-    if (!firstSave) setFirstSave(true)
-    return true
-  } catch (error) {
-    console.error("💥 [AUTOSAVE] Exception:", error)
-    toast.error('Quote not successfully saved as draft: ' + error)
-    return false
   }
-}
+
+
 
 
 
@@ -269,7 +341,9 @@ const autosave = async () => {
             </div>
             <div className="flex items-center gap-2">
               <QuotePreviewButton />
-              <Button variant="outline">Download</Button>
+              <Button variant="outline" onClick={handleDownload}>
+                Download
+              </Button>
               <Button disabled={sending || !pointOfContact}>
                 {sending ? 'Sending...' : 'Send Quote'}
               </Button>
@@ -280,7 +354,7 @@ const autosave = async () => {
 
       <div className="flex gap-6 p-6 max-w-full">
         <div className="w-3/4 space-y-6">
-          <QuoteAdminInformation />
+          <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
           <QuoteItems />
           <QuoteEmailDetails />
         </div>

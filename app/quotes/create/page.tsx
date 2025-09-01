@@ -1,6 +1,5 @@
 // app/quotes/create/page.tsx
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
 import QuoteFormProvider from "./QuoteFormProvider";
 import QuoteFormContent from "./QuoteFormContent";
 
