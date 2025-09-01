@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AdminData } from "@/types/TAdminData";
 import { AdminDataEntry } from "@/types/TAdminDataEntry";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
+import { QuoteItem } from "@/types/IQuoteItem";
 
 
 // --- Helper Functions to map DB data to Frontend types ---
@@ -34,6 +35,22 @@ function mapAdminDataEntryToAdminData(entry: AdminDataEntry | null): AdminData {
     rated: entry.rated || "RATED",
     emergencyFields: entry.emergency_fields || {},
     job_id: entry.job_id,
+  };
+}
+
+function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
+  if (!item) return {} as QuoteItem;
+  return {
+    id: String(item.id),
+    itemNumber: item.item_number || "",
+    description: item.description || "",
+    uom: item.uom || "",
+    notes: item.notes || "",
+    quantity: item.quantity || 0,
+    unitPrice: item.unit_price || 0,
+    discount: item.discount || 0,
+    discountType: item.discount_type || "dollar",
+    associatedItems: [], // Not queried, so default to empty
   };
 }
 
@@ -152,9 +169,7 @@ export async function GET(
 
   const { data: items, error: itemsErr } = await supabase
     .from("quote_items")
-    .select(
-      "id, description, quantity, unit_price, notes, uom, discount, discount_type"
-    )
+    .select("*") // Seleccionamos todo para el mapeo
     .eq("quote_id", quoteId);
 
  
@@ -196,7 +211,7 @@ export async function GET(
     ccEmails,
     bccEmails,
     recipients: recipients || [],
-    items: items || [],
+    items: items?.map(mapDbQuoteItemToQuoteItem) || [],
     admin_data: mapAdminDataEntryToAdminData(adminDataEntry),
     notes: quote.notes ? JSON.parse(quote.notes) : [],
     customers: customers?.map((c) => c.contractors) || [],
