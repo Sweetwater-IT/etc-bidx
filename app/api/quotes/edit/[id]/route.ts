@@ -1,6 +1,41 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
-import { AdminData } from "@/types/TAdminData"; // 👈 agregado
+import { AdminData } from "@/types/TAdminData";
+import { AdminDataEntry } from "@/types/TAdminDataEntry";
+import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
+
+
+// --- Helper Functions to map DB data to Frontend types ---
+function mapAdminDataEntryToAdminData(entry: AdminDataEntry | null): AdminData {
+  if (!entry) return defaultAdminObject;
+  return {
+    id: entry.id,
+    contractNumber: entry.contract_number || "",
+    contract_number: entry.contract_number || "",
+    estimator: entry.estimator || "",
+    division: entry.division || null,
+    lettingDate: entry.bid_date ? new Date(entry.bid_date) : null,
+    owner: entry.owner || null,
+    county: entry.county || defaultAdminObject.county,
+    srRoute: entry.sr_route || "",
+    location: entry.location || "",
+    dbe: entry.dbe || "",
+    startDate: entry.start_date ? new Date(entry.start_date) : null,
+    endDate: entry.end_date ? new Date(entry.end_date) : null,
+    winterStart: entry.winter_start
+      ? new Date(entry.winter_start)
+      : undefined,
+    winterEnd: entry.winter_end ? new Date(entry.winter_end) : undefined,
+    owTravelTimeMins: entry.ow_travel_time_mins || undefined,
+    owTravelTimeMinutes: entry.ow_travel_time_mins || undefined,
+    owMileage: entry.ow_mileage || undefined,
+    fuelCostPerGallon: entry.fuel_cost_per_gallon || undefined,
+    emergencyJob: entry.emergency_job || false,
+    rated: entry.rated || "RATED",
+    emergencyFields: entry.emergency_fields || {},
+    job_id: entry.job_id,
+  };
+}
 
 export async function GET(
   req: NextRequest,
@@ -64,9 +99,7 @@ export async function GET(
     `)
     .eq("quote_id", quoteId);
 
-  if (recErr) {
-    // podrías loguear o manejar error si quieres
-  }
+
 
   const contactRecipient = recipients?.find((r) => r.point_of_contact) || null;
   const contact = contactRecipient
@@ -95,24 +128,24 @@ export async function GET(
   const bccEmails = recipients?.filter((r) => r.bcc).map((r) => r.email) || [];
 
   
-  let adminData: AdminData | null = null;
+  let adminDataEntry: AdminDataEntry | null = null;
 
   if (quote.estimate_id) {
     const { data, error: adminErr } = await supabase
       .from("admin_data_entries")
       .select("*")
       .eq("bid_estimate_id", quote.estimate_id)
-      .maybeSingle<AdminData>(); 
+      .maybeSingle<AdminDataEntry>(); 
 
-    if (!adminErr) adminData = data;
+    if (!adminErr) adminDataEntry = data;
   } else if (quote.job_id) {
     const { data, error: adminErr } = await supabase
       .from("admin_data_entries")
       .select("*")
       .eq("job_id", quote.job_id)
-      .maybeSingle<AdminData>(); 
+      .maybeSingle<AdminDataEntry>(); 
 
-    if (!adminErr) adminData = data;
+    if (!adminErr) adminDataEntry = data;
   }
 
 
@@ -164,11 +197,11 @@ export async function GET(
     bccEmails,
     recipients: recipients || [],
     items: items || [],
-    admin_data: adminData,
+    admin_data: mapAdminDataEntryToAdminData(adminDataEntry),
     notes: quote.notes ? JSON.parse(quote.notes) : [],
     customers: customers?.map((c) => c.contractors) || [],
-    contract_number: adminData?.contract_number || null,
-    job_number: adminData?.jobNumber || null,
+    contract_number: adminDataEntry?.contract_number || null,
+    job_number: adminDataEntry?.job_id ? String(adminDataEntry.job_id) : null,
   };
 
 
