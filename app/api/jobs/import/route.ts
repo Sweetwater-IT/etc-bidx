@@ -214,7 +214,7 @@ async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], er
   
   const lettingDate = findFieldValue(job, ['Let Date', 'Letting Date', 'Letting']);
   const entryDate = findFieldValue(job, ['Entry Date', 'Date Added', 'Created Date']);
-  const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);
+ /*const location = findFieldValue(job, ['Location', 'Project Location', 'Address']);*/
   const owner = 'PENNDOT';
   const platform = 'ECMS';
   const requestor = findFieldValue(job, ['Requestor', 'Estimator', 'Contact']);
@@ -301,7 +301,8 @@ async function processAvailableJob(job: any, validJobs: AvailableJobInsert[], er
     due_date: parsedDueDate || currentDate, // Default to current date
     county: countyName,
     branch: branchName || 'turbotville', // Default to turbotville if branch lookup fails
-    location: cleanValue(location) || '',
+    location: '',
+ /*location: cleanValue(location) || '',*/
     platform: cleanValue(platform),
     created_at: parsedEntryDate || new Date().toISOString(),
     entry_date: parsedEntryDate || new Date().toISOString(),
