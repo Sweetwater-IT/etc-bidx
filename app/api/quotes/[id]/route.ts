@@ -1,7 +1,6 @@
-
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
-import { AdminDataEntry } from "@/types/TAdminDataEntry";
+import { AdminDataEntry } from "@/types/TAdminDataEntry"; // 👈 ya lo tenés
 
 export async function GET(
   req: NextRequest,
@@ -74,7 +73,6 @@ export async function GET(
       }
     : null;
 
-  
   const { data: recipients, error: recErr } = await supabase
     .from("quote_recipients")
     .select(`
@@ -94,46 +92,45 @@ export async function GET(
 
   if (recErr) {
     console.warn("⚠️ Error fetching recipients:", recErr);
-  } else {
-    
   }
 
   const contactRecipient = recipients?.find((r) => r.point_of_contact) || null;
 
-  const contact = contactRecipient
-    ? {
-        name: contactRecipient.customer_contacts?.name ?? null,
-        email:
-          contactRecipient.email ||
-          contactRecipient.customer_contacts?.email ||
-          null,
-        phone: contactRecipient.customer_contacts?.phone ?? null,
-      }
-    : null;
+const contact = contactRecipient
+  ? {
+      name: contactRecipient.customer_contacts?.[0]?.name ?? null,
+      email:
+        contactRecipient.email ||
+        contactRecipient.customer_contacts?.[0]?.email ||
+        null,
+      phone: contactRecipient.customer_contacts?.[0]?.phone ?? null,
+    }
+  : null;
 
   const ccEmails = recipients?.filter((r) => r.cc).map((r) => r.email) || [];
   const bccEmails = recipients?.filter((r) => r.bcc).map((r) => r.email) || [];
 
-  let adminData = null;
+  // 👇 cambio: adminData tipado
+  let adminData: AdminDataEntry | null = null;
+
   if (quote.estimate_id) {
     const { data } = await supabase
       .from("admin_data_entries")
       .select("*")
       .eq("bid_estimate_id", quote.estimate_id)
-      .maybeSingle();
+      .maybeSingle<AdminDataEntry>(); // 👈 tipado aquí
     adminData = data;
   } else if (quote.job_id) {
     const { data } = await supabase
       .from("admin_data_entries")
       .select("*")
       .eq("job_id", quote.job_id)
-      .maybeSingle();
+      .maybeSingle<AdminDataEntry>(); // 👈 tipado aquí
     adminData = data;
   }
 
   const files: any[] = [];
   const notes = quote.notes ? JSON.parse(quote.notes) : [];
-
 
   const response = {
     id: quote.id,

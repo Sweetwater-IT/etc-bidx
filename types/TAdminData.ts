@@ -13,7 +13,8 @@ export type AdminData = {
     county: County,
     srRoute: string,
     location: string,
-    jobNumber?: string;      
+    jobNumber?: string;
+        
     branch?: string;         
     paymentTerms?: string;  
     dbe: string,

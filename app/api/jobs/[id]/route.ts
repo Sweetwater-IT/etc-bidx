@@ -6,11 +6,11 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ En Next.js 15 hay que esperar params
+   
     const { id } = await context.params;
 
     const { data, error } = await supabase
-      .from("bid_estimates") // 👈 usar la tabla correcta
+      .from("bid_estimates")
       .select(`
         id,
         contract_number,
@@ -41,10 +41,10 @@ export async function GET(
         )
       `)
       .eq("id", id)
-      .maybeSingle(); // 👈 devuelve null si no hay relación
+      .maybeSingle(); 
 
     if (error) {
-      console.error("❌ Supabase error:", error);
+      console.error(" Supabase error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -53,7 +53,7 @@ export async function GET(
       admin_data: data?.admin_data_entries || null,
     });
   } catch (err: any) {
-    console.error("❌ Unexpected error:", err?.message || err);
+    console.error(" Unexpected error:", err?.message || err);
     return NextResponse.json(
       { error: "Failed to fetch estimate" },
       { status: 500 }

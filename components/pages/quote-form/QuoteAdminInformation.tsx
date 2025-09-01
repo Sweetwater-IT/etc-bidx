@@ -1,5 +1,6 @@
 "use client";
 
+import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { useCustomers } from "@/hooks/use-customers";
 import { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { AdminInformationSheet } from "./AdminInformationSheet";
 import { ContractJobSelector } from "./ContractJobSelector";
+import { QuoteItem } from "@/types/IQuoteItem";
 
 interface Estimate {
   contract_number: string;
@@ -18,6 +20,20 @@ interface Job {
 }
 
 export type PaymentTerms = "COD" | "CC" | "NET15" | "NET30" | "DUR";
+
+const createEmptyQuoteItem = (): QuoteItem => ({
+  id: generateUniqueId(),
+  itemNumber: "",
+  description: "",
+  uom: "",
+  quantity: 0,
+  unitPrice: 0,
+  discount: 0,
+  discountType: "dollar",
+  notes: "",
+  associatedItems: [],
+  isCustom: false,
+});
 
 export function QuoteAdminInformation({
   showInitialAdminState = false,
@@ -148,8 +164,12 @@ export function QuoteAdminInformation({
         const resItems = await fetch(`/api/estimates/${jobOrEstimate.id}/items`);
         if (resItems.ok) {
           const itemsData = await resItems.json();
-          setQuoteItems(itemsData);
-          console.log("🚀 Fetched items for estimate:", itemsData);
+          if (Array.isArray(itemsData) && itemsData.length > 0) {
+            setQuoteItems(itemsData);
+          } else {
+            setQuoteItems([createEmptyQuoteItem()]);
+          }
+          console.log("🚀 Fetched items for estimate:", itemsData.length > 0 ? itemsData : "none, created new item.");
         }
       } else {
         
@@ -178,11 +198,15 @@ export function QuoteAdminInformation({
         }
 
         
-        const resItems = await fetch(`/api/estimates/${jobOrEstimate.id}/items`);
+        const resItems = await fetch(`/api/jobs/${jobOrEstimate.id}/items`);
         if (resItems.ok) {
           const items = await resItems.json();
-          setQuoteItems(items);
-          console.log("🚀 Fetched items for job:", items);
+          if (Array.isArray(items) && items.length > 0) {
+            setQuoteItems(items);
+          } else {
+            setQuoteItems([createEmptyQuoteItem()]);
+          }
+          console.log("🚀 Fetched items for job:", items.length > 0 ? items : "none, created new item.");
         }
       }
     } catch (err) {

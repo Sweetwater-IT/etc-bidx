@@ -57,42 +57,38 @@ export const BidProposalReactPDF = ({
     mainPhone: ""
   };
 
-  // Calcular total general
-  const calculateTotal = () => {
-    if (!items?.length) return 0;
-
-    return items.reduce((acc, item) => {
-      const discount = item.discount || 0;
-      const discountMultiplier = (100 - discount) / 100;
-
-      const quantity = item.quantity || 0;
-      const unitPrice = item.unitPrice || 0;
-      const parentItemValue = quantity * unitPrice;
-
-      const compositeTotal = item.associatedItems?.length
-        ? item.associatedItems.reduce((subSum, c) =>
-          subSum + ((c.quantity || 0) * (c.unitPrice || 0)), 0)
-        : 0;
-
-      return acc + ((parentItemValue + compositeTotal) * discountMultiplier);
-    }, 0);
-  };
-
   // Calcular precio extendido por item
   const calculateExtendedPrice = (item: QuoteItem) => {
-    const discount = item.discount || 0;
-    const discountMultiplier = (100 - discount) / 100;
-
     const quantity = item.quantity || 0;
     const unitPrice = item.unitPrice || 0;
-    const parentItemValue = quantity * unitPrice;
 
-    const compositeTotal = item.associatedItems?.length
+    // Suma el precio de los ítems asociados para obtener el costo de una unidad compuesta
+    const compositeTotalPerUnit = item.associatedItems?.length
       ? item.associatedItems.reduce((subSum, c) =>
         subSum + ((c.quantity || 0) * (c.unitPrice || 0)), 0)
       : 0;
 
-    return (parentItemValue + compositeTotal) * discountMultiplier;
+    // El precio total de una unidad (ítem principal + asociados)
+    const totalUnitPrice = unitPrice + compositeTotalPerUnit;
+
+    // El precio base extendido antes del descuento
+    const basePrice = quantity * totalUnitPrice;
+
+    const discount = item.discount || 0;
+    const discountType = item.discountType || 'percentage';
+
+    // Calcula el monto del descuento
+    const discountAmount = discountType === 'dollar'
+      ? discount // Descuento plano sobre el total de la línea
+      : basePrice * (discount / 100);
+
+    return basePrice - discountAmount;
+  };
+
+  // Calcular total general
+  const calculateTotal = () => {
+    if (!items?.length) return 0;
+    return items.reduce((acc, item) => acc + calculateExtendedPrice(item), 0);
   };
 
   const total = calculateTotal();
@@ -178,20 +174,39 @@ export const BidProposalReactPDF = ({
           </View>
 
           {items?.map((item, index) => (
-            <View key={`item-${index}`} style={proposalStyles.tableRow}>
-              <Text style={proposalStyles.tableCell}>{item.itemNumber}</Text>
-              <Text style={[proposalStyles.tableCell, { flex: 3 }]}>
-                {[item.description, item.notes].filter(Boolean).join("\n\n")}
-              </Text>
-              <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.quantity}</Text>
-              <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.uom || 'EA'}</Text>
-              <Text style={[proposalStyles.tableCell, { textAlign: 'right'}]}>
-                {formatMoney(item.unitPrice ?? 0)}
-              </Text>
-              <Text style={[proposalStyles.tableCell, { textAlign: 'right' }]}>
-                {formatMoney(calculateExtendedPrice(item))}
-              </Text>
-            </View>
+            <React.Fragment key={`item-fragment-${index}`}>
+              {/* Fila del Ítem Principal */}
+              <View style={proposalStyles.tableRow}>
+                <Text style={proposalStyles.tableCell}>{item.itemNumber}</Text>
+                <Text style={[proposalStyles.tableCell, { flex: 3 }]}>
+                  {[item.description, item.notes].filter(Boolean).join("\n\n")}
+                </Text>
+                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.quantity}</Text>
+                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.uom || 'EA'}</Text>
+                <Text style={[proposalStyles.tableCell, { textAlign: 'right' }]}>
+                  {formatMoney(item.unitPrice ?? 0)}
+                </Text>
+                <Text style={[proposalStyles.tableCell, { textAlign: 'right', borderRightWidth: 0 }]}>
+                  {formatMoney(calculateExtendedPrice(item))}
+                </Text>
+              </View>
+
+              {/* Filas de Ítems Asociados */}
+              {item.associatedItems?.map((assocItem, assocIndex) => (
+                <View key={`assoc-item-${assocIndex}`} style={{ ...proposalStyles.tableRow, backgroundColor: '#f9f9f9' }}>
+                  <Text style={{ ...proposalStyles.tableCell, flex: 1 }}></Text>
+                  <Text style={{ ...proposalStyles.tableCell, flex: 3, paddingLeft: 15, fontSize: 9 }}>
+                    - {assocItem.description}
+                  </Text>
+                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.quantity}</Text>
+                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.uom || 'EA'}</Text>
+                  <Text style={{ ...proposalStyles.tableCell, textAlign: 'right', fontSize: 9 }}>
+                    {formatMoney(assocItem.unitPrice ?? 0)}
+                  </Text>
+                  <Text style={{ ...proposalStyles.tableCell, borderRightWidth: 0 }}></Text>
+                </View>
+              ))}
+            </React.Fragment>
           ))}
 
           {/* Rellenar filas vacías hasta 10 */}
@@ -200,7 +215,7 @@ export const BidProposalReactPDF = ({
               <Text style={proposalStyles.tableCell}></Text>
               <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
               <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
+              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text> 
               <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
               <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>-</Text>
             </View>

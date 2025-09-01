@@ -24,7 +24,7 @@ import ReactPDF from '@react-pdf/renderer'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
 // Mapper para enviar al backend en snake_case
-function mapAdminDataToApi(adminData: AdminData, quoteId: number, estimateId?: number | null, jobId?: number | null) {
+function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
 
     bid_estimate_id: estimateId ?? null,
@@ -58,10 +58,6 @@ function mapAdminDataToApi(adminData: AdminData, quoteId: number, estimateId?: n
 // helper: garantiza que trabajamos SOLO con IDs numéricos
 const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
-  useEffect(() => {
-    if (rawId != null && typeof rawId !== 'number') {
-    }
-  }, [rawId])
   return id
 }
 
@@ -92,16 +88,15 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     pointOfContact,
     adminData,
     sender,
+    notes,
+    setNotes,
   } = useQuoteForm()
-
-  const [notesState, setNotesState] = useState<Note[]>([])
-  const [loadingNotes, setLoadingNotes] = useState(false)
 
   const [isSaving, setIsSaving] = useState(false)
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
-  const prevStateRef = useRef({ quoteItems, adminData })
+  const prevStateRef = useRef({ quoteItems, adminData, notes })
   const numericQuoteId = useNumericQuoteId(quoteId)
 
   const initCalled = useRef(false);
@@ -134,43 +129,27 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
 
 
-
-  useEffect(() => {
-    async function fetchNotes() {
-      setLoadingNotes(true)
-      try {
-        if (!numericQuoteId) return
-        const res = await fetch(`/api/quotes/${numericQuoteId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setNotesState(Array.isArray(data.notes) ? data.notes : [])
-        }
-      } finally {
-        setLoadingNotes(false)
-      }
-    }
-    fetchNotes()
-  }, [numericQuoteId])
-
   const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notesState, note]
-    setNotesState(updatedNotes)
-    if (quoteId) {
-      await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
-      })
-    }
-  }
+    setNotes((prevNotes) => [...prevNotes, note]);
+  };
 
+  const handleEditNote = (index: number, updatedNote: Note) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((n, i) => (i === index ? updatedNote : n))
+    );
+  };
+
+  const handleDeleteNote = (index: number) => {
+    setNotes((prevNotes) => prevNotes.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (!numericQuoteId) return
 
     const hasQuoteItemsChanged = !isEqual(quoteItems, prevStateRef.current.quoteItems)
     const hasAdminDataChanged = !isEqual(adminData, prevStateRef.current.adminData)
-    if (!hasQuoteItemsChanged && !hasAdminDataChanged) return
+    const haveNotesChanged = !isEqual(notes, prevStateRef.current.notes);
+    if (!hasQuoteItemsChanged && !hasAdminDataChanged && !haveNotesChanged) return
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = window.setTimeout(() => {
@@ -180,7 +159,8 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [quoteItems, adminData, numericQuoteId])
+  }, [quoteItems, adminData, notes, numericQuoteId])
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setSecondCounter((prev) => prev + 1)
@@ -197,7 +177,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         return
       }
 
-      // Generar el PDF como blob
+     
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
           adminData={adminData ?? defaultAdminObject}
@@ -216,7 +196,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         />
       ).toBlob()
 
-      // Forzar la descarga en el navegador
+     
       const url = URL.createObjectURL(pdfBlob)
       const a = document.createElement("a")
       a.href = url
@@ -235,13 +215,51 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
 
 
+  const handleSendQuote = async () => {
+    if (!numericQuoteId || !pointOfContact) {
+      toast.error("A point of contact is required to send the quote.");
+      return;
+    }
+
+    setSending(true);
+    try {
+      // Primero, nos aseguramos de que el borrador más reciente esté guardado.
+      const saved = await autosave();
+      if (!saved) {
+        throw new Error("Could not save the latest draft before sending.");
+      }
+
+      // Ahora, llamamos a la API para enviar el correo.
+      const res = await fetch('/api/quotes/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: numericQuoteId }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Failed to send quote email.");
+      }
+
+      toast.success("Quote sent successfully!");
+      router.push('/quotes'); 
+
+    } catch (error: any) {
+      console.error("Error sending quote:", error);
+      toast.error(error.message || "An unexpected error occurred while sending the quote.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const autosave = async () => {
     if (!numericQuoteId) {
 
       return false
     }
 
-    prevStateRef.current = { quoteItems, adminData }
+    prevStateRef.current = { quoteItems, adminData, notes }
 
 
 
@@ -253,12 +271,11 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         items: quoteItems,
         admin_data: mapAdminDataToApi(
           adminData ?? defaultAdminObject,
-          numericQuoteId,
           estimateId,
           jobId
         ),
         status: 'DRAFT',
-        notes: notesState,
+        notes: notes,
         subject,
         body: emailBody,
         from_email: sender?.email || null,
@@ -270,6 +287,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         customers: selectedCustomers.map(c => ({ id: c.id })),
         include_terms: includeTerms,
         custom_terms: customTerms,
+        payment_terms: paymentTerms,
       }
 
 
@@ -344,7 +362,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
               <Button variant="outline" onClick={handleDownload}>
                 Download
               </Button>
-              <Button disabled={sending || !pointOfContact}>
+              <Button disabled={sending || !pointOfContact} onClick={handleSendQuote}>
                 {sending ? 'Sending...' : 'Send Quote'}
               </Button>
             </div>
@@ -363,11 +381,11 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
           <QuoteAdditionalFiles />
           <QuoteTermsAndConditions />
           <QuoteNotes
-            notes={notesState}
+            notes={notes}
             onSave={handleSaveNote}
-            onEdit={() => { }}
-            onDelete={() => { }}
-            loading={loadingNotes}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            canEdit={true}
           />
         </div>
       </div>

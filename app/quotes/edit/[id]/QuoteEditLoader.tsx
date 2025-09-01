@@ -24,6 +24,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
     setPointOfContact,
     setCcEmails,
     setBccEmails,
+    setNotes,
   } = useQuoteForm();
 
   useEffect(() => {
@@ -89,6 +90,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setIncludeTerms(data.include_terms || {});
         setIncludeFiles(data.include_files || {});
         setAssociatedContractNumber(data.associated_contract_number || "");
+
+        setNotes(data.notes || []);
 
        
         setPaymentTerms(data.payment_terms || "NET30");

@@ -1,6 +1,7 @@
 "use client";
 
 import React, {
+  Component,
   createContext,
   useContext,
   useState,
@@ -12,12 +13,14 @@ import { Customer } from "@/types/Customer";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { format } from "date-fns";
 import { AdminData } from "@/types/TAdminData";
+import { Note } from "@/components/pages/quote-form/QuoteNotes";
 import { PaymentTerms } from "@/components/pages/quote-form/QuoteAdminInformation";
 import { User } from "@/types/User";
 import {
   DefaultQuote,
   defaultQuote,
 } from "@/types/default-objects/defaultQuoteObject";
+import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 
 export type QuoteStatus = "Not Sent" | "Sent" | "Accepted";
 
@@ -111,8 +114,8 @@ interface QuoteFormState {
   adminData?: AdminData;
   setAdminData: Dispatch<SetStateAction<AdminData | undefined>>;
 
-  notes: string[];
-  setNotes: Dispatch<SetStateAction<string[]>>;
+  notes: Note[];
+  setNotes: Dispatch<SetStateAction<Note[]>>;
 
   additionalFiles: File[];
   setAdditionalFiles: Dispatch<SetStateAction<File[]>>;
@@ -145,6 +148,20 @@ interface QuoteFormProviderProps {
   initialData?: Partial<DefaultQuote>;
 }
 
+const createEmptyQuoteItem = (): QuoteItem => ({
+  id: generateUniqueId(),
+  itemNumber: "",
+  description: "",
+  uom: "",
+  quantity: 0,
+  unitPrice: 0,
+  discount: 0,
+  discountType: "dollar",
+  notes: "",
+  associatedItems: [],
+  isCustom: false,
+});
+
 export default function QuoteFormProvider({
   children,
   initialData,
@@ -167,9 +184,9 @@ export default function QuoteFormProvider({
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>(
-    mergedData.includedTerms["custom-terms"]
-      ? mergedData.notes.join("\n")
-      : ""
+    mergedData.includedTerms["custom-terms"] && Array.isArray(mergedData.notes)
+      ? mergedData.notes.map(n => typeof n === 'string' ? n : n.text).join("\n")
+      : "",
   );
   const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
@@ -195,7 +212,9 @@ export default function QuoteFormProvider({
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(mergedData.items);
+  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(
+    mergedData.items.length > 0 ? mergedData.items : [createEmptyQuoteItem()]
+  );
 
   const [adminData, setAdminData] = useState<AdminData | undefined>(
     mergedData.adminData
@@ -230,7 +249,7 @@ export default function QuoteFormProvider({
  
 
 
-  const [notes, setNotes] = useState<string[]>(mergedData.notes);
+  const [notes, setNotes] = useState<Note[]>(mergedData.notes as Note[]);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
   const [uniqueToken, setUniqueToken] = useState<string>(
     mergedData.id &&

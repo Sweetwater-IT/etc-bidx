@@ -18,7 +18,7 @@ export interface QuoteGridView {
   job_number?: string;
   quote_created_at?: string | null;
   estimate_id?: number | null;
-  job_id?: number | null;
+  job_id?: number | null; 
 }
 
 // --------------------
@@ -169,6 +169,7 @@ export async function GET(request: NextRequest) {
         total_items: row.quote_items?.length || 0,
         county: row.county,
         updated_at: row.updated_at,
+        created_at: row.created_at,
         has_attachments: (row.files?.length || 0) > 0,
         estimate_contract_number: adminData?.contract_number ?? null,
         job_number: row.job_id ?? null,
@@ -286,6 +287,7 @@ export async function PATCH(request: NextRequest) {
       from_email,
       recipients,
       customers,
+      payment_terms,
     } = body;
 
     const numericId = Number(id);
@@ -328,6 +330,7 @@ export async function PATCH(request: NextRequest) {
       equipment_sale: body.include_terms?.["equipment-sale"] ?? false,
       flagging_terms: body.include_terms?.["flagging-terms"] ?? false,
       custom_terms_conditions: body.custom_terms ?? null,
+      payment_terms: payment_terms ?? 'NET30',
     };
 
     console.log("🧾 [PATCH] Updating quotes:", { id: numericId, quoteUpdate });

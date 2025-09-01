@@ -89,7 +89,7 @@ if (counts) {
         if (branchId === branchMap.bedford) result.bedford += 1;
       }
 
-      // for shop_status (ya coincide con las claves de result)
+      // for shop_status 
       if (!isArchived && shopStatuses.includes(order.shop_status)) {
         result[order.shop_status as keyof typeof result] += 1;
       }

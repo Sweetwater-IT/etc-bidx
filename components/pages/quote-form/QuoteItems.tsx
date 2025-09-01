@@ -1,28 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Pencil, Check, MoreVertical } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useState, useEffect } from "react";
-import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
+
 
 enum UOM_TYPES {
   EA = "EA",
@@ -36,28 +21,8 @@ enum UOM_TYPES {
 
 export function QuoteItems() {
   const { quoteItems, setQuoteItems } = useQuoteForm();
-  const [showCustomForm, setShowCustomForm] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
-  const [newQuoteItem, setNewQuoteItem] = useState<QuoteItem>({
-    id: generateUniqueId(),
-    itemNumber: "",
-    description: "",
-    uom: "",
-    quantity: 0,
-    unitPrice: 0,
-    discount: 0,
-    discountType: "percentage",
-    notes: "",
-    associatedItems: [],
-  });
-
-  
-  useEffect(() => {
-    if (quoteItems.length === 0) {
-      handleAddNewItem();
-    }
-  }, [quoteItems.length]);
 
 
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
@@ -124,43 +89,6 @@ export function QuoteItems() {
   };
 
  
-  const handleAddCustomItem = () => {
-    if (quoteItems.some((qi) => qi.itemNumber === newQuoteItem.itemNumber))
-      return;
-    if (newQuoteItem.itemNumber) {
-      setQuoteItems((prevState) => [
-        ...prevState,
-        {
-          ...newQuoteItem,
-        },
-      ]);
-      
-      setNewQuoteItem({
-        id: generateUniqueId(),
-        itemNumber: "",
-        description: "",
-        uom: "",
-        quantity: 0,
-        unitPrice: 0,
-        discount: 0,
-        discountType: "percentage",
-        notes: "",
-        associatedItems: [],
-      });
-      setShowCustomForm(false);
-      
-      setEditingSubItemId(null);
-    }
-  };
-
-  
-  useEffect(() => {
-    if (showCustomForm) {
-      handleAddCustomItem();
-    }
-  }, [showCustomForm]);
-
- 
   const handleRemoveItem = (itemId: string) => {
     setQuoteItems((prevItems) =>
       prevItems.filter((item) => item.id !== itemId)
@@ -203,15 +131,6 @@ export function QuoteItems() {
     field: keyof AssociatedItem,
     value: string | number
   ) => {
-    if (parentItemId === newQuoteItem.id) {
-      setNewQuoteItem((prev) => ({
-        ...prev,
-        associatedItems:
-          prev.associatedItems?.map((ai) =>
-            ai.id === subItemId ? { ...ai, [field]: value } : ai
-          ) || [],
-      }));
-    } else {
       setQuoteItems((prevItems) =>
         prevItems.map((item) =>
           item.id === parentItemId
@@ -225,18 +144,10 @@ export function QuoteItems() {
             : item
         )
       );
-    }
   };
 
  
   const handleDeleteComposite = (parentItemId: string, subItemId: string) => {
-    if (parentItemId === newQuoteItem.id) {
-      setNewQuoteItem((prev) => ({
-        ...prev,
-        associatedItems:
-          prev.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
-      }));
-    } else {
       setQuoteItems((prevItems) =>
         prevItems.map((item) =>
           item.id === parentItemId
@@ -249,20 +160,8 @@ export function QuoteItems() {
             : item
         )
       );
-    }
   };
-
   
-  const handleCustomItemChange = (
-    field: keyof QuoteItem,
-    value: string | number
-  ) => {
-    setNewQuoteItem((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
  
   const handleAddNewItem = () => {
     const newId = generateUniqueId();
@@ -328,16 +227,6 @@ export function QuoteItems() {
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
         />
-      </div>
-
-      <div className="flex justify-start">
-        <Button
-          className="mt-4 border-none p-0 !bg-transparent shadow-none"
-          variant="outline"
-          onClick={handleAddNewItem}
-        >
-          + Add New Item
-        </Button>
       </div>
 
       
