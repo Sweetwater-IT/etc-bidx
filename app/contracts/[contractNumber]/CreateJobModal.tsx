@@ -33,6 +33,7 @@ import { formatCurrencyValue } from '@/lib/formatDecimals'
 import { handleNextDigits } from '@/lib/handleNextDigits'
 import { validateEmail } from '@/lib/emailValidation'
 import { handlePhoneInput } from '@/lib/phone-number-functions'
+import { ContactSelector } from '@/components/SelectContacts'
 
 // Define item structure
 interface JobItem {
@@ -85,7 +86,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   jobId,
   onJobCreated
 }) => {
-  // State for item numbers - will be fetched from API
+  console.log(customer);
+  
   const [itemNumbers, setItemNumbers] = useState<ItemNumber[]>([])
 
   // State for form values
@@ -100,18 +102,18 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   })
   const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
   const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
-
   // State for decimal masking - track digits for each contract value field
   const [contractValueDigits, setContractValueDigits] = useState<
     Record<string, string>
   >({})
   const [customItemDigits, setCustomItemDigits] = useState<string>('000')
-
   // State for validation errors
   const [emailError, setEmailError] = useState<string>()
-
   // State for job creation flag
   const [jobCreated, setJobCreated] = useState(false)
+
+  const [localContact, setLocalContact] = useState<any | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // Update form values when props change
   useEffect(() => {
@@ -125,6 +127,17 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       customJobId: jobId
     }))
   }, [customer, customerContractNumber, projectManager, pmEmail, pmPhone])
+
+  useEffect(() => {
+    if (localContact && localContact.id) {
+      setFormValues(prev => ({
+        ...prev,
+        project_manager: localContact.name,
+        project_email: localContact.email,
+        project_phone: localContact.phone,
+      }));
+    }
+  }, [localContact]);
 
   // Fetch item numbers from API
   useEffect(() => {
@@ -292,39 +305,39 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   }
 
   // Handle contract value change with decimal masking
-  const handleContractValueChange = (
-    itemNumber: string,
-    inputType: string,
-    data: string
-  ) => {
-    const currentDigits = contractValueDigits[itemNumber] || '000'
-    const nextDigits = handleNextDigitsContractValue(
-      currentDigits,
-      inputType,
-      data
-    )
+  // const handleContractValueChange = (
+  //   itemNumber: string,
+  //   inputType: string,
+  //   data: string
+  // ) => {
+  //   const currentDigits = contractValueDigits[itemNumber] || '000'
+  //   const nextDigits = handleNextDigitsContractValue(
+  //     currentDigits,
+  //     inputType,
+  //     data
+  //   )
 
-    setContractValueDigits(prev => ({
-      ...prev,
-      [itemNumber]: nextDigits
-    }))
+  //   setContractValueDigits(prev => ({
+  //     ...prev,
+  //     [itemNumber]: nextDigits
+  //   }))
 
-    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
-    handleItemFieldChange(itemNumber, 'contractValue', parseFloat(formatted))
-  }
+  //   const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
+  //   handleItemFieldChange(itemNumber, 'contractValue', parseFloat(formatted))
+  // }
 
-  // Handle custom item contract value change
-  const handleCustomContractValueChange = (inputType: string, data: string) => {
-    const nextDigits = handleNextDigitsContractValue(
-      customItemDigits,
-      inputType,
-      data
-    )
-    setCustomItemDigits(nextDigits)
+  // // Handle custom item contract value change
+  // const handleCustomContractValueChange = (inputType: string, data: string) => {
+  //   const nextDigits = handleNextDigitsContractValue(
+  //     customItemDigits,
+  //     inputType,
+  //     data
+  //   )
+  //   setCustomItemDigits(nextDigits)
 
-    const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
-    handleCustomItemChange('contractValue', parseFloat(formatted))
-  }
+  //   const formatted = (parseInt(nextDigits, 10) / 100).toFixed(2)
+  //   handleCustomItemChange('contractValue', parseFloat(formatted))
+  // }
 
   // Handle custom item field change
   const handleCustomItemChange = (
@@ -388,33 +401,33 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     })
   }
 
-    useEffect(() => {            
-      if (!formValues.customJobId) return;
-  
-      const timeout = setTimeout(() => {
-        validateCustomJobNumber();
-      }, 500);
-  
-      return () => clearTimeout(timeout);
-    }, [formValues.customJobId]);
-    
-    const validateCustomJobNumber = async () => {
-      const jobNumber = formValues?.customJobId?.toString();
-  
-      if (!jobNumber || jobNumber.length !== 7) {
-        return;
-      }
-  
-      try {
-        const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
-        const data = await res.json();
-  
-        setIsValidJobNumber(!data.exists);
-      } catch (error) {
-        console.error('Error validating job number:', error);
-        setIsValidJobNumber(false);
-      }
-    };
+  useEffect(() => {
+    if (!formValues.customJobId) return;
+
+    const timeout = setTimeout(() => {
+      validateCustomJobNumber();
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [formValues.customJobId]);
+
+  const validateCustomJobNumber = async () => {
+    const jobNumber = formValues?.customJobId?.toString();
+
+    if (!jobNumber || jobNumber.length !== 7) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
+      const data = await res.json();
+
+      setIsValidJobNumber(!data.exists);
+    } catch (error) {
+      console.error('Error validating job number:', error);
+      setIsValidJobNumber(false);
+    }
+  };
 
   // Check if form is valid
   const isFormValid = () => {
@@ -532,7 +545,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                 <Switch
                   checked={customJobNumber}
                   onCheckedChange={() => setCustomJobNumber((prev) => {
-                    if(!prev === false) {
+                    if (!prev === false) {
                       handleInputChange('customJobId', jobId ?? '')
                     }
                     return !prev
@@ -594,50 +607,50 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                 />
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='project_manager'>Project Manager</Label>
+              <div className="space-y-2">
+                <Label>Contact Name</Label>
+                <ContactSelector
+                  localCustomer={customer}
+                  setLocalCustomer={() => { }}
+                  localContact={localContact}
+                  setLocalContact={setLocalContact}
+                  contactModalOpen={contactModalOpen}
+                  setContactModalOpen={setContactModalOpen}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="project_manager">Project Manager</Label>
                 <Input
-                  id='project_manager'
+                  id="project_manager"
                   value={formValues.project_manager}
-                  onChange={e =>
-                    handleInputChange('project_manager', e.target.value)
-                  }
-                  placeholder='Project manager name'
-                  required
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='project_email'>Project Manager Email</Label>
+              <div className="space-y-2">
+                <Label htmlFor="project_email">Project Manager Email</Label>
                 <Input
-                  id='project_email'
-                  type='email'
-                  inputMode='email'
+                  id="project_email"
+                  type="email"
                   value={formValues.project_email}
-                  onChange={e => handleEmailChange(e.target.value)}
-                  placeholder='manager@company.com'
-                  className={
-                    emailError
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                      : ''
-                  }
-                  required
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
-                {emailError && (
-                  <p className='text-sm text-red-600'>{emailError}</p>
-                )}
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='project_phone'>Project Manager Phone</Label>
+              <div className="space-y-2">
+                <Label htmlFor="project_phone">Project Manager Phone</Label>
                 <Input
-                  id='project_phone'
-                  type='text'
-                  inputMode='tel'
+                  id="project_phone"
+                  type="text"
                   value={formValues.project_phone}
-                  onChange={handlePhoneChange}
-                  placeholder='(555) 123-4567'
-                  required
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
               </div>
             </div>

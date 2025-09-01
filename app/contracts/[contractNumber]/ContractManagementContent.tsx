@@ -192,7 +192,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
     } finally {
       stopLoading()
     }
-  }
+  }  
 
   useEffect(() => {
     fetchData()
@@ -273,7 +273,6 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         adminData={adminData}
         sender={sender}
         onJobCreated={() => {
-          // Re-fetch contract data after job creation
           fetchData()
         }}
       />
