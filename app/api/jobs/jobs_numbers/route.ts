@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         .select("*")
         .eq("year", Number(year))
         .gte("sequential_number", Number(start))
-        .lte("sequential_number", Number(end));
+        .lte("sequential_number", Number(end))
 
     if (error) {
         return NextResponse.json({ error: error.message, ok: false });

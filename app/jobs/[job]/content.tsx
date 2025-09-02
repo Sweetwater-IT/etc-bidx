@@ -2034,7 +2034,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-
     const onDeleteItems = async (element) => {
         const elementId = element.id;
         if (!elementId) return;

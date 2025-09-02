@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         }
 
         const { data, error } = await supabase
-            .from("bid_estimates")
+            .from("available_jobs")
             .select("*")
             .eq("contract_number", contractNumber)
             .limit(1);

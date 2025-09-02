@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog"
 import { Loader2 } from "lucide-react"
 
 type JobDetails = {
+    archived?: boolean;
     jobNumber: string
     contractNumber: string
     contractor: string
@@ -66,12 +67,13 @@ export default function JobNumberPicker({
                 `/api/jobs/existJob?year=${yr}&sequential=${sequential}`
             )
             const result = await response.json()
-
+            
             if (result.exist && result.data) {
                 const job = result.data.jobs?.[0]
 
                 if (job) {
                     const details: JobDetails = {
+                        archived: job.archived,
                         jobNumber: result.data.job_number,
                         contractNumber:
                             job.admin_data_entries?.contract_number ??
@@ -86,7 +88,7 @@ export default function JobNumberPicker({
                         endDate: job.admin_data_entries?.end_date
                             ? new Date(job.admin_data_entries.end_date).toLocaleDateString()
                             : "",
-                    }
+                    }  
 
                     setCustomJobNumber(null)
                     setJobDetails(details)
@@ -156,8 +158,6 @@ export default function JobNumberPicker({
         try {
             const res = await fetch(`/api/jobs/jobs_numbers?year=${yr}&start=${start}&end=${end}`)
             const data = await res.json()
-            console.log('la data es');
-
             if (data.ok) {
                 setExistingSeqs(data.data.map((d: any) => d.sequential_number))
             }
@@ -282,6 +282,8 @@ export default function JobNumberPicker({
                                 jobDetails &&
                                 <p className="text-center mb-4 text-red-500">
                                     Sorry, this work number already exists.
+
+                                    {jobDetails.archived && "(is archived)"}
                                 </p>
                             }
                             <div className="text-sm border p-2 rounded bg-muted w-full">

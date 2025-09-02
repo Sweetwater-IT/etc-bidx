@@ -97,7 +97,7 @@ export function OpenBidSheet({
     "Equipment Rental": false,
     Other: false,
   });
-  const [statusMessage, setStatusMessage] = useState(""); // Mensaje de validación
+  const [statusMessage, setStatusMessage] = useState(""); 
   const [isValid, setIsValid] = useState(true);
 
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
@@ -928,7 +928,7 @@ export function OpenBidSheet({
                 <Button
                   className="flex-1"
                   type="submit"
-                  disabled={isSubmitting || !areAllRequiredFieldsFilled()}
+                  disabled={isSubmitting || !areAllRequiredFieldsFilled() || !isValid}
                   onClick={(e) => {
                     console.log("Submit button clicked");
                     if (!isSubmitting) {
