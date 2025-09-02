@@ -3,12 +3,12 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
-  const estimateId = params.id;
+  const resolvedParams = await params
+  const estimateId = parseInt(resolvedParams.id)
 
   try {
-    // 1️⃣ Buscar contractor_id desde project_metadata usando bid_estimate_id
     const { data: metadata, error: metaError } = await supabase
       .from("project_metadata")
       .select("contractor_id, contractors (id, name)")
@@ -20,7 +20,6 @@ export async function GET(
       return NextResponse.json([], { status: 200 });
     }
 
-    // 2️⃣ Buscar contactos de ese contractor
     const { data: contacts, error: contactsError } = await supabase
       .from("customer_contacts")
       .select("id, name, email")
@@ -29,7 +28,6 @@ export async function GET(
 
     if (contactsError) throw contactsError;
 
-    // 3️⃣ Formatear respuesta
     const formatted = [
       {
         id: metadata.contractor_id,

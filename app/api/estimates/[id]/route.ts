@@ -3,10 +3,11 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: any
 ) {
   try {
-    const { id } = await context.params;
+    const resolvedParams = await params
+    const id = parseInt(resolvedParams.id)
 
     console.log("🔎 [GET /api/estimates/[id]] Fetching estimate with id:", id);
 

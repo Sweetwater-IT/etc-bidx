@@ -4,10 +4,12 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
-  const estimateId = params.id;
 
+  const resolvedParams = await params
+  const estimateId = parseInt(resolvedParams.id)
+  
   try {
     const tables = [
       { name: "sale_items", columns: "id, item_number, name, quantity, quote_price, uom, notes" },
@@ -29,9 +31,9 @@ export async function GET(
       if (data) {
         const mapped = data.map((row: any) => ({
           id: row.id,
-          itemNumber: row.item_number || "",     
+          itemNumber: row.item_number || "",
           description: row.name || row.notes || "N/A",
-          uom: row.uom || "EA",                 
+          uom: row.uom || "EA",
           quantity: row.quantity || row.number_trucks || 1,
           unitPrice:
             row.quote_price ||
@@ -42,7 +44,7 @@ export async function GET(
           discount: 0,
           discountType: "dollar",
           notes: row.notes || "",
-          associatedItems: [],                 
+          associatedItems: [],
         }));
         allItems.push(...mapped);
       }

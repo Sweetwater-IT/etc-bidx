@@ -5,7 +5,7 @@ import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
 import QuoteEditLoader from "./QuoteEditLoader";
 
-export default function EditQuotePage({ params }: { params: { id: string } }) {
+export default function EditQuotePage({ params }: any) {
   const numericId = parseInt(params.id, 10);
 
   return (

@@ -19,6 +19,7 @@ export interface QuoteGridView {
   quote_created_at?: string | null;
   estimate_id?: number | null;
   job_id?: number | null; 
+  created_at?: any
 }
 
 // --------------------

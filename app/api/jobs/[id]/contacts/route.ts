@@ -15,9 +15,10 @@ type Contact = {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
-  const jobId = params.id;
+  const resolvedParams = await params;
+  const jobId = resolvedParams.id;
 
   try {
    

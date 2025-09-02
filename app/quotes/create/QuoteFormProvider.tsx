@@ -185,7 +185,7 @@ export default function QuoteFormProvider({
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>(
     mergedData.includedTerms["custom-terms"] && Array.isArray(mergedData.notes)
-      ? mergedData.notes.map(n => typeof n === 'string' ? n : n.text).join("\n")
+      ? mergedData.notes.map((n : any) => typeof n === 'string' ? n : n.text).join("\n")
       : "",
   );
   const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
@@ -249,7 +249,7 @@ export default function QuoteFormProvider({
  
 
 
-  const [notes, setNotes] = useState<Note[]>(mergedData.notes as Note[]);
+  const [notes, setNotes] = useState<Note[]>(mergedData.notes as any);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
   const [uniqueToken, setUniqueToken] = useState<string>(
     mergedData.id &&

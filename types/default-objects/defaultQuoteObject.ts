@@ -4,6 +4,7 @@ import { TermsNames } from "../../app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "../IQuoteItem";
 
 export const defaultAdminObject: AdminData = {
+  contract_number: "",
   contractNumber: "",
   estimator: "",
   division: null,

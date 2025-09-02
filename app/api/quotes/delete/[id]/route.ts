@@ -4,10 +4,11 @@ import { supabase } from "@/lib/supabase";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any 
 ) {
   try {
-    const id = Number(params.id);
+    const resolvedParams = await params;
+    const id = Number(resolvedParams.id);
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, message: "Invalid quote ID" },

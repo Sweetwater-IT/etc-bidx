@@ -2,12 +2,13 @@ import { AdminData } from "../TAdminData";
 
 export const defaultAdminObject: AdminData = {
   contractNumber: "",
+  contract_number: "",
   estimator: "",
   division: null,
   lettingDate: null,
   owner: null,
   county: {
-    country: "",  // Aquí debe estar el campo country
+    country: "",
     id: 0,
     name: "",
     district: 0,
@@ -44,4 +45,5 @@ export const defaultAdminObject: AdminData = {
     emergencyACLites: 0,
     emergencySharps: 0,
   },
+
 };

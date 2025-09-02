@@ -56,9 +56,10 @@ function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
 
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: any }
 ) {
-  const quoteId = Number(context.params.id);
+  const resolvedParams = await context.params;
+  const quoteId = Number(resolvedParams.id);
 
   if (isNaN(quoteId)) {
     return NextResponse.json(
