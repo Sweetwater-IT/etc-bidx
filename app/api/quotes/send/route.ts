@@ -137,59 +137,59 @@ export async function POST(request: NextRequest) {
         );
         const items: QuoteItem[] = raw_quote_items.map(mapDbQuoteItemToQuoteItem);
 
-        const pdfBuffer = await generateQuotePDF({
-            adminData: admin_data,
-            items: items || [],
-            customers,
-            quoteDate: new Date(quoteData.created_at),
-            quoteNumber: quote_number ?? "",
-            pointOfContact: {
-                name: pointOfContactRecipient.customer_contacts?.[0]?.name || to,
-                email: to,
-            },
-            sender: {
-                name: "Napoleon Dunn",
-                email: from_email || "it@establishedtraffic.com",
-                role: "President",
-            },
-            paymentTerms: payment_terms,
-            includedTerms: {
-                "standard-terms": standard_terms,
-                "rental-agreements": rental_agreements,
-                "equipment-sale": equipment_sale,
-                "flagging-terms": flagging_terms,
-                "custom-terms": !!custom_terms_conditions,
-            },
-            customTaC: custom_terms_conditions || "",
-            county:
-                admin_data?.county?.country ||
-                admin_data?.county?.name ||
-                "",
-            sr: admin_data?.srRoute || "",
-            ecms: admin_data?.contractNumber || "",
-        });
+        // const pdfBuffer = await generateQuotePDF({
+        //     adminData: admin_data,
+        //     items: items || [],
+        //     customers,
+        //     quoteDate: new Date(quoteData.created_at),
+        //     quoteNumber: quote_number ?? "",
+        //     pointOfContact: {
+        //         name: pointOfContactRecipient.customer_contacts?.[0]?.name || to,
+        //         email: to,
+        //     },
+        //     sender: {
+        //         name: "Napoleon Dunn",
+        //         email: from_email || "it@establishedtraffic.com",
+        //         role: "President",
+        //     },
+        //     paymentTerms: payment_terms,
+        //     includedTerms: {
+        //         "standard-terms": standard_terms,
+        //         "rental-agreements": rental_agreements,
+        //         "equipment-sale": equipment_sale,
+        //         "flagging-terms": flagging_terms,
+        //         "custom-terms": !!custom_terms_conditions,
+        //     },
+        //     customTaC: custom_terms_conditions || "",
+        //     county:
+        //         admin_data?.county?.country ||
+        //         admin_data?.county?.name ||
+        //         "",
+        //     sr: admin_data?.srRoute || "",
+        //     ecms: admin_data?.contractNumber || "",
+        // });
 
-        // 👇 Generar el HTML para el correo
-        const emailHtml = createQuoteEmailHtml(
-            admin_data,
-            items || [],
-            customers.map((c) => c.name),
-            quote_number ?? "",
-            new Date(quoteData.created_at),
-            payment_terms,
-            admin_data?.county?.country || admin_data?.county?.name || "",
-            admin_data?.srRoute || "",
-            admin_data?.contractNumber || "",
-            {
-                "standard-terms": standard_terms,
-                "rental-agreements": rental_agreements,
-                "equipment-sale": equipment_sale,
-                "flagging-terms": flagging_terms,
-                "custom-terms": !!custom_terms_conditions,
-            },
-            custom_terms_conditions || "",
-            body || ""
-        );
+        // // 👇 Generar el HTML para el correo
+        // const emailHtml = createQuoteEmailHtml(
+        //     admin_data,
+        //     items || [],
+        //     customers.map((c) => c.name),
+        //     quote_number ?? "",
+        //     new Date(quoteData.created_at),
+        //     payment_terms,
+        //     admin_data?.county?.country || admin_data?.county?.name || "",
+        //     admin_data?.srRoute || "",
+        //     admin_data?.contractNumber || "",
+        //     {
+        //         "standard-terms": standard_terms,
+        //         "rental-agreements": rental_agreements,
+        //         "equipment-sale": equipment_sale,
+        //         "flagging-terms": flagging_terms,
+        //         "custom-terms": !!custom_terms_conditions,
+        //     },
+        //     custom_terms_conditions || "",
+        //     body || ""
+        // );
 
         // --- LÓGICA DE ENVÍO DE CORREO ---
         // await resend.emails.send({
