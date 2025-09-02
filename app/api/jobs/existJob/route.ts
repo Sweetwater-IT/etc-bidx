@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
                 sequential_number,
                 jobs (
                 id,
+                archived,
                 project_status,
                 billing_status,
                 admin_data_entries (

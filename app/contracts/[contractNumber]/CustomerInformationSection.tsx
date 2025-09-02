@@ -118,11 +118,6 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
     pmEmail,
     pmPhone,
     onCustomerChange,
-    onCustomerContractNumberChange,
-    onProjectManagerChange,
-    onPmEmailChange,
-    onPmPhoneChange,
-    contractNumber,
     jobId
 }) => {
 
@@ -153,9 +148,9 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
         setLocalValues((prev) => ({ ...prev, [field]: value }));
     };
 
-        useEffect(() => {
+    useEffect(() => {
         if (customer && localValues.pmEmail) {
-            const matchingIndex = customer.emails.findIndex(email => email === localValues.pmEmail);
+            const matchingIndex = customer.emails.findIndex(email => email === localValues.pmEmail);            
             if (matchingIndex !== -1) {
                 setLocalContact({
                     id: customer.contactIds[matchingIndex],
@@ -170,7 +165,7 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
         } else {
             setLocalContact(null);
         }
-    }, [customer, localValues.pmEmail]);
+    }, [customer, customer?.emails]);
 
     const handleSave = async () => {
         if (!jobId) return;

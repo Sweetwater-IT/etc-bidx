@@ -25,12 +25,12 @@ export async function GET(request: NextRequest) {
     const filters = searchParams.get('filters');
     const sortBy = searchParams.get('sortBy');
     const sortOrder = searchParams.get('sortOrder');
-    
+
     // NEW: Handle archived parameter
     const archived = searchParams.get('archived');
     const isArchivedFilter = archived === 'true';
     const excludeArchived = archived === 'false';
-    
+
     // Parse filters if they exist
     let parsedFilters: Record<string, string[]> = {};
     if (filters) {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     // Helper function to get job data and determine won-pending status
     const getJobsDataForBids = async (bidIds: number[]) => {
       if (bidIds.length === 0) return [];
-      
+
       const { data: jobs, error: jobsError } = await supabase
         .from('jobs')
         .select(`
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           job_numbers!jobs_job_number_id_fkey(job_number)
         `)
         .in('estimate_id', bidIds)
-        
+
       if (jobsError || !jobs) return [];
       return jobs;
     };
@@ -60,15 +60,15 @@ export async function GET(request: NextRequest) {
     // Helper function to determine actual status including won-pending
     const getActualStatus = (bid: any, jobsData: any[]) => {
       if (bid.status === 'WON') {
-        const hasWonPendingJob = jobsData.some(job => 
-          job.estimate_id === bid.id && 
+        const hasWonPendingJob = jobsData.some(job =>
+          job.estimate_id === bid.id &&
           job.job_numbers?.job_number?.startsWith('P-')
         );
         return hasWonPendingJob ? 'won-pending' : 'won';
       }
       return bid.status?.toLowerCase();
     };
-    
+
     if (counts) {
       try {
         // Get all bids
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           .from('estimate_complete')
           .select('id, status, archived, admin_data')
           .eq('deleted', false);
-        
+
         if (allBidsError || !allBids) {
           return NextResponse.json(
             { error: 'Failed to fetch bid counts', details: allBidsError },
@@ -87,10 +87,10 @@ export async function GET(request: NextRequest) {
         // Get job data for won bids
         const wonBidIds = allBids.filter(bid => bid.status === 'WON').map(bid => bid.id);
         const jobsData = await getJobsDataForBids(wonBidIds);
-        
+
         // FIXED: Only count non-archived items for main counts
         const nonArchivedBids = allBids.filter(bid => bid.archived !== true);
-        
+
         const countData = {
           all: nonArchivedBids.length,
           won: nonArchivedBids.filter(bid => bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won').length,
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
           draft: nonArchivedBids.filter(bid => bid.status === 'DRAFT').length,
           archived: allBids.filter(bid => bid.archived === true).length
         };
-        
+
         return NextResponse.json(countData);
       } catch (error) {
         console.error('Error fetching bid counts:', error);
@@ -203,9 +203,9 @@ export async function GET(request: NextRequest) {
                 .from('users')
                 .select('name')
                 .in('id', parsedFilters[field]);
-              
+
               if (estimatorError) throw estimatorError;
-              
+
               if (estimatorData && estimatorData.length > 0) {
                 const estimatorNames = estimatorData.map(e => e.name);
                 countQuery = countQuery.in('admin_data->>estimator', estimatorNames);
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
 
     // Get the filtered count data first
     const { data: filteredBids, count: totalFilteredCount, error: countError } = await countQuery;
-    
+
     if (countError) {
       return NextResponse.json(
         { success: false, message: 'Failed to fetch bid count', error: countError.message },
@@ -234,18 +234,18 @@ export async function GET(request: NextRequest) {
 
     // Now we need to handle won-pending filtering for the count
     let actualTotalCount = totalFilteredCount || 0;
-    
+
     if (status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')) {
       // We need to get job data to determine actual won vs won-pending count
       const wonBidIds = (filteredBids || []).filter(bid => bid.status === 'WON').map(bid => bid.id);
       const jobsData = await getJobsDataForBids(wonBidIds);
-      
+
       if (status.toLowerCase() === 'won') {
-        actualTotalCount = (filteredBids || []).filter(bid => 
+        actualTotalCount = (filteredBids || []).filter(bid =>
           bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won'
         ).length;
       } else if (status.toLowerCase() === 'won-pending') {
-        actualTotalCount = (filteredBids || []).filter(bid => 
+        actualTotalCount = (filteredBids || []).filter(bid =>
           bid.status === 'WON' && getActualStatus(bid, jobsData) === 'won-pending'
         ).length;
       }
@@ -360,9 +360,9 @@ export async function GET(request: NextRequest) {
                 .from('users')
                 .select('name')
                 .in('id', parsedFilters[field]);
-              
+
               if (estimatorError) throw estimatorError;
-              
+
               if (estimatorData && estimatorData.length > 0) {
                 const estimatorNames = estimatorData.map(e => e.name);
                 query = query.in('admin_data->>estimator', estimatorNames);
@@ -383,7 +383,7 @@ export async function GET(request: NextRequest) {
     // because we'll filter them after determining the actual status
     let fetchLimit = limit;
     let fetchOffset = offset;
-    
+
     if (status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')) {
       // Fetch more records to account for filtering
       fetchLimit = Math.min(limit * 3, 1000); // Fetch up to 3x the needed amount, max 1000
@@ -391,7 +391,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
-    
+
     if (error || !data) {
       return NextResponse.json(
         { success: false, message: 'Failed to fetch active bids', error: error?.message },
@@ -413,8 +413,8 @@ export async function GET(request: NextRequest) {
             (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT'))
               ? bid.admin_data?.contractNumber + '-DRAFT'
               : bid.admin_data?.contractNumber,
-                    status: actualStatus,
-                  };
+          status: actualStatus,
+        };
       } else {
         return {
           id: bid.id,
@@ -439,8 +439,8 @@ export async function GET(request: NextRequest) {
           total_hours: bid.total_hours,
           mpt_value: parseFloat(bid.mpt_revenue || '0'),
           mpt_gross_profit: parseFloat(bid.mpt_gross_profit || '0'),
-          mpt_gm_percent: bid.mpt_revenue > 0 
-            ? ((parseFloat(bid.mpt_gross_profit) / parseFloat(bid.mpt_revenue)) * 100).toFixed(2) 
+          mpt_gm_percent: bid.mpt_revenue > 0
+            ? ((parseFloat(bid.mpt_gross_profit) / parseFloat(bid.mpt_revenue)) * 100).toFixed(2)
             : 0
         };
       }
@@ -457,14 +457,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply proper pagination to the filtered results
-    const startIndex = status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending') 
-      ? Math.max(0, offset - fetchOffset) 
+    const startIndex = status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')
+      ? Math.max(0, offset - fetchOffset)
       : 0;
     const endIndex = startIndex + limit;
     const paginatedData = transformedData.slice(startIndex, endIndex);
-    
+
     return NextResponse.json({
-      success: true, 
+      success: true,
       data: paginatedData,
       pagination: {
         page,
@@ -496,16 +496,16 @@ export async function POST(request: NextRequest) {
       saleItems: SaleItem[];
       permanentSigns: PermanentSigns;
       status: 'PENDING' | 'DRAFT';
-      notes: { text: string, timestamp: number, user_email: number}[]
+      notes: { text: string, timestamp: number, user_email: number }[]
     };
 
     // Calculate totals
     const allTotals = getAllTotals(
-      adminData, 
-      mptRental, 
-      equipmentRental || [], 
-      flagging || defaultFlaggingObject, 
-      serviceWork || defaultFlaggingObject, 
+      adminData,
+      mptRental,
+      equipmentRental || [],
+      flagging || defaultFlaggingObject,
+      serviceWork || defaultFlaggingObject,
       saleItems || [],
       permanentSigns || defaultPermanentSignsObject
     );
@@ -548,7 +548,7 @@ export async function POST(request: NextRequest) {
       if (bidError) {
         throw new Error(`Failed to create bid estimate: ${bidError.message}`);
       }
-      
+
       bidEstimateId = newBid.id;
     }
 
@@ -557,7 +557,7 @@ export async function POST(request: NextRequest) {
         bid_id: bidEstimateId,
         text: note.text,
         created_at: new Date(note.timestamp).toISOString(),
-        user_email: note.user_email, 
+        user_email: note.user_email,
       }));
 
       const { error: notesError } = await supabase
@@ -568,7 +568,7 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to insert bid notes: ${notesError.message}`);
       }
     }
-    
+
     // Upsert admin data
     const { error: adminError } = await supabase
       .from('admin_data_entries')
@@ -658,7 +658,7 @@ export async function POST(request: NextRequest) {
     // Insert phases
     for (let i = 0; i < mptRental.phases.length; i++) {
       const phase = mptRental.phases[i];
-      
+
       const { data: phaseEntry, error: phaseError } = await supabase
         .from('mpt_phases')
         .insert({
@@ -773,20 +773,20 @@ export async function POST(request: NextRequest) {
 
       const rentalInserts = equipmentRental.map(item => (
         {
-        bid_estimate_id: bidEstimateId,
-        name: item.name,
-        quantity: item.quantity,
-        months: item.months,
-        rent_price: item.rentPrice,
-        re_rent_price: item.reRentPrice,
-        re_rent_for_current_job: item.reRentForCurrentJob,
-        total_cost: item.totalCost,
-        useful_life_yrs: item.usefulLifeYrs,
-        revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
-        gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
-        gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
-        cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
-      }));
+          bid_estimate_id: bidEstimateId,
+          name: item.name,
+          quantity: item.quantity,
+          months: item.months,
+          rent_price: item.rentPrice,
+          re_rent_price: item.reRentPrice,
+          re_rent_for_current_job: item.reRentForCurrentJob,
+          total_cost: item.totalCost,
+          useful_life_yrs: item.usefulLifeYrs,
+          revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
+          gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
+          gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
+          cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
+        }));
 
       const { error: rentalError } = await supabase
         .from('equipment_rental_entries')
@@ -912,126 +912,99 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert permanent signs data
-if (permanentSigns) {
-  // Extract signItems and prepare info object
-  const { signItems, ...permanentSignsInfo } = permanentSigns;
-  // Upsert permanent_signs_entries
-  const { data: permanentSignsEntry, error: permanentSignsError } = await supabase
-    .from('permanent_signs_entries')
-    .upsert({
-      bid_estimate_id: bidEstimateId,
-      permanent_signs_info: permanentSignsInfo
-    }, {
-      onConflict: 'bid_estimate_id'
-    })
-    .select('id')
-    .single();
+    if (permanentSigns) {
+      // Extract signItems and prepare info object
+      const { signItems, ...permanentSignsInfo } = permanentSigns;
+      // Upsert permanent_signs_entries
+      const { data: permanentSignsEntry, error: permanentSignsError } = await supabase
+        .from('permanent_signs_entries')
+        .upsert({
+          bid_estimate_id: bidEstimateId,
+          permanent_signs_info: permanentSignsInfo
+        }, {
+          onConflict: 'bid_estimate_id'
+        })
+        .select('id')
+        .single();
 
-  if (permanentSignsError) {
-    throw new Error(`Failed to upsert permanent signs entry: ${permanentSignsError.message}`);
-  }
+      if (permanentSignsError) {
+        throw new Error(`Failed to upsert permanent signs entry: ${permanentSignsError.message}`);
+      }
 
-  // Delete existing permanent signs before inserting new ones
-  await supabase
-    .from('permanent_signs')
-    .delete()
-    .eq('permanent_signs_entry_id', permanentSignsEntry.id);
+      // Delete existing permanent signs before inserting new ones
+      await supabase
+        .from('permanent_signs')
+        .delete()
+        .eq('permanent_signs_entry_id', permanentSignsEntry.id);
 
-  // Insert permanent sign items
-  if (signItems && signItems.length > 0) {
-    const permanentSignInserts = signItems.map(item => {
-      const itemType = determineItemType(item);
-      
-      return {
-        permanent_signs_entry_id: permanentSignsEntry.id,
-        item_type: itemType,
-        item_number: item.itemNumber || null,
-        personnel: item.personnel || 0,
-        number_trucks: item.numberTrucks || 0,
-        number_trips: item.numberTrips || 0,
-        install_hours_required: item.installHoursRequired || 0,
-        quantity: item.quantity || 0,
-        perm_sign_bolts: item.permSignBolts || null,
-        productivity_rate: (item as any).productivityRate || null,
-        
-        // PostMountedInstall fields (Type B/F/C)
-        type: (item as any).type || null,
-        sign_sq_footage: (item as any).signSqFootage || null,
-        perm_sign_price_sq_ft: (item as any).permSignPriceSqFt || null,
-        standard_pricing: item.standardPricing !== undefined ? item.standardPricing : true,
-        custom_margin: item.customMargin || null,
-        separate_mobilization: item.separateMobilization || false,
-        perm_sign_cost_sq_ft: (item as any).permSignCostSqFt || null,
-        hi_reflective_strips: (item as any).hiReflectiveStrips || null,
-        fyg_reflective_strips: (item as any).fygReflectiveStrips || null,
-        jenny_brackets: (item as any).jennyBrackets || null,
-        stiffener_inches: (item as any).stiffenerInches || null,
-        tmz_brackets: (item as any).tmzBrackets || null,
-        anti_theft_bolts: (item as any).antiTheftBolts || null,
-        chevron_brackets: (item as any).chevronBrackets || null,
-        street_name_cross_brackets: (item as any).streetNameCrossBrackets || null,
-        
-        // PostMountedResetOrRemove fields
-        is_remove: (item as any).isRemove || null,
-        
-        // InstallFlexibleDelineators fields
-        flexible_delineator_cost: (item as any).flexibleDelineatorCost || null,
-        
-        // Additional items as JSON
-        additional_items: (item as any).additionalItems || []
-      };
-    });
+      // Insert permanent sign items
+      if (signItems && signItems.length > 0) {
+        const permanentSignInserts = signItems.map(item => {
+          const itemType = determineItemType(item);
 
-    const { error: permanentSignItemsError } = await supabase
-      .from('permanent_signs')
-      .insert(permanentSignInserts);
+          return {
+            permanent_signs_entry_id: permanentSignsEntry.id,
+            item_type: itemType,
+            item_number: item.itemNumber || null,
+            personnel: item.personnel || 0,
+            number_trucks: item.numberTrucks || 0,
+            number_trips: item.numberTrips || 0,
+            install_hours_required: item.installHoursRequired || 0,
+            quantity: item.quantity || 0,
+            perm_sign_bolts: item.permSignBolts || null,
+            productivity_rate: (item as any).productivityRate || null,
 
-    if (permanentSignItemsError) {
-      throw new Error(`Failed to create permanent sign items: ${permanentSignItemsError.message}`);
+            // PostMountedInstall fields (Type B/F/C)
+            type: (item as any).type || null,
+            sign_sq_footage: (item as any).signSqFootage || null,
+            perm_sign_price_sq_ft: (item as any).permSignPriceSqFt || null,
+            standard_pricing: item.standardPricing !== undefined ? item.standardPricing : true,
+            custom_margin: item.customMargin || null,
+            separate_mobilization: item.separateMobilization || false,
+            perm_sign_cost_sq_ft: (item as any).permSignCostSqFt || null,
+            hi_reflective_strips: (item as any).hiReflectiveStrips || null,
+            fyg_reflective_strips: (item as any).fygReflectiveStrips || null,
+            jenny_brackets: (item as any).jennyBrackets || null,
+            stiffener_inches: (item as any).stiffenerInches || null,
+            tmz_brackets: (item as any).tmzBrackets || null,
+            anti_theft_bolts: (item as any).antiTheftBolts || null,
+            chevron_brackets: (item as any).chevronBrackets || null,
+            street_name_cross_brackets: (item as any).streetNameCrossBrackets || null,
+
+            // PostMountedResetOrRemove fields
+            is_remove: (item as any).isRemove || null,
+
+            // InstallFlexibleDelineators fields
+            flexible_delineator_cost: (item as any).flexibleDelineatorCost || null,
+
+            // Additional items as JSON
+            additional_items: (item as any).additionalItems || []
+          };
+        });
+
+        const { error: permanentSignItemsError } = await supabase
+          .from('permanent_signs')
+          .insert(permanentSignInserts);
+
+        if (permanentSignItemsError) {
+          throw new Error(`Failed to create permanent sign items: ${permanentSignItemsError.message}`);
+        }
+      }
     }
-  }
-}
 
-    return NextResponse.json({ 
-      success: true, 
-      data: { id: bidEstimateId, isUpdate: !!id } 
+    return NextResponse.json({
+      success: true,
+      data: { id: bidEstimateId, isUpdate: !!id }
     });
 
   } catch (error) {
     console.error('Error upserting bid:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to upsert active bid', 
-        error: error instanceof Error ? error.message : String(error) 
+      {
+        success: false,
+        message: 'Failed to upsert active bid',
+        error: error instanceof Error ? error.message : String(error)
       },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { data, error } = await supabase
-      .from('bid_estimates')
-      .delete()
-      .in('id', body.ids)
-      .select();
-
-    if (error) {
-      return NextResponse.json(
-        { success: false, message: 'Failed to delete active bids', error: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data, count: body.ids.length });
-
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Unexpected error', error: String(error) },
       { status: 500 }
     );
   }

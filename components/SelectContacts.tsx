@@ -13,7 +13,7 @@ import { Customer } from '@/types/Customer'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 import { CustomerContactForm } from './customer-contact-form'
-import { CustomerProvider } from '@/contexts/customer-context'
+import { CustomerProvider, useCustomer } from '@/contexts/customer-context'
 
 interface IContact {
     id: number
@@ -42,14 +42,36 @@ export function ContactSelector({
 }: ContactSelectorProps) {
     const [openCustomerContact, setOpenCustomerContact] = useState(false)
 
+    return (
+        <CustomerProvider initialCustomer={localCustomer}>
+            <InnerContactSelector
+                localContact={localContact}
+                setLocalContact={setLocalContact}
+                contactModalOpen={contactModalOpen}
+                setLocalCustomer={setLocalCustomer}
+                setContactModalOpen={setContactModalOpen}
+                openCustomerContact={openCustomerContact}
+                setOpenCustomerContact={setOpenCustomerContact}
+            />
+        </CustomerProvider>
+    )
+}
 
-    async function fetchCustomerById(id: number) {
-        const res = await fetch(`/api/customers/${id}`)
-        if (res.ok) {
-            return await res.json()
-        }
-        return null
-    }
+interface InnerProps extends Omit<ContactSelectorProps, 'localCustomer'> {
+    openCustomerContact: boolean
+    setOpenCustomerContact: (open: boolean) => void
+}
+
+function InnerContactSelector({
+    localContact,
+    setLocalContact,
+    contactModalOpen,
+    setLocalCustomer,
+    setContactModalOpen,
+    openCustomerContact,
+    setOpenCustomerContact
+}: InnerProps) {
+    const { customer } = useCustomer()
 
     return (
         <>
@@ -60,7 +82,7 @@ export function ContactSelector({
                         role="combobox"
                         aria-expanded={openCustomerContact}
                         className="w-full justify-between bg-muted/50"
-                        disabled={!localCustomer}
+                        disabled={!customer}
                     >
                         <span className="truncate">
                             {localContact ? localContact.name : 'Select contact...'}
@@ -74,7 +96,6 @@ export function ContactSelector({
                         <CommandInput placeholder="Search contact..." />
                         <CommandEmpty>No contact found.</CommandEmpty>
                         <CommandGroup className="max-h-[200px] overflow-y-auto">
-                            {/* Crear nuevo contacto */}
                             <CommandItem
                                 onSelect={() => {
                                     setOpenCustomerContact(false)
@@ -86,21 +107,20 @@ export function ContactSelector({
                                 + Add new contact
                             </CommandItem>
 
-                            {localCustomer &&
-                                Array.isArray(localCustomer.contactIds) &&
-                                localCustomer.contactIds.length > 0 &&
-                                localCustomer.contactIds.map((id: number, idx: number) => (
+                            {customer &&
+                                Array.isArray(customer.contactIds) &&
+                                customer.contactIds.map((id, idx) => (
                                     <CommandItem
                                         key={id}
-                                        value={localCustomer.names[idx]}
+                                        value={customer.names[idx]}
                                         className="flex flex-row items-center"
                                         onSelect={() => {
                                             setLocalContact({
                                                 id,
-                                                name: localCustomer.names[idx],
-                                                email: localCustomer.emails[idx],
-                                                phone: localCustomer.phones[idx],
-                                                role: localCustomer.roles[idx]
+                                                name: customer.names[idx],
+                                                email: customer.emails[idx],
+                                                phone: customer.phones[idx],
+                                                role: customer.roles[idx]
                                             })
                                             setOpenCustomerContact(false)
                                         }}
@@ -112,10 +132,10 @@ export function ContactSelector({
                                             )}
                                         />
                                         <div className="flex flex-col items-start">
-                                            <p>{localCustomer.names[idx]}</p>
-                                            {localCustomer.emails[idx] && (
+                                            <p>{customer.names[idx]}</p>
+                                            {customer.emails[idx] && (
                                                 <p className="text-xs text-muted-foreground">
-                                                    {localCustomer.emails[idx]}
+                                                    {customer.emails[idx]}
                                                 </p>
                                             )}
                                         </div>
@@ -126,29 +146,24 @@ export function ContactSelector({
                 </PopoverContent>
             </Popover>
 
-            {localCustomer && (
-                <CustomerProvider initialCustomer={localCustomer}>
-                    {localCustomer &&
-                        (<Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
-                            <DialogContent className="sm:max-w-lg w-full">
-                                <DialogHeader>
-                                    <DialogTitle>Add New Contact</DialogTitle>
-                                </DialogHeader>
-                                <CustomerContactForm
-                                    customerId={localCustomer.id}
-                                    isOpen={contactModalOpen}
-                                    onClose={() => setContactModalOpen(false)}
-                                    onSuccess={async (newContactId?: number) => {
-                                        setContactModalOpen(false)
-                                        if (localCustomer?.id) {
-                                            const updatedCustomer = await fetchCustomerById(localCustomer.id)
-                                            setLocalCustomer(updatedCustomer)
-                                        }
-                                    }}
-                                    customer={localCustomer} />
-                            </DialogContent>
-                        </Dialog>)}
-                </CustomerProvider>)}
+            {customer && (
+                <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
+                    <DialogContent className="sm:max-w-lg w-full">
+                        <DialogHeader>
+                            <DialogTitle>Add New Contact</DialogTitle>
+                        </DialogHeader>
+                        <CustomerContactForm
+                            customerId={customer.id}
+                            isOpen={contactModalOpen}
+                            onClose={() => setContactModalOpen(false)}
+                            onSuccess={async (refreshedCustomer?: any) => {
+                                setContactModalOpen(false)
+                            }}
+                            customer={customer}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </>
     )
 }
