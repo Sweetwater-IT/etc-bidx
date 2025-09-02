@@ -306,7 +306,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                 </div>
               </div>
 
-              {/* Items */}
+            
               <div className="grid grid-cols-1 gap-8">
                 <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
                   <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
@@ -328,6 +328,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   />
                 </div>
               </div>
+              
             </div>
           </div>
         </div>

@@ -24,10 +24,10 @@ const AdminInformationAccordion = () => {
   const [value, setValue] = useState<string[]>([]);
   const { adminData, dispatch } = useEstimate();
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  
+
   // Temporary state for editing
   const [tempData, setTempData] = useState<Partial<AdminData>>({});
-  
+
   const [openStates, setOpenStates] = useState({
     county: false,
     estimator: false,
@@ -66,7 +66,7 @@ const AdminInformationAccordion = () => {
   const getTotalDays = () => {
     const startDate = isEditing ? tempData.startDate : adminData.startDate;
     const endDate = isEditing ? tempData.endDate : adminData.endDate;
-    
+
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -112,7 +112,7 @@ const AdminInformationAccordion = () => {
         });
       }
     });
-    
+
     setIsEditing(false);
     setTempData({});
   };
@@ -145,7 +145,8 @@ const AdminInformationAccordion = () => {
         nonRatedTargetGM: selectedCounty.nonRatedTargetGM || 0,
         insurance: selectedCounty.insurance || 0,
         fuel: selectedCounty.fuel || 0,
-        market: selectedCounty.market || 'LOCAL'
+        market: selectedCounty.market || 'LOCAL',
+        country: selectedCounty.country || 'USA'
       };
 
       setTempData(prev => ({ ...prev, county: newCounty }));
@@ -321,15 +322,15 @@ const AdminInformationAccordion = () => {
             <Input
               type="date"
               value={
-                tempData[field] 
-                  ? (typeof tempData[field] === 'string' 
-                      ? tempData[field] as string
-                      : (tempData[field] as Date).toISOString().split('T')[0]) 
-                  : (adminData[field] 
-                      ? (typeof adminData[field] === 'string' 
-                          ? adminData[field] as string
-                          : (adminData[field] as Date).toISOString().split('T')[0])
-                      : "")
+                tempData[field]
+                  ? (typeof tempData[field] === 'string'
+                    ? tempData[field] as string
+                    : (tempData[field] as Date).toISOString().split('T')[0])
+                  : (adminData[field]
+                    ? (typeof adminData[field] === 'string'
+                      ? adminData[field] as string
+                      : (adminData[field] as Date).toISOString().split('T')[0])
+                    : "")
               }
               onChange={(e) => {
                 setTempData(prev => ({
@@ -343,7 +344,7 @@ const AdminInformationAccordion = () => {
             <Input
               value={tempData[field as keyof AdminData] as number || adminData[field as keyof AdminData] as number || ''}
               onChange={(e) => {
-                const value = field === "owTravelTimeMins" || field === "owMileage" || field === "fuelCostPerGallon" 
+                const value = field === "owTravelTimeMins" || field === "owMileage" || field === "fuelCostPerGallon"
                   ? (e.target.value ? Number(e.target.value) : null)
                   : e.target.value;
                 setTempData(prev => ({ ...prev, [field]: value }));
@@ -410,10 +411,10 @@ const AdminInformationAccordion = () => {
               {renderField("Letting Date", "lettingDate", formatDate(isEditing ? tempData.lettingDate : adminData.lettingDate))}
               {renderField("SR Route", "srRoute", adminData.srRoute)}
               {renderField("DBE %", "dbe", adminData.dbe + '%')}
-              {renderField("One Way Travel Time (min)", "owTravelTimeMins", adminData.owTravelTimeMins ?  adminData.owTravelTimeMins + ' mins' : null)}
+              {renderField("One Way Travel Time (min)", "owTravelTimeMins", adminData.owTravelTimeMins ? adminData.owTravelTimeMins + ' mins' : null)}
               {renderField("One Way Mileage", "owMileage", adminData.owMileage ? adminData.owMileage + ' mi' : null)}
               {renderField("Diesel Cost per Gallon", "fuelCostPerGallon", adminData.fuelCostPerGallon ? `$${adminData.fuelCostPerGallon.toFixed(2)}` : null)}
-              
+
               {((isEditing ? tempData.winterStart : adminData.winterStart) || (isEditing ? tempData.winterEnd : adminData.winterEnd)) && (
                 <>
                   {renderField("Winter Start", "winterStart", formatDate(isEditing ? tempData.winterStart : adminData.winterStart))}

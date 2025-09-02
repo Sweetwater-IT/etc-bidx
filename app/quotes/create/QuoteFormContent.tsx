@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
 import {
   PaymentTerms,
@@ -13,33 +14,71 @@ import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditio
 import { QuoteTermsAndConditions } from '@/components/pages/quote-form/QuoteTermsAndConditions'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import { QuotePreviewButton } from '@/components/pages/quote-form/PreviewButton'
-import { sendQuoteEmail } from '@/lib/api-client'
 import { toast } from 'sonner'
-import ReactPDF, { PDFDownloadLink } from '@react-pdf/renderer'
-import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData'
-import { useState, useEffect, useRef, useMemo } from 'react'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
+import isEqual from 'lodash/isEqual'
 import { useRouter } from 'next/navigation'
-import { Document, Page, Text } from "@react-pdf/renderer";
-import { BidDetailsResponse } from '@/types/TBidDetails';
+import { AdminData } from '@/types/TAdminData'
+import ReactPDF from '@react-pdf/renderer'
+import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
+// Mapper para enviar al backend en snake_case
+function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
+  const mapped = {
 
-// ========================
-// Componente Principal
-// ========================
-export default function QuoteFormContent() {
+    bid_estimate_id: estimateId ?? null,
+    job_id: jobId ?? null,
+    contract_number: adminData.contractNumber,
+    estimator: adminData.estimator,
+    division: adminData.division,
+    letting_date: adminData.lettingDate,
+    owner: adminData.owner,
+    county: adminData.county,
+    sr_route: adminData.srRoute,
+    location: adminData.location,
+    dbe: adminData.dbe,
+    start_date: adminData.startDate,
+    end_date: adminData.endDate,
+    winter_start: adminData.winterStart,
+    winter_end: adminData.winterEnd,
+    ow_travel_time_hours: adminData.owTravelTimeHours,
+    ow_travel_time_minutes:
+      adminData.owTravelTimeMinutes ?? adminData.owTravelTimeMins,
+    ow_mileage: adminData.owMileage,
+    fuel_cost_per_gallon: adminData.fuelCostPerGallon,
+    emergency_job: adminData.emergencyJob,
+    rated: adminData.rated,
+    emergency_fields: adminData.emergencyFields,
+  }
+  console.log('[mapAdminDataToApi] mapped:', mapped)
+  return mapped
+}
+
+// helper: garantiza que trabajamos SOLO con IDs numéricos
+const useNumericQuoteId = (rawId: unknown) => {
+  const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
+  return id
+}
+
+export default function QuoteFormContent({ showInitialAdminState = false }: { showInitialAdminState?: boolean }) {
   const router = useRouter()
-
   const {
     selectedCustomers,
-    emailSent,
-    emailError,
     sending,
     setSending,
-    setEmailSent,
-    setEmailError,
     quoteId,
+    jobId,
+    includeTerms,
+    customTerms,
+    setSelectedCustomers,
+    setPointOfContact,
+    setJobId,
+    setQuoteId,
+    estimateId,
+    setEstimateId,
+    quoteNumber,
+    setQuoteNumber,
     quoteItems,
     paymentTerms,
     emailBody,
@@ -47,393 +86,306 @@ export default function QuoteFormContent() {
     ccEmails,
     bccEmails,
     pointOfContact,
-    status,
-    includeTerms,
-    includeFiles,
-    customTerms,
     adminData,
-    county,
-    stateRoute,
-    ecmsPoNumber,
-    notes,
-    additionalFiles,
-    uniqueToken,
-    setUniqueToken,
-    quoteDate,
-    setStatus,
-    quoteType,
-    associatedContractNumber,
     sender,
+    notes,
+    setNotes,
   } = useQuoteForm()
 
-  const [notesState, setNotesState] = useState<Note[]>([])
-  const [loadingNotes, setLoadingNotes] = useState(false)
-
-  // Autosave states
-  const [isSaving, setIsSaving] = useState<boolean>(false)
-  const [secondCounter, setSecondCounter] = useState<number>(0)
+  const [isSaving, setIsSaving] = useState(false)
+  const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
-  const [firstSave, setFirstSave] = useState<boolean>(false)
+  const [firstSave, setFirstSave] = useState(false)
+  const prevStateRef = useRef({ quoteItems, adminData, notes })
+  const numericQuoteId = useNumericQuoteId(quoteId)
 
-  // ========================
-  // Fetch notas
-  // ========================
+  const initCalled = useRef(false);
+
   useEffect(() => {
-    async function fetchNotes() {
-      setLoadingNotes(true);
-      try {
-        if (!quoteId) return;
-        const res = await fetch(`/api/quotes/bid-details`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contractNumber: quoteId,
-            type: "estimate" // o "job" según tu caso
-          }),
-        });
+    async function initDraft() {
+      if (initCalled.current) return;
+      initCalled.current = true;
 
-        if (res.ok) {
-          const data: BidDetailsResponse = await res.json();
-          if (data?.data) {
-            console.log("Bid details:", data.data);
-            // ahora TS ya sabe qué propiedades tiene data.data
-          }
+      if (!quoteId) {
+        try {
+          const res = await fetch("/api/quotes", { method: "POST" });
+          if (!res.ok) throw new Error("Failed to create draft");
+          const data = await res.json();
+          setQuoteId(data.data.id);
+          setQuoteNumber(data.data.quote_number || "");
+
+          console.log("🚀 Draft initialized with:", data.data.id, data.data.quote_number);
+        } catch (err) {
+          console.error("Error creating draft", err);
+          toast.error("Could not start a new draft");
         }
-      } finally {
-        setLoadingNotes(false);
       }
     }
-    fetchNotes();
-  }, [quoteId]);
+    initDraft();
 
-  // ========================
-  // Notas handlers
-  // ========================
+  }, []);
+
+
+
+
+
   const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notesState, note]
-    setNotesState(updatedNotes)
-    if (quoteId) {
-      await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
-      })
+    setNotes((prevNotes) => [...prevNotes, note]);
+  };
+
+  const handleEditNote = (index: number, updatedNote: Note) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((n, i) => (i === index ? updatedNote : n))
+    );
+  };
+
+  const handleDeleteNote = (index: number) => {
+    setNotes((prevNotes) => prevNotes.filter((_, i) => i !== index));
+  };
+
+  useEffect(() => {
+    if (!numericQuoteId) return
+
+    const hasQuoteItemsChanged = !isEqual(quoteItems, prevStateRef.current.quoteItems)
+    const hasAdminDataChanged = !isEqual(adminData, prevStateRef.current.adminData)
+    const haveNotesChanged = !isEqual(notes, prevStateRef.current.notes);
+    if (!hasQuoteItemsChanged && !hasAdminDataChanged && !haveNotesChanged) return
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = window.setTimeout(() => {
+      autosave()
+    }, 5000)
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }
+  }, [quoteItems, adminData, notes, numericQuoteId])
 
-  const handleEditNote = async (index: number, updatedNote: Note) => {
-    const updatedNotes = notesState.map((n, i) =>
-      i === index ? updatedNote : n
-    )
-    setNotesState(updatedNotes)
-    if (quoteId) {
-      await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
-      })
-    }
-  }
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setSecondCounter((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(intervalId)
+  }, [])
 
-  const handleDeleteNote = async (index: number) => {
-    const updatedNotes = notesState.filter((_, i) => i !== index)
-    setNotesState(updatedNotes)
-    if (quoteId) {
-      await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: quoteId, notes: updatedNotes }),
-      })
-    }
-  }
 
-  // ========================
-  // Función enviar Quote (PDF + email)
-  // ========================
-  const handleSendQuote = async () => {
-    if (!pointOfContact) {
-      toast.error('Please select a point of contact before sending the quote')
-      return
-    }
 
-    setSending(true)
-    setEmailError(null)
-
-    if (!uniqueToken) {
-      const newToken =
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15)
-      setUniqueToken(newToken)
-    }
-
+  const handleDownload = async () => {
     try {
-      const recipients: {
-        email: string
-        contactId: number | undefined
-        point_of_contact?: boolean
-        cc?: boolean
-        bcc?: boolean
-      }[] = []
-
-      if (pointOfContact) {
-        recipients.push({
-          email: pointOfContact.email,
-          contactId: getContactIdFromEmail(pointOfContact.email),
-          point_of_contact: true,
-        })
+      if (!quoteId) {
+        toast.error("No quote available to download")
+        return
       }
 
-      ccEmails.forEach((email) =>
-        recipients.push({ email, contactId: getContactIdFromEmail(email), cc: true })
-      )
-      bccEmails.forEach((email) =>
-        recipients.push({ email, contactId: getContactIdFromEmail(email), bcc: true })
-      )
-
+     
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
           customers={selectedCustomers}
-          quoteDate={new Date(quoteDate)}
-          quoteNumber={quoteId}
-          pointOfContact={{
-            name: pointOfContact?.name || '',
-            email: pointOfContact?.email || '',
-          }}
+          quoteDate={new Date()}
+          quoteNumber={quoteId?.toString() ?? ""}
+          pointOfContact={pointOfContact ?? { name: "", email: "" }}
           sender={sender}
           paymentTerms={paymentTerms as PaymentTerms}
           includedTerms={includeTerms}
           customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-          county={county}
-          sr={stateRoute}
-          ecms={ecmsPoNumber}
+          county={adminData?.county?.country || ''}
+          sr={adminData?.srRoute || ''}
+          ecms={adminData?.contractNumber || ''}
         />
       ).toBlob()
 
-      const pdfFile = new File([pdfBlob], `Quote-${quoteId}.pdf`, {
-        type: 'application/pdf',
-      })
-      const allFiles = [pdfFile, ...(additionalFiles || [])]
+     
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Quote-${quoteId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
 
-      const success = await sendQuoteEmail(
-        {
-          adminData,
-          date: new Date(quoteDate),
-          quoteNumber: quoteId,
-          customerName: pointOfContact?.name || '',
-          customers: selectedCustomers,
-          totalAmount: calculateQuoteTotal(quoteItems),
-          items: quoteItems,
-          createdBy: 'User',
-          createdAt: new Date().toISOString(),
-          paymentTerms: paymentTerms as PaymentTerms,
-          includedTerms: includeTerms,
-          ecmsPoNumber,
-          stateRoute,
-          county,
-          notes: notesState.map((n) => n.text).join('\n'),
-          status,
-          customTerms,
-          attachmentFlags: includeFiles,
-          uniqueToken:
-            uniqueToken ||
-            Math.random().toString(36).substring(2, 15),
-          quoteType,
-          associatedContract: associatedContractNumber ?? '',
-        },
-        {
-          pointOfContact,
-          fromEmail: sender.email || 'it@establishedtraffic.com',
-          recipients,
-          cc: ccEmails,
-          bcc: bccEmails,
-          subject,
-          body: emailBody,
-          files: allFiles,
-          standardDocs: getStandardDocsFromFlags(includeFiles),
-        }
-      )
+      toast.success("PDF downloaded successfully!")
+    } catch (err) {
+      console.error("Error downloading PDF:", err)
+      toast.error("Could not download PDF")
+    }
+  }
 
-      if (success) {
-        setEmailSent(true)
-        toast.success(`Quote sent successfully to ${pointOfContact.email}!`)
-        setStatus('Sent')
-        setTimeout(() => setEmailSent(false), 5000)
-      } else {
-        setEmailError('Failed to send email, but quote has been saved.')
-        toast.error(
-          'There was a problem sending the email, but your quote has been saved.'
-        )
+
+
+  const handleSendQuote = async () => {
+    if (!numericQuoteId || !pointOfContact) {
+      toast.error("A point of contact is required to send the quote.");
+      return;
+    }
+
+    setSending(true);
+    try {
+      // Primero, nos aseguramos de que el borrador más reciente esté guardado.
+      const saved = await autosave();
+      if (!saved) {
+        throw new Error("Could not save the latest draft before sending.");
       }
-    } catch (error) {
-      console.error('Error sending quote email:', error)
-      setEmailError('An error occurred while sending the quote.')
+
+      // Ahora, llamamos a la API para enviar el correo.
+      const res = await fetch('/api/quotes/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: numericQuoteId }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Failed to send quote email.");
+      }
+
+      toast.success("Quote sent successfully!");
+      router.push('/quotes'); 
+
+    } catch (error: any) {
+      console.error("Error sending quote:", error);
+      toast.error(error.message || "An unexpected error occurred while sending the quote.");
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
-  // ========================
-  // Helpers
-  // ========================
-  const getContactIdFromEmail = (email: string): number | undefined => {
-    for (const customer of selectedCustomers) {
-      if (
-        customer.contactIds &&
-        customer.emails &&
-        customer.emails.length === customer.contactIds.length
-      ) {
-        const emailIndex = customer.emails.findIndex((e) => e === email)
-        if (emailIndex >= 0 && emailIndex < customer.contactIds.length) {
-          return customer.contactIds[emailIndex]
-        }
+  const autosave = async () => {
+    if (!numericQuoteId) {
+
+      return false
+    }
+
+    prevStateRef.current = { quoteItems, adminData, notes }
+
+
+
+    try {
+      const payload = {
+        id: numericQuoteId,
+        estimate_id: estimateId,
+        job_id: jobId,
+        items: quoteItems,
+        admin_data: mapAdminDataToApi(
+          adminData ?? defaultAdminObject,
+          estimateId,
+          jobId
+        ),
+        status: 'DRAFT',
+        notes: notes,
+        subject,
+        body: emailBody,
+        from_email: sender?.email || null,
+        recipients: [
+          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+          ...ccEmails.map((email) => ({ email, cc: true })),
+          ...bccEmails.map((email) => ({ email, bcc: true })),
+        ],
+        customers: selectedCustomers.map(c => ({ id: c.id })),
+        include_terms: includeTerms,
+        custom_terms: customTerms,
+        payment_terms: paymentTerms,
       }
+
+
+
+      const res = await fetch(`/api/quotes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText || 'Failed to save draft')
+      }
+
+      setSecondCounter(1)
+      if (!firstSave) setFirstSave(true)
+      return true
+    } catch (error) {
+
+      toast.error('Quote not successfully saved as draft: ' + error)
+      return false
     }
-    return undefined
   }
 
-  const calculateQuoteTotal = (items: any[]): number => {
-    if (!items?.length) return 0
 
-    return items.reduce((total, item) => {
-      const discount = item.discount || 0
-      const discountType = item.discountType || 'percentage'
-      const quantity = item.quantity || 0
-      const unitPrice = item.unitPrice || 0
-      const basePrice = quantity * unitPrice
 
-      const discountAmount =
-        discountType === 'dollar' ? discount : basePrice * (discount / 100)
 
-      const compositeTotal =
-        item.associatedItems && item.associatedItems.length > 0
-          ? item.associatedItems.reduce(
-            (subSum, compositeItem) =>
-              subSum +
-              (compositeItem.quantity || 0) * (compositeItem.unitPrice || 0),
-            0
-          )
-          : 0
 
-      return total + (basePrice + compositeTotal - discountAmount)
-    }, 0)
-  }
-
-  const getStandardDocsFromFlags = (
-    flags: Record<string, boolean>
-  ): string[] => {
-    const docs: string[] = []
-    if (flags['flagging-price-list']) docs.push('Flagging Price List')
-    if (flags['flagging-service-area']) docs.push('Flagging Service Area')
-    if (flags['bedford-branch']) docs.push('Sell Sheet')
-    return docs
+  const handleSaveAndExit = async () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    try {
+      setIsSaving(true)
+      const success = await autosave()
+      if (success) router.push('/quotes')
+    } catch (error) {
+      toast.error('Could not save draft before exiting: ' + error)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const getSaveStatusMessage = () => {
     if (isSaving && !firstSave) return 'Saving...'
     if (!firstSave) return ''
     if (secondCounter < 60) {
-      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''
+        } ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''
+        } ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
       return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
-  // ========================
-  // PDF Document Memo
-  // ========================
-  const pdfDoc = useMemo(() => {
-    if (!pointOfContact) {
-      return (
-        <Document>
-          <Page>
-            <Text>No contact selected</Text>
-          </Page>
-        </Document>
-      );
-    }
-
-    return (
-      <BidProposalReactPDF
-        adminData={adminData ?? defaultAdminObject}
-        items={quoteItems}
-        customers={selectedCustomers}
-        quoteDate={new Date(quoteDate)}
-        quoteNumber={quoteId}
-        pointOfContact={pointOfContact}
-        sender={sender}
-        paymentTerms={paymentTerms as PaymentTerms}
-        includedTerms={includeTerms}
-        customTaC={includeTerms["custom-terms"] ? customTerms : ""}
-        county={county}
-        sr={stateRoute}
-        ecms={ecmsPoNumber}
-      />
-    );
-  }, [
-    adminData,
-    quoteItems,
-    selectedCustomers,
-    quoteDate,
-    quoteId,
-    pointOfContact,
-    sender,
-    paymentTerms,
-    includeTerms,
-    customTerms,
-    county,
-    stateRoute,
-    ecmsPoNumber,
-  ]);
-
-
-  // ========================
-  // Render
-  // ========================
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading="Quote Form"
-        handleSubmit={() => router.push('/quotes')}
+        heading="Create Quote"
+        handleSubmit={handleSaveAndExit}
         showX
         saveButtons={
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
               {getSaveStatusMessage()}
             </div>
-            <PDFDownloadLink document={pdfDoc} fileName={`Quote-${quoteId}.pdf`}>
-              <Button variant="outline">Download PDF</Button>
-            </PDFDownloadLink>
-            <QuotePreviewButton />
-            <Button onClick={handleSendQuote} disabled={sending || !pointOfContact}>
-              {sending ? 'Sending...' : 'Send Quote'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <QuotePreviewButton />
+              <Button variant="outline" onClick={handleDownload}>
+                Download
+              </Button>
+              <Button disabled={sending || !pointOfContact} onClick={handleSendQuote}>
+                {sending ? 'Sending...' : 'Send Quote'}
+              </Button>
+            </div>
           </div>
         }
       />
 
       <div className="flex gap-6 p-6 max-w-full">
-        <div className="flex-3/4 space-y-6">
-          <QuoteAdminInformation />
+        <div className="w-3/4 space-y-6">
+          <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
           <QuoteItems />
           <QuoteEmailDetails />
         </div>
-
-        <div className="flex-1/4 space-y-6">
+        <div className="w-1/4 space-y-6">
           <QuoteNumber />
           <QuoteAdditionalFiles />
           <QuoteTermsAndConditions />
           <QuoteNotes
-            notes={notesState}
+            notes={notes}
             onSave={handleSaveNote}
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
-            loading={loadingNotes}
+            canEdit={true}
           />
         </div>
       </div>

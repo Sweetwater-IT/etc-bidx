@@ -1,30 +1,23 @@
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
+// app/quotes/edit/[id]/page.tsx
+"use client";
+
 import QuoteFormProvider from "../../create/QuoteFormProvider";
 import QuoteFormContent from "../../create/QuoteFormContent";
 import QuoteEditLoader from "./QuoteEditLoader";
 
-export default async function EditQuotePage({ params }: any) {
-  const quoteId = params.id;
+export default function EditQuotePage({ params }: any) {
+  const numericId = parseInt(params.id, 10);
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
+    <div className="flex flex-col h-screen w-screen">
+      <div className="flex-1 overflow-auto">
         <QuoteFormProvider>
-          <QuoteEditLoader />
-          <QuoteFormContent />
+        
+          <QuoteEditLoader quoteId={numericId} />
+         
+          <QuoteFormContent showInitialAdminState />
         </QuoteFormProvider>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }

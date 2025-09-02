@@ -9,6 +9,7 @@ export interface QuoteItem {
     discount: number;
     discountType: 'dollar' | 'percentage'
     associatedItems: Omit<QuoteItem, 'discount' | 'discountType' | 'associatedItems' | 'notes'>[];
+    isCustom?: any
   }
 
   export interface AssociatedItem {
