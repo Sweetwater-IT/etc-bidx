@@ -547,7 +547,7 @@ export default function SignOrderContentSimple({
             endDate: undefined,
             contact: null
           }}
-          signList={signList || []}
+          signList={mptRental.phases[0].signs || []}
           mptRental={mptRental}
           notes={notes || []}
         />
@@ -645,7 +645,7 @@ export default function SignOrderContentSimple({
             <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
               <SignOrderWorksheet
                 adminInfo={adminInfo}
-                signList={signList}
+                signList={mptRental.phases[0].signs || []}
                 mptRental={mptRental}
                 notes={notes}
               />
