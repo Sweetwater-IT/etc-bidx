@@ -8,11 +8,13 @@ import { CardActions } from "@/components/card-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
-import { Button } from "@/components/ui/button";
 import { useLoading } from "@/hooks/use-loading";
+import { toast } from "sonner";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
+  { key: "estimate_id", title: "Estimate ID" }, 
+  { key: "job_id", title: "Job ID" },
   { key: "status", title: "Status" },
   { key: "date_sent", title: "Date Sent" },
   { key: "customer_name", title: "Customer" },
@@ -20,14 +22,15 @@ const QUOTES_COLUMNS = [
   { key: "total_items", title: "Items" },
   { key: "county", title: "County" },
   { key: "created_at", title: "Created" },
-  { key: "has_attachments", title: "Attachments" }
+  { key: "has_attachments", title: "Attachments" },
+
 ];
 
 const SEGMENTS = [
   { label: "All", value: "all" },
   { label: "Not Sent", value: "Not Sent" },
   { label: "Sent", value: "Sent" },
-  { label: "Accepted", value: "Accepted" }
+  { label: "Accepted", value: "Accepted" },
 ];
 
 export default function QuotesPage() {
@@ -38,18 +41,17 @@ export default function QuotesPage() {
     all: 0,
     not_sent: 0,
     sent: 0,
-    accepted: 0
+    accepted: 0,
   });
-  
-  // Pagination state
+
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  const {startLoading, stopLoading, isLoading} = useLoading();
+  const { startLoading, stopLoading, isLoading } = useLoading();
 
-  // Fetch quotes
+
   const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
     startLoading();
 
@@ -60,9 +62,9 @@ export default function QuotesPage() {
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-      params.append("orderBy", "quote_created_at");
+      params.append("orderBy", "created_at");
       params.append("ascending", "false");
-      params.append('detailed', "true");
+      params.append("detailed", "false");
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
@@ -81,10 +83,9 @@ export default function QuotesPage() {
     }
   };
 
-  // Fetch quote counts
   const fetchQuoteCounts = async () => {
     try {
-      const response = await fetch('/api/quotes?counts=true');
+      const response = await fetch("/api/quotes?counts=true");
       const data = await response.json();
       setQuoteCounts(data);
     } catch (error) {
@@ -92,34 +93,65 @@ export default function QuotesPage() {
     }
   };
 
-  // Handle segment change
+  const handleDeleteQuote = async (quote: QuoteGridView) => {
+    try {
+      const res = await fetch(`/api/quotes/delete/${quote.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success(`Quote ${quote.quote_number} deleted`);
+        fetchQuotes(activeSegment, pageIndex + 1, pageSize);
+        fetchQuoteCounts();
+      } else {
+        toast.error(data.message || "Failed to delete quote");
+      }
+    } catch (err) {
+      console.error("Error deleting quote:", err);
+      toast.error("Unexpected error deleting quote");
+    }
+  };
+
+  const handleDeleteMultiple = async (quotesToDelete: QuoteGridView[]) => {
+    try {
+      for (const q of quotesToDelete) {
+        await fetch(`/api/quotes/delete/${q.id}`, { method: "DELETE" });
+      }
+      toast.success(`${quotesToDelete.length} quotes deleted`);
+      fetchQuotes(activeSegment, pageIndex + 1, pageSize);
+      fetchQuoteCounts();
+    } catch (err) {
+      console.error("Error deleting quotes:", err);
+      toast.error("Unexpected error deleting quotes");
+    }
+  };
+
+  
   const handleSegmentChange = (value: string) => {
     setActiveSegment(value);
-    setPageIndex(0); // Reset to first page
+    setPageIndex(0);
     fetchQuotes(value, 1, pageSize);
   };
 
-  // Handle page change
   const handlePageChange = (newPage: number) => {
     setPageIndex(newPage);
     fetchQuotes(activeSegment, newPage + 1, pageSize);
   };
 
-  // Handle page size change
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
-    setPageIndex(0); // Reset to first page
+    setPageIndex(0);
     fetchQuotes(activeSegment, 1, newSize);
   };
 
-  // Initial data fetch
   useEffect(() => {
     fetchQuoteCounts();
     fetchQuotes();
   }, []);
 
   const handleRowClick = (quote: QuoteGridView) => {
-    router.push(`/quotes/${quote.id}`);
+    router.push(`/quotes/view/${quote.id}`);
   };
 
   return (
@@ -140,7 +172,7 @@ export default function QuotesPage() {
               <div className="flex items-center justify-between px-0 -mb-3">
                 <CardActions
                   createButtonLabel="Create Quote"
-                  onCreateClick={() => router.push('/quotes/create')}
+                  onCreateClick={() => router.push("/quotes/create")}
                   hideCalendar
                   goUpActions
                 />
@@ -153,15 +185,16 @@ export default function QuotesPage() {
                 segmentValue={activeSegment}
                 segmentCounts={quoteCounts}
                 onSegmentChange={handleSegmentChange}
-                onRowClick={handleRowClick}
+                onViewDetails={handleRowClick}
                 stickyLastColumn
-                // Pagination props
                 pageCount={pageCount}
                 pageIndex={pageIndex}
                 pageSize={pageSize}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
+
+                onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>
           </div>

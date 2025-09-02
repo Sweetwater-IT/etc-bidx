@@ -392,7 +392,8 @@ const AdminInformationStep1 = () => {
         nonRatedTargetGM: selectedCounty.nonRatedTargetGM || 0,
         insurance: selectedCounty.insurance || 0,
         fuel: selectedCounty.fuel || 0,
-        market: selectedCounty.market || 'LOCAL'
+        market: selectedCounty.market || 'LOCAL',
+        country: selectedCounty.country || 'USA'
       };
 
       dispatch({

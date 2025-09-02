@@ -36,6 +36,7 @@ import { County } from '@/types/TCounty'
 import { toast } from 'sonner'
 import { useAuth } from "@/contexts/auth-context";
 import { Switch } from './ui/switch'
+import JobNumberPicker from './SelectAvaiableJobsNumbers'
 
 interface CreateJobSheetProps {
   open: boolean
@@ -51,9 +52,7 @@ export function CreateJobSheet({
   onSuccess
 }: CreateJobSheetProps) {
   // Form data
-  const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
   const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
-
   const [formData, setFormData] = useState({
     customer: '',
     customJobNumber: 0,
@@ -73,7 +72,7 @@ export function CreateJobSheet({
     fringeRate: '',
     shopRate: ''
   })
-
+  const [validatingExistJob, setvalidatingExistJob] = useState(false)
   // Digits state for rate masking (similar to admin component)
   const [digits, setDigits] = useState({
     laborRate: '000',
@@ -138,34 +137,6 @@ export function CreateJobSheet({
 
     return digits.padStart(3, '0')
   }
-
-  useEffect(() => {
-    if (!formData.customJobNumber) return;
-
-    const timeout = setTimeout(() => {
-      validateCustomJobNumber();
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [formData.customJobNumber, formData.division, branch]);
-
-  const validateCustomJobNumber = async () => {
-    const jobNumber = formData.customJobNumber.toString();
-
-    if (!jobNumber || jobNumber.length !== 7) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/jobs/exist-job-number?customJobNumber=${jobNumber}`);
-      const data = await res.json();
-
-      setIsValidJobNumber(!data.exists);
-    } catch (error) {
-      console.error('Error validating job number:', error);
-      setIsValidJobNumber(false);
-    }
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -340,6 +311,9 @@ export function CreateJobSheet({
     }
   }
 
+  console.log(formData);
+
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='sm:max-w-[500px] overflow-y-auto p-0'>
@@ -355,36 +329,15 @@ export function CreateJobSheet({
         <div className='p-6 space-y-6'>
           <div>
             <div className='w-full mb-1.5'>
-              <Label className='text-sm font-medium mb-1.5' >Enter number manually</Label>
-              <Switch
-                checked={customJobNumber}
-                onCheckedChange={() => setCustomJobNumber((prev) => !prev)}
+              <Label className='text-sm font-medium mb-1.5' >Enter number</Label>
+              <JobNumberPicker
+                validJobNumber={(value: boolean) => setIsValidJobNumber(value)}
+                customJobNumber={formData.customJobNumber} setCustomJobNumber={(value: any) =>
+                  handleInputChange('customJobNumber', value)}
+                setvalidatingExistJob={setvalidatingExistJob}
+                validatingExistJob={validatingExistJob}
               />
             </div>
-            {
-              customJobNumber &&
-              <div className='w-full mb-4'>
-                <Label htmlFor='custom_job_number' className='text-sm font-medium mb-1.5' >Number Job</Label>
-                <Input
-                  id='custom_job_number'
-                  placeholder='Enter contract number'
-                  className='h-10 border-gray-200'
-                  value={formData.customJobNumber}
-                  onChange={e => {
-                    handleInputChange('customJobNumber', e.target.value)
-
-                    if (!isValidJobNumber) {
-                      setIsValidJobNumber(true)
-                    }
-                  }}
-                />
-                {
-                  !isValidJobNumber &&
-                  <Label className='text-[12px] font-medium my-2 mx-2 text-red-400' >There is already a job with this number</Label>
-                }
-
-              </div>
-            }
             <div className='grid grid-cols-2 gap-4'>
               <div>
                 <Label

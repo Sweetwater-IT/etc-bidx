@@ -9,6 +9,7 @@ import { AlertCircle } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
+import JobNumberPicker from "./SelectAvaiableJobsNumbers";
 
 interface EditActiveJobSheetProps {
   open: boolean;
@@ -36,11 +37,12 @@ function formatDateForInput(date: Date | string | null | undefined): string {
 type Statuses = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE'
 
 export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditActiveJobSheetProps) {
-  const [formData, setFormData] = useState<Partial<ActiveJob>>({});
+  const [formData, setFormData] = useState<Partial<ActiveJob>>({ newJobNumber: job?.jobNumber ?? '' });
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [isValidJobNumber, setIsValidJobNumber] = useState<boolean>(true);
+  const [validatingExistJob, setvalidatingExistJob] = useState(false)
 
-  // State for decimal masking
   const [digits, setDigits] = useState({
     laborRate: "000",
     fringeRate: "000",
@@ -65,11 +67,12 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
 
   useEffect(() => {
     if (job) {
-      setFormData(job);
+      setFormData({
+        ...job
+      });
       setStartDate(job.startDate ? new Date(job.startDate) : undefined);
       setEndDate(job.endDate ? new Date(job.endDate) : undefined);
 
-      // Initialize digits for rate fields
       setDigits({
         laborRate: Math.round((job.countyJson?.laborRate || 0) * 100)
           .toString()
@@ -79,13 +82,10 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
           .padStart(3, "0"),
       });
     } else {
-      setFormData({});
+      setFormData({ newJobNumber: '' });
       setStartDate(undefined);
       setEndDate(undefined);
-      setDigits({
-        laborRate: "000",
-        fringeRate: "000",
-      });
+      setDigits({ laborRate: "000", fringeRate: "000" });
     }
   }, [job]);
 
@@ -152,7 +152,7 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
         <div className="flex flex-col gap-2 relative z-10 bg-background">
           <SheetHeader className="p-6 pb-4">
-            <SheetTitle>Edit Job: {job?.jobNumber}</SheetTitle>
+            <SheetTitle>Edit Job: {job?.newJobNumber ? job.newJobNumber : job?.jobNumber}</SheetTitle>
           </SheetHeader>
           <Separator className='w-full -mt-2' />
         </div>
@@ -160,19 +160,20 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
         <div className="flex flex-col overflow-y-auto h-full">
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2 w-full">
                   <Label>Job Number</Label>
-                  <div className="relative">
-                    <Input
-                      value={formData.jobNumber || ''}
-                      onChange={(e) => handleInputChange('jobNumber', e.target.value)}
-                      disabled
-                      readOnly
-                    />
-                  </div>
+                  <JobNumberPicker
+                    customJobNumber={formData.newJobNumber}
+                    setCustomJobNumber={(value: any) => handleInputChange('newJobNumber', value)}
+                    validJobNumber={(isValid: boolean) => setIsValidJobNumber(isValid)}
+                    initialValueNumber={(job?.jobNumber || '').split('-').pop() || ''}
+                    setvalidatingExistJob={setvalidatingExistJob}
+                    validatingExistJob={validatingExistJob}
+                  />
                 </div>
-
+              </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2 w-full">
                   <Label>Bid Number</Label>
                   <Input
@@ -367,8 +368,15 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              Save Changes
+            <Button disabled={!isValidJobNumber || validatingExistJob} onClick={handleSubmit}>
+              {validatingExistJob ? (
+                <span className="flex items-center justify-center">
+                  <span className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></span>
+                  Saving...
+                </span>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </div>
         </div>

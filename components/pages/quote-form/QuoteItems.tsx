@@ -1,28 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Pencil, Check, MoreVertical } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useState, useEffect } from "react";
-import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
+
 
 enum UOM_TYPES {
   EA = "EA",
@@ -36,30 +21,10 @@ enum UOM_TYPES {
 
 export function QuoteItems() {
   const { quoteItems, setQuoteItems } = useQuoteForm();
-  const [showCustomForm, setShowCustomForm] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
-  const [newQuoteItem, setNewQuoteItem] = useState<QuoteItem>({
-    id: generateUniqueId(),
-    itemNumber: "",
-    description: "",
-    uom: "",
-    quantity: 0,
-    unitPrice: 0,
-    discount: 0,
-    discountType: "percentage",
-    notes: "",
-    associatedItems: [],
-  });
 
-  // Add initial item when page loads
-  useEffect(() => {
-    if (quoteItems.length === 0) {
-      handleAddNewItem();
-    }
-  }, []);
 
-  // Calculate unit price for composite items (items with sub-items)
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
     if (!item.associatedItems || item.associatedItems.length === 0) {
       return item.unitPrice;
@@ -72,12 +37,12 @@ export function QuoteItems() {
     );
   };
 
-  // Calculate extended price based on quantity, unit price, and discount
+  
   const calculateExtendedPrice = (item: QuoteItem) => {
     const unitPrice = calculateCompositeUnitPrice(item);
     const basePrice = item.quantity * unitPrice;
 
-    // If discount type is dollar, use the direct amount, otherwise calculate percentage
+   
     const discountAmount =
       item.discountType === "dollar"
         ? item.discount
@@ -88,14 +53,14 @@ export function QuoteItems() {
     });
   };
 
-  // Calculate total value
+  
   const totalValueCalculation = () => {
     return quoteItems
       .reduce((sum, item) => {
         const unitPrice = calculateCompositeUnitPrice(item);
         const basePrice = (item.quantity || 0) * unitPrice;
 
-        // If discount type is dollar, use the direct amount, otherwise calculate percentage
+        
         const discountAmount =
           item.discountType === "dollar"
             ? item.discount
@@ -108,7 +73,7 @@ export function QuoteItems() {
       });
   };
 
-  // Handle item updates
+ 
   const handleItemUpdate = (
     itemId: string,
     field: keyof QuoteItem,
@@ -119,151 +84,85 @@ export function QuoteItems() {
         item.id === itemId ? { ...item, [field]: value } : item
       )
     );
-    // Reset editing state for sub-items when parent is saved
+    
     setEditingSubItemId(null);
   };
 
-  // Handle adding custom item
-  const handleAddCustomItem = () => {
-    if (quoteItems.some((qi) => qi.itemNumber === newQuoteItem.itemNumber))
-      return;
-    if (newQuoteItem.itemNumber) {
-      setQuoteItems((prevState) => [
-        ...prevState,
-        {
-          ...newQuoteItem,
-        },
-      ]);
-      // Reset form and hide custom form
-      setNewQuoteItem({
-        id: generateUniqueId(),
-        itemNumber: "",
-        description: "",
-        uom: "",
-        quantity: 0,
-        unitPrice: 0,
-        discount: 0,
-        discountType: "percentage",
-        notes: "",
-        associatedItems: [],
-      });
-      setShowCustomForm(false);
-      // Reset editing state for sub-items
-      setEditingSubItemId(null);
-    }
-  };
-
-  // Auto-add item when form is shown
-  useEffect(() => {
-    if (showCustomForm) {
-      handleAddCustomItem();
-    }
-  }, [showCustomForm]);
-
-  // Handle removing item
+ 
   const handleRemoveItem = (itemId: string) => {
     setQuoteItems((prevItems) =>
       prevItems.filter((item) => item.id !== itemId)
     );
   };
 
-  // Handle adding sub-item
+  
   const handleAddCompositeItem = (parentItem: QuoteItem) => {
     const newId = generateUniqueId();
     setQuoteItems((prevItems) =>
       prevItems.map((item) =>
         item.id === parentItem.id
           ? {
-              ...item,
-              associatedItems: [
-                ...(item.associatedItems || []),
-                {
-                  id: newId,
-                  itemNumber: "",
-                  description: "",
-                  uom: "",
-                  quantity: 0,
-                  unitPrice: 0,
-                  discount: 0,
-                  discountType: "dollar",
-                  notes: "",
-                  isCustom: true,
-                },
-              ],
-            }
+            ...item,
+            associatedItems: [
+              ...(item.associatedItems || []),
+              {
+                id: newId,
+                itemNumber: "",
+                description: "",
+                uom: "",
+                quantity: 0,
+                unitPrice: 0,
+                discount: 0,
+                discountType: "dollar",
+                notes: "",
+                isCustom: true,
+              },
+            ],
+          }
           : item
       )
     );
   };
 
-  // Handle sub-item updates
+  
   const handleCompositeItemUpdate = (
     parentItemId: string,
     subItemId: string,
     field: keyof AssociatedItem,
     value: string | number
   ) => {
-    if (parentItemId === newQuoteItem.id) {
-      setNewQuoteItem((prev) => ({
-        ...prev,
-        associatedItems:
-          prev.associatedItems?.map((ai) =>
-            ai.id === subItemId ? { ...ai, [field]: value } : ai
-          ) || [],
-      }));
-    } else {
       setQuoteItems((prevItems) =>
         prevItems.map((item) =>
           item.id === parentItemId
             ? {
-                ...item,
-                associatedItems:
-                  item.associatedItems?.map((ai) =>
-                    ai.id === subItemId ? { ...ai, [field]: value } : ai
-                  ) || [],
-              }
+              ...item,
+              associatedItems:
+                item.associatedItems?.map((ai) =>
+                  ai.id === subItemId ? { ...ai, [field]: value } : ai
+                ) || [],
+            }
             : item
         )
       );
-    }
   };
 
-  // Handle removing sub-item
+ 
   const handleDeleteComposite = (parentItemId: string, subItemId: string) => {
-    if (parentItemId === newQuoteItem.id) {
-      setNewQuoteItem((prev) => ({
-        ...prev,
-        associatedItems:
-          prev.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
-      }));
-    } else {
       setQuoteItems((prevItems) =>
         prevItems.map((item) =>
           item.id === parentItemId
             ? {
-                ...item,
-                associatedItems:
-                  item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
-                  [],
-              }
+              ...item,
+              associatedItems:
+                item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
+                [],
+            }
             : item
         )
       );
-    }
   };
-
-  // Handle new item form changes
-  const handleCustomItemChange = (
-    field: keyof QuoteItem,
-    value: string | number
-  ) => {
-    setNewQuoteItem((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Handle adding new item
+  
+ 
   const handleAddNewItem = () => {
     const newId = generateUniqueId();
     setQuoteItems((prevItems) => [
@@ -294,9 +193,9 @@ export function QuoteItems() {
         </Button>
       </div>
 
-      {/* Items List */}
+     
       <div className="space-y-4">
-        {/* Header */}
+        
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
           style={{
@@ -312,7 +211,7 @@ export function QuoteItems() {
           <div className="uppercase">Extended Price</div>
         </div>
 
-        {/* Items */}
+        
         <QuoteItemsList
           quoteItems={quoteItems}
           editingItemId={editingItemId}
@@ -330,17 +229,7 @@ export function QuoteItems() {
         />
       </div>
 
-      <div className="flex justify-start">
-        <Button
-          className="mt-4 border-none p-0 !bg-transparent shadow-none"
-          variant="outline"
-          onClick={handleAddNewItem}
-        >
-          + Add New Item
-        </Button>
-      </div>
-
-      {/* Totals */}
+      
       <div className="mt-6 flex justify-end space-y-1 text-sm">
         <div className="text-right">
           <div>Total Items: {quoteItems.length}</div>
