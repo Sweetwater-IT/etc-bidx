@@ -1,9 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: any) {
     try {
-        const id = params.id;
+        const resolvedParams = await params;
+        const id = parseInt(resolvedParams.id);
 
         if (!id) {
             return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
@@ -44,9 +45,9 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
             paymentTerms: data.payment_terms || ''
         };
 
-        return NextResponse.json({ customer, ok:true});
+        return NextResponse.json({ customer, ok: true });
     } catch (err) {
         console.error('Error fetching customer:', err);
-        return NextResponse.json({ error: 'Unexpected error fetching customer', ok:false }, { status: 500 });
+        return NextResponse.json({ error: 'Unexpected error fetching customer', ok: false }, { status: 500 });
     }
 }
