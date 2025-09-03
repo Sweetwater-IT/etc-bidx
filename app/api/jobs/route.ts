@@ -41,15 +41,19 @@ export async function GET(request: NextRequest) {
         }
 
         const filteredCountiesJobs = allJobs.filter(job => !!job.admin_data_entries && !!(job.admin_data_entries as any).county)
-        const nonArchivedJobs = allJobs.filter(job => job.archived !== true);
-        const nonArchivedFilteredJobs = filteredCountiesJobs.filter(job => job.archived !== true);
+        const isArchived = (v: any) => v === true || v === 'true' || v === 1 || v === '1';
+
+        const nonArchivedJobs = allJobs.filter(job => (!job.archived));
+        const nonArchivedFilteredJobs = filteredCountiesJobs.filter(job => !isArchived(job.archived));
+
+        const archivedJobs = allJobs.filter(job => job.archived === true);
 
         const countData = {
-          all: nonArchivedJobs.length,
+          all: 100,
           west: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Bedford' || (job.admin_data_entries as any).county.branch === 'WEST').length,
           turbotville: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Turbotville').length,
           hatfield: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Hatfield').length,
-          archived: allJobs.filter(job => !!job.archived).length
+          archived: archivedJobs.length
         };
 
         return NextResponse.json(countData);
@@ -136,6 +140,7 @@ export async function GET(request: NextRequest) {
     if (isArchivedFilter) {
       query = query.eq('archived', true);
     } else if (excludeArchived) {
+      query = query.eq('archived', false);
     }
 
     // Apply branch filters

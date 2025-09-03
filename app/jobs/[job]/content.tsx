@@ -496,7 +496,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at ? job.created_at : '-',
+                    createdAt: job.created_at ? formatDate(job.created_at) : '-',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
@@ -850,6 +850,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
             const fetchedBidsData = await fetchBids(options);
 
+            console.log('data es', fetchedBidsData);
+
             setJobCounts({
                 all: fetchedBidsData.counts.all,
                 unset: fetchedBidsData.counts.unset,
@@ -868,6 +870,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [isAvailableJobs, startLoading, stopLoading]);
 
     const fetchActiveJobCounts = useCallback(async () => {
+
         if (!isActiveJobs) return;
 
         try {
@@ -897,8 +900,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [isActiveJobs, startLoading, stopLoading]);
 
     const fetchActiveBidCounts = useCallback(async () => {
-        if (!isActiveBids) return;
 
+        if (!isActiveBids) return;
         try {
             startLoading();
 
@@ -1723,6 +1726,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         const allParams = new URLSearchParams();
         allParams.set("limit", "1");
         allParams.set("page", "1");
+        allParams.set("archived", "false"); 
         if (Object.keys(filtersWithoutBranch).length > 0) {
             allParams.set("filters", JSON.stringify(filtersWithoutBranch));
         }
@@ -1742,7 +1746,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const segments = isAvailableJobs
         ? [
-            { label: `All (${jobCounts.all || 0})`, value: "all" },
+            { label: `All (${jobCounts.all ?? 0})`, value: "all" },
             { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
             { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
             { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },

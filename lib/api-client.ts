@@ -106,7 +106,7 @@ export async function fetchBids(options?: {
   if (options?.includeStats) {
     return { data: result.data, counts: result.counts, stats: result.stats };
   }
-
+  
   return result.data;
 }
 
