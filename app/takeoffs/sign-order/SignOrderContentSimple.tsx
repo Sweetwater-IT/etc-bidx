@@ -40,7 +40,6 @@ import { useMemo } from 'react';
 import { usePDF } from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
 
-
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
 export interface SignOrderAdminInformation {
@@ -83,6 +82,7 @@ export default function SignOrderContentSimple({
     orderNumber: undefined,
     contact: null
   })
+  const [signList, setSignList] = useState<SignItem[]>([])
 
   const { startLoading, stopLoading } = useLoading()
   const { user } = useAuth()
@@ -287,7 +287,7 @@ export default function SignOrderContentSimple({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-
+      setSignList(mptRental.phases[0].signs.map(normalizeSign));
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
@@ -547,7 +547,7 @@ export default function SignOrderContentSimple({
             endDate: undefined,
             contact: null
           }}
-          signList={mptRental.phases[0].signs || []}
+          signList={signList || []}
           mptRental={mptRental}
           notes={notes || []}
         />
@@ -645,19 +645,12 @@ export default function SignOrderContentSimple({
             <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
               <SignOrderWorksheet
                 adminInfo={adminInfo}
-                signList={mptRental.phases[0].signs || []}
+                signList={signList}
                 mptRental={mptRental}
                 notes={notes}
               />
             </div>
           </div>
-          <QuoteNotes
-            notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            loading={loadingNotes}
-          />
         </div>
       </div>
     </div>
@@ -665,3 +658,23 @@ export default function SignOrderContentSimple({
     <></>
   );
 }
+
+const normalizeSign = (sign: any): SignItem => ({
+  designation: sign.designation || '',
+  description: sign.description || '',
+  quantity: sign.quantity || 0,
+  width: sign.width || 0,
+  height: sign.height || 0,
+  sheeting: sign.sheeting || '',
+  substrate: sign.substrate || '', // ensure string, fallback to empty string
+  stiffener: typeof sign.stiffener === 'string' || typeof sign.stiffener === 'boolean' ? sign.stiffener : '',
+  inStock: sign.inStock ?? 0,
+  order: sign.order ?? 0,
+  displayStructure: sign.displayStructure || '',
+  bLights: sign.bLights || 0,
+  cover: sign.cover || false,
+  make: sign.make ?? 0,
+  unitPrice: sign.unitPrice ?? undefined,
+  totalPrice: sign.totalPrice ?? undefined,
+  primarySignId: sign.primarySignId ?? undefined,
+});
