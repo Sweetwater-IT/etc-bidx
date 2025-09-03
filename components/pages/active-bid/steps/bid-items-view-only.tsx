@@ -1098,9 +1098,7 @@ const BidItemsViewOnly = () => {
 
                 {/* Sale Items Tab */}
                 <TabsContent value="sale" className="mt-6">
-                    <div className="text-center py-6 text-muted-foreground pl-6">
-                        <SaleItemsViewOnly />
-                    </div>
+                    <SaleItemsViewOnly />
                 </TabsContent>
 
                 {/* Patterns/Service Work Tab */}
