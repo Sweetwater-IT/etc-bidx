@@ -63,6 +63,7 @@ const AdminInformationStep1 = () => {
 
   const { adminData, dispatch, ratesAcknowledged, firstSaveTimestamp, mptRental,
     flagging, serviceWork, saleItems, equipmentRental, notes, permanentSigns } = useEstimate();
+  const [alreadyExistBidMessage, setAlreadyExistBidMessage] = useState('')
 
   const searchParams = useSearchParams();
   const availableJobId = searchParams?.get('jobId');
@@ -95,7 +96,7 @@ const AdminInformationStep1 = () => {
 
   const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
   const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
-  const owDecimalHours = (owHours + owMinutes / 60).toFixed(1); 
+  const owDecimalHours = (owHours + owMinutes / 60).toFixed(1);
   const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
@@ -115,7 +116,7 @@ const AdminInformationStep1 = () => {
   }
 
   useEffect(() => {
-    const totalMins = safeNumber(adminData.owTravelTimeMins); 
+    const totalMins = safeNumber(adminData.owTravelTimeMins);
     setOwHours(Math.floor(totalMins / 60));
     setOwMinutes(totalMins % 60);
   }, [adminData.owTravelTimeMins]);
@@ -832,8 +833,15 @@ const AdminInformationStep1 = () => {
                                 serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
                               dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
                               dispatch({ type: 'SET_ID', payload: createResponse.id })
-                            } catch (err) {
-                              toast.error('Failed to save bid' + err)
+                              if(alreadyExistBidMessage) {
+                                setAlreadyExistBidMessage('')
+                              }
+                            } catch (err: any) {
+                              if (err?.alreadyExist) {
+                                setAlreadyExistBidMessage("The contract number already exist")
+                              } else {
+                                toast.error("Failed to save bid: " + err.message);
+                              }
                             }
                           }
                         }}
@@ -865,6 +873,9 @@ const AdminInformationStep1 = () => {
                         }}
                         className="h-10"
                       />
+                      {field.name === "contractNumber" && alreadyExistBidMessage && (
+                        <p className="text-sm text-red-500 mt-1">{alreadyExistBidMessage}</p>
+                      )}
                       {field.hasToggle && (
                         <div className="flex items-center gap-2">
                           <Label

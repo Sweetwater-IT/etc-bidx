@@ -118,7 +118,12 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
     pmEmail,
     pmPhone,
     onCustomerChange,
-    jobId
+    jobId,
+    onCustomerContractNumberChange,
+    onProjectManagerChange,
+    onPmEmailChange,
+    onPmPhoneChange
+
 }) => {
 
     const { customers = [] } = useCustomers();
@@ -150,7 +155,7 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
 
     useEffect(() => {
         if (customer && localValues.pmEmail) {
-            const matchingIndex = customer.emails.findIndex(email => email === localValues.pmEmail);            
+            const matchingIndex = customer.emails.findIndex(email => email === localValues.pmEmail);
             if (matchingIndex !== -1) {
                 setLocalContact({
                     id: customer.contactIds[matchingIndex],
@@ -192,6 +197,11 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
 
             if (res.ok && data.success) {
                 toast.success("Project metadata updated!");
+                onCustomerContractNumberChange(localValues.customerContractNumber)
+                onProjectManagerChange(localValues.projectManager)
+                onPmEmailChange(localValues.pmEmail)
+                onPmPhoneChange(localValues.pmPhone)
+
                 setModeEdit(false);
             } else {
                 toast.error("Failed to update project metadata: " + data.error);

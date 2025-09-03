@@ -122,7 +122,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         return
       }
 
-      const response = await jobResponse.json()      
+      const response = await jobResponse.json()
 
       // Update admin data
       if (response.adminData) {
@@ -192,13 +192,13 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
     } finally {
       stopLoading()
     }
-  }  
+  }
 
   useEffect(() => {
     fetchData()
   }, [contractNumber, customers, isLoadingCustomers])
 
-  const fetchFiles =() => {
+  const fetchFiles = () => {
     if (!jobId) return
     fetchAssociatedFiles(jobId, 'contract-management?job_id', setFiles)
   }
@@ -260,22 +260,27 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         </DialogContent>
       </Dialog>
 
-      <CreateJobModal
-        jobId={jobId}
-        isOpen={isOpenJobCreation}
-        onOpenChange={setIsOpenJobCreation}
-        customer={customer}
-        customerContractNumber={customerContractNumber}
-        projectManager={projectManager}
-        pmEmail={pmEmail}
-        pmPhone={pmPhone}
-        contractNumber={contractNumber}
-        adminData={adminData}
-        sender={sender}
-        onJobCreated={() => {
-          fetchData()
-        }}
-      />
+
+      {
+        isOpenJobCreation &&
+        <CreateJobModal
+          jobId={jobId}
+          isOpen={isOpenJobCreation}
+          onOpenChange={setIsOpenJobCreation}
+          customer={customer}
+          customerContractNumber={customerContractNumber}
+          projectManager={projectManager}
+          pmEmail={pmEmail}
+          pmPhone={pmPhone}
+          contractNumber={contractNumber}
+          adminData={adminData}
+          sender={sender}
+          onJobCreated={() => {
+            fetchData()
+          }}
+          onCustomerChange={setCustomer}
+        />
+      }
 
       <EmailSendingModal
         isOpen={isOpenEmailSending}

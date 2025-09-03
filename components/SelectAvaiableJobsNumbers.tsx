@@ -46,10 +46,11 @@ export default function JobNumberPicker({
     const [yearStart, setYearStart] = useState(currentYear)
 
     const handlePrevYears = () => {
-        if (yearStart > currentYear) {
-            setYearStart(yearStart - 6);
-        }
-    }; const handleNextYears = () => setYearStart(yearStart + 6)
+        setYearStart(yearStart - 6);
+    };
+    const handleNextYears = () => {
+        setYearStart(yearStart + 6);
+    };
 
     const toggleModal = () => setModalState((prev) => !prev)
 
@@ -213,17 +214,16 @@ export default function JobNumberPicker({
                     <div className="flex flex-col items-center w-full">
                         <div className="p-2 w-full">
                             <div className="flex justify-between items-center mb-2">
-                                {
-                                    (yearStart > currentYear) &&
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 px-2"
-                                        onClick={handlePrevYears}
-                                    >
-                                        &lt;
-                                    </Button>
-                                }
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2"
+                                    onClick={handlePrevYears}
+                                >
+                                    &lt;
+                                </Button>
+
                                 <span className="text-sm font-medium">
                                     {years[0]} – {years[years.length - 1]}
                                 </span>

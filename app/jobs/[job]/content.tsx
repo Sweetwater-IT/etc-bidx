@@ -1726,7 +1726,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         const allParams = new URLSearchParams();
         allParams.set("limit", "1");
         allParams.set("page", "1");
-        allParams.set("archived", "false"); 
+        allParams.set("archived", "false");
         if (Object.keys(filtersWithoutBranch).length > 0) {
             allParams.set("filters", JSON.stringify(filtersWithoutBranch));
         }

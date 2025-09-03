@@ -532,7 +532,6 @@ export async function POST(request: NextRequest) {
       }
     } else {
 
-
       const { data: existingBid, error: checkError } = await supabase
         .from('bid_estimates')
         .select('id')
@@ -547,6 +546,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            alreadyExist:true,
             message: `A bid with contract_number "${adminData.contractNumber}" already exists.`,
           },
           { status: 400 }
