@@ -23,7 +23,6 @@ import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
-// Mapper para enviar al backend en snake_case
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
 
@@ -122,16 +121,71 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
     }
     initDraft();
-
-  }, []);
-
-
-
-
+  
+  }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const handleSaveNote = async (note: Note) => {
     setNotes((prevNotes) => [...prevNotes, note]);
   };
+  const autosave = async () => {
+    if (!numericQuoteId) {
+
+      return false
+    }
+
+    prevStateRef.current = { quoteItems, adminData, notes }
+
+
+
+    try {
+      const payload = {
+        id: numericQuoteId,
+        estimate_id: estimateId,
+        job_id: jobId,
+        items: quoteItems,
+        admin_data: mapAdminDataToApi(
+          adminData ?? defaultAdminObject,
+          estimateId,
+          jobId
+        ),
+        status: 'DRAFT',
+        notes: notes,
+        subject,
+        body: emailBody,
+        from_email: sender?.email || null,
+        recipients: [
+          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+          ...ccEmails.map((email) => ({ email, cc: true })),
+          ...bccEmails.map((email) => ({ email, bcc: true })),
+        ],
+        customers: selectedCustomers.map(c => ({ id: c.id })),
+        include_terms: includeTerms,
+        custom_terms: customTerms,
+        payment_terms: paymentTerms,
+      }
+
+
+
+      const res = await fetch(`/api/quotes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText || 'Failed to save draft')
+      }
+
+      setSecondCounter(1)
+      if (!firstSave) setFirstSave(true)
+      return true
+    } catch (error) {
+
+      toast.error('Quote not successfully saved as draft: ' + error)
+      return false
+    }
+  }
 
   const handleEditNote = (index: number, updatedNote: Note) => {
     setNotes((prevNotes) =>
@@ -159,7 +213,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [quoteItems, adminData, notes, numericQuoteId])
+  }, [quoteItems, adminData, notes, numericQuoteId, autosave])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -252,69 +306,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       setSending(false);
     }
   };
-
-  const autosave = async () => {
-    if (!numericQuoteId) {
-
-      return false
-    }
-
-    prevStateRef.current = { quoteItems, adminData, notes }
-
-
-
-    try {
-      const payload = {
-        id: numericQuoteId,
-        estimate_id: estimateId,
-        job_id: jobId,
-        items: quoteItems,
-        admin_data: mapAdminDataToApi(
-          adminData ?? defaultAdminObject,
-          estimateId,
-          jobId
-        ),
-        status: 'DRAFT',
-        notes: notes,
-        subject,
-        body: emailBody,
-        from_email: sender?.email || null,
-        recipients: [
-          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
-          ...ccEmails.map((email) => ({ email, cc: true })),
-          ...bccEmails.map((email) => ({ email, bcc: true })),
-        ],
-        customers: selectedCustomers.map(c => ({ id: c.id })),
-        include_terms: includeTerms,
-        custom_terms: customTerms,
-        payment_terms: paymentTerms,
-      }
-
-
-
-      const res = await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || 'Failed to save draft')
-      }
-
-      setSecondCounter(1)
-      if (!firstSave) setFirstSave(true)
-      return true
-    } catch (error) {
-
-      toast.error('Quote not successfully saved as draft: ' + error)
-      return false
-    }
-  }
-
-
-
 
 
   const handleSaveAndExit = async () => {
