@@ -966,10 +966,10 @@ const BidItemsViewOnly = () => {
         { key: 'months', title: 'Months', sortable: true },
         { key: 'rentPrice', title: 'Rent Price', sortable: true },
         { key: 'reRentPrice', title: 'Re-Rent Price', sortable: true },
-        { key: 'reRentForCurrentJob', title: 'Re-Rent Current Job', sortable: true },
-        { key: 'totalCost', title: 'Total Cost', sortable: true },
-        { key: 'equipmentCost', title: 'Equipment Cost', sortable: true },
-        { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
+        // { key: 'reRentForCurrentJob', title: 'Re-Rent Current Job', sortable: true },
+        // { key: 'totalCost', title: 'Total Cost', sortable: true },
+        // { key: 'equipmentCost', title: 'Equipment Cost', sortable: true },
+        // { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
     ];
 
     // Función para calcular el total
