@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+const formatedSign = (signs: any[]) => {
+  return signs.map((sign) => ({
+    ...sign,
+    associatedStructure: sign.associated_structure
+  }))
+}
+
 export async function GET() {
   try {
     const { data: jobsList, error: jobsError } = await supabase
       .from("jobs_list")
       .select("*")
-      .eq("archived", false); 
+      .eq("archived", false);
     if (jobsError) throw jobsError;
 
     const { data: bids, error: bidsError } = await supabase
@@ -48,8 +55,8 @@ export async function GET() {
         .map(phase => ({
           id: phase.id,
           name: phase.name,
-          mpt_primary_signs: phase.mpt_primary_signs || [],
-          mpt_secondary_signs: phase.mpt_secondary_signs || [],
+          mpt_primary_signs: formatedSign(phase.mpt_primary_signs) || [],
+          mpt_secondary_signs: formatedSign(phase.mpt_secondary_signs) || [],
         }))
         .filter(phase => (phase.mpt_primary_signs.length + phase.mpt_secondary_signs.length) > 0);
 
@@ -71,8 +78,8 @@ export async function GET() {
         .map(phase => ({
           id: phase.id,
           name: phase.name,
-          mpt_primary_signs: phase.mpt_primary_signs || [],
-          mpt_secondary_signs: phase.mpt_secondary_signs || [],
+          mpt_primary_signs: formatedSign(phase.mpt_primary_signs) || [],
+          mpt_secondary_signs: formatedSign(phase.mpt_secondary_signs) || [],
         }))
         .filter(phase => (phase.mpt_primary_signs.length + phase.mpt_secondary_signs.length) > 0);
 

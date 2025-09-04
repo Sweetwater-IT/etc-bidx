@@ -58,8 +58,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
 
     const isSecondary = isSecondarySign(sign);
-
-    console.log( "isSignOrder:", isSignOrder);
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
@@ -321,7 +319,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             console.error("Error getting available dimensions:", error);
             return [];
         }
-    };
+    };    
 
     const handleSave = () => {
         // For secondary signs, make sure the quantity matches the primary sign
