@@ -21,6 +21,7 @@ import isEqual from 'lodash/isEqual'
 import { useRouter } from 'next/navigation'
 import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
+import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
@@ -361,23 +362,51 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         }
       />
 
+      {/* Contenido principal: Formulario a la izquierda, Vista previa a la derecha */}
       <div className="flex gap-6 p-6 max-w-full">
-        <div className="w-3/4 space-y-6">
+        {/* Columna Izquierda (Formulario) */}
+        <div className="w-1/2 space-y-6">
           <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
           <QuoteItems />
           <QuoteEmailDetails />
         </div>
-        <div className="w-1/4 space-y-6">
+
+        {/* Columna Derecha (Vista Previa y otros) */}
+        <div className="w-1/2 space-y-6">
           <QuoteNumber />
           <QuoteAdditionalFiles />
-          <QuoteTermsAndConditions />
-          <QuoteNotes
-            notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            canEdit={true}
-          />
+          <div className="grid grid-cols-2 gap-6">
+            <QuoteTermsAndConditions />
+            <QuoteNotes
+              notes={notes}
+              onSave={handleSaveNote}
+              onEdit={handleEditNote}
+              onDelete={handleDeleteNote}
+              canEdit={true}
+            />
+          </div>
+          
+          {/* Contenedor de la Vista Previa del PDF */}
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
+            <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              <BidProposalWorksheet
+                adminData={adminData ?? defaultAdminObject}
+                items={quoteItems}
+                customers={selectedCustomers}
+                quoteDate={new Date()}
+                quoteNumber={quoteNumber || quoteId?.toString() || ''}
+                pointOfContact={pointOfContact ?? { name: '', email: '' }}
+                sender={sender}
+                paymentTerms={paymentTerms as PaymentTerms}
+                includedTerms={includeTerms}
+                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+                county={adminData ? adminData.county?.name || '' : ''}
+                sr={adminData ? adminData.srRoute || '' : ''}
+                ecms={adminData ? adminData.contractNumber || '' : ''}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
