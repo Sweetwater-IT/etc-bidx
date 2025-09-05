@@ -96,6 +96,7 @@ export function ContractJobSelector({
     setAssociatedContractNumber,
     setQuoteItems,
     setAdminData,
+    setNotes,
   } = useQuoteForm();
 
   const handleBlur = () => {
@@ -263,7 +264,14 @@ export function ContractJobSelector({
               <DropdownMenuItem
                 onClick={() => {
                   onSelect(null);
-                  setAdminData(undefined); // 🔥 limpia adminData también acá
+                  // Limpiar todos los estados relacionados
+                  setAdminData(undefined);
+                  setAssociatedContractNumber(undefined);
+                  setSelectedCustomers([]);
+                  setQuoteItems([]);
+                  setNotes([]);
+                  setQuoteType("new");
+
                 }}
               >
                 Delete

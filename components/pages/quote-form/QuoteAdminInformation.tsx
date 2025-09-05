@@ -60,6 +60,7 @@ export function QuoteAdminInformation({
     setQuoteItems,
     adminData,
     setAdminData,
+    setNotes,
     setEstimateId,
     setJobId,
     quoteId,
@@ -133,7 +134,19 @@ export function QuoteAdminInformation({
     setSheetMode("edit");
     setSheetOpen(false);
 
-    if (!jobOrEstimate) return;
+    if (!jobOrEstimate) {
+      // Si se deselecciona, limpiar todo
+      setAdminData(undefined);
+      setAssociatedContractNumber(undefined);
+      setSelectedCustomers([]);
+      setQuoteItems([createEmptyQuoteItem()]);
+      setNotes([]);
+      setEstimateId(null);
+      setJobId(null);
+      setQuoteType("new");
+      setSelectedContractJob(null); // Asegurarse de limpiar el estado local también
+      return;
+    }
 
     try {
       if (jobOrEstimate.contract_number) {

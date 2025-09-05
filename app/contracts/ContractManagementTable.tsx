@@ -179,7 +179,7 @@ const ContractManagementTable = () => {
     }
 
     fetchData()
-  }, [currentSegment, activeFilters, sortBy, sortOrder])
+  }, [currentSegment, activeFilters, sortBy, sortOrder, startLoading, stopLoading])
 
   const handleSegmentChange = (value: string) => {
     setCurrentSegment(value)

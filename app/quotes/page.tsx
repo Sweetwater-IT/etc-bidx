@@ -147,8 +147,8 @@ export default function QuotesPage() {
 
   useEffect(() => {
     fetchQuoteCounts();
-    fetchQuotes();
-  }, []);
+    fetchQuotes(activeSegment, pageIndex + 1, pageSize);
+  }, [activeSegment, pageIndex, pageSize]);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
