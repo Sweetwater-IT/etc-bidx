@@ -3,12 +3,8 @@
 import { Button } from '@/components/ui/button'
 import { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
-import {
-  PaymentTerms,
-  QuoteAdminInformation,
-} from '@/components/pages/quote-form/QuoteAdminInformation'
+import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
-import { QuoteEmailDetails } from '@/components/pages/quote-form/QuoteEmailDetails'
 import { QuoteNumber } from '@/components/pages/quote-form/QuoteNumber'
 import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditionalFiles'
 import { QuoteTermsAndConditions } from '@/components/pages/quote-form/QuoteTermsAndConditions'
@@ -368,24 +364,19 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         <div className="w-1/2 space-y-6">
           <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
           <QuoteItems />
-          <QuoteEmailDetails />
+          <QuoteNotes
+            notes={notes}
+            onSave={handleSaveNote}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            canEdit={true}
+          />
+          {/* <QuoteAdditionalFiles /> */}
+          {/* <QuoteTermsAndConditions /> */}
         </div>
 
         {/* Columna Derecha (Vista Previa y otros) */}
         <div className="w-1/2 space-y-6">
-          <QuoteNumber />
-          <QuoteAdditionalFiles />
-          <div className="grid grid-cols-2 gap-6">
-            <QuoteTermsAndConditions />
-            <QuoteNotes
-              notes={notes}
-              onSave={handleSaveNote}
-              onEdit={handleEditNote}
-              onDelete={handleDeleteNote}
-              canEdit={true}
-            />
-          </div>
-          
           {/* Contenedor de la Vista Previa del PDF */}
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
