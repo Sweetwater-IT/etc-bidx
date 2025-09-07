@@ -67,6 +67,8 @@ interface OpenBidSheetProps {
   job?: AvailableJob;
 }
 
+let debounceTimer: NodeJS.Timeout;
+
 export function OpenBidSheet({
   open,
   onOpenChange,
@@ -95,6 +97,8 @@ export function OpenBidSheet({
     "Equipment Rental": false,
     Other: false,
   });
+  const [statusMessage, setStatusMessage] = useState(""); 
+  const [isValid, setIsValid] = useState(true);
 
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
@@ -264,7 +268,7 @@ export function OpenBidSheet({
           const usersDb = await fetchReferenceData("users");
           const dbUser = usersDb.find((u: any) => u.email === user.email);
           if (dbUser) name = dbUser.name;
-        } catch (err) {}
+        } catch (err) { }
         setRequestor(name);
       }
     }
@@ -325,10 +329,10 @@ export function OpenBidSheet({
       const formattedLettingDate = lettingDate
         ? lettingDate.toISOString().split('T')[0]
         : today;
-      const formattedDueDate = dueDate 
-        ? dueDate.toISOString().split('T')[0] 
+      const formattedDueDate = dueDate
+        ? dueDate.toISOString().split('T')[0]
         : today;
-        
+
       console.log('Submitting dates:', {
         lettingDate: lettingDate ? lettingDate.toISOString() : null,
         formattedLettingDate,
@@ -436,6 +440,50 @@ export function OpenBidSheet({
     setOpenStates((prev) => ({ ...prev, owner: false }));
   };
 
+
+  const checkContractNumber = async (number: string) => {
+    if (!number) return;
+
+    try {
+      const res = await fetch(`/api/bids/existContractNumber?contract_number=${number}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        setStatusMessage("Error checking contract number");
+        setIsValid(false);
+        return;
+      }
+
+      const bid = data.data?.[0];
+
+      if (bid) {
+        if (bid.archived) {
+          setStatusMessage("This contract number is archived");
+          setIsValid(false);
+        } else {
+          setStatusMessage("This contract number already exists");
+          setIsValid(false);
+        }
+      } else {
+        setStatusMessage("");
+        setIsValid(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatusMessage("Error checking contract number");
+      setIsValid(false);
+    }
+  };
+
+  useEffect(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      checkContractNumber(contractNumber);
+    }, 1500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [contractNumber]);
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
@@ -467,12 +515,14 @@ export function OpenBidSheet({
                       placeholder="Contract Number"
                       className="h-10"
                       value={contractNumber}
-                      onChange={(e) =>
-                        setContractNumber(e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => setContractNumber(e.target.value.toUpperCase())}
                       required
                     />
+                    {statusMessage && (
+                      <p className="text-sm text-red-500 mt-1">{statusMessage}</p>
+                    )}
                   </div>
+
                 </div>
 
                 <div className="space-y-2 w-full">
@@ -878,7 +928,7 @@ export function OpenBidSheet({
                 <Button
                   className="flex-1"
                   type="submit"
-                  disabled={isSubmitting || !areAllRequiredFieldsFilled()}
+                  disabled={isSubmitting || !areAllRequiredFieldsFilled() || !isValid}
                   onClick={(e) => {
                     console.log("Submit button clicked");
                     if (!isSubmitting) {
@@ -891,8 +941,8 @@ export function OpenBidSheet({
                       ? "Updating..."
                       : "Creating..."
                     : job
-                    ? "Update"
-                    : "Create"}
+                      ? "Update"
+                      : "Create"}
                 </Button>
               </div>
             </div>

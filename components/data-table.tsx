@@ -169,6 +169,7 @@ export interface DataTableProps<TData extends object> {
   onViewBidSummary?: (item: TData) => void
   onUnarchive?: (item: TData) => void
   onDelete?: (item: TData, index: number) => void;
+  onDeleteItem?: (item: TData) => void;
 
 }
 
@@ -308,7 +309,7 @@ function formatCellValue(value: any, key: string) {
         return `${monthNames[month - 1]} ${day}, ${year}${timestamp}`
       }
 
-      const date = new Date(value) 
+      const date = new Date(value)
       const monthName = monthNames[date.getMonth()]
       const dayNum = date.getDate()
       const yearNum = date.getFullYear()
@@ -413,7 +414,8 @@ export function DataTable<TData extends object>({
   viewBidSummaryOpen,
   onViewBidSummary,
   onUnarchive,
-  onDelete
+  onDelete,
+  onDeleteItem,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -517,6 +519,17 @@ export function DataTable<TData extends object>({
             [row.original]
           )
 
+
+          const handleDeleteItem = useCallback(
+            async (e: React.MouseEvent) => {
+              e.stopPropagation()
+              e.preventDefault()
+              if (onDeleteItem) {
+                await onDeleteItem(row.original as TData)
+              }
+            },
+            [row.original]
+          )
           return (
             <div
               className={cn(
@@ -699,7 +712,7 @@ export function DataTable<TData extends object>({
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        onDelete(row.original as TData, row.index); 
+                        onDelete(row.original as TData, row.index);
                       }}
                     >
                       Delete
@@ -747,6 +760,15 @@ export function DataTable<TData extends object>({
                       Unarchive
                     </DropdownMenuItem>
                   )}
+
+                  {onDeleteItem && segmentValue === 'archived' && (
+                    <DropdownMenuItem
+                      className='text-destructive'
+                      onClick={handleDeleteItem}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -766,6 +788,7 @@ export function DataTable<TData extends object>({
             <DropdownMenuTrigger asChild>
               <Checkbox
                 className={`translate-x-1 ${table.getIsAllPageRowsSelected() ? 'bg-black text-white border-black' : ''}`}
+
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label='Select all rows'

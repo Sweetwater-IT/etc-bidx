@@ -61,26 +61,25 @@ if (counts) {
       return acc;
     }, {});
 
-    // Initialize counters
+    
     const result = {
-      all_active: 0,
+      all: 0,
       archived: 0,
       turbotville: 0,
       hatfield: 0,
       bedford: 0,
-      not_started: 0,
-      in_process: 0,
-      on_order: 0,
+      "not-started": 0,
+      "in-process": 0,
+      "on-order": 0,
       complete: 0
     };
-
 
     for (const order of allOrders) {
       const isArchived = order.archived;
       const branchId = userBranchMap[order.requestor];
 
-      // totales
-      if (!isArchived) result.all_active += 1;
+      // the total count
+      if (!isArchived) result.all += 1;
       if (isArchived) result.archived += 1;
 
       // the totals for branches
@@ -90,7 +89,7 @@ if (counts) {
         if (branchId === branchMap.bedford) result.bedford += 1;
       }
 
-      // for shop_status
+      // for shop_status 
       if (!isArchived && shopStatuses.includes(order.shop_status)) {
         result[order.shop_status as keyof typeof result] += 1;
       }
@@ -102,6 +101,7 @@ if (counts) {
     return NextResponse.json({ success: false, error: 'Failed to fetch counts' }, { status: 500 });
   }
 }
+
 
 
 

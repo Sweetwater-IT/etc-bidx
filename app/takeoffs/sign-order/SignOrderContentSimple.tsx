@@ -32,6 +32,13 @@ import FileViewingContainer from '@/components/file-viewing-container'
 import { FileMetadata } from '@/types/FileTypes'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthAdminApi } from '@supabase/supabase-js'
+import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
+import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import { useMemo } from 'react';
+import { usePDF } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -75,6 +82,7 @@ export default function SignOrderContentSimple({
     orderNumber: undefined,
     contact: null
   })
+  const [signList, setSignList] = useState<SignItem[]>([])
 
   const { startLoading, stopLoading } = useLoading()
   const { user } = useAuth()
@@ -252,11 +260,11 @@ export default function SignOrderContentSimple({
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setSecondCounter(prev => prev + 1)
-    }, 1000)
+      setSecondCounter(prev => prev + 1);
+    }, 1000);
 
-    return () => clearInterval(intervalId)
-  }, [secondCounter])
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Autosave effect - exactly like active bid header
   useEffect(() => {
@@ -279,7 +287,7 @@ export default function SignOrderContentSimple({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-
+      setSignList(mptRental.phases[0].signs.map(normalizeSign));
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
@@ -409,14 +417,12 @@ export default function SignOrderContentSimple({
     fetchFiles();
   }, [signOrderId])
 
-  // Use useEffect to update parent component's files state when upload is successful
   useEffect(() => {
     if (isSuccess && files.length > 0) {
       fetchFiles();
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
     async function fetchNotes() {
       setLoadingNotes(true)
@@ -445,6 +451,7 @@ export default function SignOrderContentSimple({
       })
     }
   }
+
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
     const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
@@ -504,10 +511,8 @@ export default function SignOrderContentSimple({
         contact: adminInfo.contact
       }
 
-      // Submit data to the API
       const result = await saveSignOrder(signOrderData)
 
-      // Store the ID for future updates
       if (result.id) {
         setSignOrderId(result.id)
       }
@@ -523,24 +528,66 @@ export default function SignOrderContentSimple({
     }
   }
 
+  const handleDownloadPdf = async () => {
+    try {
+      const pdfElement = (
+        <SignOrderWorksheetPDF
+          adminInfo={adminInfo || {
+            requestor: null,
+            customer: null,
+            orderDate: new Date(),
+            needDate: null,
+            orderType: [],
+            selectedBranch: 'All',
+            jobNumber: '',
+            isSubmitting: false,
+            contractNumber: '',
+            orderNumber: undefined,
+            startDate: undefined,
+            endDate: undefined,
+            contact: null
+          }}
+          signList={signList || []}
+          mptRental={mptRental}
+          notes={notes || []}
+        />
+      );
+
+      const blob = await pdf(pdfElement).toBlob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sign-order.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Error generating PDF');
+    }
+  };
+
   return mptRental.phases.length > 0 ? (
-    <div className='flex flex-1 flex-col'>
+    <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading='Create Sign Order'
+        heading="Create Sign Order"
         handleSubmit={() => {
-          handleSave('DRAFT')
-          router.push('/takeoffs/load-sheet')
+          handleSave("DRAFT");
+          router.push("/takeoffs/load-sheet");
         }}
         showX
         saveButtons={
-          <div className='flex items-center gap-4'>
-            <div className='text-sm text-muted-foreground'>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
               {getSaveStatusMessage()}
             </div>
-            <div className='flex items-center gap-2'>
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() =>
-                  handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')
+                  handleSave(alreadySubmitted ? "SUBMITTED" : "DRAFT")
                 }
                 disabled={
                   adminInfo.isSubmitting ||
@@ -549,18 +596,18 @@ export default function SignOrderContentSimple({
                 }
               >
                 {adminInfo.isSubmitting
-                  ? 'Saving...'
+                  ? "Saving..."
                   : initialSignOrderId
-                    ? 'Update order'
-                    : 'Done'}
+                    ? "Update order"
+                    : "Done"}
               </Button>
             </div>
           </div>
         }
       />
-      <div className='flex gap-6 p-6 max-w-full'>
+      <div className="flex gap-6 p-6 max-w-full">
         {/* Main Form Column (3/4) */}
-        <div className='w-3/4 space-y-6'>
+        <div className="w-3/4 space-y-6">
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
@@ -569,13 +616,13 @@ export default function SignOrderContentSimple({
           <SignOrderList />
         </div>
         {/* Right Column (1/4) */}
-        <div className='w-1/4 space-y-6'>
+        <div className="w-1/4 space-y-6">
           <EquipmentTotalsAccordion />
-          <div className='border rounded-lg p-4'>
-            <h2 className='mb-2 text-lg font-semibold'>Files</h2>
+          <div className="border rounded-lg p-4">
+            <h2 className="mb-2 text-lg font-semibold">Files</h2>
             <Dropzone
               {...fileUploadProps}
-              className='p-8 cursor-pointer space-y-4 mb-4'
+              className="p-8 cursor-pointer space-y-4 mb-4"
             >
               <DropzoneContent />
               <DropzoneEmptyState />
@@ -589,10 +636,45 @@ export default function SignOrderContentSimple({
             onDelete={handleDeleteNote}
             loading={loadingNotes}
           />
+          <div className="bg-[#F4F5F7] p-6 rounded-lg">
+            <div className="flex justify-end">
+              <Button onClick={handleDownloadPdf}>
+                Download PDF
+              </Button>
+            </div>
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
+              <SignOrderWorksheet
+                adminInfo={adminInfo}
+                signList={signList}
+                mptRental={mptRental}
+                notes={notes}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   ) : (
     <></>
-  )
+  );
 }
+
+const normalizeSign = (sign: any): SignItem => ({
+  designation: sign.designation || '',
+  description: sign.description || '',
+  quantity: sign.quantity || 0,
+  width: sign.width || 0,
+  height: sign.height || 0,
+  sheeting: sign.sheeting || '',
+  substrate: sign.substrate || '', // ensure string, fallback to empty string
+  stiffener: typeof sign.stiffener === 'string' || typeof sign.stiffener === 'boolean' ? sign.stiffener : '',
+  inStock: sign.inStock ?? 0,
+  order: sign.order ?? 0,
+  displayStructure: sign.displayStructure || '',
+  bLights: sign.bLights || 0,
+  cover: sign.cover || false,
+  make: sign.make ?? 0,
+  unitPrice: sign.unitPrice ?? undefined,
+  totalPrice: sign.totalPrice ?? undefined,
+  primarySignId: sign.primarySignId ?? undefined,
+});

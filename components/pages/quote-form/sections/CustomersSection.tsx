@@ -5,7 +5,7 @@ import { Customer } from "@/types/Customer";
 interface CustomersSectionProps {
   customers: Customer[];
   selectedCustomers: Customer[];
-  handleCustomerSelection: (names: string[] | undefined) => void;
+  handleCustomerSelection: (ids: string[] | undefined) => void;
   isLoading: boolean;
 }
 
@@ -21,9 +21,9 @@ export function CustomersSection({
       <MultiSelect
         options={customers.map((customer) => ({
           label: customer.name,
-          value: customer.name,
+          value: customer.id.toString(),   // 👈 Usamos id único
         }))}
-        selected={selectedCustomers.map((customer) => customer.name)}
+        selected={selectedCustomers.map((customer) => customer.id.toString())} // 👈 Selección por id
         onChange={handleCustomerSelection}
         placeholder="Select customers"
         disabled={isLoading}

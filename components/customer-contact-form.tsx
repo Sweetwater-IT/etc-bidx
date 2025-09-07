@@ -21,7 +21,7 @@ interface CustomerContactFormProps {
   customerId: number
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (updatedCustomer?: any) => void
   contactToEdit?: {
     id: number
     name: string
@@ -108,7 +108,6 @@ export function CustomerContactForm({
       setIsSubmitting(true)
 
       let success = false;
-
       if (isEditMode && contactToEdit) {
         success = await updateContact(contactToEdit.id, {
           name: formData.name,

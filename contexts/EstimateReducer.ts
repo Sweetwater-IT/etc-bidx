@@ -137,7 +137,7 @@ export const estimateReducer = (
 
 		case "UPDATE_MPT_PHASE_EMERGENCY_RATE":
 			if (!state.mptRental) return state;
-			
+
 			return {
 				...state,
 				mptRental: {
@@ -159,7 +159,7 @@ export const estimateReducer = (
 				},
 			};
 
-		case "UPDATE_MPT_PHASE_EMERGENCY":			
+		case "UPDATE_MPT_PHASE_EMERGENCY":
 			if (!state.mptRental) return state;
 			return {
 				...state,
@@ -309,6 +309,9 @@ export const estimateReducer = (
 			if (!state.mptRental) return state;
 			const { phaseNumber: addSignPhase, sign } = action.payload;
 
+			console.log('recibo aqui', action.payload);
+
+
 			return {
 				...state,
 				mptRental: {
@@ -317,14 +320,13 @@ export const estimateReducer = (
 						if (index === addSignPhase) {
 							return {
 								...phase,
-								signs: [...phase.signs, sign],
+								signs: [...(phase.signs || []), sign], // <-- asegura que siempre sea array
 							};
 						}
 						return phase;
 					}),
 				},
 			};
-
 		case "ADD_BATCH_MPT_SIGNS":
 			if (!state.mptRental) return state;
 			const { phaseNumber: batchPhaseNumber, signs } = action.payload;
@@ -414,10 +416,13 @@ export const estimateReducer = (
 				...state,
 				mptRental: {
 					...state.mptRental,
-					phases: state.mptRental.phases.map((phase: Phase) => ({
-						...phase,
-						signs: phase.signs.filter((sign) => sign.id !== signIdToDelete.signId),
-					})),
+					phases: state.mptRental.phases.map((phase: Phase, idx: number) => {
+						if (idx !== signIdToDelete.phaseNumber) return phase;
+						return {
+							...phase,
+							signs: phase.signs.filter(sign => sign.id !== signIdToDelete.signId)
+						};
+					})
 				},
 			};
 

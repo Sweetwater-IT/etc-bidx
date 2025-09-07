@@ -17,7 +17,7 @@ interface Props {
 const PageHeaderWithSaving = ({ heading, subheading, handleSubmit, showX, badgeText, badgeVariant, saveButtons }: Props) => {
 
     return (
-        <div className={`flex w-full bg-white z-50 items-center sticky top-0 justify-between px-6 gap-2 pb-4 mb-6 ${showX ? 'mt-2 pt-6 border-b-1' : ''}`}>
+        <div className={`flex w-full bg-background z-50 items-center sticky top-0 justify-between px-6 gap-2 pb-4 mb-6 ${showX ? 'mt-2 pt-6 border-b-1' : ''}`}>
             <div className='flex items-center gap-x-0'>
                 {showX && <Button variant='ghost' onClick={handleSubmit}>
                     <XIcon className="cursor-pointer" />

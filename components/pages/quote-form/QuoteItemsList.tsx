@@ -1,40 +1,40 @@
 import QuoteItemRow from "./QuoteItemRow";
+import { QuoteItem, AssociatedItem } from "@/types/IQuoteItem";
 
-export default function QuoteItemsList({
+// Define los props basándose en lo que se pasa desde QuoteItems.tsx
+interface QuoteItemsListProps {
+  quoteItems: QuoteItem[];
+  editingItemId: string | null;
+  editingSubItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
+  setEditingSubItemId: (id: string | null) => void;
+  handleItemUpdate: (
+    itemId: string,
+    field: keyof QuoteItem,
+    value: any
+  ) => void;
+  handleRemoveItem: (itemId: string) => void;
+  handleAddCompositeItem: (parentItem: QuoteItem) => void;
+  handleCompositeItemUpdate: (
+    parentItemId: string,
+    subItemId: string,
+    field: keyof AssociatedItem,
+    value: any
+  ) => void;
+  handleDeleteComposite: (parentItemId: string, subItemId: string) => void;
+  UOM_TYPES: any;
+  calculateCompositeUnitPrice: (item: QuoteItem) => number;
+  calculateExtendedPrice: (item: QuoteItem) => string;
+}
+
+const QuoteItemsList = ({
   quoteItems,
   editingItemId,
-  editingSubItemId,
-  setEditingItemId,
-  setEditingSubItemId,
-  handleItemUpdate,
-  handleRemoveItem,
-  handleAddCompositeItem,
-  handleCompositeItemUpdate,
-  handleDeleteComposite,
-  UOM_TYPES,
-  calculateCompositeUnitPrice,
-  calculateExtendedPrice,
-}) {
+  ...rest
+}: QuoteItemsListProps) => {
   return (
-    <>
-      {quoteItems.map((item) => (
-        <QuoteItemRow
-          key={item.id}
-          item={item}
-          isEditing={editingItemId === item.id}
-          editingSubItemId={editingSubItemId}
-          setEditingItemId={setEditingItemId}
-          setEditingSubItemId={setEditingSubItemId}
-          handleItemUpdate={handleItemUpdate}
-          handleRemoveItem={handleRemoveItem}
-          handleAddCompositeItem={handleAddCompositeItem}
-          handleCompositeItemUpdate={handleCompositeItemUpdate}
-          handleDeleteComposite={handleDeleteComposite}
-          UOM_TYPES={UOM_TYPES}
-          calculateCompositeUnitPrice={calculateCompositeUnitPrice}
-          calculateExtendedPrice={calculateExtendedPrice}
-        />
-      ))}
-    </>
+    <>{quoteItems.map((item) => <QuoteItemRow key={item.id} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
   );
-} 
+};
+
+export default QuoteItemsList;

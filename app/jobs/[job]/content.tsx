@@ -11,7 +11,7 @@ import { FilterOption } from "../../../components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
 import { type ActiveJob } from "../../../data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
 import { OpenBidSheet } from "../../../components/open-bid-sheet";
@@ -607,8 +607,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }
             const result = await response.json();
             //raw data has all the info we need
-            const { data, stats, pagination } = result;     
-       
+            const { data, stats, pagination } = result;
+            console.log('el resultado es', data);
+
             const transformedData = data.map(e => ({
                 flagging: e.flagging ?? {},
                 id: e.id,
@@ -849,6 +850,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
             const fetchedBidsData = await fetchBids(options);
 
+            console.log('data es', fetchedBidsData);
+
             setJobCounts({
                 all: fetchedBidsData.counts.all,
                 unset: fetchedBidsData.counts.unset,
@@ -867,6 +870,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [isAvailableJobs, startLoading, stopLoading]);
 
     const fetchActiveJobCounts = useCallback(async () => {
+
         if (!isActiveJobs) return;
 
         try {
@@ -896,8 +900,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     }, [isActiveJobs, startLoading, stopLoading]);
 
     const fetchActiveBidCounts = useCallback(async () => {
-        if (!isActiveBids) return;
 
+        if (!isActiveBids) return;
         try {
             startLoading();
 
@@ -977,7 +981,19 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
-    const data: JobPageData[] = isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
+    const data = useMemo(() => {
+        return isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
+    }, [isAvailableJobs, isActiveBids, isActiveJobs, availableJobs, activeBids, activeJobs]);
+    console.log('el lenth del data es', data.length);
+
+    //borrar
+    // useEffect(() => {
+
+    // console.log('Rendering JobsContent with', { data, activeSegment, activeFilters, sortBy, sortOrder
+    // });
+    // }, [data, activeSegment, activeFilters, sortBy, sortOrder]);
+
+
 
     const handleActiveBidViewDetails = (item: ActiveBid) => {
         console.log('View details clicked:', item);
@@ -1376,8 +1392,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setShowDeleteBidsDialog(true);
     };
 
-
-
     const handleDeleteArchivedJobs = async () => {
         try {
             startLoading();
@@ -1712,6 +1726,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         const allParams = new URLSearchParams();
         allParams.set("limit", "1");
         allParams.set("page", "1");
+        allParams.set("archived", "false");
         if (Object.keys(filtersWithoutBranch).length > 0) {
             allParams.set("filters", JSON.stringify(filtersWithoutBranch));
         }
@@ -1731,7 +1746,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const segments = isAvailableJobs
         ? [
-            { label: `All (${jobCounts.all || 0})`, value: "all" },
+            { label: `All (${jobCounts.all ?? 0})`, value: "all" },
             { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
             { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
             { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
@@ -1837,7 +1852,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                 const result = await response.json();
                 const allJobs = result.data.map((job: any) => {
-                    
+
                     // Use the same transformation logic from loadAvailableJobs
                     const isEffectivelyUnknown = (value: any): boolean => {
                         if (value === undefined || value === null) return true;
@@ -2023,6 +2038,38 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
+    const onDeleteItems = async (element) => {
+        const elementId = element.id;
+        if (!elementId) return;
+
+        let response;
+        try {
+            if (isAvailableJobs) {
+                response = await fetch('/api/bids/deleteForever?id=' + elementId, { method: 'DELETE' });
+            } else if (isActiveBids) {
+                response = await fetch('/api/active-bids/deleteForever?id=' + elementId, { method: 'DELETE' });
+            } else if (isActiveJobs) {
+                response = await fetch('/api/jobs/deleteForever?id=' + elementId, { method: 'DELETE' });
+            }
+            const result = await response.json()
+
+            if (result.success) {
+                if (isAvailableJobs) {
+                    setAvailableJobs((prev) => prev.filter((aj) => aj.id !== element.id));
+                } else if (isActiveBids) {
+                    setActiveBids((prev) => prev.filter((aj) => aj.id !== element.id));
+                } else {
+                    setActiveJobs((prev) => prev.filter((aj) => aj.id !== element.id));
+                }
+                toast.success(result.message);
+            }
+            console.log('Eliminación completada');
+        } catch (error) {
+            console.error('Error al eliminar:', error);
+        }
+    };
+
+
     return (
         <SidebarProvider
             style={
@@ -2138,6 +2185,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     setShowFilters={setShowFilters}
                                     hideDropdown={true}
                                     onUnarchive={handleUnarchiveAvailableJob}
+                                    onDeleteItem={onDeleteItems}
                                 />
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
@@ -2198,6 +2246,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     setShowFilters={setShowFilters}
                                     hideDropdown={true}
                                     onUnarchive={handleUnarchiveActiveBid}
+                                    onDeleteItem={onDeleteItems}
+
                                 />
                             ) : (
                                 <DataTable<ActiveJob>
@@ -2253,6 +2303,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     showFilters={showFilters}
                                     setShowFilters={setShowFilters}
                                     hideDropdown={true}
+                                    onDeleteItem={onDeleteItems}
                                 />
                             )}
 

@@ -56,7 +56,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
       ...data.navMain,
       ...data.navClouds,
       ...data.navSecondary,
-      ...data.documents.map((doc) => ({ title: doc.name, url: doc.url })),
+      /*...data.documents.map((doc) => ({ title: doc.name, url: doc.url })),*/
     ];
     const foundTitle = findTitle(allItems);
     return foundTitle || (pathname === "/" ? "Dashboard" : "");

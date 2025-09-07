@@ -83,7 +83,7 @@ export function SignOrderJobSelector({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-xl font-semibold">Job Informatio</div>
+        <div className="text-xl font-semibold">Job Information</div>
         {(selectedContractJob || showInitialAdminState) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

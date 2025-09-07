@@ -1,11 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
 } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Plus, Pencil, Check, MoreVertical } from "lucide-react";
+import { Trash2, Plus, Pencil, Check, MoreVertical, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useProductsSearch } from "@/hooks/useProductsSearch";
 import { SubItemRow } from "./SubItemRow";
@@ -82,6 +82,11 @@ export default function QuoteItemRow({
   useEffect(() => {
     setIsCustomLocal(!!item.isCustom);
   }, [item.isCustom]);
+
+  // Sincroniza el estado local del input cuando el item prop cambia desde el padre
+  useEffect(() => {
+    setProductInput(item.itemNumber || "");
+  }, [item.itemNumber]);
 
   const updateDropdownPosition = () => {
     if (inputRef.current) {
@@ -215,11 +220,24 @@ export default function QuoteItemRow({
         }}
       >
         {/* Produto: input sempre disponível */}
-        <div className="relative">
+        <div className="relative flex items-center">
           {!!item.itemNumber ? (
-            <div className="text-foreground w-full truncate text-sm ml-2">
-              {item.itemNumber}
-            </div>
+            <>
+              <div className="text-foreground w-full truncate text-sm ml-2 flex-grow">
+                {item.itemNumber}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => {
+                  handleItemUpdate(item.id, "itemNumber", "");
+                  handleItemUpdate(item.id, "description", "");
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
           ) : (
             <Input
             ref={inputRef}

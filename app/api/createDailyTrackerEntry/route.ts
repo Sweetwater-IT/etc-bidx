@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        const body: any = req.json();
 
         const { data, error } = await supabase
             .from('daily_tracker_entries')
@@ -23,3 +23,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
     }
 }
+
