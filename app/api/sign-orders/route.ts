@@ -41,7 +41,7 @@ async function generateSignOrderNumber(orderType: string[], branchCode: number):
 export async function POST(req: NextRequest) {
   try {
     const signOrderData = await req.json();
-    
+
     let orderNumber: string | undefined;
     let branchNumber = 10;
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         job_number: signOrderData.job_number,
         signs: signOrderData.signs,
         order_status: signOrderData.status,
-        contact_id: contactId 
+        contact_id: contactId
       };
 
       // Only generate a new SO number if status is SUBMITTED and order_number is not already set
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
         signs: signOrderData.signs,
         order_number: orderNumber,
         order_status: signOrderData.status,
-        contact_id: contactId  
+        contact_id: contactId
       })
       .select('id')
       .single();
@@ -465,20 +465,24 @@ export async function GET(req: NextRequest) {
           ].filter(Boolean).join(', '),
           status: item.status || '',
           shop_status: item.shop_status || 'not-started',
-          order_number: item.order_number || ''
+          order_number: item.order_number || '',
+          signs: item.signs.map((sign) => ({
+            ...sign,
+            associatedStructure: sign.associated_structure
+          }))
         })) || [];
 
         const pageCount = Math.ceil(totalCount / limit);
-
         return NextResponse.json({
           success: true,
           data: transformedData,
           totalCount,
           pageCount
         });
+        
       } catch (error: any) {
         console.error('Error fetching sign orders:', error);
-
+        
         // If there's an error with the database query, return a fallback with empty data
         // This ensures the frontend doesn't break completely
         return NextResponse.json({

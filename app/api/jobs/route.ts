@@ -41,15 +41,19 @@ export async function GET(request: NextRequest) {
         }
 
         const filteredCountiesJobs = allJobs.filter(job => !!job.admin_data_entries && !!(job.admin_data_entries as any).county)
-        const nonArchivedJobs = allJobs.filter(job => job.archived !== true);
-        const nonArchivedFilteredJobs = filteredCountiesJobs.filter(job => job.archived !== true);
+        const isArchived = (v: any) => v === true || v === 'true' || v === 1 || v === '1';
+
+        const nonArchivedJobs = allJobs.filter(job => (!job.archived));
+        const nonArchivedFilteredJobs = filteredCountiesJobs.filter(job => !isArchived(job.archived));
+
+        const archivedJobs = allJobs.filter(job => job.archived === true);
 
         const countData = {
-          all: nonArchivedJobs.length,
+          all: 100,
           west: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Bedford' || (job.admin_data_entries as any).county.branch === 'WEST').length,
           turbotville: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Turbotville').length,
           hatfield: nonArchivedFilteredJobs.filter(job => (job.admin_data_entries as any).county.branch === 'Hatfield').length,
-          archived: allJobs.filter(job => !!job.archived).length
+          archived: archivedJobs.length
         };
 
         return NextResponse.json(countData);
@@ -136,6 +140,7 @@ export async function GET(request: NextRequest) {
     if (isArchivedFilter) {
       query = query.eq('archived', true);
     } else if (excludeArchived) {
+      query = query.eq('archived', false);
     }
 
     // Apply branch filters
@@ -429,44 +434,83 @@ export async function PATCH(request: NextRequest) {
 
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')
-      .select('id')
+      .select('id, job_number')
       .eq('job_number', formData.jobNumber)
       .single();
 
     if (jobNumberError || !jobNumberData) {
       console.error('Job number lookup error:', jobNumberError);
-      return NextResponse.json(
-        { message: 'Job number not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: 'Job number not found' }, { status: 404 });
     }
 
-    //manually transform the branch from the frontend brnach input
-    const transformedCountJson = {
-      ...formData.countyJson,
-      branch: formData.branch
+    if (formData.newJobNumber) {
+      const lastHyphenIndex = formData.jobNumber.lastIndexOf('-');
+      const prefix = formData.jobNumber.slice(0, lastHyphenIndex + 1); const newJobNumStr = String(formData.newJobNumber);
+
+      const newYear = parseInt(newJobNumStr.slice(0, 4), 10);
+      const newSequential = parseInt(newJobNumStr.slice(4), 10);
+
+      const { error: updateJobNumberError } = await supabase
+        .from('job_numbers')
+        .update({
+          job_number: prefix + formData.newJobNumber,
+          year: newYear,
+          sequential_number: newSequential
+        })
+        .eq('id', jobNumberData.id);
+
+      if (updateJobNumberError) {
+        console.error('Failed to update job number:', updateJobNumberError);
+        return NextResponse.json(
+          { message: 'Failed to update job number', error: updateJobNumberError.message },
+          { status: 500 }
+        );
+      }
+
+      const { error: updateJobReservedError } = await supabase
+        .from('jobs')
+        .update({
+          reserved_job_number: String(prefix) + String(newSequential)
+        })
+        .eq('job_number_id', jobNumberData.id);
+
+      if (updateJobReservedError) {
+        console.error('Failed to update reserved_job_number in jobs:', updateJobReservedError);
+        return NextResponse.json(
+          { message: 'Failed to update reserved job number in jobs', error: updateJobReservedError.message },
+          { status: 500 }
+        );
+      }
     }
+
+    const transformedCountJson = { ...formData.countyJson, branch: formData.branch };
 
     const { data: adminDataResult, error: adminDataError } = await supabase
       .from('admin_data_entries')
       .update({
-        'county': transformedCountJson, 'location': formData.location, 'contract_number': formData.contractNumber,
-        'start_date': formData.startDate, 'end_date': formData.endDate
+        county: transformedCountJson,
+        location: formData.location,
+        contract_number: formData.contractNumber,
+        start_date: formData.startDate,
+        end_date: formData.endDate
       })
-      .eq('job_id', formData.id)
+      .eq('job_id', formData.id);
 
     if (adminDataError) {
       console.error('Supabase error:', adminDataError);
       return NextResponse.json(
-        { message: 'Failed to update job status', error: adminDataError.message },
+        { message: 'Failed to update job admin data', error: adminDataError.message },
         { status: 500 }
       );
     }
 
-    // Now update the job status using the job_number_id
     const { data, error } = await supabase
       .from('jobs')
-      .update({ 'bid_number': formData.bidNumber, 'project_status': formData.projectStatus, 'billing_status': formData.billingStatus })
+      .update({
+        bid_number: formData.bidNumber,
+        project_status: formData.projectStatus,
+        billing_status: formData.billingStatus
+      })
       .eq('job_number_id', jobNumberData.id);
 
     if (error) {
@@ -478,21 +522,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'Job status updated successfully', data: { data, adminDataResult } },
+      { message: 'Job updated successfully', data: { data, adminDataResult } },
       { status: 200 }
     );
 
-
   } catch (error) {
     console.error('PATCH request error:', error);
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
 
-//this creates a job manually
 export async function POST(req: NextRequest) {
   try {
     const requestData = await req.json();
@@ -526,10 +565,10 @@ export async function POST(req: NextRequest) {
     let year: number;
     let sequential: number;
 
-    if (requestData.customJobNumber) {      
+    if (requestData.customJobNumber) {
       const str = String(requestData.customJobNumber);
       year = parseInt(str.slice(0, 4), 10);
-      sequential = parseInt(str.slice(4), 10); 
+      sequential = parseInt(str.slice(4), 10);
     } else {
       year = new Date().getFullYear();
 
@@ -539,20 +578,20 @@ export async function POST(req: NextRequest) {
         .eq('year', year)
         .order('sequential_number', { ascending: false })
         .limit(1)
-        .single();      
+        .single();
 
       sequential = lastJob ? lastJob.sequential_number + 1 : 1;
     }
 
     const jobNumberStr = `${branchCode}-${requestData.division === 'PUBLIC' ? '21' : '22'}-${year}${String(sequential).padStart(4, '0')}`;
-    
+
     const payload: any = {
       job_number: jobNumberStr,
       year,
       owner_type: requestData.division === 'PUBLIC' ? '21' : '22',
       branch_code: branchCode,
       sequential_number: sequential
-    };  
+    };
 
     const { data: jobNumberData, error: jobNumberError } = await supabase
       .from('job_numbers')

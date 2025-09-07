@@ -32,6 +32,9 @@ export function CustomerProvider({ children, initialCustomer = null }: {
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
   const [isLoading, setIsLoading] = useState(false);
   
+  console.log('ahora customer es', customer);
+  
+  
   // Update customer state when initialCustomer changes
   useEffect(() => {
     console.log('CustomerProvider - initialCustomer changed:', initialCustomer);
@@ -45,7 +48,6 @@ export function CustomerProvider({ children, initialCustomer = null }: {
     console.log('CustomerProvider - customer state updated:', customer);
   }, [customer]);
 
-  // Fetch updated customer data
   const refreshCustomer = useCallback(async () => {
     if (!customer) {
       console.error('Cannot refresh customer: No customer data available');
@@ -54,10 +56,12 @@ export function CustomerProvider({ children, initialCustomer = null }: {
     
     console.log(`CustomerContext: Refreshing customer data for ID: ${customer.id}`);
     setIsLoading(true);
+    
     try {
-      const response = await fetch(`/api/customers/${customer.id}`);
+      const response = await fetch(`/api/contractors/${customer.id}`);
       if (response.ok) {
-        const updatedCustomer = await response.json();
+        const result = await response.json();
+        const updatedCustomer = result.customer;
         console.log('CustomerContext: Received updated customer data:', updatedCustomer);
         setCustomer(updatedCustomer);
         return updatedCustomer;
@@ -137,7 +141,7 @@ export function CustomerProvider({ children, initialCustomer = null }: {
       const updatedCustomer = await refreshCustomer();
       console.log('Customer data after contact update:', updatedCustomer);
       
-      return true;
+      return true
     } catch (error) {
       console.error('Error updating contact:', error);
       toast.error('Failed to update contact. Please try again.');

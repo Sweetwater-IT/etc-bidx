@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-// GET: Fetch reference data for dropdowns and rates
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -19,7 +17,6 @@ export async function GET(request: NextRequest) {
 
     switch (type) {
       case 'counties':
-        // Fetch counties with their rates
         ({ data, error } = await supabase
           .from('counties')
           .select(`
@@ -54,7 +51,6 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'users':
-        // Fetch users for estimator dropdown
         ({ data, error } = await supabase
           .from('users')
           .select('id, name, email, role, branches(name)')
@@ -62,14 +58,12 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'owners':
-        // Fetch owners
         ({ data, error } = await supabase
           .from('owners')
           .select('id, name'))
         break;
         
       case 'branches':
-        // Fetch branches
         ({ data, error } = await supabase
           .from('branches')
           .select('id, name')
@@ -77,7 +71,6 @@ export async function GET(request: NextRequest) {
         break;
         
       case 'estimators':
-        // Fetch all users as potential estimators since there's no specific 'estimator' role
         ({ data, error } = await supabase
           .from('users')
           .select('id, name')
@@ -92,7 +85,6 @@ export async function GET(request: NextRequest) {
         break;
         
       case 'customers':
-        // Alias for contractors - many parts of the app use 'customers' instead of 'contractors'
         ({ data, error } = await supabase
           .from('contractors')
           .select('id, name')

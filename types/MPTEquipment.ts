@@ -163,7 +163,7 @@ export interface DynamicSignInfo {
   designation: string;
   description: string;
   bLightsColor?: 'Yellow' | 'Red' | 'White'
-  substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'
+  substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'  | 'Roll Up' | 'Face';
   stiffener?: boolean;
 }
 export interface PrimarySign extends DynamicSignInfo {

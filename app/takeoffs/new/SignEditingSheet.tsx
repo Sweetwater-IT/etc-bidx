@@ -40,6 +40,7 @@ interface Props {
     sign: PrimarySign | SecondarySign;
     currentPhase?: number;
     isTakeoff?: boolean;
+    isSignOrder?: boolean;
 }
 
 // Type guard to check if sign is SecondarySign
@@ -47,17 +48,16 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
     return 'primarySignId' in sign;
 };
 
-const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true }: Props) => {
+const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useEstimate();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
     const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
-    const [isCustom, setIsCustom] = useState(sign.isCustom || false);    
+    const [isCustom, setIsCustom] = useState(sign.isCustom || false);
 
     const isSecondary = isSecondarySign(sign);
-
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
@@ -282,7 +282,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
         // Get default dimension from the selected designation
         const shouldAutoSetDimensions = selectedDesignation.dimensions && selectedDesignation.dimensions.length === 1;
-    
+
         const defaultDimension = shouldAutoSetDimensions
             ? selectedDesignation.dimensions[0]
             : { width: 0, height: 0 };
@@ -319,7 +319,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             console.error("Error getting available dimensions:", error);
             return [];
         }
-    };
+    };    
 
     const handleSave = () => {
         // For secondary signs, make sure the quantity matches the primary sign
@@ -362,7 +362,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 <div className="flex flex-col gap-2 relative z-10 bg-background">
                     <SheetHeader className="pb-4 p-6">
                         <SheetTitle>
-                            {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom? 'Custom sign' : (localSign.designation || 'Sign')} details`}
+                            {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
                         </SheetTitle>
                         {isSecondary && primarySign && (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
@@ -500,6 +500,12 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         Aluminum Composite
                                     </SelectItem>
                                     <SelectItem value="Plastic">Plastic</SelectItem>
+                                    {isSignOrder && (
+                                        <>
+                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                            <SelectItem value="Face">Face</SelectItem>
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -547,7 +553,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     disabled={getAvailableDimensions().length === 1}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select dimensions"/>
+                                        <SelectValue placeholder="Select dimensions" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
