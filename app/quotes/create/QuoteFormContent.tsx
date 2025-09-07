@@ -3,12 +3,8 @@
 import { Button } from '@/components/ui/button'
 import { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
-import {
-  PaymentTerms,
-  QuoteAdminInformation,
-} from '@/components/pages/quote-form/QuoteAdminInformation'
+import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
-import { QuoteEmailDetails } from '@/components/pages/quote-form/QuoteEmailDetails'
 import { QuoteNumber } from '@/components/pages/quote-form/QuoteNumber'
 import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditionalFiles'
 import { QuoteTermsAndConditions } from '@/components/pages/quote-form/QuoteTermsAndConditions'
@@ -21,9 +17,9 @@ import isEqual from 'lodash/isEqual'
 import { useRouter } from 'next/navigation'
 import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
+import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 
-// Mapper para enviar al backend en snake_case
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
 
@@ -122,16 +118,71 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
     }
     initDraft();
-
-  }, []);
-
-
-
-
+  
+  }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const handleSaveNote = async (note: Note) => {
     setNotes((prevNotes) => [...prevNotes, note]);
   };
+  const autosave = async () => {
+    if (!numericQuoteId) {
+
+      return false
+    }
+
+    prevStateRef.current = { quoteItems, adminData, notes }
+
+
+
+    try {
+      const payload = {
+        id: numericQuoteId,
+        estimate_id: estimateId,
+        job_id: jobId,
+        items: quoteItems,
+        admin_data: mapAdminDataToApi(
+          adminData ?? defaultAdminObject,
+          estimateId,
+          jobId
+        ),
+        status: 'DRAFT',
+        notes: notes,
+        subject,
+        body: emailBody,
+        from_email: sender?.email || null,
+        recipients: [
+          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+          ...ccEmails.map((email) => ({ email, cc: true })),
+          ...bccEmails.map((email) => ({ email, bcc: true })),
+        ],
+        customers: selectedCustomers.map(c => ({ id: c.id })),
+        include_terms: includeTerms,
+        custom_terms: customTerms,
+        payment_terms: paymentTerms,
+      }
+
+
+
+      const res = await fetch(`/api/quotes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText || 'Failed to save draft')
+      }
+
+      setSecondCounter(1)
+      if (!firstSave) setFirstSave(true)
+      return true
+    } catch (error) {
+
+      toast.error('Quote not successfully saved as draft: ' + error)
+      return false
+    }
+  }
 
   const handleEditNote = (index: number, updatedNote: Note) => {
     setNotes((prevNotes) =>
@@ -159,7 +210,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [quoteItems, adminData, notes, numericQuoteId])
+  }, [quoteItems, adminData, notes, numericQuoteId, autosave])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -253,69 +304,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     }
   };
 
-  const autosave = async () => {
-    if (!numericQuoteId) {
-
-      return false
-    }
-
-    prevStateRef.current = { quoteItems, adminData, notes }
-
-
-
-    try {
-      const payload = {
-        id: numericQuoteId,
-        estimate_id: estimateId,
-        job_id: jobId,
-        items: quoteItems,
-        admin_data: mapAdminDataToApi(
-          adminData ?? defaultAdminObject,
-          estimateId,
-          jobId
-        ),
-        status: 'DRAFT',
-        notes: notes,
-        subject,
-        body: emailBody,
-        from_email: sender?.email || null,
-        recipients: [
-          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
-          ...ccEmails.map((email) => ({ email, cc: true })),
-          ...bccEmails.map((email) => ({ email, bcc: true })),
-        ],
-        customers: selectedCustomers.map(c => ({ id: c.id })),
-        include_terms: includeTerms,
-        custom_terms: customTerms,
-        payment_terms: paymentTerms,
-      }
-
-
-
-      const res = await fetch(`/api/quotes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || 'Failed to save draft')
-      }
-
-      setSecondCounter(1)
-      if (!firstSave) setFirstSave(true)
-      return true
-    } catch (error) {
-
-      toast.error('Quote not successfully saved as draft: ' + error)
-      return false
-    }
-  }
-
-
-
-
 
   const handleSaveAndExit = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -370,16 +358,12 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         }
       />
 
+      {/* Contenido principal: Formulario a la izquierda, Vista previa a la derecha */}
       <div className="flex gap-6 p-6 max-w-full">
-        <div className="w-3/4 space-y-6">
+        {/* Columna Izquierda (Formulario) */}
+        <div className="w-1/2 space-y-6">
           <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
           <QuoteItems />
-          <QuoteEmailDetails />
-        </div>
-        <div className="w-1/4 space-y-6">
-          <QuoteNumber />
-          <QuoteAdditionalFiles />
-          <QuoteTermsAndConditions />
           <QuoteNotes
             notes={notes}
             onSave={handleSaveNote}
@@ -387,6 +371,33 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
             onDelete={handleDeleteNote}
             canEdit={true}
           />
+          {/* <QuoteAdditionalFiles /> */}
+          {/* <QuoteTermsAndConditions /> */}
+        </div>
+
+        {/* Columna Derecha (Vista Previa y otros) */}
+        <div className="w-1/2 space-y-6">
+          {/* Contenedor de la Vista Previa del PDF */}
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
+            <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              <BidProposalWorksheet
+                adminData={adminData ?? defaultAdminObject}
+                items={quoteItems}
+                customers={selectedCustomers}
+                quoteDate={new Date()}
+                quoteNumber={quoteNumber || quoteId?.toString() || ''}
+                pointOfContact={pointOfContact ?? { name: '', email: '' }}
+                sender={sender}
+                paymentTerms={paymentTerms as PaymentTerms}
+                includedTerms={includeTerms}
+                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+                county={adminData ? adminData.county?.name || '' : ''}
+                sr={adminData ? adminData.srRoute || '' : ''}
+                ecms={adminData ? adminData.contractNumber || '' : ''}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

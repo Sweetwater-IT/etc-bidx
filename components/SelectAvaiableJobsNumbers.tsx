@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog"
-import { Loader2 } from "lucide-react"
+import { Link, Loader2 } from "lucide-react"
 
 type JobDetails = {
     archived?: boolean;
@@ -43,10 +43,14 @@ export default function JobNumberPicker({
     const [existingSeqs, setExistingSeqs] = useState<number[]>([])
 
     const currentYear = new Date().getFullYear()
-    const [yearStart, setYearStart] = useState(currentYear - 2)
+    const [yearStart, setYearStart] = useState(currentYear)
 
-    const handlePrevYears = () => setYearStart(yearStart - 6)
-    const handleNextYears = () => setYearStart(yearStart + 6)
+    const handlePrevYears = () => {
+        setYearStart(yearStart - 6);
+    };
+    const handleNextYears = () => {
+        setYearStart(yearStart + 6);
+    };
 
     const toggleModal = () => setModalState((prev) => !prev)
 
@@ -67,43 +71,49 @@ export default function JobNumberPicker({
                 `/api/jobs/existJob?year=${yr}&sequential=${sequential}`
             )
             const result = await response.json()
-            
+
             if (result.exist && result.data) {
                 const job = result.data.jobs?.[0]
 
-                if (job) {
-                    const details: JobDetails = {
-                        archived: job.archived,
+                const details: JobDetails = job
+                    ? {
+                        archived: job.archived ?? '-',
                         jobNumber: result.data.job_number,
                         contractNumber:
                             job.admin_data_entries?.contract_number ??
                             job.project_metadata?.customer_contract_number ??
-                            "",
-                        contractor: job.project_metadata?.contractors?.name ?? "",
-                        projectStatus: job.project_status ?? "",
-                        billingStatus: job.billing_status ?? "",
+                            "-",
+                        contractor: job.project_metadata?.contractors?.name ?? "-",
+                        projectStatus: job.project_status ?? "-",
+                        billingStatus: job.billing_status ?? "-",
                         startDate: job.admin_data_entries?.start_date
                             ? new Date(job.admin_data_entries.start_date).toLocaleDateString()
-                            : "",
+                            : "-",
                         endDate: job.admin_data_entries?.end_date
                             ? new Date(job.admin_data_entries.end_date).toLocaleDateString()
-                            : "",
-                    }  
+                            : "-",
+                    }
+                    : {
+                        archived: '-',
+                        jobNumber: result.data.job_number,
+                        contractNumber: '-',
+                        contractor: '-',
+                        projectStatus: '-',
+                        billingStatus: '-',
+                        startDate: '-',
+                        endDate: '-',
+                    }
 
-                    setCustomJobNumber(null)
-                    setJobDetails(details)
-                    setInputError("⚠️ Job number already exists")
-                    validJobNumber(false)
-                } else {
-                    validJobNumber(true)
-                    setJobDetails(null)
-                    setInputError("")
-                }
+                setCustomJobNumber(null)
+                setJobDetails(details)
+                setInputError(result.data.jobs?.length ? "⚠️ Job number already exists" : "")
+                validJobNumber(!result.data.jobs?.length)
             } else {
                 setJobDetails(null)
                 setInputError("")
                 validJobNumber(true)
             }
+
         } catch (error) {
             console.error(error)
             setInputError("Error validating job number")
@@ -182,9 +192,12 @@ export default function JobNumberPicker({
                     value={customJobNumber || initialValueNumber || ""}
                 />
                 {inputError && <p className="text-red-500 text-sm">{inputError}</p>}
-                <Button variant="outline" onClick={toggleModal}>
-                    Build number
-                </Button>
+                <span
+                    onClick={toggleModal}
+                    className="text-black font-bold pl-2 text-sm underline cursor-pointer mb-4"
+                >
+                    View Available Job Numbers
+                </span>
             </div>
 
             <Dialog open={modalState} onOpenChange={setModalState}>
@@ -201,6 +214,7 @@ export default function JobNumberPicker({
                     <div className="flex flex-col items-center w-full">
                         <div className="p-2 w-full">
                             <div className="flex justify-between items-center mb-2">
+
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -209,6 +223,7 @@ export default function JobNumberPicker({
                                 >
                                     &lt;
                                 </Button>
+
                                 <span className="text-sm font-medium">
                                     {years[0]} – {years[years.length - 1]}
                                 </span>
@@ -265,11 +280,17 @@ export default function JobNumberPicker({
                                         key={num}
                                         size="sm"
                                         variant={selectedNumber === num ? "default" : "outline"}
-                                        onClick={() => handleSelectNumber(num)}
-                                        disabled={!year}
-                                        className={`h-8 px-1 text-xs w-full ${existingSeqs.includes(num) ? "text-red-300" : ""}`}
+                                        onClick={() => {
+                                            if (existingSeqs.includes(num)) {
+                                                if (year) existJobNumber(year, num)
+                                            } else {
+                                                handleSelectNumber(num)
+                                            }
+                                        }}
+                                        className={`h-8 px-1 text-xs w-full ${existingSeqs.includes(num) ? "text-red-300 cursor-pointer" : ""
+                                            }`}
                                     >
-                                        {num}
+                                        {String(num).padStart(3, '0')}
                                     </Button>
                                 ))}
                             </div>

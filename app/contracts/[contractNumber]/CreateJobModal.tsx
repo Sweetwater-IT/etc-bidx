@@ -30,7 +30,6 @@ import {
   TabsTrigger
 } from '../../../components/ui/tabs'
 import { formatCurrencyValue } from '@/lib/formatDecimals'
-import { handleNextDigits } from '@/lib/handleNextDigits'
 import { validateEmail } from '@/lib/emailValidation'
 import { handlePhoneInput } from '@/lib/phone-number-functions'
 import { ContactSelector } from '@/components/SelectContacts'
@@ -57,20 +56,21 @@ interface ItemNumber {
   uom: string
 }
 
-// Props for the modal
 interface CreateJobModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  contractNumber: string
   customer: Customer | null
   customerContractNumber: string
   projectManager: string
   pmEmail: string
   pmPhone: string
+  contractNumber: string
   adminData: AdminData
   sender: User
-  jobId: number | undefined
-  onJobCreated?: () => void
+  jobId?: number
+  onJobCreated: () => void
+  onCustomerChange: (customer: Customer | null) => void;
+
 }
 
 const CreateJobModal: React.FC<CreateJobModalProps> = ({
@@ -84,10 +84,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   pmPhone,
   adminData,
   jobId,
-  onJobCreated
+  onJobCreated,
+  onCustomerChange
 }) => {
-  console.log(customer);
-  
   const [itemNumbers, setItemNumbers] = useState<ItemNumber[]>([])
 
   // State for form values
@@ -100,6 +99,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     customJobId: jobId,
     items: [] as JobItem[]
   })
+
   const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
   const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
   // State for decimal masking - track digits for each contract value field
@@ -115,7 +115,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   const [localContact, setLocalContact] = useState<any | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
-  // Update form values when props change
   useEffect(() => {
     setFormValues(prev => ({
       ...prev,
@@ -124,9 +123,10 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       project_manager: projectManager || '',
       project_email: pmEmail || '',
       project_phone: pmPhone || '',
-      customJobId: jobId
+      customJobId: jobId,
+      items: prev.items.length ? prev.items : []
     }))
-  }, [customer, customerContractNumber, projectManager, pmEmail, pmPhone])
+  }, [customer, customerContractNumber, projectManager, pmEmail, pmPhone, jobId])
 
   useEffect(() => {
     if (localContact && localContact.id) {
@@ -139,7 +139,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }
   }, [localContact]);
 
-  // Fetch item numbers from API
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true)
@@ -510,7 +509,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       setIsSubmitting(false)
     }
   }
-
+  
   // Check if an item is in the form
   const isItemInForm = (itemNumber: string) => {
     return formValues.items.some(item => item.itemNumber === itemNumber)
@@ -611,9 +610,10 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                 <Label>Contact Name</Label>
                 <ContactSelector
                   localCustomer={customer}
-                  setLocalCustomer={() => { }}
                   localContact={localContact}
                   setLocalContact={setLocalContact}
+                  setLocalCustomer={(customer: any) => onCustomerChange(customer)}
+
                   contactModalOpen={contactModalOpen}
                   setContactModalOpen={setContactModalOpen}
                 />

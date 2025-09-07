@@ -531,6 +531,27 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to update bid estimate: ${updateError.message}`);
       }
     } else {
+
+      const { data: existingBid, error: checkError } = await supabase
+        .from('bid_estimates')
+        .select('id')
+        .eq('contract_number', adminData.contractNumber)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Failed to check existing bid: ${checkError.message}`);
+      }
+
+      if (existingBid) {
+        return NextResponse.json(
+          {
+            success: false,
+            alreadyExist:true,
+            message: `A bid with contract_number "${adminData.contractNumber}" already exists.`,
+          },
+          { status: 400 }
+        );
+      }
       // Create new bid
       const { data: newBid, error: bidError } = await supabase
         .from('bid_estimates')

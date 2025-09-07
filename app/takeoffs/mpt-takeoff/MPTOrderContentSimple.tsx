@@ -149,7 +149,7 @@ export default function MPTOrderContentSimple ({
       const orderWithBranch = {
         ...data.data,
         branch:
-          users.find(u => u.name === data.data.requestor)?.branches?.name || ''
+          users.find(u => u.name === data.data.requestor)?.branches?.name || '',
       }
 
       const ordersData: OrderTypes[] = []

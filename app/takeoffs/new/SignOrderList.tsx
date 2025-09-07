@@ -231,7 +231,9 @@ export function SignOrderList({
   }, [dispatch, currentPhase]);
 
   const handleQuantityChange = useCallback((signId: string, quantity: number) => {
+
     const currentSign = mptRental.phases[currentPhase].signs.find(s => s.id === signId);
+    if (!currentSign) return;
     if (currentSign && Object.hasOwn(currentSign, 'associatedStructure')) {
       const qtyChange = quantity - currentSign.quantity;
       if ((currentSign as PrimarySign).associatedStructure !== 'none') {

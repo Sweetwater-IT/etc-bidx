@@ -272,7 +272,7 @@ export async function createActiveBid(
   status: 'PENDING' | 'DRAFT',
   notes: INote[],
   id?: number,
-): Promise<{ id: number }> {
+): Promise<any> {
   // Ensure division and owner fields have valid values
   const processedAdminData = {
     ...adminData,
@@ -300,11 +300,13 @@ export async function createActiveBid(
         notes
       }
     }),
-  });
-
-  if (!response.ok) {
+  });  
+  if (!response.ok) {    
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to create active bid');
+    throw {
+      message: errorData.message || "Error creating bid",
+      alreadyExist: errorData.alreadyExist || false,
+    };
   }
 
   const result = await response.json();
