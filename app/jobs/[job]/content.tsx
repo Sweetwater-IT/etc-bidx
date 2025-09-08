@@ -496,7 +496,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at ? formatDate(job.created_at) : '-',
+                    createdAt: job.created_at ?? '-',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,

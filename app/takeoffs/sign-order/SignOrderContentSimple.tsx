@@ -607,16 +607,13 @@ export default function SignOrderContentSimple({
       />
       <div className="flex gap-6 p-6 max-w-full">
         {/* Main Form Column (3/4) */}
-        <div className="w-3/4 space-y-6">
+        <div className="w-2/4 space-y-6">
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
           />
           <SignOrderList />
-        </div>
-        {/* Right Column (1/4) */}
-        <div className="w-1/4 space-y-6">
           <EquipmentTotalsAccordion />
           <div className="border rounded-lg p-4">
             <h2 className="mb-2 text-lg font-semibold">Files</h2>
@@ -636,6 +633,9 @@ export default function SignOrderContentSimple({
             onDelete={handleDeleteNote}
             loading={loadingNotes}
           />
+        </div>
+        {/* Right Column (1/4) */}
+        <div className="w-2/4 space-y-6">
           <div className="bg-[#F4F5F7] p-6 rounded-lg">
             <div className="flex justify-end">
               <Button onClick={handleDownloadPdf}>
