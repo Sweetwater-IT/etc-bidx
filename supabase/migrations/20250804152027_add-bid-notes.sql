@@ -1,4 +1,4 @@
-create table bid_notes (
+create table notes (
   id uuid primary key default gen_random_uuid(),
   bid_id uuid references bid_estimates(id) on delete cascade,
   text text not null,
