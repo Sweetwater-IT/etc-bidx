@@ -39,6 +39,7 @@ export async function GET(
 
     const transformedData = {
       ...data,
+      signs: data.signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure })),
       contact: data.customer_contacts ? {
         id: data.customer_contacts.id,
         name: data.customer_contacts.name || '',

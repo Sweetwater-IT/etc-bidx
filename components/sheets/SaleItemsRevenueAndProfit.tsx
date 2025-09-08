@@ -1,12 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { getAllTotals, getPermanentSignRevenueAndMargin, getPermanentSignsCostSummary, getPermSignTotalCost } from '@/lib/mptRentalHelperFunctions'
-import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
 import { safeNumber } from '@/lib/safe-number'
-import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject'
-import { determineItemType } from '@/types/TPermanentSigns'
-import { getDisplayName } from '@/types/TPermanentSigns'
 
 interface BasicSummaryTotals {
   totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin: number
@@ -19,29 +14,6 @@ const SaleItemsRevenueAndProfit = () => {
     totalRevenue: number
     grossProfit: number
     grossMargin: number
-  } | null>(null)
-  const [totalPermSignsStats, setTotalPermSignsStats] = React.useState<BasicSummaryTotals | null>(null);
-
-  useEffect(() => {
-    if(!permanentSigns || !mptRental || !adminData){
-      setTotalPermSignsStats(null);
-      return;
-    }
-
-    const permSignsSummary = getPermanentSignsCostSummary(permanentSigns, adminData, mptRental);
-    setTotalPermSignsStats({
-      totalRevenue: permSignsSummary.totalRevenue,
-      totalCost: permSignsSummary.totalCost,
-      totalGrossProfit: permSignsSummary.totalRevenue - permSignsSummary.totalCost,
-      grossProfitMargin: permSignsSummary.grossMargin
-    })
-  }, [permanentSigns, mptRental, adminData])
-
-  const [allTotals, setAllTotals] = useState<{
-    totalCost: number
-    totalRevenue: number
-    totalGrossProfit: number
-    totalGrossMargin: number
   } | null>(null)
 
   useEffect(() => {
@@ -75,26 +47,6 @@ const SaleItemsRevenueAndProfit = () => {
     })
   }, [saleItems])
 
-  useEffect(() => {
-    if (!mptRental || !adminData) return
-
-    const totals = getAllTotals(
-      adminData,
-      mptRental,
-      equipmentRental || [],
-      flagging || defaultFlaggingObject,
-      serviceWork || defaultFlaggingObject,
-      saleItems || [],
-      permanentSigns ?? defaultPermanentSignsObject
-    )
-
-    setAllTotals({
-      totalCost: totals.totalCost,
-      totalRevenue: totals.totalRevenue,
-      totalGrossProfit: totals.totalGrossProfit,
-      totalGrossMargin: totals.totalGrossMargin
-    })
-  }, [adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems])
 
   return (
     <div className="bg-white rounded-lg p-2 md:row-span-1">
@@ -109,39 +61,6 @@ const SaleItemsRevenueAndProfit = () => {
 
       {saleItems && saleItems.length > 0 ? (
         <>
-          <div className="rounded-lg border mt-4">
-            <div className="grid grid-cols-5 gap-4 p-4 border-b bg-muted/50">
-              <div className="font-medium">Perm. Signs Items</div>
-              <div className="font-medium">Revenue</div>
-              <div className="font-medium">Cost</div>
-              <div className="font-medium">Gross Profit</div>
-              <div className="font-medium">Gross Profit %</div>
-            </div>
-            <div className="divide-y">
-              {permanentSigns?.signItems.map(signItem => {
-                const signFinancials = getPermanentSignRevenueAndMargin(permanentSigns, signItem, adminData, mptRental)
-                const itemType = determineItemType(signItem)
-                const signCost = getPermSignTotalCost(itemType, permanentSigns, signItem, adminData, mptRental)
-                return (
-                  <div key={signItem.id} className={`grid grid-cols-5 gap-4 p-4`} >
-                    <div>{getDisplayName(itemType)}</div>
-                    <div>{signFinancials.revenue}</div>
-                    <div>{signCost}</div>
-                    <div>{signFinancials.revenue - signCost}</div>
-                    <div>{signFinancials.grossMargin}</div>
-                  </div>
-                )
-              }
-              )}
-              <div className={`grid grid-cols-5 gap-4 p-4 bg-muted`} >
-                <div>Permanent Signs</div>
-                <div>{totalPermSignsStats?.totalRevenue}</div>
-                <div>{totalPermSignsStats?.totalCost}</div>
-                <div>{totalPermSignsStats?.totalGrossProfit}</div>
-                <div>{totalPermSignsStats?.grossProfitMargin}</div>
-              </div>
-            </div>
-          </div>
           {/* Sale Items Row */}
           <div className="grid grid-cols-5 border-t py-1 border-gray-300">
             <div className="text-sm">Sale Items</div>

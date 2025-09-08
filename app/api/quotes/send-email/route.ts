@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
           .select('id')
           .eq('contract_number', associatedContract)
           .single();
-        
+
         if (estimateData) {
           estimate_id = estimateData.id;
           console.log(`Found estimate_id: ${estimate_id} for contract ${associatedContract}`);
@@ -83,9 +83,9 @@ export async function POST(req: NextRequest) {
         const { data: jobData } = await supabase
           .from('jobs')
           .select('id')
-          .eq('contract_number', associatedContract)
+          .eq('job_number', associatedContract) 
           .single();
-        
+
         if (jobData) {
           job_id = jobData.id;
           console.log(`Found job_id: ${job_id} for contract ${associatedContract}`);
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     const standardDocs = standardDocsString ? standardDocsString.split(',') : [];
-    
+
     // Get all uploaded files
     const files = formData.getAll('files') as File[];
 
@@ -114,14 +114,14 @@ export async function POST(req: NextRequest) {
       try {
         const buffer = await file.arrayBuffer();
         const fileBuffer = Buffer.from(buffer);
-        
+
         attachments.push({
           filename: file.name,
           content: fileBuffer.toString('base64'),
           type: file.type,
           disposition: 'attachment'
         });
-        
+
         fileNames.push(file.name);
         console.log(`Added file attachment: ${file.name}`);
       } catch (error) {
@@ -150,14 +150,14 @@ export async function POST(req: NextRequest) {
             const fileType = docName === 'Flagging Price List'
               ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
               : 'application/pdf';
-              
+
             attachments.push({
               filename: fileName,
               content: fileBuffer.toString('base64'),
               type: fileType,
               disposition: 'attachment'
             });
-            
+
             // We don't add standard documents to fileNames
             console.log(`Added standard document: ${docName}`);
           } catch (fileError) {
@@ -228,12 +228,12 @@ export async function POST(req: NextRequest) {
     // 3. Insert into quote_recipients table
     // Find the point of contact recipient
     const pointOfContactRecipient = recipients.find(r => r.point_of_contact === true);
-    
+
     for (const recipient of recipients) {
       // If this recipient is the POC or we specifically find it marked as POC
-      const isPOC = recipient.point_of_contact === true || 
-                   (recipient.email === to && pointOfContactRecipient === undefined);
-      
+      const isPOC = recipient.point_of_contact === true ||
+        (recipient.email === to && pointOfContactRecipient === undefined);
+
       const { error: recipientError } = await supabase
         .from('quote_recipients')
         .insert({
@@ -375,10 +375,10 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Error sending quote email:', error);
     // Provide more detailed error info if available
-    const errorDetails = error.response?.body?.errors ? 
-      error.response.body.errors[0] : 
+    const errorDetails = error.response?.body?.errors ?
+      error.response.body.errors[0] :
       (error instanceof Error ? error.message : "Unknown error");
-      
+
     return NextResponse.json(
       {
         success: false,

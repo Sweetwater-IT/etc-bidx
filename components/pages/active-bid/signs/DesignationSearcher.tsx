@@ -94,7 +94,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
       height: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].height : 0,
       sheeting: selectedDesignation.sheeting,
       description: selectedDesignation.description,
-    };    
+    };
 
     setLocalSign(updatedSign);
 
@@ -128,7 +128,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                     height: 0,
                     sheeting: localSign.sheeting,
                     description: "",
-                    isCustom:true,
+                    isCustom: true,
                   };
                   setLocalSign(updatedSign);
                   if (onDesignationSelected) {
@@ -150,29 +150,74 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
 
 
               {filteredDesignations.map((item) => (
-                <CommandItem
-                  key={item.designation}
-                  value={item.designation}
-                  onSelect={() => handleDesignationSelect(item.designation)}
-                >
-                  <div className="flex items-center w-full">
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        localSign.designation === item.designation ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{item.designation}</span>
-                      {item.description && (
-                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                          {item.description}
-                        </span>
-                      )}
+                <div key={item.designation}>
+                  <CommandItem
+                    value={item.designation}
+                    onSelect={() => {
+                      if (item.dimensions.length === 1) {
+                        handleDesignationSelect(item.designation);
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center w-full">
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          localSign.designation === item.designation ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{item.designation}</span>
+                        {item.description && (
+                          <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                            {item.description}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CommandItem>
+                  </CommandItem>
+
+                  {item.dimensions.length > 1 && (
+                    <div className="ml-0">
+                      {item.dimensions.map((dim, idx) => (
+                        <CommandItem
+                          key={`${item.designation}-${idx}`}
+                          value={`${item.designation}-${dim.width}x${dim.height}`}
+                          onSelect={() => {
+                            const updatedSign = {
+                              ...localSign,
+                              designation: item.designation,
+                              width: dim.width,
+                              height: dim.height,
+                              sheeting: item.sheeting,
+                              description: item.description,
+                            };
+                            setLocalSign(updatedSign);
+                            onDesignationSelected?.(updatedSign);
+                            setOpen(false);
+                          }}
+                        >
+                          <div className="flex items-center w-full pl-2">
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                localSign.designation === item.designation &&
+                                  localSign.width === dim.width &&
+                                  localSign.height === dim.height
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <span className="text-sm">{dim.width} x {dim.height}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
+
             </CommandGroup>
           </CommandList>
         </Command>

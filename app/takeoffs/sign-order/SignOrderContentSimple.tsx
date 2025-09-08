@@ -31,8 +31,10 @@ import { formatDate } from '@/lib/formatUTCDate'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
+import { usePDF } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -255,11 +257,11 @@ export default function SignOrderContentSimple ({
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setSecondCounter(prev => prev + 1)
-    }, 1000)
+      setSecondCounter(prev => prev + 1);
+    }, 1000);
 
-    return () => clearInterval(intervalId)
-  }, [secondCounter])
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Autosave effect - exactly like active bid header
   useEffect(() => {
@@ -398,7 +400,6 @@ export default function SignOrderContentSimple ({
   // Destructure needed properties
   const { files, successes, isSuccess } = fileUploadProps
 
-  // Use useEffect to update parent component's files state when upload is successful
   useEffect(() => {
     if (isSuccess && files.length > 0) {
       const successfulFiles = files.filter(file =>
@@ -417,7 +418,6 @@ export default function SignOrderContentSimple ({
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  // Fetch notes for the sign order on mount (if editing an existing sign order)
   useEffect(() => {
     async function fetchNotes () {
       setLoadingNotes(true)
@@ -446,6 +446,7 @@ export default function SignOrderContentSimple ({
       })
     }
   }
+
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
     const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
@@ -502,10 +503,8 @@ export default function SignOrderContentSimple ({
         order_number: adminInfo.orderNumber
       }
 
-      // Submit data to the API
       const result = await saveSignOrder(signOrderData)
 
-      // Store the ID for future updates
       if (result.id) {
         setSignOrderId(result.id)
       }
@@ -521,29 +520,66 @@ export default function SignOrderContentSimple ({
     }
   }
 
-  const pdfDoc = useMemo(
-    () => <SignOrderWorksheetPDF adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />,
-    [adminInfo, signList, mptRental, notes]
-  );
+  const handleDownloadPdf = async () => {
+    try {
+      const pdfElement = (
+        <SignOrderWorksheetPDF
+          adminInfo={adminInfo || {
+            requestor: null,
+            customer: null,
+            orderDate: new Date(),
+            needDate: null,
+            orderType: [],
+            selectedBranch: 'All',
+            jobNumber: '',
+            isSubmitting: false,
+            contractNumber: '',
+            orderNumber: undefined,
+            startDate: undefined,
+            endDate: undefined,
+            contact: null
+          }}
+          signList={signList || []}
+          mptRental={mptRental}
+          notes={notes || []}
+        />
+      );
+
+      const blob = await pdf(pdfElement).toBlob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sign-order.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Error generating PDF');
+    }
+  };
 
   return mptRental.phases.length > 0 ? (
-    <div className='flex flex-1 flex-col'>
+    <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading='Create Sign Order'
+        heading="Create Sign Order"
         handleSubmit={() => {
-          handleSave('DRAFT')
-          router.push('/takeoffs/load-sheet')
+          handleSave("DRAFT");
+          router.push("/takeoffs/load-sheet");
         }}
         showX
         saveButtons={
-          <div className='flex items-center gap-4'>
-            <div className='text-sm text-muted-foreground'>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
               {getSaveStatusMessage()}
             </div>
-            <div className='flex items-center gap-2'>
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() =>
-                  handleSave(alreadySubmitted ? 'SUBMITTED' : 'DRAFT')
+                  handleSave(alreadySubmitted ? "SUBMITTED" : "DRAFT")
                 }
                 disabled={
                   adminInfo.isSubmitting ||
@@ -552,7 +588,7 @@ export default function SignOrderContentSimple ({
                 }
               >
                 {adminInfo.isSubmitting
-                  ? 'Saving...'
+                  ? "Saving..."
                   : initialSignOrderId
                   ? 'Update order'
                   : 'Done'}
@@ -567,50 +603,18 @@ export default function SignOrderContentSimple ({
             {/* Main Form Column (3/4) */}
               <SignOrderAdminInfo
                 adminInfo={adminInfo}
-                setAdminInfo={setAdminInfo}
-                showInitialAdminState={!!initialSignOrderId}
-              />
-              <SignOrderList />
-            {/* Right Column (1/4) */}
-              {/* Toggle Button for PDF Preview (floated to the right, outside preview) */}
-              <EquipmentTotalsAccordion />
-              <div className='border rounded-lg p-4'>
-                <h2 className='mb-2 text-lg font-semibold'>Files</h2>
-                <Dropzone
-                  {...fileUploadProps}
-                  className='p-8 cursor-pointer space-y-4'
-                >
-                  <DropzoneContent />
-                  <DropzoneEmptyState />
-                </Dropzone>
-              </div>
-              <QuoteNotes
+                signList={signList}
+                mptRental={mptRental}
                 notes={notes}
-                onSave={handleSaveNote}
-                onEdit={handleEditNote}
-                onDelete={handleDeleteNote}
-                loading={loadingNotes}
               />
-          </div>
-          {/* PDF Preview Section: only render if visible */}
-          <div className='w-1/2 bg-[#F4F5F7] p-6 rounded-lg'>
-            <div className='flex justify-end'>
-              <PDFDownloadLink
-                document={pdfDoc}
-                fileName="sign-order.pdf"
-              >
-                <Button>Download PDF</Button>
-              </PDFDownloadLink>
-            </div>
-            <div className='min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]'>
-              <SignOrderWorksheet adminInfo={adminInfo} signList={signList} mptRental={mptRental} notes={notes} />
             </div>
           </div>
+        </div>
       </div>
     </div>
   ) : (
     <></>
-  )
+  );
 }
 
 const normalizeSign = (sign: any): SignItem => ({

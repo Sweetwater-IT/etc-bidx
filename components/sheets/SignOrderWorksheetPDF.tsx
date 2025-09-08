@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { styles as baseStyles } from './styles/bidSummaryPDFStyle'
 import Checkbox from './SheetCheckBox'
@@ -35,7 +35,7 @@ interface Props {
   notes: Note[]
 }
 
-function formatDateTime (ts: number) {
+function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString('en-US', {
     month: 'short',
     day: '2-digit',
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   notesContainer: {
     padding: 12,
     fontSize: 9,
-    flex: 0.66, 
+    flex: 0.66,
     borderLeft: '1.5px solid black'
   },
   notesRow: {
@@ -213,186 +213,236 @@ const Footer = ({
 
 const SignOrderWorksheetPDF: React.FC<Props> = ({
   adminInfo,
-  signList,
+  signList = [],
   mptRental,
   notes
-}) => (
-  <Document>
-    <Page size='A4' style={styles.page}>
-      <View style={styles.mainContainer}>
-        {/* Title Bar */}
-        <View style={styles.titleBar}>
-          <Text style={styles.titleText}>Sign Order Worksheet</Text>
-          <View style={styles.titleRight}>
-            <Text style={{ fontSize: 10 }}>
-              Submitter: {adminInfo.requestor?.name || '-'}
-            </Text>
-            <Text style={{ fontSize: 10 }}>
-              Submission Date: {new Date(adminInfo.orderDate).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-        {/* Header Section */}
-        <View style={styles.headerContainer}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerCell}>
-              <Text style={styles.label}>Customer:</Text>
-              <Text style={styles.value}>
-                {adminInfo.customer?.name || '-'}
+}) => {
+
+  const contentKey = useMemo(() => {
+    return JSON.stringify({
+      adminInfo,
+      signListLength: signList.length,
+      notesLength: notes.length,
+      mptRental: !!mptRental
+    });
+  }, [adminInfo, signList, mptRental, notes]);
+
+  const safeSignList: SignItem[] = (Array.isArray(signList) ? signList : [])
+    .filter(item => {
+      if (!item || typeof item !== 'object') return false;
+      const hasRequiredProps =
+        'designation' in item &&
+        'quantity' in item &&
+        'width' in item &&
+        'height' in item;
+
+      if (!hasRequiredProps) {
+        console.warn('Filtering invalid sign item:', item);
+        return false;
+      }
+      return true;
+    })
+    .map(item => ({
+      designation: item.designation ?? '-',
+      description: item.description ?? '-',
+      quantity: item.quantity ?? 0,
+      width: item.width ?? 0,
+      height: item.height ?? 0,
+      sheeting: item.sheeting ?? '-',
+      substrate: item.substrate ?? '-',
+      stiffener: item.stiffener ?? '',
+      inStock: item.inStock ?? 0,
+      order: item.order ?? 0,
+      make: item.make ?? 0,
+      unitPrice: item.unitPrice ?? 0,
+      totalPrice: item.totalPrice ?? 0,
+      primarySignId: item.primarySignId ?? '-',
+      displayStructure: item.displayStructure ?? '-',
+      bLights: item.bLights ?? 0,
+      cover: !!item?.cover
+    }));
+    
+  return (
+    <Document key={contentKey}>
+      <Page size='A4' style={styles.page}>
+        <View style={styles.mainContainer}>
+          {/* Title Bar */}
+          <View style={styles.titleBar}>
+            <Text style={styles.titleText}>Sign Order Worksheet</Text>
+            <View style={styles.titleRight}>
+              <Text style={{ fontSize: 10 }}>
+                Submitter: {adminInfo.requestor?.name || '-'}
               </Text>
-            </View>
-            <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Customer Contact:</Text>
-              <Text style={styles.value}>{adminInfo.customer?.phones[0] || '-'}</Text>
-            </View>
-          </View>
-          <View style={styles.headerRow}>
-            <View style={styles.headerCell}>
-              <Text style={styles.label}>Job #:</Text>
-              <Text style={styles.value}>
-                {adminInfo.jobNumber || '-'}
-              </Text>
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Contract #:</Text>
-              <Text style={styles.value}>
-                {adminInfo.contractNumber || '-'}
-              </Text>
-            </View>
-            <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Phase #:</Text>
-              <Text style={styles.value}>
-                {mptRental?.phases.length || 0}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.headerRow}>
-            <View style={styles.headerCell}>
-              <Text style={styles.label}>Sale:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('sale')} />
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Rental:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('rental')} />
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Permanent:</Text>
-              <Checkbox checked={adminInfo.orderType.includes('permanent signs')} />
-            </View>
-            <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Multiple:</Text>
-              <Checkbox checked={adminInfo.orderType.length > 1} />
-            </View>
-          </View>
-          <View style={styles.lastHeaderRow}>
-            <View style={styles.headerCell}>
-              <Text style={styles.label}>Need Date:</Text>
-              <Text style={styles.value}>
-                {adminInfo.needDate ? new Date(adminInfo.needDate).toLocaleDateString() : '-'}
-              </Text>
-            </View>
-            <View style={[styles.headerCell]}>
-              <Text style={styles.label}>Rental Start Date:</Text>
-              <Text style={styles.value}>
-                {adminInfo.startDate ? new Date(adminInfo.startDate).toLocaleDateString() : '-'}
-              </Text>
-            </View>
-            <View style={[styles.headerCell, styles.lastCell]}>
-              <Text style={styles.label}>Rental End Date:</Text>
-              <Text style={styles.value}>
-                {adminInfo.endDate ? new Date(adminInfo.endDate).toLocaleDateString() : '-'}
+              <Text style={{ fontSize: 10 }}>
+                Submission Date: {new Date(adminInfo.orderDate).toLocaleDateString()}
               </Text>
             </View>
           </View>
-        </View>
-        {/* Section Title */}
-        <Text style={styles.sectionTitle}>SIGN LIST</Text>
-        {/* Sign List Table */}
-        <View style={[styles.container, { borderBottom: '4px solid black' }]}>
-          <View style={{ flex: 1 }}>
-            {/* Table Header */}
-            <View style={[styles.row, { backgroundColor: '#F3F4F6' }]}>
-              <Text style={[styles.cell, styles.columnHeader]}>Designation</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Width</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Height</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Quantity</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Sheeting</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Structure</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>B Lights</Text>
-              <Text style={[styles.cell, styles.columnHeader]}>Covers</Text>
-            </View>
-            {/* Table Rows */}
-            {signList.map((item, idx) => (
-              <View style={styles.row} key={idx}>
-                <Text style={styles.cell}>{item.designation}</Text>
-                <Text style={styles.cell}>{item.width} in.</Text>
-                <Text style={styles.cell}>{item.height} in.</Text>
-                <Text style={styles.cell}>{item.quantity}</Text>
-                <Text style={styles.cell}>{item.sheeting}</Text>
-                <Text style={styles.cell}>{item.displayStructure || '-'}</Text>
-                <Text style={styles.cell}>{item.bLights}</Text>
-                <Text style={styles.cell}>{item.cover ? 'Yes' : 'No'}</Text>
+          {/* Header Section */}
+          <View style={styles.headerContainer}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerCell}>
+                <Text style={styles.label}>Customer:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.customer?.name || '-'}
+                </Text>
               </View>
-            ))}
+              <View style={[styles.headerCell, styles.lastCell]}>
+                <Text style={styles.label}>Customer Contact:</Text>
+                <Text style={styles.value}>{adminInfo.customer?.phones[0] || '-'}</Text>
+              </View>
+            </View>
+            <View style={styles.headerRow}>
+              <View style={styles.headerCell}>
+                <Text style={styles.label}>Job #:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.jobNumber || '-'}
+                </Text>
+              </View>
+              <View style={[styles.headerCell]}>
+                <Text style={styles.label}>Contract #:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.contractNumber || '-'}
+                </Text>
+              </View>
+              <View style={[styles.headerCell, styles.lastCell]}>
+                <Text style={styles.label}>Phase #:</Text>
+                <Text style={styles.value}>
+                  {mptRental?.phases.length || 0}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.headerRow}>
+              <View style={styles.headerCell}>
+                <Text style={styles.label}>Sale:</Text>
+                <Checkbox checked={adminInfo.orderType.includes('sale')} />
+              </View>
+              <View style={[styles.headerCell]}>
+                <Text style={styles.label}>Rental:</Text>
+                <Checkbox checked={adminInfo.orderType.includes('rental')} />
+              </View>
+              <View style={[styles.headerCell]}>
+                <Text style={styles.label}>Permanent:</Text>
+                <Checkbox checked={adminInfo.orderType.includes('permanent signs')} />
+              </View>
+              <View style={[styles.headerCell, styles.lastCell]}>
+                <Text style={styles.label}>Multiple:</Text>
+                <Checkbox checked={adminInfo.orderType.length > 1} />
+              </View>
+            </View>
+            <View style={styles.lastHeaderRow}>
+              <View style={styles.headerCell}>
+                <Text style={styles.label}>Need Date:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.needDate ? new Date(adminInfo.needDate).toLocaleDateString() : '-'}
+                </Text>
+              </View>
+              <View style={[styles.headerCell]}>
+                <Text style={styles.label}>Rental Start Date:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.startDate ? new Date(adminInfo.startDate).toLocaleDateString() : '-'}
+                </Text>
+              </View>
+              <View style={[styles.headerCell, styles.lastCell]}>
+                <Text style={styles.label}>Rental End Date:</Text>
+                <Text style={styles.value}>
+                  {adminInfo.endDate ? new Date(adminInfo.endDate).toLocaleDateString() : '-'}
+                </Text>
+              </View>
+            </View>
           </View>
+          {/* Section Title */}
+          <Text style={styles.sectionTitle}>SIGN LIST</Text>
+          {/* Sign List Table */}
+          <View style={[styles.container, { borderBottom: '4px solid black' }]}>
+            <View style={{ flex: 1 }}>
+              {/* Table Header */}
+              <View style={[styles.row, { backgroundColor: '#F3F4F6' }]}>
+                <Text style={[styles.cell, styles.columnHeader]}>Designation</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Width</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Height</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Quantity</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Sheeting</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Structure</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>B Lights</Text>
+                <Text style={[styles.cell, styles.columnHeader]}>Covers</Text>
+              </View>
+              {/* Table Rows */}
+              {
+                safeSignList.map((item, idx) => (
+                  <View style={styles.row} key={idx}>
+                    <Text style={styles.cell}>{item.designation}</Text>
+                    <Text style={styles.cell}>{item.width} in.</Text>
+                    <Text style={styles.cell}>{item.height} in.</Text>
+                    <Text style={styles.cell}>{item.quantity}</Text>
+                    <Text style={styles.cell}>{item.sheeting}</Text>
+                    <Text style={styles.cell}>{item.displayStructure}</Text>
+                    <Text style={styles.cell}>{item.bLights}</Text>
+                    <Text style={styles.cell}>{item.cover ? 'Yes' : 'No'}</Text>
+                  </View>
+                ))
+              }
+            </View>
+          </View>
+          {/* EQUIPMENT SUMMARY */}
+          <View style={styles.equipmentContainer}>
+            <View style={{ flex: 0.33 }}>
+              <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>H-STANDS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>V/P&apos;S =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>SANDBAGS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>POSTS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>6&apos; WINGS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>METAL STANDS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).metalStands.totalQuantity)}</Text>
+              </View>
+              <View style={styles.equipmentRow}>
+                <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
+                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity)}</Text>
+              </View>
+            </View>
+            <View style={styles.notesContainer}>
+              {
+                notes.map((note, idx) => (
+                  <View style={styles.notesRow} key={idx}>
+                    <Text>{note.text}</Text>
+                    <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
+                  </View>
+                ))
+              }
+            </View>
+          </View>
+          {/* Footer */}
+          <Footer pageNumber={1} totalPages={1} />
         </View>
-        {/* EQUIPMENT SUMMARY */}
-        <View style={styles.equipmentContainer}>
-          <View style={{ flex: 0.33 }}>
-            <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>H-STANDS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>V/P&apos;S =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>SANDBAGS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>POSTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>6&apos; WINGS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>METAL STANDS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).metalStands.totalQuantity)}</Text>
-            </View>
-            <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity)}</Text>
-            </View>
-          </View>
-          <View style={styles.notesContainer}>  
-            {
-              notes.map((note, idx) => (
-                <View style={styles.notesRow} key={idx}>
-                  <Text>{note.text}</Text>
-                  <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
-                </View>
-              ))
-            }
-          </View>
-        </View>
-        {/* Footer */}
-        <Footer pageNumber={1} totalPages={1} />
-      </View>
-    </Page>
-  </Document>
-)
+      </Page>
+    </Document>
+  )
+
+}
 
 export default SignOrderWorksheetPDF
