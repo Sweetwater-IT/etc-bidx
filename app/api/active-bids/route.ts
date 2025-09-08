@@ -582,7 +582,7 @@ export async function POST(request: NextRequest) {
       }));
 
       const { error: notesError } = await supabase
-        .from('bid_notes')
+        .from('notes')
         .insert(noteInserts);
 
       if (notesError) {
