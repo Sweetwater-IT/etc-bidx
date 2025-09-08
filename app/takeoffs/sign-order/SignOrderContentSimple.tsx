@@ -17,7 +17,7 @@ import { useFileUpload } from '@/hooks/use-file-upload'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
-import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
+import { fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import isEqual from 'lodash/isEqual'
 import EquipmentTotalsAccordion from './view/[id]/EquipmentTotalsAccordion'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
@@ -28,10 +28,6 @@ import {
 import { useLoading } from '@/hooks/use-loading'
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { formatDate } from '@/lib/formatUTCDate'
-import FileViewingContainer from '@/components/file-viewing-container'
-import { FileMetadata } from '@/types/FileTypes'
-import { useAuth } from '@/contexts/auth-context'
-import { AuthAdminApi } from '@supabase/supabase-js'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
@@ -62,7 +58,7 @@ interface Props {
   signOrderId?: number
 }
 
-export default function SignOrderContentSimple({
+export default function SignOrderContentSimple ({
   signOrderId: initialSignOrderId
 }: Props) {
   const { dispatch, mptRental } = useEstimate()
@@ -79,14 +75,15 @@ export default function SignOrderContentSimple({
     jobNumber: '',
     isSubmitting: false,
     contractNumber: '',
-    orderNumber: undefined,
-    contact: null
+    orderNumber: undefined
   })
   const [signList, setSignList] = useState<SignItem[]>([])
 
   const { startLoading, stopLoading } = useLoading()
-  const { user } = useAuth()
-  const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
+
+  const [localFiles, setLocalFiles] = useState<File[]>([])
+  const [localNotes, setLocalNotes] = useState<string>()
+  const [savedNotes, setSavedNotes] = useState<string>()
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
   const [signOrderId, setSignOrderId] = useState<number | null>(
     initialSignOrderId ?? null
@@ -336,8 +333,7 @@ export default function SignOrderContentSimple({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status: 'DRAFT' as const,
-        order_number: adminInfo.orderNumber,
-        contact: adminInfo.contact
+        order_number: adminInfo.orderNumber
       }
 
       const result = await saveSignOrder(signOrderData)
@@ -364,23 +360,26 @@ export default function SignOrderContentSimple({
     if (!firstSave) return ''
 
     if (secondCounter < 60) {
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
-        } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60)
-      return `${alreadySubmitted ? 'Sign order updates' : 'Draft'
-        } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order updates' : 'Draft'
+      } saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600)
-      return `${alreadySubmitted ? 'Sign order ' : 'Draft'
-        } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
+      return `${
+        alreadySubmitted ? 'Sign order ' : 'Draft'
+      } saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
     }
   }
 
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024, // 50MB
     maxFiles: 10, // Allow multiple files to be uploaded
-    uniqueIdentifier: signOrderId ?? '',
+    uniqueIdentifier: 100000,
     apiEndpoint: '/api/files/sign-orders',
     accept: {
       'application/pdf': ['.pdf'],
@@ -399,32 +398,28 @@ export default function SignOrderContentSimple({
   })
 
   // Destructure needed properties
-  const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps;
-
-  useEffect(() => {
-    if (!fileErrors || fileErrors.length === 0) return;
-    if (fileErrors.some(err => err.name === 'identifier')) {
-      toast.error('Sign order needs to be saved as draft in order to being associating files. Please add admin data, then click upload files again.')
-    }
-  }, [fileErrors])
-
-  const fetchFiles = () => {
-    if (!signOrderId) return
-    fetchAssociatedFiles(signOrderId, 'sign-orders?sign_order_id', setLocalFiles)
-  }
-
-  useEffect(() => {
-    fetchFiles();
-  }, [signOrderId])
+  const { files, successes, isSuccess } = fileUploadProps
 
   useEffect(() => {
     if (isSuccess && files.length > 0) {
-      fetchFiles();
+      const successfulFiles = files.filter(file =>
+        successes.includes(file.name)
+      )
+      if (successfulFiles.length > 0) {
+        setLocalFiles(prevFiles => {
+          // Filter out duplicates
+          const filteredPrevFiles = prevFiles.filter(
+            prevFile =>
+              !successfulFiles.some(newFile => newFile.name === prevFile.name)
+          )
+          return [...filteredPrevFiles, ...successfulFiles]
+        })
+      }
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
   useEffect(() => {
-    async function fetchNotes() {
+    async function fetchNotes () {
       setLoadingNotes(true)
       try {
         if (!signOrderId) return
@@ -447,7 +442,7 @@ export default function SignOrderContentSimple({
       await fetch(`/api/sign-orders`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, timestamp: note.timestamp, notes: updatedNotes, user_email: user.email })
+        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
       })
     }
   }
@@ -491,9 +486,7 @@ export default function SignOrderContentSimple({
         requestor: adminInfo.requestor ? adminInfo.requestor : undefined,
         contractor_id: adminInfo.customer ? adminInfo.customer.id : undefined,
         contract_number: adminInfo.contractNumber,
-        order_date: adminInfo.orderDate
-          ? new Date(adminInfo.orderDate).toISOString()
-          : '',
+        order_date: new Date(adminInfo.orderDate).toISOString(),
         need_date: adminInfo.needDate
           ? new Date(adminInfo.needDate).toISOString()
           : undefined,
@@ -507,8 +500,7 @@ export default function SignOrderContentSimple({
         job_number: adminInfo.jobNumber,
         signs: mptRental.phases[0].signs || [],
         status,
-        order_number: adminInfo.orderNumber,
-        contact: adminInfo.contact
+        order_number: adminInfo.orderNumber
       }
 
       const result = await saveSignOrder(signOrderData)
@@ -598,59 +590,23 @@ export default function SignOrderContentSimple({
                 {adminInfo.isSubmitting
                   ? "Saving..."
                   : initialSignOrderId
-                    ? "Update order"
-                    : "Done"}
+                  ? 'Update order'
+                  : 'Done'}
               </Button>
             </div>
           </div>
         }
       />
-      <div className="flex gap-6 p-6 max-w-full">
-        {/* Main Form Column (3/4) */}
-        <div className="w-3/4 space-y-6">
+      <div className='flex gap-6 p-6 max-w-full'>
+        {/* Left Section: expands if PDF preview is hidden */}
+        <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
+          {/* Main Form Column (3/4) */}
           <SignOrderAdminInfo
             adminInfo={adminInfo}
-            setAdminInfo={setAdminInfo}
-            showInitialAdminState={!!initialSignOrderId}
-          />
-          <SignOrderList />
-        </div>
-        {/* Right Column (1/4) */}
-        <div className="w-1/4 space-y-6">
-          <EquipmentTotalsAccordion />
-          <div className="border rounded-lg p-4">
-            <h2 className="mb-2 text-lg font-semibold">Files</h2>
-            <Dropzone
-              {...fileUploadProps}
-              className="p-8 cursor-pointer space-y-4 mb-4"
-            >
-              <DropzoneContent />
-              <DropzoneEmptyState />
-            </Dropzone>
-            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
-          </div>
-          <QuoteNotes
+            signList={signList}
+            mptRental={mptRental}
             notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            loading={loadingNotes}
           />
-          <div className="bg-[#F4F5F7] p-6 rounded-lg">
-            <div className="flex justify-end">
-              <Button onClick={handleDownloadPdf}>
-                Download PDF
-              </Button>
-            </div>
-            <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
-              <SignOrderWorksheet
-                adminInfo={adminInfo}
-                signList={signList}
-                mptRental={mptRental}
-                notes={notes}
-              />
-            </div>
-          </div>
         </div>
       </div>
     </div>
