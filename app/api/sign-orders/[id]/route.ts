@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF';
 
 export async function GET(
   request: NextRequest,
@@ -37,23 +38,11 @@ export async function GET(
       );
     }
 
-    // Parse signs JSON string and convert to array
-    let signs = [];
-    if (data.signs) {
-      try {
-        // Parse JSON string to object or array
-        const signsObj = typeof data.signs === 'string' ? JSON.parse(data.signs) : data.signs;
-        // Convert to array: use Object.values() for objects, or keep as-is for arrays
-        signs = typeof signsObj === 'object' && signsObj !== null ? (Array.isArray(signsObj) ? signsObj : Object.values(signsObj)) : [];
-      } catch (parseError) {
-        console.error('Error parsing signs JSON:', parseError);
-        signs = [];
-      }
-    }
+    let signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
     
     const transformedData = {
       ...data,
-      signs: data.signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure })),
+      signs: signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure || '' })),
       contact: data.customer_contacts ? {
         id: data.customer_contacts.id,
         name: data.customer_contacts.name || '',
