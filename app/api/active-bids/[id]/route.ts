@@ -31,14 +31,14 @@ export async function GET(
         .single();
 
       const { data: bidNotes, error: notesError } = await supabase
-        .from('bid_notes')
+        .from('notes')
         .select('id, text, created_at, user_email')
         .eq('bid_id', resolvedParams.id);
 
       if (!estimateError && !notesError) {
         data = {
           ...estimateData,
-          bid_notes: bidNotes
+          notes: bidNotes
         };
         error = null;
       }
@@ -51,16 +51,18 @@ export async function GET(
       );
     }
 
-    //append draft if necessary
-    if(data.status === 'DRAFT'){
+    if (data?.status === 'DRAFT') {
       data = {
         ...data,
         admin_data: {
           ...data.admin_data,
-          contractNumber : data.admin_data.contractNumber.endsWith('-DRAFT') ? data.admin_data.contractNumber : data.admin_data.contractNumber + '-DRAFT'
+          contractNumber: data.admin_data.contractNumber.endsWith('-DRAFT')
+            ? data.admin_data.contractNumber
+            : data.admin_data.contractNumber + '-DRAFT'
         }
       }
     }     
+
     
     return NextResponse.json({ success: true, data });
     
@@ -91,6 +93,40 @@ export async function PATCH(
     }
     
     const body = await request.json();
+     
+    if (body.notes && Array.isArray(body.notes)) {
+      const { error: deleteError } = await supabase
+        .from('bid_notes')
+        .delete()
+        .eq('bid_id', id)
+
+      if (deleteError) {
+        console.error('Error deleting previous bid notes:', deleteError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to delete old notes', error: deleteError.message },
+          { status: 500 }
+        );
+      }
+
+      // 2. Insert new notes
+      const newNotes = body.notes.map((note: any) => ({
+        bid_id: id,
+        text: note.text,
+        created_at: new Date(note.timestamp).toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('bid_notes')
+        .insert(newNotes);
+
+      if (insertError) {
+        console.error('Error inserting new bid notes:', insertError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to insert new notes', error: insertError.message },
+          { status: 500 }
+        );
+      }
+    }
     
     const { data: updatedBid, error: updateError } = await supabase
       .from('bid_estimates')

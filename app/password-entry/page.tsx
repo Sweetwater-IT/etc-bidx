@@ -22,8 +22,6 @@ export default function GoogleAuthPage() {
     checkSession();
   }, [router]);
 
-
-
   return (
     <div className="min-h-screen flex relative">
       {/* Top Left Brand */}
@@ -37,7 +35,7 @@ export default function GoogleAuthPage() {
         />
       </div>
       <div className="flex flex-col justify-center w-full max-w-md px-8 py-12 bg-white z-10 mx-auto">
-        <h1 className="text-2xl font-bold mb-2 text-center">Login to your account</h1>
+        <h1 className="text-2xl text-black font-bold mb-2 text-center">Login to your account</h1>
         <p className="mb-6 text-gray-500 text-center text-[13px]">Use your gmail to login to your account</p>
         <form className="space-y-4">
           <button

@@ -11,6 +11,7 @@ import {
 import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem'
 import { Flagging } from '@/types/TFlagging'
 import { safeNumber } from '@/lib/safe-number'
+import { getEquipmentTotalsPerPhase, returnSignTotalsByPhase } from '@/lib/mptRentalHelperFunctions'
 
 interface BasicTotals {
   revenue: string
@@ -253,14 +254,14 @@ const GenerateBidSummaryReactPDF = ({
           <Text style={styles.label}>PROJECT DAYS:</Text>
           <Text style={styles.value}>
             {adminData?.startDate &&
-            adminData?.endDate &&
-            adminData.startDate instanceof Date &&
-            adminData.endDate instanceof Date
+              adminData?.endDate &&
+              adminData.startDate instanceof Date &&
+              adminData.endDate instanceof Date
               ? Math.ceil(
-                  (adminData.endDate.getTime() -
-                    adminData.startDate.getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
+                (adminData.endDate.getTime() -
+                  adminData.startDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+              )
               : 0}
           </Text>
         </View>
@@ -268,14 +269,14 @@ const GenerateBidSummaryReactPDF = ({
           <Text style={styles.label}>W/S DAYS:</Text>
           <Text style={styles.value}>
             {adminData?.winterStart &&
-            adminData?.winterEnd &&
-            adminData.winterStart instanceof Date &&
-            adminData.winterEnd instanceof Date
+              adminData?.winterEnd &&
+              adminData.winterStart instanceof Date &&
+              adminData.winterEnd instanceof Date
               ? Math.ceil(
-                  (adminData.winterEnd.getTime() -
-                    adminData.winterStart.getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
+                (adminData.winterEnd.getTime() -
+                  adminData.winterStart.getTime()) /
+                (1000 * 60 * 60 * 24)
+              )
               : '-'}
           </Text>
         </View>
@@ -349,7 +350,11 @@ const GenerateBidSummaryReactPDF = ({
             <View style={styles.row}>
               <Text style={styles.cell}>{`4'`} TYPE III =</Text>
               <Text style={styles.quantityCell}>
-                {equipmentTotals.fourFootTypeIII}
+                {mptRental &&
+                  safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental)?.fourFootTypeIII
+                      .totalQuantity
+                  )}
               </Text>
             </View>
             <View style={styles.row}>
@@ -402,7 +407,15 @@ const GenerateBidSummaryReactPDF = ({
             </View>
             <View style={styles.totalStructure}>
               <Text style={styles.value}>
-                STRUCTURES: {equipmentTotals.fourFootTypeIII + equipmentTotals.hStand}
+                STRUCTURES:{' '}
+                {mptRental
+                  ? safeNumber(
+                    getEquipmentTotalsPerPhase(mptRental)?.fourFootTypeIII
+                      .totalQuantity +
+                    getEquipmentTotalsPerPhase(mptRental).hStand
+                      .totalQuantity
+                  )
+                  : '-'}
               </Text>
             </View>
           </View>
@@ -590,6 +603,100 @@ const GenerateBidSummaryReactPDF = ({
   };
 
   const PhaseSummary = () => {
+    const getTotals = () => {
+      if (!mptRental?.phases)
+        return {
+          days: 0,
+          vp: 0,
+          bLights: 0,
+          cLights: 0,
+          type3: 0,
+          sixFootWings: 0,
+          hStand: 0,
+          post: 0,
+          sandbag: 0,
+          wings: 0,
+          metalStands: 0,
+          hi: 0,
+          dg: 0,
+          special: 0
+        }
+
+      return mptRental.phases.reduce(
+        (acc, phase) => {
+          const signTotals = returnSignTotalsByPhase(phase)
+
+          return {
+            days: acc.days + safeNumber(phase.days),
+            vp:
+              acc.vp +
+              safeNumber(phase.standardEquipment.HIVP.quantity) +
+              safeNumber(phase.standardEquipment.TypeXIVP.quantity) +
+              safeNumber(phase.standardEquipment.sharps.quantity),
+            bLights:
+              acc.bLights +
+              safeNumber(phase.standardEquipment.BLights.quantity),
+            cLights:
+              acc.cLights +
+              safeNumber(phase.standardEquipment.ACLights.quantity),
+            type3:
+              acc.type3 +
+              safeNumber(phase.standardEquipment?.fourFootTypeIII.quantity),
+            hStand:
+              acc.hStand + safeNumber(phase.standardEquipment.hStand.quantity),
+            post: acc.post + safeNumber(phase.standardEquipment.post.quantity),
+            sandbag:
+              acc.sandbag +
+              safeNumber(phase.standardEquipment.sandbag.quantity),
+            metalStands:
+              acc.metalStands +
+              safeNumber(phase.standardEquipment.metalStands.quantity),
+            sixFootWings:
+              acc.sixFootWings +
+              safeNumber(phase.standardEquipment.sixFootWings.quantity),
+            hi: signTotals.HI.totalSquareFootage,
+            dg: signTotals.DG.totalSquareFootage,
+            special: signTotals.Special.totalSquareFootage
+          }
+        },
+        {
+          days: 0,
+          vp: 0,
+          bLights: 0,
+          cLights: 0,
+          type3: 0,
+          hStand: 0,
+          post: 0,
+          sandbag: 0,
+          metalStands: 0,
+          sixFootWings: 0,
+          hi: 0,
+          dg: 0,
+          special: 0
+        }
+      )
+    }
+
+    const rentalItemTotals = equipmentRental?.reduce(
+      (acc, item) => {
+        switch (item.name) {
+          case 'TMA':
+            acc.tma += item.quantity
+            break
+          case 'Message Board':
+            acc.messageBoard += item.quantity
+            break
+          case 'Arrow Board':
+            acc.arrowBoard += item.quantity
+            break
+          case 'Speed Trailer':
+            acc.speedTrailer += item.quantity
+            break
+        }
+        return acc // Need to return the accumulator
+      },
+      { tma: 0, messageBoard: 0, arrowBoard: 0, speedTrailer: 0 }
+    )
     return (
       <View>
         <Text style={styles.sectionTitle}>PHASE SUMMARY</Text>
@@ -625,7 +732,7 @@ const GenerateBidSummaryReactPDF = ({
             <Text style={styles.phaseSummaryCell}>{phase.post}</Text>
             <Text style={styles.phaseSummaryCell}>{phase.sandbag}</Text>
             <Text style={styles.phaseSummaryCell}>{phase.metalStands}</Text>
-          </View>
+          </View >
         ))}
 
         <View style={[styles.summaryTotalRow]}>
@@ -643,7 +750,7 @@ const GenerateBidSummaryReactPDF = ({
           <Text style={styles.phaseSummaryCell}>{phaseSummaryData.totals.sandbag}</Text>
           <Text style={styles.phaseSummaryCell}>{phaseSummaryData.totals.metalStands}</Text>
         </View>
-      </View>
+      </View >
     )
   }
 
@@ -791,16 +898,17 @@ const GenerateBidSummaryReactPDF = ({
                     Phase {phaseData.phaseIndex + 1} Structure Totals
                   </Text>
                   <Text style={[styles.phaseSummaryCell, { flex: 4.5 }]}>
-                    4&apos; Type III: {phaseData.structureTotals.fourFootTypeIII} | Post: {phaseData.structureTotals.post} | H Stand: {phaseData.structureTotals.hStand}
-                  </Text>
+                    4 & apos; Type III: {phaseData.structureTotals.fourFootTypeIII} | Post: {phaseData.structureTotals.post} | H Stand: {phaseData.structureTotals.hStand}
+
+                  </Text >
                   <Text style={[styles.phaseSummaryCell, { flex: 1.5 }]} />
                   <Text style={[styles.phaseSummaryCell, { flex: 1 }]} />
-                </View>
-              </React.Fragment>
+                </View >
+              </React.Fragment >
             ))}
-          </View>
-        </View>
-      </View>
+          </View >
+        </View >
+      </View >
     )
   }
 
