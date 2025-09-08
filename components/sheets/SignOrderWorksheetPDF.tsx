@@ -26,6 +26,7 @@ export interface SignItem {
   displayStructure?: string
   bLights?: number
   cover?: boolean
+  associated_structure?: string
 }
 
 interface Props {
