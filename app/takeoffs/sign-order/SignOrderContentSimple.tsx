@@ -598,17 +598,15 @@ export default function SignOrderContentSimple ({
         }
       />
       <div className='flex gap-6 p-6 max-w-full'>
-          {/* Left Section: expands if PDF preview is hidden */}
-          <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
-            {/* Main Form Column (3/4) */}
-              <SignOrderAdminInfo
-                adminInfo={adminInfo}
-                signList={signList}
-                mptRental={mptRental}
-                notes={notes}
-              />
-            </div>
-          </div>
+        {/* Left Section: expands if PDF preview is hidden */}
+        <div className={`w-1/2 flex flex-col gap-6 space-y-6`}>
+          {/* Main Form Column (3/4) */}
+          <SignOrderAdminInfo
+            adminInfo={adminInfo}
+            signList={signList}
+            mptRental={mptRental}
+            notes={notes}
+          />
         </div>
       </div>
     </div>
