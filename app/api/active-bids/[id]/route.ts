@@ -31,14 +31,14 @@ export async function GET(
         .single();
 
       const { data: bidNotes, error: notesError } = await supabase
-        .from('bid_notes')
+        .from('notes')
         .select('id, text, created_at, user_email')
         .eq('bid_id', resolvedParams.id);
 
       if (!estimateError && !notesError) {
         data = {
           ...estimateData,
-          bid_notes: bidNotes
+          notes: bidNotes
         };
         error = null;
       }

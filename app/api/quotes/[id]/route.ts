@@ -68,10 +68,10 @@ export async function GET(
 
   const customer = contractorData
     ? {
-        id: contractorData.id,
-        name: contractorData.name,
-        displayName: contractorData.display_name,
-      }
+      id: contractorData.id,
+      name: contractorData.name,
+      displayName: contractorData.display_name,
+    }
     : null;
 
   const { data: recipients, error: recErr } = await supabase
@@ -97,8 +97,8 @@ export async function GET(
 
   const contactRecipient = recipients?.find((r) => r.point_of_contact) || null;
 
-const contact = contactRecipient
-  ? {
+  const contact = contactRecipient
+    ? {
       name: contactRecipient.customer_contacts?.[0]?.name ?? null,
       email:
         contactRecipient.email ||
@@ -106,7 +106,7 @@ const contact = contactRecipient
         null,
       phone: contactRecipient.customer_contacts?.[0]?.phone ?? null,
     }
-  : null;
+    : null;
 
   const ccEmails = recipients?.filter((r) => r.cc).map((r) => r.email) || [];
   const bccEmails = recipients?.filter((r) => r.bcc).map((r) => r.email) || [];
@@ -129,9 +129,9 @@ const contact = contactRecipient
       .maybeSingle<AdminDataEntry>(); // 👈 tipado aquí
     adminData = data;
   }
-
   const files: any[] = [];
-  const notes = quote.notes ? JSON.parse(quote.notes) : [];
+
+  const { data: allNotes } = await supabase.from('notes').select('*').eq('quote_id', quote.id)
 
   const response = {
     id: quote.id,
@@ -154,7 +154,7 @@ const contact = contactRecipient
     })),
     admin_data: adminData || null,
     files,
-    notes,
+    notes: allNotes,
   };
 
   console.log("✅ [GET /quotes/:id] Final response3", response);
