@@ -32,7 +32,7 @@ const AdminInfoViewOnly = () => {
             startLoading();
             if (id) {
                 const data = await fetchActiveBidById(id);
-                const bidNotes: INote[] = data.bid_notes.map(note => ({
+                const bidNotes: INote[] = data.notes.map(note => ({
                     text: note.text,
                     timestamp: new Date(note.created_at).getTime()
                 }));

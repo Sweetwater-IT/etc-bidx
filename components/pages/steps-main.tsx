@@ -141,7 +141,7 @@ const StepsMain = () => {
 
         const data = await res.json();
                 
-        const notesFromBid = data?.data?.bid_notes || [];
+        const notesFromBid = data?.data?.notes || [];
         
         const formattedNotes = notesFromBid.map((note: any) => ({
           text: note.text,
