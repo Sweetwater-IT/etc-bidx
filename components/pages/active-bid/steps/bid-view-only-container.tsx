@@ -104,7 +104,7 @@ const BidViewOnlyContainer = () => {
           const result = await response.json()
 
           if (result.success && result.data) {
-            const notesResult = result.data.bid_notes || []
+            const notesResult = result.data.notes || []
             if (notesResult.length > 0) {
               setNotes(notesResult.map(note => ({
                 timestamp: new Date(note.created_at).getTime(),

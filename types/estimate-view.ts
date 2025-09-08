@@ -3,7 +3,7 @@ import { Database } from "./database.types";
 //types for estimate views
 export interface EstimateCompleteView {
     id: number;
-    bid_notes: Array<{
+    notes: Array<{
       id: string;
       text: string;
       created_at: string;
