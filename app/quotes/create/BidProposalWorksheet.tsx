@@ -118,7 +118,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       </section>
 
       <div className='text-center my-4 w-4/5 m-auto font-semibold flex flex-col'>
-        <p className='font-bold'>CONFIDENTIALITY NOTICE"</p>
+        <p className='font-bold'>CONFIDENTIALITY NOTICE</p>
         <p className=''>
           This message (including any attachments) may contain confidential, proprietary, privileged and/or private information. The information is intended to be for the use of the individual or entity designated above. If you are not the intended recipient of this message, please notify the sender immediately and delete the message and any attachments. Any disclosure, reproduction, distribution or other use of this message or any attachments by an individual or entity other than the intended recipient is prohibited.
           PRICING IS SUBJECT TO CHANGE at any time due to the continued escalation of raw material and transportation costs</p>
@@ -271,7 +271,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </div>
 
           <div className="grid grid-cols-6">
-            <div className="px-2 py-1">B Lights & Sequential</div>
+            <div className="px-2 py-1">B Lights &amp; Sequential</div>
             <div className="px-2 py-1 text-center">$0.13</div>
             <div className="px-2 py-1"></div>
             <div className="px-2 py-1"></div>
