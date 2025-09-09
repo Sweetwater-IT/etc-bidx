@@ -122,30 +122,30 @@ export async function GET(
   const contactRecipient = recipients?.find((r) => r.point_of_contact) || null;
   const contact = contactRecipient
     ? {
-        name:
-          Array.isArray(contactRecipient.customer_contacts) &&
+      name:
+        Array.isArray(contactRecipient.customer_contacts) &&
           contactRecipient.customer_contacts.length > 0
-            ? contactRecipient.customer_contacts[0].name
-            : null,
-        email:
-          contactRecipient.email ||
-          (Array.isArray(contactRecipient.customer_contacts) &&
+          ? contactRecipient.customer_contacts[0].name
+          : null,
+      email:
+        contactRecipient.email ||
+        (Array.isArray(contactRecipient.customer_contacts) &&
           contactRecipient.customer_contacts.length > 0
-            ? contactRecipient.customer_contacts[0].email
-            : null) ||
-          null,
-        phone:
-          Array.isArray(contactRecipient.customer_contacts) &&
+          ? contactRecipient.customer_contacts[0].email
+          : null) ||
+        null,
+      phone:
+        Array.isArray(contactRecipient.customer_contacts) &&
           contactRecipient.customer_contacts.length > 0
-            ? contactRecipient.customer_contacts[0].phone
-            : null,
-      }
+          ? contactRecipient.customer_contacts[0].phone
+          : null,
+    }
     : null;
 
   const ccEmails = recipients?.filter((r) => r.cc).map((r) => r.email) || [];
   const bccEmails = recipients?.filter((r) => r.bcc).map((r) => r.email) || [];
 
-  
+
   let adminDataEntry: AdminDataEntry | null = null;
 
   if (quote.estimate_id) {
@@ -153,7 +153,7 @@ export async function GET(
       .from("admin_data_entries")
       .select("*")
       .eq("bid_estimate_id", quote.estimate_id)
-      .maybeSingle<AdminDataEntry>(); 
+      .maybeSingle<AdminDataEntry>();
 
     if (!adminErr) adminDataEntry = data;
   } else if (quote.job_id) {
@@ -161,7 +161,7 @@ export async function GET(
       .from("admin_data_entries")
       .select("*")
       .eq("job_id", quote.job_id)
-      .maybeSingle<AdminDataEntry>(); 
+      .maybeSingle<AdminDataEntry>();
 
     if (!adminErr) adminDataEntry = data;
   }
@@ -173,7 +173,7 @@ export async function GET(
     .select("*") // Seleccionamos todo para el mapeo
     .eq("quote_id", quoteId);
 
- 
+
 
   const { data: customers, error: custErr } = await supabase
     .from("quotes_customers")
@@ -188,7 +188,12 @@ export async function GET(
     `)
     .eq("quote_id", quoteId);
 
-
+  const { data: notes, error: notesError } = await supabase
+    .from("notes")
+    .select(`
+      *
+    `)
+    .eq("quote_id", quoteId);
 
   const response = {
     id: quote.id,
@@ -214,12 +219,14 @@ export async function GET(
     recipients: recipients || [],
     items: items?.map(mapDbQuoteItemToQuoteItem) || [],
     admin_data: mapAdminDataEntryToAdminData(adminDataEntry),
-    notes: quote.notes ? JSON.parse(quote.notes) : [],
+    notes: notes?.map((note) => ({
+      ...note,
+      timestamp: new Date(note.created_at).getTime(),
+    })),
     customers: customers?.map((c) => c.contractors) || [],
     contract_number: adminDataEntry?.contract_number || null,
     job_number: adminDataEntry?.job_id ? String(adminDataEntry.job_id) : null,
   };
-
 
   return NextResponse.json(response);
 }

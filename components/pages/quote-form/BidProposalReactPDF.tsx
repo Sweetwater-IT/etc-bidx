@@ -1,293 +1,421 @@
 import React from 'react';
-import { Page, Text, View, Document, Image } from '@react-pdf/renderer';
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  Image,
+  StyleSheet,
+} from '@react-pdf/renderer';
 import { AdminData } from '@/types/TAdminData';
 import { QuoteItem } from '@/types/IQuoteItem';
-import { PaymentTerms } from './QuoteAdminInformation';
-import { proposalStyles } from './proposal-parts/proposalStyles';
-import { StandardConditions, StandardExclusions } from './proposal-parts/StandardTermsAndConditions';
-import { StandardRentalEquipmentAgreement } from './proposal-parts/RentalEquipmentAgreement';
-import { StandardFlaggingTermsConditions } from './proposal-parts/FlaggingTermsAndConditions';
+import { PaymentTerms } from '../../../components/pages/quote-form/QuoteAdminInformation';
 import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
 import { User } from '@/types/User';
 import { Customer } from '@/types/Customer';
+import { INote } from '@/types/TEstimate';
 
 interface Props {
-  adminData: AdminData
-  items?: QuoteItem[]
-  customers: Customer[]
-  sender: User
-  quoteDate: Date
-  quoteNumber: string
-  paymentTerms: PaymentTerms
-  includedTerms: Record<TermsNames, boolean>
-  customTaC?: string
-  county: string
-  sr: string
-  ecms: string
-  pointOfContact: { name: string, email: string }
+  adminData: AdminData;
+  items: QuoteItem[];
+  customers: Customer[];
+  sender: User;
+  quoteDate: Date;
+  quoteNumber: string;
+  paymentTerms: PaymentTerms;
+  includedTerms: Record<TermsNames, boolean>;
+  customTaC?: string;
+  county: string;
+  sr: string;
+  ecms: string;
+  pointOfContact: { name: string; email: string };
+  notes: INote[];
 }
 
+const styles = StyleSheet.create({
+  page: { padding: 24, fontSize: 10, fontFamily: 'Helvetica' },
+
+  // Header
+  header: {
+    width:'100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 2,
+    borderColor: '#000',
+    paddingBottom: 8,
+  },
+  logo: { width: 80, height: 40 },
+  headerCenter: { textAlign: 'center', display:'flex', flexDirection:'column', alignItems:'center' },
+  centerText: {textAlign: 'center'},
+  // Grid section
+  sectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderWidth: 1,
+    borderColor: '#000',
+    marginTop: 8,
+  },
+  gridCell: {
+    width: '50%',
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#000',
+    padding: 4,
+  },
+
+  // Table
+  table: {
+    display: 'flex',
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#000',
+    marginTop: 12,
+    flexDirection: 'column',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderColor: '#000',
+  },
+  tableCell: {
+    flex: 1,
+    padding: 4,
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  lastCell: { borderRightWidth: 0 },
+  tableHeader: { fontWeight: 'bold', borderBottom: 1, borderBottomColor: 'black' },
+
+  // Notes
+  notesSection: { marginTop: 12, flexDirection: 'row' },
+  noteItem: { marginBottom: 4 },
+
+  // Rental Rates
+  rentalSection: {
+    marginTop: 12,
+    fontSize: 9,
+  },
+  rentalTitle: {
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  rentalTable: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#000',
+  },
+  rentalRow: {
+    flexDirection: 'row',
+  },
+  rentalCell: {
+    flex: 1,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    fontSize: 9,
+  },
+  rentalCellLastCol: {
+    borderRightWidth: 0,
+  },
+  rentalHeader: {
+    fontWeight: 'bold',
+  },
+  rentalCellTextCenter: {
+    textAlign: 'center',
+  },
+  rentalCellTextLeft: {
+    textAlign: 'left',
+  },
+
+  // Signature
+  signatureRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginHorizontal: 32,
+  },
+
+  footerText: {
+    marginTop: 12,
+    fontSize: 8,
+    textAlign: 'center',
+  },
+  disclaimerText: {
+    marginVertical: 12,
+    fontSize: 9,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    width: '75%',
+    alignSelf: 'center',
+  },
+  signatureBox: {
+    marginTop: 8,
+    backgroundColor: '#FEF08A', // amarillo suave
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    padding: 4,
+    fontSize: 8,
+    fontWeight: 'medium',
+  },
+  signatureField: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginHorizontal: 8,
+  },
+  signatureLabel: {
+    marginRight: 4,
+    fontSize: 9,
+  },
+  signatureLine: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderColor: '#000',
+    minWidth: 150,
+  },
+  signatureLineText: {
+    fontSize: 8,
+    fontStyle: 'italic',
+    marginLeft: 2,
+  },
+});
+
 export const BidProposalReactPDF = ({
-  paymentTerms,
-  pointOfContact,
-  quoteNumber,
-  sender,
-  quoteDate,
   adminData,
   items,
   customers,
+  quoteDate,
+  quoteNumber,
+  pointOfContact,
+  sender,
   includedTerms,
   customTaC,
   county,
   sr,
   ecms,
+  notes,
 }: Props) => {
+  const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
 
-  // Helper para formato de moneda
-  const formatMoney = (value: number) =>
-    value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formatMoney = (v: number) =>
+    v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  // Cliente principal (previene crash si customers está vacío)
-  const primaryCustomer = customers?.[0] ?? {
-    name: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    mainPhone: ""
-  };
-
-  // Calcular precio extendido por item
   const calculateExtendedPrice = (item: QuoteItem) => {
-    const quantity = item.quantity || 0;
-    const unitPrice = item.unitPrice || 0;
-
-    // Suma el precio de los ítems asociados para obtener el costo de una unidad compuesta
-    const compositeTotalPerUnit = item.associatedItems?.length
-      ? item.associatedItems.reduce((subSum, c) =>
-        subSum + ((c.quantity || 0) * (c.unitPrice || 0)), 0)
-      : 0;
-
-    // El precio total de una unidad (ítem principal + asociados)
-    const totalUnitPrice = unitPrice + compositeTotalPerUnit;
-
-    // El precio base extendido antes del descuento
-    const basePrice = quantity * totalUnitPrice;
-
+    const q = item.quantity || 0;
+    const up = item.unitPrice || 0;
+    const composite = item.associatedItems?.reduce(
+      (sum, c) => sum + (c.quantity || 0) * (c.unitPrice || 0),
+      0
+    ) || 0;
+    const base = q * (up + composite);
     const discount = item.discount || 0;
-    const discountType = item.discountType || 'percentage';
-
-    // Calcula el monto del descuento
-    const discountAmount = discountType === 'dollar'
-      ? discount // Descuento plano sobre el total de la línea
-      : basePrice * (discount / 100);
-
-    return basePrice - discountAmount;
+    const discAmt =
+      item.discountType === 'dollar' ? discount : (base * discount) / 100;
+    return base - discAmt;
   };
 
-  // Calcular total general
-  const calculateTotal = () => {
-    if (!items?.length) return 0;
-    return items.reduce((acc, item) => acc + calculateExtendedPrice(item), 0);
-  };
-
-  const total = calculateTotal();
+  const total = items.reduce((acc, it) => acc + calculateExtendedPrice(it), 0);
 
   return (
-    <Document title={`Proposal ${ecms}`}>
-      <Page size="A4" style={proposalStyles.page}>
-        {/* Footer con número de página */}
-        <Text
-          fixed
-          style={{ position: 'absolute', bottom: 10, right: 30, fontSize: 10 }}
-          render={({ pageNumber, totalPages }) => (
-            `Initials: ________ Page ${pageNumber} of ${totalPages}`
-          )}
-        />
-
-        {/* Header en páginas siguientes */}
-        <View
-          fixed
-          style={{ position: 'absolute', top: 10, left: 30, fontSize: 13, fontWeight: 'bold' }}
-          render={({ pageNumber }) =>
-            pageNumber > 1 ? (
-              <Text>
-                Quote For: {customers.length > 1 ? 'Estimating' : primaryCustomer.name} - Quote ID: {quoteNumber} cont.
-              </Text>
-            ) : null
-          }
-        />
-
-        {/* Company Info */}
-        <View style={proposalStyles.companyInfoContainer}>
-          <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Image style={proposalStyles.img} src='/logo.jpg' />
-            <Text style={proposalStyles.etcHeader}>Established Traffic Control, Inc.</Text>
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Image src="/logo.jpg" style={styles.logo} />
+          <View style={styles.headerCenter}>
+            <Text style={{ fontSize: 14, fontWeight: 'bold' }}>
+              Established Traffic Control, Inc.
+            </Text>
+            <Text style={styles.centerText}>3162 Unionville Pike</Text>
+            <Text style={styles.centerText}>Hatfield, PA 19440</Text>
+            <Text style={styles.centerText}>O: 215.997.8801 | F: 215.997.8868</Text>
+            <Text style={styles.centerText}>Email: {sender.email}</Text>
           </View>
-          <View>
-            <Text style={proposalStyles.quoteNumber}>{quoteNumber}</Text>
-            <Text style={proposalStyles.infoText}>{sender.name}</Text>
-            <Text style={proposalStyles.infoText}>{sender.email}</Text>
-            <Text style={proposalStyles.infoText}>3162 UNIONVILLE PIKE</Text>
-            <Text style={proposalStyles.infoText}>HATFIELD, PA 19440</Text>
-            <Text style={proposalStyles.infoText}>OFFICE: (215) 997-8801</Text>
-            <Text style={proposalStyles.infoText}>FAX: (215) 997-8868</Text>
-            <Text style={proposalStyles.infoText}>DBE / VBE</Text>
+          <View style={styles.headerCenter}>
+            <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign:'center' }}>PROPOSAL</Text>
+            <Text style={styles.centerText}>{quoteDate.toLocaleDateString('en-US')}</Text>
+            <Text style={styles.centerText}>ETC Contact: {sender.name}</Text>
           </View>
         </View>
 
-        {/* Sold To / Bill To / Ship To */}
-        <View style={{ flexDirection: 'row', marginTop: 10 }}>
-          {['Sold To', 'Bill To', 'Ship To'].map((label, idx) => (
-            <View key={label} style={{ flex: 1, paddingHorizontal: 5 }}>
-              <Text style={proposalStyles.quoteTableLabel}>{label}:</Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.name}</Text>
-              <Text style={{ fontSize: 10 }}>ATT: {pointOfContact.name}</Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.address}</Text>
-              <Text style={{ fontSize: 10 }}>
-                {primaryCustomer.city}, {primaryCustomer.state} {primaryCustomer.zip} US
-              </Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.mainPhone}</Text>
-              {idx === 0 && (
-                <Text style={{ fontSize: 10, marginTop: 15 }}>
-                  Created: {quoteDate.toLocaleDateString('en-US')}
-                </Text>
-              )}
-              {idx === 2 && (
-                <Text style={{ fontSize: 10, marginTop: 15, textAlign: 'right' }}>
-                  Expires: {new Date(quoteDate.getTime() + (30 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US')}
-                </Text>
-              )}
-            </View>
-          ))}
+        {/* GRID INFO */}
+        <View style={styles.sectionGrid}>
+          <View style={styles.gridCell}>
+            <Text>TO: {customer.name}</Text>
+            <Text>Address: {customer.address}</Text>
+          </View>
+          <View style={styles.gridCell}>
+            <Text>ETC Job #: {quoteNumber}</Text>
+            <Text>Contact: {pointOfContact.name}</Text>
+            <Text>Phone: {customer.mainPhone}</Text>
+          </View>
+          <View style={styles.gridCell}>
+            <Text>Township: {adminData.location}</Text>
+            <Text>County: {county}</Text>
+            <Text>S.R./Route: {sr}</Text>
+            <Text>Project: {ecms}</Text>
+          </View>
+          <View style={styles.gridCell}>
+            <Text>Bid Date: {quoteDate.toLocaleDateString('en-US')}</Text>
+            <Text>MPT Start Date: __________</Text>
+            <Text>MPT Completion Date: __________</Text>
+            <Text>MPT Days: __________</Text>
+          </View>
         </View>
 
-        {/* Items Table */}
-        <View style={proposalStyles.table}>
-          <View style={proposalStyles.tableHeader}>
-            <Text style={proposalStyles.tableHeaderCell}>ITEM #</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: 3 }]}>DESCRIPTION</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>QTY</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>UOM</Text>
-            <Text style={proposalStyles.tableHeaderCell}>UNIT PRICE</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { borderRightWidth: 0 }]}>EXTENDED PRICE</Text>
+        {/* ITEMS TABLE */}
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            {['Item #', 'Description', 'Qty/Units', 'Unit Price', 'Extended'].map(
+              (h, i) => (
+                <Text
+                  key={i}
+                  style={[styles.tableCell, styles.tableHeader]}
+                >
+                  {h}
+                </Text>
+              )
+            )}
           </View>
-
-          {items?.map((item, index) => (
-            <React.Fragment key={`item-fragment-${index}`}>
-              {/* Fila del Ítem Principal */}
-              <View style={proposalStyles.tableRow}>
-                <Text style={proposalStyles.tableCell}>{item.itemNumber}</Text>
-                <Text style={[proposalStyles.tableCell, { flex: 3 }]}>
-                  {[item.description, item.notes].filter(Boolean).join("\n\n")}
+          {items.map((item, idx) => {
+            const ext = calculateExtendedPrice(item);
+            return (
+              <View key={idx} style={styles.tableRow}>
+                <Text style={styles.tableCell}>
+                  {item.itemNumber || idx + 1}
                 </Text>
-                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.quantity}</Text>
-                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.uom || 'EA'}</Text>
-                <Text style={[proposalStyles.tableCell, { textAlign: 'right' }]}>
-                  {formatMoney(item.unitPrice ?? 0)}
+                <Text style={styles.tableCell}>
+                  {item.description}
+                  {item.notes && <Text>{'\n'}{item.notes}</Text>}
                 </Text>
-                <Text style={[proposalStyles.tableCell, { textAlign: 'right', borderRightWidth: 0 }]}>
-                  {formatMoney(calculateExtendedPrice(item))}
+                <Text style={styles.tableCell}>
+                  {item.quantity} {item.uom || 'EA'}
+                </Text>
+                <Text style={styles.tableCell}>
+                  {formatMoney(item.unitPrice || 0)}
+                </Text>
+                <Text style={[styles.tableCell, styles.lastCell]}>
+                  {formatMoney(ext)}
                 </Text>
               </View>
-
-              {/* Filas de Ítems Asociados */}
-              {item.associatedItems?.map((assocItem, assocIndex) => (
-                <View key={`assoc-item-${assocIndex}`} style={{ ...proposalStyles.tableRow, backgroundColor: '#f9f9f9' }}>
-                  <Text style={{ ...proposalStyles.tableCell, flex: 1 }}></Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: 3, paddingLeft: 15, fontSize: 9 }}>
-                    - {assocItem.description}
-                  </Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.quantity}</Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.uom || 'EA'}</Text>
-                  <Text style={{ ...proposalStyles.tableCell, textAlign: 'right', fontSize: 9 }}>
-                    {formatMoney(assocItem.unitPrice ?? 0)}
-                  </Text>
-                  <Text style={{ ...proposalStyles.tableCell, borderRightWidth: 0 }}></Text>
-                </View>
-              ))}
-            </React.Fragment>
-          ))}
-
-          {/* Rellenar filas vacías hasta 10 */}
-          {Array(Math.max(0, 10 - (items?.length || 0))).fill(null).map((_, i) => (
-            <View key={`empty-${i}`} style={proposalStyles.tableRow}>
-              <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
-              <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text> 
-              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
-              <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>-</Text>
-            </View>
-          ))}
-
-          {/* Total */}
-          <View style={proposalStyles.tableRow}>
-            <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
-            <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 0.8, textAlign: 'right' }]}>TOTAL</Text>
-            <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>
+            );
+          })}
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
+              TOTAL
+            </Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
               {formatMoney(total)}
             </Text>
           </View>
         </View>
 
-        {/* Warning */}
-        <Text style={proposalStyles.warningText}>
-          ABOVE PRICING IS SUBJECT TO CHANGE AT ANY TIME DUE TO THE CONTINUED ESCALATION OF RAW MATERIAL AND TRANSPORTATION COSTS. ABOVE PRICES EXCLUDE TAX.
+        <Text style={styles.disclaimerText}>
+          Sales tax not included in price. Please add 3% to total if paying by MC or VISA, 4% for AMEX.{"\n"}
+          Due to extreme market volatility, all pricing and availability are subject to change without notice.{"\n"}
+          All quotes to be confirmed at time of order placement.
         </Text>
 
-        {includedTerms['equipment-sale'] && (
-          <View style={[proposalStyles.table, { marginTop: 10, backgroundColor: '#FFFF00' }]}>
-            <Text style={{ fontSize: 8, padding: 5, color: 'red', textAlign: 'center' }}>
-              SALE ITEM PAYMENT TERMS ARE NET 14
-            </Text>
+        {/* SIGNATURE BOX */}
+        <View style={styles.signatureBox}>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>X</Text>
+            <View style={styles.signatureLine}>
+              <Text style={styles.signatureLineText}></Text>
+            </View>
           </View>
-        )}
-
-        {includedTerms['custom-terms'] && !!customTaC && (
-          <View style={[proposalStyles.table, { marginTop: 10, padding: 4 }]}>
-            <Text style={{ fontSize: 11 }}>{customTaC}</Text>
-          </View>
-        )}
-
-        {/* Subtotal & Totals */}
-        <View style={{ backgroundColor: '#e4e4e4', padding: 12, marginTop: 15}}>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Sub Total</Text>
-            <Text>{formatMoney(total)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row', marginTop: 10}}>
-            <Text style={{ fontWeight: 'bold'}}>Miscellaneous</Text>
-            <Text>{formatMoney(0)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Estimated Sales Tax</Text>
-            <Text>{formatMoney(0)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Total</Text>
-            <Text style={{ fontWeight: 'bold'}}>{formatMoney(total)}</Text>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>Date</Text>
+            <View style={styles.signatureLine}>
+              <Text style={styles.signatureLineText}></Text>
+            </View>
           </View>
         </View>
 
-        {/* Firma */}
-        <View style={{ marginTop: 20, marginHorizontal: 30 }}>
-          <Text style={{ fontSize: 10, textAlign: 'center', color: '#000080' }}>
-            IF THE PROPOSAL IS ACCEPTED, PLEASE SIGN AND DATE BELOW AND RETURN. THANK YOU!,
-          </Text>
-          <View style={{ flexDirection: 'row', marginTop: 20, justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 10 }}>ACCEPTED BY:________________________________</Text>
-            <Text style={{ fontSize: 10 }}>DATE:_______________</Text>
+        {/* NOTES */}
+        <View style={styles.notesSection}>
+          <Text style={{ fontWeight: 'bold' }}>Notes:</Text>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            {notes.length > 0 ? (
+              notes.map((nt, i) => (
+                <View key={i} style={styles.noteItem}>
+                  <Text>{nt.text}</Text>
+                  <Text style={{ fontSize: 8, color: 'gray' }}>
+                    {new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text>No notes available</Text>
+            )}
           </View>
         </View>
 
-        {/* Terms */}
-        {includedTerms['standard-terms'] && (<><StandardConditions /><StandardExclusions /></>)}
-        {includedTerms['rental-agreements'] && <StandardRentalEquipmentAgreement />}
-        {includedTerms['flagging-terms'] && <StandardFlaggingTermsConditions />}
+        {/* RENTAL RATES */}
+        <View style={styles.rentalSection}>
+          <Text style={styles.rentalTitle}>Rental Rates:</Text>
+
+          {/* Table */}
+          <View style={styles.rentalTable}>
+            {/* Header */}
+            <View style={styles.rentalRow}>
+              {['Rental', 'Daily', 'Weekly', 'Monthly'].map((col, i) => (
+                <Text
+                  key={i}
+                  style={[
+                    styles.rentalCell,
+                    styles.rentalHeader,
+                    i === 0 ? styles.rentalCellTextLeft : styles.rentalCellTextCenter,
+                  ]}
+                >
+                  {col}
+                </Text>
+              ))}
+            </View>
+
+            {[
+              ['Arrow Board', '$50.00', '$150.00', '$450.00'],
+              ['Message Board', '$100.00', '$450.00', '$750.00'],
+              ['Channelizers', '$0.75', '', ''],
+              ['B Lights & Sequential', '$0.13', '', ''],
+              ['Type A/C Lights', '$0.20', '', ''],
+              ["Add'l Mobilizations", '$125.00', '', ''],
+            ].map((row, i) => (
+              <View key={i} style={styles.rentalRow}>
+                {row.map((c, j) => (
+                  <Text
+                    key={j}
+                    style={[
+                      styles.rentalCell,
+                      j === 0 ? styles.rentalCellTextLeft : styles.rentalCellTextCenter,
+                    ]}
+                  >
+                    {c}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        </View>
+
+
+        {/* SIGNATURE */}
+        <Text
+          style={{
+            marginTop: 12,
+            fontSize: 9,
+            textAlign: 'center',
+            color: 'blue',
+          }}
+        >
+          If the proposal is accepted, please sign and date below and return.
+          Thank you!
+        </Text>
+        <View style={styles.signatureRow}>
+          <Text>ACCEPTED BY: ____________________</Text>
+          <Text>DATE: _______________</Text>
+        </View>
       </Page>
     </Document>
   );

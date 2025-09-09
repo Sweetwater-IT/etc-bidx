@@ -29,32 +29,22 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
 
   useEffect(() => {
     if (!quoteId) return;
-
+    console.log('jajajajaajjaa');
+    
     async function fetchQuote() {
       try {
         const res = await fetch(`/api/quotes/edit/${quoteId}`);
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
-
-        console.log("🚀 [QuoteEditLoader] Loaded quote:", data);
-
         
         setQuoteId(data.id);
         setQuoteNumber(data.quote_number);
         setStatus(data.status || "Not Sent");
         setQuoteDate(data.date_sent || data.created_at);
-
-     
         setSelectedCustomers(data.customers || []);
-
-        
         setQuoteItems(data.items || []);
+        setAdminData(data.admin_data ?? defaultAdminObject);
 
-      
-       setAdminData(data.admin_data ?? defaultAdminObject);
-
-
-       
         const point = data.recipients?.find((r: any) => r.point_of_contact);
         const cc =
           data.recipients?.filter((r: any) => r.cc).map((r: any) => r.email) ||
@@ -68,7 +58,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
             name:
               point.customer_contacts?.name ??
               point.name ??
-              "", 
+              "",
             email:
               point.email ??
               point.customer_contacts?.email ??
@@ -81,11 +71,10 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setCcEmails(cc);
         setBccEmails(bcc);
 
-       
+
         setSubject(data.subject || "");
         setEmailBody(data.body || "");
 
-      
         setCustomTerms(data.custom_terms_conditions || "");
         setIncludeTerms(data.include_terms || {});
         setIncludeFiles(data.include_files || {});
@@ -93,7 +82,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
 
         setNotes(data.notes || []);
 
-       
         setPaymentTerms(data.payment_terms || "NET30");
       } catch (err) {
         console.error("💥 [QuoteEditLoader] Error loading quote:", err);
