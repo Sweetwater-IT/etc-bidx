@@ -285,7 +285,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </div>
 
           <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Add'l Mobilizations</div>
+            <div className="px-2 py-1">Add&apos;l Mobilizations</div>
             <div className="px-2 py-1 text-center">$125.00</div>
           </div>
         </div>
