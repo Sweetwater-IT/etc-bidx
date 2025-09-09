@@ -120,7 +120,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <p><span className="font-bold">MPT Days:</span> __________</p>
         </div>
       </section>
-
       {/* Items */}
       <section className="mt-3 text-[12px]">
         <table className="w-full border-[1.5px] border-black border-collapse">
@@ -272,7 +271,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </div>
 
           <div className="grid grid-cols-6">
-            <div className="px-2 py-1">B Lights & Sequential</div>
+            <div className="px-2 py-1">B Lights &amp; Sequential</div>
             <div className="px-2 py-1 text-center">$0.13</div>
             <div className="px-2 py-1"></div>
             <div className="px-2 py-1"></div>
@@ -286,7 +285,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </div>
 
           <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Add'l Mobilizations</div>
+            <div className="px-2 py-1">Add&apos;l Mobilizations</div>
             <div className="px-2 py-1 text-center">$125.00</div>
           </div>
         </div>
