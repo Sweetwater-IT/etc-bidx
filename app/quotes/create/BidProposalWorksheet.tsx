@@ -25,9 +25,6 @@ interface BidProposalWorksheetProps {
   notes: INote[]
 }
 
-const cell = "border p-1 text-[10px]"
-const header = "border bg-gray-100 font-bold uppercase text-[10px] p-1"
-
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   adminData,
   items,
