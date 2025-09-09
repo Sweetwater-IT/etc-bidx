@@ -38,7 +38,7 @@ export async function GET(
       );
     }
 
-    let signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
+    const signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
     
     const transformedData = {
       ...data,
