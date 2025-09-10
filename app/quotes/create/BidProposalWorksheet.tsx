@@ -230,64 +230,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       </section>
 
-      {/* Rental Rates */}
-      <section className="mt-3 text-[10px]">
-        <p className="font-bold uppercase">Rental Rates:</p>
-
-        {/* Table container */}
-        <div className="w-full border border-black mt-1 text-[10px]">
-
-          {/* Table Header */}
-          <div className="grid grid-cols-6 font-bold">
-            <div className="px-2 py-1">Rental</div>
-            <div className="px-2 py-1 text-center">Daily</div>
-            <div className="px-2 py-1 text-center">Weekly</div>
-            <div className="px-2 py-1 text-center">Monthly</div>
-          </div>
-
-          {/* Table Rows */}
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Arrow Board</div>
-            <div className="px-2 py-1 text-center">$50.00</div>
-            <div className="px-2 py-1 text-center">$150.00</div>
-            <div className="px-2 py-1 text-center">$450.00</div>
-          </div>
-
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Message Board</div>
-            <div className="px-2 py-1 text-center">$100.00</div>
-            <div className="px-2 py-1 text-center">$450.00</div>
-            <div className="px-2 py-1 text-center">$750.00</div>
-          </div>
-
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Channelizers</div>
-            <div className="px-2 py-1 text-center">$0.75</div>
-            <div className="px-2 py-1"></div>
-            <div className="px-2 py-1"></div>
-          </div>
-
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">B Lights &amp; Sequential</div>
-            <div className="px-2 py-1 text-center">$0.13</div>
-            <div className="px-2 py-1"></div>
-            <div className="px-2 py-1"></div>
-          </div>
-
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Type A/C Lights</div>
-            <div className="px-2 py-1 text-center">$0.20</div>
-            <div className="px-2 py-1"></div>
-            <div className="px-2 py-1"></div>
-          </div>
-
-          <div className="grid grid-cols-6">
-            <div className="px-2 py-1">Add&apos;l Mobilizations</div>
-            <div className="px-2 py-1 text-center">$125.00</div>
-          </div>
-        </div>
-      </section>
-
       {/* Signature */}
       <section className="mt-4 text-center">
         <p className="text-[9px] text-blue-800">

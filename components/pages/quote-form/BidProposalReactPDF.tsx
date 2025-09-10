@@ -351,55 +351,6 @@ export const BidProposalReactPDF = ({
             )}
           </View>
         </View>
-
-        {/* RENTAL RATES */}
-        <View style={styles.rentalSection}>
-          <Text style={styles.rentalTitle}>Rental Rates:</Text>
-
-          {/* Table */}
-          <View style={styles.rentalTable}>
-            {/* Header */}
-            <View style={styles.rentalRow}>
-              {['Rental', 'Daily', 'Weekly', 'Monthly'].map((col, i) => (
-                <Text
-                  key={i}
-                  style={[
-                    styles.rentalCell,
-                    styles.rentalHeader,
-                    i === 0 ? styles.rentalCellTextLeft : styles.rentalCellTextCenter,
-                  ]}
-                >
-                  {col}
-                </Text>
-              ))}
-            </View>
-
-            {[
-              ['Arrow Board', '$50.00', '$150.00', '$450.00'],
-              ['Message Board', '$100.00', '$450.00', '$750.00'],
-              ['Channelizers', '$0.75', '', ''],
-              ['B Lights & Sequential', '$0.13', '', ''],
-              ['Type A/C Lights', '$0.20', '', ''],
-              ["Add'l Mobilizations", '$125.00', '', ''],
-            ].map((row, i) => (
-              <View key={i} style={styles.rentalRow}>
-                {row.map((c, j) => (
-                  <Text
-                    key={j}
-                    style={[
-                      styles.rentalCell,
-                      j === 0 ? styles.rentalCellTextLeft : styles.rentalCellTextCenter,
-                    ]}
-                  >
-                    {c}
-                  </Text>
-                ))}
-              </View>
-            ))}
-          </View>
-        </View>
-
-
         {/* SIGNATURE */}
         <Text
           style={{
