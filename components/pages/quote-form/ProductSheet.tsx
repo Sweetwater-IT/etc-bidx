@@ -115,7 +115,21 @@ export function ProductSheet({
         discount: "000",
       });
     }
-  }, [open, editingSubItemId, item.associatedItems]);
+  }, [
+    open,
+    editingSubItemId,
+    item.associatedItems,
+    item.description,
+    item.discount,
+    item.discountType,
+    item.itemNumber,
+    item.notes,
+    item.quantity,
+    item.unitPrice,
+    item.uom,
+    setDigits,
+    setNewProduct,
+  ]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

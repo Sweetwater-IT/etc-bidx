@@ -1028,7 +1028,7 @@ const BidItemsStep5 = ({
     value: number,
     equipmentKey: EquipmentType,
     property: keyof DynamicEquipmentInfo,
-    phaseNumber: number // usar el que llega como argumento
+    phaseNumber: number 
   ) => {
     dispatch({
       type: 'ADD_MPT_ITEM_NOT_SIGN',

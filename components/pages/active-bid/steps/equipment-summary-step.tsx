@@ -30,6 +30,7 @@ const EquipmentSummaryStep = ({
     if (newItemName.trim()) {
       const newEquipment: EquipmentRentalItem = {
         name: newItemName.trim(),
+        itemNumber: '',
         quantity: 0,
         months: 0,
         rentPrice: 0,
