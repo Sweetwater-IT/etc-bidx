@@ -100,19 +100,42 @@ const AdminInformationStep1 = () => {
   const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    let newHours = owHours;
+    let newMinutes = owMinutes;
+
     if (type === 'hours') {
-      dispatch({
-        type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeHours', value },
-      });
+      newHours = value;
       setOwHours(value);
     } else {
-      dispatch({
-        type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeMins', value },
-      });
+      newMinutes = value;
       setOwMinutes(value);
     }
+
+    const totalMinutes = newHours * 60 + newMinutes;
+
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMins',
+        value: totalMinutes,
+      },
+    });
+
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeHours',
+        value: newHours,
+      },
+    });
+
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMinutes',
+        value: newMinutes,
+      },
+    });
   };
 
   useEffect(() => {
