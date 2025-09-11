@@ -34,149 +34,26 @@ interface Props {
 
 const styles = StyleSheet.create({
   page: { padding: 24, fontSize: 10, fontFamily: 'Helvetica' },
-
-  // Header
-  header: {
-    width:'100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 2,
-    borderColor: '#000',
-    paddingBottom: 8,
-  },
+  header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, borderColor: '#000', paddingBottom: 8 },
   logo: { width: 80, height: 40 },
-  headerCenter: { textAlign: 'center', display:'flex', flexDirection:'column', alignItems:'center' },
-  centerText: {textAlign: 'center'},
-  // Grid section
-  sectionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderWidth: 1,
-    borderColor: '#000',
-    marginTop: 8,
-  },
-  gridCell: {
-    width: '50%',
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#000',
-    padding: 4,
-  },
-
-  // Table
-  table: {
-    display: 'flex',
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#000',
-    marginTop: 12,
-    flexDirection: 'column',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderColor: '#000',
-  },
-  tableCell: {
-    flex: 1,
-    padding: 4,
-    fontSize: 9,
-    textAlign: 'center',
-  },
-  lastCell: { borderRightWidth: 0 },
-  tableHeader: { fontWeight: 'bold', borderBottom: 1, borderBottomColor: 'black' },
-
-  // Notes
+  headerCenter: { textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  centerText: { textAlign: 'center' },
+  sectionGrid: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderColor: '#000', marginTop: 8 },
+  gridCell: { width: '50%', borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#000', padding: 4 },
+  table: { display: 'flex', width: '100%', borderWidth: 1, borderColor: '#000', marginTop: 12, flexDirection: 'column' },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#000' },
+  tableCell: { flex: 1, padding: 4, fontSize: 9, textAlign: 'center' },
+  tableHeader: { fontWeight: 'bold', borderBottomWidth: 1, borderColor: '#000' },
+  lastCell: { flex: 1, padding: 4, fontSize: 9, textAlign: 'center' },
   notesSection: { marginTop: 12, flexDirection: 'row' },
   noteItem: { marginBottom: 4 },
-
-  // Rental Rates
-  rentalSection: {
-    marginTop: 12,
-    fontSize: 9,
-  },
-  rentalTitle: {
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  rentalTable: {
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#000',
-  },
-  rentalRow: {
-    flexDirection: 'row',
-  },
-  rentalCell: {
-    flex: 1,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    fontSize: 9,
-  },
-  rentalCellLastCol: {
-    borderRightWidth: 0,
-  },
-  rentalHeader: {
-    fontWeight: 'bold',
-  },
-  rentalCellTextCenter: {
-    textAlign: 'center',
-  },
-  rentalCellTextLeft: {
-    textAlign: 'left',
-  },
-
-  // Signature
-  signatureRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginHorizontal: 32,
-  },
-
-  footerText: {
-    marginTop: 12,
-    fontSize: 8,
-    textAlign: 'center',
-  },
-  disclaimerText: {
-    marginVertical: 12,
-    fontSize: 9,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    width: '75%',
-    alignSelf: 'center',
-  },
-  signatureBox: {
-    marginTop: 8,
-    backgroundColor: '#FEF08A', // amarillo suave
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    padding: 4,
-    fontSize: 8,
-    fontWeight: 'medium',
-  },
-  signatureField: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginHorizontal: 8,
-  },
-  signatureLabel: {
-    marginRight: 4,
-    fontSize: 9,
-  },
-  signatureLine: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderColor: '#000',
-    minWidth: 150,
-  },
-  signatureLineText: {
-    fontSize: 8,
-    fontStyle: 'italic',
-    marginLeft: 2,
-  },
+  disclaimerText: { marginVertical: 12, fontSize: 9, textAlign: 'center', fontWeight: 'bold', width: '75%', alignSelf: 'center' },
+  signatureBox: { marginTop: 8, backgroundColor: '#FEF08A', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', padding: 4, fontSize: 8, fontWeight: 'medium' },
+  signatureField: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: 8 },
+  signatureLabel: { marginRight: 4, fontSize: 9 },
+  signatureLine: { flex: 1, borderBottomWidth: 1, borderColor: '#000', minWidth: 150 },
+  signatureLineText: { fontSize: 8, fontStyle: 'italic', marginLeft: 2 },
+  signatureRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginHorizontal: 32 },
 });
 
 export const BidProposalReactPDF = ({
@@ -218,21 +95,20 @@ export const BidProposalReactPDF = ({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* HEADER */}
         <View style={styles.header}>
           <Image src="/logo.jpg" style={styles.logo} />
           <View style={styles.headerCenter}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold' }}>
-              Established Traffic Control, Inc.
-            </Text>
+            <Text style={{ fontSize: 14, fontWeight: 'bold' }}>Established Traffic Control, Inc.</Text>
             <Text style={styles.centerText}>3162 Unionville Pike</Text>
             <Text style={styles.centerText}>Hatfield, PA 19440</Text>
             <Text style={styles.centerText}>O: 215.997.8801 | F: 215.997.8868</Text>
             <Text style={styles.centerText}>Email: {sender.email}</Text>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign:'center' }}>PROPOSAL</Text>
-            <Text style={styles.centerText}>{quoteDate.toLocaleDateString('en-US')}</Text>
-            <Text style={styles.centerText}>ETC Contact: {sender.name}</Text>
+            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>PROPOSAL</Text>
+            <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
+            <Text style={{ fontSize: 16}}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
           </View>
         </View>
 
@@ -264,50 +140,61 @@ export const BidProposalReactPDF = ({
         {/* ITEMS TABLE */}
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            {['Item #', 'Description', 'Qty/Units', 'Unit Price', 'Extended'].map(
-              (h, i) => (
-                <Text
-                  key={i}
-                  style={[styles.tableCell, styles.tableHeader]}
-                >
-                  {h}
-                </Text>
-              )
-            )}
+            {['Row', 'Item #', 'Description', 'Qty/Units', 'Unit Price', 'Extended'].map((h, i) => (
+              <Text key={i} style={[styles.tableCell, styles.tableHeader]}>
+                {h}
+              </Text>
+            ))}
           </View>
           {items.map((item, idx) => {
             const ext = calculateExtendedPrice(item);
             return (
-              <View key={idx} style={styles.tableRow}>
-                <Text style={styles.tableCell}>
-                  {item.itemNumber || idx + 1}
-                </Text>
-                <Text style={styles.tableCell}>
-                  {item.description}
-                  {item.notes && <Text>{'\n'}{item.notes}</Text>}
-                </Text>
-                <Text style={styles.tableCell}>
-                  {item.quantity} {item.uom || 'EA'}
-                </Text>
-                <Text style={styles.tableCell}>
-                  {formatMoney(item.unitPrice || 0)}
-                </Text>
-                <Text style={[styles.tableCell, styles.lastCell]}>
-                  {formatMoney(ext)}
-                </Text>
+              <View key={idx}>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableCell}>{idx + 1}</Text>
+                  <Text style={styles.tableCell}>{item.itemNumber || idx + 1}</Text>
+                  <Text style={styles.tableCell}>
+                    {item.description}
+                    {item.notes && `\n${item.notes}`}
+                  </Text>
+                  <Text style={styles.tableCell}>
+                    {item.quantity} {item.uom || 'EA'}
+                  </Text>
+                  <Text style={styles.tableCell}>{formatMoney(item.unitPrice || 0)}</Text>
+                  <Text style={styles.tableCell}>{formatMoney(ext)}</Text>
+                </View>
+
+                {/* Associated items */}
+                {item.associatedItems?.map((assoc, aIdx) => (
+                  <View key={`assoc-${idx}-${aIdx}`} style={[styles.tableRow, { backgroundColor: '#F3F3F3' }]}>
+                    <Text style={styles.tableCell}></Text>
+                    <Text style={styles.tableCell}>- {assoc.description}</Text>
+                    <Text style={styles.tableCell}>{assoc.quantity}</Text>
+                    <Text style={styles.tableCell}>{formatMoney(assoc.unitPrice || 0)}</Text>
+                    <Text style={styles.tableCell}></Text>
+                    <Text style={styles.tableCell}></Text>
+                  </View>
+                ))}
               </View>
             );
           })}
+
+          {/* TOTALS */}
           <View style={styles.tableRow}>
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
-            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
-              TOTAL
-            </Text>
-            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
-              {formatMoney(total)}
-            </Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>SUBTOTAL</Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{formatMoney(total)}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>TOTAL</Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{formatMoney(total)}</Text>
           </View>
         </View>
 
@@ -321,15 +208,11 @@ export const BidProposalReactPDF = ({
         <View style={styles.signatureBox}>
           <View style={styles.signatureField}>
             <Text style={styles.signatureLabel}>X</Text>
-            <View style={styles.signatureLine}>
-              <Text style={styles.signatureLineText}></Text>
-            </View>
+            <View style={styles.signatureLine}></View>
           </View>
           <View style={styles.signatureField}>
             <Text style={styles.signatureLabel}>Date</Text>
-            <View style={styles.signatureLine}>
-              <Text style={styles.signatureLineText}></Text>
-            </View>
+            <View style={styles.signatureLine}></View>
           </View>
         </View>
 
@@ -351,22 +234,15 @@ export const BidProposalReactPDF = ({
             )}
           </View>
         </View>
-        {/* SIGNATURE */}
-        <Text
-          style={{
-            marginTop: 12,
-            fontSize: 9,
-            textAlign: 'center',
-            color: 'blue',
-          }}
-        >
-          If the proposal is accepted, please sign and date below and return.
-          Thank you!
+
+        {/* SIGNATURE TEXT */}
+        {/* <Text style={{ marginTop: 12, fontSize: 9, textAlign: 'center', color: 'blue' }}>
+          If the proposal is accepted, please sign and date below and return. Thank you!
         </Text>
         <View style={styles.signatureRow}>
           <Text>ACCEPTED BY: ____________________</Text>
           <Text>DATE: _______________</Text>
-        </View>
+        </View> */}
       </Page>
     </Document>
   );
