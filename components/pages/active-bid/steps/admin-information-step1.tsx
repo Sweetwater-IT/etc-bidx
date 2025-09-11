@@ -99,21 +99,22 @@ const AdminInformationStep1 = () => {
   const owDecimalHours = (owHours + owMinutes / 60).toFixed(1);
   const owTotalMinutes = owHours * 60 + owMinutes;
   
-  const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
+ const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
     if (type === 'hours') {
       dispatch({
         type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeMins', value: value * 60 + owMinutes },
+        payload: { key: 'owTravelTimeHours', value },
       });
       setOwHours(value);
     } else {
       dispatch({
         type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeMins', value: owHours * 60 + value },
+        payload: { key: 'owTravelTimeMins', value },
       });
       setOwMinutes(value);
     }
   };
+
   
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
