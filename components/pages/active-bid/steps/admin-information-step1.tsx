@@ -95,26 +95,20 @@ const AdminInformationStep1 = () => {
   });
 
   const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
-  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+  const [owMinutes, setOwMinutes] = useState<number>(safeNumber(adminData.owTravelTimeMins) % 60);
   const owDecimalHours = (owHours + owMinutes / 60).toFixed(1);
   const owTotalMinutes = owHours * 60 + owMinutes;
-
+  
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
-    if (type === 'hours') {
-      dispatch({
-        type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeHours', value },
-      });
-      setOwHours(value);
-    } else {
-      dispatch({
-        type: 'UPDATE_ADMIN_DATA',
-        payload: { key: 'owTravelTimeMins', value },
-      });
-      setOwMinutes(value);
-    }
+    const newOwMinutes = type === 'hours' ? value * 60 + owMinutes : owHours * 60 + value;
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: { key: 'owTravelTimeMins', value: newOwMinutes },
+    });
+    setOwHours(type === 'hours' ? value : owHours);
+    setOwMinutes(type === 'minutes' ? value : owMinutes);
   };
-
+  
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
     setOwHours(Math.floor(totalMins / 60));
