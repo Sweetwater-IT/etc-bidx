@@ -115,7 +115,6 @@ const AdminInformationStep1 = () => {
     setOwMinutes(totalMins % 60);
   }, [adminData.owTravelTimeMins]);
 
-
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
   const [estimators, setEstimators] = useState<{ id: number; name: string }[]>([]);
