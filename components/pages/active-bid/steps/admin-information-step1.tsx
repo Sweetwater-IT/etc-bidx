@@ -100,20 +100,20 @@ const AdminInformationStep1 = () => {
   const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
-    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
-    const extraMinutes = currentOwMinutes % 60;
-    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
-    dispatch({
-      type: 'UPDATE_ADMIN_DATA',
-      payload: {
-        key: 'owTravelTimeMins',
-        value: newOwMinutes
-      }
-    })
-
-    setOwHours(Math.floor(newOwMinutes / 60))
-    setOwMinutes(newOwMinutes % 60);
-  }
+    if (type === 'hours') {
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: 'owTravelTimeHours', value },
+      });
+      setOwHours(value);
+    } else {
+      dispatch({
+        type: 'UPDATE_ADMIN_DATA',
+        payload: { key: 'owTravelTimeMins', value },
+      });
+      setOwMinutes(value);
+    }
+  };
 
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
@@ -833,7 +833,7 @@ const AdminInformationStep1 = () => {
                                 serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
                               dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
                               dispatch({ type: 'SET_ID', payload: createResponse.id })
-                              if(alreadyExistBidMessage) {
+                              if (alreadyExistBidMessage) {
                                 setAlreadyExistBidMessage('')
                               }
                             } catch (err: any) {

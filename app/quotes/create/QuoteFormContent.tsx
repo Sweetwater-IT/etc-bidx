@@ -48,6 +48,9 @@ function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, job
     emergency_fields: adminData.emergencyFields,
   }
   console.log('[mapAdminDataToApi] mapped:', mapped)
+
+  console.log('mapped es', mapped);
+  
   return mapped
 }
 

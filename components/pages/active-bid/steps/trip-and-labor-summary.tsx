@@ -113,7 +113,7 @@ export const TripAndLaborSummary = ({
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Base Non-Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(nonRatedHours).toFixed(0) === "0" ? 0 : 1}
+          {safeNumber(nonRatedHours).toFixed(1)}
         </div>
       </div>
       <div className='flex flex-col'>
@@ -121,7 +121,7 @@ export const TripAndLaborSummary = ({
           Additional Non-Rated Hours
         </label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
-          {safeNumber(phase.additionalNonRatedHours).toFixed(1) === "0.0" ? 0 : 1}
+          {safeNumber(phase.additionalNonRatedHours).toFixed(1)}
         </div>
       </div>
       <div className='flex flex-col'>
@@ -129,7 +129,7 @@ export const TripAndLaborSummary = ({
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(
             nonRatedHours + safeNumber(phase.additionalNonRatedHours)
-          ).toFixed(1) === "0.0" ? 0 : 1}
+          ).toFixed(1)}
         </div>
       </div>
 
