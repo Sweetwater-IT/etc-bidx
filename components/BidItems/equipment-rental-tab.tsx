@@ -1,6 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
 import React, { useEffect, useState } from 'react';
@@ -60,20 +61,24 @@ const EquipmentSummaryStep = () => {
   const [itemToDelete, setItemToDelete] = useState<{ item: any, index: number } | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const setItemPrices = async () => {
       const rentalItemsData = await fetchReferenceData('rental_items');
-
-      // Filtramos los items duplicados basándonos en el display_name
-      const uniqueRentalItems = rentalItemsData.filter(
-        (item: RentalItem, index: number, self: RentalItem[]) =>
-          index === self.findIndex((t: RentalItem) => (
-            t.display_name === item.display_name
-          ))
-      );
-      setRentalItems(uniqueRentalItems);
+      if (isMounted) {
+        // Filtramos los items duplicados basándonos en el display_name
+        const uniqueRentalItems = rentalItemsData.filter(
+          (item: RentalItem, index: number, self: RentalItem[]) =>
+            index === self.findIndex((t: RentalItem) => (
+              t.display_name === item.display_name
+            ))
+        );
+        setRentalItems(uniqueRentalItems);
+      }
     };
     setItemPrices();
-  }, []);
+
+    return () => { isMounted = false; };
+  }, []); // El array vacío asegura que se ejecute solo una vez
 
   const handleAddEquipment = () => {
     setFormData({
@@ -105,20 +110,7 @@ const EquipmentSummaryStep = () => {
   const handleFormUpdate = (updates: Partial<EquipmentRentalItem>) => {
     if (formData) {
       const updatedFormData = { ...formData, ...updates };
-      setFormData(updatedFormData);
-      // If we are in edit mode, dispatch the change immediately
-      if (editingIndex !== null) {
-        Object.entries(updates).forEach(([key, value]) => {
-          dispatch({
-            type: 'UPDATE_RENTAL_ITEM',
-            payload: {
-              index: editingIndex,
-              key: key as keyof EquipmentRentalItem,
-              value: value,
-            },
-          });
-        });
-      }
+      setFormData(updatedFormData); // Solo actualiza el estado local del formulario
     }
   };
 
@@ -308,28 +300,40 @@ const EquipmentSummaryStep = () => {
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-sm p-0">
                   <Command>
                     <CommandInput placeholder="Search equipment..." />
-                    <CommandList>
-                      <CommandEmpty>No equipment found.</CommandEmpty>
-                      <CommandGroup className="max-h-[200px] overflow-y-auto">
-                        <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', itemNumber: '' }) }}>Custom</CommandItem>
-                        {rentalItems.map((item) => (
-                          <CommandItem
-                            key={item.id}
-                            value={item.display_name}
-                            onSelect={() => {
-                              handleFormUpdate({
-                                itemNumber: item.item_number,
-                                name: item.display_name
-                              });
-                              setIsCustom(false);
-                              setOpen(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0")} />
-                            {item.display_name}
+                    <CommandList onWheel={(e) => e.stopPropagation()}>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <CommandEmpty>No equipment found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', itemNumber: '' }); }} className="flex items-center">
+                            <Check className={cn("mr-2 h-4 w-4", isCustom ? "opacity-100" : "opacity-0")} />
+                            Custom
                           </CommandItem>
-                        ))}
-                      </CommandGroup>
+                          <Separator className='my-1' />
+                          {rentalItems.map((item) => (
+                            <CommandItem
+                              key={item.id}
+                              value={`${item.display_name} ${item.item_number}`}
+                              onSelect={() => {
+                                handleFormUpdate({
+                                  itemNumber: item.item_number,
+                                  name: item.display_name
+                                });
+                                setIsCustom(false);
+                                setOpen(false);
+                              }}
+                              className="flex items-center"
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span>{item.display_name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {item.item_number}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </div>
                     </CommandList>
                   </Command>
                 </PopoverContent>
