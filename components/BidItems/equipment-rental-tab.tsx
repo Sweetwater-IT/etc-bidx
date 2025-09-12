@@ -1,23 +1,23 @@
-"use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import React, { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
-import { useEstimate } from "@/contexts/EstimateContext";
-import { SaleItem } from "@/types/TSaleItem";
+'use client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from "@/components/ui/checkbox";
+import React, { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { useEstimate } from '@/contexts/EstimateContext';
+import { EquipmentRentalItem } from '@/types/IEquipmentRentalItem';
 import {
   Drawer,
   DrawerClose,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerFooter,
-} from "@/components/ui/drawer";
+} from '@/components/ui/drawer';
 import {
   Command,
   CommandEmpty,
@@ -31,180 +31,254 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import EmptyContainer from "@/components/BidItems/empty-container";
+import { fetchReferenceData } from '@/lib/api-client';
+import EmptyContainer from './empty-container';
+import { DataTable } from '@/components/data-table';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 
-const SaleItemsStep = () => {
-  const { saleItems, dispatch } = useEstimate();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingItemNumber, setEditingItemNumber] = useState<string | null>(null);
-  const [formData, setFormData] = useState<SaleItem | null>(null);
-  const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
+interface StaticPriceData {
+  usefulLife: number;
+  cost: number;
+}
+
+interface RentalItem {
+  id: number;
+  item_number: string;
+  display_name: string;
+  item_description: string;
+}
+
+const EquipmentSummaryStep = () => {
+  const { equipmentRental, dispatch } = useEstimate();
+  const [rentalItems, setRentalItems] = useState<RentalItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [formData, setFormData] = useState<EquipmentRentalItem | null>(null);
   const [isCustom, setIsCustom] = useState(false);
 
-  const calculateMargin = (quotePrice: number, markupPercentage: number) => {
-    if (!quotePrice || !markupPercentage) return 0;
-    const sellingPrice = quotePrice * (1 + markupPercentage / 100);
-    return ((sellingPrice - quotePrice) / sellingPrice) * 100;
-  };
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ item: any, index: number } | null>(null);
 
-  const handleAddItem = () => {
-    setFormData({
-      itemNumber: "",
-      name: "",
-      vendor: "",
-      quantity: 0,
-      quotePrice: 0,
-      markupPercentage: 0,
-    });
-    setEditingItemNumber(null);
-    setIsCustom(false);
-    setDrawerOpen(true);
-    fetchItems();
-  };
-
-  const handleEditItem = (itemNumber: string) => {
-    const item = saleItems.find((item) => item.itemNumber === itemNumber);
-    if (item) {
-      setFormData({ ...item });
-      setEditingItemNumber(itemNumber);
-      setIsCustom(!availableItems.some((i) => i.item_number === item.itemNumber));
-      setDrawerOpen(true);
-      fetchItems();
-    }
-  };
-
-  const fetchItems = async () => {
-    try {
-      const res = await fetch("/api/bid-items/sale-items");
-      const data = await res.json();
-      if (data.items) {
-        // Filter unique items by item_number
-        const uniqueSaleItems = data.items.filter(
-          (item: { item_number: string }, index: number, self: { item_number: string }[]) =>
-            index === self.findIndex((t: { item_number: string }) => t.item_number === item.item_number)
+  useEffect(() => {
+    let isMounted = true;
+    const setItemPrices = async () => {
+      const rentalItemsData = await fetchReferenceData('rental_items');
+      if (isMounted) {
+        const uniqueRentalItems = rentalItemsData.filter(
+          (item: RentalItem, index: number, self: RentalItem[]) =>
+            index === self.findIndex((t: RentalItem) => (
+              t.item_number === item.item_number
+            ))
         );
-        setAvailableItems(uniqueSaleItems);
+        setRentalItems(uniqueRentalItems);
       }
-    } catch (error) {
-      console.error("Error fetching sale items:", error);
-    }
+    };
+    setItemPrices();
+
+    return () => { isMounted = false; };
+  }, []); 
+
+  const handleAddEquipment = () => {
+    setFormData({
+      name: '',
+      itemNumber: '',
+      quantity: 0,
+      months: 0,
+      rentPrice: 0,
+      reRentPrice: 0,
+      reRentForCurrentJob: false,
+      totalCost: 0,
+      usefulLifeYrs: 0,
+    });
+    setIsCustom(false);
+    setEditingIndex(null);
+    setDrawerOpen(true);
   };
 
-  const handleFormUpdate = (field: keyof SaleItem, value: any) => {
+  const handleEditEquipment = (index: number) => {
+    const itemToEdit = equipmentRental[index];
+    setFormData({ ...itemToEdit });
+    setEditingIndex(index);
+    // Check if the item is a standard one or a custom one
+    const isStandard = rentalItems.some(item => item.item_number === itemToEdit.itemNumber);
+    setIsCustom(!isStandard);
+    setDrawerOpen(true);
+  };
+
+  const handleFormUpdate = (updates: Partial<EquipmentRentalItem>) => {
     if (formData) {
-      setFormData({ ...formData, [field]: value });
+      const updatedFormData = { ...formData, ...updates };
+      setFormData(updatedFormData); 
     }
   };
 
   const handleSave = () => {
-    if (!formData || !formData.itemNumber.trim()) return;
+    if (!formData) return;
+
+    const finalName = formData.name.trim();
+    if (!finalName) return;
 
     const finalFormData = {
       ...formData,
-      itemNumber: isCustom ? formData.name : formData.itemNumber,
+      name: finalName,
+      itemNumber: isCustom ? '' : formData.itemNumber,
     };
 
-    if (editingItemNumber) {
-      dispatch({
-        type: "UPDATE_SALE_ITEM",
-        payload: {
-          oldItemNumber: editingItemNumber,
-          item: finalFormData,
-        },
+    if (editingIndex !== null) {
+      (Object.keys(finalFormData) as Array<keyof EquipmentRentalItem>).forEach(key => {
+        dispatch({
+          type: 'UPDATE_RENTAL_ITEM',
+          payload: {
+            index: editingIndex,
+            key: key,
+            value: finalFormData[key],
+          },
+        });
       });
     } else {
       dispatch({
-        type: "ADD_SALE_ITEM",
+        type: 'ADD_RENTAL_ITEM',
         payload: finalFormData,
       });
     }
 
     setDrawerOpen(false);
     setFormData(null);
-    setEditingItemNumber(null);
+    setEditingIndex(null);
     setIsCustom(false);
   };
 
   const handleCancel = () => {
     setDrawerOpen(false);
     setFormData(null);
-    setEditingItemNumber(null);
+    setEditingIndex(null);
     setIsCustom(false);
   };
 
-  const handleItemDelete = (itemNumber: string) => {
+  const handleDeleteClick = (item: any) => {
+    const index = equipmentRental.findIndex(equip => equip.name === item.name);
+    if (index !== -1) {
+      setItemToDelete({ item, index });
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (itemToDelete) {
+      handleEquipmentDelete(itemToDelete.index); 
+
+    }
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
+  };
+
+  const handleEquipmentDelete = (index: number) => {
     dispatch({
-      type: "DELETE_SALE_ITEM",
-      payload: itemNumber,
+      type: 'DELETE_RENTAL_ITEM',
+      payload: { index },
     });
   };
 
+
+  const EQUIPMENT_COLUMNS = [
+    {
+      key: 'name',
+      title: 'Equipment',
+      className: 'text-left'
+    },
+    {
+      key: 'quantity',
+      title: 'Quantity',
+      className: 'text-left'
+    },
+    {
+      key: 'months',
+      title: 'Months',
+      className: 'text-left'
+    },
+    {
+      key: 'rentPrice',
+      title: 'Rent Price',
+      className: 'text-left'
+    },
+    {
+      key: 'reRentPrice',
+      title: 'Re-rent Price',
+      className: 'text-left'
+    }
+  ];
+
+  const formatCurrency = (value: number | null | undefined): string => {
+    if (!value) return "-";
+    return `$${value.toFixed(2)}`;
+  };
+
+  const formattedData = equipmentRental.map(item => ({
+    ...item,
+    rentPrice: formatCurrency(item.rentPrice),
+    reRentPrice: formatCurrency(item.reRentPrice)
+  }));
+
+
   return (
     <div>
-      <div className="flex items-center justify-between pb-2 border-b mb-6">
-        <h3 className="text-xl text-black font-semibold">Sale Items</h3>
-        <Button onClick={handleAddItem}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Sale Item
+      <div className='flex items-center justify-between pb-2 border-b mb-6'>
+        <h3 className='text-xl text-black font-semibold'>Rental Equipment</h3>
+        <Button onClick={handleAddEquipment}>
+          <Plus className='mr-2 h-4 w-4' />
+          Add Equipment
         </Button>
       </div>
 
-      <div className="relative">
-        {saleItems.length === 0 && (
+      <div className='relative'>
+        {equipmentRental.length === 0 ? (
           <EmptyContainer
-            topText="No sale items added yet"
-            subtext="When you add sale items, they will appear here."
+            topText='No rental items added yet'
+            subtext='When you add rental items, they will appear here.'
           />
-        )}
-        {saleItems.map((item) => (
-          <div
-            key={item.itemNumber}
-            className="rounded-lg border bg-card text-card-foreground shadow-sm mb-2 p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="font-medium">{item.itemNumber}</div>
-                <div className="text-sm text-muted-foreground">
-                  {item.name} • {item.vendor} • Qty: {item.quantity}
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEditItem(item.itemNumber)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleItemDelete(item.itemNumber)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        ) : (
+          <DataTable
+            data={formattedData}
+            columns={EQUIPMENT_COLUMNS}
+            onDelete={handleDeleteClick}
+            hideDropdown={true}
+            onEdit={(item) => {
+              const index = equipmentRental.findIndex(equip => equip.name === item.name);
+              if (index !== -1) handleEditEquipment(index);
+            }}
+          />
 
-      <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
+
+        )}
+
+      </div>
+      <ConfirmDeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        itemCount={1}
+        itemType="equipment" 
+      />
+
+      <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {editingItemNumber ? "Edit Sale Item" : "Add Sale Item"}
+              {editingIndex !== null ? 'Edit Equipment' : 'Add Equipment'}
             </DrawerTitle>
             <DrawerDescription>
-              {editingItemNumber
-                ? "Update the sale item details below."
-                : "Configure the details for your new sale item."}
+              {editingIndex !== null
+                ? 'Update the equipment details below.'
+                : 'Configure the details for your new equipment item.'}
             </DrawerDescription>
           </DrawerHeader>
 
           {formData && (
-            <div className="px-4 space-y-4">
+            <div className='px-4 space-y-4'>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -214,59 +288,42 @@ const SaleItemsStep = () => {
                     className="w-full justify-between overflow-hidden"
                   >
                     <span className="truncate">
-                      {formData.name ? formData.name : "Select sale item..."}
+                      {formData.name
+                        ? formData.name
+                        : "Select equipment..."}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-sm p-0">
                   <Command>
-                    <CommandInput placeholder="Search sale item..." />
+                    <CommandInput placeholder="Search equipment..." />
                     <CommandList onWheel={(e) => e.stopPropagation()}>
                       <div className="max-h-[200px] overflow-y-auto">
-                        <CommandEmpty>No sale items found.</CommandEmpty>
+                        <CommandEmpty>No equipment found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandItem
-                            onSelect={() => {
-                              setIsCustom(true);
-                              setOpen(false);
-                              handleFormUpdate({ name: "", itemNumber: "" });
-                            }}
-                            className="flex items-center"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                isCustom ? "opacity-100" : "opacity-0"
-                              )}
-                            />
+                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', itemNumber: '' }); }} className="flex items-center">
+                            <Check className={cn("mr-2 h-4 w-4", isCustom ? "opacity-100" : "opacity-0")} />
                             Custom
                           </CommandItem>
-                          <Separator className="my-1" />
-                          {availableItems.map((item) => (
+                          <Separator className='my-1' />
+                          {rentalItems.map((item) => (
                             <CommandItem
-                              key={item.item_number}
-                              value={`${item.name} ${item.item_number}`}
+                              key={item.id}
+                              value={`${item.display_name} ${item.item_number}`}
                               onSelect={() => {
                                 handleFormUpdate({
                                   itemNumber: item.item_number,
-                                  name: item.name,
+                                  name: item.display_name
                                 });
                                 setIsCustom(false);
                                 setOpen(false);
                               }}
                               className="flex items-center"
                             >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.itemNumber === item.item_number
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
+                              <Check className={cn("mr-2 h-4 w-4", formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
-                                <span>{item.name}</span>
+                                <span>{item.display_name}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {item.item_number}
                                 </span>
@@ -281,85 +338,155 @@ const SaleItemsStep = () => {
               </Popover>
 
               {isCustom && (
-                <div className="w-full">
-                  <Label className="text-sm font-medium mb-2 block">
-                    Custom Sale Item Name
+                <div className='w-full'>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Custom Equipment Name
                   </Label>
                   <Input
                     value={formData.name}
-                    onChange={(e) => handleFormUpdate("name", e.target.value)}
-                    placeholder="Enter custom item name"
-                    className="w-full"
+                    onChange={e => handleFormUpdate({ name: e.target.value })}
+                    placeholder='Enter custom item name'
+                    className='w-full'
                   />
                 </div>
               )}
-
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Vendor</Label>
-                <Input
-                  value={formData.vendor}
-                  onChange={(e) => handleFormUpdate("vendor", e.target.value)}
-                  className="w-full"
-                  placeholder="Enter vendor name (optional)"
-                />
+              <div className='flex gap-4 w-full'>
+                <div className='flex-1'>
+                  <Label className='text-sm font-medium mb-2 block'>Qty</Label>
+                  <Input
+                    type='number'
+                    value={formData.quantity || ''}
+                    onChange={e =>
+                      handleFormUpdate({
+                        quantity:
+                        parseInt(e.target.value) || 0
+                      })
+                    }
+                    min={0}
+                    className='w-full'
+                  />
+                </div>
+                <div className='flex-1'>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Months
+                  </Label>
+                  <Input
+                    type='number'
+                    value={formData.months || ''
+                    }
+                    onChange={e => handleFormUpdate({ months: parseInt(e.target.value) || 0 }
+                    )
+                    }
+                    min={0}
+                    className='w-full'
+                  />
+                </div>
+              </div>
+              <div className='flex gap-4 w-full'>
+                <div className='flex-1'>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Rent Price ($)
+                  </Label>
+                  <Input
+                    type='number'
+                    value={formData.rentPrice || ''}
+                    onChange={e =>
+                      handleFormUpdate({
+                        rentPrice:
+                        parseFloat(e.target.value) || 0
+                      })
+                    }
+                    min={0}
+                    className='w-full'
+                  />
+                </div>
+                {formData.reRentForCurrentJob && (
+                  <div className='flex-1'>
+                    <Label className='text-sm font-medium mb-2 block'>
+                      Re-Rent Cost ($)
+                    </Label>
+                    <Input
+                      type='number'
+                      value={formData.reRentPrice || ''}
+                      onChange={e =>
+                        handleFormUpdate({
+                          reRentPrice:
+                          parseFloat(e.target.value) || 0
+                        })
+                      }
+                      min={0}
+                      className='w-full'
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                  <Input
-                    type="number"
-                    value={formData.quantity || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("quantity", parseInt(e.target.value) || 0)
-                    }
-                    min={0}
-                    className="w-full"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Quote Price ($)</Label>
-                  <Input
-                    type="number"
-                    value={formData.quotePrice || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("quotePrice", parseFloat(e.target.value) || 0)
-                    }
-                    min={0}
-                    step="0.01"
-                    className="w-full"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Markup (%)</Label>
-                  <Input
-                    type="number"
-                    value={formData.markupPercentage || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("markupPercentage", parseFloat(e.target.value) || 0)
-                    }
-                    min={0}
-                    step="0.01"
-                    className="w-full"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Margin (%)</Label>
-                  <div className="h-10 flex items-center text-muted-foreground bg-gray-50 px-3 rounded-md border">
-                    {calculateMargin(formData.quotePrice, formData.markupPercentage).toFixed(2)}%
+              <div className='flex flex-row gap-4 w-full'>
+                <div className='flex-1'>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Re-Rent
+                  </Label>
+                  <div className='flex items-center space-x-2 pt-2'>
+                    <Checkbox
+                      id='reRent-drawer'
+                      checked={formData.reRentForCurrentJob}
+                      onCheckedChange={(checked) =>
+                        handleFormUpdate({ reRentForCurrentJob: !!checked })
+                      }
+                    />
+                    <Label htmlFor='reRent-drawer' className='text-sm'>
+                      Re-rent for current job
+                    </Label>
                   </div>
                 </div>
               </div>
+
+              {isCustom && (
+                <div className='flex gap-x-4 w-full'>
+                  <div className='flex-1'>
+                    <Label className='text-sm font-medium mb-2 block'>
+                      Cost
+                    </Label>
+                    <Input
+                      type='number'
+                      value={formData.totalCost || ''}
+                      onChange={e =>
+                        handleFormUpdate({
+                          totalCost:
+                          parseFloat(e.target.value) || 0
+                        })
+                      }
+                      min={0}
+                      className='w-full'
+                    />
+                  </div>
+                  <div className='flex-1'>
+                    <Label className='text-sm font-medium mb-2 block'>
+                      Useful Life in Years
+                    </Label>
+                    <Input
+                      type='number'
+                      value={formData.usefulLifeYrs || ''
+                      }
+                      onChange={e =>
+                        handleFormUpdate({
+                          usefulLifeYrs:
+                          parseInt(e.target.value) || 0
+                        })
+                      }
+                      min={0}
+                      className='w-full'
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           <DrawerFooter>
-            <div className="flex justify-end space-x-3 w-full">
+            <div className='flex justify-end space-x-3 w-full'>
               <DrawerClose asChild>
-                <Button variant="outline" onClick={handleCancel}>
+                <Button variant='outline' onClick={handleCancel}>
                   Cancel
                 </Button>
               </DrawerClose>
@@ -367,7 +494,7 @@ const SaleItemsStep = () => {
                 onClick={handleSave}
                 disabled={!formData?.name.trim()}
               >
-                {editingItemNumber ? "Update Sale Item" : "Save Sale Item"}
+                {editingIndex !== null ? 'Update Equipment' : 'Save Equipment'}
               </Button>
             </div>
           </DrawerFooter>
@@ -377,4 +504,4 @@ const SaleItemsStep = () => {
   );
 };
 
-export default SaleItemsStep;
+export default EquipmentSummaryStep;
