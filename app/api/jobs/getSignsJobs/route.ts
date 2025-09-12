@@ -8,7 +8,7 @@ const formatedSign = (signs: any[]) => {
   }))
 }
 
-export async function GET() {
+export async function GET() {  
   try {
     const { data: jobsList, error: jobsError } = await supabase
       .from("jobs_list")

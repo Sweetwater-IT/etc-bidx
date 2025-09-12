@@ -69,8 +69,25 @@ interface Props {
   updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void;
   adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void;
   isSignOrder?: boolean;
-
+  jobNumber?: any;
+  needJobNumber?: boolean;
 }
+
+const formatJobFromMptRental = (mptRental: any, currentPhase: number) => {
+  return {
+    id: mptRental.id ?? "job-1",
+    label: mptRental.label ?? "Job",
+    status: mptRental.status ?? "active",
+    phases: (mptRental.phases ?? [])
+      .filter((_: any, idx: number) => idx !== currentPhase)
+      .map((p: any, idx: number) => ({
+        id: p.id ?? `${idx}`,
+        name: p.name ?? `Phase ${idx + 1}`,
+        mpt_primary_signs: p.signs ?? [],
+        mpt_secondary_signs: [],
+      })),
+  };
+};
 
 export function SignOrderList({
   currentPhase = 0,
@@ -80,6 +97,8 @@ export function SignOrderList({
   updateShopTracking,
   adjustShopValue,
   isSignOrder,
+  jobNumber,
+  needJobNumber = false
 }: Props) {
   const { mptRental, dispatch } = useEstimate();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
@@ -87,13 +106,12 @@ export function SignOrderList({
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
-
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
     setLocalSign(undefined);
     setOpen(false);
     setMode('create');
-  }, []);
+  }, []);  
 
   const getCurrentEquipmentQuantity = useCallback((equipmentType: EquipmentType): number => {
     const currentPhaseData = mptRental.phases[currentPhase];
@@ -355,7 +373,7 @@ export function SignOrderList({
         <div className="flex items-center gap-2">
           <div className="flex flex-col items-start mr-4">
             <label className="text-[14px] font-medium mb-1 ml-1">Import from job</label>
-            <SelectJobOrBid currentPhase={currentPhase} />
+            <SelectJobOrBid currentJob={formatJobFromMptRental(mptRental, currentPhase)} needJobNumber={needJobNumber} jobNumber={jobNumber} currentPhase={currentPhase} />
           </div>
           <Button onClick={handleSignAddition} className="mt-[22px] ml-[-10px]">
             <Plus className="h-4 w-4 mr-2" />

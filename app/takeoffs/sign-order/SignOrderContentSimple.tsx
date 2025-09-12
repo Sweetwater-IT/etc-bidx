@@ -568,7 +568,7 @@ export default function SignOrderContentSimple({
       console.error('Error generating PDF:', error);
       toast.error('Error generating PDF');
     }
-  };
+  };  
 
   return mptRental.phases.length > 0 ? (
     <div className="flex flex-1 flex-col">
@@ -613,7 +613,7 @@ export default function SignOrderContentSimple({
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
           />
-          <SignOrderList />
+          <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>
         {/* Right Column (1/4) */}
         <div className="w-1/4 space-y-6">

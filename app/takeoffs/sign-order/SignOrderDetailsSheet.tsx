@@ -296,7 +296,7 @@ export function SignOrderDetailsSheet({
           <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
             {/* Job Information Section */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Information</h3>
+              <h3 className='text-lg font-semibold'>Job Informationn</h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* <div className="space-y-2">
