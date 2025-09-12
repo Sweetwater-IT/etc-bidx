@@ -65,7 +65,6 @@ const EquipmentSummaryStep = () => {
     const setItemPrices = async () => {
       const rentalItemsData = await fetchReferenceData('rental_items');
       if (isMounted) {
-        // Filtramos los items duplicados basándonos en el display_name
         const uniqueRentalItems = rentalItemsData.filter(
           (item: RentalItem, index: number, self: RentalItem[]) =>
             index === self.findIndex((t: RentalItem) => (
@@ -78,7 +77,7 @@ const EquipmentSummaryStep = () => {
     setItemPrices();
 
     return () => { isMounted = false; };
-  }, []); // El array vacío asegura que se ejecute solo una vez
+  }, []); 
 
   const handleAddEquipment = () => {
     setFormData({
@@ -110,7 +109,7 @@ const EquipmentSummaryStep = () => {
   const handleFormUpdate = (updates: Partial<EquipmentRentalItem>) => {
     if (formData) {
       const updatedFormData = { ...formData, ...updates };
-      setFormData(updatedFormData); // Solo actualiza el estado local del formulario
+      setFormData(updatedFormData); 
     }
   };
 
@@ -210,7 +209,6 @@ const EquipmentSummaryStep = () => {
     }
   ];
 
-  // Formatear los datos para la tabla
   const formatCurrency = (value: number | null | undefined): string => {
     if (!value) return "-";
     return `$${value.toFixed(2)}`;
