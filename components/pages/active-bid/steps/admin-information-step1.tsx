@@ -95,32 +95,55 @@ const AdminInformationStep1 = () => {
   });
 
   const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
-  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+  const [owMinutes, setOwMinutes] = useState<number>(safeNumber(adminData.owTravelTimeMins) % 60);
   const owDecimalHours = (owHours + owMinutes / 60).toFixed(1);
   const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
-    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
-    const extraMinutes = currentOwMinutes % 60;
-    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
+    let newHours = owHours;
+    let newMinutes = owMinutes;
+
+    if (type === 'hours') {
+      newHours = value;
+      setOwHours(value);
+    } else {
+      newMinutes = value;
+      setOwMinutes(value);
+    }
+
+    const totalMinutes = newHours * 60 + newMinutes;
+
     dispatch({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
         key: 'owTravelTimeMins',
-        value: newOwMinutes
-      }
-    })
+        value: totalMinutes,
+      },
+    });
 
-    setOwHours(Math.floor(newOwMinutes / 60))
-    setOwMinutes(newOwMinutes % 60);
-  }
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeHours',
+        value: newHours,
+      },
+    });
 
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMinutes',
+        value: newMinutes,
+      },
+    });
+  };
+
+  
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
     setOwHours(Math.floor(totalMins / 60));
     setOwMinutes(totalMins % 60);
   }, [adminData.owTravelTimeMins]);
-
 
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
@@ -833,7 +856,7 @@ const AdminInformationStep1 = () => {
                                 serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
                               dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
                               dispatch({ type: 'SET_ID', payload: createResponse.id })
-                              if(alreadyExistBidMessage) {
+                              if (alreadyExistBidMessage) {
                                 setAlreadyExistBidMessage('')
                               }
                             } catch (err: any) {

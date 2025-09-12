@@ -68,6 +68,7 @@ import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TripAndLaborSummary } from './trip-and-labor-summary'
+import { log } from 'node:console'
 
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
@@ -698,7 +699,7 @@ const BidItemsStep5 = ({
         if (Array.isArray(equipmentData)) {
           // Process regular equipment data
           equipmentData.forEach(item => {
-            if (!item) return
+            if (!item) return            
 
             // Find matching equipment type
             const equipmentType = getEquipmentTypeFromName(item.name)
@@ -751,7 +752,7 @@ const BidItemsStep5 = ({
           signList.forEach(sign => {
             const matchedItem = equipmentData.find(
               (item: any) => item.name === sign.dbName
-            )
+            )            
             if (matchedItem) {
               const price = parseFloat(matchedItem.price)
 
