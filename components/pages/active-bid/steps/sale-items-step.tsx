@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
 import {
