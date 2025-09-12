@@ -90,7 +90,7 @@ const formatJobFromMptRental = (mptRental: any, currentPhase: number) => {
 };
 
 export function SignOrderList({
-  currentPhase = 0,
+  currentPhase = 1,
   onlyTable = false,
   shopMode = false,
   shopSigns,
