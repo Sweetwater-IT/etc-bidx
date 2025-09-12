@@ -68,7 +68,7 @@ const EquipmentSummaryStep = () => {
         const uniqueRentalItems = rentalItemsData.filter(
           (item: RentalItem, index: number, self: RentalItem[]) =>
             index === self.findIndex((t: RentalItem) => (
-              t.display_name === item.display_name
+              t.item_number === item.item_number
             ))
         );
         setRentalItems(uniqueRentalItems);
