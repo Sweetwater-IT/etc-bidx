@@ -91,7 +91,7 @@ const SaleItemsStep = () => {
     }
   };
 
-  const handleFormUpdate = (field: keyof SaleItem, value: any) => {
+  const handleFormUpdate = (updates: Partial<SaleItem>) => {
     if (formData) {
       setFormData({ ...formData, [field]: value });
     }
