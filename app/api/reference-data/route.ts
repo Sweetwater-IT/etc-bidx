@@ -69,6 +69,17 @@ export async function GET(request: NextRequest) {
           .select('id, name')
           .order('name'))
         break;
+
+      case 'rental_items':
+        ({ data, error } = await supabase
+          .from('rental_items')
+          .select(`
+            id,
+            item_number,
+            display_name,
+            item_description
+          `))
+        break;
         
       case 'estimators':
         ({ data, error } = await supabase
@@ -82,6 +93,17 @@ export async function GET(request: NextRequest) {
           .from('contractors')
           .select('id, name')
           .order('name'))
+        break;
+
+      case 'rental_items':
+        ({ data, error } = await supabase
+          .from('rental_items')
+          .select(`
+            id,
+            item_number,
+            display_name,
+            item_description
+          `))
         break;
         
       case 'customers':
