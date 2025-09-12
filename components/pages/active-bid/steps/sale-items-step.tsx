@@ -2,11 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
 import {
@@ -14,10 +12,11 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerFooter,
 } from "@/components/ui/drawer";
+
 import {
   Command,
   CommandEmpty,
@@ -40,7 +39,6 @@ const SaleItemsStep = () => {
   const [formData, setFormData] = useState<SaleItem | null>(null);
   const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
   const [open, setOpen] = useState(false);
-  const [isCustom, setIsCustom] = useState(false);
 
   const calculateMargin = (quotePrice: number, markupPercentage: number) => {
     if (!quotePrice || !markupPercentage) return 0;
@@ -58,40 +56,32 @@ const SaleItemsStep = () => {
       markupPercentage: 0,
     });
     setEditingItemNumber(null);
-    setIsCustom(false);
     setDrawerOpen(true);
-    fetchItems();
+    fetchItems(); 
   };
 
-  const handleEditItem = (itemNumber: string) => {
-    const item = saleItems.find((item) => item.itemNumber === itemNumber);
-    if (item) {
-      setFormData({ ...item });
-      setEditingItemNumber(itemNumber);
-      setIsCustom(!availableItems.some((i) => i.item_number === item.itemNumber));
-      setDrawerOpen(true);
-      fetchItems();
-    }
-  };
+const handleEditItem = (itemNumber: string) => {
+  const item = saleItems.find(item => item.itemNumber === itemNumber);
+  if (item) {
+    setFormData({ ...item });
+    setEditingItemNumber(itemNumber);
+    setDrawerOpen(true);
+    fetchItems(); 
+  }
+};
 
-  const fetchItems = async () => {
-    try {
-      const res = await fetch("/api/bid-items/sale-items");
-      const data = await res.json();
-      if (data.items) {
-        // Filter unique items by item_number
-        const uniqueSaleItems = data.items.filter(
-          (item: { item_number: string }, index: number, self: { item_number: string }[]) =>
-            index === self.findIndex((t: { item_number: string }) => t.item_number === item.item_number)
-        );
-        setAvailableItems(uniqueSaleItems);
-      }
-    } catch (error) {
-      console.error("Error fetching sale items:", error);
-    }
-  };
+const fetchItems = async () => {
+  try {
+    const res = await fetch("/api/bid-items/sale-items");
+    const data = await res.json();
+    if (data.items) setAvailableItems(data.items);
+  } catch (error) {
+    console.error("Error fetching sale items:", error);
+  }
+};
 
-  const handleFormUpdate = (updates: Partial<SaleItem>) => {
+
+  const handleFormUpdate = (field: keyof SaleItem, value: any) => {
     if (formData) {
       setFormData({ ...formData, [field]: value });
     }
@@ -100,42 +90,37 @@ const SaleItemsStep = () => {
   const handleSave = () => {
     if (!formData || !formData.itemNumber.trim()) return;
 
-    const finalFormData = {
-      ...formData,
-      itemNumber: isCustom ? formData.name : formData.itemNumber,
-    };
-
     if (editingItemNumber) {
+      // Update existing item
       dispatch({
-        type: "UPDATE_SALE_ITEM",
+        type: 'UPDATE_SALE_ITEM',
         payload: {
           oldItemNumber: editingItemNumber,
-          item: finalFormData,
+          item: formData,
         },
       });
     } else {
+      // Add new item
       dispatch({
-        type: "ADD_SALE_ITEM",
-        payload: finalFormData,
+        type: 'ADD_SALE_ITEM',
+        payload: formData,
       });
     }
 
     setDrawerOpen(false);
     setFormData(null);
     setEditingItemNumber(null);
-    setIsCustom(false);
   };
 
   const handleCancel = () => {
     setDrawerOpen(false);
     setFormData(null);
     setEditingItemNumber(null);
-    setIsCustom(false);
   };
 
   const handleItemDelete = (itemNumber: string) => {
     dispatch({
-      type: "DELETE_SALE_ITEM",
+      type: 'DELETE_SALE_ITEM',
       payload: itemNumber,
     });
   };
@@ -151,6 +136,7 @@ const SaleItemsStep = () => {
       </div>
 
       <div className="relative">
+        {/* Sale Items List */}
         {saleItems.length === 0 && (
           <EmptyContainer
             topText="No sale items added yet"
@@ -190,110 +176,90 @@ const SaleItemsStep = () => {
         ))}
       </div>
 
+      {/* Drawer for adding/editing sale items */}
       <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {editingItemNumber ? "Edit Sale Item" : "Add Sale Item"}
+              {editingItemNumber ? 'Edit Sale Item' : 'Add Sale Item'}
             </DrawerTitle>
             <DrawerDescription>
               {editingItemNumber
-                ? "Update the sale item details below."
-                : "Configure the details for your new sale item."}
+                ? 'Update the sale item details below.'
+                : 'Configure the details for your new sale item.'}
             </DrawerDescription>
           </DrawerHeader>
 
           {formData && (
             <div className="px-4 space-y-4">
-              <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between overflow-hidden"
-                  >
-                    <span className="truncate">
-                      {formData.name ? formData.name : "Select sale item..."}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-sm p-0">
-                  <Command>
-                    <CommandInput placeholder="Search sale item..." />
-                    <CommandList onWheel={(e) => e.stopPropagation()}>
-                      <div className="max-h-[200px] overflow-y-auto">
-                        <CommandEmpty>No sale items found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={() => {
-                              setIsCustom(true);
-                              setOpen(false);
-                              handleFormUpdate({ name: "", itemNumber: "" });
-                            }}
-                            className="flex items-center"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                isCustom ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            Custom
-                          </CommandItem>
-                          <Separator className="my-1" />
-                          {availableItems.map((item) => (
-                            <CommandItem
-                              key={item.item_number}
-                              value={`${item.name} ${item.item_number}`}
-                              onSelect={() => {
-                                handleFormUpdate({
-                                  itemNumber: item.item_number,
-                                  name: item.name,
-                                });
-                                setIsCustom(false);
-                                setOpen(false);
-                              }}
-                              className="flex items-center"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.itemNumber === item.item_number
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{item.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {item.item_number}
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </div>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              {/* Item Number Dropdown */}
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Item Number</Label>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between overflow-hidden"
+                    >
+                      <span className="truncate">
+                        {formData.itemNumber || "Select an item number"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-sm p-0">
+                    <Command>
+                      <CommandInput placeholder="Search item number..." />
+                      <CommandList onWheel={(e) => e.stopPropagation()}>
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <CommandEmpty>No items found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableItems.map((item) => (
+                              <CommandItem
+                                key={item.item_number}
+                                value={item.item_number}
+                                onSelect={(value) => {
+                                  const selected = availableItems.find(i => i.item_number === value);
+                                  if (selected && formData) {
+                                    setFormData({ ...formData, itemNumber: selected.item_number, name: selected.name });
+                                  } else if (formData) {
+                                    setFormData({ ...formData, itemNumber: "", name: "" });
+                                  }
+                                  setOpen(false);
+                                }}
+                                className="flex items-center"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {item.item_number}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </div>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              {isCustom && (
-                <div className="w-full">
-                  <Label className="text-sm font-medium mb-2 block">
-                    Custom Sale Item Name
-                  </Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleFormUpdate("name", e.target.value)}
-                    placeholder="Enter custom item name"
-                    className="w-full"
-                  />
-                </div>
-              )}
+              {/* Name Autocomplete */}
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Name</Label>
+                <Input
+                  value={formData.name || ""}
+                  readOnly
+                  className="w-full bg-gray-100"
+                  placeholder="Name will auto-fill"
+                />
+              </div>
 
+              {/* Other fields */}
               <div>
                 <Label className="text-sm font-medium mb-2 block">Vendor</Label>
                 <Input
@@ -310,9 +276,7 @@ const SaleItemsStep = () => {
                   <Input
                     type="number"
                     value={formData.quantity || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("quantity", parseInt(e.target.value) || 0)
-                    }
+                    onChange={(e) => handleFormUpdate("quantity", parseInt(e.target.value) || 0)}
                     min={0}
                     className="w-full"
                   />
@@ -323,9 +287,7 @@ const SaleItemsStep = () => {
                   <Input
                     type="number"
                     value={formData.quotePrice || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("quotePrice", parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => handleFormUpdate("quotePrice", parseFloat(e.target.value) || 0)}
                     min={0}
                     step="0.01"
                     className="w-full"
@@ -337,9 +299,7 @@ const SaleItemsStep = () => {
                   <Input
                     type="number"
                     value={formData.markupPercentage || ""}
-                    onChange={(e) =>
-                      handleFormUpdate("markupPercentage", parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => handleFormUpdate("markupPercentage", parseFloat(e.target.value) || 0)}
                     min={0}
                     step="0.01"
                     className="w-full"
@@ -365,9 +325,9 @@ const SaleItemsStep = () => {
               </DrawerClose>
               <Button
                 onClick={handleSave}
-                disabled={!formData?.name.trim()}
+                disabled={!formData?.itemNumber.trim()}
               >
-                {editingItemNumber ? "Update Sale Item" : "Save Sale Item"}
+                {editingItemNumber ? 'Update Sale Item' : 'Save Sale Item'}
               </Button>
             </div>
           </DrawerFooter>
@@ -375,6 +335,8 @@ const SaleItemsStep = () => {
       </Drawer>
     </div>
   );
+
+
 };
 
 export default SaleItemsStep;
