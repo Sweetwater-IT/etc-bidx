@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { SaleItem } from "@/types/TSaleItem";
 import {
@@ -18,12 +18,18 @@ import {
 } from "@/components/ui/drawer";
 
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import EmptyContainer from "@/components/BidItems/empty-container";
 
 const SaleItemsStep = () => {
@@ -32,6 +38,7 @@ const SaleItemsStep = () => {
   const [editingItemNumber, setEditingItemNumber] = useState<string | null>(null);
   const [formData, setFormData] = useState<SaleItem | null>(null);
   const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
+  const [open, setOpen] = useState(false);
 
   const calculateMargin = (quotePrice: number, markupPercentage: number) => {
     if (!quotePrice || !markupPercentage) return 0;
@@ -67,7 +74,14 @@ const fetchItems = async () => {
   try {
     const res = await fetch("/api/bid-items/sale-items");
     const data = await res.json();
-    if (data.items) setAvailableItems(data.items);
+    if (data.items) {
+      // Filter unique items by item_number
+      const uniqueSaleItems = data.items.filter(
+        (item: { item_number: string }, index: number, self: { item_number: string }[]) =>
+          index === self.findIndex((t: { item_number: string }) => t.item_number === item.item_number)
+      );
+      setAvailableItems(uniqueSaleItems);
+    }
   } catch (error) {
     console.error("Error fetching sale items:", error);
   }
@@ -186,31 +200,63 @@ const fetchItems = async () => {
           {formData && (
             <div className="px-4 space-y-4">
               {/* Item Number Dropdown */}
-              <div className="w-full">
-                <Label className="text-sm font-medium mb-2 block">Item Number</Label>
-                <Select
-                  value={formData.itemNumber || ""}
-                  onValueChange={(value) => {
-                    const selected = availableItems.find(i => i.item_number === value);
-                    if (selected && formData) {
-                      setFormData({ ...formData, itemNumber: selected.item_number, name: selected.name });
-                    } else if (formData) {
-                      setFormData({ ...formData, itemNumber: "", name: "" });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select an item number" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableItems.map((item) => (
-                      <SelectItem key={item.item_number} value={item.item_number}>
-                        {item.item_number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="w-full">
+                  <Label className="text-sm font-medium mb-2 block">Item Number</Label>
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between overflow-hidden"
+                      >
+                        <span className="truncate">
+                          {formData.name || "Select sale item..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-sm p-0">
+                      <Command>
+                        <CommandInput placeholder="Search sale item..." />
+                        <CommandList onWheel={(e) => e.stopPropagation()}>
+                          <div className="max-h-[200px] overflow-y-auto">
+                            <CommandEmpty>No items found.</CommandEmpty>
+                            <CommandGroup>
+                              {availableItems.map((item) => (
+                                <CommandItem
+                                  key={item.item_number}
+                                  value={`${item.name} ${item.item_number}`}
+                                  onSelect={(value) => {
+                                    const selected = availableItems.find(i => i.item_number === value.split(" ").pop());
+                                    if (selected && formData) {
+                                      setFormData({ ...formData, itemNumber: selected.item_number, name: selected.name });
+                                    } else if (formData) {
+                                      setFormData({ ...formData, itemNumber: "", name: "" });
+                                    }
+                                    setOpen(false);
+                                  }}
+                                  className="flex items-center"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{item.name}</span>
+                                    <span className="text-xs text-muted-foreground">{item.item_number}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </div>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
               {/* Name Autocomplete */}
               <div className="w-full">
