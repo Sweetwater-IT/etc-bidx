@@ -193,7 +193,6 @@ export function QuoteAdminInformation({
 
         console.log("🚀 Selected job:", jobOrEstimate);
 
-        
         const resJob = await fetch(`/api/jobs/${jobOrEstimate.id}`);
         if (resJob.ok) {
           const jobData = await resJob.json();

@@ -203,8 +203,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-
-
 // --------------------
 // POST → crear draft vacío con quote_number
 // --------------------

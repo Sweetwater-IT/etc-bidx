@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
 import { QuoteNumber } from '@/components/pages/quote-form/QuoteNumber'
@@ -19,6 +20,7 @@ import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
 import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
+import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFields';
 
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
@@ -50,7 +52,7 @@ function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, job
   console.log('[mapAdminDataToApi] mapped:', mapped)
 
   console.log('mapped es', mapped);
-  
+
   return mapped
 }
 
@@ -121,7 +123,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
     }
     initDraft();
-  
+
   }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const handleSaveNote = async (note: Note) => {
@@ -231,7 +233,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         return
       }
 
-     
+
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
           adminData={adminData ?? defaultAdminObject}
@@ -250,7 +252,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         />
       ).toBlob()
 
-     
+
       const url = URL.createObjectURL(pdfBlob)
       const a = document.createElement("a")
       a.href = url
@@ -297,7 +299,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
 
       toast.success("Quote sent successfully!");
-      router.push('/quotes'); 
+      router.push('/quotes');
 
     } catch (error: any) {
       console.error("Error sending quote:", error);
@@ -365,7 +367,20 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       <div className="flex gap-6 p-6 max-w-full">
         {/* Columna Izquierda (Formulario) */}
         <div className="w-1/2 space-y-6">
-          <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
+          <p className='font-bold text-xl mb-2'>Quote type</p>
+
+          <Select>
+            <SelectTrigger><SelectValue placeholder="Select Quote Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Straight Sale">Straight Sale</SelectItem>
+              <SelectItem value="To Project">To Project</SelectItem>
+              <SelectItem value="Estimate">Estimate</SelectItem>
+              <SelectItem value="Bid">Bid</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* <QuoteAdminInformation showInitialAdminState={showInitialAdminState} /> */}
+
+          <RenderEstimateBidQuoteFields/>
           <QuoteItems />
           <QuoteNotes
             notes={notes}
@@ -403,6 +418,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

@@ -61,8 +61,8 @@ export const QuotePreviewButton = () => {
         sender={sender}
         pointOfContact={pointOfContact ?? { name: "", email: "" }}
         paymentTerms={paymentTerms as PaymentTerms}
-        includedTerms={includeTerms}
-        customTaC={includeTerms["custom-terms"] ? customTerms : ""}
+        includedTerms={includeTerms ?? {}}
+        customTaC={includeTerms?.["custom-terms"] ? customTerms : ""}
         county={typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? ""}
         sr={stateRoute}
         ecms={ecmsPoNumber}

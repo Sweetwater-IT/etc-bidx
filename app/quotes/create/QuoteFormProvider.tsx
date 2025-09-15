@@ -199,7 +199,6 @@ export default function QuoteFormProvider({
     string | undefined
   >(undefined);
 
-
   const [estimateId, setEstimateId] = useState<number | null>(
     typeof mergedData.estimate_id === "number" ? mergedData.estimate_id : null
   );
