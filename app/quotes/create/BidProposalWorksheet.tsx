@@ -111,6 +111,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr className="bg-gray-200">
+              <th className={headerCellClass}>Row</th>
               <th className={headerCellClass}>Item #</th>
               <th className={`${headerCellClass} w-2/5`}>Description</th>
               <th className={headerCellClass}>Qty</th>
@@ -124,6 +125,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               return (
                 <React.Fragment key={item.id || index}>
                   <tr className="border-b border-gray-300">
+                    <td className={`${cellClass} text-center`}>{index + 1}</td>
                     <td className={cellClass}>{item.itemNumber}</td>
                     <td className={`${cellClass} w-2/5`}>
                       {item.description}
@@ -137,6 +139,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                   {item.associatedItems?.map((assocItem, assocIndex) => (
                     <tr key={`assoc-${assocIndex}`} className="bg-gray-50 border-b border-gray-200">
                       <td className={cellClass}></td>
+                      <td className={cellClass}></td>
                       <td className={`${cellClass} pl-4 text-[9px]`}>- {assocItem.description}</td>
                       <td className={`${cellClass} text-center text-[9px]`}>{assocItem.quantity}</td>
                       <td className={`${cellClass} text-[9px]`}>{assocItem.uom || 'EA'}</td>
@@ -149,7 +152,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             })}
             {/* Total Row */}
             <tr className="border-t-2 border-black">
-              <td colSpan={4} className={cellClass}></td>
+              <td colSpan={5} className={cellClass}></td>
               <td className={`${cellClass} text-right font-bold`}>TOTAL</td>
               <td className={`${cellClass} text-right font-bold`}>{formatMoney(total)}</td>
             </tr>

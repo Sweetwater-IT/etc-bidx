@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF';
 
 export async function GET(
   request: NextRequest,
@@ -37,9 +38,11 @@ export async function GET(
       );
     }
 
+    const signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
+    
     const transformedData = {
       ...data,
-      signs: data.signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure })),
+      signs: signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure || '' })),
       contact: data.customer_contacts ? {
         id: data.customer_contacts.id,
         name: data.customer_contacts.name || '',

@@ -69,6 +69,9 @@ import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+//import { TripAndLaborSummary } from './trip-and-labor-summary'
+import { log } from 'node:console'
+
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
 const DEFAULT_MPG_PER_TRUCK = 8
@@ -883,7 +886,7 @@ const BidItemsStep5 = ({
         if (Array.isArray(equipmentData)) {
           // Process regular equipment data
           equipmentData.forEach(item => {
-            if (!item) return
+            if (!item) return            
 
             // Find matching equipment type
             const equipmentType = getEquipmentTypeFromName(item.name)
@@ -936,7 +939,7 @@ const BidItemsStep5 = ({
           signList.forEach(sign => {
             const matchedItem = equipmentData.find(
               (item: any) => item.name === sign.dbName
-            )
+            )            
             if (matchedItem) {
               const price = parseFloat(matchedItem.price)
 
@@ -1213,7 +1216,7 @@ const BidItemsStep5 = ({
     value: number,
     equipmentKey: EquipmentType,
     property: keyof DynamicEquipmentInfo,
-    phaseNumber: number // usar el que llega como argumento
+    phaseNumber: number 
   ) => {
     dispatch({
       type: 'ADD_MPT_ITEM_NOT_SIGN',
