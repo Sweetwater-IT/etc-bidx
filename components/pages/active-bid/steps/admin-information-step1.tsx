@@ -544,9 +544,14 @@ const AdminInformationStep1 = () => {
             <div className="max-w-xl grid grid-cols-2 gap-6">
               {step.fields.map((field) => (
                 <div key={field.name} className="space-y-2.5">
-                  <Label htmlFor={field.name} className="text-sm font-medium text-muted-foreground">
-                    {field.label}
-                  </Label>
+                  {field.name !== "winterShutdown" && (
+                    <Label
+                      htmlFor={field.name}
+                      className="text-sm font-medium text-muted-foreground"
+                    >
+                      {field.label}
+                    </Label>
+                  )}
                   {field.name === "county" ? (
                     <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
                       <PopoverTrigger asChild>
