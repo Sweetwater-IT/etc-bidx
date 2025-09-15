@@ -544,7 +544,7 @@ const AdminInformationStep1 = () => {
             <div className="max-w-xl grid grid-cols-2 gap-6">
               {step.fields.map((field) => (
                 <div key={field.name} className="space-y-2.5">
-                  {field.name !== "winterShutdown" && <Label htmlFor={field.name} className="text-sm font-medium text-muted-foreground">}
+                  <Label htmlFor={field.name} className="text-sm font-medium text-muted-foreground">
                     {field.label}
                   </Label>
                   {field.name === "county" ? (
