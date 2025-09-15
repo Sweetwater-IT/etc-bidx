@@ -84,7 +84,7 @@ const AdminInformationStep1 = () => {
     laborRate: false,
     fringeRate: false,
     shopRate: false,
-    winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
+ //   winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
   const [digits, setDigits] = useState({
@@ -233,10 +233,10 @@ const AdminInformationStep1 = () => {
           }
 
           // Set toggle states based on prefilled data
-          setToggleStates(prev => ({
+         /* setToggleStates(prev => ({
             ...prev,
-            winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
-          }));
+           winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
+          })); */
         }
       } catch (error) {
         toast.error("Error fetching reference data:" + error);
@@ -753,6 +753,7 @@ const AdminInformationStep1 = () => {
                         </div>
                       )}
                     </div> */
+                  <></>
                   ) : field.name === "oneWayTravelTime" ? (
                     <div className="space-y-2">
                       <div className="flex space-x-4">
