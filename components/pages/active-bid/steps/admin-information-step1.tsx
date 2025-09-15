@@ -687,7 +687,7 @@ const AdminInformationStep1 = () => {
                       ))}
                     </RadioGroup>
                   ) : field.name === "winterShutdown" ? (
-                    <div>
+  /*              <div>
                       <div className="flex items-center space-x-2">
                         <Switch
                           id={field.name}
@@ -752,7 +752,7 @@ const AdminInformationStep1 = () => {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </div> */
                   ) : field.name === "oneWayTravelTime" ? (
                     <div className="space-y-2">
                       <div className="flex space-x-4">
