@@ -20,7 +20,7 @@ import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
 import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
-import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFields';
+import { useAuth } from '@/contexts/auth-context'
 
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
@@ -63,6 +63,7 @@ const useNumericQuoteId = (rawId: unknown) => {
 }
 
 export default function QuoteFormContent({ showInitialAdminState = false }: { showInitialAdminState?: boolean }) {
+  const { user } = useAuth()
   const router = useRouter()
   const {
     selectedCustomers,
@@ -127,8 +128,9 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
   }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const handleSaveNote = async (note: Note) => {
-    setNotes((prevNotes) => [...prevNotes, note]);
+    setNotes((prevNotes) => [...prevNotes, { ...note, user_email: user.email }]);
   };
+
   const autosave = async () => {
     if (!numericQuoteId) {
 
@@ -136,8 +138,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     }
 
     prevStateRef.current = { quoteItems, adminData, notes }
-
-
 
     try {
       const payload = {
@@ -236,6 +236,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
+          notes={notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
           customers={selectedCustomers}
@@ -400,6 +401,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
+                notes={notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers}

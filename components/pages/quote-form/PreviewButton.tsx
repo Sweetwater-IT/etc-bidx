@@ -31,6 +31,7 @@ export const QuotePreviewButton = () => {
     stateRoute,
     ecmsPoNumber,
     pointOfContact,
+    notes
   } = useQuoteForm();
 
 
@@ -53,6 +54,7 @@ export const QuotePreviewButton = () => {
 
     return (
       <BidProposalReactPDF
+        notes={notes}
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}

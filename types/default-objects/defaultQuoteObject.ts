@@ -93,7 +93,7 @@ export interface DefaultQuote {
   county: string;
   stateRoute: string;
   ecmsPoNumber: string;
-  notes: string[];
+  notes: any[];
   additionalFiles: any[];
   includedTerms: Record<TermsNames, boolean>;
   quoteDate: Date;

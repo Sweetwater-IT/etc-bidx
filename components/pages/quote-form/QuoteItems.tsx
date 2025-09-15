@@ -176,7 +176,7 @@ export function QuoteItems() {
         unitPrice: 0,
         discount: 0,
         discountType: "dollar",
-        notes: "",
+        notes: [],
         associatedItems: [],
       },
     ]);

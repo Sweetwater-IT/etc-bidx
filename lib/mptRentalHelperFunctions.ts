@@ -848,7 +848,6 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
   const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips * 2) * phase.personnel;
-  
   return nonRatedHours;
 }
 
