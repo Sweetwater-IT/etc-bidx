@@ -1,4 +1,4 @@
-'use client'
+'use client' 
 import { getNonRatedHoursPerPhase, getRatedHoursPerPhase } from '@/lib/mptRentalHelperFunctions'
 import { safeNumber } from '@/lib/safe-number'
 import { Phase } from '@/types/MPTEquipment'
