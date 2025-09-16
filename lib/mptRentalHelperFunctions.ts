@@ -843,10 +843,10 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
     return 0;
   }
   const baseTrips = getTotalTripsPerPhase(phase);
-  const totalTrips = baseTrips + safeNumber(phase.maintenanceTrips);
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
+  const totalTrips = baseTrips; // Remove double-counting of maintenanceTrips
   const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips * 2) * phase.personnel;
   return nonRatedHours;
 }
