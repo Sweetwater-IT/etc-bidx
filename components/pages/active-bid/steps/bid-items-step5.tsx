@@ -188,7 +188,7 @@ const TripAndLaborSummary = ({
     const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
 
     // Calculate baseTrips based on equipment
-    const baseTrips = Math.ceil(((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30) * 2);
+    const baseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
 
     // Add additional trips from phase.maintenanceTrips
     const additionalTrips = safeNumber(phase.maintenanceTrips);
