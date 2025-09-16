@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
@@ -25,6 +25,7 @@ import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFie
 import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
 import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
+import { Loader2 } from 'lucide-react';
 
 const typeQuotes = [
   {
@@ -40,6 +41,79 @@ const typeQuotes = [
     value: "estimate_bid",
   }
 ]
+
+function normalizeQuoteMetadata(meta: any): QuoteState {
+  const base: Partial<Quote> = {
+    id: meta.id,
+    quote_number: meta.quote_number,
+    type_quote: meta.type_quote,
+    status: meta.status,
+    date_sent: meta.date_sent,
+    project_title: meta.project_title,
+    description: meta.description,
+    estimate_id: meta.estimate_id,
+    job_id: meta.job_id,
+    county: meta.county,
+    updated_at: meta.updated_at,
+    created_at: meta.created_at,
+  };
+
+  const commonFields = {
+    customer: meta.customer ?? {},
+    customer_contact: meta.customer_contact ?? {},
+    customer_email: meta.customer_email ?? "",
+    customer_phone: meta.customer_phone ?? "",
+    customer_address: meta.customer_address ?? "",
+    customer_job_number: meta.customer_job_number ?? "",
+    purchase_order: meta.purchase_order ?? "",
+    etc_point_of_contact: meta.etc_point_of_contact ?? "",
+    etc_poc_email: meta.etc_poc_email ?? "",
+    etc_poc_phone_number: meta.etc_poc_phone_number ?? "",
+    etc_branch: meta.etc_branch ?? "",
+  };
+
+  if (meta.type_quote === "straight_sale") {
+    return {
+      ...base,
+      ...commonFields,
+    } as StraightSaleQuote;
+  }
+
+  if (meta.type_quote === "to_project") {
+    return {
+      ...base,
+      ...commonFields,
+      township: meta.township ?? "",
+      county: meta.county ?? "",
+      sr_route: meta.sr_route ?? "",
+      job_address: meta.job_address ?? "",
+      ecsm_contract_number: meta.ecsm_contract_number ?? "",
+      bid_date: meta.bid_date ?? "",
+      start_date: meta.start_date ?? "",
+      end_date: meta.end_date ?? "",
+      duration: meta.duration ?? 0,
+    } as ToProjectQuote;
+  }
+
+  if (meta.type_quote === "estimate_bid") {
+    return {
+      ...base,
+      ...commonFields,
+      township: meta.township ?? "",
+      county: meta.county ?? "",
+      sr_route: meta.sr_route ?? "",
+      job_address: meta.job_address ?? "",
+      ecsm_contract_number: meta.ecsm_contract_number ?? "",
+      bid_date: meta.bid_date ?? "",
+      start_date: meta.start_date ?? "",
+      end_date: meta.end_date ?? "",
+      duration: meta.duration ?? 0,
+    } as EstimateBidQuote;
+  }
+
+  return base as QuoteState;
+}
+
 
 
 type QuoteState =
@@ -119,7 +193,10 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     sender,
     notes,
     setNotes,
+    quoteMetadata,
+    loadingMetadata
   } = useQuoteForm()
+
 
   const [isSaving, setIsSaving] = useState(false)
   const [secondCounter, setSecondCounter] = useState(0)
@@ -250,14 +327,19 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => clearInterval(intervalId)
   }, [])
 
-  const handleQuoteTypeChange = (type: "straight_sale" | "to_project" | "estimate_bid") => {
+  const handleQuoteTypeChange = (type: "straight_sale" | "to_project" | "estimate_bid", needSetObject = true) => {
     setQuoteType(type);
+
+    if (!needSetObject) {
+      return;
+    }
 
     if (type === "straight_sale") {
       setQuoteData({
-        type_quote: quoteType,
+        type_quote: type,
+        customer_name: "",
         customer: {},
-        customer_contact: {},
+        customer_contact: "",
         customer_email: "",
         customer_phone: "",
         customer_address: "",
@@ -274,7 +356,8 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
     if (type === "to_project") {
       setQuoteData({
-        type_quote: quoteType,
+        type_quote: type,
+        customer_name: "",
         customer: {},
         customer_contact: {},
         customer_email: "",
@@ -302,7 +385,8 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
     if (type === "estimate_bid") {
       setQuoteData({
-        type_quote: quoteType,
+        type_quote: type,
+        customer_name: "",
         customer: {},
         customer_contact: {},
         customer_email: "",
@@ -327,7 +411,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       });
     }
   };
-
 
   async function handleSaveQuote() {
     if (!quoteId) {
@@ -466,6 +549,14 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     }
   }
 
+  React.useEffect(() => {
+    if (quoteMetadata?.id) {
+      const normalizedQuote = normalizeQuoteMetadata(quoteMetadata);
+      setQuoteData(normalizedQuote);
+      handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
+    }
+  }, [quoteMetadata]);
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -492,67 +583,74 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
       <div className="flex gap-6 p-6 max-w-full">
         <div className="w-1/2 space-y-6">
-
-          <div className='flex flex-col'>
-            <div>
-              <p className='font-bold text-xl mb-2'>Quote type</p>
-              <div className='w-1/4'>
-                <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
-                <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Quote Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeQuotes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.key}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {
+            loadingMetadata ?
+              <div className='w-full h-full flex fle-row items-center justify-center '>
+                <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
               </div>
+              :
+              <div className='flex flex-col'>
+                <div>
+                  <p className='font-bold text-xl mb-2'>Quote type</p>
+                  <div className='w-1/4'>
+                    <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
+                    <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Quote Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {typeQuotes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            </div>
+                </div>
 
-            {/* <QuoteAdminInformation showInitialAdminState={showInitialAdminState} /> */}
-            <div className='my-4'>
-              {quoteType === "straight_sale" && quoteData && (
-                <RenderSaleQuoteFields
-                  data={quoteData as Partial<StraightSaleQuote>}
-                  setData={setQuoteData}
-                  onSaveInformation={handleSaveQuote}
-                />
-              )}
+                {/* <QuoteAdminInformation showInitialAdminState={showInitialAdminState} /> */}
+                <div className='my-4'>
+                  {quoteType === "straight_sale" && quoteData && (
+                    <RenderSaleQuoteFields
+                      data={quoteData as Partial<StraightSaleQuote>}
+                      setData={setQuoteData}
+                      onSaveInformation={handleSaveQuote}
+                    />
+                  )}
 
-              {quoteType === "to_project" && quoteData && (
-                <RenderProjectQuoteFields
-                  data={quoteData as Partial<ToProjectQuote>}
-                  setData={setQuoteData}
-                  onSaveInformation={handleSaveQuote}
-                />
-              )}
+                  {quoteType === "to_project" && quoteData && (
+                    <RenderProjectQuoteFields
+                      data={quoteData as Partial<ToProjectQuote>}
+                      setData={setQuoteData}
+                      onSaveInformation={handleSaveQuote}
+                    />
+                  )}
 
-              {quoteType === "estimate_bid" && quoteData && (
-                <RenderEstimateBidQuoteFields
-                  data={quoteData as Partial<EstimateBidQuote>}
-                  setData={setQuoteData}
-                  onSaveInformation={handleSaveQuote}
-                />
-              )}
-            </div>
+                  {quoteType === "estimate_bid" && quoteData && (
+                    <RenderEstimateBidQuoteFields
+                      data={quoteData as Partial<EstimateBidQuote>}
+                      setData={setQuoteData}
+                      onSaveInformation={handleSaveQuote}
+                    />
+                  )}
+                </div>
 
-            <QuoteItems />
-            <QuoteNotes
+                <QuoteItems />
+
+                {/* <QuoteAdditionalFiles /> */}
+                {/* <QuoteTermsAndConditions /> */}
+                {/* <QuoteNotes
               notes={notes}
               onSave={handleSaveNote}
               onEdit={handleEditNote}
               onDelete={handleDeleteNote}
               canEdit={true}
-            />
-            {/* <QuoteAdditionalFiles /> */}
-            {/* <QuoteTermsAndConditions /> */}
+            /> */}
 
-          </div>
+              </div>
+          }
 
         </div>
 

@@ -86,36 +86,37 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_name || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || '_____________________'}</p>
+              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact?.name || ''}</p>
+              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
+              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
+              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
             <div className="p-1 border-b border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
-              <p><span className="font-semibold">Township:</span> {data.township || '_____________________'}</p>
-              <p><span className="font-semibold">County:</span> {data.county || '_____________________'}</p>
-              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || '_____________________'}</p>
-              <p><span className="font-semibold">Job Address:</span> {data.job_address || '_____________________'}</p>
-              <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || '_____________________'}</p>
+              <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
+              <p><span className="font-semibold">County:</span> {data.county || ''}</p>
+              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || ''}</p>
+              <p><span className="font-semibold">Job Address:</span> {data.job_address || ''}</p>
+              <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
             <div className="p-1  border-r border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || '_____________________'}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || '_____________________'}</p>
-              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || '_____________________'}</p>
-              <p><span className="font-semibold">Duration:</span> {data.etc_branch || '_____________________'}</p>
+              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
             </div>
 
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || '_____________________'}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.start_date || '_____________________'}</p>
-              <p><span className="font-semibold">End Date:</span> {data.end_date || '_____________________'}</p>
-              <p><span className="font-semibold">Duration:</span> {data.duration || '_____________________'}</p>
+              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
+              <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
+              <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
+              <p><span className="font-semibold">Duration:</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -126,37 +127,37 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_name || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || '_____________________'}</p>
-              <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || '_____________________'}</p>
+              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact?.name || ''}</p>
+              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
+              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
+              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
             <div className="p-1 border-b border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
-              <p><span className="font-semibold">Township:</span> {data.township || '_____________________'}</p>
-              <p><span className="font-semibold">County:</span> {data.county || '_____________________'}</p>
-              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || '_____________________'}</p>
-              <p><span className="font-semibold">Job Address:</span> {data.job_address || '_____________________'}</p>
-              <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || '_____________________'}</p>
+              <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
+              <p><span className="font-semibold">County:</span> {data.county || ''}</p>
+              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || ''}</p>
+              <p><span className="font-semibold">Job Address:</span> {data.job_address || ''}</p>
+              <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
             <div className="p-1  border-r border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || '_____________________'}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || '_____________________'}</p>
-              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || '_____________________'}</p>
-              <p><span className="font-semibold">Duration:</span> {data.etc_branch || '_____________________'}</p>
+              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">Duration:</span> {data.etc_branch || ''}</p>
             </div>
 
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || '_____________________'}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.start_date || '_____________________'}</p>
-              <p><span className="font-semibold">End Date:</span> {data.end_date || '_____________________'}</p>
-              <p><span className="font-semibold">Duration:</span> {data.duration || '_____________________'}</p>
+              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
+              <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
+              <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
+              <p><span className="font-semibold">Duration:</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -168,19 +169,20 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[10px]">
             <div className="p-1 border-r border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_name || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || '_____________________'}</p>
-              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || '_____________________'}</p>
-              <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || '_____________________'}</p>
+              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact?.name || ''}</p>
+              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
+              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
+              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
+              <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || '_____________________'}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || '_____________________'}</p>
-              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || '_____________________'}</p>
-              <p><span className="font-semibold">Duration:</span> {data.etc_branch || '_____________________'}</p>
+              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">Duration:</span> {data.etc_branch || ''}</p>
             </div>
           </section>
         );
@@ -211,35 +213,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       </header>
 
-      {/* Customer / Job Info */}
-      {/* <section className="grid grid-cols-2 grid-rows-2 border border-black mt-2 text-[10px]">
-        <div className="p-1 border-r border-b border-black">
-          <p><span className="font-bold">TO:</span> {customer?.name || 'N/A'}</p>
-          <p><span className="font-bold">Address:</span> {customer?.address ?? '-'}</p>
-        </div>
 
-        <div className="p-1 border-b border-black">
-          <p><span className="font-bold">ETC Job #:</span> {quoteNumber}</p>
-          <p><span className="font-bold">Contact:</span> {pointOfContact?.name ?? "-"}</p>
-          <p><span className="font-bold">Phone:</span> {customer?.mainPhone ?? "-"}</p>
-        </div>
-
-        <div className="p-1 border-r border-black">
-          <p><span className="font-bold">Township:</span> {adminData?.location ?? "-"}</p>
-          <p><span className="font-bold">County:</span> {county ?? "-"}</p>
-          <p><span className="font-bold">S.R./Route:</span> {sr ?? "-"}</p>
-          <p><span className="font-bold">Project:</span> {ecms ?? "-"}</p>
-        </div>
-
-        <div className="p-1">
-          <p><span className="font-bold">Bid Date:</span> {quoteDate.toLocaleDateString('en-US')}</p>
-          <p><span className="font-bold">MPT Start Date:</span> __________</p>
-          <p><span className="font-bold">MPT Completion Date:</span> __________</p>
-          <p><span className="font-bold">MPT Days:</span> __________</p>
-        </div>
-      </section> */}
       {renderCustomerInfo()}
-      {/* Items */}
       <section className="mt-3 text-[12px]">
         <table className="w-full border-[1.5px] border-black border-collapse">
           <thead>
@@ -351,7 +326,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       </div>
 
-      <section className="mt-2 text-[9px] flex flex-row gap-4">
+      {/* <section className="mt-2 text-[9px] flex flex-row gap-4">
         <p className="uppercase font-bold">Notes:</p>
         <div className='flex flex-col flex-1'>
           {
@@ -367,7 +342,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           }
 
         </div>
-      </section>
+      </section> */}
 
       {/* Signature */}
       {/* <section className="mt-4 text-center">
@@ -375,7 +350,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           If the proposal is accepted, please sign and date below and return. Thank you!
         </p>
         <div className="flex justify-between mt-4 mx-8">
-          <p className="text-[10px]">ACCEPTED BY: __________________________</p>
+          <p className="text-[10px]">ACCEPTED BY: _____</p>
           <p className="text-[10px]">DATE: _______________</p>
         </div>
       </section> */}

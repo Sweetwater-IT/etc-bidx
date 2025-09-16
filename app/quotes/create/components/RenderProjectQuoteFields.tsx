@@ -82,6 +82,7 @@ const RenderProjectQuoteFields = ({
 
             {/* Inputs */}
             <div className="grid grid-cols-2 gap-4">
+                {renderInput("customer_name", "Customer")}
                 {renderInput("customer_email", "Customer Email")}
                 {renderInput("customer_phone", "Customer Phone")}
                 {renderInput("customer_address", "Customer Address")}

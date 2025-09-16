@@ -25,18 +25,20 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
     setCcEmails,
     setBccEmails,
     setNotes,
+    setQuoteMetadata,
+    setLoadingMetadata
   } = useQuoteForm();
 
   useEffect(() => {
+    setLoadingMetadata(true)
     if (!quoteId) return;
-    console.log('jajajajaajjaa');
-    
+
     async function fetchQuote() {
       try {
         const res = await fetch(`/api/quotes/edit/${quoteId}`);
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
-        
+        setQuoteMetadata(data)
         setQuoteId(data.id);
         setQuoteNumber(data.quote_number);
         setStatus(data.status || "Not Sent");
@@ -86,6 +88,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
       } catch (err) {
         console.error("💥 [QuoteEditLoader] Error loading quote:", err);
         toast.error("Could not load quote for editing");
+      } finally {
+        setLoadingMetadata(false)
       }
     }
 

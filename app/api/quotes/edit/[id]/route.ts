@@ -71,24 +71,7 @@ export async function GET(
   const { data: quote, error } = await supabase
     .from("quotes")
     .select(`
-      id,
-      quote_number,
-      status,
-      created_at,
-      date_sent,
-      job_id,
-      estimate_id,
-      notes,
-      ecms_po_number,
-      subject,
-      body,
-      custom_terms_conditions,
-      standard_terms,
-      rental_agreements,
-      equipment_sale,
-      flagging_terms,
-      from_email,
-      payment_terms
+      *
     `)
     .eq("id", quoteId)
     .single();
@@ -226,6 +209,7 @@ export async function GET(
     customers: customers?.map((c) => c.contractors) || [],
     contract_number: adminDataEntry?.contract_number || null,
     job_number: adminDataEntry?.job_id ? String(adminDataEntry.job_id) : null,
+    ...quote
   };
 
   return NextResponse.json(response);

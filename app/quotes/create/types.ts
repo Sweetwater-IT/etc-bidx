@@ -38,8 +38,6 @@ export interface Quote {
     updated_at?: string | null;
     has_attachments?: boolean;
     estimate_contract_number?: string;
-    job_number?: string;
-    quote_created_at?: string | null;
     estimate_id?: number | null;
     job_id?: number | null;
     created_at?: any
@@ -48,7 +46,7 @@ export interface Quote {
 }
 
 export interface StraightSaleQuote extends Quote {
-    quoteCategory: "Straight Sale";
+    quoteCategory?: "Straight Sale";
     customer: any;
     customer_contact: any;
     customer_email: string;
@@ -63,7 +61,7 @@ export interface StraightSaleQuote extends Quote {
 }
 
 export interface ToProjectQuote extends Quote {
-    quoteCategory: "To Project";
+    quoteCategory?: "To Project";
     customer: any;
     customer_contact: any;
     customer_email: string;
@@ -90,7 +88,7 @@ export interface ToProjectQuote extends Quote {
 }
 
 export interface EstimateBidQuote extends Quote {
-    quoteCategory: "Estimate" | "Bid";
+    quoteCategory?: "Estimate" | "Bid";
     customer: any;
     customer_contact: any;
     customer_email: string;

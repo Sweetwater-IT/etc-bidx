@@ -42,6 +42,13 @@ interface PointOfContact {
 }
 
 interface QuoteFormState {
+
+  loadingMetadata: boolean;
+  setLoadingMetadata: Dispatch<SetStateAction<any>>;
+
+  quoteMetadata: any;
+  setQuoteMetadata: Dispatch<SetStateAction<any>>;
+
   selectedCustomers: Customer[];
   setSelectedCustomers: Dispatch<SetStateAction<Customer[]>>;
 
@@ -185,9 +192,13 @@ export default function QuoteFormProvider({
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [customTerms, setCustomTerms] = useState<string>(
     mergedData.includedTerms["custom-terms"] && Array.isArray(mergedData.notes)
-      ? mergedData.notes.map((n : any) => typeof n === 'string' ? n : n.text).join("\n")
+      ? mergedData?.notes?.map((n: any) => typeof n === 'string' ? n : n.text).join("\n")
       : "",
   );
+
+  const [quoteMetadata, setQuoteMetadata] = useState<any>(null)
+  const [loadingMetadata, setLoadingMetadata] = useState<boolean>(false)
+
   const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
   const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("NET30");
@@ -202,10 +213,10 @@ export default function QuoteFormProvider({
   const [estimateId, setEstimateId] = useState<number | null>(
     typeof mergedData.estimate_id === "number" ? mergedData.estimate_id : null
   );
-  
- const [jobId, setJobId] = useState<number | null>(
-  typeof mergedData.job_id === "number" ? mergedData.job_id : null
-);
+
+  const [jobId, setJobId] = useState<number | null>(
+    typeof mergedData.job_id === "number" ? mergedData.job_id : null
+  );
 
   const [ecmsPoNumber, setEcmsPoNumber] = useState(mergedData.ecmsPoNumber);
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
@@ -259,8 +270,8 @@ export default function QuoteFormProvider({
   });
 
   useEffect(() => {
-  console.log("🔍 [Provider] adminData cambió:", adminData)
-}, [adminData])
+    console.log("🔍 [Provider] adminData cambió:", adminData)
+  }, [adminData])
 
   useEffect(() => {
     if (selectedCustomers.length > 0) {
@@ -280,7 +291,10 @@ export default function QuoteFormProvider({
   }, [selectedCustomers]);
 
   const value: QuoteFormState = {
-
+    loadingMetadata,
+    setLoadingMetadata,
+    quoteMetadata,
+    setQuoteMetadata,
     selectedCustomers,
     setSelectedCustomers,
     pointOfContact,

@@ -75,7 +75,6 @@ const RenderSaleQuoteFields = ({
                 </div>
             </div>
 
-            {/* Customer Section */}
             <h4 className="mt-4 mb-2 font-semibold">Customer Information</h4>
             <div className="flex gap-4 mb-4">
                 <div className={inputClass}>
