@@ -1132,7 +1132,8 @@ export function DataTable<TData extends object>({
                       data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
                       className={cn(
                         'cursor-pointer',
-                        isRowSelected(row.original, selectedItem) && 'bg-muted/50'
+                        isRowSelected(row.original, selectedItem) &&
+                        'bg-muted/50'
                       )}
                       onClick={(e) => {
                         const target = e.target as HTMLElement;
