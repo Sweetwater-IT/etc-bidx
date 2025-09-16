@@ -842,12 +842,12 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
     return 0;
   }
   const baseTrips = getTotalTripsPerPhase(phase);
-  const totalTrips = baseTrips + safeNumber(phase.maintenanceTrips);
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
-  const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips) * phase.personnel;
-
+  const totalTrips = baseTrips; // Remove double-counting of maintenanceTrips
+  const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips * 2) * phase.personnel;
+  
   return nonRatedHours;
 }
 
@@ -858,12 +858,13 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   }
 
   // Safely access equipment quantities with null checks
-  const fourFootQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
+  const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const hStandQuantity = phase.standardEquipment.hStand?.quantity || 0;
   const postQuantity = phase.standardEquipment.post?.quantity || 0;
 
   const relevantEquipmentTotals = fourFootQuantity + hStandQuantity + postQuantity;
-  return safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30);
+  return safeNumber(phase.maintenanceTrips) + (Math.ceil(relevantEquipmentTotals / 30) * 2);
+
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
