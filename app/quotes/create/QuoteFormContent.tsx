@@ -21,6 +21,31 @@ import ReactPDF from '@react-pdf/renderer'
 import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
 import { useAuth } from '@/contexts/auth-context'
+import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFields';
+import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
+import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
+import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
+
+const typeQuotes = [
+  {
+    key: "Straight Sale",
+    value: "straight_sale",
+  },
+  {
+    key: "To Project",
+    value: "to_project",
+  },
+  {
+    key: "Estimate/Bid",
+    value: "estimate_bid",
+  }
+]
+
+
+type QuoteState =
+  | Partial<StraightSaleQuote>
+  | Partial<ToProjectQuote>
+  | Partial<EstimateBidQuote>;
 
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
@@ -56,7 +81,6 @@ function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, job
   return mapped
 }
 
-// helper: garantiza que trabajamos SOLO con IDs numéricos
 const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
   return id
@@ -65,6 +89,9 @@ const useNumericQuoteId = (rawId: unknown) => {
 export default function QuoteFormContent({ showInitialAdminState = false }: { showInitialAdminState?: boolean }) {
   const { user } = useAuth()
   const router = useRouter()
+  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">('straight_sale')
+  const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
+
   const {
     selectedCustomers,
     sending,
@@ -100,7 +127,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
   const [firstSave, setFirstSave] = useState(false)
   const prevStateRef = useRef({ quoteItems, adminData, notes })
   const numericQuoteId = useNumericQuoteId(quoteId)
-
   const initCalled = useRef(false);
 
   useEffect(() => {
@@ -224,7 +250,110 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => clearInterval(intervalId)
   }, [])
 
+  const handleQuoteTypeChange = (type: "straight_sale" | "to_project" | "estimate_bid") => {
+    setQuoteType(type);
 
+    if (type === "straight_sale") {
+      setQuoteData({
+        type_quote: quoteType,
+        customer: {},
+        customer_contact: {},
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        purchase_order: "",
+        etc_point_of_contact: "",
+        etc_poc_email: "",
+        etc_poc_phone_number: "",
+        etc_branch: "",
+        project_title: "",
+        description: "",
+      });
+    }
+
+    if (type === "to_project") {
+      setQuoteData({
+        type_quote: quoteType,
+        customer: {},
+        customer_contact: {},
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        purchase_order: "",
+        etc_point_of_contact: "",
+        etc_poc_email: "",
+        etc_poc_phone_number: "",
+        etc_branch: "",
+        township: "",
+        county: "",
+        sr_route: "",
+        job_address: "",
+        ecsm_contract_number: "",
+        bid_date: "",
+        start_date: "",
+        end_date: "",
+        duration: 0,
+        project_title: "",
+        description: "",
+      });
+    }
+
+    if (type === "estimate_bid") {
+      setQuoteData({
+        type_quote: quoteType,
+        customer: {},
+        customer_contact: {},
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        etc_point_of_contact: "",
+        etc_poc_email: "",
+        etc_poc_phone_number: "",
+        etc_branch: "",
+        township: "",
+        county: "",
+        sr_route: "",
+        job_address: "",
+        ecsm_contract_number: "",
+        bid_date: "",
+        start_date: "",
+        end_date: "",
+        duration: 0,
+        project_title: "",
+        description: "",
+      });
+    }
+  };
+
+
+  async function handleSaveQuote() {
+    if (!quoteId) {
+      return;
+    }
+    try {
+      const result = await fetch('/api/quotes', {
+        method: "PATCH",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ...quoteData, id: quoteId })
+      })
+
+      const resp = await result.json()
+
+      if (resp.success) {
+        toast.success("Quote data successfully edited")
+      }
+
+    } catch (error) {
+      toast.success("There was an error updating the quote")
+      console.log(error);
+    }
+
+  }
 
   const handleDownload = async () => {
     try {
@@ -271,7 +400,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
   }
 
 
-
   const handleSendQuote = async () => {
     if (!numericQuoteId || !pointOfContact) {
       toast.error("A point of contact is required to send the quote.");
@@ -280,13 +408,11 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
     setSending(true);
     try {
-      // Primero, nos aseguramos de que el borrador más reciente esté guardado.
       const saved = await autosave();
       if (!saved) {
         throw new Error("Could not save the latest draft before sending.");
       }
 
-      // Ahora, llamamos a la API para enviar el correo.
       const res = await fetch('/api/quotes/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -364,43 +490,79 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         }
       />
 
-      {/* Contenido principal: Formulario a la izquierda, Vista previa a la derecha */}
       <div className="flex gap-6 p-6 max-w-full">
-        {/* Columna Izquierda (Formulario) */}
         <div className="w-1/2 space-y-6">
-          <p className='font-bold text-xl mb-2'>Quote type</p>
 
-          <Select>
-            <SelectTrigger><SelectValue placeholder="Select Quote Type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Straight Sale">Straight Sale</SelectItem>
-              <SelectItem value="To Project">To Project</SelectItem>
-              <SelectItem value="Estimate">Estimate</SelectItem>
-              <SelectItem value="Bid">Bid</SelectItem>
-            </SelectContent>
-          </Select>
-          {/* <QuoteAdminInformation showInitialAdminState={showInitialAdminState} /> */}
+          <div className='flex flex-col'>
+            <div>
+              <p className='font-bold text-xl mb-2'>Quote type</p>
+              <div className='w-1/4'>
+                <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
+                <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Quote Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeQuotes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.key}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <RenderEstimateBidQuoteFields/>
-          <QuoteItems />
-          <QuoteNotes
-            notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            canEdit={true}
-          />
-          {/* <QuoteAdditionalFiles /> */}
-          {/* <QuoteTermsAndConditions /> */}
+            </div>
+
+            {/* <QuoteAdminInformation showInitialAdminState={showInitialAdminState} /> */}
+            <div className='my-4'>
+              {quoteType === "straight_sale" && quoteData && (
+                <RenderSaleQuoteFields
+                  data={quoteData as Partial<StraightSaleQuote>}
+                  setData={setQuoteData}
+                  onSaveInformation={handleSaveQuote}
+                />
+              )}
+
+              {quoteType === "to_project" && quoteData && (
+                <RenderProjectQuoteFields
+                  data={quoteData as Partial<ToProjectQuote>}
+                  setData={setQuoteData}
+                  onSaveInformation={handleSaveQuote}
+                />
+              )}
+
+              {quoteType === "estimate_bid" && quoteData && (
+                <RenderEstimateBidQuoteFields
+                  data={quoteData as Partial<EstimateBidQuote>}
+                  setData={setQuoteData}
+                  onSaveInformation={handleSaveQuote}
+                />
+              )}
+            </div>
+
+            <QuoteItems />
+            <QuoteNotes
+              notes={notes}
+              onSave={handleSaveNote}
+              onEdit={handleEditNote}
+              onDelete={handleDeleteNote}
+              canEdit={true}
+            />
+            {/* <QuoteAdditionalFiles /> */}
+            {/* <QuoteTermsAndConditions /> */}
+
+          </div>
+
         </div>
 
-        {/* Columna Derecha (Vista Previa y otros) */}
         <div className="w-1/2 space-y-6">
-          {/* Contenedor de la Vista Previa del PDF */}
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
+                quoteData={quoteData}
+                quoteType={quoteType}
                 notes={notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}

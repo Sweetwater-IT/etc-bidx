@@ -6,38 +6,33 @@ import { Edit } from "lucide-react";
 import { useState } from "react";
 import { EstimateBidQuote } from "../types";
 
-const RenderEstimateBidQuoteFields = () => {
-    const [estimateBid, setEstimateBid] = useState<Partial<EstimateBidQuote>>({
-        quoteCategory: "Estimate",
-        customer: {},
-        customer_contact: {},
-        customer_email: "",
-        customer_phone: "",
-        customer_address: "",
-        customer_job_number: "",
-        etc_point_of_contact: "",
-        etc_poc_email: "",
-        etc_poc_phone_number: "",
-        etc_branch: "",
-        township: "",
-        county: "",
-        sr_route: "",
-        job_address: "",
-        ecsm_contract_number: "",
-        bid_date: "",
-        start_date: "",
-        end_date: "",
-        duration: 0,
-    });
+interface IRenderEstimateBidQuoteFields {
+    data: Partial<EstimateBidQuote>;
+    setData: (data: Partial<EstimateBidQuote>) => void;
+    onSaveInformation: () => void;
+}
 
+const RenderEstimateBidQuoteFields = ({
+    data,
+    setData,
+    onSaveInformation,
+}: IRenderEstimateBidQuoteFields) => {
     const [editMode, setEditMode] = useState(false);
-    const [backup, setBackup] = useState(estimateBid);
+    const [backup, setBackup] = useState<Partial<EstimateBidQuote>>(data);
 
     const toggleEditMode = (value: boolean) => {
-        if (value) {
-            setBackup(estimateBid);
-        }
+        if (value) setBackup(data);
         setEditMode(value);
+    };
+
+    const handleSave = () => {
+        onSaveInformation();
+        setEditMode(false);
+    };
+
+    const handleCancel = () => {
+        setData(backup);
+        setEditMode(false);
     };
 
     const renderInput = (
@@ -50,39 +45,34 @@ const RenderEstimateBidQuoteFields = () => {
             {editMode ? (
                 <Input
                     type={type}
-                    value={estimateBid[field] ?? ""}
+                    value={data?.[field] ?? ""}
                     onChange={(e) =>
-                        setEstimateBid({ ...estimateBid, [field]: e.target.value })
+                        setData({
+                            ...data,
+                            [field]:
+                                type === "number"
+                                    ? Number(e.target.value)
+                                    : e.target.value,
+                        })
                     }
                     className="w-full"
                 />
             ) : (
-                <span>{estimateBid[field] || "-"}</span>
+                <span>{data?.[field] || "-"}</span>
             )}
         </div>
     );
 
     return (
-        <div className="p-[20px] border-[1px] border-gray-300 rounded-md">
+        <div className="">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold">Estimate / Bid Quote</h3>
                 {editMode ? (
                     <div className="flex gap-2">
-                        <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => toggleEditMode(false)}
-                        >
+                        <Button size="sm" variant="default" onClick={handleSave}>
                             Save
                         </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                                setEstimateBid(backup);
-                                toggleEditMode(false);
-                            }}
-                        >
+                        <Button size="sm" variant="outline" onClick={handleCancel}>
                             Cancel
                         </Button>
                     </div>
@@ -132,6 +122,11 @@ const RenderEstimateBidQuoteFields = () => {
                 {renderInput("start_date", "Start Date", "date")}
                 {renderInput("end_date", "End Date", "date")}
                 {renderInput("duration", "Duration (days)", "number")}
+            </div>
+
+            <div>
+                {renderInput("project_title", "Project Title", "text")}
+                {renderInput("description", "Description", "text")}
             </div>
         </div>
     );

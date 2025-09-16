@@ -19,15 +19,7 @@ export async function GET(
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select(`
-      id,
-      quote_number,
-      status,
-      created_at,
-      date_sent,
-      job_id,
-      estimate_id,
-      notes,
-      ecms_po_number
+      *
     `)
     .eq("id", quoteId)
     .single();
@@ -155,6 +147,7 @@ export async function GET(
     admin_data: adminData || null,
     files,
     notes: allNotes,
+    ...quote,
   };
 
   console.log("✅ [GET /quotes/:id] Final response3", response);

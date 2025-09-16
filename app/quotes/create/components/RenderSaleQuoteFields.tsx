@@ -2,41 +2,43 @@
 
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Quote, StraightSaleQuote } from "../types";
+import { StraightSaleQuote } from "../types";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 
-const RenderSaleQuoteFields = () => {
-    const [straightSale, setStraightSale] = useState<StraightSaleQuote>({
-        quoteCategory: "Straight Sale",
-        customer: {},
-        customer_contact: {},
-        customer_email: "",
-        customer_phone: "",
-        customer_address: "",
-        customer_job_number: "",
-        purchase_order: "",
-        etc_point_of_contact: "",
-        etc_poc_email: "",
-        etc_poc_phone_number: "",
-        etc_branch: "",
-    });
-    const [isEditing, setIsEditing] = useState(false);
+interface IRenderSaleQuoteFields {
+    data: Partial<StraightSaleQuote>;
+    setData: (data: Partial<StraightSaleQuote>) => void;
+    onSaveInformation: () => void;
+}
 
+const RenderSaleQuoteFields = ({
+    data,
+    setData,
+    onSaveInformation,
+}: IRenderSaleQuoteFields) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [backup, setBackup] = useState<Partial<StraightSaleQuote>>(data);
 
     const toggleEditMode = (edit: boolean) => {
+        if (edit) setBackup(data);
         setIsEditing(edit);
     };
 
     const handleSave = () => {
-        console.log("Guardado:", straightSale);
+        onSaveInformation();
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setData(backup);
         setIsEditing(false);
     };
 
     const inputClass = "flex-1";
 
     return (
-        <div className="p-[20px] border-[1px] border-gray-300 rounded-md">
+        <div className="">
             <div className="flex flex-row justify-between">
                 <h2 className="font-bold">Straight Sale Quote</h2>
                 <div className="flex justify-end mb-4 gap-2">
@@ -54,7 +56,7 @@ const RenderSaleQuoteFields = () => {
                                 size="sm"
                                 variant="outline"
                                 className="h-8"
-                                onClick={() => toggleEditMode(false)}
+                                onClick={handleCancel}
                             >
                                 Cancel
                             </Button>
@@ -80,19 +82,19 @@ const RenderSaleQuoteFields = () => {
                     <label>Customer Name</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.customer_contact?.name || ""}
+                            value={data.customer_contact?.name || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
+                                setData({
+                                    ...data,
                                     customer_contact: {
-                                        ...straightSale.customer_contact,
+                                        ...data.customer_contact,
                                         name: e.target.value,
                                     },
                                 })
                             }
                         />
                     ) : (
-                        <p>{straightSale.customer_contact?.name || "-"}</p>
+                        <p>{data.customer_contact?.name || "-"}</p>
                     )}
                 </div>
 
@@ -100,13 +102,13 @@ const RenderSaleQuoteFields = () => {
                     <label>Customer Email</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.customer_email}
+                            value={data.customer_email || ""}
                             onChange={(e) =>
-                                setStraightSale({ ...straightSale, customer_email: e.target.value })
+                                setData({ ...data, customer_email: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.customer_email || "-"}</p>
+                        <p>{data.customer_email || "-"}</p>
                     )}
                 </div>
             </div>
@@ -116,13 +118,13 @@ const RenderSaleQuoteFields = () => {
                     <label>Customer Phone</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.customer_phone}
+                            value={data.customer_phone || ""}
                             onChange={(e) =>
-                                setStraightSale({ ...straightSale, customer_phone: e.target.value })
+                                setData({ ...data, customer_phone: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.customer_phone || "-"}</p>
+                        <p>{data.customer_phone || "-"}</p>
                     )}
                 </div>
 
@@ -130,16 +132,13 @@ const RenderSaleQuoteFields = () => {
                     <label>Customer Address</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.customer_address}
+                            value={data.customer_address || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
-                                    customer_address: e.target.value,
-                                })
+                                setData({ ...data, customer_address: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.customer_address || "-"}</p>
+                        <p>{data.customer_address || "-"}</p>
                     )}
                 </div>
             </div>
@@ -149,16 +148,13 @@ const RenderSaleQuoteFields = () => {
                     <label>Customer Job Number</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.customer_job_number}
+                            value={data.customer_job_number || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
-                                    customer_job_number: e.target.value,
-                                })
+                                setData({ ...data, customer_job_number: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.customer_job_number || "-"}</p>
+                        <p>{data.customer_job_number || "-"}</p>
                     )}
                 </div>
 
@@ -166,37 +162,31 @@ const RenderSaleQuoteFields = () => {
                     <label>Purchase Order</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.purchase_order}
+                            value={data.purchase_order || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
-                                    purchase_order: e.target.value,
-                                })
+                                setData({ ...data, purchase_order: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.purchase_order || "-"}</p>
+                        <p>{data.purchase_order || "-"}</p>
                     )}
                 </div>
             </div>
 
             {/* ETC Section */}
-            <h4 className="mt-6  font-semibold mb-4">ETC Contact</h4>
+            <h4 className="mt-6 font-semibold mb-4">ETC Contact</h4>
             <div className="flex gap-4 mb-4">
                 <div className={inputClass}>
                     <label>ETC Point of Contact</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.etc_point_of_contact}
+                            value={data.etc_point_of_contact || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
-                                    etc_point_of_contact: e.target.value,
-                                })
+                                setData({ ...data, etc_point_of_contact: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.etc_point_of_contact || "-"}</p>
+                        <p>{data.etc_point_of_contact || "-"}</p>
                     )}
                 </div>
 
@@ -204,13 +194,13 @@ const RenderSaleQuoteFields = () => {
                     <label>ETC POC Email</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.etc_poc_email}
+                            value={data.etc_poc_email || ""}
                             onChange={(e) =>
-                                setStraightSale({ ...straightSale, etc_poc_email: e.target.value })
+                                setData({ ...data, etc_poc_email: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.etc_poc_email || "-"}</p>
+                        <p>{data.etc_poc_email || "-"}</p>
                     )}
                 </div>
             </div>
@@ -220,16 +210,13 @@ const RenderSaleQuoteFields = () => {
                     <label>ETC POC Phone</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.etc_poc_phone_number}
+                            value={data.etc_poc_phone_number || ""}
                             onChange={(e) =>
-                                setStraightSale({
-                                    ...straightSale,
-                                    etc_poc_phone_number: e.target.value,
-                                })
+                                setData({ ...data, etc_poc_phone_number: e.target.value })
                             }
                         />
                     ) : (
-                        <p>{straightSale.etc_poc_phone_number || "-"}</p>
+                        <p>{data.etc_poc_phone_number || "-"}</p>
                     )}
                 </div>
 
@@ -237,17 +224,14 @@ const RenderSaleQuoteFields = () => {
                     <label>ETC Branch</label>
                     {isEditing ? (
                         <Input
-                            value={straightSale.etc_branch}
-                            onChange={(e) =>
-                                setStraightSale({ ...straightSale, etc_branch: e.target.value })
-                            }
+                            value={data.etc_branch || ""}
+                            onChange={(e) => setData({ ...data, etc_branch: e.target.value })}
                         />
                     ) : (
-                        <p>{straightSale.etc_branch || "-"}</p>
+                        <p>{data.etc_branch || "-"}</p>
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

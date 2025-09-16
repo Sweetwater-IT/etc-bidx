@@ -27,6 +27,7 @@ export interface PointOfContact {
 export interface Quote {
     id?: number;
     quote_number?: string | null;
+    type_quote: "straight_sale" | "to_project" | "estimate_bid",
     status?: "Not Sent" | "Sent" | "Accepted" | "DRAFT" | null;
     date_sent?: string | null;
     customer_name?: string;
@@ -63,7 +64,6 @@ export interface StraightSaleQuote extends Quote {
 
 export interface ToProjectQuote extends Quote {
     quoteCategory: "To Project";
-
     customer: any;
     customer_contact: any;
     customer_email: string;
@@ -119,6 +119,13 @@ export interface EstimateBidQuote extends Quote {
     end_date: string;
     duration: number;
 }
+
+export type AnyPartialQuote =
+    | Partial<Quote>
+    | Partial<StraightSaleQuote>
+    | Partial<ToProjectQuote>
+    | Partial<EstimateBidQuote>;
+
 
 export interface ContactInfo {
     name: string;

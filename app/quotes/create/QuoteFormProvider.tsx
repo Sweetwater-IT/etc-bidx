@@ -243,11 +243,6 @@ export default function QuoteFormProvider({
       ? mergedData.quote_number
       : ""
   );
-
-
- 
-
-
   const [notes, setNotes] = useState<Note[]>(mergedData.notes as any);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
   const [uniqueToken, setUniqueToken] = useState<string>(
