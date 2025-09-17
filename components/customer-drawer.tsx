@@ -169,7 +169,7 @@ export const CustomerDrawer = memo(function CustomerDrawer({
               <Separator />
             </DrawerHeader>
 
-            <div className="flex-1 overflow-auto p-6 pt-2 pb-24">
+            <div className="flex-1 overflow-auto p-6 pt-2 pb-5">
               {isViewMode && customerData ? (
                 <div className="space-y-6">
                   <CustomerDetails
@@ -252,20 +252,22 @@ export const CustomerDrawer = memo(function CustomerDrawer({
               ) : null}
             </div>
 
-            <div className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10 justify-end">
-              <div className="flex justify-between gap-4 w-full max-w-[351px]">
-                <Button variant="outline" className="flex-1" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button className="flex-1" onClick={handleEdit}>
-                  {
-                    loadingApi ? "Saving..."
-                      :
-                      editDataCustomer ? "Save" : "Edit"
-                  }
-                </Button>
+            {isViewMode && (
+              <div className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10 justify-end">
+                <div className="flex justify-between gap-4 w-full max-w-[351px]">
+                  <Button variant="outline" className="flex-1" onClick={handleClose}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1" onClick={handleEdit}>
+                    {
+                      loadingApi ? "Saving..."
+                        :
+                        editDataCustomer ? "Save" : "Edit"
+                    }
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </DrawerContent>
 
