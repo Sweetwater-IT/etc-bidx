@@ -110,10 +110,21 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
           <Label htmlFor="url">Website URL</Label>
           <Input 
             id="url" 
-            placeholder="https://example.com" 
-            type="url"
-            {...register("url")}
+            placeholder="www.example.com" 
+            type="text"
+            {...register("url", {
+              pattern: {
+                value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                message: "Please enter a valid URL (e.g., www.example.com)"
+              }
+            })}
           />
+          {errors.url && (
+            <p className="text-sm text-red-500">{errors.url.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Accepts URLs starting with http://, https://, or www.
+          </p>
         </div>
         
         {/* Main Phone */}
