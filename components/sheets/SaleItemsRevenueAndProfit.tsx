@@ -1,11 +1,20 @@
 'use client'
 import React, { useEffect, useState } from 'react'
+import { SaleItem } from '@/types/TSaleItem'
 import { useEstimate } from '@/contexts/EstimateContext'
 import { safeNumber } from '@/lib/safe-number'
 
 interface BasicSummaryTotals {
   totalCost: number, totalRevenue: number, totalGrossProfit: number, grossProfitMargin: number
 }
+
+interface SaleItemRow extends SaleItem {
+  salePrice: number;
+  grossProfit: number;
+  grossMargin: number;
+  extendedPrice: number;
+}
+
 
 const SaleItemsRevenueAndProfit = () => {
   const { adminData, mptRental, equipmentRental, flagging, serviceWork, saleItems, permanentSigns } = useEstimate()
@@ -15,6 +24,7 @@ const SaleItemsRevenueAndProfit = () => {
     grossProfit: number
     grossMargin: number
   } | null>(null)
+  const [saleItemRows, setSaleItemRows] = useState<SaleItemRow[]>([]);
 
   useEffect(() => {
     if (!saleItems || saleItems.length === 0) {
@@ -24,24 +34,37 @@ const SaleItemsRevenueAndProfit = () => {
         grossProfit: 0,
         grossMargin: 0
       })
+      setSaleItemRows([]);
       return
     }
 
-    const summary = saleItems.reduce((acc, item) => {
-      acc.totalCost += item.quotePrice * item.quantity
-      acc.totalRevenue += item.quotePrice * item.quantity * (1 + (item.markupPercentage / 100))
-      return acc // Added return statement here
-    }, {
-      totalCost: 0,
-      totalRevenue: 0,
-    })
+    const rows: SaleItemRow[] = saleItems.map(item => {
+      const salePrice = item.quotePrice * (1 + (item.markupPercentage / 100));
+      const extendedPrice = salePrice * item.quantity;
+      const totalCost = item.quotePrice * item.quantity;
+      const grossProfit = extendedPrice - totalCost;
+      const grossMargin = extendedPrice > 0 ? grossProfit / extendedPrice : 0;
 
-    const grossProfit = summary.totalRevenue - summary.totalCost
-    const grossMargin = summary.totalRevenue > 0 ? grossProfit / summary.totalRevenue : 0
+      return {
+        ...item,
+        salePrice,
+        grossProfit,
+        grossMargin,
+        extendedPrice,
+      };
+    });
+
+    setSaleItemRows(rows);
+
+    const totalRevenue = rows.reduce((sum, item) => sum + item.extendedPrice, 0);
+    const totalCost = rows.reduce((sum, item) => sum + (item.quotePrice * item.quantity), 0);
+
+    const grossProfit = totalRevenue - totalCost;
+    const grossMargin = totalRevenue > 0 ? grossProfit / totalRevenue : 0;
 
     setSaleTotals({
-      totalCost: summary.totalCost,
-      totalRevenue: summary.totalRevenue,
+      totalCost: totalCost,
+      totalRevenue: totalRevenue,
       grossProfit: grossProfit,
       grossMargin: grossMargin
     })
@@ -51,7 +74,7 @@ const SaleItemsRevenueAndProfit = () => {
   return (
     <div className="bg-white rounded-lg p-2 md:row-span-1">
       {/* Header */}
-      <div className="grid grid-cols-5 mb-2">
+      <div className="grid grid-cols-5 mb-2 text-sm">
         <div className="font-medium">Sale Items</div>
         <div className="font-medium">Revenue</div>
         <div className="font-medium">Cost</div>
@@ -59,24 +82,23 @@ const SaleItemsRevenueAndProfit = () => {
         <div className="font-medium">Gross Profit %</div>
       </div>
 
-      {saleItems && saleItems.length > 0 ? (
+      {saleItemRows && saleItemRows.length > 0 ? (
         <>
-          {/* Sale Items Row */}
-          <div className="grid grid-cols-5 border-t py-1 border-gray-300">
-            <div className="text-sm">Sale Items</div>
-            <div className="text-sm">
-              ${saleTotals?.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+          {saleItemRows.map((item, index) => (
+            <div key={index} className="grid grid-cols-5 border-t py-1 border-gray-300 text-sm">
+              <div>{item.itemNumber}</div>
+              <div>
+                ${safeNumber(item.extendedPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div>
+                ${safeNumber(item.quotePrice * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div>
+                ${safeNumber(item.grossProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div>{(safeNumber(item.grossMargin) * 100).toFixed(2)}%</div>
             </div>
-            <div className="text-sm">
-              ${saleTotals?.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="text-sm">
-              ${saleTotals?.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-            </div>
-            <div className="text-sm">
-              {(safeNumber(saleTotals?.grossMargin || 0) * 100).toFixed(2)}%
-            </div>
-          </div>
+          ))}
 
           {/* Sale Items Total */}
           <div className="grid grid-cols-5 border-t border-gray-300 py-1 bg-green-50">

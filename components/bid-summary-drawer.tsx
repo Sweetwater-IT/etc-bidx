@@ -10,9 +10,7 @@ import RentalRevenueAndProfit from "./sheets/RentalRevenueAndProfit"
 import SidebarLaborSummary from "./sheets/SidebarLaborSummary"
 import SignSquareFootageTotals from "./sheets/SignSquareFootageTotals"
 import BidSummaryByItem from "./sheets/BidSummaryByItem"
-import EquipmentSummary from "./sheets/EquipmentSummary"
-import SaleItemsSummary from "./sheets/SaleItemsSummary"
-import SaleItemsRevenueAndProfit from "./sheets/SaleItemsRevenueAndProfit"
+import EquipmentSummary from "./sheets/EquipmentSummary";
 import { EstimateData } from "@/lib/exportBidsToExcel"
 import { useEstimate } from "@/contexts/EstimateContext"
 import { AdminData } from "@/types/TAdminData"
@@ -109,10 +107,6 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                   <div className="flex flex-col flex-[.5] space-y-2 min-w-0">
                     <SidebarLaborSummary />
                     <SignSquareFootageTotals />
-                    {/* SaleItemsSummary below Labor and Sign summaries */}
-                    <div className="w-[200%]"> {/* Extend width to make it 2/3 of total available space */}
-                      <SaleItemsSummary />
-                    </div>
                   </div>
                 </div>
               </div>
