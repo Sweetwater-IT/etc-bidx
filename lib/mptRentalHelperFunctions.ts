@@ -867,7 +867,6 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   return safeNumber(phase.maintenanceTrips) + (Math.ceil(relevantEquipmentTotals / 30) * 2);
 
 }
-
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
   // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {
