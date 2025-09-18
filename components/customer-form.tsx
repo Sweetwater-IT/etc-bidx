@@ -18,7 +18,7 @@ type FormData = {
   name: string
   display_name: string
   customer_number: string
-  web: string
+  url: string
   main_phone: string
   address: string
   city: string
@@ -30,12 +30,12 @@ type FormData = {
 export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  const { register, handleSubmit, setValue, formState: { errors }, reset } = useForm<FormData>({
+  const { register, handleSubmit, setValue, formState: { errors }, reset, watch } = useForm<FormData>({
     defaultValues: {
       name: '',
       display_name: '',
       customer_number: '',
-      web: '',
+      url: '',
       main_phone: '',
       address: '',
       city: '',
@@ -50,6 +50,9 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     setValue('payment_terms', value)
   }
   
+  // Watch the 'name' field to enable/style the create button
+  const customerName = watch("name");
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     
@@ -66,8 +69,9 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
   }
   
   return (
-    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <form className="flex flex-col h-full" onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex-1 overflow-y-auto p-1 -m-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Name */}
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -103,13 +107,24 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
         
         {/* Website URL */}
         <div className="space-y-2">
-          <Label htmlFor="web">Website URL</Label>
+          <Label htmlFor="url">Website URL</Label>
           <Input 
-            id="web" 
-            placeholder="https://example.com" 
-            type="url"
-            {...register("web")}
+            id="url" 
+            placeholder="www.example.com" 
+            type="text"
+            {...register("url", {
+              pattern: {
+                value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                message: "Please enter a valid URL (e.g., www.example.com)"
+              }
+            })}
           />
+          {errors.url && (
+            <p className="text-sm text-red-500">{errors.url.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Accepts URLs starting with http://, https://, or www.
+          </p>
         </div>
         
         {/* Main Phone */}
@@ -182,23 +197,26 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
             </SelectContent>
           </Select>
         </div>
+        </div>
       </div>
       
       {/* Action Buttons */}
-      <div className="pt-6 border-t mt-6">
+      <div className="mt-auto pt-6 border-t">
         <div className="flex justify-between gap-4">
           <Button 
             type="button" 
             variant="outline"
             className="flex-1"
             onClick={onCancel}
-            disabled={isSubmitting}
+            disabled={isSubmitting} 
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800"
+            className={`flex-1 transition-colors ${
+              customerName ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+            }`}
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Creating...' : 'Create'}
