@@ -22,7 +22,9 @@ import { Badge } from '@/components/ui/badge'
 import { FileMetadata } from '@/types/FileTypes'
 import FileViewingContainer from '@/components/file-viewing-container'
 import { SendEmailDialog } from './SendEmailDialog'
-import { Note } from '@/components/pages/quote-form/QuoteNotes'
+import { Note, QuoteNotes } from '@/components/pages/quote-form/QuoteNotes'
+import { userAgent } from 'next/server'
+import { useAuth } from '@/contexts/auth-context'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -67,6 +69,7 @@ interface SignOrder {
     email: string
     phone: string
   }
+  notes: any[]
 }
 
 interface SignItem {
@@ -92,6 +95,7 @@ const determineBranch = (id: number): string => {
 }
 
 export default function SignOrderViewContent() {
+  const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
   const { dispatch, mptRental } = useEstimate()
@@ -227,8 +231,18 @@ export default function SignOrderViewContent() {
           setOrderDate(parsedOrderDate)
         }
         if (data.data.need_date) {
-          const parsedNeedDate = new Date(formatDate(data.data.need_date))
-          setNeedDate(parsedNeedDate)
+          const processedNotes = data.data.notes?.map((n: any) => ({
+            id: n.id,
+            text: n.text,
+            user_email: n.user_email,
+            timestamp: new Date(n.created_at).getTime()
+          })) || []
+
+          setSignOrder(prev => ({
+            ...prev,
+            ...data.data,
+            notes: processedNotes
+          }))
         }
 
         // Set order type checkboxes based on data
@@ -412,6 +426,7 @@ export default function SignOrderViewContent() {
     fetchFiles();
   }, [params])
 
+
   // Handle saving/submitting the sign order (same logic as SignOrderContentSimple)
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
     // Prevent multiple submissions
@@ -492,8 +507,72 @@ export default function SignOrderViewContent() {
     )
   }
 
-  console.log(signOrder);
+  const handleSaveNote = async (note: Note) => {
+    if (!signOrder) return;
 
+    const newNote = {
+      ...note,
+      user_email: user.email,
+      sign_id: signOrder.id
+    };
+
+    try {
+      const res = await fetch(`/api/sign-orders/addNotes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNote)
+      });
+
+      const data = await res.json();
+
+      const savedNote: Note = {
+        id: data.data.id,
+        text: data.data.text,
+        user_email: data.data.user_email,
+        timestamp: new Date(data.data.created_at).getTime()
+      };
+
+      const updatedNotes = [...(signOrder.notes || []), savedNote];
+      setSignOrder({ ...signOrder, notes: updatedNotes });
+
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to save note');
+    }
+  };
+
+  const handleEditNote = async (index: number, updatedNote: Note) => {
+    if (!signOrder) return;
+
+    const updatedNotes = (signOrder.notes || []).map((n, i) =>
+      i === index ? updatedNote : n
+    );
+
+    setSignOrder({ ...signOrder, notes: updatedNotes });
+
+    await fetch(`/api/sign-orders/addNotes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
+    });
+  };
+
+  const handleDeleteNote = async (index: number) => {
+    if (!signOrder) return;
+
+    const noteToDelete = (signOrder.notes || [])[index];
+    const updatedNotes = (signOrder.notes || []).filter((_, i) => i !== index);
+
+    setSignOrder({ ...signOrder, notes: updatedNotes });
+
+    if (noteToDelete?.id) {
+      await fetch(`/api/sign-orders/addNotes`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: noteToDelete.id })
+      });
+    }
+  };
 
   return (
     <>
@@ -659,6 +738,12 @@ export default function SignOrderViewContent() {
               <div className='flex flex-col gap-y-2'>
                 <EquipmentTotalsAccordion key={signItems.length} />
                 <FileViewingContainer files={files} onFilesChange={setFiles} />
+                <QuoteNotes
+                  notes={signOrder.notes || []}
+                  onSave={handleSaveNote}
+                  onEdit={handleEditNote}
+                  onDelete={handleDeleteNote}
+                />
               </div>
             </div>
 

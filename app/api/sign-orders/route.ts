@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     // Parse the request body
-    const { id, ...updateData } = await req.json();
+    const { id, notes, ...updateData } = await req.json();
 
     // Update the record in the sign_orders table
     const { data, error } = await supabase
@@ -447,30 +447,39 @@ export async function GET(req: NextRequest) {
 
         console.log(`Retrieved ${data?.length || 0} sign orders out of ${totalCount} total`);
 
-        // Transform data for frontend
-        const transformedData = data?.map(item => ({
-          id: item.id,
-          requestor: item.requestor || '',
-          customer: item.contractors?.name || '',
-          order_date: item.order_date || '',
-          need_date: item.need_date || '',
-          start_date: item.start_date || '',
-          end_date: item.end_date || '',
-          job_number: item.job_number || '',
-          contract_number: item.contract_number || '',
-          type: [
-            item.sale ? 'S' : '',
-            item.rental ? 'R' : '',
-            item.perm_signs ? 'P' : ''
-          ].filter(Boolean).join(', '),
-          status: item.status || '',
-          shop_status: item.shop_status || 'not-started',
-          order_number: item.order_number || '',
-          signs: item.signs.map((sign) => ({
-            ...sign,
-            associatedStructure: sign.associated_structure
-          }))
-        })) || [];
+        const transformedData = await Promise.all(
+          (data || []).map(async (item) => {
+            const { data: notesData } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('sign_id', item.id);
+
+            return {
+              id: item.id,
+              requestor: item.requestor || '',
+              customer: item.contractors?.name || '',
+              order_date: item.order_date || '',
+              need_date: item.need_date || '',
+              start_date: item.start_date || '',
+              end_date: item.end_date || '',
+              job_number: item.job_number || '',
+              contract_number: item.contract_number || '',
+              type: [
+                item.sale ? 'S' : '',
+                item.rental ? 'R' : '',
+                item.perm_signs ? 'P' : ''
+              ].filter(Boolean).join(', '),
+              status: item.status || '',
+              shop_status: item.shop_status || 'not-started',
+              order_number: item.order_number || '',
+              signs: item.signs.map((sign) => ({
+                ...sign,
+                associatedStructure: sign.associated_structure
+              })),
+              notes: notesData || [] 
+            };
+          })
+        );
 
         const pageCount = Math.ceil(totalCount / limit);
         return NextResponse.json({
@@ -479,10 +488,10 @@ export async function GET(req: NextRequest) {
           totalCount,
           pageCount
         });
-        
+
       } catch (error: any) {
         console.error('Error fetching sign orders:', error);
-        
+
         // If there's an error with the database query, return a fallback with empty data
         // This ensures the frontend doesn't break completely
         return NextResponse.json({

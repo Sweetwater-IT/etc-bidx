@@ -139,6 +139,16 @@ export default function SignOrderContentSimple({
         throw new Error('Invalid API response format')
       }
 
+      if (data.data.notes) {
+        const parsedNotes = data.data.notes.map((note: any) => ({
+          ...note,
+          timestamp: note.created_at
+        }))
+        setNotes(parsedNotes)
+      } else {
+        setNotes([])
+      }
+
       const users = await fetchReferenceData('users')
 
       const orderWithBranch = {
@@ -244,6 +254,7 @@ export default function SignOrderContentSimple({
       setLoadingNotes(false)
     } finally {
       stopLoading()
+      setLoadingNotes(false)
     }
   }
 
@@ -423,59 +434,63 @@ export default function SignOrderContentSimple({
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  useEffect(() => {
-    async function fetchNotes() {
-      setLoadingNotes(true)
-      try {
-        if (!signOrderId) return
-        const res = await fetch(`/api/sign-orders?id=${signOrderId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setNotes(Array.isArray(data.notes) ? data.notes : [])
-        }
-      } finally {
-        setLoadingNotes(false)
-      }
-    }
-    fetchNotes()
-  }, [signOrderId])
+  const handleSaveNote = async (note: Note) => {    
+    
+    if (!signOrderId) return;
 
-  const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notes, note]
-    setNotes(updatedNotes)
-    if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, timestamp: note.timestamp, notes: updatedNotes, user_email: user.email })
-      })
-    }
-  }
+    const newNote = {
+      sign_id: signOrderId,
+      text: note.text,
+      user_email: user.email,
+      timestamp: note.timestamp
+    };
 
+    const res = await fetch(`/api/sign-orders/addNotes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({...newNote})
+    });
+
+    const data = await res.json();
+    if (data.ok) {
+      setNotes((prev) => [...prev, data.data]);
+    }
+  };
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
-    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
-    setNotes(updatedNotes)
-    if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
-      })
+    if (!updatedNote.id) return;
+
+    const res = await fetch(`/api/sign-orders/addNotes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
+    });
+
+    const data = await res.json();
+    if (data.ok) {
+      setNotes((prev) =>
+        prev.map((n, i) => (i === index ? data.data : n))
+      );
     }
-  }
+  };
 
   const handleDeleteNote = async (index: number) => {
-    const updatedNotes = notes.filter((_, i) => i !== index)
-    setNotes(updatedNotes)
-    if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
-      })
+    const noteToDelete = notes[index];
+    if (!noteToDelete?.id) return;
+
+    const res = await fetch(`/api/sign-orders/addNotes`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: noteToDelete.id })
+    });
+
+    const data = await res.json();
+    if (data.ok) {
+      setNotes((prev) => prev.filter((_, i) => i !== index));
     }
-  }
+  };
+
+
 
   // Handle saving the sign order
   const handleSave = async (status: 'DRAFT' | 'SUBMITTED') => {
@@ -568,7 +583,7 @@ export default function SignOrderContentSimple({
       console.error('Error generating PDF:', error);
       toast.error('Error generating PDF');
     }
-  };  
+  };
 
   return mptRental.phases.length > 0 ? (
     <div className="flex flex-1 flex-col">

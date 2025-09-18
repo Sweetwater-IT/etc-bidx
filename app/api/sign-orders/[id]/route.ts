@@ -38,8 +38,19 @@ export async function GET(
       );
     }
 
+    const { data: notes, error: notesError } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('sign_id', data.id);
+
+    if (notesError) {
+      console.error("Error fetching notes:", notesError);
+    }
+
+    const signNotes = notes ?? [];
+
     const signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
-    
+
     const transformedData = {
       ...data,
       signs: signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure || '' })),
@@ -48,8 +59,9 @@ export async function GET(
         name: data.customer_contacts.name || '',
         role: data.customer_contacts.role || '',
         email: data.customer_contacts.email || '',
-        phone: data.customer_contacts.phone || ''
-      } : undefined
+        phone: data.customer_contacts.phone || '',
+      } : undefined,
+      notes: signNotes
     };
 
     return NextResponse.json({
