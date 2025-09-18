@@ -64,6 +64,7 @@ const EquipmentSummaryStep = () => {
     let isMounted = true;
     const setItemPrices = async () => {
       const rentalItemsData = await fetchReferenceData('rental_items');
+      console.log('Datos de rental_items:', rentalItemsData);
       if (isMounted) {
         const uniqueRentalItems = rentalItemsData.filter(
           (item: RentalItem, index: number, self: RentalItem[]) =>
@@ -83,6 +84,7 @@ const EquipmentSummaryStep = () => {
     setFormData({
       name: '',
       itemNumber: '',
+      item_description: '',
       quantity: 0,
       months: 0,
       rentPrice: 0,
@@ -183,6 +185,11 @@ const EquipmentSummaryStep = () => {
 
   const EQUIPMENT_COLUMNS = [
     {
+      key: 'itemNumber',
+      title: 'Item Number',
+      className: 'text-left'
+    },
+    {
       key: 'name',
       title: 'Equipment',
       className: 'text-left'
@@ -216,6 +223,7 @@ const EquipmentSummaryStep = () => {
 
   const formattedData = equipmentRental.map(item => ({
     ...item,
+    itemNumber: item.itemNumber || '-',
     rentPrice: formatCurrency(item.rentPrice),
     reRentPrice: formatCurrency(item.reRentPrice)
   }));
@@ -314,7 +322,8 @@ const EquipmentSummaryStep = () => {
                               onSelect={() => {
                                 handleFormUpdate({
                                   itemNumber: item.item_number,
-                                  name: item.display_name
+                                  name: item.display_name,
+                                  item_description: item.item_description
                                 });
                                 setIsCustom(false);
                                 setOpen(false);
@@ -336,6 +345,19 @@ const EquipmentSummaryStep = () => {
                   </Command>
                 </PopoverContent>
               </Popover>
+
+              {/* Item Number and Description Display */}
+              {formData.itemNumber && formData.name && !isCustom && (
+                <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Item Number: </span>{formData.itemNumber}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Description: </span>{formData.item_description || formData.name}
+                  </p>
+                </div>
+              )}
+
 
               {isCustom && (
                 <div className='w-full'>
