@@ -15,7 +15,7 @@ export default function EditQuotePage({ params }: any) {
       <div className="flex-1 overflow-auto">
         <QuoteFormProvider>
           <QuoteEditLoader quoteId={numericId} />
-          <QuoteFormContent showInitialAdminState />
+          <QuoteFormContent edit={true} showInitialAdminState />
         </QuoteFormProvider>
       </div>
     </div>

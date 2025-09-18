@@ -146,10 +146,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             <div className="p-1  border-r border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">Duration:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
             </div>
 
             <div className="p-1">
@@ -179,10 +179,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">End Date:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">Duration:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
             </div>
           </section>
         );
@@ -326,7 +326,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       </div>
 
-      {/* <section className="mt-2 text-[9px] flex flex-row gap-4">
+      <section className="mt-2 text-[9px] flex flex-row gap-4">
         <p className="uppercase font-bold">Notes:</p>
         <div className='flex flex-col flex-1'>
           {
@@ -342,7 +342,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           }
 
         </div>
-      </section> */}
+      </section>
 
       {/* Signature */}
       {/* <section className="mt-4 text-center">

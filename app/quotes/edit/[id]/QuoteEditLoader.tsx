@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuoteForm } from "../../create/QuoteFormProvider";
 import { toast } from "sonner";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
+import { Note } from "@react-pdf/renderer";
 
 export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
   const {
@@ -82,7 +83,12 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setIncludeFiles(data.include_files || {});
         setAssociatedContractNumber(data.associated_contract_number || "");
 
-        setNotes(data.notes || []);
+
+        const parsedNotes: any[] = typeof data.notes === 'string'
+          ? JSON.parse(data.notes)
+          : data.notes || [];
+
+        setNotes(parsedNotes);
 
         setPaymentTerms(data.payment_terms || "NET30");
       } catch (err) {

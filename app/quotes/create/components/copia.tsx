@@ -9,7 +9,7 @@ import RenderEtcSection from "./RenderEtcSection";
 
 interface IRenderProjectQuoteFields {
     data: Partial<ToProjectQuote>;
-    setData: (data: Partial<any>) => void;
+    setData: (data: Partial<ToProjectQuote>) => void;
     onSaveData: (data: Partial<ToProjectQuote>) => void;
 }
 
@@ -53,11 +53,8 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData }: IRenderProjectQ
         const job = selectedJob;
         const start = job.admin_data?.startDate ? new Date(job.admin_data.startDate) : null;
         const end = job.admin_data?.endDate ? new Date(job.admin_data.endDate) : null;
-        const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                
-        setData((prev) => (
-            {
-            ...prev,
+        const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;        
+        setData({
             customer: job?.customer || "",
             customer_name: job?.customer_name || "",
             customer_email: job?.customer_email || "",
@@ -76,8 +73,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData }: IRenderProjectQ
             duration,
             project_title: "",
             description: "",
-        }));
-
+        });
     }, [selectedJob, setData]);
 
     const renderField = (
@@ -111,10 +107,10 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData }: IRenderProjectQ
 
     React.useEffect(() => {
         if (selectedJob?.id) {
-            setData((prev)=> ({
-                ...prev,
+            setData({
+                ...data,
                 job_id: selectedJob.id
-            }))
+            })
         }
     }, [selectedJob])
 

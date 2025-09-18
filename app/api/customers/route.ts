@@ -7,7 +7,6 @@ export async function POST(
   try {
     const body = await request.json();
 
-    // Obtenemos el max ID para generar uno nuevo
     const { data: maxIdData, error: maxIdError } = await supabase
       .from('contractors')
       .select('id')

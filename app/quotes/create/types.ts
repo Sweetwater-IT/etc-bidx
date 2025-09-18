@@ -99,19 +99,11 @@ export interface EstimateBidQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
-
-    //job/location
-
     township: string;
     county: string;
     sr_route: string;
     job_address: string;
     ecsm_contract_number: string;
-
-
-    // aditionals project details
-
-
     bid_date: string;
     start_date: string;
     end_date: string;

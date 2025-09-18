@@ -70,8 +70,8 @@ interface QuoteFormState {
   status: QuoteStatus;
   setStatus: Dispatch<SetStateAction<QuoteStatus>>;
 
-  quoteType: "new" | "estimate" | "job";
-  setQuoteType: Dispatch<SetStateAction<"new" | "estimate" | "job">>;
+  quoteType: "straight_sale" | "to_project" | "estimate_bid";
+  setQuoteType: Dispatch<SetStateAction<"straight_sale" | "to_project" | "estimate_bid">>;
 
   paymentTerms: PaymentTerms;
   setPaymentTerms: Dispatch<SetStateAction<PaymentTerms>>;
@@ -200,7 +200,7 @@ export default function QuoteFormProvider({
   const [loadingMetadata, setLoadingMetadata] = useState<boolean>(false)
 
   const [status, setStatus] = useState<QuoteStatus>(mergedData.status);
-  const [quoteType, setQuoteType] = useState<"new" | "estimate" | "job">("new");
+  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">("straight_sale");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("NET30");
   const [digitalSignature, setDigitalSignature] = useState(false);
   const [quoteDate, setQuoteDate] = useState(

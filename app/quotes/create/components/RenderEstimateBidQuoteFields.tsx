@@ -2,133 +2,198 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
-import { useState } from "react";
 import { EstimateBidQuote } from "../types";
+import React, { useState } from "react";
+import SelectBid from "@/components/SelectBid";
+import RenderEtcSection from "./RenderEtcSection";
 
 interface IRenderEstimateBidQuoteFields {
     data: Partial<EstimateBidQuote>;
-    setData: (data: Partial<EstimateBidQuote>) => void;
-    onSaveInformation: () => void;
+    setData: React.Dispatch<any>;
+    onSaveData: (data: Partial<EstimateBidQuote>) => void;
 }
 
-const RenderEstimateBidQuoteFields = ({
-    data,
-    setData,
-    onSaveInformation,
-}: IRenderEstimateBidQuoteFields) => {
-    const [editMode, setEditMode] = useState(false);
-    const [backup, setBackup] = useState<Partial<EstimateBidQuote>>(data);
-
-    const toggleEditMode = (value: boolean) => {
-        if (value) setBackup(data);
-        setEditMode(value);
-    };
-
-    const handleSave = () => {
-        onSaveInformation();
-        setEditMode(false);
-    };
-
-    const handleCancel = () => {
-        setData(backup);
-        setEditMode(false);
-    };
-
-    const renderInput = (
-        field: keyof EstimateBidQuote,
-        label: string,
-        type: string = "text"
-    ) => (
-        <div className="mb-4">
-            <label className="font-semibold block mb-1">{label}</label>
-            {editMode ? (
-                <Input
-                    type={type}
-                    value={data?.[field] ?? ""}
-                    onChange={(e) =>
-                        setData({
-                            ...data,
-                            [field]:
-                                type === "number"
-                                    ? Number(e.target.value)
-                                    : e.target.value,
-                        })
-                    }
-                    className="w-full"
-                />
+const SectionBox = ({
+    title,
+    children,
+    isEditing,
+    onEdit,
+    onCancel,
+    onSave,
+}: {
+    title: string;
+    children: React.ReactNode;
+    isEditing: boolean;
+    onEdit: () => void;
+    onCancel: () => void;
+    onSave: () => void;
+}) => (
+    <div className="border rounded-lg p-4 mb-6 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+            <h4 className="font-bold">{title}</h4>
+            {!isEditing ? (
+                <Button size="sm" onClick={onEdit}>Edit</Button>
             ) : (
-                <span>{data?.[field] || "-"}</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
+                    <Button size="sm" onClick={onSave}>Save</Button>
+                </div>
             )}
         </div>
-    );
+        {children}
+    </div>
+);
 
-    return (
-        <div className="">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Estimate / Bid Quote</h3>
-                {editMode ? (
-                    <div className="flex gap-2">
-                        <Button size="sm" variant="default" onClick={handleSave}>
-                            Save
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={handleCancel}>
-                            Cancel
-                        </Button>
-                    </div>
+const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEstimateBidQuoteFields) => {
+    const [selectedBid, setSelectedBid] = useState<any>(null);
+    const [editingSection, setEditingSection] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!selectedBid) return;
+
+        const admin = selectedBid.admin_data || {};
+        const start = admin.startDate ? new Date(admin.startDate) : null;
+        const end = admin.endDate ? new Date(admin.endDate) : null;
+        const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+        setData((prev) => (
+            {
+                ...prev,
+                customer: selectedBid?.customer || "",
+                customer_name: selectedBid?.customer_name || "",
+                customer_email: selectedBid?.customer_email || "",
+                customer_phone: selectedBid?.customer_phone || "",
+                customer_address: selectedBid?.customer_address || "",
+                customer_job_number: selectedBid.job_number || "",
+                township: admin.location || "",
+                county: admin.county?.name || "",
+                sr_route: admin.srRoute || "",
+                job_address: admin.location || "",
+                ecsm_contract_number: admin.contractNumber || "",
+                bid_date: admin.lettingDate ? new Date(admin.lettingDate).toISOString().slice(0, 16) : "",
+                start_date: start ? start.toISOString().slice(0, 16) : "",
+                end_date: end ? end.toISOString().slice(0, 16) : "",
+                duration,
+                project_title: "",
+                description: "",
+            }
+        ));
+    }, [selectedBid, setData]);
+
+    const renderField = (
+        field: keyof EstimateBidQuote,
+        label: string,
+        type: string = "text",
+        disabled?: boolean
+    ) => {
+        const isEditing = editingSection !== null;
+        const isDateField = type === "date";
+
+        return (
+            <div className="mb-4">
+                <label className="font-semibold block mb-1">{label}</label>
+                {isEditing ? (
+                    <Input
+                        type={isDateField ? "datetime-local" : type}
+                        value={data[field] ?? ""}
+                        onChange={(e) => setData({ ...data, [field]: e.target.value })}
+                        className="w-full"
+                        readOnly={disabled}
+                    />
                 ) : (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleEditMode(true)}
-                    >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                    </Button>
+                    <p className="text-sm text-gray-700">{data[field] ? String(data[field]) : "-"}</p>
                 )}
             </div>
+        );
+    };
 
-            {/* Customer Info */}
-            <div className="grid grid-cols-2 gap-4">
-                {renderInput("customer_name", "Customer")}
-                {renderInput("customer_email", "Customer Email")}
-                {renderInput("customer_phone", "Customer Phone")}
-                {renderInput("customer_address", "Customer Address")}
-                {renderInput("customer_job_number", "Customer Job Number")}
+    React.useEffect(() => {
+        if (selectedBid?.id) {
+            setData((prev)=> ({
+                ...prev,
+                estimate_id: selectedBid.id
+            }))
+        }
+    }, [selectedBid])
+
+    return (
+        <div>
+            <div className="mb-8">
+                <p className="font-bold mb-2">Bid Selection</p>
+                <SelectBid
+                    onChangeQuote={(partial) => setData((prev) => ({ ...(prev as any), ...partial }))}
+                    quoteData={data}
+                    selectedJob={selectedBid}
+                    onChange={setSelectedBid}
+                />
             </div>
 
-            {/* ETC Info */}
-            <h4 className="font-bold text-lg mt-6 mb-2">ETC Info</h4>
-            <div className="grid grid-cols-2 gap-4">
-                {renderInput("etc_point_of_contact", "ETC Point of Contact")}
-                {renderInput("etc_poc_email", "ETC POC Email")}
-                {renderInput("etc_poc_phone_number", "ETC POC Phone")}
-                {renderInput("etc_branch", "ETC Branch")}
-            </div>
+            <SectionBox
+                title="Customer & Contact Information"
+                isEditing={editingSection === "customer"}
+                onEdit={() => setEditingSection("customer")}
+                onCancel={() => setEditingSection(null)}
+                onSave={() => {
+                    onSaveData(data);
+                    setEditingSection(null);
+                }}
+            >
+                <div className="grid grid-cols-2 gap-4">
+                    {renderField("customer_name", "Customer")}
+                    {renderField("customer_contact", "Customer Contact")}
+                    {renderField("customer_phone", "Customer Phone")}
+                    {renderField("customer_email", "Customer Email")}
+                    {renderField("customer_address", "Customer Address")}
+                    {renderField("customer_job_number", "Customer Job Number")}
+                </div>
+            </SectionBox>
 
-            {/* Job / Location */}
-            <h4 className="font-bold text-lg mt-6 mb-2">Job / Location</h4>
-            <div className="grid grid-cols-2 gap-4">
-                {renderInput("township", "Township")}
-                {renderInput("county", "County")}
-                {renderInput("sr_route", "SR Route")}
-                {renderInput("job_address", "Job Address")}
-                {renderInput("ecsm_contract_number", "ECSM Contract Number")}
-            </div>
+            <SectionBox
+                title="Job / Location"
+                isEditing={editingSection === "jobLocation"}
+                onEdit={() => setEditingSection("jobLocation")}
+                onCancel={() => setEditingSection(null)}
+                onSave={() => {
+                    onSaveData(data);
+                    setEditingSection(null);
+                }}
+            >
+                <div className="grid grid-cols-2 gap-4">
+                    {renderField("township", "Township")}
+                    {renderField("county", "County")}
+                    {renderField("sr_route", "SR Route")}
+                    {renderField("job_address", "Job Address")}
+                    {renderField("ecsm_contract_number", "ECSM Contract Number")}
+                </div>
+            </SectionBox>
 
-            {/* Project Details */}
-            <h4 className="font-bold text-lg mt-6 mb-2">Project Details</h4>
-            <div className="grid grid-cols-2 gap-4">
-                {renderInput("bid_date", "Bid Date", "date")}
-                {renderInput("start_date", "Start Date", "date")}
-                {renderInput("end_date", "End Date", "date")}
-                {renderInput("duration", "Duration (days)", "number")}
-            </div>
+            <SectionBox
+                title="Project Details"
+                isEditing={editingSection === "project"}
+                onEdit={() => setEditingSection("project")}
+                onCancel={() => setEditingSection(null)}
+                onSave={() => {
+                    onSaveData(data);
+                    setEditingSection(null);
+                }}
+            >
+                <div className="grid grid-cols-2 gap-4">
+                    {renderField("bid_date", "Bid Date", "date")}
+                    {renderField("start_date", "Start Date", "date")}
+                    {renderField("end_date", "End Date", "date")}
+                    {renderField("duration", "Duration (days)", "number", true)}
+                </div>
+                <div>
+                    {renderField("project_title", "Project Title")}
+                    {renderField("description", "Description")}
+                </div>
+            </SectionBox>
 
-            <div>
-                {renderInput("project_title", "Project Title", "text")}
-                {renderInput("description", "Description", "text")}
-            </div>
+            <RenderEtcSection
+                data={data}
+                setData={setData}
+                onSaveData={() => onSaveData(data)}
+            />
         </div>
     );
 };

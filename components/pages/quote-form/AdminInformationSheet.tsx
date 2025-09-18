@@ -27,7 +27,7 @@ interface Job {
   branch: string;
 }
 
-export type QuoteType = "new" | "estimate" | "job";
+export type QuoteType =  "straight_sale" | "to_project" | "estimate_bid";
 export type PaymentTerms = "COD" | "CC" | "NET15" | "NET30" | "DUR";
 
 interface Props {
