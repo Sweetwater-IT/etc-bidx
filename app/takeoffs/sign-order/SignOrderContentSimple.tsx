@@ -140,10 +140,13 @@ export default function SignOrderContentSimple({
       }
 
       if (data.data.notes) {
-        const parsedNotes = data.data.notes.map((note: any) => ({
-          ...note,
-          timestamp: note.created_at
-        }))
+        const parsedNotes = data.data.notes.map((n: any) => ({
+          id: n.id,
+          text: n.text,
+          user_email: n.user_email,
+          timestamp: new Date(n.created_at).getTime()
+        })) || []
+
         setNotes(parsedNotes)
       } else {
         setNotes([])
@@ -434,8 +437,8 @@ export default function SignOrderContentSimple({
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  const handleSaveNote = async (note: Note) => {    
-    
+  const handleSaveNote = async (note: Note) => {
+
     if (!signOrderId) return;
 
     const newNote = {
@@ -448,7 +451,7 @@ export default function SignOrderContentSimple({
     const res = await fetch(`/api/sign-orders/addNotes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({...newNote})
+      body: JSON.stringify({ ...newNote })
     });
 
     const data = await res.json();
