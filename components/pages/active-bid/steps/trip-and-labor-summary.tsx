@@ -35,28 +35,19 @@ export const TripAndLaborSummary = ({
     ratedHours,
     nonRatedHours,
   } = useMemo(() => {
-    // Safely access equipment quantities from phase.standardEquipment
-    const fourFootTypeIIIQuantity = phase.standardEquipment.fourFootTypeIII?.quantity || 0;
-    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
-
-    // Calculate baseTrips based on equipment
+    const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
+    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
     const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
-    const baseTrips = phase.numberTrucks ? rawBaseTrips / phase.numberTrucks : rawBaseTrips; // Divide by numberTrucks
-
-
-    // Add additional trips from phase.maintenanceTrips
+    const baseTrips = (phase.numberTrucks || 1) ? rawBaseTrips / (phase.numberTrucks || 1) : rawBaseTrips; // Divide by numberTrucks
     const additionalTrips = safeNumber(phase.maintenanceTrips);
-    const totalTrips = rawBaseTrips + additionalTrips; // Use rawBaseTrips
-
+    const totalTrips = rawBaseTrips + additionalTrips; // Use raw trips for costs
     const rated = getRatedHoursPerPhase(phase);
     const nonRated = getNonRatedHoursPerPhase(adminData, phase);
-
     const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
     const fuel =
-      (((phase.numberTrucks || 0) * totalTrips * 1 * (adminData?.owMileage ?? 0)) / // Changed 2 to 1
-        (mptRental?.mpg_per_truck || 1)) *
+      (((phase.numberTrucks || 0) * totalTrips * 1 * (adminData?.owMileage ?? 0)) / // Use * 1
+        (mptRental?.mpgPerTruck || 1)) *
       (adminData?.fuelCostPerGallon ?? 0);
-
     return {
       mobilizationCost: mobilization,
       fuelCost: fuel,
@@ -67,7 +58,6 @@ export const TripAndLaborSummary = ({
       nonRatedHours: nonRated,
     };
   }, [phase, adminData, mptRental]);
-
 
   return (
     <div className='grid grid-cols-3 gap-4 text-sm'>
