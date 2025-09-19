@@ -497,7 +497,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     countyValue: countyValue,
                     branch: branchValue,
                     dbe: dbeValue,
-                    createdAt: job.created_at??'-',
+                    createdAt: job.created_at ? job.created_at : '-',
                     location: locationValue,
                     platform: platformValue,
                     noBidReason,
@@ -613,7 +613,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 flagging: e.flagging ?? {},
                 id: e.id,
                 service_work: e.service_work ?? {},
-                bid_notes: e.notes || [],
+                bid_notes: Array.isArray(e.notes)
+                        ? e.notes
+                        : JSON.parse(e.notes || "[]"), 
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',

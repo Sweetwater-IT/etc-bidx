@@ -203,12 +203,12 @@ useEffect(() => {
       try {
         const response = await fetch(`/api/active-bids/addNotes?bid_id=${bid.id}`);
         const result = await response.json();
-
-        if (result.success && Array.isArray(result.data)) {
+          
+        if (result.ok && Array.isArray(result.data)) {
           const parsedNotes: INote[] = result.data.map((note: any) => ({
             ...note,
             timestamp: new Date(note.created_at).getTime(),
-          }));
+          }));          
 
           setNoteInfo(parsedNotes);
         } else {
@@ -483,6 +483,7 @@ useEffect(() => {
       currency: "USD",
     }).format(numValue);
   };
+  
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

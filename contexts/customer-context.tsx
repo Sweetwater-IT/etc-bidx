@@ -30,10 +30,7 @@ export function CustomerProvider({ children, initialCustomer = null }: {
   initialCustomer?: Customer | null;
 }) {
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  console.log('ahora customer es', customer);
-  
+  const [isLoading, setIsLoading] = useState(false);  
   
   // Update customer state when initialCustomer changes
   useEffect(() => {
@@ -162,9 +159,7 @@ export function CustomerProvider({ children, initialCustomer = null }: {
     setIsLoading(true);
     try {
       const result = await deleteCustomerContact(contactId);
-      
-      console.log('Contact deletion API response:', result);
-      
+          
       // Show success message
       toast.success(`${contactName} has been deleted successfully`);
       

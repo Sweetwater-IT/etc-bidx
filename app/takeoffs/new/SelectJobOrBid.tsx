@@ -13,22 +13,30 @@ import {
 
 interface ISelectJobOrBid {
     currentPhase: any;
+    jobNumber?: any
+    needJobNumber?: boolean;
+    currentJob: any | null;
 }
 
-const SelectJobOrBid = ({ currentPhase }: ISelectJobOrBid) => {
-    const { dispatch } = useEstimate();
 
-    const [selectedPhase, setSelectedPhase] = useState<any>(null);
+
+const SelectJobOrBid = ({ currentPhase, jobNumber, needJobNumber = false, currentJob = null }: ISelectJobOrBid) => {
+    const { dispatch , mptRental} = useEstimate();
+    const [selectedPhases, setSelectedPhases] = useState<any[]>([]);
     const [jobs, setJobs] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
 
     const getAllJobsWithSigns = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/jobs/getSignsJobs/');
+            const url = needJobNumber ? `/api/jobs/getSignsJobs/${jobNumber ?? 0}` : '/api/jobs/getSignsJobs';
+            const response = await fetch(url);
             const resp = await response.json();
-            if (resp.success) setJobs(resp.data);
+
+            if (resp.success) {
+                setJobs(Array.isArray(resp.data) ? resp.data : [resp.data]);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -36,41 +44,65 @@ const SelectJobOrBid = ({ currentPhase }: ISelectJobOrBid) => {
         }
     };
 
-    const handleCopySignsFromPhase = useCallback((phase: any) => {
-        if (!phase) return;
+    const handleCopySignsFromPhases = useCallback(() => {
 
-        const allSigns = [
-            ...(phase.mpt_primary_signs || []),
-            ...(phase.mpt_secondary_signs || [])
-        ];
+        selectedPhases.forEach(phase => {
+            const allSigns = [
+                ...(phase.mpt_primary_signs || []),
+                ...(phase.mpt_secondary_signs || [])
+            ];
 
-        allSigns.forEach(sign => {
-            dispatch({
-                type: 'ADD_MPT_SIGN',
-                payload: {
-                    phaseNumber: currentPhase,
-                    sign: { ...sign, id: generateUniqueId() }
-                }
+            allSigns.forEach(sign => {
+                dispatch({
+                    type: 'ADD_MPT_SIGN',
+                    payload: {
+                        phaseNumber: currentPhase,
+                        sign: { ...sign, id: generateUniqueId() }
+                    }
+                });
             });
         });
-    }, [dispatch, currentPhase]);
+    }, [dispatch, currentPhase, selectedPhases]);
 
-    useEffect(() => { getAllJobsWithSigns(); }, []);
+    useEffect(() => {
+        if (needJobNumber && jobNumber) getAllJobsWithSigns();
+    }, [jobNumber, needJobNumber]);
+
+    useEffect(() => {
+        if (currentJob) {
+            setJobs([currentJob])
+        }
+    }, [currentPhase, mptRental.phases]);
+
+    const togglePhaseSelection = (phase: any) => {
+        setSelectedPhases(prev => {
+            if (prev.find(p => p.id === phase.id)) {
+                return prev.filter(p => p.id !== phase.id);
+            } else {
+                return [...prev, phase];
+            }
+        });
+    };
 
     const filteredJobs = jobs
-        .map((job, index) => ({
+        .map((job, jobIndex) => ({
             ...job,
-            phases: job.phases.filter((p: any) =>
-                p.name.toLowerCase().includes(search.toLowerCase())
-            )
+            phases: job.phases.filter((p: any, phaseIndex: number) => {
+                const phaseName = p.name || `Phase ${phaseIndex}`;
+                return phaseName.toLowerCase().includes(search.toLowerCase());
+            })
         }))
-        .filter(job => job.phases.length > 0);
+        .filter(job => job.phases.length > 0);    
 
     return (
         <div className="flex items-center flex-row gap-2">
-            <DropdownMenu >
+            <DropdownMenu>
                 <DropdownMenuTrigger className="border rounded-[10px] px-2 h-10 w-[300px] text-[14px] flex items-center justify-between">
-                    {selectedPhase ? selectedPhase.name : loading ? "Loading..." : "Select phase"}
+                    {selectedPhases.length > 0
+                        ? `${selectedPhases.length} phase(s) selected`
+                        : loading
+                            ? "Loading..."
+                            : "Select a phase"}
                     {loading && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
                 </DropdownMenuTrigger>
 
@@ -82,29 +114,29 @@ const SelectJobOrBid = ({ currentPhase }: ISelectJobOrBid) => {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
-                        {filteredJobs.map((job, index) => (
-                            <div key={job.id + " " + index} className="mb-1">
-                                <div className="text-gray-600 font-semibold px-2 py-1 flex flex-row">
-                                    {job.label}
-                                    <span className="mx-2 text-gray-400">{`(${job?.status})`}</span>
-                                    </div>
-                            
-                                {job.phases.map((phase: any, index) => (
-                                    <DropdownMenuItem
-                                        key={phase.id}
-                                        className="pl-4"
-                                        onSelect={() => {
-                                            setSelectedPhase(phase);
-                                        }}
-                                    >
-                                        <span className="font-medium">
-                                            {"> " + (phase.name ? phase.name : "Phase " + index)}
-                                        </span>
-                                        <span className="text-gray-400">
-                                            ({(phase.mpt_primary_signs?.length || 0) + (phase.mpt_secondary_signs?.length || 0)}) signs
-                                        </span>
-                                    </DropdownMenuItem>
-                                ))}
+                        {filteredJobs.map((job, jobIndex) => (
+                            <div key={job.id + " " + jobIndex} className="mb-1">
+                                {job.phases.map((phase: any, phaseIndex: number) => {
+                                    const phaseName = phase.name || `Phase ${phaseIndex}`;
+                                    const checked = selectedPhases.find(p => p.id === phase.id);
+                                    return (
+                                        <DropdownMenuItem
+                                            key={phase.id}
+                                            className="pl-4 flex justify-between items-center"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                togglePhaseSelection({ ...phase, index: phaseIndex });
+                                            }}
+                                        >
+                                            <span>{phaseName}</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!checked}
+                                                readOnly
+                                            />
+                                        </DropdownMenuItem>
+                                    )
+                                })}
                             </div>
                         ))}
                         {filteredJobs.length === 0 && (
@@ -116,12 +148,12 @@ const SelectJobOrBid = ({ currentPhase }: ISelectJobOrBid) => {
 
             <button
                 type="button"
-                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhase
+                className={`flex items-center px-3 py-2 rounded-[10px] border transition-colors ${selectedPhases.length > 0
                     ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 cursor-pointer'
                     : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                     }`}
-                disabled={!selectedPhase}
-                onClick={() => handleCopySignsFromPhase(selectedPhase)}
+                disabled={selectedPhases.length === 0}
+                onClick={handleCopySignsFromPhases}
             >
                 <Copy className="w-4 h-4 mr-2" />
                 Import signs
@@ -130,4 +162,4 @@ const SelectJobOrBid = ({ currentPhase }: ISelectJobOrBid) => {
     );
 };
 
-export default SelectJobOrBid;
+export default SelectJobOrBid

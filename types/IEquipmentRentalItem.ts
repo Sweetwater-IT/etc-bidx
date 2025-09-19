@@ -1,6 +1,8 @@
 export interface EquipmentRentalItem {
     // phase: number;
     name: string;
+    itemNumber: string;
+    item_description: string;
     quantity: number;
     months: number;
     rentPrice: number;

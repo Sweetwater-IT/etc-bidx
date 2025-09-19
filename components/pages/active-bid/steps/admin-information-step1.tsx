@@ -84,7 +84,7 @@ const AdminInformationStep1 = () => {
     laborRate: false,
     fringeRate: false,
     shopRate: false,
-    winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
+ //   winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
   const [digits, setDigits] = useState({
@@ -95,32 +95,55 @@ const AdminInformationStep1 = () => {
   });
 
   const [owHours, setOwHours] = useState<number>(Math.floor(safeNumber(adminData.owTravelTimeMins) / 60));
-  const [owMinutes, setOwMinutes] = useState<number>((safeNumber(adminData.owTravelTimeMins) % 60));
+  const [owMinutes, setOwMinutes] = useState<number>(safeNumber(adminData.owTravelTimeMins) % 60);
   const owDecimalHours = (owHours + owMinutes / 60).toFixed(1);
   const owTotalMinutes = owHours * 60 + owMinutes;
 
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
-    const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
-    const extraMinutes = currentOwMinutes % 60;
-    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
+    let newHours = owHours;
+    let newMinutes = owMinutes;
+
+    if (type === 'hours') {
+      newHours = value;
+      setOwHours(value);
+    } else {
+      newMinutes = value;
+      setOwMinutes(value);
+    }
+
+    const totalMinutes = newHours * 60 + newMinutes;
+
     dispatch({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
         key: 'owTravelTimeMins',
-        value: newOwMinutes
-      }
-    })
+        value: totalMinutes,
+      },
+    });
 
-    setOwHours(Math.floor(newOwMinutes / 60))
-    setOwMinutes(newOwMinutes % 60);
-  }
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeHours',
+        value: newHours,
+      },
+    });
 
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: {
+        key: 'owTravelTimeMinutes',
+        value: newMinutes,
+      },
+    });
+  };
+
+  
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
     setOwHours(Math.floor(totalMins / 60));
     setOwMinutes(totalMins % 60);
   }, [adminData.owTravelTimeMins]);
-
 
   // State for dropdown options
   const [counties, setCounties] = useState<County[]>([]);
@@ -210,10 +233,10 @@ const AdminInformationStep1 = () => {
           }
 
           // Set toggle states based on prefilled data
-          setToggleStates(prev => ({
+         /* setToggleStates(prev => ({
             ...prev,
-            winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
-          }));
+           winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
+          })); */
         }
       } catch (error) {
         toast.error("Error fetching reference data:" + error);
@@ -521,12 +544,14 @@ const AdminInformationStep1 = () => {
             <div className="max-w-xl grid grid-cols-2 gap-6">
               {step.fields.map((field) => (
                 <div key={field.name} className="space-y-2.5">
-                  <Label
-                    htmlFor={field.name}
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    {field.label}
-                  </Label>
+                  {field.name !== "winterShutdown" && (
+                    <Label
+                      htmlFor={field.name}
+                      className="text-sm font-medium text-muted-foreground"
+                    >
+                      {field.label}
+                    </Label>
+                  )}
                   {field.name === "county" ? (
                     <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
                       <PopoverTrigger asChild>
@@ -664,7 +689,7 @@ const AdminInformationStep1 = () => {
                       ))}
                     </RadioGroup>
                   ) : field.name === "winterShutdown" ? (
-                    <div>
+  /*              <div>
                       <div className="flex items-center space-x-2">
                         <Switch
                           id={field.name}
@@ -729,7 +754,8 @@ const AdminInformationStep1 = () => {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </div> */
+                  <></>
                   ) : field.name === "oneWayTravelTime" ? (
                     <div className="space-y-2">
                       <div className="flex space-x-4">
@@ -833,7 +859,7 @@ const AdminInformationStep1 = () => {
                                 serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, 'DRAFT', notes);
                               dispatch({ type: 'SET_FIRST_SAVE', payload: 1 })
                               dispatch({ type: 'SET_ID', payload: createResponse.id })
-                              if(alreadyExistBidMessage) {
+                              if (alreadyExistBidMessage) {
                                 setAlreadyExistBidMessage('')
                               }
                             } catch (err: any) {
