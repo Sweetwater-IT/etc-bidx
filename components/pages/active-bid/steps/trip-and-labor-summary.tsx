@@ -27,38 +27,37 @@ export const TripAndLaborSummary = ({
 
   // Memoize cost calculations
   const {
-  mobilizationCost,
-  fuelCost,
-  truckAndFuelCost,
-  baseTrips,
-  totalTrips,
-  ratedHours,
-  nonRatedHours,
-} = useMemo(() => {
-  const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
-  const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
-  const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
-  const baseTrips = (phase.numberTrucks || 1) ? rawBaseTrips / (phase.numberTrucks || 1) : rawBaseTrips; // Divide by numberTrucks
-  const additionalTrips = safeNumber(phase.maintenanceTrips);
-  const totalTrips = baseTrips + additionalTrips;
-  const rated = getRatedHoursPerPhase(phase);
-  const nonRated = getNonRatedHoursPerPhase(adminData, phase);
-  const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
-  const fuel =
-    (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
-      (mptRental?.mpgPerTruck || 1)) *
-    (adminData?.fuelCostPerGallon ?? 0);
-  return {
-    mobilizationCost: mobilization,
-    fuelCost: fuel,
-    truckAndFuelCost: mobilization + fuel,
+    mobilizationCost,
+    fuelCost,
+    truckAndFuelCost,
     baseTrips,
     totalTrips,
-    ratedHours: rated,
-    nonRatedHours: nonRated,
-  };
-}, [phase, adminData, mptRental]);
-  
+    ratedHours,
+    nonRatedHours,
+  } = useMemo(() => {
+    const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
+    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
+    const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30) / (phase.numberTrucks > 0 ? phase.numberTrucks : 1); // Round, then divide by numberTrucks
+    const additionalTrips = safeNumber(phase.maintenanceTrips);
+    const totalTrips = rawBaseTrips + additionalTrips;
+    const rated = getRatedHoursPerPhase(phase);
+    const nonRated = getNonRatedHoursPerPhase(adminData, phase);
+    const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
+    const fuel =
+      (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
+        (mptRental?.mpgPerTruck || 1)) *
+      (adminData?.fuelCostPerGallon ?? 0);
+    return {
+      mobilizationCost: mobilization,
+      fuelCost: fuel,
+      truckAndFuelCost: mobilization + fuel,
+      baseTrips: rawBaseTrips, // Use rawBaseTrips as Base Trips
+      totalTrips,
+      ratedHours: rated,
+      nonRatedHours: nonRated,
+    };
+  }, [phase, adminData, mptRental]);
+
   return (
     <div className='grid grid-cols-3 gap-4 text-sm'>
       {/* Row 1 */}
