@@ -27,38 +27,38 @@ export const TripAndLaborSummary = ({
 
   // Memoize cost calculations
   const {
-    mobilizationCost,
-    fuelCost,
-    truckAndFuelCost,
+  mobilizationCost,
+  fuelCost,
+  truckAndFuelCost,
+  baseTrips,
+  totalTrips,
+  ratedHours,
+  nonRatedHours,
+} = useMemo(() => {
+  const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
+  const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
+  const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
+  const baseTrips = (phase.numberTrucks || 1) ? rawBaseTrips / (phase.numberTrucks || 1) : rawBaseTrips; // Divide by numberTrucks
+  const additionalTrips = safeNumber(phase.maintenanceTrips);
+  const totalTrips = baseTrips + additionalTrips;
+  const rated = getRatedHoursPerPhase(phase);
+  const nonRated = getNonRatedHoursPerPhase(adminData, phase);
+  const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
+  const fuel =
+    (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
+      (mptRental?.mpgPerTruck || 1)) *
+    (adminData?.fuelCostPerGallon ?? 0);
+  return {
+    mobilizationCost: mobilization,
+    fuelCost: fuel,
+    truckAndFuelCost: mobilization + fuel,
     baseTrips,
     totalTrips,
-    ratedHours,
-    nonRatedHours,
-  } = useMemo(() => {
-    const fourFootTypeIIIQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
-    const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0;
-    const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
-    const baseTrips = (phase.numberTrucks || 1) ? rawBaseTrips / (phase.numberTrucks || 1) : rawBaseTrips; // Divide by numberTrucks
-    const additionalTrips = safeNumber(phase.maintenanceTrips);
-    const totalTrips = rawBaseTrips + additionalTrips; // Use raw trips for costs
-    const rated = getRatedHoursPerPhase(phase);
-    const nonRated = getNonRatedHoursPerPhase(adminData, phase);
-    const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
-    const fuel =
-      (((phase.numberTrucks || 0) * totalTrips * 1 * (adminData?.owMileage ?? 0)) / // Use * 1
-        (mptRental?.mpgPerTruck || 1)) *
-      (adminData?.fuelCostPerGallon ?? 0);
-    return {
-      mobilizationCost: mobilization,
-      fuelCost: fuel,
-      truckAndFuelCost: mobilization + fuel,
-      baseTrips,
-      totalTrips,
-      ratedHours: rated,
-      nonRatedHours: nonRated,
-    };
-  }, [phase, adminData, mptRental]);
-
+    ratedHours: rated,
+    nonRatedHours: nonRated,
+  };
+}, [phase, adminData, mptRental]);
+  
   return (
     <div className='grid grid-cols-3 gap-4 text-sm'>
       {/* Row 1 */}
