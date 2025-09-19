@@ -852,14 +852,14 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   return nonRatedHours;
 }
 
-
 export function getTotalTripsPerPhase(phase: Phase): number {
   if (!phase || !phase.standardEquipment) {
     return 0;
   }
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const relevantEquipmentTotals = fourFootQuantity;
-  return safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30); // Removed * 2
+  const rawTrips = safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30);
+  return (phase.numberTrucks || 1) ? rawTrips / (phase.numberTrucks || 1) : rawTrips;
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
