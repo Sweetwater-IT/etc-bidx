@@ -858,7 +858,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   }
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const relevantEquipmentTotals = fourFootQuantity;
-  const rawTrips = safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30);
+  const rawTrips = safeNumber(phase.maintenanceTrips) + Math.ceil(relevantEquipmentTotals / 30) / (phase.numberTrucks > 0 ? phase.numberTrucks : 1);
   return (phase.numberTrucks || 1) ? rawTrips / (phase.numberTrucks || 1) : rawTrips;
 }
 
