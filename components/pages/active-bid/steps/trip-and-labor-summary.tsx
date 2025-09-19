@@ -40,19 +40,21 @@ export const TripAndLaborSummary = ({
     const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
 
     // Calculate baseTrips based on equipment
-    const baseTrips = Math.ceil((fourFootTypeIIIQuantity) / 30);
+    const rawBaseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
+    const baseTrips = phase.numberTrucks ? rawBaseTrips / phase.numberTrucks : rawBaseTrips; // Divide by numberTrucks
+
 
     // Add additional trips from phase.maintenanceTrips
     const additionalTrips = safeNumber(phase.maintenanceTrips);
-    const totalTrips = baseTrips + additionalTrips;
+    const totalTrips = rawBaseTrips + additionalTrips; // Use rawBaseTrips
 
     const rated = getRatedHoursPerPhase(phase);
     const nonRated = getNonRatedHoursPerPhase(adminData, phase);
 
     const mobilization = (phase.numberTrucks || 0) * totalTrips * (mptRental?.dispatchFee || 0);
     const fuel =
-      (((phase.numberTrucks || 0) * totalTrips * 2 * (adminData?.owMileage ?? 0)) /
-        (mptRental?.mpgPerTruck || 1)) *
+      (((phase.numberTrucks || 0) * totalTrips * 1 * (adminData?.owMileage ?? 0)) / // Changed 2 to 1
+        (mptRental?.mpg_per_truck || 1)) *
       (adminData?.fuelCostPerGallon ?? 0);
 
     return {
