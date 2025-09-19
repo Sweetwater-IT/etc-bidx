@@ -614,7 +614,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 flagging: e.flagging ?? {},
                 id: e.id,
                 service_work: e.service_work ?? {},
-                bid_notes: e.notes || [],
+                bid_notes: Array.isArray(e.notes)
+                        ? e.notes
+                        : JSON.parse(e.notes || "[]"), 
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',

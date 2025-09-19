@@ -422,7 +422,6 @@ export function OpenBidSheet({
     const selectedCounty = counties.find((c) => c.name === countyName);
     if (selectedCounty) {
       setCounty(selectedCounty.name);
-      // Auto-set branch based on county
       if (selectedCounty.branch) {
         setBranch(selectedCounty.branch);
       }
