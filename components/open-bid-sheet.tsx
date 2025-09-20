@@ -97,7 +97,7 @@ export function OpenBidSheet({
     "Equipment Rental": false,
     Other: false,
   });
-  const [statusMessage, setStatusMessage] = useState(""); 
+  const [statusMessage, setStatusMessage] = useState("");
   const [isValid, setIsValid] = useState(true);
 
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
@@ -442,7 +442,13 @@ export function OpenBidSheet({
 
 
   const checkContractNumber = async (number: string) => {
+
     if (!number) return;
+    if (job && number === job.contractNumber) {
+      setStatusMessage("");
+      setIsValid(true);
+      return;
+    }
 
     try {
       const res = await fetch(`/api/bids/existContractNumber?contract_number=${number}`);
@@ -474,6 +480,7 @@ export function OpenBidSheet({
       setIsValid(false);
     }
   };
+
 
   useEffect(() => {
     clearTimeout(debounceTimer);
@@ -928,8 +935,11 @@ export function OpenBidSheet({
                 <Button
                   className="flex-1"
                   type="submit"
-                  disabled={isSubmitting || !areAllRequiredFieldsFilled() || !isValid}
-                  onClick={(e) => {
+                  disabled={
+                    isSubmitting ||
+                    (!job && !areAllRequiredFieldsFilled()) ||
+                    !isValid
+                  } onClick={(e) => {
                     console.log("Submit button clicked");
                     if (!isSubmitting) {
                       handleSubmit(e as unknown as React.FormEvent);
