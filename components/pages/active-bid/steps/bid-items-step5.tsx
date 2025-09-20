@@ -173,7 +173,7 @@ const TripAndLaborSummary = ({
     })}`
   }
 
-   // Memoize cost calculations
+  // Memoize cost calculations
   const {
     mobilizationCost,
     fuelCost,
@@ -188,7 +188,7 @@ const TripAndLaborSummary = ({
     const sixFootWingsQuantity = phase.standardEquipment.sixFootWings?.quantity || 0; // Included as per your code
 
     // Calculate baseTrips based on equipment
-    const baseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30);
+    const baseTrips = Math.ceil((fourFootTypeIIIQuantity + sixFootWingsQuantity) / 30) / (phase.numberTrucks || 1);
 
     // Add additional trips from phase.maintenanceTrips
     const additionalTrips = safeNumber(phase.maintenanceTrips);
@@ -243,7 +243,7 @@ const TripAndLaborSummary = ({
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(baseTrips)}
         </div>
-      </div>      
+      </div>
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Additional Mobilizations</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
@@ -255,7 +255,7 @@ const TripAndLaborSummary = ({
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(baseTrips) + safeNumber(phase?.maintenanceTrips)}
         </div>
-      </div>      
+      </div>
 
       {/* Row 3 */}
       <div className='flex flex-col'>
@@ -263,7 +263,7 @@ const TripAndLaborSummary = ({
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(nonRatedHours).toFixed(1)}
         </div>
-      </div>      
+      </div>
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>
           Additional Non-Rated Hours
@@ -279,7 +279,7 @@ const TripAndLaborSummary = ({
             nonRatedHours + safeNumber(phase.additionalNonRatedHours)
           ).toFixed(1)}
         </div>
-      </div>      
+      </div>
 
       {/* Row 4 */}
       <div className='flex flex-col'>
@@ -293,7 +293,7 @@ const TripAndLaborSummary = ({
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
           {safeNumber(phase.additionalRatedHours).toFixed(1)}
         </div>
-      </div>      
+      </div>
       <div className='flex flex-col'>
         <label className='text-sm font-semibold'>Total Rated Hours</label>
         <div className='pr-3 py-1 select-text cursor-default text-muted-foreground'>
@@ -301,7 +301,7 @@ const TripAndLaborSummary = ({
             ratedHours + safeNumber(phase.additionalRatedHours)
           ).toFixed(1)}
         </div>
-      </div> 
+      </div>
 
       {/* Row 5 */}
       <div className='flex flex-col'>
@@ -886,7 +886,7 @@ const BidItemsStep5 = ({
         if (Array.isArray(equipmentData)) {
           // Process regular equipment data
           equipmentData.forEach(item => {
-            if (!item) return            
+            if (!item) return
 
             // Find matching equipment type
             const equipmentType = getEquipmentTypeFromName(item.name)
@@ -939,7 +939,7 @@ const BidItemsStep5 = ({
           signList.forEach(sign => {
             const matchedItem = equipmentData.find(
               (item: any) => item.name === sign.dbName
-            )            
+            )
             if (matchedItem) {
               const price = parseFloat(matchedItem.price)
 
@@ -1216,7 +1216,7 @@ const BidItemsStep5 = ({
     value: number,
     equipmentKey: EquipmentType,
     property: keyof DynamicEquipmentInfo,
-    phaseNumber: number 
+    phaseNumber: number
   ) => {
     dispatch({
       type: 'ADD_MPT_ITEM_NOT_SIGN',
@@ -1665,7 +1665,7 @@ const BidItemsStep5 = ({
                                               </Label>
                                           }
                                         </div>
-                                       {phase.emergency && (
+                                        {phase.emergency && (
                                           <div className='flex flex-col w-1/3 gap-2 mt-2'>
                                             <Label
                                               htmlFor={`emergency-${equipmentKey}-${index}`}
