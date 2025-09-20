@@ -160,9 +160,9 @@ export type EstimateAction =
 	| { type: "ADD_SALE_ITEM"; payload: SaleItem }
 	| {
 		type: "UPDATE_SALE_ITEM";
-		payload: { oldItemNumber: string; item: SaleItem };
+		payload: { index: number; item: SaleItem };
 	}
-	| { type: "DELETE_SALE_ITEM"; payload: string }
+	| { type: "DELETE_SALE_ITEM"; payload: number }
 	| { type: "RESET_SALE_ITEMS" }
 	/**GENERAL RESET */
 	| { type: "RESET_STATE" }

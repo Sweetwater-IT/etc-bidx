@@ -36,7 +36,7 @@ import { DataTable } from "@/components/data-table";
 const SaleItemsStep = () => {
   const { saleItems, dispatch } = useEstimate();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingItemNumber, setEditingItemNumber] = useState<string | null>(null);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<SaleItem | null>(null);
   const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
   const [open, setOpen] = useState(false);
@@ -72,16 +72,16 @@ const SaleItemsStep = () => {
       quotePrice: 0,
       markupPercentage: 0,
     });
-    setEditingItemNumber(null);
+    setEditingItemIndex(null);
     setDrawerOpen(true);
     fetchItems();
   };
 
-  const handleEditItem = (itemNumber: string) => {
-    const item = saleItems.find(item => item.itemNumber === itemNumber);
-    if (item) {
-      setFormData({ ...item });
-      setEditingItemNumber(itemNumber);
+  const handleEditItem = (index: number) => {
+    const itemToEdit = saleItems[index];
+    if (itemToEdit) {
+      setFormData({ ...itemToEdit });
+      setEditingItemIndex(index);
       setDrawerOpen(true);
       fetchItems();
     }
@@ -114,12 +114,12 @@ const SaleItemsStep = () => {
   const handleSave = () => {
     if (!formData || !formData.itemNumber.trim()) return;
 
-    if (editingItemNumber) {
+    if (editingItemIndex !== null) {
       // Update existing item
       dispatch({
         type: 'UPDATE_SALE_ITEM',
         payload: {
-          oldItemNumber: editingItemNumber,
+          index: editingItemIndex,
           item: formData,
         },
       });
@@ -133,19 +133,19 @@ const SaleItemsStep = () => {
 
     setDrawerOpen(false);
     setFormData(null);
-    setEditingItemNumber(null);
+    setEditingItemIndex(null);
   };
 
   const handleCancel = () => {
     setDrawerOpen(false);
     setFormData(null);
-    setEditingItemNumber(null);
+    setEditingItemIndex(null);
   };
 
-  const handleItemDelete = (itemNumber: string) => {
+  const handleItemDelete = (index: number) => {
     dispatch({
       type: 'DELETE_SALE_ITEM',
-      payload: itemNumber,
+      payload: index,
     });
   };
 
@@ -177,8 +177,9 @@ const SaleItemsStep = () => {
     },
   ];
 
-  const formattedSaleItems = saleItems.map(item => ({
+  const formattedSaleItems = saleItems.map((item, index) => ({
     ...item,
+    index, // Añadimos el índice para pasarlo a los manejadores de eventos
     salePrice: formatCurrency(
       calculateSellingPrice(item.quotePrice, item.markupPercentage)
     ),
@@ -206,8 +207,8 @@ const SaleItemsStep = () => {
           <DataTable
             data={formattedSaleItems}
             columns={SALE_ITEMS_COLUMNS}
-            onDelete={(item) => handleItemDelete(item.itemNumber)}
-            onEdit={(item) => handleEditItem(item.itemNumber)}
+            onDelete={(item) => handleItemDelete(item.index)}
+            onEdit={(item) => handleEditItem(item.index)}
             hideDropdown={true}
           />
         )}
@@ -219,10 +220,10 @@ const SaleItemsStep = () => {
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {editingItemNumber ? 'Edit Sale Item' : 'Add Sale Item'}
+              {editingItemIndex !== null ? 'Edit Sale Item' : 'Add Sale Item'}
             </DrawerTitle>
             <DrawerDescription>
-              {editingItemNumber
+              {editingItemIndex !== null
                 ? 'Update the sale item details below.'
                 : 'Configure the details for your new sale item.'}
             </DrawerDescription>
@@ -400,7 +401,7 @@ const SaleItemsStep = () => {
                 onClick={handleSave}
                 disabled={!formData?.itemNumber.trim()}
               >
-                {editingItemNumber ? 'Update Sale Item' : 'Save Sale Item'}
+                {editingItemIndex !== null ? 'Update Sale Item' : 'Save Sale Item'}
               </Button>
             </div>
           </DrawerFooter>

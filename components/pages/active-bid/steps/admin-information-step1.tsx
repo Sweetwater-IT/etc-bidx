@@ -84,7 +84,7 @@ const AdminInformationStep1 = () => {
     laborRate: false,
     fringeRate: false,
     shopRate: false,
-    winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
+ //   winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
   const [digits, setDigits] = useState({
@@ -233,10 +233,10 @@ const AdminInformationStep1 = () => {
           }
 
           // Set toggle states based on prefilled data
-          setToggleStates(prev => ({
+         /* setToggleStates(prev => ({
             ...prev,
-            winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
-          }));
+           winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
+          })); */
         }
       } catch (error) {
         toast.error("Error fetching reference data:" + error);
@@ -544,12 +544,14 @@ const AdminInformationStep1 = () => {
             <div className="max-w-xl grid grid-cols-2 gap-6">
               {step.fields.map((field) => (
                 <div key={field.name} className="space-y-2.5">
-                  <Label
-                    htmlFor={field.name}
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    {field.label}
-                  </Label>
+                  {field.name !== "winterShutdown" && (
+                    <Label
+                      htmlFor={field.name}
+                      className="text-sm font-medium text-muted-foreground"
+                    >
+                      {field.label}
+                    </Label>
+                  )}
                   {field.name === "county" ? (
                     <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
                       <PopoverTrigger asChild>
@@ -687,7 +689,7 @@ const AdminInformationStep1 = () => {
                       ))}
                     </RadioGroup>
                   ) : field.name === "winterShutdown" ? (
-                    <div>
+  /*              <div>
                       <div className="flex items-center space-x-2">
                         <Switch
                           id={field.name}
@@ -752,7 +754,8 @@ const AdminInformationStep1 = () => {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </div> */
+                  <></>
                   ) : field.name === "oneWayTravelTime" ? (
                     <div className="space-y-2">
                       <div className="flex space-x-4">

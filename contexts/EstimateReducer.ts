@@ -564,19 +564,16 @@ export const estimateReducer = (
 		case "UPDATE_SALE_ITEM":
 			return {
 				...state,
-				saleItems: state.saleItems.map((item) => {
-					if (item.itemNumber == action.payload.oldItemNumber) {
-						return action.payload.item;
-					}
-					return item;
-				}),
+				saleItems: state.saleItems.map((item, index) =>
+					index === action.payload.index ? action.payload.item : item
+				),
 			};
 
 		case "DELETE_SALE_ITEM":
 			return {
 				...state,
-				saleItems: state.saleItems.filter(
-					(item) => item.itemNumber !== action.payload
+				saleItems: state.saleItems.filter((_, index) =>
+					index !== action.payload
 				),
 			};
 
@@ -647,7 +644,7 @@ export const estimateReducer = (
 					endDate: p.endDate ? new Date(p.endDate) : null,
 					signs: p.signs.map(s => {
 						//add quantity based on primary sign
-						let additionalProperties: any = {}
+						const additionalProperties: any = {}
 						if ('make' in s) {
 							additionalProperties.make = (s as ExtendedPrimarySign).make;
 							additionalProperties.inStock = (s as ExtendedPrimarySign).inStock;
