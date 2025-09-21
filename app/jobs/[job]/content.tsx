@@ -385,6 +385,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const loadAvailableJobs = useCallback(async () => {
+        
         try {
             console.log("Loading available jobs with activeSegment:", activeSegment);
             startLoading();
@@ -483,7 +484,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     'Perm Signs': job.perm_signs || false,
                     'Other': job.other || false
                 };
-
+                
                 return {
                     id: job.id,
                     contractNumber: contractNumberValue,
@@ -608,13 +609,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
             const result = await response.json();
             //raw data has all the info we need
             const { data, stats, pagination } = result;
-            console.log('el resultado es', data);
-
             const transformedData = data.map(e => ({
                 flagging: e.flagging ?? {},
                 id: e.id,
                 service_work: e.service_work ?? {},
-                bid_notes: e.notes || [],
+                bid_notes: Array.isArray(e.notes)
+                        ? e.notes
+                        : JSON.parse(e.notes || "[]"), 
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
@@ -849,9 +850,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
             }
 
             const fetchedBidsData = await fetchBids(options);
-
-            console.log('data es', fetchedBidsData);
-
             setJobCounts({
                 all: fetchedBidsData.counts.all,
                 unset: fetchedBidsData.counts.unset,
