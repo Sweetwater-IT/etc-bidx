@@ -856,14 +856,14 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   if (!phase || !phase.standardEquipment) {
     return 0;
   }
-
   // Safely access equipment quantities with null checks
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
-
   const relevantEquipmentTotals = fourFootQuantity;
-  return (safeNumber(phase.maintenanceTrips) * 2) + Math.ceil(relevantEquipmentTotals / 30);
-  
+  const trucks = Number(phase.numberTrucks) || 1;  // Added: Use trucks, default 1
+  const capacityPerMobilization = 30 * trucks;  // Added: Capacity scales with trucks
+  return (safeNumber(phase.maintenanceTrips) * 2) + (Math.ceil(relevantEquipmentTotals / capacityPerMobilization) * 2);
 }
+
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
   // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {
