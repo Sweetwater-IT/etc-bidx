@@ -845,12 +845,14 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
-  const roundTripHours = totalTravelTimeMins * 2 / 60;  // One-way * 2 / 60 = round-trip hours
-  const baseMobilizations = Math.ceil((phase.standardEquipment?.fourFootTypeIII?.quantity || 0) / 30);  // Base_mob
+  const roundTripHours = totalTravelTimeMins * 2 / 60;  // (mins * 2) / 60
+  const trucks = Number(phase.numberTrucks) || 1;
+  const rawBase = Math.ceil((phase.standardEquipment?.fourFootTypeIII?.quantity || 0) / 30);  // ceil(equip / 30)
+  const baseMobilizations = rawBase / trucks;  // Scaled by trucks
   const additionalMobilizations = safeNumber(phase.maintenanceTrips);  // Additional_mob
-  const basePart = roundTripHours * phase.personnel * baseMobilizations;  // Base part without extra *2 (to match 40)
+  const basePart = (roundTripHours * phase.personnel * baseMobilizations) * 2;  // Base part with outer *2
   const additionalPart = roundTripHours * phase.personnel * additionalMobilizations;  // Additional part
-  const nonRatedHours = basePart + additionalPart;  // Total = 24 + 16 = 40
+  const nonRatedHours = basePart + additionalPart;  // Total
   return nonRatedHours;
 }
 
