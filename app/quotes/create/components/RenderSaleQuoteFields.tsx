@@ -3,16 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StraightSaleQuote } from "../types";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from '@/components/ui/select';
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/auth-context";
-import { useCustomerSelection } from "@/hooks/use-csutomers-selection";
 import RenderEtcSection from "./RenderEtcSection";
 import { Edit } from "lucide-react";
 
@@ -38,23 +29,31 @@ const SectionBox = ({
     onCancel: () => void;
     onSave: () => void;
 }) => (
-    <div className="border rounded-lg p-4 mb-6 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold">{title}</h4>
+    <div className="rounded-lg p-4 mb-6 text-[12px]">
+        <div className="flex justify-between items-start h-[50px]">
+            <h4 className="font-bold ">{title}</h4>
             {!isEditing ? (
-                <Button size="sm" onClick={onEdit}>
-                    <Edit />
-                </Button>
+                <span
+                    className="text-gray-600 underline cursor-pointer hover:text-blue-800 text-[12px]"
+                    onClick={onEdit}
+                >
+                    Edit
+                </span>
             ) : (
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button size="sm" onClick={onSave}>Save</Button>
+                    <Button size="sm" variant="outline" onClick={onCancel}>
+                        <p className="text-[12px]">Cancel</p>
+                    </Button>
+                    <Button size="sm" onClick={onSave}>
+                        <p className="text-[12px]">Save</p>
+                    </Button>
                 </div>
             )}
         </div>
         {children}
     </div>
 );
+
 
 const RenderSaleQuoteFields = ({ data, setData, selectedCustomer, selectedContact }: IRenderSaleQuoteFields) => {
     const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -101,9 +100,8 @@ const RenderSaleQuoteFields = ({ data, setData, selectedCustomer, selectedContac
     );
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full text-[12px]">
             {/* Customer selection */}
-
             <div className="grid grid-cols-2 w-full gap-4">
                 {/* Customer info */}
                 <SectionBox

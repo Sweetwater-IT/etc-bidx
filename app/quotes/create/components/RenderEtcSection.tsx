@@ -50,16 +50,21 @@ const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
     );
 
     return (
-        <div className="border rounded-lg p-4 mb-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="font-bold">ETC Contact</h4>
+        <div className="rounded-lg p-4 mb-6 text-[12px]">
+            <div className="flex justify-between items-start h-[50px]">
+                <h4 className="font-bold ">ETC Contact</h4>
                 {!isEditing ? (
-                    <Button size="sm" onClick={() => setIsEditing(true)}>
-                        <Edit/>
-                    </Button>
+                    <span
+                        className="text-gray-600 underline cursor-pointer text-[12px] hover:text-blue-800"
+                        onClick={() => setIsEditing(true)}
+                    >
+                        Edit
+                    </span>
                 ) : (
                     <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                            <p className="text-[12px]">Cancel</p>
+                        </Button>
                         <Button
                             size="sm"
                             onClick={() => {
@@ -67,11 +72,12 @@ const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
                                 setIsEditing(false);
                             }}
                         >
-                            Save
+                            <p className="text-[12px]">Save</p>
                         </Button>
                     </div>
                 )}
             </div>
+
 
             <div className="flex flex-col gap-2 mb-4">
                 {renderField("etc_point_of_contact", "ETC Point of Contact", user?.user_metadata?.name)}

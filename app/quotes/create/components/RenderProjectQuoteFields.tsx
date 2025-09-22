@@ -30,23 +30,31 @@ const SectionBox = ({
     onCancel: () => void;
     onSave: () => void;
 }) => (
-    <div className="border rounded-lg p-4 mb-6 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold">{title}</h4>
+    <div className="rounded-lg p-4 mb-6 text-[12px]">
+        <div className="flex justify-between items-start h-[50px]">
+            <h4 className="font-bold ">{title}</h4>
             {!isEditing ? (
-                <Button size="sm" onClick={onEdit}>
-                    <Edit />
-                </Button>
+                <span
+                    className="text-gray-600 underline cursor-pointer hover:text-blue-800 text-[12px]"
+                    onClick={onEdit}
+                >
+                    Edit
+                </span>
             ) : (
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button size="sm" onClick={onSave}>Save</Button>
+                    <Button size="sm" variant="outline" onClick={onCancel}>
+                        <p className="text-[12px]">Cancel</p>
+                    </Button>
+                    <Button size="sm" onClick={onSave}>
+                        <p className="text-[12px]">Save</p>
+                    </Button>
                 </div>
             )}
         </div>
         {children}
     </div>
 );
+
 
 const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob }: IRenderProjectQuoteFields) => {
     const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -127,7 +135,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob }: IR
 
     return (
         <div>
-            <div className="grid grid-cols-2 w-full gap-4">
+            <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
                 <SectionBox
                     title="Customer & Contact Information"
                     isEditing={editingSection === "customer"}

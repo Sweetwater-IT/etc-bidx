@@ -627,11 +627,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       <div className="flex gap-6 p-6 max-w-full">
         {
           loadingMetadata ? (
-            <div className='w-full h-full flex flex-row items-center justify-center'>
+            <div className=' w-1/2 h-full flex flex-row items-center justify-center'>
               <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
             </div>
           ) : (
-            <div className='flex flex-col'>
+            <div className='flex w-1/2 flex-col'>
               {/* All selects in one row */}
               <div className="flex flex-row gap-4 mb-4 w-full">
                 {/* Quote Type */}
