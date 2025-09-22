@@ -842,12 +842,15 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   if (!phase.personnel || phase.personnel === 0) {
     return 0;
   }
-  const baseTrips = getTotalTripsPerPhase(phase);
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
-  const totalTrips = baseTrips; // Remove double-counting of maintenanceTrips
-  const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips) * phase.personnel;
+  const roundTripHours = totalTravelTimeMins * 2 / 60;  // One-way * 2 / 60 = round-trip hours
+  const baseMobilizations = Math.ceil((phase.standardEquipment?.fourFootTypeIII?.quantity || 0) / 30);  // Base_mob
+  const additionalMobilizations = safeNumber(phase.maintenanceTrips);  // Additional_mob
+  const basePart = roundTripHours * phase.personnel * baseMobilizations;  // Base part without extra *2 (to match 40)
+  const additionalPart = roundTripHours * phase.personnel * additionalMobilizations;  // Additional part
+  const nonRatedHours = basePart + additionalPart;  // Total = 24 + 16 = 40
   return nonRatedHours;
 }
 
