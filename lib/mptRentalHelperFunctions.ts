@@ -861,8 +861,11 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const relevantEquipmentTotals = fourFootQuantity;
   const trucks = Number(phase.numberTrucks) || 1;
-  const baseMobilizations = Math.ceil(relevantEquipmentTotals / 30) / trucks;  // Scaled base_mob (fractional)
-  return (safeNumber(phase.maintenanceTrips) * 2) + (baseMobilizations * 2);  // Round-trip on both
+  const rawBase = Math.ceil(relevantEquipmentTotals / 30);  // 3
+  const fixedEffectiveBase = rawBase * 2;  // 6
+  const scaledEffectiveBase = fixedEffectiveBase * (2 / trucks);  // 6 * (2 / trucks)
+  const additionalEffective = safeNumber(phase.maintenanceTrips) * 2;  // 4
+  return scaledEffectiveBase + additionalEffective;  // Total trips
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
