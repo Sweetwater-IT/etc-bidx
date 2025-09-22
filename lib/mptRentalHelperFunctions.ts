@@ -842,29 +842,34 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
   if (!phase.personnel || phase.personnel === 0) {
     return 0;
   }
-  const baseTrips = getTotalTripsPerPhase(phase);
   const totalTravelTimeMins = (adminData.owTravelTimeHours !== undefined && adminData.owTravelTimeMinutes !== undefined)
     ? safeNumber(adminData.owTravelTimeHours) * 60 + safeNumber(adminData.owTravelTimeMinutes)
     : safeNumber(adminData.owTravelTimeMins);
-  const totalTrips = baseTrips; // Remove double-counting of maintenanceTrips
-  const nonRatedHours = ((totalTravelTimeMins / 60) * totalTrips * 2) * phase.personnel;
-  
+  const roundTripHours = totalTravelTimeMins * 2 / 60;  // (mins * 2) / 60
+  const trucks = Number(phase.numberTrucks) || 1;
+  const rawBase = Math.ceil((phase.standardEquipment?.fourFootTypeIII?.quantity || 0) / 30);  // ceil(equip / 30)
+  const baseMobilizations = rawBase / trucks;  // Scaled by trucks
+  const additionalMobilizations = safeNumber(phase.maintenanceTrips);  // Additional_mob
+  const basePart = (roundTripHours * phase.personnel * baseMobilizations) * 2;  // Base part with outer *2
+  const additionalPart = roundTripHours * phase.personnel * additionalMobilizations;  // Additional part
+  const nonRatedHours = basePart + additionalPart;  // Total
   return nonRatedHours;
 }
 
 export function getTotalTripsPerPhase(phase: Phase): number {
-  // Check if phase or standardEquipment is undefined
   if (!phase || !phase.standardEquipment) {
     return 0;
   }
-
-  // Safely access equipment quantities with null checks
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
-
   const relevantEquipmentTotals = fourFootQuantity;
-  return safeNumber(phase.maintenanceTrips) + (Math.ceil(relevantEquipmentTotals / 30) * 2);
-
+  const trucks = Number(phase.numberTrucks) || 1;
+  const rawBase = Math.ceil(relevantEquipmentTotals / 30);  // 3
+  const fixedEffectiveBase = rawBase * 2;  // 6
+  const scaledEffectiveBase = fixedEffectiveBase * (2 / trucks);  // 6 * (2 / trucks)
+  const additionalEffective = safeNumber(phase.maintenanceTrips) * 2;  // 4
+  return scaledEffectiveBase + additionalEffective;  // Total trips
 }
+
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
   // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {

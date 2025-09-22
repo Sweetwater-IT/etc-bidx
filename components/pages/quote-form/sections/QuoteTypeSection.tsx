@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/select";
 
 interface QuoteTypeSectionProps {
-  quoteType: "new" | "estimate" | "job";
-  setQuoteType: (value: "new" | "estimate" | "job") => void;
+  quoteType:  "straight_sale" | "to_project" | "estimate_bid";
+  setQuoteType: (value:  "straight_sale" | "to_project" | "estimate_bid") => void;
 }
 
 export function QuoteTypeSection({
@@ -22,16 +22,16 @@ export function QuoteTypeSection({
       <Select
         value={quoteType}
         onValueChange={(value) =>
-          setQuoteType(value as "new" | "estimate" | "job")
+          setQuoteType(value as  "straight_sale" | "to_project" | "estimate_bid")
         }
       >
         <SelectTrigger>
           <SelectValue placeholder="Select quote type" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="new">New</SelectItem>
-          <SelectItem value="estimate">Estimate</SelectItem>
-          <SelectItem value="job">Job</SelectItem>
+          <SelectItem value="straight_sale">Straight Sale</SelectItem>
+          <SelectItem value="estimate_bid">Estimate Bid</SelectItem>
+          <SelectItem value="to_project">To Project</SelectItem>
         </SelectContent>
       </Select>
     </div>

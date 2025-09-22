@@ -1,293 +1,333 @@
 import React from 'react';
-import { Page, Text, View, Document, Image } from '@react-pdf/renderer';
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  Image,
+  StyleSheet,
+} from '@react-pdf/renderer';
 import { AdminData } from '@/types/TAdminData';
 import { QuoteItem } from '@/types/IQuoteItem';
-import { PaymentTerms } from './QuoteAdminInformation';
-import { proposalStyles } from './proposal-parts/proposalStyles';
-import { StandardConditions, StandardExclusions } from './proposal-parts/StandardTermsAndConditions';
-import { StandardRentalEquipmentAgreement } from './proposal-parts/RentalEquipmentAgreement';
-import { StandardFlaggingTermsConditions } from './proposal-parts/FlaggingTermsAndConditions';
+import { PaymentTerms } from '../../../components/pages/quote-form/QuoteAdminInformation';
 import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
 import { User } from '@/types/User';
 import { Customer } from '@/types/Customer';
+import { INote } from '@/types/TEstimate';
+import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/quotes/create/types';
 
 interface Props {
-  adminData: AdminData
-  items?: QuoteItem[]
-  customers: Customer[]
-  sender: User
-  quoteDate: Date
-  quoteNumber: string
-  paymentTerms: PaymentTerms
-  includedTerms: Record<TermsNames, boolean>
-  customTaC?: string
-  county: string
-  sr: string
-  ecms: string
-  pointOfContact: { name: string, email: string }
+  adminData: AdminData;
+  items: QuoteItem[];
+  customers: Customer[];
+  sender: User;
+  quoteDate: Date;
+  quoteNumber: string;
+  paymentTerms: PaymentTerms;
+  includedTerms: Record<TermsNames, boolean>;
+  customTaC?: string;
+  county: string;
+  sr: string;
+  ecms: string;
+  pointOfContact: { name: string; email: string };
+  notes: INote[];
+  quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
+  quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
 }
 
-export const BidProposalReactPDF = ({
-  paymentTerms,
-  pointOfContact,
-  quoteNumber,
-  sender,
-  quoteDate,
+const styles = StyleSheet.create({
+  page: { padding: 24, fontSize: 10, fontFamily: 'Helvetica' },
+  header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, borderColor: '#000', paddingBottom: 8 },
+  logo: { width: 80, height: 40 },
+  headerCenter: { textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  centerText: { textAlign: 'center' },
+  table: { display: 'flex', width: '100%', borderWidth: 1, borderColor: '#000', marginTop: 12, flexDirection: 'column' },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#000' },
+  tableCell: { flex: 1, padding: 4, fontSize: 9, textAlign: 'center' },
+  tableHeader: { fontWeight: 'bold', borderBottomWidth: 1, borderColor: '#000' },
+  notesSection: { marginTop: 12, flexDirection: 'row' },
+  noteItem: { marginBottom: 4 },
+  disclaimerText: { marginVertical: 12, fontSize: 9, textAlign: 'center', fontWeight: 'bold', width: '75%', alignSelf: 'center' },
+  signatureBox: { marginTop: 8, backgroundColor: '#FEF08A', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', padding: 4, fontSize: 8, fontWeight: 'medium' },
+  signatureField: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: 8 },
+  signatureLabel: { marginRight: 4, fontSize: 9 },
+  signatureLine: { flex: 1, borderBottomWidth: 1, borderColor: '#000', minWidth: 150 },
+});
+
+export const BidProposalReactPDF: React.FC<Props> = ({
   adminData,
   items,
   customers,
+  quoteDate,
+  quoteNumber,
+  pointOfContact,
+  sender,
   includedTerms,
   customTaC,
   county,
   sr,
   ecms,
-}: Props) => {
+  notes,
+  quoteType,
+  quoteData
+}) => {
+  const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
 
-  // Helper para formato de moneda
-  const formatMoney = (value: number) =>
-    value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formatMoney = (v: number) =>
+    v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  // Cliente principal (previene crash si customers está vacío)
-  const primaryCustomer = customers?.[0] ?? {
-    name: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    mainPhone: ""
-  };
-
-  // Calcular precio extendido por item
   const calculateExtendedPrice = (item: QuoteItem) => {
     const quantity = item.quantity || 0;
     const unitPrice = item.unitPrice || 0;
-
-    // Suma el precio de los ítems asociados para obtener el costo de una unidad compuesta
-    const compositeTotalPerUnit = item.associatedItems?.length
-      ? item.associatedItems.reduce((subSum, c) =>
-        subSum + ((c.quantity || 0) * (c.unitPrice || 0)), 0)
-      : 0;
-
-    // El precio total de una unidad (ítem principal + asociados)
-    const totalUnitPrice = unitPrice + compositeTotalPerUnit;
-
-    // El precio base extendido antes del descuento
-    const basePrice = quantity * totalUnitPrice;
-
+    const compositeTotalPerUnit = item.associatedItems?.reduce(
+      (sum, c) => sum + ((c.quantity || 0) * (c.unitPrice || 0)),
+      0
+    ) || 0;
+    const base = quantity * (unitPrice + compositeTotalPerUnit);
     const discount = item.discount || 0;
-    const discountType = item.discountType || 'percentage';
-
-    // Calcula el monto del descuento
-    const discountAmount = discountType === 'dollar'
-      ? discount // Descuento plano sobre el total de la línea
-      : basePrice * (discount / 100);
-
-    return basePrice - discountAmount;
+    const discountAmount = item.discountType === 'dollar' ? discount : (base * discount) / 100;
+    return base - discountAmount;
   };
 
-  // Calcular total general
-  const calculateTotal = () => {
-    if (!items?.length) return 0;
-    return items.reduce((acc, item) => acc + calculateExtendedPrice(item), 0);
-  };
+  const total = items.reduce((acc, item) => acc + calculateExtendedPrice(item), 0);
 
-  const total = calculateTotal();
+  const renderCustomerInfo = () => {
+    if (!quoteData) return null;
+
+    switch (quoteType) {
+      case "estimate_bid": {
+        const data = quoteData as Partial<EstimateBidQuote>;
+        return (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+            {/* Customer Info */}
+            <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
+              <Text>Customer: {data.customer_name || ""}</Text>
+              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Email: {data.customer_email || ""}</Text>
+              <Text>Phone: {data.customer_phone || ""}</Text>
+              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Job #: {data.customer_job_number || ""}</Text>
+            </View>
+
+            {/* Job Info */}
+            <View style={{ width: "50%", borderBottomWidth: 1, padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
+              <Text>Township: {data.township || ""}</Text>
+              <Text>County: {data.county || ""}</Text>
+              <Text>S.R./Route: {data.sr_route || ""}</Text>
+              <Text>Job Address: {data.job_address || ""}</Text>
+              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
+            </View>
+
+            {/* ETC */}
+            <View style={{ width: "50%", padding: 4, borderRight:1, borderColor:'black' }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
+              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
+              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
+              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
+              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+            </View>
+
+            {/* Additional */}
+            <View style={{ width: "50%", padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
+              <Text>Bid Date: {data.bid_date || ""}</Text>
+              <Text>Start Date: {data.start_date || ""}</Text>
+              <Text>End Date: {data.end_date || ""}</Text>
+              <Text>Duration: {data.duration || ""}</Text>
+            </View>
+          </View>
+        );
+      }
+
+      case "to_project": {
+        const data = quoteData as Partial<ToProjectQuote>;
+
+        return (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+            {/* Customer Info */}
+            <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
+              <Text>Customer: {data.customer_name || ""}</Text>
+              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Email: {data.customer_email || ""}</Text>
+              <Text>Phone: {data.customer_phone || ""}</Text>
+              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Job #: {data.customer_job_number || ""}</Text>
+            </View>
+
+            {/* Job Info */}
+            <View style={{ width: "50%", borderBottomWidth: 1, padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
+              <Text>Township: {data.township || ""}</Text>
+              <Text>County: {data.county || ""}</Text>
+              <Text>S.R./Route: {data.sr_route || ""}</Text>
+              <Text>Job Address: {data.job_address || ""}</Text>
+              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
+            </View>
+
+            {/* ETC */}
+            <View style={{ width: "50%", padding: 4, borderRight:1, borderColor:'black' }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
+              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
+              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
+              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
+              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+            </View>
+
+            {/* Additional */}
+            <View style={{ width: "50%", padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
+              <Text>Bid Date: {data.bid_date || ""}</Text>
+              <Text>Start Date: {data.start_date || ""}</Text>
+              <Text>End Date: {data.end_date || ""}</Text>
+              <Text>Duration: {data.duration || ""}</Text>
+            </View>
+          </View>
+        )
+      }
+
+      case "straight_sale":
+      default: {
+        const data = quoteData as Partial<StraightSaleQuote>;
+        return (
+          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+            <View style={{ width: "50%", borderRightWidth: 1, padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
+              <Text>Customer: {data.customer_name || ""}</Text>
+              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Email: {data.customer_email || ""}</Text>
+              <Text>Phone: {data.customer_phone || ""}</Text>
+              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Job #: {data.customer_job_number || ""}</Text>
+              <Text>Purchase Order #: {data.purchase_order || ""}</Text>
+            </View>
+            <View style={{ width: "50%", padding: 4 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
+              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
+              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
+              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
+              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+            </View>
+          </View>
+        );
+      }
+    }
+  };
 
   return (
-    <Document title={`Proposal ${ecms}`}>
-      <Page size="A4" style={proposalStyles.page}>
-        {/* Footer con número de página */}
-        <Text
-          fixed
-          style={{ position: 'absolute', bottom: 10, right: 30, fontSize: 10 }}
-          render={({ pageNumber, totalPages }) => (
-            `Initials: ________ Page ${pageNumber} of ${totalPages}`
-          )}
-        />
-
-        {/* Header en páginas siguientes */}
-        <View
-          fixed
-          style={{ position: 'absolute', top: 10, left: 30, fontSize: 13, fontWeight: 'bold' }}
-          render={({ pageNumber }) =>
-            pageNumber > 1 ? (
-              <Text>
-                Quote For: {customers.length > 1 ? 'Estimating' : primaryCustomer.name} - Quote ID: {quoteNumber} cont.
-              </Text>
-            ) : null
-          }
-        />
-
-        {/* Company Info */}
-        <View style={proposalStyles.companyInfoContainer}>
-          <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Image style={proposalStyles.img} src='/logo.jpg' />
-            <Text style={proposalStyles.etcHeader}>Established Traffic Control, Inc.</Text>
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Image src="/logo.jpg" style={styles.logo} />
+          <View style={styles.headerCenter}>
+            <Text style={{ fontSize: 14, fontWeight: 'bold' }}>Established Traffic Control, Inc.</Text>
+            <Text style={styles.centerText}>3162 Unionville Pike</Text>
+            <Text style={styles.centerText}>Hatfield, PA 19440</Text>
+            <Text style={styles.centerText}>O: 215.997.8801 | F: 215.997.8868</Text>
+            <Text style={styles.centerText}>Email: {sender.email}</Text>
           </View>
-          <View>
-            <Text style={proposalStyles.quoteNumber}>{quoteNumber}</Text>
-            <Text style={proposalStyles.infoText}>{sender.name}</Text>
-            <Text style={proposalStyles.infoText}>{sender.email}</Text>
-            <Text style={proposalStyles.infoText}>3162 UNIONVILLE PIKE</Text>
-            <Text style={proposalStyles.infoText}>HATFIELD, PA 19440</Text>
-            <Text style={proposalStyles.infoText}>OFFICE: (215) 997-8801</Text>
-            <Text style={proposalStyles.infoText}>FAX: (215) 997-8868</Text>
-            <Text style={proposalStyles.infoText}>DBE / VBE</Text>
+          <View style={styles.headerCenter}>
+            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>PROPOSAL</Text>
+            <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
+            <Text style={{ fontSize: 12 }}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
           </View>
         </View>
 
-        {/* Sold To / Bill To / Ship To */}
-        <View style={{ flexDirection: 'row', marginTop: 10 }}>
-          {['Sold To', 'Bill To', 'Ship To'].map((label, idx) => (
-            <View key={label} style={{ flex: 1, paddingHorizontal: 5 }}>
-              <Text style={proposalStyles.quoteTableLabel}>{label}:</Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.name}</Text>
-              <Text style={{ fontSize: 10 }}>ATT: {pointOfContact.name}</Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.address}</Text>
-              <Text style={{ fontSize: 10 }}>
-                {primaryCustomer.city}, {primaryCustomer.state} {primaryCustomer.zip} US
-              </Text>
-              <Text style={{ fontSize: 10 }}>{primaryCustomer.mainPhone}</Text>
-              {idx === 0 && (
-                <Text style={{ fontSize: 10, marginTop: 15 }}>
-                  Created: {quoteDate.toLocaleDateString('en-US')}
-                </Text>
-              )}
-              {idx === 2 && (
-                <Text style={{ fontSize: 10, marginTop: 15, textAlign: 'right' }}>
-                  Expires: {new Date(quoteDate.getTime() + (30 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US')}
-                </Text>
-              )}
-            </View>
-          ))}
-        </View>
+        {/* Customer Info */}
+        {renderCustomerInfo()}
 
         {/* Items Table */}
-        <View style={proposalStyles.table}>
-          <View style={proposalStyles.tableHeader}>
-            <Text style={proposalStyles.tableHeaderCell}>ITEM #</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: 3 }]}>DESCRIPTION</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>QTY</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { flex: .8 }]}>UOM</Text>
-            <Text style={proposalStyles.tableHeaderCell}>UNIT PRICE</Text>
-            <Text style={[proposalStyles.tableHeaderCell, { borderRightWidth: 0 }]}>EXTENDED PRICE</Text>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            {['Row', 'Item #', 'Description', 'Qty/Units', 'Unit Price', 'Extended'].map((h, i) => (
+              <Text key={i} style={[styles.tableCell, styles.tableHeader]}>{h}</Text>
+            ))}
           </View>
 
-          {items?.map((item, index) => (
-            <React.Fragment key={`item-fragment-${index}`}>
-              {/* Fila del Ítem Principal */}
-              <View style={proposalStyles.tableRow}>
-                <Text style={proposalStyles.tableCell}>{item.itemNumber}</Text>
-                <Text style={[proposalStyles.tableCell, { flex: 3 }]}>
-                  {[item.description, item.notes].filter(Boolean).join("\n\n")}
-                </Text>
-                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.quantity}</Text>
-                <Text style={[proposalStyles.tableCell, { flex: .8 }]}>{item.uom || 'EA'}</Text>
-                <Text style={[proposalStyles.tableCell, { textAlign: 'right' }]}>
-                  {formatMoney(item.unitPrice ?? 0)}
-                </Text>
-                <Text style={[proposalStyles.tableCell, { textAlign: 'right', borderRightWidth: 0 }]}>
-                  {formatMoney(calculateExtendedPrice(item))}
-                </Text>
-              </View>
-
-              {/* Filas de Ítems Asociados */}
-              {item.associatedItems?.map((assocItem, assocIndex) => (
-                <View key={`assoc-item-${assocIndex}`} style={{ ...proposalStyles.tableRow, backgroundColor: '#f9f9f9' }}>
-                  <Text style={{ ...proposalStyles.tableCell, flex: 1 }}></Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: 3, paddingLeft: 15, fontSize: 9 }}>
-                    - {assocItem.description}
+          {items.map((item, idx) => {
+            const ext = calculateExtendedPrice(item);
+            return (
+              <View key={idx}>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableCell}>{idx + 1}</Text>
+                  <Text style={styles.tableCell}>{item.itemNumber || idx + 1}</Text>
+                  <Text style={styles.tableCell}>
+                    {item.description}
+                    {item.notes && `\n${item.notes}`}
                   </Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.quantity}</Text>
-                  <Text style={{ ...proposalStyles.tableCell, flex: .8, fontSize: 9 }}>{assocItem.uom || 'EA'}</Text>
-                  <Text style={{ ...proposalStyles.tableCell, textAlign: 'right', fontSize: 9 }}>
-                    {formatMoney(assocItem.unitPrice ?? 0)}
-                  </Text>
-                  <Text style={{ ...proposalStyles.tableCell, borderRightWidth: 0 }}></Text>
+                  <Text style={styles.tableCell}>{item.quantity} {item.uom || 'EA'}</Text>
+                  <Text style={styles.tableCell}>{formatMoney(item.unitPrice || 0)}</Text>
+                  <Text style={styles.tableCell}>{formatMoney(ext)}</Text>
                 </View>
-              ))}
-            </React.Fragment>
-          ))}
+                {item.associatedItems?.map((assoc, aIdx) => (
+                  <View key={`assoc-${idx}-${aIdx}`} style={[styles.tableRow, { backgroundColor: '#F3F3F3' }]}>
+                    <Text style={styles.tableCell}></Text>
+                    <Text style={styles.tableCell}>- {assoc.description}</Text>
+                    <Text style={styles.tableCell}>{assoc.quantity}</Text>
+                    <Text style={styles.tableCell}>{formatMoney(assoc.unitPrice || 0)}</Text>
+                    <Text style={styles.tableCell}></Text>
+                    <Text style={styles.tableCell}></Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
 
-          {/* Rellenar filas vacías hasta 10 */}
-          {Array(Math.max(0, 10 - (items?.length || 0))).fill(null).map((_, i) => (
-            <View key={`empty-${i}`} style={proposalStyles.tableRow}>
-              <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
-              <Text style={proposalStyles.tableCell}></Text>
-              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text> 
-              <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
-              <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>-</Text>
-            </View>
-          ))}
-
-          {/* Total */}
-          <View style={proposalStyles.tableRow}>
-            <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 3 }]}></Text>
-            <Text style={proposalStyles.tableCell}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 0.8 }]}></Text>
-            <Text style={[proposalStyles.tableCell, { flex: 0.8, textAlign: 'right' }]}>TOTAL</Text>
-            <Text style={[proposalStyles.tableCell, { borderRightWidth: 0, textAlign: 'right' }]}>
-              {formatMoney(total)}
-            </Text>
+          {/* Totals */}
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>SUBTOTAL</Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{formatMoney(total)}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>TOTAL</Text>
+            <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{formatMoney(total)}</Text>
           </View>
         </View>
 
-        {/* Warning */}
-        <Text style={proposalStyles.warningText}>
-          ABOVE PRICING IS SUBJECT TO CHANGE AT ANY TIME DUE TO THE CONTINUED ESCALATION OF RAW MATERIAL AND TRANSPORTATION COSTS. ABOVE PRICES EXCLUDE TAX.
+        {/* Disclaimer */}
+        <Text style={styles.disclaimerText}>
+          Sales tax not included in price. Please add 3% to total if paying by MC or VISA, 4% for AMEX.{"\n"}
+          Due to extreme market volatility, all pricing and availability are subject to change without notice.{"\n"}
+          All quotes to be confirmed at time of order placement.
         </Text>
 
-        {includedTerms['equipment-sale'] && (
-          <View style={[proposalStyles.table, { marginTop: 10, backgroundColor: '#FFFF00' }]}>
-            <Text style={{ fontSize: 8, padding: 5, color: 'red', textAlign: 'center' }}>
-              SALE ITEM PAYMENT TERMS ARE NET 14
-            </Text>
+        {/* Signature */}
+        <View style={styles.signatureBox}>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>X</Text>
+            <View style={styles.signatureLine}></View>
           </View>
-        )}
-
-        {includedTerms['custom-terms'] && !!customTaC && (
-          <View style={[proposalStyles.table, { marginTop: 10, padding: 4 }]}>
-            <Text style={{ fontSize: 11 }}>{customTaC}</Text>
-          </View>
-        )}
-
-        {/* Subtotal & Totals */}
-        <View style={{ backgroundColor: '#e4e4e4', padding: 12, marginTop: 15}}>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Sub Total</Text>
-            <Text>{formatMoney(total)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row', marginTop: 10}}>
-            <Text style={{ fontWeight: 'bold'}}>Miscellaneous</Text>
-            <Text>{formatMoney(0)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Estimated Sales Tax</Text>
-            <Text>{formatMoney(0)}</Text>
-          </View>
-          <View style={{justifyContent: 'space-between', flexDirection: 'row'}}>
-            <Text style={{ fontWeight: 'bold'}}>Total</Text>
-            <Text style={{ fontWeight: 'bold'}}>{formatMoney(total)}</Text>
+          <View style={styles.signatureField}>
+            <Text style={styles.signatureLabel}>Date</Text>
+            <View style={styles.signatureLine}></View>
           </View>
         </View>
 
-        {/* Firma */}
-        <View style={{ marginTop: 20, marginHorizontal: 30 }}>
-          <Text style={{ fontSize: 10, textAlign: 'center', color: '#000080' }}>
-            IF THE PROPOSAL IS ACCEPTED, PLEASE SIGN AND DATE BELOW AND RETURN. THANK YOU!,
-          </Text>
-          <View style={{ flexDirection: 'row', marginTop: 20, justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 10 }}>ACCEPTED BY:________________________________</Text>
-            <Text style={{ fontSize: 10 }}>DATE:_______________</Text>
+        {/* Notes */}
+        <View style={styles.notesSection}>
+          <Text style={{ fontWeight: 'bold' }}>Notes:</Text>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            {notes.length > 0 ? notes.map((nt, i) => (
+              <View key={i} style={styles.noteItem}>
+                <Text>{nt.text}</Text>
+                <Text style={{ fontSize: 8, color: 'gray' }}>
+                  {new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}
+                </Text>
+              </View>
+            )) : <Text>No notes available</Text>}
           </View>
         </View>
-
-        {/* Terms */}
-        {includedTerms['standard-terms'] && (<><StandardConditions /><StandardExclusions /></>)}
-        {includedTerms['rental-agreements'] && <StandardRentalEquipmentAgreement />}
-        {includedTerms['flagging-terms'] && <StandardFlaggingTermsConditions />}
       </Page>
     </Document>
   );
