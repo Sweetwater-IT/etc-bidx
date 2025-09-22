@@ -852,16 +852,14 @@ export function getNonRatedHoursPerPhase(adminData: AdminData, phase: Phase): nu
 }
 
 export function getTotalTripsPerPhase(phase: Phase): number {
-  // Check if phase or standardEquipment is undefined
   if (!phase || !phase.standardEquipment) {
     return 0;
   }
-  // Safely access equipment quantities with null checks
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
   const relevantEquipmentTotals = fourFootQuantity;
-  const trucks = Number(phase.numberTrucks) || 1;  // Added: Use trucks, default 1
-  const capacityPerMobilization = 30 * trucks;  // Added: Capacity scales with trucks
-  return (safeNumber(phase.maintenanceTrips) * 2) + (Math.ceil(relevantEquipmentTotals / capacityPerMobilization) * 2);
+  const trucks = Number(phase.numberTrucks) || 1;
+  const baseMobilizations = Math.ceil(relevantEquipmentTotals / 30) / trucks;  // Scaled base_mob (fractional)
+  return (safeNumber(phase.maintenanceTrips) * 2) + (baseMobilizations * 2);  // Round-trip on both
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
