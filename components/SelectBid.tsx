@@ -53,13 +53,14 @@ const SelectBid = ({ selectedBid, onChange, quoteData }: ISelectBid) => {
     }, [])
 
     useEffect(() => {
-        if (bids?.length > 0 && quoteData?.bid_id) {
-            const findBid = bids.find((b) => b.id === quoteData?.bid_id)
+
+        if (bids?.length > 0 && quoteData?.ecsm_contract_number) {
+            const findBid = bids.find((b) => b?.admin_data?.contractNumber === quoteData?.ecsm_contract_number)
             if (findBid) {
                 onChange(findBid)
             }
         }
-    }, [bids, quoteData?.bid_id])
+    }, [bids, quoteData?.ecsm_contract_number])
 
     return (
         <div className="w-full">
