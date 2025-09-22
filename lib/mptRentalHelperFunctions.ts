@@ -861,8 +861,8 @@ export function getTotalTripsPerPhase(phase: Phase): number {
   const fourFootQuantity = phase.standardEquipment?.fourFootTypeIII?.quantity || 0;
 
   const relevantEquipmentTotals = fourFootQuantity;
-  return safeNumber(phase.maintenanceTrips) + (Math.ceil(relevantEquipmentTotals / 30) * 2);
-
+  return (safeNumber(phase.maintenanceTrips) * 2) + (Math.ceil(relevantEquipmentTotals / 30) * 2);
+  
 }
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
   // Helper function to ensure values are valid numbers  
