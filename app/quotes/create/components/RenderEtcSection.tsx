@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import React from "react";
+import { Edit } from "lucide-react";
 
 interface IRenderEtcSection {
     data: any;
@@ -53,7 +54,9 @@ const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
             <div className="flex justify-between items-center mb-4">
                 <h4 className="font-bold">ETC Contact</h4>
                 {!isEditing ? (
-                    <Button size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
+                    <Button size="sm" onClick={() => setIsEditing(true)}>
+                        <Edit/>
+                    </Button>
                 ) : (
                     <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
@@ -70,12 +73,12 @@ const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
                 )}
             </div>
 
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-col gap-2 mb-4">
                 {renderField("etc_point_of_contact", "ETC Point of Contact", user?.user_metadata?.name)}
                 {renderField("etc_poc_email", "ETC POC Email", user?.email)}
             </div>
 
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-col gap-2 mb-4">
                 {renderField("etc_poc_phone_number", "ETC POC Phone", userBranch?.address)}
                 {renderField("etc_branch", "ETC Branch", userBranch?.name)}
             </div>

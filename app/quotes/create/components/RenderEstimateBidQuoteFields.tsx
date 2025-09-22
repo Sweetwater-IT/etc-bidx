@@ -6,11 +6,13 @@ import { EstimateBidQuote } from "../types";
 import React, { useState } from "react";
 import SelectBid from "@/components/SelectBid";
 import RenderEtcSection from "./RenderEtcSection";
+import { Edit } from "lucide-react";
 
 interface IRenderEstimateBidQuoteFields {
     data: Partial<EstimateBidQuote>;
     setData: React.Dispatch<any>;
     onSaveData: (data: Partial<EstimateBidQuote>) => void;
+    selectedBid?: any;
 }
 
 const SectionBox = ({
@@ -32,7 +34,9 @@ const SectionBox = ({
         <div className="flex justify-between items-center mb-4">
             <h4 className="font-bold">{title}</h4>
             {!isEditing ? (
-                <Button size="sm" onClick={onEdit}>Edit</Button>
+                <Button size="sm" onClick={onEdit}>
+                    <Edit />
+                </Button>
             ) : (
                 <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
@@ -44,8 +48,7 @@ const SectionBox = ({
     </div>
 );
 
-const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEstimateBidQuoteFields) => {
-    const [selectedBid, setSelectedBid] = useState<any>(null);
+const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid }: IRenderEstimateBidQuoteFields) => {
     const [editingSection, setEditingSection] = useState<string | null>(null);
 
     React.useEffect(() => {
@@ -101,15 +104,20 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEsti
                         readOnly={disabled}
                     />
                 ) : (
-                    <p className="text-sm text-gray-700">{data[field] ? String(data[field]) : "-"}</p>
-                )}
+                    <p className="text-sm text-gray-700">
+                        {data[field]
+                            ? type === "date"
+                                ? new Date(data[field] as string).toISOString().slice(0, 10)
+                                : String(data[field])
+                            : "-"}
+                    </p>)}
             </div>
         );
     };
 
     React.useEffect(() => {
         if (selectedBid?.id) {
-            setData((prev)=> ({
+            setData((prev) => ({
                 ...prev,
                 estimate_id: selectedBid.id
             }))
@@ -118,82 +126,73 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEsti
 
     return (
         <div>
-            <div className="mb-8">
-                <p className="font-bold mb-2">Bid Selection</p>
-                <SelectBid
-                    onChangeQuote={(partial) => setData((prev) => ({ ...(prev as any), ...partial }))}
-                    quoteData={data}
-                    selectedJob={selectedBid}
-                    onChange={setSelectedBid}
+            <div className="grid grid-cols-2 w-full gap-4">
+                <SectionBox
+                    title="Customer & Contact Information"
+                    isEditing={editingSection === "customer"}
+                    onEdit={() => setEditingSection("customer")}
+                    onCancel={() => setEditingSection(null)}
+                    onSave={() => {
+                        onSaveData(data);
+                        setEditingSection(null);
+                    }}
+                >
+                    <div className="grid grid-cols-1 gap-2">
+                        {renderField("customer_name", "Customer")}
+                        {renderField("customer_contact", "Customer Contact")}
+                        {renderField("customer_phone", "Customer Phone")}
+                        {renderField("customer_email", "Customer Email")}
+                        {renderField("customer_address", "Customer Address")}
+                        {renderField("customer_job_number", "Customer Job Number")}
+                    </div>
+                </SectionBox>
+
+                <SectionBox
+                    title="Job / Location"
+                    isEditing={editingSection === "jobLocation"}
+                    onEdit={() => setEditingSection("jobLocation")}
+                    onCancel={() => setEditingSection(null)}
+                    onSave={() => {
+                        onSaveData(data);
+                        setEditingSection(null);
+                    }}
+                >
+                    <div className="grid grid-cols-1 gap-2">
+                        {renderField("township", "Township")}
+                        {renderField("county", "County")}
+                        {renderField("sr_route", "SR Route")}
+                        {renderField("job_address", "Job Address")}
+                        {renderField("ecsm_contract_number", "ECSM Contract Number")}
+                    </div>
+                </SectionBox>
+
+                <SectionBox
+                    title="Project Details"
+                    isEditing={editingSection === "project"}
+                    onEdit={() => setEditingSection("project")}
+                    onCancel={() => setEditingSection(null)}
+                    onSave={() => {
+                        onSaveData(data);
+                        setEditingSection(null);
+                    }}
+                >
+                    <div className="grid grid-cols-1 gap-2">
+                        {renderField("bid_date", "Bid Date", "date")}
+                        {renderField("start_date", "Start Date", "date")}
+                        {renderField("end_date", "End Date", "date")}
+                        {renderField("duration", "Duration (days)", "number", true)}
+                        {renderField("project_title", "Project Title")}
+                        {renderField("description", "Description")}
+                    </div>
+                </SectionBox>
+
+                <RenderEtcSection
+                    data={data}
+                    setData={setData}
+                    onSaveData={() => onSaveData(data)}
                 />
             </div>
 
-            <SectionBox
-                title="Customer & Contact Information"
-                isEditing={editingSection === "customer"}
-                onEdit={() => setEditingSection("customer")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
-                    {renderField("customer_name", "Customer")}
-                    {renderField("customer_contact", "Customer Contact")}
-                    {renderField("customer_phone", "Customer Phone")}
-                    {renderField("customer_email", "Customer Email")}
-                    {renderField("customer_address", "Customer Address")}
-                    {renderField("customer_job_number", "Customer Job Number")}
-                </div>
-            </SectionBox>
-
-            <SectionBox
-                title="Job / Location"
-                isEditing={editingSection === "jobLocation"}
-                onEdit={() => setEditingSection("jobLocation")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
-                    {renderField("township", "Township")}
-                    {renderField("county", "County")}
-                    {renderField("sr_route", "SR Route")}
-                    {renderField("job_address", "Job Address")}
-                    {renderField("ecsm_contract_number", "ECSM Contract Number")}
-                </div>
-            </SectionBox>
-
-            <SectionBox
-                title="Project Details"
-                isEditing={editingSection === "project"}
-                onEdit={() => setEditingSection("project")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
-                    {renderField("bid_date", "Bid Date", "date")}
-                    {renderField("start_date", "Start Date", "date")}
-                    {renderField("end_date", "End Date", "date")}
-                    {renderField("duration", "Duration (days)", "number", true)}
-                </div>
-                <div>
-                    {renderField("project_title", "Project Title")}
-                    {renderField("description", "Description")}
-                </div>
-            </SectionBox>
-
-            <RenderEtcSection
-                data={data}
-                setData={setData}
-                onSaveData={() => onSaveData(data)}
-            />
         </div>
     );
 };

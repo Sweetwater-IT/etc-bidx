@@ -26,6 +26,9 @@ import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
 import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
 import { Loader2 } from 'lucide-react';
+import SelectBid from '@/components/SelectBid';
+import SelectJob from '@/components/SelectJob';
+import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
 
 const typeQuotes = [
   {
@@ -159,8 +162,9 @@ const useNumericQuoteId = (rawId: unknown) => {
 export default function QuoteFormContent({ showInitialAdminState = false, edit }: { showInitialAdminState?: boolean, edit?: true }) {
   const { user } = useAuth()
   const router = useRouter()
-  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">('straight_sale')
+  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">("")
   const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
+  const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact } = useCustomerSelection();
 
   const {
     selectedCustomers,
@@ -202,6 +206,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const numericQuoteId = useNumericQuoteId(quoteId)
   const initCalled = useRef(false);
   const [userBranch, setUserBranch] = useState<any>(null);
+
+  // Para To Project
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+
+  // Para Estimate/Bid
+  const [selectedBid, setSelectedBid] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserBranch = async () => {
@@ -466,7 +476,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           sr={adminData?.srRoute || ''}
           ecms={adminData?.contractNumber || ''}
           quoteData={quoteData || quoteMetadata}
-          quoteType={quoteType}
+          quoteType={quoteType || "straight_sale"}
         />
       ).toBlob()
 
@@ -567,6 +577,29 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }, [quoteMetadata, user, userBranch]);
 
+  const renderSelect = () => {
+    return (
+      <div className='mb-4'>
+        <p className='font-bold text-xl mb-2'>Quote type</p>
+        <div className='w-1/4'>
+          <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
+          <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Quote Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {typeQuotes.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.key}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -592,62 +625,131 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       />
 
       <div className="flex gap-6 p-6 max-w-full">
-        <div className="w-1/2 space-y-6">
-          {
-            loadingMetadata ?
-              <div className='w-full h-full flex fle-row items-center justify-center '>
-                <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
-              </div>
-              :
-              <div className='flex flex-col'>
-                <div className='mb-4'>
-                  <p className='font-bold text-xl mb-2'>Quote type</p>
-                  <div className='w-1/4'>
-                    <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
-                    <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Quote Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {typeQuotes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.key}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        {
+          loadingMetadata ? (
+            <div className='w-full h-full flex flex-row items-center justify-center'>
+              <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+            </div>
+          ) : (
+            <div className='flex flex-col'>
+              {/* All selects in one row */}
+              <div className="flex flex-row gap-4 mb-4 w-full">
+                {/* Quote Type */}
+                <div className="w-1/2 gap-4">
+                  <p className="font-semibold mb-1">Quote Type</p>
+                  <Select onValueChange={handleQuoteTypeChange} value={quoteType || ""}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Quote Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {typeQuotes.map(t => (
+                        <SelectItem key={t.value} value={t.value}>{t.key}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Customer / Job / Bid */}
+                {quoteType === "straight_sale" && quoteData && (
+                  <>
+                    <div className="flex-1">
+                      <p className="font-semibold mb-1">Customer</p>
+                      <Select onValueChange={selectCustomer} value={selectedCustomer?.id?.toString() || ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map(c => (
+                            <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="font-semibold mb-1">Contact</p>
+                      <Select
+                        onValueChange={selectContact}
+                        value={selectedContact?.id?.toString() || ""}
+                        disabled={!selectedCustomer}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Contact" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCustomer?.customer_contacts?.length
+                            ? selectedCustomer.customer_contacts.map(cc => (
+                              <SelectItem key={cc.id} value={cc.id.toString()}>
+                                {cc.name} ({cc.email})
+                              </SelectItem>
+                            ))
+                            : <p className="text-center text-gray-400 text-sm py-4">There are no contacts</p>
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {quoteType === "to_project" && quoteData && (
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">Job</p>
+                    <SelectJob
+                      quoteData={quoteData}
+                      onChangeQuote={setQuoteData}
+                      selectedJob={selectedJob}
+                      onChange={setSelectedJob}
+                    />
                   </div>
-                </div>
+                )}
 
-                <div className='my-4'>
-                  {quoteType === "straight_sale" && quoteData && (
-                    <RenderSaleQuoteFields
-                      data={quoteData as Partial<StraightSaleQuote>}
-                      setData={setQuoteData}
+                {quoteType === "estimate_bid" && quoteData && (
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">Bid</p>
+                    <SelectBid
+                      quoteData={quoteData}
+                      selectedBid={selectedBid}
+                      onChange={setSelectedBid}
                     />
-                  )}
+                  </div>
+                )}
+              </div>
 
-                  {quoteType === "to_project" && quoteData && (
-                    <RenderProjectQuoteFields
-                      data={quoteData as Partial<ToProjectQuote>}
-                      setData={setQuoteData}
-                      onSaveData={handleSaveQuote}
-                    />
-                  )}
+              {/* Fields */}
+              <div className='my-4'>
+                {quoteType === "straight_sale" && quoteData && (
+                  <RenderSaleQuoteFields
+                    selectedContact={selectContact}
+                    selectedCustomer={selectedCustomer}
+                    data={quoteData as Partial<StraightSaleQuote>}
+                    setData={setQuoteData}
+                  />
+                )}
 
-                  {quoteType === "estimate_bid" && quoteData && (
-                    <RenderEstimateBidQuoteFields
-                      data={quoteData as Partial<EstimateBidQuote>}
-                      setData={setQuoteData}
-                      onSaveData={handleSaveQuote}
-                    />
-                  )}
-                </div>
+                {quoteType === "to_project" && quoteData && (
+                  <RenderProjectQuoteFields
+                    selectedJob={selectedJob}
+                    data={quoteData as Partial<ToProjectQuote>}
+                    setData={setQuoteData}
+                    onSaveData={handleSaveQuote}
+                  />
+                )}
 
+                {quoteType === "estimate_bid" && quoteData && (
+                  <RenderEstimateBidQuoteFields
+                    selectedBid={selectedBid}
+                    data={quoteData as Partial<EstimateBidQuote>}
+                    setData={setQuoteData}
+                    onSaveData={handleSaveQuote}
+                  />
+                )}
+              </div>
+
+              <div className='my-4'>
                 <QuoteItems />
+              </div>
 
-                {/* <QuoteAdditionalFiles /> */}
-                {/* <QuoteTermsAndConditions /> */}
+              {quoteType && quoteData &&
                 <QuoteNotes
                   notes={notes}
                   onSave={handleSaveNote}
@@ -655,10 +757,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   onDelete={handleDeleteNote}
                   canEdit={true}
                 />
-              </div>
-          }
+              }
+            </div>
+          )
+        }
 
-        </div>
 
         <div className="w-1/2 space-y-6">
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
@@ -666,7 +769,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
                 quoteData={quoteData}
-                quoteType={quoteType}
+                quoteType={quoteType || "straight_sale"}
                 notes={notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
