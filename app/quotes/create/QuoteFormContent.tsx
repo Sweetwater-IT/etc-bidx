@@ -653,7 +653,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 {quoteType === "straight_sale" && quoteData && (
                   <>
                     <div className="flex-1">
-                      <p className="font-semibold mb-1">Customer</p>
+                      <p className="font-semibold mb-1">Select a customer</p>
                       <Select onValueChange={selectCustomer} value={selectedCustomer?.id?.toString() || ""}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Customer" />
@@ -693,7 +693,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
                 {quoteType === "to_project" && quoteData && (
                   <div className="flex-1">
-                    <p className="font-semibold mb-1">Job</p>
+                    <p className="font-semibold mb-1">Select a job number</p>
                     <SelectJob
                       quoteData={quoteData}
                       onChangeQuote={setQuoteData}
@@ -705,7 +705,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
                 {quoteType === "estimate_bid" && quoteData && (
                   <div className="flex-1">
-                    <p className="font-semibold mb-1">Bid</p>
+                    <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
                       quoteData={quoteData}
                       selectedBid={selectedBid}
