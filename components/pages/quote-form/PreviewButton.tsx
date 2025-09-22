@@ -31,28 +31,16 @@ export const QuotePreviewButton = () => {
     stateRoute,
     ecmsPoNumber,
     pointOfContact,
+    notes,
+    quoteMetadata,
+    quoteType
   } = useQuoteForm();
 
 
   const pdfDocument = useMemo(() => {
-    console.log("📄 Datos que se envían al PDF:", {
-      adminData: adminData ?? defaultAdminObject,
-      items: quoteItems,
-      customers: selectedCustomers,
-      quoteDate: quoteDate ? new Date(quoteDate) : new Date(),
-      quoteNumber: quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A",
-      sender,
-      pointOfContact: pointOfContact ?? { name: "", email: "" },
-      paymentTerms,
-      includedTerms: includeTerms,
-      customTaC: includeTerms["custom-terms"] ? customTerms : "",
-      county: typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? "",
-      sr: stateRoute,
-      ecms: ecmsPoNumber,
-    });
-
     return (
       <BidProposalReactPDF
+        notes={notes}
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}
@@ -61,11 +49,13 @@ export const QuotePreviewButton = () => {
         sender={sender}
         pointOfContact={pointOfContact ?? { name: "", email: "" }}
         paymentTerms={paymentTerms as PaymentTerms}
-        includedTerms={includeTerms}
-        customTaC={includeTerms["custom-terms"] ? customTerms : ""}
+        includedTerms={includeTerms ?? {}}
+        customTaC={includeTerms?.["custom-terms"] ? customTerms : ""}
         county={typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? ""}
         sr={stateRoute}
         ecms={ecmsPoNumber}
+        quoteType={quoteType}
+        quoteData={quoteMetadata}
       />
     );
   }, [

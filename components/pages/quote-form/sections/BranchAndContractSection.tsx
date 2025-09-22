@@ -25,7 +25,7 @@ interface Job {
 }
 
 interface BranchAndContractSectionProps {
-  quoteType: "new" | "estimate" | "job";
+  quoteType:  "straight_sale" | "to_project" | "estimate_bid";
   selectedBranch: string;
   setSelectedBranch: (value: string) => void;
   associatedContractNumber: string | undefined;
@@ -45,7 +45,7 @@ export function BranchAndContractSection({
   allEstimates,
   allJobs,
 }: BranchAndContractSectionProps) {
-  if (quoteType === "new") return null;
+  if (quoteType === "straight_sale") return null;
 
   return (
     <>
@@ -66,7 +66,7 @@ export function BranchAndContractSection({
       </div>
       <div className="space-y-2">
         <Label>
-          {quoteType === "estimate" ? "Contract Number" : "Job Number"}
+          {quoteType === "estimate_bid" ? "Contract Number" : "Job Number"}
         </Label>
         <Select
           value={associatedContractNumber || ""}
@@ -76,12 +76,12 @@ export function BranchAndContractSection({
           <SelectTrigger>
             <SelectValue
               placeholder={`Select ${
-                quoteType === "estimate" ? "contract" : "job"
+                quoteType === "estimate_bid" ? "contract" : "job"
               } number`}
             />
           </SelectTrigger>
           <SelectContent>
-            {quoteType === "estimate"
+            {quoteType === "estimate_bid"
               ? allEstimates
                   .filter((estimate) =>
                     selectedBranch === "All"

@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { AdminInformationSheet } from "./AdminInformationSheet";
-import { ContractJobSelector } from "./ContractJobSelector";
 import { QuoteItem } from "@/types/IQuoteItem";
 
 interface Estimate {
@@ -30,7 +29,7 @@ const createEmptyQuoteItem = (): QuoteItem => ({
   unitPrice: 0,
   discount: 0,
   discountType: "dollar",
-  notes: "",
+  notes: [],
   associatedItems: [],
   isCustom: false,
 });
@@ -129,136 +128,8 @@ export function QuoteAdminInformation({
     setSheetOpen(true);
   };
 
-  const handleSelect = async (jobOrEstimate: any) => {
-    setSelectedContractJob(jobOrEstimate);
-    setSheetMode("edit");
-    setSheetOpen(false);
-
-    if (!jobOrEstimate) {
-      // Si se deselecciona, limpiar todo
-      setAdminData(undefined);
-      setAssociatedContractNumber(undefined);
-      setSelectedCustomers([]);
-      setQuoteItems([createEmptyQuoteItem()]);
-      setNotes([]);
-      setEstimateId(null);
-      setJobId(null);
-      setQuoteType("new");
-      setSelectedContractJob(null); // Asegurarse de limpiar el estado local también
-      return;
-    }
-
-    try {
-      if (jobOrEstimate.contract_number) {
-        
-        setAssociatedContractNumber(jobOrEstimate.contract_number || "");
-        setQuoteType("estimate");
-        setEstimateId(jobOrEstimate.id);
-        setJobId(null);
-
-        
-        const resEstimate = await fetch(`/api/estimates/${jobOrEstimate.id}`);
-        if (resEstimate.ok) {
-          const estimateData = await resEstimate.json();
-          if (estimateData?.admin_data) {
-            setAdminData(estimateData.admin_data);
-            console.log("📊 Fetched adminData for estimate:", estimateData.admin_data);
-          }
-        }
-
-        
-        const resContacts = await fetch(`/api/estimates/${jobOrEstimate.id}/contacts`);
-        if (resContacts.ok) {
-          const contactsData = await resContacts.json();
-          setSelectedCustomers(contactsData);
-        }
-
-       
-        const resItems = await fetch(`/api/estimates/${jobOrEstimate.id}/items`);
-        if (resItems.ok) {
-          const itemsData = await resItems.json();
-          if (Array.isArray(itemsData) && itemsData.length > 0) {
-            setQuoteItems(itemsData);
-          } else {
-            setQuoteItems([createEmptyQuoteItem()]);
-          }
-          console.log("🚀 Fetched items for estimate:", itemsData.length > 0 ? itemsData : "none, created new item.");
-        }
-      } else {
-        
-        setAssociatedContractNumber(jobOrEstimate.job_number || jobOrEstimate.id);
-        setQuoteType("job");
-        setJobId(jobOrEstimate.id);
-        setEstimateId(null);
-
-        console.log("🚀 Selected job:", jobOrEstimate);
-
-        
-        const resJob = await fetch(`/api/jobs/${jobOrEstimate.id}`);
-        if (resJob.ok) {
-          const jobData = await resJob.json();
-          if (jobData?.admin_data) {
-            setAdminData(jobData.admin_data);
-            console.log("📊 Fetched adminData for job:", jobData.admin_data);
-          }
-        }
-
-      
-        const resContacts = await fetch(`/api/jobs/${jobOrEstimate.id}/contacts`);
-        if (resContacts.ok) {
-          const contactsData = await resContacts.json();
-          setSelectedCustomers(contactsData);
-        }
-
-        
-        const resItems = await fetch(`/api/jobs/${jobOrEstimate.id}/items`);
-        if (resItems.ok) {
-          const items = await resItems.json();
-          if (Array.isArray(items) && items.length > 0) {
-            setQuoteItems(items);
-          } else {
-            setQuoteItems([createEmptyQuoteItem()]);
-          }
-          console.log("🚀 Fetched items for job:", items.length > 0 ? items : "none, created new item.");
-        }
-      }
-    } catch (err) {
-      toast.error("Could not load admin/contacts/items for this contract/job");
-    }
-  };
-
-
-
   return (
     <>
-      <ContractJobSelector
-        allEstimates={allEstimates}
-        allJobs={allJobs}
-        selectedContractJob={selectedContractJob}
-        onSelect={handleSelect}
-        onAddNew={handleAddNew}
-        onEdit={handleEdit}
-        searchValue={searchValue}
-        setSearchValue={setSearchValue}
-        quoteType={quoteType}
-        branch={selectedBranch}
-        jobNumber={associatedContractNumber}
-        county={countyString}
-        ecmsPoNumber={ecmsPoNumber}
-        stateRoute={stateRoute}
-        paymentTerms={paymentTerms}
-        quoteDate={quoteDate}
-        customers={selectedCustomers}
-        isLoading={isLoading}
-        selectedBranch={selectedBranch}
-        setSelectedBranch={setSelectedBranch}
-        isLoadingEstimatesJobs={isLoadingEstimatesJobs}
-        digitalSignature={digitalSignature}
-        showInitialAdminState={showInitialAdminState}
-        adminData={adminData}
-      />
-
-     
       {sheetOpen && (
         <AdminInformationSheet
           quoteId={quoteId ?? 0}

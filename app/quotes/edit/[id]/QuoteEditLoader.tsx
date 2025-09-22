@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuoteForm } from "../../create/QuoteFormProvider";
 import { toast } from "sonner";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
+import { Note } from "@react-pdf/renderer";
 
 export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
   const {
@@ -25,9 +26,12 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
     setCcEmails,
     setBccEmails,
     setNotes,
+    setQuoteMetadata,
+    setLoadingMetadata
   } = useQuoteForm();
 
   useEffect(() => {
+    setLoadingMetadata(true)
     if (!quoteId) return;
 
     async function fetchQuote() {
@@ -35,26 +39,15 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         const res = await fetch(`/api/quotes/edit/${quoteId}`);
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
-
-        console.log("🚀 [QuoteEditLoader] Loaded quote:", data);
-
-        
+        setQuoteMetadata(data)
         setQuoteId(data.id);
         setQuoteNumber(data.quote_number);
         setStatus(data.status || "Not Sent");
         setQuoteDate(data.date_sent || data.created_at);
-
-     
         setSelectedCustomers(data.customers || []);
-
-        
         setQuoteItems(data.items || []);
+        setAdminData(data.admin_data ?? defaultAdminObject);
 
-      
-       setAdminData(data.admin_data ?? defaultAdminObject);
-
-
-       
         const point = data.recipients?.find((r: any) => r.point_of_contact);
         const cc =
           data.recipients?.filter((r: any) => r.cc).map((r: any) => r.email) ||
@@ -68,7 +61,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
             name:
               point.customer_contacts?.name ??
               point.name ??
-              "", 
+              "",
             email:
               point.email ??
               point.customer_contacts?.email ??
@@ -81,23 +74,28 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setCcEmails(cc);
         setBccEmails(bcc);
 
-       
+
         setSubject(data.subject || "");
         setEmailBody(data.body || "");
 
-      
         setCustomTerms(data.custom_terms_conditions || "");
         setIncludeTerms(data.include_terms || {});
         setIncludeFiles(data.include_files || {});
         setAssociatedContractNumber(data.associated_contract_number || "");
 
-        setNotes(data.notes || []);
 
-       
+        const parsedNotes: any[] = typeof data.notes === 'string'
+          ? JSON.parse(data.notes)
+          : data.notes || [];
+
+        setNotes(parsedNotes);
+
         setPaymentTerms(data.payment_terms || "NET30");
       } catch (err) {
         console.error("💥 [QuoteEditLoader] Error loading quote:", err);
         toast.error("Could not load quote for editing");
+      } finally {
+        setLoadingMetadata(false)
       }
     }
 

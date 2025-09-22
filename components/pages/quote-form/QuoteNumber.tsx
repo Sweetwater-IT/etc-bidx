@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 export function QuoteNumber() {
   const { 
-    quoteNumber,      // 👈 usamos quoteNumber, no quoteId
+    quoteNumber,      
     setQuoteNumber, 
     status, 
     quoteType, 
@@ -43,9 +43,9 @@ export function QuoteNumber() {
   const updateQuoteNumber = async () => {
     const latestNumber = await getLatestNumber();
     
-    if (quoteType === 'new') {
+    if (quoteType === 'straight_sale') {
       setQuoteNumber(`Q-${latestNumber}`);
-    } else if ((quoteType === 'estimate' || quoteType === 'job') && associatedContractNumber) {
+    } else if ((quoteType === 'estimate_bid' || quoteType === 'to_project') && associatedContractNumber) {
       setQuoteNumber(`${associatedContractNumber}-Q-${latestNumber}`);
     } else if (!quoteNumber) {
       setQuoteNumber(`Q-${latestNumber}`);

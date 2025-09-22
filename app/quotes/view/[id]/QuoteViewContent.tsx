@@ -16,28 +16,72 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 
-interface Quote {
-  id: number;
-  contract_number?: string;
-  job_number?: string;
-  status?: string;
-  customer?: {
-    id: number;
-    name: string;
-    displayName: string;
-  };
-  requestor?: string;
-  quote_date?: string;
-  created_at?: string;
-  order_status?: string;
-  items?: any[];
-  contact?: {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-  };
+export interface ContactInfo {
+  id?: number;
+  name?: string;
+  email?: string;
+  phone?: string;
 }
+
+export interface Quote {
+  id: number;
+  quote_number?: string | null;
+  contract_number?: string | null;
+  status?: "DRAFT" | "Not Sent" | "Sent" | "Accepted" | null;
+  created_at?: string | null;
+  date_sent?: string | null;
+  customer?: Record<string, any>;
+  contact?: ContactInfo | null;
+  ccEmails?: string[];
+  bccEmails?: string[];
+  requestor?: string | null;
+  quote_date?: string | null;
+  items?: any[];
+  admin_data?: any | null;
+  files?: any[];
+  notes?: any | null;
+  from_email?: string | null;
+  subject?: string | null;
+  body?: string | null;
+  estimate_id?: number | null;
+  job_id?: number | null;
+  response_token?: string | null;
+  custom_terms_conditions?: string | null;
+  payment_terms?: string;
+  county?: string | null;
+  state_route?: string | null;
+  ecms_po_number?: string | null;
+  bedford_sell_sheet?: boolean;
+  flagging_price_list?: boolean;
+  flagging_service_area?: boolean;
+  standard_terms?: boolean;
+  rental_agreements?: boolean;
+  equipment_sale?: boolean;
+  flagging_terms?: boolean;
+  updated_at?: string | null;
+  type_quote: "straight_sale" | "to_project" | "estimate_bid";
+  customer_contact?: Record<string, any>;
+  customer_email?: string;
+  customer_phone?: string;
+  customer_address?: string;
+  customer_job_number?: string;
+  purchase_order?: string | null;
+  etc_point_of_contact?: string;
+  etc_poc_email?: string;
+  etc_poc_phone_number?: string;
+  etc_branch?: string;
+  township?: string;
+  sr_route?: string;
+  job_address?: string;
+  ecsm_contract_number?: string;
+  bid_date?: string;
+  start_date?: string;
+  end_date?: string | null;
+  duration?: number;
+  description?: string;
+  project_title?: string;
+}
+
 
 interface QuoteItem {
   id: number;
@@ -175,7 +219,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     });
   };
 
-
   return (
     <SidebarProvider
       style={
@@ -290,6 +333,74 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                       {quote.contact?.email ?? "-"}
                     </div>
                   </div>
+
+                  {quote.type_quote === "straight_sale" && (
+                    <>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Purchase Order</div>
+                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Job Number</div>
+                        <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
+                      </div>
+                    </>
+                  )}
+
+                  {quote.type_quote === "to_project" && (
+                    <>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Project Title</div>
+                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Bid Date</div>
+                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Start Date</div>
+                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">End Date</div>
+                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Duration</div>
+                        <div className="text-base mt-1">{quote.duration || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Purchase Order</div>
+                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                      </div>
+                    </>
+                  )}
+
+                  {quote.type_quote === "estimate_bid" && (
+                    <>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Project Title</div>
+                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Bid Date</div>
+                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Start Date</div>
+                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">End Date</div>
+                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Duration</div>
+                        <div className="text-base mt-1">{quote.duration || "-"}</div>
+                      </div>
+                    </>
+                  )}
+
                 </div>
               </div>
 
@@ -306,7 +417,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                 </div>
               </div>
 
-            
+
               <div className="grid grid-cols-1 gap-8">
                 <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
                   <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
@@ -328,7 +439,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   />
                 </div>
               </div>
-              
+
             </div>
           </div>
         </div>

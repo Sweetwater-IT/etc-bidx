@@ -8,7 +8,7 @@ interface LocationDetailsSectionProps {
   setEcmsPoNumber: (value: string) => void;
   stateRoute: string;
   setStateRoute: (value: string) => void;
-  quoteType: "new" | "estimate" | "job";
+  quoteType: "straight_sale" | "to_project" | "estimate_bid";
 }
 
 export function LocationDetailsSection({
@@ -20,7 +20,7 @@ export function LocationDetailsSection({
   setStateRoute,
   quoteType,
 }: LocationDetailsSectionProps) {
-  if (quoteType === "new") return null;
+  if (quoteType === "straight_sale") return null;
 
   return (
     <>
@@ -38,7 +38,7 @@ export function LocationDetailsSection({
           placeholder="ECMS / PO #"
           value={ecmsPoNumber}
           onChange={(e) => setEcmsPoNumber(e.target.value)}
-          disabled={quoteType === "job"}
+          disabled={quoteType === "to_project"}
         />
       </div>
       <div className="space-y-2">

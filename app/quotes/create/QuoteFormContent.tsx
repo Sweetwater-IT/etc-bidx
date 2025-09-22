@@ -1,8 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
 import { QuoteNumber } from '@/components/pages/quote-form/QuoteNumber'
@@ -19,6 +20,106 @@ import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
 import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
+import { useAuth } from '@/contexts/auth-context'
+import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFields';
+import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
+import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
+import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
+import { Loader2 } from 'lucide-react';
+
+const typeQuotes = [
+  {
+    key: "Straight Sale",
+    value: "straight_sale",
+  },
+  {
+    key: "To Project",
+    value: "to_project",
+  },
+  {
+    key: "Estimate/Bid",
+    value: "estimate_bid",
+  }
+]
+
+function normalizeQuoteMetadata(meta: any): QuoteState {
+  const base: Partial<Quote> = {
+    id: meta.id,
+    quote_number: meta.quote_number,
+    type_quote: meta.type_quote,
+    status: meta.status,
+    date_sent: meta.date_sent,
+    project_title: meta.project_title,
+    description: meta.description,
+    estimate_id: meta.estimate_id,
+    job_id: meta.job_id,
+    county: meta.county,
+    updated_at: meta.updated_at,
+    created_at: meta.created_at,
+  };
+
+  const commonFields = {
+    customer: meta.customer ?? {},
+    customer_contact: meta.customer_contact ?? {},
+    customer_email: meta.customer_email ?? "",
+    customer_phone: meta.customer_phone ?? "",
+    customer_address: meta.customer_address ?? "",
+    customer_job_number: meta.customer_job_number ?? "",
+    purchase_order: meta.purchase_order ?? "",
+    etc_point_of_contact: meta.etc_point_of_contact ?? "",
+    etc_poc_email: meta.etc_poc_email ?? "",
+    etc_poc_phone_number: meta.etc_poc_phone_number ?? "",
+    etc_branch: meta.etc_branch ?? "",
+  };
+
+  if (meta.type_quote === "straight_sale") {
+    return {
+      ...base,
+      ...commonFields,
+    } as StraightSaleQuote;
+  }
+
+  if (meta.type_quote === "to_project") {
+    return {
+      ...base,
+      ...commonFields,
+      township: meta.township ?? "",
+      county: meta.county ?? "",
+      sr_route: meta.sr_route ?? "",
+      job_address: meta.job_address ?? "",
+      ecsm_contract_number: meta.ecsm_contract_number ?? "",
+      bid_date: meta.bid_date ?? "",
+      start_date: meta.start_date ?? "",
+      end_date: meta.end_date ?? "",
+      duration: meta.duration ?? 0,
+    } as ToProjectQuote;
+  }
+
+  if (meta.type_quote === "estimate_bid") {
+    return {
+      ...base,
+      ...commonFields,
+      township: meta.township ?? "",
+      county: meta.county ?? "",
+      sr_route: meta.sr_route ?? "",
+      job_address: meta.job_address ?? "",
+      ecsm_contract_number: meta.ecsm_contract_number ?? "",
+      bid_date: meta.bid_date ?? "",
+      start_date: meta.start_date ?? "",
+      end_date: meta.end_date ?? "",
+      duration: meta.duration ?? 0,
+    } as EstimateBidQuote;
+  }
+
+  return base as QuoteState;
+}
+
+
+
+type QuoteState =
+  | Partial<StraightSaleQuote>
+  | Partial<ToProjectQuote>
+  | Partial<EstimateBidQuote>;
 
 function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
   const mapped = {
@@ -47,21 +148,20 @@ function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, job
     rated: adminData.rated,
     emergency_fields: adminData.emergencyFields,
   }
-  console.log('[mapAdminDataToApi] mapped:', mapped)
-
-  console.log('mapped es', mapped);
-  
   return mapped
 }
 
-// helper: garantiza que trabajamos SOLO con IDs numéricos
 const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
   return id
 }
 
-export default function QuoteFormContent({ showInitialAdminState = false }: { showInitialAdminState?: boolean }) {
+export default function QuoteFormContent({ showInitialAdminState = false, edit }: { showInitialAdminState?: boolean, edit?: true }) {
+  const { user } = useAuth()
   const router = useRouter()
+  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">('straight_sale')
+  const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
+
   const {
     selectedCustomers,
     sending,
@@ -89,16 +189,32 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     sender,
     notes,
     setNotes,
+    quoteMetadata,
+    loadingMetadata,
+    setQuoteMetadata
   } = useQuoteForm()
 
   const [isSaving, setIsSaving] = useState(false)
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
-  const prevStateRef = useRef({ quoteItems, adminData, notes })
+  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData })
   const numericQuoteId = useNumericQuoteId(quoteId)
-
   const initCalled = useRef(false);
+  const [userBranch, setUserBranch] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserBranch = async () => {
+      try {
+        const res = await fetch(`/api/users?email=${user.email}`);
+        const result = await res.json();
+        if (result.success) setUserBranch(result.branchData[0]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchUserBranch();
+  }, [user.email, edit]);
 
   useEffect(() => {
     async function initDraft() {
@@ -121,35 +237,24 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
     }
     initDraft();
-  
+
   }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const handleSaveNote = async (note: Note) => {
-    setNotes((prevNotes) => [...prevNotes, note]);
+    setNotes((prevNotes) => [...prevNotes, { ...note, user_email: user.email }]);
   };
-  const autosave = async () => {
-    if (!numericQuoteId) {
 
-      return false
-    }
-
-    prevStateRef.current = { quoteItems, adminData, notes }
-
-
+  const autosave = React.useCallback(async () => {
+    if (!numericQuoteId) return false;
 
     try {
       const payload = {
         id: numericQuoteId,
-        estimate_id: estimateId,
-        job_id: jobId,
+        estimate_id: estimateId || quoteData?.estimate_id,
+        job_id: jobId || quoteData?.job_id,
         items: quoteItems,
-        admin_data: mapAdminDataToApi(
-          adminData ?? defaultAdminObject,
-          estimateId,
-          jobId
-        ),
         status: 'DRAFT',
-        notes: notes,
+        notes,
         subject,
         body: emailBody,
         from_email: sender?.email || null,
@@ -162,30 +267,27 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         include_terms: includeTerms,
         custom_terms: customTerms,
         payment_terms: paymentTerms,
-      }
-
-
+        ...quoteData
+      };
 
       const res = await fetch(`/api/quotes`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
+      });
 
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || 'Failed to save draft')
-      }
+      if (!res.ok) throw new Error(await res.text());
 
-      setSecondCounter(1)
-      if (!firstSave) setFirstSave(true)
-      return true
-    } catch (error) {
+      prevStateRef.current = { quoteItems, adminData, notes, quoteData };
+      setSecondCounter(1);
+      if (!firstSave) setFirstSave(true);
 
-      toast.error('Quote not successfully saved as draft: ' + error)
-      return false
+      return true;
+    } catch (err) {
+      toast.error('Quote not successfully saved as draft: ' + err);
+      return false;
     }
-  }
+  }, [numericQuoteId, quoteItems, adminData, notes, quoteData, estimateId, jobId, subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers, includeTerms, customTerms, paymentTerms, firstSave]);
 
   const handleEditNote = (index: number, updatedNote: Note) => {
     setNotes((prevNotes) =>
@@ -198,22 +300,25 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
   };
 
   useEffect(() => {
-    if (!numericQuoteId) return
+    if (!numericQuoteId) return;
 
-    const hasQuoteItemsChanged = !isEqual(quoteItems, prevStateRef.current.quoteItems)
-    const hasAdminDataChanged = !isEqual(adminData, prevStateRef.current.adminData)
-    const haveNotesChanged = !isEqual(notes, prevStateRef.current.notes);
-    if (!hasQuoteItemsChanged && !hasAdminDataChanged && !haveNotesChanged) return
+    const hasChanges =
+      !isEqual(quoteItems, prevStateRef.current.quoteItems) ||
+      !isEqual(adminData, prevStateRef.current.adminData) ||
+      !isEqual(notes, prevStateRef.current.notes) ||
+      !isEqual(quoteData, prevStateRef.current.quoteData);
 
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    if (!hasChanges) return;
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
-      autosave()
-    }, 5000)
+      autosave();
+    }, 5000);
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    }
-  }, [quoteItems, adminData, notes, numericQuoteId, autosave])
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [quoteItems, adminData, notes, quoteData, numericQuoteId, autosave]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -222,6 +327,120 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     return () => clearInterval(intervalId)
   }, [])
 
+  const handleQuoteTypeChange = (
+    type: "straight_sale" | "to_project" | "estimate_bid",
+    needSetObject = true
+  ) => {
+    setQuoteType(type);
+    if (!needSetObject) return;
+
+    const etcDefaults = {
+      etc_point_of_contact: user?.user_metadata?.name ?? "",
+      etc_poc_email: user?.email ?? "",
+      etc_poc_phone_number: userBranch?.address ?? "",
+      etc_branch: userBranch?.name ?? "",
+    };
+
+    let newQuoteData: QuoteState = { ...quoteData };
+
+    if (type === "straight_sale") {
+      newQuoteData = {
+        ...newQuoteData,
+        type_quote: 'straight_sale',
+        customer_name: "",
+        customer: {},
+        customer_contact: "",
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        purchase_order: "",
+        project_title: "",
+        description: "",
+        ...etcDefaults,
+      };
+    }
+
+    if (type === "to_project") {
+      newQuoteData = {
+        ...newQuoteData,
+        type_quote: "to_project",
+        job_id: null,
+        customer_name: "",
+        customer: null,
+        customer_contact: "",
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        purchase_order: "",
+        township: "",
+        county: "",
+        sr_route: "",
+        job_address: "",
+        ecsm_contract_number: "",
+        bid_date: "",
+        start_date: "",
+        end_date: "",
+        duration: 0,
+        project_title: "",
+        description: "",
+        ...etcDefaults,
+      };
+    }
+
+    if (type === "estimate_bid") {
+      newQuoteData = {
+        ...newQuoteData,
+        type_quote: "estimate_bid",
+        estimate_id: null,
+        customer_name: "",
+        customer: null,
+        customer_contact: "",
+        customer_email: "",
+        customer_phone: "",
+        customer_address: "",
+        customer_job_number: "",
+        township: "",
+        county: "",
+        sr_route: "",
+        job_address: "",
+        ecsm_contract_number: "",
+        bid_date: "",
+        start_date: "",
+        end_date: "",
+        duration: 0,
+        project_title: "",
+        description: "",
+        ...etcDefaults,
+      };
+    }
+
+    setQuoteData(newQuoteData);
+    handleSaveQuote(newQuoteData);
+  };
+
+  async function handleSaveQuote(dataToSave?: QuoteState) {
+    if (!quoteId) return;
+
+    const payload = { ...dataToSave || quoteData, id: quoteId };
+
+    try {
+      const result = await fetch('/api/quotes', {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const resp = await result.json();
+
+      if (resp.success) {
+        toast.success("Quote data successfully edited");
+      }
+    } catch (error) {
+      toast.error("There was an error updating the quote");
+      console.log(error);
+    }
+  }
 
 
   const handleDownload = async () => {
@@ -230,10 +449,9 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         toast.error("No quote available to download")
         return
       }
-
-     
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
+          notes={notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
           customers={selectedCustomers}
@@ -247,10 +465,11 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
           county={adminData?.county?.country || ''}
           sr={adminData?.srRoute || ''}
           ecms={adminData?.contractNumber || ''}
+          quoteData={quoteData || quoteMetadata}
+          quoteType={quoteType}
         />
       ).toBlob()
 
-     
       const url = URL.createObjectURL(pdfBlob)
       const a = document.createElement("a")
       a.href = url
@@ -268,7 +487,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
   }
 
 
-
   const handleSendQuote = async () => {
     if (!numericQuoteId || !pointOfContact) {
       toast.error("A point of contact is required to send the quote.");
@@ -277,13 +495,11 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
 
     setSending(true);
     try {
-      // Primero, nos aseguramos de que el borrador más reciente esté guardado.
       const saved = await autosave();
       if (!saved) {
         throw new Error("Could not save the latest draft before sending.");
       }
 
-      // Ahora, llamamos a la API para enviar el correo.
       const res = await fetch('/api/quotes/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -297,7 +513,7 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
       }
 
       toast.success("Quote sent successfully!");
-      router.push('/quotes'); 
+      router.push('/quotes');
 
     } catch (error: any) {
       console.error("Error sending quote:", error);
@@ -337,6 +553,20 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
     }
   }
 
+  React.useEffect(() => {
+    if (quoteMetadata?.id) {
+      const normalizedQuote = normalizeQuoteMetadata(quoteMetadata);
+      setQuoteData(prev => ({
+        ...normalizedQuote,
+        etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
+        etc_poc_email: prev?.etc_poc_email || user?.email || "",
+        etc_poc_phone_number: prev?.etc_poc_phone_number || userBranch?.address || "",
+        etc_branch: prev?.etc_branch || userBranch?.name || "",
+      }));
+      handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
+    }
+  }, [quoteMetadata, user, userBranch]);
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -361,30 +591,83 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
         }
       />
 
-      {/* Contenido principal: Formulario a la izquierda, Vista previa a la derecha */}
       <div className="flex gap-6 p-6 max-w-full">
-        {/* Columna Izquierda (Formulario) */}
         <div className="w-1/2 space-y-6">
-          <QuoteAdminInformation showInitialAdminState={showInitialAdminState} />
-          <QuoteItems />
-          <QuoteNotes
-            notes={notes}
-            onSave={handleSaveNote}
-            onEdit={handleEditNote}
-            onDelete={handleDeleteNote}
-            canEdit={true}
-          />
-          {/* <QuoteAdditionalFiles /> */}
-          {/* <QuoteTermsAndConditions /> */}
+          {
+            loadingMetadata ?
+              <div className='w-full h-full flex fle-row items-center justify-center '>
+                <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+              </div>
+              :
+              <div className='flex flex-col'>
+                <div className='mb-4'>
+                  <p className='font-bold text-xl mb-2'>Quote type</p>
+                  <div className='w-1/4'>
+                    <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
+                    <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Quote Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {typeQuotes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className='my-4'>
+                  {quoteType === "straight_sale" && quoteData && (
+                    <RenderSaleQuoteFields
+                      data={quoteData as Partial<StraightSaleQuote>}
+                      setData={setQuoteData}
+                    />
+                  )}
+
+                  {quoteType === "to_project" && quoteData && (
+                    <RenderProjectQuoteFields
+                      data={quoteData as Partial<ToProjectQuote>}
+                      setData={setQuoteData}
+                      onSaveData={handleSaveQuote}
+                    />
+                  )}
+
+                  {quoteType === "estimate_bid" && quoteData && (
+                    <RenderEstimateBidQuoteFields
+                      data={quoteData as Partial<EstimateBidQuote>}
+                      setData={setQuoteData}
+                      onSaveData={handleSaveQuote}
+                    />
+                  )}
+                </div>
+
+                <QuoteItems />
+
+                {/* <QuoteAdditionalFiles /> */}
+                {/* <QuoteTermsAndConditions /> */}
+                <QuoteNotes
+                  notes={notes}
+                  onSave={handleSaveNote}
+                  onEdit={handleEditNote}
+                  onDelete={handleDeleteNote}
+                  canEdit={true}
+                />
+              </div>
+          }
+
         </div>
 
-        {/* Columna Derecha (Vista Previa y otros) */}
         <div className="w-1/2 space-y-6">
-          {/* Contenedor de la Vista Previa del PDF */}
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
+                quoteData={quoteData}
+                quoteType={quoteType}
+                notes={notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers}
@@ -403,6 +686,6 @@ export default function QuoteFormContent({ showInitialAdminState = false }: { sh
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
