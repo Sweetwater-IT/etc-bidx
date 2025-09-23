@@ -131,8 +131,9 @@ export async function POST(req: NextRequest) {
       // Create a unique file path to avoid naming conflicts
       const timestamp = Date.now();
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `${folder}/${uniqueIdentifier}/${timestamp}_${sanitizedFilename}`;
+
       
+      const storagePath = `${folder}/${uniqueIdentifier}/${timestamp}_${sanitizedFilename}`;      
       try {
         // Upload file to Supabase Storage
         const { data: storageData, error: storageError } = await supabase.storage

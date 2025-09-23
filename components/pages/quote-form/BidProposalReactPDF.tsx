@@ -33,6 +33,7 @@ interface Props {
   notes: INote[];
   quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
+  termsAndConditions?: boolean;
 }
 
 const styles = StyleSheet.create({
@@ -69,7 +70,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   ecms,
   notes,
   quoteType,
-  quoteData
+  quoteData,
+  termsAndConditions
+
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
 
@@ -121,7 +124,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
 
             {/* ETC */}
-            <View style={{ width: "50%", padding: 4, borderRight:1, borderColor:'black' }}>
+            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
               <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
               <Text>ETC Email: {data.etc_poc_email || ""}</Text>
@@ -168,7 +171,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
 
             {/* ETC */}
-            <View style={{ width: "50%", padding: 4, borderRight:1, borderColor:'black' }}>
+            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
               <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
               <Text>ETC Email: {data.etc_poc_email || ""}</Text>
@@ -226,7 +229,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <Text style={{ fontSize: 14, fontWeight: 'bold' }}>Established Traffic Control, Inc.</Text>
             <Text style={styles.centerText}>3162 Unionville Pike</Text>
             <Text style={styles.centerText}>Hatfield, PA 19440</Text>
-            <Text style={styles.centerText}>O: 215.997.8801 | F: 215.997.8868</Text>
+            <Text style={styles.centerText}>O: 215.997.8801</Text>
             <Text style={styles.centerText}>Email: {sender.email}</Text>
           </View>
           <View style={styles.headerCenter}>
@@ -329,6 +332,49 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           </View>
         </View>
       </Page>
+      {termsAndConditions && (
+        <Page size="A4" style={styles.page}>
+          <View style={{ marginTop: 12, fontSize: 9 }}>
+            <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
+
+            <Text>
+              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
+            </Text>
+
+            <Text>
+              --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
+            </Text>
+
+            <Text>
+              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
+            </Text>
+
+            <Text>
+              --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
+            </Text>
+
+            <Text>
+              --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless if owner has paid contractor.
+            </Text>
+
+            <Text>
+              --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
+            </Text>
+
+            <Text>
+              --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
+            </Text>
+
+            <Text>
+              --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
+            </Text>
+
+            <Text>
+              --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
+            </Text>
+          </View>
+        </Page>
+      )}
     </Document>
   );
 };

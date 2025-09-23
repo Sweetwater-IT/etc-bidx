@@ -15,7 +15,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 
-export const QuotePreviewButton = () => {
+export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteType: any, termsAndConditions: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -33,7 +33,6 @@ export const QuotePreviewButton = () => {
     pointOfContact,
     notes,
     quoteMetadata,
-    quoteType
   } = useQuoteForm();
 
 
@@ -56,6 +55,7 @@ export const QuotePreviewButton = () => {
         ecms={ecmsPoNumber}
         quoteType={quoteType}
         quoteData={quoteMetadata}
+        termsAndConditions={termsAndConditions}
       />
     );
   }, [
@@ -71,6 +71,8 @@ export const QuotePreviewButton = () => {
     customTerms,
     stateRoute,
     ecmsPoNumber,
+    quoteType,
+    termsAndConditions
   ]);
 
   return (

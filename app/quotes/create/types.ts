@@ -43,6 +43,9 @@ export interface Quote {
     created_at?: any
     project_title?: string;
     description?: string;
+    selectedfilesids: any[];
+    aditionalFiles: boolean;
+    aditionalTerms: boolean;
 }
 
 export interface StraightSaleQuote extends Quote {

@@ -29,6 +29,8 @@ import { Loader2 } from 'lucide-react';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const typeQuotes = [
   {
@@ -59,6 +61,9 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     county: meta.county,
     updated_at: meta.updated_at,
     created_at: meta.created_at,
+    selectedfilesids: meta.selectedfilesids,
+    aditionalFiles: meta.aditionalFiles,
+    aditionalTerms: meta.aditionalTerms
   };
 
   const commonFields = {
@@ -124,35 +129,6 @@ type QuoteState =
   | Partial<ToProjectQuote>
   | Partial<EstimateBidQuote>;
 
-function mapAdminDataToApi(adminData: AdminData, estimateId?: number | null, jobId?: number | null) {
-  const mapped = {
-
-    bid_estimate_id: estimateId ?? null,
-    job_id: jobId ?? null,
-    contract_number: adminData.contractNumber,
-    estimator: adminData.estimator,
-    division: adminData.division,
-    letting_date: adminData.lettingDate,
-    owner: adminData.owner,
-    county: adminData.county,
-    sr_route: adminData.srRoute,
-    location: adminData.location,
-    dbe: adminData.dbe,
-    start_date: adminData.startDate,
-    end_date: adminData.endDate,
-    winter_start: adminData.winterStart,
-    winter_end: adminData.winterEnd,
-    ow_travel_time_hours: adminData.owTravelTimeHours,
-    ow_travel_time_minutes:
-      adminData.owTravelTimeMinutes ?? adminData.owTravelTimeMins,
-    ow_mileage: adminData.owMileage,
-    fuel_cost_per_gallon: adminData.fuelCostPerGallon,
-    emergency_job: adminData.emergencyJob,
-    rated: adminData.rated,
-    emergency_fields: adminData.emergencyFields,
-  }
-  return mapped
-}
 
 const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
@@ -195,23 +171,29 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setNotes,
     quoteMetadata,
     loadingMetadata,
-    setQuoteMetadata
+    setQuoteMetadata,
   } = useQuoteForm()
 
   const [isSaving, setIsSaving] = useState(false)
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
-  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData })
+  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteData || quoteMetadata })
   const numericQuoteId = useNumericQuoteId(quoteId)
   const initCalled = useRef(false);
   const [userBranch, setUserBranch] = useState<any>(null);
-
-  // Para To Project
   const [selectedJob, setSelectedJob] = useState<any>(null);
-
-  // Para Estimate/Bid
   const [selectedBid, setSelectedBid] = useState<any>(null);
+  const [files, setFiles] = useState<any>([])
+
+  const handleFileSelect = (fileId: string) => {
+    setQuoteData((prev: any) => ({
+      ...prev,
+      selectedfilesids: (prev?.selectedfilesids ?? []).includes(fileId)
+        ? prev.selectedfilesids!.filter((id) => id !== fileId)
+        : [...(prev?.selectedfilesids ?? []), fileId],
+    }));
+  };
 
   useEffect(() => {
     const fetchUserBranch = async () => {
@@ -249,10 +231,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     initDraft();
 
   }, [quoteId, setQuoteId, setQuoteNumber]);
-
-  const handleSaveNote = async (note: Note) => {
-    setNotes((prevNotes) => [...prevNotes, { ...note, user_email: user.email }]);
-  };
 
   const autosave = React.useCallback(async () => {
     if (!numericQuoteId) return false;
@@ -316,7 +294,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       !isEqual(quoteItems, prevStateRef.current.quoteItems) ||
       !isEqual(adminData, prevStateRef.current.adminData) ||
       !isEqual(notes, prevStateRef.current.notes) ||
-      !isEqual(quoteData, prevStateRef.current.quoteData);
+      !isEqual(quoteData, prevStateRef.current.quoteData) ||
+      !isEqual(
+        [quoteData?.selectedfilesids, quoteData?.aditionalFiles, quoteData?.aditionalTerms],
+        [prevStateRef.current.quoteData?.selectedfilesids,
+        prevStateRef.current.quoteData?.aditionalFiles,
+        prevStateRef.current.quoteData?.aditionalTerms]
+      );
 
     if (!hasChanges) return;
 
@@ -329,6 +313,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [quoteItems, adminData, notes, quoteData, numericQuoteId, autosave]);
+
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -344,11 +329,15 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setQuoteType(type);
     if (!needSetObject) return;
 
-    const etcDefaults = {
+    const defaultValues = {
       etc_point_of_contact: user?.user_metadata?.name ?? "",
       etc_poc_email: user?.email ?? "",
       etc_poc_phone_number: userBranch?.address ?? "",
       etc_branch: userBranch?.name ?? "",
+      aditionalFiles: false,
+      aditionalTerms: false,
+      selectedfilesids: [],
+
     };
 
     let newQuoteData: QuoteState = { ...quoteData };
@@ -367,7 +356,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         purchase_order: "",
         project_title: "",
         description: "",
-        ...etcDefaults,
+        ...defaultValues,
       };
     }
 
@@ -395,7 +384,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         duration: 0,
         project_title: "",
         description: "",
-        ...etcDefaults,
+        ...defaultValues,
       };
     }
 
@@ -422,7 +411,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         duration: 0,
         project_title: "",
         description: "",
-        ...etcDefaults,
+        ...defaultValues,
       };
     }
 
@@ -477,6 +466,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           ecms={adminData?.contractNumber || ''}
           quoteData={quoteData || quoteMetadata}
           quoteType={quoteType || "straight_sale"}
+          termsAndConditions={quoteData?.aditionalTerms}
         />
       ).toBlob()
 
@@ -577,29 +567,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }, [quoteMetadata, user, userBranch]);
 
-  const renderSelect = () => {
-    return (
-      <div className='mb-4'>
-        <p className='font-bold text-xl mb-2'>Quote type</p>
-        <div className='w-1/4'>
-          <p className='font-semibold mb-2 text-md'>Select Quote Type</p>
-          <Select value={quoteType ?? ""} onValueChange={handleQuoteTypeChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Quote Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {typeQuotes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.key}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -612,7 +579,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton />
+              <QuotePreviewButton quoteType={quoteType} termsAndConditions={quoteData?.aditionalTerms || false} />
               <Button variant="outline" onClick={handleDownload}>
                 Download
               </Button>
@@ -749,15 +716,59 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 <QuoteItems />
               </div>
 
-              {quoteType && quoteData &&
-                <QuoteNotes
-                  notes={notes}
-                  onSave={handleSaveNote}
-                  onEdit={handleEditNote}
-                  onDelete={handleDeleteNote}
-                  canEdit={true}
-                />
-              }
+              <div className='my-4'>
+                <QuoteAdditionalFiles setFiles={setFiles} />
+              </div>
+
+              <div className="rounded-lg border p-6 my-4">
+                <h2 className="mb-4 text-lg font-semibold">Additional Documents</h2>
+
+                {/* Checkboxes principales */}
+                <div className="flex flex-row gap-6 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="files"
+                      checked={quoteData?.aditionalFiles || false}
+                      onCheckedChange={(checked) =>
+                        setQuoteData(prev => ({ ...prev, aditionalFiles: !!checked }))
+                      }
+                    />
+                    <Label htmlFor="files">Files</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="terms"
+                      checked={quoteData?.aditionalTerms || false}
+                      onCheckedChange={(checked) =>
+                        setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
+                      }
+                    />
+                    <Label htmlFor="terms">Terms and Conditions</Label>
+                  </div>
+                </div>
+
+                {/* Lista de archivos */}
+                {quoteData?.aditionalFiles && files.length > 0 && (
+                  <div className="ml-6 grid grid-cols-1 gap-2">
+                    {files.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 transition"
+                      >
+                        <Checkbox
+                          id={`file-${file.id}`}
+                          checked={quoteData?.selectedfilesids?.includes(file.id)}
+                          onCheckedChange={() => handleFileSelect(file.id)}
+                        />
+                        <Label htmlFor={`file-${file.id}`} className="truncate">
+                          {file.filename}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )
         }
@@ -784,6 +795,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 county={adminData ? adminData.county?.name || '' : ''}
                 sr={adminData ? adminData.srRoute || '' : ''}
                 ecms={adminData ? adminData.contractNumber || '' : ''}
+                termsAndConditions={quoteData?.aditionalTerms}
+                files={files.filter((f) => quoteData?.selectedfilesids?.includes(f.id))}
               />
             </div>
           </div>

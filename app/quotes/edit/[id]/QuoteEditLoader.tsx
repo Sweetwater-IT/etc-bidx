@@ -39,7 +39,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         const res = await fetch(`/api/quotes/edit/${quoteId}`);
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
-        setQuoteMetadata(data)
+        setQuoteMetadata({...data})
         setQuoteId(data.id);
         setQuoteNumber(data.quote_number);
         setStatus(data.status || "Not Sent");

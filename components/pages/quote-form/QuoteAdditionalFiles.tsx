@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AttachmentNames, useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
@@ -11,7 +11,7 @@ import { FileMetadata } from "@/types/FileTypes";
 import FileViewingContainer from "@/components/file-viewing-container";
 import { fetchAssociatedFiles } from "@/lib/api-client";
 
-export function QuoteAdditionalFiles() {
+export function QuoteAdditionalFiles({ setFiles }: { setFiles: any }) {
   const { includeFiles, setIncludeFiles, quoteId } = useQuoteForm();
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([]);
 
@@ -20,10 +20,9 @@ export function QuoteAdditionalFiles() {
   };
 
   const fileUploadProps = useFileUpload({
-    maxFileSize: 50 * 1024 * 1024, 
-    maxFiles: 10, 
+    maxFileSize: 50 * 1024 * 1024,
+    maxFiles: 10,
     uniqueIdentifier: quoteId ?? '',
-    apiEndpoint: '/api/files/quotes',
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -34,11 +33,14 @@ export function QuoteAdditionalFiles() {
       'application/zip': ['.zip'],
       'text/plain': ['.txt'],
       'text/csv': ['.csv']
-    }
+    },
+    folder: 'quotes'
   });
-
-
   const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
+
+  useEffect(() => {
+    setFiles(localFiles || []);
+  }, [localFiles, setFiles]);
 
   useEffect(() => {
     if (!fileErrors || fileErrors.length === 0) return;
@@ -54,7 +56,7 @@ export function QuoteAdditionalFiles() {
 
   const fetchFiles = () => {
     if (!quoteId) return;
-    fetchAssociatedFiles(quoteId, 'quotes?quote_id', setLocalFiles);
+    fetchAssociatedFiles(quoteId, 'quotes', setLocalFiles);
   };
 
   useEffect(() => {
@@ -75,35 +77,6 @@ export function QuoteAdditionalFiles() {
         <DropzoneEmptyState />
       </Dropzone>
       <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
-
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="flagging-price-list"
-            checked={includeFiles["flagging-price-list"]}
-            onCheckedChange={(checked) => handleFileToggle("flagging-price-list", !!checked)}
-          />
-          <Label htmlFor="flagging-price-list">Flagging Price List</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="flagging-service-area"
-            checked={includeFiles["flagging-service-area"]}
-            onCheckedChange={(checked) => handleFileToggle("flagging-service-area", !!checked)}
-          />
-          <Label htmlFor="flagging-service-area">Flagging Service Area</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="bedford-branch"
-            checked={includeFiles["bedford-branch"]}
-            onCheckedChange={(checked) => handleFileToggle("bedford-branch", !!checked)}
-          />
-          <Label htmlFor="bedford-branch">Bedford Branch Sell Sheet</Label>
-        </div>
-      </div>
     </div>
   );
 }
