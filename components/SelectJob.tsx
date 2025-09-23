@@ -56,7 +56,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
                 const job = jobs.find(j => j.id.toString() === value);
                 if (job) onChange(job);
             }}
-            value={selectedJob?.id?.toString()} // <-- usar el ID, no job_number
+            value={selectedJob?.id?.toString()} 
             disabled={loading}
         >
             <SelectTrigger className="w-[300px]">
