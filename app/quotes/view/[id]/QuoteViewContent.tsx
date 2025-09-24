@@ -15,6 +15,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
+import { Copy, Edit, ExternalLink } from "lucide-react";
 
 export interface ContactInfo {
   id?: number;
@@ -30,7 +31,7 @@ export interface Quote {
   status?: "DRAFT" | "Not Sent" | "Sent" | "Accepted" | null;
   created_at?: string | null;
   date_sent?: string | null;
-  customer?: Record<string, any>;
+  customer?: any;
   contact?: ContactInfo | null;
   ccEmails?: string[];
   bccEmails?: string[];
@@ -233,7 +234,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">View Quote</h1>
+            <h1 className="text-3xl font-bold mt-2 ml-0">Q-{quote?.id}</h1>
             <div className="flex gap-2">
               <Button
                 onClick={handleEditQuote}
@@ -250,170 +251,217 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             </div>
           </div>
         </SiteHeader>
+        <div className="p-6">
+          <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
+          <div className="w-full flex flex-row gap-4 items-center">
+            <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
+              <p className="truncate text-gray-600">{'https://google.com'}</p>
+            </div>
+            <button className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60" role="button" title="Copy link">
+              <Copy className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+            </button>
+            <button className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60" role="button" title="Open link">
+              <ExternalLink className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+            </button>
+            {/* {copied && <span className="text-green-600 text-sm">Copied!</span>} */}
+          </div>
+          <p className="mt-2 text-gray-500">Share this link with your customer so they can view and accept/decline the quote.</p>
+        </div>
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
+
+
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">                <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                <h2 className="text-xl font-semibold mb-4">
-                  Quote Information
-                </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Quote ID</div>
-                    <div className="text-base mt-1 flex items-center gap-2">
-                      {quote.id}
-                      {quote.status?.toLowerCase() === "submitted" && (
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                          Submitted
-                        </Badge>
-                      )}
+              <div className="flex flex-row w-full gap-4 ">
+                <div className="w-3/4 flex flex-col gap-4">
+                  <div className="grid grid-cols-1 w-full gap-8">
+                    <div className="lg:col-span-2 w-full bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">
+                        Customer Information
+                      </h2>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Customer Name
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.customer || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Customer Address
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.customer_address || "-"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Email</div>
+                          <div className="text-base mt-1">{quote.customer_email || "-"}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Job Number</div>
+                          <div className="text-base mt-1">
+                            {quote.customer_job_number || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Phone</div>
+                          <div className="text-base mt-1">
+                            {quote.customer_phone || "-"}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <div className="grid grid-cols-1  gap-8">
+                    <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">
+                        Quote Information
+                      </h2>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contract Number
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contract_number || "-"}
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Quote ID</div>
+                          <div className="text-base mt-1 flex items-center gap-2">
+                            {quote.id}
+                            {quote.status?.toLowerCase() === "submitted" && (
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                Submitted
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">Requestor</div>
-                    <div className="text-base mt-1">{quote.requestor || "-"}</div>
-                  </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Contract Number
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.contract_number || "-"}
+                          </div>
+                        </div>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">Customer</div>
-                    <div className="text-base mt-1">
-                      {quote.customer?.displayName || "-"}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Requestor</div>
+                          <div className="text-base mt-1">{quote.requestor || "-"}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer</div>
+                          <div className="text-base mt-1">
+                            {quote.customer || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Quote Date
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.quote_date
+                              ? format(new Date(quote.quote_date), "MM/dd/yyyy")
+                              : "-"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Created At
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.created_at
+                              ? format(new Date(quote.created_at), "MM/dd/yyyy")
+                              : "-"}
+                          </div>
+                        </div>
+
+                        {quote.type_quote === "straight_sale" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Purchase Order</div>
+                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Job Number</div>
+                              <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
+                            </div>
+                          </>
+                        )}
+
+                        {quote.type_quote === "to_project" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Project Title</div>
+                              <div className="text-base mt-1">{quote.project_title || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bid Date</div>
+                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Start Date</div>
+                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">End Date</div>
+                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Duration</div>
+                              <div className="text-base mt-1">{quote.duration || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Purchase Order</div>
+                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                            </div>
+                          </>
+                        )}
+
+                        {quote.type_quote === "estimate_bid" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Project Title</div>
+                              <div className="text-base mt-1">{quote.project_title || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bid Date</div>
+                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Start Date</div>
+                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">End Date</div>
+                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Duration</div>
+                              <div className="text-base mt-1">{quote.duration || "-"}</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+
                     </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Quote Date
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.quote_date
-                        ? format(new Date(quote.quote_date), "MM/dd/yyyy")
-                        : "-"}
-                    </div>
+                <div className="w-1/4">
+                  <div className="flex flex-col gap-y-2">
+                    <QuoteNotes
+                      notes={notes}
+                      onSave={(note: INote) => handleSave(note, notes.length)}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      title="Recent Activity"
+                    />
                   </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Created At
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.created_at
-                        ? format(new Date(quote.created_at), "MM/dd/yyyy")
-                        : "-"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contact Name
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contact?.name ?? "-"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contact Email
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contact?.email ?? "-"}
-                    </div>
-                  </div>
-
-                  {quote.type_quote === "straight_sale" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Purchase Order</div>
-                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Job Number</div>
-                        <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
-                  {quote.type_quote === "to_project" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Project Title</div>
-                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bid Date</div>
-                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Start Date</div>
-                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">End Date</div>
-                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Duration</div>
-                        <div className="text-base mt-1">{quote.duration || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Purchase Order</div>
-                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
-                  {quote.type_quote === "estimate_bid" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Project Title</div>
-                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bid Date</div>
-                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Start Date</div>
-                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">End Date</div>
-                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Duration</div>
-                        <div className="text-base mt-1">{quote.duration || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
-                </div>
-              </div>
-
-                <div className="flex flex-col gap-y-2">
-                  <FileViewingContainer files={files} onFilesChange={setFiles} />
-
-                  <QuoteNotes
-                    notes={notes}
-                    onSave={(note: INote) => handleSave(note, notes.length)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    title="Notes"
-                  />
                 </div>
               </div>
 
