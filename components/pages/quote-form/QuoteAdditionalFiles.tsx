@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { FileMetadata } from "@/types/FileTypes";
 import FileViewingContainer from "@/components/file-viewing-container";
 import { fetchAssociatedFiles } from "@/lib/api-client";
+import { PdfPreviewDialog } from "@/app/quotes/create/components/ModalPreviewPdf";
 
-export function QuoteAdditionalFiles({ setFiles }: { setFiles: any }) {
+export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; }) {
   const { includeFiles, setIncludeFiles, quoteId } = useQuoteForm();
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([]);
+  const [previewFile, setPreviewFile] = useState<any | null>(null);
 
   const handleFileToggle = (fileId: AttachmentNames, checked: boolean) => {
     setIncludeFiles(prev => ({ ...prev, [fileId as AttachmentNames]: checked }));
@@ -25,18 +27,10 @@ export function QuoteAdditionalFiles({ setFiles }: { setFiles: any }) {
     uniqueIdentifier: quoteId ?? '',
     accept: {
       'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/gif': ['.gif'],
-      'application/zip': ['.zip'],
-      'text/plain': ['.txt'],
-      'text/csv': ['.csv']
     },
     folder: 'quotes'
   });
-  const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
+  const { files: filesUp, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
 
   useEffect(() => {
     setFiles(localFiles || []);
@@ -64,19 +58,67 @@ export function QuoteAdditionalFiles({ setFiles }: { setFiles: any }) {
   }, [quoteId]);
 
   useEffect(() => {
-    if (isSuccess && files && files.length > 0) {
+    if (isSuccess && filesUp && filesUp.length > 0) {
       fetchFiles();
     }
-  }, [isSuccess, files]);
+  }, [isSuccess, filesUp]);
+
 
   return (
-    <div className="rounded-lg border p-6">
+    <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
       <Dropzone {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
         <DropzoneContent />
         <DropzoneEmptyState />
       </Dropzone>
       <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
+      {files.length > 0 && (
+        <div className="grid grid-cols-1 gap-2">
+          {files.map((file) => (
+            <div
+              key={file.id}
+              className="flex items-center gap-2 rounded hover:bg-gray-50 transition"
+            >
+              <Checkbox
+                id={`file-${file.id}`}
+                checked={quoteData?.selectedfilesids?.includes(file.id)}
+                onCheckedChange={() => {
+                  setPreviewFile(file);
+                }}
+              />
+              <Label htmlFor={`file-${file.id}`} className="truncate">
+                {file.filename}
+              </Label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-row gap-6 mt-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="terms"
+            checked={quoteData?.aditionalTerms || false}
+            onCheckedChange={(checked) =>
+              setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
+            }
+          />
+          <Label htmlFor="terms">Terms and Conditions</Label>
+        </div>
+      </div>
+      <PdfPreviewDialog
+        file={
+          previewFile
+            ? {
+              id: previewFile.id,
+              url: previewFile.file_url, 
+              filename: previewFile.filename,
+            }
+            : null
+        }
+        onClose={() => setPreviewFile(null)}
+        onConfirm={(fileId) => handleFileSelect(fileId)}
+      />
     </div>
   );
 }

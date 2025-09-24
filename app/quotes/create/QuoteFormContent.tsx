@@ -1,4 +1,4 @@
-'use client' 
+'use client'
 
 import { Button } from '@/components/ui/button'
 import React, { useEffect, useState, useRef } from 'react'
@@ -717,62 +717,16 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className='my-4'>
-                <QuoteAdditionalFiles setFiles={setFiles} />
-              </div>
-
-              <div className="rounded-lg border p-6 my-4">
-                <h2 className="mb-4 text-lg font-semibold">Additional Documents</h2>
-
-                {/* Checkboxes principales */}
-                <div className="flex flex-row gap-6 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="files"
-                      checked={quoteData?.aditionalFiles || false}
-                      onCheckedChange={(checked) =>
-                        setQuoteData(prev => ({ ...prev, aditionalFiles: !!checked }))
-                      }
-                    />
-                    <Label htmlFor="files">Files</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={quoteData?.aditionalTerms || false}
-                      onCheckedChange={(checked) =>
-                        setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
-                      }
-                    />
-                    <Label htmlFor="terms">Terms and Conditions</Label>
-                  </div>
-                </div>
-
-                {/* Lista de archivos */}
-                {quoteData?.aditionalFiles && files.length > 0 && (
-                  <div className="ml-6 grid grid-cols-1 gap-2">
-                    {files.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 transition"
-                      >
-                        <Checkbox
-                          id={`file-${file.id}`}
-                          checked={quoteData?.selectedfilesids?.includes(file.id)}
-                          onCheckedChange={() => handleFileSelect(file.id)}
-                        />
-                        <Label htmlFor={`file-${file.id}`} className="truncate">
-                          {file.filename}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <QuoteAdditionalFiles
+                  setQuoteData={setQuoteData}
+                  quoteData={quoteData}
+                  handleFileSelect={(field: any) => handleFileSelect(field)}
+                  files={files}
+                  setFiles={setFiles} />
               </div>
             </div>
           )
         }
-
 
         <div className="w-1/2 space-y-6">
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">

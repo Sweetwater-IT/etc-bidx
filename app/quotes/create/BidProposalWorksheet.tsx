@@ -396,7 +396,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       {files && files.length > 0 && (
         <>
           {files.map((file: any, index: number) => (
-            <div key={index} className="page-break w-full bg-white text-black border-[1px] border-gray-400 mt-4">
+            <div key={index} className="flex-1 ">
               <PdfViewer fileUrl={file.file_url} />
             </div>
           ))}
