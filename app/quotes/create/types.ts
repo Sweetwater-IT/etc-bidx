@@ -46,6 +46,7 @@ export interface Quote {
     selectedfilesids: any[];
     aditionalFiles: boolean;
     aditionalTerms: boolean;
+    pdf_url: string;
 }
 
 export interface StraightSaleQuote extends Quote {

@@ -25,7 +25,7 @@ import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFie
 import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
 import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
-import { Loader2 } from 'lucide-react';
+import { Loader, Loader2 } from 'lucide-react';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
@@ -63,7 +63,8 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     created_at: meta.created_at,
     selectedfilesids: meta.selectedfilesids,
     aditionalFiles: meta.aditionalFiles,
-    aditionalTerms: meta.aditionalTerms
+    aditionalTerms: meta.aditionalTerms,
+    pdf_url: meta.pdf_url,
   };
 
   const commonFields = {
@@ -175,6 +176,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   } = useQuoteForm()
 
   const [isSaving, setIsSaving] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
@@ -229,7 +231,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       }
     }
     initDraft();
-
   }, [quoteId, setQuoteId, setQuoteNumber]);
 
   const autosave = React.useCallback(async () => {
@@ -255,7 +256,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         include_terms: includeTerms,
         custom_terms: customTerms,
         payment_terms: paymentTerms,
-        ...quoteData
+        ...quoteData,
       };
 
       const res = await fetch(`/api/quotes`, {
@@ -275,17 +276,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       toast.error('Quote not successfully saved as draft: ' + err);
       return false;
     }
-  }, [numericQuoteId, quoteItems, adminData, notes, quoteData, estimateId, jobId, subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers, includeTerms, customTerms, paymentTerms, firstSave]);
+  }, [
+    numericQuoteId, quoteItems, adminData, notes, quoteData, estimateId, jobId,
+    subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
+    includeTerms, customTerms, paymentTerms, firstSave
+  ]);
 
-  const handleEditNote = (index: number, updatedNote: Note) => {
-    setNotes((prevNotes) =>
-      prevNotes.map((n, i) => (i === index ? updatedNote : n))
-    );
-  };
-
-  const handleDeleteNote = (index: number) => {
-    setNotes((prevNotes) => prevNotes.filter((_, i) => i !== index));
-  };
 
   useEffect(() => {
     if (!numericQuoteId) return;
@@ -307,7 +303,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
       autosave();
-    }, 5000);
+    }, 2500);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -337,7 +333,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       aditionalFiles: false,
       aditionalTerms: false,
       selectedfilesids: [],
-
+      pdf_url: ""
     };
 
     let newQuoteData: QuoteState = { ...quoteData };
@@ -368,7 +364,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         customer_name: "",
         customer: null,
         customer_contact: "",
-        customer_email: "",
+        customer_email: "juancho",
         customer_phone: "",
         customer_address: "",
         customer_job_number: "",
@@ -382,7 +378,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         start_date: "",
         end_date: "",
         duration: 0,
-        project_title: "",
+        project_title: "jajajja",
         description: "",
         ...defaultValues,
       };
@@ -440,14 +436,15 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       console.log(error);
     }
   }
+  console.log('cuote data es ', quoteData);
 
-
-  const handleDownload = async () => {
+  const handleGenerateAndUpload = async (): Promise<string | null> => {
     try {
       if (!quoteId) {
-        toast.error("No quote available to download")
-        return
+        toast.error("No quote available")
+        return null
       }
+
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
           notes={notes}
@@ -464,25 +461,73 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           county={adminData?.county?.country || ''}
           sr={adminData?.srRoute || ''}
           ecms={adminData?.contractNumber || ''}
-          quoteData={quoteData || quoteMetadata}
+          quoteData={quoteData}
           quoteType={quoteType || "straight_sale"}
           termsAndConditions={quoteData?.aditionalTerms}
         />
       ).toBlob()
 
-      const url = URL.createObjectURL(pdfBlob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `Quote-${quoteId}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      const formData = new FormData()
+      formData.append("quoteId", quoteId.toString())
+      formData.append("uniqueIdentifier", quoteId.toString())
+      formData.append("file", new File([pdfBlob], `Quote-${quoteId}.pdf`, { type: "application/pdf" }))
 
-      toast.success("PDF downloaded successfully!")
+      const filesToUpload = files.filter((f) => quoteData?.selectedfilesids?.includes(f.id))
+
+      for (const f of filesToUpload) {
+        const response = await fetch(f.file_url)
+        const blob = await response.blob()
+        const file = new File([blob], f.filename, { type: f.file_type })
+        formData.append("file", file)
+      }
+      const res = await fetch("/api/files/combine-pdfs", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error merging PDFs")
+
+      setQuoteData((prev: any) => ({
+        ...prev,
+        pdf_url: data.url
+      }))
+
+      return data.url
     } catch (err) {
-      console.error("Error downloading PDF:", err)
-      toast.error("Could not download PDF")
+      console.error("Error generating/uploading PDF:", err)
+      toast.error("Could not generate PDF")
+      return null
+    }
+  }
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true)
+
+      const url = await handleGenerateAndUpload()
+      if (!url) return
+
+      const response = await fetch(url)
+      if (!response.ok) throw new Error("Failed to fetch PDF")
+
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+
+      const link = document.createElement("a")
+      link.href = blobUrl
+      link.download = `Quote-${quoteId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Release the blob URL
+      window.URL.revokeObjectURL(blobUrl)
+
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -522,7 +567,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       setSending(false);
     }
   };
-
 
   const handleSaveAndExit = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -580,8 +624,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
             <div className="flex items-center gap-2">
               <QuotePreviewButton quoteType={quoteType} termsAndConditions={quoteData?.aditionalTerms || false} />
-              <Button variant="outline" onClick={handleDownload}>
-                Download
+              <Button disabled={downloading} variant="outline" onClick={handleDownload}>
+                {downloading ? (
+                  <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                ) : (
+                  "Download"
+                )}
               </Button>
               <Button disabled={sending || !pointOfContact} onClick={handleSendQuote}>
                 {sending ? 'Sending...' : 'Send Quote'}

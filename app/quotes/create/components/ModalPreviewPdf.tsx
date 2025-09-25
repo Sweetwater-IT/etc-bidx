@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Document, Page } from "react-pdf";
@@ -15,13 +15,6 @@ export function PdfPreviewDialog({ file, onClose, onConfirm }: PdfPreviewDialogP
     const [pageNumber, setPageNumber] = useState(1);
     const [numPages, setNumPages] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerHeight, setContainerHeight] = useState(0);
-
-    useEffect(() => {
-        if (containerRef.current) {
-            setContainerHeight(containerRef.current.clientHeight);
-        }
-    }, [file]);
 
     if (!file) return null;
 
@@ -49,7 +42,7 @@ export function PdfPreviewDialog({ file, onClose, onConfirm }: PdfPreviewDialogP
                         >
                             <Page
                                 pageNumber={pageNumber}
-                                height={containerHeight}
+                                height={450}
                             />
                         </Document>
                     </div>

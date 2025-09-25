@@ -309,9 +309,6 @@ export const estimateReducer = (
 			if (!state.mptRental) return state;
 			const { phaseNumber: addSignPhase, sign } = action.payload;
 
-			console.log('recibo aqui', action.payload);
-
-
 			return {
 				...state,
 				mptRental: {
@@ -320,7 +317,7 @@ export const estimateReducer = (
 						if (index === addSignPhase) {
 							return {
 								...phase,
-								signs: [...(phase.signs || []), sign], // <-- asegura que siempre sea array
+								signs: [...(phase.signs || []), sign], 
 							};
 						}
 						return phase;

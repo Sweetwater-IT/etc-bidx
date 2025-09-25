@@ -81,6 +81,7 @@ export interface Quote {
   duration?: number;
   description?: string;
   project_title?: string;
+  pdf_url: string;
 }
 
 
@@ -96,10 +97,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
-  const [files, setFiles] = useState<FileMetadata[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   const QUOTE_COLUMNS = [
     { key: "description", title: "Description", sortable: false },
@@ -110,19 +109,16 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
   useEffect(() => {
     const fetchQuote = async () => {
+      if (!quoteId) return;
       try {
-        if (!quoteId) return;
-
         const res = await fetch(`/api/quotes/${quoteId}`);
         const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.message || "Failed to fetch quote");
-        }
+        if (!res.ok) throw new Error(data.message || "Failed to fetch quote");
 
-        setQuote(data);
-        setQuoteItems(
-          Array.isArray(data.items)
+        setQuote({
+          ...data,
+          items: Array.isArray(data.items)
             ? data.items.map((item: any, idx: number) => ({
               id: idx + 1,
               description: item.description || "N/A",
@@ -130,10 +126,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               unitPrice: item.unitPrice || 0,
               total: (item.quantity || 0) * (item.unitPrice || 0),
             }))
-            : []
-        );
-        setNotes(Array.isArray(data.notes) ? data.notes : []);
-        setFiles(Array.isArray(data.files) ? data.files : []);
+            : [],
+        });
       } catch (err) {
         console.error("Error fetching quote:", err);
         toast.error("Error loading quote");
@@ -141,7 +135,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
         setLoading(false);
       }
     };
-
     fetchQuote();
   }, [quoteId]);
 
@@ -167,57 +160,73 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     );
   }
 
-  const handleSave = async (note: INote, index: number) => {
-    const updated = [...notes, { ...note, user_email: user.email }];
-    setNotes(updated);
-
-    const response = await fetch('/api/quotes/addNotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        quote_id: quoteId,
-        timestamp: note.timestamp,
-        text: note.text,
-        user_email: user.email
-      })
-    });
-    const result = await response.json();
-
-    if (result.ok) {
-      setNotes((prev) =>
-        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
-      );
+  const handleSaveNote = async (note: INote) => {
+    if (!quote) return;
+    try {
+      const res = await fetch("/api/quotes/addNotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_id: quote.id,
+          timestamp: note.timestamp,
+          text: note.text,
+          user_email: user.email,
+        }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setQuote((prev) =>
+          prev ? { ...prev, notes: [...(prev.notes || []), result.data] } : prev
+        );
+      }
+    } catch (err) {
+      toast.error("Error saving note");
     }
   };
 
-  const handleEdit = async (index: number, updatedNote: INote) => {
-    const updated = notes.map((n, i) => (i === index ? updatedNote : n));
-    setNotes(updated);
+  const handleEditNote = async (index: number, updatedNote: INote) => {
+    if (!quote) return;
+    try {
+      const res = await fetch("/api/quotes/addNotes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setQuote((prev) => {
+          if (!prev?.notes) return prev;
+          const updatedNotes = [...prev.notes];
+          updatedNotes[index] = {
+            ...result.data,
+            timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now(),
 
-    const resp = await fetch('/api/quotes/addNotes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
-    });
-    const result = await resp.json();
-
-    if (result.ok) {
-      setNotes((prev) =>
-        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
-      );
+          };
+          return { ...prev, notes: updatedNotes };
+        });
+      }
+    } catch (err) {
+      toast.error("Error editing note");
     }
   };
 
-  const handleDelete = async (index: number) => {
-    const noteToDelete = notes[index];
-    const updated = notes.filter((_, i) => i !== index);
-    setNotes(updated);
-
-    await fetch('/api/quotes/addNotes', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: noteToDelete.id })
-    });
+  const handleDeleteNote = async (index: number) => {
+    if (!quote || !quote.notes) return;
+    const noteToDelete = quote.notes[index];
+    try {
+      await fetch("/api/quotes/addNotes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: noteToDelete.id }),
+      });
+      setQuote((prev) => {
+        if (!prev?.notes) return prev;
+        const updatedNotes = prev.notes.filter((_, i) => i !== index);
+        return { ...prev, notes: updatedNotes };
+      });
+    } catch (err) {
+      toast.error("Error deleting note");
+    }
   };
 
   return (
@@ -255,17 +264,35 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">
             <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
-              <p className="truncate text-gray-600">{'https://google.com'}</p>
+              <p className="truncate text-gray-600">{quote.pdf_url ?? "No link available"}</p>
             </div>
-            <button className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60" role="button" title="Copy link">
+
+            <button
+              className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60"
+              role="button"
+              title="Copy link"
+              disabled={!quote.pdf_url}
+              onClick={() => {
+                navigator.clipboard.writeText(quote.pdf_url);
+                toast.success("Link copied!");
+              }}
+            >
               <Copy className="w-5 h-5 text-gray-600 hover:text-gray-800" />
             </button>
-            <button className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60" role="button" title="Open link">
+
+            <button
+              className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60"
+              role="button"
+              title="Open link"
+              disabled={!quote.pdf_url}
+              onClick={() => window.open(quote.pdf_url, "_blank")}
+            >
               <ExternalLink className="w-5 h-5 text-gray-600 hover:text-gray-800" />
             </button>
-            {/* {copied && <span className="text-green-600 text-sm">Copied!</span>} */}
           </div>
-          <p className="mt-2 text-gray-500">Share this link with your customer so they can view and accept/decline the quote.</p>
+          <p className="mt-2 text-gray-500">
+            Share this link with your customer so they can view and accept/decline the quote.
+          </p>
         </div>
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
@@ -455,10 +482,10 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                 <div className="w-1/4">
                   <div className="flex flex-col gap-y-2">
                     <QuoteNotes
-                      notes={notes}
-                      onSave={(note: INote) => handleSave(note, notes.length)}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
+                      notes={quote?.notes || []}
+                      onSave={handleSaveNote}
+                      onEdit={handleEditNote}
+                      onDelete={handleDeleteNote}
                       title="Recent Activity"
                     />
                   </div>

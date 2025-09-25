@@ -75,7 +75,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
-
+  
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 

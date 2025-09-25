@@ -13,13 +13,9 @@ import { fetchAssociatedFiles } from "@/lib/api-client";
 import { PdfPreviewDialog } from "@/app/quotes/create/components/ModalPreviewPdf";
 
 export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; }) {
-  const { includeFiles, setIncludeFiles, quoteId } = useQuoteForm();
+  const { quoteId } = useQuoteForm();
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([]);
   const [previewFile, setPreviewFile] = useState<any | null>(null);
-
-  const handleFileToggle = (fileId: AttachmentNames, checked: boolean) => {
-    setIncludeFiles(prev => ({ ...prev, [fileId as AttachmentNames]: checked }));
-  };
 
   const fileUploadProps = useFileUpload({
     maxFileSize: 50 * 1024 * 1024,
@@ -82,8 +78,14 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
               <Checkbox
                 id={`file-${file.id}`}
                 checked={quoteData?.selectedfilesids?.includes(file.id)}
-                onCheckedChange={() => {
-                  setPreviewFile(file);
+                onCheckedChange={(checked: boolean) => {
+                  const isAlreadySelected = quoteData?.selectedfilesids?.includes(file.id);
+
+                  if (checked && !isAlreadySelected) {
+                    setPreviewFile(file);
+                  } else if (!checked && isAlreadySelected) {
+                    handleFileSelect(file.id);
+                  }
                 }}
               />
               <Label htmlFor={`file-${file.id}`} className="truncate">
@@ -111,7 +113,7 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
           previewFile
             ? {
               id: previewFile.id,
-              url: previewFile.file_url, 
+              url: previewFile.file_url,
               filename: previewFile.filename,
             }
             : null

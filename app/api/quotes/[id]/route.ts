@@ -19,7 +19,8 @@ export async function GET(
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select(`
-      *
+      *,
+      notes(*)
     `)
     .eq("id", quoteId)
     .single();
@@ -123,7 +124,8 @@ export async function GET(
   }
   const files: any[] = [];
 
-  const { data: allNotes } = await supabase.from('notes').select('*').eq('quote_id', quote.id)
+
+
 
   const response = {
     id: quote.id,
@@ -146,8 +148,11 @@ export async function GET(
     })),
     admin_data: adminData || null,
     files,
-    notes: allNotes,
     ...quote,
+    notes: quote?.notes?.map(note => ({
+      ...note,
+      timestamp: new Date(note.created_at).getTime(),
+    }))
   };
 
   console.log("✅ [GET /quotes/:id] Final response3", response);
