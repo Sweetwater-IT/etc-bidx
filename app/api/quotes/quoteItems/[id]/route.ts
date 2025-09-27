@@ -1,8 +1,34 @@
 import { supabase } from "@/lib/supabase";
+import { QuoteItem } from "@/types/IQuoteItem";
 import { NextRequest, NextResponse } from "next/server";
-import { mapDbQuoteItemToQuoteItem } from "../route";
 
-// --- PATCH: update quote item and its associated items ---
+function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
+    if (!item) return {} as QuoteItem;
+    return {
+        id: String(item.id),
+        itemNumber: item.item_number || "",
+        description: item.description || "",
+        uom: item.uom || "",
+        notes: item.notes || "",
+        quantity: item.quantity || 0,
+        unitPrice: item.unit_price || 0,
+        discount: item.discount || 0,
+        discountType: item.discount_type || "dollar",
+        quote_id: item.quote_id,
+        tax: item.tax || 0,
+        is_tax_percentage: item.is_tax_percentage || false,
+        associatedItems: item.associated_items?.map((ai: any) => ({
+            id: String(ai.id),
+            itemNumber: ai.item_number || "",
+            description: ai.description || "",
+            uom: ai.uom || "",
+            quantity: ai.quantity || 0,
+            unitPrice: ai.unit_price || 0,
+            notes: ai.notes || "",
+        })) || [],
+    };
+}
+
 export async function PATCH(req: NextRequest, context: { params: any }) {
     const itemId = Number(context.params.id);
     if (isNaN(itemId)) return NextResponse.json({ success: false, message: "Invalid item id" }, { status: 400 });

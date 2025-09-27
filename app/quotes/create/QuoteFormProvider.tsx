@@ -167,6 +167,9 @@ const createEmptyQuoteItem = (): QuoteItem => ({
   notes: [],
   associatedItems: [],
   isCustom: false,
+  is_tax_percentage: false,
+  quote_id: null,
+  tax: null
 });
 
 export default function QuoteFormProvider({
@@ -270,19 +273,12 @@ export default function QuoteFormProvider({
   });
 
   useEffect(() => {
-    console.log("🔍 [Provider] adminData cambió:", adminData)
-  }, [adminData])
-
-  useEffect(() => {
     if (selectedCustomers.length > 0) {
       setPaymentTerms(
         (selectedCustomers[0].paymentTerms as PaymentTerms) || "NET30"
       );
     }
   }, [selectedCustomers]);
-
-
-
 
   useEffect(() => {
     setPointOfContact(undefined);

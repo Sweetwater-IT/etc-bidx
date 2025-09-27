@@ -3,7 +3,7 @@ import { QuoteItem } from "@/types/IQuoteItem";
 import { NextRequest, NextResponse } from "next/server";
 
 // --- Mapper DB -> Frontend ---
-export function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
+function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
     if (!item) return {} as QuoteItem;
     return {
         id: String(item.id),
