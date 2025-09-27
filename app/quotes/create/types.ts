@@ -1,9 +1,3 @@
-import { PaymentTerms } from "@/components/pages/quote-form/AdminInformationSheet";
-import { Note } from "@/components/pages/quote-form/QuoteNotes";
-import { Customer } from "@/types/Customer";
-import { QuoteItem } from "@/types/IQuoteItem";
-import { AdminData } from "@/types/TAdminData";
-import { User } from "@supabase/supabase-js";
 
 export type QuoteStatus = "Not Sent" | "Sent" | "Accepted";
 
@@ -47,6 +41,8 @@ export interface Quote {
     aditionalFiles: boolean;
     aditionalTerms: boolean;
     pdf_url: string;
+    comment: "",
+    digital_signature: ""
 }
 
 export interface StraightSaleQuote extends Quote {

@@ -15,7 +15,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
-import { Copy, Edit, ExternalLink } from "lucide-react";
+import { Copy, Edit, ExternalLink, Eye, EyeIcon } from "lucide-react";
 
 export interface ContactInfo {
   id?: number;
@@ -82,21 +82,14 @@ export interface Quote {
   description?: string;
   project_title?: string;
   pdf_url: string;
+  digital_signature: string;
+  comments: string;
 }
 
-
-interface QuoteItem {
-  id: number;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total?: number;
-}
 
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -105,6 +98,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     { key: "quantity", title: "Quantity", sortable: false },
     { key: "unitPrice", title: "Unit Price", sortable: false },
     { key: "total", title: "Total", sortable: false },
+    { key: "tax", title: "Tax", sortable: false },
+    { key: "confirmed", title: "Confirmed", sortable: false },
   ];
 
   useEffect(() => {
@@ -125,6 +120,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               quantity: item.quantity || 0,
               unitPrice: item.unitPrice || 0,
               total: (item.quantity || 0) * (item.unitPrice || 0),
+              tax: item.tax || "0",
+              confirmed: item.confirmed || "NO",
             }))
             : [],
         });
@@ -243,7 +240,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">Q-{quote?.id}</h1>
+            <h1 className="text-3xl font-bold mt-2 ml-0">{quote?.quote_number}</h1>
             <div className="flex gap-2">
               <Button
                 onClick={handleEditQuote}
@@ -264,16 +261,15 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">
             <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
-              <p className="truncate text-gray-600">{quote.pdf_url ?? "No link available"}</p>
+              <p className="truncate text-gray-600">{process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id}</p>
             </div>
 
             <button
               className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60"
               role="button"
               title="Copy link"
-              disabled={!quote.pdf_url}
               onClick={() => {
-                navigator.clipboard.writeText(quote.pdf_url);
+                navigator.clipboard.writeText(process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id);
                 toast.success("Link copied!");
               }}
             >
@@ -285,9 +281,14 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               role="button"
               title="Open link"
               disabled={!quote.pdf_url}
-              onClick={() => window.open(quote.pdf_url, "_blank")}
+              onClick={() =>
+                window.open(
+                  process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id,
+                  "_blank"
+                )
+              }
             >
-              <ExternalLink className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+              <Eye className="w-5 h-5 text-gray-600 hover:text-gray-800" />
             </button>
           </div>
           <p className="mt-2 text-gray-500">
@@ -491,6 +492,30 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   </div>
                 </div>
               </div>
+              <div className="grid grid-cols-1 gap-8">
+                {
+                  quote.comments && (
+                    <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">Customer Comments</h2>
+                      <p className="text-base text-gray-700 whitespace-pre-line">
+                        {quote.comments || "No comments provided"}
+                      </p>
+                    </div>
+                  )
+                }
+
+                {
+                  quote.digital_signature &&
+                  <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-semibold mb-4">Digital Signature</h2>
+                    <p className="text-base text-gray-700 whitespace-pre-line">
+                      {quote.digital_signature || "No digital signature provided"}
+                    </p>
+                  </div>
+                }
+
+              </div>
+
 
 
               <div className="grid grid-cols-1 gap-8">
@@ -498,7 +523,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
                   <DataTable
                     data={
-                      quoteItems.length === 0
+                      quote?.items?.length === 0
                         ? [
                           {
                             description: "-",
@@ -507,7 +532,14 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                             total: "-",
                           } as any,
                         ]
-                        : quoteItems
+                        : (quote.items?.map((q) => ({
+                          description: q.description,
+                          quantity: q.quantity,
+                          unitPrice: q.unitPrice,
+                          total: q.quantity * q.unitPrice,
+                          tax: (q.tax ?? 0) + " %",
+                          confirmed: q.confirmed ? "YES" : "NO"
+                        })) ?? [])
                     }
                     columns={QUOTE_COLUMNS}
                     hideDropdown

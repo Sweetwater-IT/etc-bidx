@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { QuoteItem } from '@/types/IQuoteItem'
 import { AdminData } from '@/types/TAdminData'
@@ -51,6 +51,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   termsAndConditions,
   files
 }) => {
+  const [currentPage, setCurrentPage] = useState(0);
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
@@ -189,222 +190,235 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
     }
   };
 
-  return (
-    <div>
-      <div className="bg-white min-h-[600px] text-black p-4 font-sans text-[10px] border border-gray-400">
-        {/* Header */}
-        <header className="flex justify-between items-start pb-2">
-          <div className="flex items-start justify-between w-full">
-            <div className='flex flex-col items-start'>
-              <Image src="/logo.jpg" alt="ETC Logo" width={120} height={120} />
-              <a className='mt-1 text-blue-500' href="http://www.establishedtraffic.com/">www.establishedtraffic.com</a>
-            </div>
-            <div className='flex flex-col items-center'>
-              <h1 className="font-bold text-lg">Established Traffic Control, Inc.</h1>
-              <p>3162 Unionville Pike</p>
-              <p>Hatfield, PA 19440</p>
-              <p>O: 215.997.8801</p>
-              <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
-            </div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold">PROPOSAL</h2>
-              <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
-              <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
-            </div>
+  const pages: any[] = [];
+
+  pages.push(
+    <div key="main-proposal" className="bg-white min-h-[600px] text-black p-4 font-sans text-[10px] border border-gray-400">
+      <header className="flex justify-between items-start pb-2">
+        <div className="flex items-start justify-between w-full">
+          <div className='flex flex-col items-start'>
+            <Image src="/logo.jpg" alt="ETC Logo" width={120} height={120} />
+            <a className='mt-1 text-blue-500' href="http://www.establishedtraffic.com/">www.establishedtraffic.com</a>
           </div>
-        </header>
-
-
-        {renderCustomerInfo()}
-        <section className="mt-3 text-[12px]">
-          <table className="w-full border-[1.5px] border-black border-collapse">
-            <thead>
-
-              <tr className='border-black border-b-[1.5px]'>
-                <th className="px-2 py-1 text-center">Row </th>
-                <th className="px-2 py-1 text-center">Item #</th>
-                <th className="px-2 py-1 text-center">Description</th>
-                <th className="px-2 py-1 text-center">Qty/Units</th>
-                <th className="px-2 py-1 text-center">Unit Price</th>
-                <th className="px-2 py-1 text-center">Extended</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const extended = calculateExtendedPrice(item);
-                return (
-                  <React.Fragment key={item.id || index}>
-                    <tr>
-                      <td className="px-1 py-1 align-top text-center">
-                        {index + 1}
-                      </td>
-                      <td className="px-1 py-1 align-top text-center">
-                        {item.itemNumber || index + 1}
-                      </td>
-                      <td className="px-1 text-center  py-1 font-bold align-top">
-                        {item.description}
-                        {item.notes && (
-                          <div className="text-[10px] font-normal text-gray-600 mt-1">
-                            {item.notes}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-1 py-1 text-center align-top">
-                        {item.quantity} {item.uom || 'EA'}
-                      </td>
-                      <td className="px-1 text-center py-1 align-top">
-                        {formatMoney(item.unitPrice || 0)}
-                      </td>
-                      <td className="px-1 text-center py-1 align-top">
-                        {formatMoney(extended)}
-                      </td>
-                    </tr>
-
-                    {/* Associated items */}
-                    {item.associatedItems?.map((assoc, assocIndex) => (
-                      <tr
-                        key={`assoc-${item.id}-${assocIndex}`}
-                        className="bg-gray-50"
-                      >
-                        <td className="border border-black px-2 py-1"></td>
-                        <td className="border border-black px-2 py-1 pl-4 text-[10px]">
-                          - {assoc.description}
-                        </td>
-                        <td className="border border-black px-2 py-1 text-center text-[10px]">
-                          {assoc.quantity}
-                        </td>
-                        <td className="border border-black px-2 py-1 text-right text-[10px]">
-                          {formatMoney(assoc.unitPrice || 0)}
-                        </td>
-                        <td className="border border-black px-2 py-1"></td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-
-
-              {/* Totals */}
-              <tr className='w-full border-b-black border-1 my-2'></tr>
-              <tr className="">
-                <td colSpan={4}></td>
-                <td colSpan={1} className="px-1 py-1 text-center font-bold">
-                  SUBTOTAL
-                </td>
-                <td colSpan={1} className=" py-1 text-center font-bold">
-                  {formatMoney(total)}
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={4}></td>
-                <td colSpan={1} className="px-2 py-1 text-center font-bold">
-                  TOTAL
-                </td>
-                <td colSpan={1} className="px-2 py-1 text-center font-bold">
-                  {formatMoney(total)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <p className='text-center my-4 w-3/4 m-auto font-semibold'>Sales tax not included in price. Please add 3% to total if paying by MC or VISA, 4% for AMEX.
-          Due to extreme market volatility, all pricing and availability are subject to change without notice.
-          All quotes to be confirmed at time of order placement</p>
-
-        <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
-          <div className="flex items-end gap-2 flex-1">
-            <span>X</span>
-            <span className="border-b flex-1 border-black min-w-[150px] inline-block">
-              <span className="pl-1 italic text-[11px]"></span>
-            </span>
+          <div className='flex flex-col items-center'>
+            <h1 className="font-bold text-lg">Established Traffic Control, Inc.</h1>
+            <p>3162 Unionville Pike</p>
+            <p>Hatfield, PA 19440</p>
+            <p>O: 215.997.8801</p>
+            <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
           </div>
-          <div className="flex items-end gap-8 flex-1">
-            <span>Date</span>
-            <span className="border-b flex-1 border-black min-w-[150px] inline-block">
-              <span className="pl-1 italic text-[11px]"></span>
-            </span>
+          <div className="text-center">
+            <h2 className="text-xl font-bold">PROPOSAL</h2>
+            <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
+            <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
           </div>
         </div>
+      </header>
 
-        <section className="mt-2 text-[9px] flex flex-row gap-4">
-          <p className="uppercase font-bold">Notes:</p>
-          <div className='flex flex-col flex-1'>
-            {
-              notes.length > 0 ?
-                notes.map((nt, index) => {
-                  return <div key={index} className='flex flex-col'>
-                    <p className='text-md'>{nt.text}</p>
-                    <p className='text-[8px] text-gray-400'>{new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}</p>
-                  </div>
-                })
-                :
-                <p>No notes available</p>
-            }
+      {renderCustomerInfo()}
+      <section className="mt-3 text-[12px]">
+        <table className="w-full border-[1.5px] border-black border-collapse">
+          <thead>
+            <tr className='border-black border-b-[1.5px]'>
+              <th className="px-2 py-1 text-center">Row </th>
+              <th className="px-2 py-1 text-center">Item #</th>
+              <th className="px-2 py-1 text-center">Description</th>
+              <th className="px-2 py-1 text-center">Qty/Units</th>
+              <th className="px-2 py-1 text-center">Unit Price</th>
+              <th className="px-2 py-1 text-center">Extended</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => {
+              const extended = calculateExtendedPrice(item);
+              return (
+                <React.Fragment key={item.id || index}>
+                  <tr>
+                    <td className="px-1 py-1 align-top text-center">
+                      {index + 1}
+                    </td>
+                    <td className="px-1 py-1 align-top text-center">
+                      {item.itemNumber || index + 1}
+                    </td>
+                    <td className="px-1 text-center  py-1 font-bold align-top">
+                      {item.description}
+                      {item.notes && (
+                        <div className="text-[10px] font-normal text-gray-600 mt-1">
+                          {item.notes}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-1 py-1 text-center align-top">
+                      {item.quantity} {item.uom || 'EA'}
+                    </td>
+                    <td className="px-1 text-center py-1 align-top">
+                      {formatMoney(item.unitPrice || 0)}
+                    </td>
+                    <td className="px-1 text-center py-1 align-top">
+                      {formatMoney(extended)}
+                    </td>
+                  </tr>
 
-          </div>
-        </section>
+                  {item.associatedItems?.map((assoc, assocIndex) => (
+                    <tr
+                      key={`assoc-${item.id}-${assocIndex}`}
+                      className="bg-gray-50"
+                    >
+                      <td className="border border-black px-2 py-1"></td>
+                      <td className="border border-black px-2 py-1 pl-4 text-[10px]">
+                        - {assoc.description}
+                      </td>
+                      <td className="border border-black px-2 py-1 text-center text-[10px]">
+                        {assoc.quantity}
+                      </td>
+                      <td className="border border-black px-2 py-1 text-right text-[10px]">
+                        {formatMoney(assoc.unitPrice || 0)}
+                      </td>
+                      <td className="border border-black px-2 py-1"></td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
 
-        {/* Signature */}
-        {/* <section className="mt-4 text-center">
-          <p className="text-[9px] text-blue-800">
-            If the proposal is accepted, please sign and date below and return. Thank you!
-          </p>
-          <div className="flex justify-between mt-4 mx-8">
-            <p className="text-[10px]">ACCEPTED BY: _____</p>
-            <p className="text-[10px]">DATE: _______________</p>
-          </div>
-        </section> */}
+            <tr className='w-full border-b-black border-1 my-2'></tr>
+            <tr className="">
+              <td colSpan={4}></td>
+              <td colSpan={1} className="px-1 py-1 text-center font-bold">
+                SUBTOTAL
+              </td>
+              <td colSpan={1} className=" py-1 text-center font-bold">
+                {formatMoney(total)}
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4}></td>
+              <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                TOTAL
+              </td>
+              <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                {formatMoney(total)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <p className='text-center my-4 w-3/4 m-auto font-semibold'>Sales tax not included in price. Please add 3% to total if paying by MC or VISA, 4% for AMEX.
+        Due to extreme market volatility, all pricing and availability are subject to change without notice.
+        All quotes to be confirmed at time of order placement</p>
+
+      <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
+        <div className="flex items-end gap-2 flex-1">
+          <span>X</span>
+          <span className="border-b flex-1 border-black min-w-[150px] inline-block">
+            <span className="pl-1 italic text-[11px]"></span>
+          </span>
+        </div>
+        <div className="flex items-end gap-8 flex-1">
+          <span>Date</span>
+          <span className="border-b flex-1 border-black min-w-[150px] inline-block">
+            <span className="pl-1 italic text-[11px]"></span>
+          </span>
+        </div>
       </div>
 
-      {termsAndConditions && (
-        <div className="page-break min-h-[600px] bg-white text-black p-4 font-sans text-[9px] border border-gray-400 mt-4">
-          <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
-          <div className="space-y-2">
-            <p>
-              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-            </p>
-            <p>
-              --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
-            </p>
-            <p>
-              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-            </p>
-            <p>
-              --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
-            </p>
-            <p>
-              --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor.
-            </p>
-            <p>
-              --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
-            </p>
-            <p>
-              --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
-            </p>
-            <p>
-              --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
-            </p>
-            <p>
-              --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
-            </p>
-          </div>
+      <section className="mt-2 text-[9px] flex flex-row gap-4">
+        <p className="uppercase font-bold">Notes:</p>
+        <div className='flex flex-col flex-1'>
+          {notes.length > 0 ?
+            notes.map((nt, index) => (
+              <div key={index} className='flex flex-col'>
+                <p className='text-md'>{nt.text}</p>
+                <p className='text-[8px] text-gray-400'>{new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}</p>
+              </div>
+            ))
+            : <p>No notes available</p>
+          }
         </div>
-      )}
+      </section>
+    </div>
+  );
 
+  if (termsAndConditions) {
+    pages.push(
+      <div key="terms" className="min-h-[600px] bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
+        <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
+        <div className="space-y-2">
+          <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
+          <p>--- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.</p>
+          <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
+          <p>--- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.</p>
+          <p>--- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor.</p>
+          <p>--- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.</p>
+          <p>--- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.</p>
+          <p>--- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.</p>
+          <p>--- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.</p>
+        </div>
+      </div>
+    );
+  }
 
-      {files && files.length > 0 && (
-        <>
-          {files.map((file: any, index: number) => (
-            <div key={index} className="flex-1 ">
-              <PdfViewer fileUrl={file.file_url} />
-            </div>
-          ))}
-        </>
-      )}
+  if (files && files.length > 0) {
+    files.forEach((file: any, index: number) => {
+      pages.push(
+        <div key={`pdf-${index}`} className="flex-1 min-h-[600px]">
+          <PdfViewer fileUrl={file.file_url} />
+        </div>
+      );
+    });
+  }
+
+  const nextPage = () => {
+    if (currentPage < pages.length - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  return (
+    <div className="relative">
+      {/* Controles de navegación */}
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={prevPage}
+          disabled={currentPage === 0}
+          className={`px-4 py-2 rounded ${currentPage === 0
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-black text-white'
+            }`}
+        >
+          ← Prev
+        </button>
+
+        <span className="text-sm font-medium">
+          Página {currentPage + 1} de {pages.length}
+        </span>
+
+        <button
+          onClick={nextPage}
+          disabled={currentPage === pages.length - 1}
+          className={`px-4 py-2 rounded ${currentPage === pages.length - 1
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-black text-white'
+            }`}
+        >
+          Next →
+        </button>
+      </div>
+
+      {/* Página actual */}
+      <div className="min-h-[600px]">
+        {pages[currentPage]}
+      </div>
 
     </div>
-  )
+  );
 }
 
 export default BidProposalWorksheet

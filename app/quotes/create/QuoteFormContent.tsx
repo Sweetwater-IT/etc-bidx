@@ -241,9 +241,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         id: numericQuoteId,
         estimate_id: estimateId || quoteData?.estimate_id,
         job_id: jobId || quoteData?.job_id,
-        items: quoteItems,
         status: 'DRAFT',
-        notes,
         subject,
         body: emailBody,
         from_email: sender?.email || null,
@@ -277,7 +275,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       return false;
     }
   }, [
-    numericQuoteId, quoteItems, adminData, notes, quoteData, estimateId, jobId,
+    numericQuoteId, adminData, notes, quoteData, estimateId, jobId,
     subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
     includeTerms, customTerms, paymentTerms, firstSave
   ]);
@@ -287,7 +285,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (!numericQuoteId) return;
 
     const hasChanges =
-      !isEqual(quoteItems, prevStateRef.current.quoteItems) ||
       !isEqual(adminData, prevStateRef.current.adminData) ||
       !isEqual(notes, prevStateRef.current.notes) ||
       !isEqual(quoteData, prevStateRef.current.quoteData) ||
@@ -308,7 +305,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [quoteItems, adminData, notes, quoteData, numericQuoteId, autosave]);
+  }, [ adminData, notes, quoteData, numericQuoteId, autosave]);
 
 
   useEffect(() => {

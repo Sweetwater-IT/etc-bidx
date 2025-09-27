@@ -7,6 +7,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 export const PdfViewer = ({ fileUrl }: { fileUrl: string }) => {
     const [file, setFile] = useState<{ data: Uint8Array } | null>(null);
     const [numPages, setNumPages] = useState<number>(0);
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     useEffect(() => {
         let mounted = true;
@@ -23,23 +24,47 @@ export const PdfViewer = ({ fileUrl }: { fileUrl: string }) => {
 
     const onDocumentLoadSuccess = (pdf: any) => {
         setNumPages(pdf.numPages);
+        setCurrentPage(1); // reset cada vez que cargas un nuevo pdf
     };
+
+    const prevPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
+    const nextPage = () => setCurrentPage((p) => Math.min(p + 1, numPages));
 
     if (!file) return <p>Loading PDF...</p>;
 
     return (
-        <div className='flex flex-1 flex-col items-center justify-center gap-4 w-full'>
-            <Document file={file} onLoadSuccess={onDocumentLoadSuccess}>
-                {Array.from({ length: numPages }, (_, index) => (
-                    <div key={index} className=' bg-white text-black border-[1px] border-gray-400 mt-4 w-full max-w-full'>
-                        <Page
-                            pageNumber={index + 1}
-                            width={Math.min(800)}
-                            loading={<div>Loading page {index + 1}...</div>}
-                        />
-                    </div>
-                ))}
-            </Document>
+        <div className="flex flex-col items-center justify-center w-full">
+            <div className="flex justify-between items-center mb-2 w-full max-w-[820px]">
+                <button
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-black text-white'}`}
+                >
+                    ← Prev
+                </button>
+
+                <span className="text-sm font-medium">
+                    Page {currentPage} of {numPages}
+                </span>
+
+                <button
+                    onClick={nextPage}
+                    disabled={currentPage === numPages}
+                    className={`px-3 py-1 rounded ${currentPage === numPages ? 'bg-gray-300 cursor-not-allowed' : 'bg-black text-white'}`}
+                >
+                    Next →
+                </button>
+            </div>
+
+            <div className="bg-white text-black border border-gray-400 w-full max-w-[820px] flex justify-center">
+                <Document file={file} onLoadSuccess={onDocumentLoadSuccess}>
+                    <Page
+                        pageNumber={currentPage}
+                        width={800}
+                        loading={<div>Loading page {currentPage}...</div>}
+                    />
+                </Document>
+            </div>
         </div>
     );
 };

@@ -8,7 +8,6 @@ import { useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
 
-
 enum UOM_TYPES {
   EA = "EA",
   LS = "LS",
@@ -19,30 +18,47 @@ enum UOM_TYPES {
   HR = "HR",
 }
 
+// --- Endpoints ---
+async function createQuoteItem(item: QuoteItem) {
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
+
+async function updateQuoteItem(item: QuoteItem) {
+  const res = await fetch(`/api/quotes/quoteItems/${item.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
+
+async function deleteQuoteItem(itemId: string) {
+  const res = await fetch(`/api/quotes/quoteItems/${itemId}`, { method: "DELETE" });
+  return res.json();
+}
+
 export function QuoteItems() {
-  const { quoteItems, setQuoteItems } = useQuoteForm();
+  const { quoteItems, setQuoteItems, quoteId } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
 
-
+  // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
-    if (!item.associatedItems || item.associatedItems.length === 0) {
-      return item.unitPrice;
-    }
-
+    if (!item.associatedItems || item.associatedItems.length === 0) return item.unitPrice;
     return item.associatedItems.reduce(
-      (acc, associatedItem) =>
-        acc + associatedItem.quantity * associatedItem.unitPrice,
+      (acc, associatedItem) => acc + associatedItem.quantity * associatedItem.unitPrice,
       0
     );
   };
 
-  
   const calculateExtendedPrice = (item: QuoteItem) => {
     const unitPrice = calculateCompositeUnitPrice(item);
     const basePrice = item.quantity * unitPrice;
-
-   
     const discountAmount =
       item.discountType === "dollar"
         ? item.discount
@@ -53,136 +69,142 @@ export function QuoteItems() {
     });
   };
 
-  
   const totalValueCalculation = () => {
     return quoteItems
       .reduce((sum, item) => {
         const unitPrice = calculateCompositeUnitPrice(item);
         const basePrice = (item.quantity || 0) * unitPrice;
-
-        
         const discountAmount =
           item.discountType === "dollar"
             ? item.discount
             : basePrice * (item.discount / 100);
         return sum + (basePrice - discountAmount);
       }, 0)
-      .toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
- 
-  const handleItemUpdate = (
-    itemId: string,
-    field: keyof QuoteItem,
-    value: string | number
-  ) => {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      )
-    );
-    
-    setEditingSubItemId(null);
-  };
-
- 
-  const handleRemoveItem = (itemId: string) => {
-    setQuoteItems((prevItems) =>
-      prevItems.filter((item) => item.id !== itemId)
-    );
-  };
-
-  
-  const handleAddCompositeItem = (parentItem: QuoteItem) => {
+  // --- CRUD Handlers ---
+  const handleAddNewItem = async () => {
     const newId = generateUniqueId();
+    const newItem: QuoteItem = {
+      quote_id: quoteId, 
+      id: newId,
+      itemNumber: "",
+      description: "",
+      uom: "",
+      quantity: 0,
+      unitPrice: 0,
+      discount: 0,
+      discountType: "dollar",
+      notes: [],
+      associatedItems: [],
+      is_tax_percentage: false,
+      tax: 0,
+    };
+
+    const response = await createQuoteItem(newItem);
+    if (response.success) {
+      setQuoteItems((prevItems) => [...prevItems, response.item]);
+      setEditingItemId(response.item.id);
+    }
+  };
+
+  const handleItemUpdate = async (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
     setQuoteItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === parentItem.id
-          ? {
-            ...item,
-            associatedItems: [
-              ...(item.associatedItems || []),
-              {
-                id: newId,
-                itemNumber: "",
-                description: "",
-                uom: "",
-                quantity: 0,
-                unitPrice: 0,
-                discount: 0,
-                discountType: "dollar",
-                notes: "",
-                isCustom: true,
-              },
-            ],
-          }
+        item.id === itemId
+          ? field === "fullItem"
+            ? value
+            : { ...item, [field]: value }
           : item
       )
     );
+
+    const itemToUpdate = quoteItems.find((i) => i.id === itemId);
+    if (itemToUpdate) {
+      const updated = field === "fullItem" ? value : { ...itemToUpdate, [field]: value };
+      await updateQuoteItem(updated);
+    }
+
+    setEditingSubItemId(null);
   };
 
-  
-  const handleCompositeItemUpdate = (
+  const handleRemoveItem = async (itemId: string) => {
+    const response = await deleteQuoteItem(itemId);
+    if (response.success) {
+      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    }
+  };
+
+  const handleAddCompositeItem = async (parentItem: QuoteItem) => {
+    const newSubItem: AssociatedItem = {
+      id: generateUniqueId(),
+      itemNumber: "",
+      description: "",
+      uom: "",
+      quantity: 0,
+      unitPrice: 0,
+      notes: "",
+    };
+
+    setQuoteItems((prevItems: any[]) =>
+      prevItems.map((item) =>
+        item.id === parentItem.id
+          ? { ...item, associatedItems: [...(item.associatedItems || []), newSubItem] }
+          : item
+      )
+    );
+
+    const updatedParent = {
+      ...parentItem,
+      associatedItems: [...(parentItem.associatedItems || []), newSubItem],
+    };
+
+    await updateQuoteItem(updatedParent as any);
+  };
+
+
+  const handleCompositeItemUpdate = async (
     parentItemId: string,
     subItemId: string,
     field: keyof AssociatedItem,
     value: string | number
   ) => {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-              ...item,
-              associatedItems:
-                item.associatedItems?.map((ai) =>
-                  ai.id === subItemId ? { ...ai, [field]: value } : ai
-                ) || [],
-            }
-            : item
-        )
-      );
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+            ...item,
+            associatedItems:
+              item.associatedItems?.map((ai) =>
+                ai.id === subItemId ? { ...ai, [field]: value } : ai
+              ) || [],
+          }
+          : item
+      )
+    );
+
+    const parentItem = quoteItems.find((i) => i.id === parentItemId);
+    if (parentItem) await updateQuoteItem(parentItem);
   };
 
- 
-  const handleDeleteComposite = (parentItemId: string, subItemId: string) => {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-              ...item,
-              associatedItems:
-                item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
-                [],
-            }
-            : item
-        )
-      );
-  };
-  
- 
-  const handleAddNewItem = () => {
-    const newId = generateUniqueId();
-    setQuoteItems((prevItems) => [
-      ...prevItems,
-      {
-        id: newId,
-        itemNumber: "",
-        description: "",
-        uom: "",
-        quantity: 0,
-        unitPrice: 0,
-        discount: 0,
-        discountType: "dollar",
-        notes: [],
-        associatedItems: [],
-      },
-    ]);
-    setEditingItemId(newId);
+  const handleDeleteComposite = async (parentItemId: string, subItemId: string) => {
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+            ...item,
+            associatedItems: item.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
+          }
+          : item
+      )
+    );
+
+    const parentItem = quoteItems.find((i) => i.id === parentItemId);
+    if (parentItem) await updateQuoteItem({ ...parentItem, associatedItems: parentItem.associatedItems?.filter((ai) => ai.id !== subItemId) || [] });
   };
 
+  // --- Render ---
   return (
     <div className="rounded-lg">
       <div className="mb-4 flex items-center justify-between">
@@ -193,14 +215,10 @@ export function QuoteItems() {
         </Button>
       </div>
 
-     
       <div className="space-y-4">
-        
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
-          style={{
-            gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
-          }}
+          style={{ gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px" }}
         >
           <div className="uppercase">Item # / SKU</div>
           <div className="uppercase pl-2">Description</div>
@@ -211,7 +229,6 @@ export function QuoteItems() {
           <div className="uppercase">Extended Price</div>
         </div>
 
-        
         <QuoteItemsList
           quoteItems={quoteItems}
           editingItemId={editingItemId}
@@ -229,13 +246,10 @@ export function QuoteItems() {
         />
       </div>
 
-      
       <div className="mt-6 flex justify-end space-y-1 text-sm">
         <div className="text-right">
           <div>Total Items: {quoteItems.length}</div>
-          <div className="font-medium">
-            Total Value: ${totalValueCalculation()}
-          </div>
+          <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
         </div>
       </div>
     </div>

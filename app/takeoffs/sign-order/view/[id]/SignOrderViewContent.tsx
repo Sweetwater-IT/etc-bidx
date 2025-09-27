@@ -492,9 +492,6 @@ export default function SignOrderViewContent() {
     )
   }
 
-  console.log(signOrder);
-
-
   return (
     <>
       <SendEmailDialog open={openEmailDialog} onOpenChange={setOpenEmailDialog} mptRental={mptRental} adminInfo={adminInfo} notes={notes} />

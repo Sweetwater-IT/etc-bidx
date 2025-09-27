@@ -52,7 +52,6 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] 
 
 export function ChartScatter({ data = [] }: { data?: MPTBidData[] }) {
 
-  console.log(data)
   // Process data for scatter plot
   const scatterData = React.useMemo(() => {
     if (!data || data.length === 0) return [];

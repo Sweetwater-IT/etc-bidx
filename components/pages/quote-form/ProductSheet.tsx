@@ -53,6 +53,9 @@ export function ProductSheet({
             discountType: subItem.discountType || "dollar",
             discount: subItem.discount || "",
             notes: subItem.notes || "",
+            tax: subItem.tax || "",
+            is_tax_percentage: subItem.is_tax_percentage || false,
+
           });
           setDigits({
             unitPrice: subItem.unitPrice
@@ -73,6 +76,8 @@ export function ProductSheet({
             discountType: "dollar",
             discount: "",
             notes: "",
+            tax: "",
+            is_tax_percentage: false,
           });
           setDigits({
             unitPrice: "000",
@@ -89,6 +94,8 @@ export function ProductSheet({
           discountType: item.discountType || "dollar",
           discount: item.discount || "",
           notes: item.notes || "",
+          tax: item.tax || "",
+          is_tax_percentage: item.is_tax_percentage || false,
         });
         setDigits({
           unitPrice: item.unitPrice
@@ -109,6 +116,8 @@ export function ProductSheet({
         discountType: "dollar",
         discount: "",
         notes: "",
+        tax: "",
+        is_tax_percentage: false,
       });
       setDigits({
         unitPrice: "000",
@@ -292,6 +301,41 @@ export function ProductSheet({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-[15px] font-medium text-muted-foreground">
+              Tax
+            </Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={newProduct?.is_tax_percentage}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    is_tax_percentage: e.target.checked,
+                    tax: e.target.checked ? prev.tax : "",
+                  }))
+                }
+              />
+              <span className="text-sm text-muted-foreground">Is Percentage</span>
+            </div>
+            {newProduct.is_tax_percentage && (
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                className="bg-background"
+                placeholder="Enter tax %"
+                value={newProduct.tax ?? ''}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    tax: e.target.value,
+                  }))
+                }
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Notes
             </Label>
             <Textarea
@@ -321,6 +365,7 @@ export function ProductSheet({
               className=" text-white py-2 flex-1 text-sm  transition rounded-md"
               onClick={() => {
                 onOpenChange(false);
+
                 if (editingSubItemId) {
                   const subItemData = {
                     id: editingSubItemId,
@@ -333,64 +378,40 @@ export function ProductSheet({
                     discount: Number(newProduct.discount),
                     notes: newProduct.notes,
                     isCustom: true,
+                    tax: newProduct.tax,
+                    is_tax_percentage: newProduct.is_tax_percentage,
                   };
 
-                  const exists = item.associatedItems?.some(
+                  const updatedAssociatedItems = item.associatedItems?.some(
                     (ai) => ai.id === editingSubItemId
-                  );
+                  )
+                    ? item.associatedItems.map((ai) =>
+                      ai.id === editingSubItemId ? subItemData : ai
+                    )
+                    : [...(item.associatedItems || []), subItemData];
 
-                  if (exists) {
-                    handleItemUpdate(
-                      item.id,
-                      "associatedItems",
-                      item.associatedItems.map((ai) =>
-                        ai.id === editingSubItemId ? subItemData : ai
-                      )
-                    );
-                  } else {
-                    handleItemUpdate(item.id, "associatedItems", [
-                      ...(item.associatedItems || []),
-                      subItemData,
-                    ]);
-                  }
-
+                  handleItemUpdate(item.id, "associatedItems", updatedAssociatedItems);
                   setEditingSubItemId(null);
                 } else {
-                  handleItemUpdate(
-                    item.id,
-                    "itemNumber",
-                    newProduct.itemNumber
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "description",
-                    newProduct.description
-                  );
-                  handleItemUpdate(item.id, "uom", newProduct.uom);
-                  handleItemUpdate(
-                    item.id,
-                    "quantity",
-                    Number(newProduct.quantity)
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "unitPrice",
-                    Number(newProduct.unitPrice)
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "discountType",
-                    newProduct.discountType
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "discount",
-                    Number(newProduct.discount)
-                  );
-                  handleItemUpdate(item.id, "isCustom", true);
+                  const updatedItem = {
+                    ...item,
+                    itemNumber: newProduct.itemNumber,
+                    description: newProduct.description,
+                    uom: newProduct.uom,
+                    quantity: Number(newProduct.quantity),
+                    unitPrice: Number(newProduct.unitPrice),
+                    discountType: newProduct.discountType,
+                    discount: Number(newProduct.discount),
+                    tax: newProduct.tax ? Number(newProduct.tax) : 0,
+                    is_tax_percentage: newProduct.is_tax_percentage,
+                    isCustom: true,
+                  };
+
+                  handleItemUpdate(item.id, "fullItem", updatedItem);
                   setProductInput(newProduct.itemNumber);
                   setEditingItemId(null);
                 }
+
                 setNewProduct({
                   itemNumber: "",
                   description: "",
@@ -401,11 +422,13 @@ export function ProductSheet({
                   discount: "",
                   notes: "",
                 });
+
                 setDigits({
                   unitPrice: "000",
                   discount: "000",
                 });
               }}
+
             >
               Save Product
             </Button>

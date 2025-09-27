@@ -1,11 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -64,6 +64,8 @@ export default function QuoteItemRow({
     discountType: "dollar",
     discount: "",
     notes: "",
+    tax: "",
+    is_tax_percentage: false,
   });
 
   const [digits, setDigits] = useState({
@@ -153,10 +155,6 @@ export default function QuoteItemRow({
   }
 
   useEffect(() => {
-    console.log("openProductSheet", openProductSheet);
-  }, [openProductSheet]);
-
-  useEffect(() => {
     if (openProductSheet && editingSubItemId) {
       const subItem = item.associatedItems?.find(
         (s) => s.id === editingSubItemId
@@ -171,6 +169,8 @@ export default function QuoteItemRow({
           discountType: subItem.discountType || "dollar",
           discount: subItem.discount || "",
           notes: subItem.notes || "",
+          tax: "",
+          is_tax_percentage: false,
         });
         setDigits({
           unitPrice: subItem.unitPrice
@@ -212,9 +212,8 @@ export default function QuoteItemRow({
   return (
     <>
       <div
-        className={`grid items-center mb-1 gap-2 ${
-          !hasSubItems ? "border-b border-border pb-1" : ""
-        }`}
+        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
+          }`}
         style={{
           gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
         }}
@@ -240,19 +239,18 @@ export default function QuoteItemRow({
             </>
           ) : (
             <Input
-            ref={inputRef}
-            className={`w-full h-9 text-base text-foreground bg-transparent ${
-              item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
-            }`}
-            placeholder="Search or add a product..."
-            value={productInput}
-            onChange={(e) => {
-              const value = e.target.value;
-              setProductInput(value);
-              setShowDropdown(true);
-            }}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+              ref={inputRef}
+              className={`w-full h-9 text-base text-foreground bg-transparent ${item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
+                }`}
+              placeholder="Search or add a product..."
+              value={productInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                setProductInput(value);
+                setShowDropdown(true);
+              }}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={!!item.itemNumber}
             />
           )}

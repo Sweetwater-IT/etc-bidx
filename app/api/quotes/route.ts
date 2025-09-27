@@ -289,7 +289,6 @@ export async function PATCH(request: NextRequest) {
       items,
       admin_data,
       status,
-      notes,
       subject,
       body: emailBody,
       from_email,
@@ -313,7 +312,6 @@ export async function PATCH(request: NextRequest) {
     // Status seguro
     const allowedStatuses = new Set(["Not Sent", "Sent", "Accepted", "DRAFT"]);
     const safeStatus = allowedStatuses.has(status) ? status : "DRAFT";
-    const notesValue = Array.isArray(notes) ? JSON.stringify(notes) : notes ?? null;
 
     // County flexible
     let countyValue: string | null = null;
@@ -323,7 +321,6 @@ export async function PATCH(request: NextRequest) {
 
     let quoteUpdate: any = {
       status: safeStatus,
-      notes: notesValue,
       subject: subject ?? null,
       body: emailBody ?? null,
       from_email: from_email ?? null,
@@ -390,23 +387,6 @@ export async function PATCH(request: NextRequest) {
           .from("admin_data_entries")
           .upsert(adminPayload, { onConflict: conflictKey });
       }
-    }
-
-    // Items
-    if (Array.isArray(items)) {
-      await supabase.from("quote_items").delete().eq("quote_id", numericId);
-      const itemsToInsert = items.map((item: any) => ({
-        quote_id: numericId,
-        item_number: item.itemNumber ?? item.item_number ?? null,
-        description: item.description ?? null,
-        uom: item.uom ?? null,
-        notes: item.notes ?? null,
-        quantity: item.quantity ?? null,
-        unit_price: item.unitPrice ?? item.unit_price ?? null,
-        discount: item.discount ?? null,
-        discount_type: item.discountType ?? item.discount_type ?? null,
-      }));
-      if (itemsToInsert.length > 0) await supabase.from("quote_items").insert(itemsToInsert);
     }
 
     // Customers
