@@ -261,7 +261,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">
             <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
-              <p className="truncate text-gray-600">{process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id}</p>
+              <p className="truncate text-gray-600">{process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id}</p>
             </div>
 
             <button
@@ -269,7 +269,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               role="button"
               title="Copy link"
               onClick={() => {
-                navigator.clipboard.writeText(process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id);
+                navigator.clipboard.writeText(process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id);
                 toast.success("Link copied!");
               }}
             >
@@ -283,7 +283,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               disabled={!quote.pdf_url}
               onClick={() =>
                 window.open(
-                  process.env.NEXT_PUBLIC_BASE_APP_URL + 'customer-view-quote/' + quote.id,
+                  process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id,
                   "_blank"
                 )
               }
