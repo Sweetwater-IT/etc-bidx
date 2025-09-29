@@ -24,7 +24,7 @@ export const PdfViewer = ({ fileUrl }: { fileUrl: string }) => {
 
     const onDocumentLoadSuccess = (pdf: any) => {
         setNumPages(pdf.numPages);
-        setCurrentPage(1); // reset cada vez que cargas un nuevo pdf
+        setCurrentPage(1);
     };
 
     const prevPage = () => setCurrentPage((p) => Math.max(p - 1, 1));

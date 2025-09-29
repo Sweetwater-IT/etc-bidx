@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 interface CustomerContact {
     id: number;
     name: string;
-    email?: string;
+    email: string;
     phone?: string;
     address?: string;
 }
@@ -11,13 +11,13 @@ interface CustomerContact {
 interface Customer {
     id: number;
     name: string;
-    email?: string;
-    main_phone?: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    customer_contacts: CustomerContact[];
+    customer_contacts?: CustomerContact[];
+    email: string;
+    main_phone: string;
+    address: string;
+    city: string;
+    state: string
+    zip: string;
 }
 
 export const useCustomerSelection = () => {
@@ -48,8 +48,30 @@ export const useCustomerSelection = () => {
     };
 
     const selectContact = (id: string) => {
-        const contact = selectedCustomer?.customer_contacts.find(c => c.id.toString() === id) || null;
+        const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === id) || null;
         setSelectedContact(contact);
+    };
+
+    const addCustomer = (customer: Customer) => {
+        setCustomers(prev => [...prev, customer]);
+        setSelectedCustomer(customer);
+        setSelectedContact(customer.customer_contacts?.[0] || null);
+    };
+
+    const addContact = (contact: CustomerContact) => {
+        if (!selectedCustomer) return;
+        const updatedCustomer = {
+            ...selectedCustomer,
+            customer_contacts: selectedCustomer.customer_contacts
+                ? [...selectedCustomer.customer_contacts, contact]
+                : [contact]
+        };
+        setSelectedCustomer(updatedCustomer);
+        setSelectedContact(contact);
+
+        setCustomers(prev =>
+            prev.map(c => (c.id === updatedCustomer.id ? updatedCustomer : c))
+        );
     };
 
     return {
@@ -58,5 +80,9 @@ export const useCustomerSelection = () => {
         selectedContact,
         selectCustomer,
         selectContact,
+        addCustomer,
+        addContact,
+        refreshCustomers: getCustomers,
     };
 };
+

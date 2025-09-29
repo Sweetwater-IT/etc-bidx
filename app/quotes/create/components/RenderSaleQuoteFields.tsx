@@ -6,12 +6,11 @@ import { StraightSaleQuote } from "../types";
 import React, { useEffect, useState } from "react";
 import RenderEtcSection from "./RenderEtcSection";
 import { Edit } from "lucide-react";
+import { useCustomerSelection } from "@/hooks/use-csutomers-selection";
 
 interface IRenderSaleQuoteFields {
     data: Partial<StraightSaleQuote>;
     setData: (data: Partial<StraightSaleQuote>) => void;
-    selectedCustomer: any;
-    selectedContact: any
 }
 
 const SectionBox = ({
@@ -55,8 +54,9 @@ const SectionBox = ({
 );
 
 
-const RenderSaleQuoteFields = ({ data, setData, selectedCustomer, selectedContact }: IRenderSaleQuoteFields) => {
+const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
     const [editingSection, setEditingSection] = useState<string | null>(null);
+    const { selectedCustomer, selectedContact } = useCustomerSelection();
 
     useEffect(() => {
         if (!selectedCustomer) return;

@@ -397,7 +397,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </button>
 
         <span className="text-sm font-medium">
-          Página {currentPage + 1} de {pages.length}
+          Page  {currentPage + 1} de {pages.length}
         </span>
 
         <button
@@ -412,7 +412,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </button>
       </div>
 
-      {/* Página actual */}
       <div className="min-h-[600px]">
         {pages[currentPage]}
       </div>

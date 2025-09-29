@@ -6,17 +6,13 @@ import { useQuoteForm } from './QuoteFormProvider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
-import { QuoteNumber } from '@/components/pages/quote-form/QuoteNumber'
 import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditionalFiles'
-import { QuoteTermsAndConditions } from '@/components/pages/quote-form/QuoteTermsAndConditions'
-import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import { QuotePreviewButton } from '@/components/pages/quote-form/PreviewButton'
 import { toast } from 'sonner'
 import { defaultAdminObject } from '@/types/default-objects/defaultAdminData'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
 import isEqual from 'lodash/isEqual'
 import { useRouter } from 'next/navigation'
-import { AdminData } from '@/types/TAdminData'
 import ReactPDF from '@react-pdf/renderer'
 import { BidProposalWorksheet } from './BidProposalWorksheet'
 import { BidProposalReactPDF } from '@/components/pages/quote-form/BidProposalReactPDF'
@@ -29,8 +25,7 @@ import { Loader, Loader2 } from 'lucide-react';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import CustomerSelect from './components/CustomerSelector';
 
 const typeQuotes = [
   {
@@ -123,13 +118,10 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
   return base as QuoteState;
 }
 
-
-
 type QuoteState =
   | Partial<StraightSaleQuote>
   | Partial<ToProjectQuote>
   | Partial<EstimateBidQuote>;
-
 
 const useNumericQuoteId = (rawId: unknown) => {
   const id = typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null
@@ -141,7 +133,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const router = useRouter()
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">("")
   const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
-  const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact } = useCustomerSelection();
 
   const {
     selectedCustomers,
@@ -305,7 +296,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [ adminData, notes, quoteData, numericQuoteId, autosave]);
+  }, [adminData, notes, quoteData, numericQuoteId, autosave]);
 
 
   useEffect(() => {
@@ -423,17 +414,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const resp = await result.json();
+      await result.json();
 
-      if (resp.success) {
-        toast.success("Quote data successfully edited");
-      }
+
     } catch (error) {
       toast.error("There was an error updating the quote");
       console.log(error);
     }
   }
-  console.log('cuote data es ', quoteData);
 
   const handleGenerateAndUpload = async (): Promise<string | null> => {
     try {
@@ -644,9 +632,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
           ) : (
             <div className='flex w-1/2 flex-col'>
-              {/* All selects in one row */}
               <div className="flex flex-row gap-4 mb-4 w-full">
-                {/* Quote Type */}
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>
                   <Select onValueChange={handleQuoteTypeChange} value={quoteType || ""}>
@@ -661,50 +647,17 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </Select>
                 </div>
 
-                {/* Customer / Job / Bid */}
                 {quoteType === "straight_sale" && quoteData && (
-                  <>
-                    <div className="flex-1">
-                      <p className="font-semibold mb-1">Select a customer</p>
-                      <Select onValueChange={selectCustomer} value={selectedCustomer?.id?.toString() || ""}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map(c => (
-                            <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex-1">
-                      <p className="font-semibold mb-1">Contact</p>
-                      <Select
-                        onValueChange={selectContact}
-                        value={selectedContact?.id?.toString() || ""}
-                        disabled={!selectedCustomer}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Contact" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedCustomer?.customer_contacts?.length
-                            ? selectedCustomer.customer_contacts.map(cc => (
-                              <SelectItem key={cc.id} value={cc.id.toString()}>
-                                {cc.name} ({cc.email})
-                              </SelectItem>
-                            ))
-                            : <p className="text-center text-gray-400 text-sm py-4">There are no contacts</p>
-                          }
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
+                  <div className='w-1/2'>
+                    <CustomerSelect
+                      data={quoteData as any}
+                      setData={setQuoteData}
+                    />
+                  </div>
                 )}
 
                 {quoteType === "to_project" && quoteData && (
-                  <div className="flex-1">
+                  <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a job number</p>
                     <SelectJob
                       quoteData={quoteData}
@@ -716,7 +669,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 )}
 
                 {quoteType === "estimate_bid" && quoteData && (
-                  <div className="flex-1">
+                  <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
                       quoteData={quoteData}
@@ -731,8 +684,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <div className='my-4'>
                 {quoteType === "straight_sale" && quoteData && (
                   <RenderSaleQuoteFields
-                    selectedContact={selectContact}
-                    selectedCustomer={selectedCustomer}
                     data={quoteData as Partial<StraightSaleQuote>}
                     setData={setQuoteData}
                   />

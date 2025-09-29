@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Insertar en customer_contacts
     const { data: contact, error } = await supabase
       .from("customer_contacts")
       .insert({
@@ -37,7 +36,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Si hay quoteId, asociar contacto a quote_recipients
     if (quoteId && contact?.id) {
       const { error: linkError } = await supabase
         .from("quote_recipients")
@@ -45,7 +43,7 @@ export async function POST(request: NextRequest) {
           quote_id: quoteId,
           customer_contacts_id: contact.id,
           email: contact.email,
-          point_of_contact: true, // default
+          point_of_contact: true,
         });
 
       if (linkError) {
@@ -53,7 +51,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(contact, { status: 201 });
+    return NextResponse.json({ status: 201, success: true, data: contact });
   } catch (err) {
     console.error("Error in customer contact creation:", err);
     return NextResponse.json(
