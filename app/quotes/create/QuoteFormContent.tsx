@@ -64,6 +64,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
 
   const commonFields = {
     customer: meta.customer ?? {},
+    customer_name: meta.customer_name,
     customer_contact: meta.customer_contact ?? {},
     customer_email: meta.customer_email ?? "",
     customer_phone: meta.customer_phone ?? "",
@@ -74,6 +75,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     etc_poc_email: meta.etc_poc_email ?? "",
     etc_poc_phone_number: meta.etc_poc_phone_number ?? "",
     etc_branch: meta.etc_branch ?? "",
+    etc_job_number: meta.etc_job_number ?? ""
   };
 
   if (meta.type_quote === "straight_sale") {
@@ -112,6 +114,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
       start_date: meta.start_date ?? "",
       end_date: meta.end_date ?? "",
       duration: meta.duration ?? 0,
+      etc_job_number: meta.etc_job_number ?? ""
     } as EstimateBidQuote;
   }
 
@@ -315,7 +318,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   ) => {
     setQuoteType(type);
     if (!needSetObject) return;
-    const today = new Date().toISOString().slice(0, 10); 
+    const today = new Date().toISOString().slice(0, 10);
 
 
     const defaultValues = {

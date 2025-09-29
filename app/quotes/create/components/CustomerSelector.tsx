@@ -7,13 +7,32 @@ import {
 import { Input } from '@/components/ui/input'
 import CreateModal from './CreateModal'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
+import { Loader } from 'lucide-react'
 
 const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<any> }) => {
-    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, refreshCustomers, addContact, addCustomer } = useCustomerSelection();
+    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, refreshCustomers, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
     const [modalOpen, setModalOpen] = useState(false)
     const [modalType, setModalType] = useState<'customer' | 'contact' | null>(null)
+
+    useEffect(() => {
+        if (data.customer && customers.length > 0) {
+            const cust = customers.find(c => c.id.toString() === data.customer.toString());
+            if (cust) {
+                selectCustomer(cust.id.toString());
+                const contact = cust?.customer_contacts?.find(c => c.name === data.customer_contact);
+                if (contact) selectContact(contact.id.toString());
+            }
+        }
+    }, [data.customer, customers]);
+
+    useEffect(() => {
+        if (data.customer_contact) {
+            const contact = selectedCustomer?.customer_contacts?.find(c => c.name === data.customer_contact);
+            if (contact) selectContact(contact.id.toString());
+        }
+    }, [selectedCustomer, data.customer_contact]);
 
     useEffect(() => {
         if (!selectedCustomer) return;
@@ -99,13 +118,17 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
                 <div className="w-1/2">
                     <Select
                         onValueChange={val => {
-                            if (val === '__new__') return openModal('customer')
-                            selectCustomer(val)
+                            if (val === "__new__") return openModal("customer");
+                            selectCustomer(val);
                         }}
-                        value={selectedCustomer?.id?.toString() || ''}
+                        value={selectedCustomer?.id?.toString() || ""}
+                        disabled={loading}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Select Customer" />
+                            <SelectValue placeholder={loading ? "Loading..." : "Select Customer"} />
+                            {loading && (
+                                <Loader className="animate-spin w-4 h-4 text-gray-600 ml-2" />
+                            )}
                         </SelectTrigger>
                         <SelectContent className="flex flex-col">
                             <div className="p-2 border-b">
@@ -139,14 +162,17 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
                 <div className="w-1/2">
                     <Select
                         onValueChange={val => {
-                            if (val === '__new__') return openModal('contact')
-                            selectContact(val)
+                            if (val === "__new__") return openModal("contact");
+                            selectContact(val);
                         }}
-                        value={selectedContact?.id?.toString() || ''}
-                        disabled={!selectedCustomer}
+                        value={selectedContact?.id?.toString() || ""}
+                        disabled={!selectedCustomer || loading}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Select Contact" />
+                            <SelectValue placeholder={loading ? "Loading..." : "Select Contact"} />
+                            {loading && (
+                                <Loader className="animate-spin w-4 h-4 text-gray-600 ml-2" />
+                            )}
                         </SelectTrigger>
                         <SelectContent className="flex flex-col">
                             <div className="p-2 border-b">

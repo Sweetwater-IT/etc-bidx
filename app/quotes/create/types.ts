@@ -58,6 +58,7 @@ export interface StraightSaleQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
 }
 
 export interface ToProjectQuote extends Quote {
@@ -74,6 +75,7 @@ export interface ToProjectQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
 
     township: string;
     county: string;
@@ -99,6 +101,7 @@ export interface EstimateBidQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
     township: string;
     county: string;
     sr_route: string;

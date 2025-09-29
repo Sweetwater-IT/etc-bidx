@@ -9,9 +9,11 @@ interface IRenderEtcSection {
     setData: (data: any) => void;
     onSaveData: (data: any) => void;
     editAll?: boolean;
+    showldJobNumber?: boolean;
+
 }
 
-const RenderEtcSection = ({ data, setData, editAll = false }: IRenderEtcSection) => {
+const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: IRenderEtcSection) => {
     const { user } = useAuth();
     const [userBranch, setUserBranch] = React.useState<any>(null);
 
@@ -61,6 +63,14 @@ const RenderEtcSection = ({ data, setData, editAll = false }: IRenderEtcSection)
                 {renderField("etc_poc_phone_number", "ETC POC Phone", userBranch?.address)}
                 {renderField("etc_branch", "ETC Branch", userBranch?.name)}
             </div>
+
+            {
+                showldJobNumber &&
+                <div className="flex flex-col gap-2 mb-4">
+                    {renderField("etc_job_number", "ETC Job Number", data.etc_job_number)}
+                </div>
+            }
+
         </div>
     );
 };

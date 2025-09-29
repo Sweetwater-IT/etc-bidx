@@ -10,7 +10,7 @@ import { useCustomerSelection } from "@/hooks/use-csutomers-selection";
 interface IRenderSaleQuoteFields {
     data: Partial<StraightSaleQuote>;
     setData: (data: Partial<StraightSaleQuote>) => void;
-    editAll?: boolean; 
+    editAll?: boolean;
 }
 
 const SectionBox = ({
@@ -31,22 +31,6 @@ const SectionBox = ({
 );
 
 const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQuoteFields) => {
-    const { selectedCustomer, selectedContact } = useCustomerSelection();
-
-    useEffect(() => {
-        if (!selectedCustomer) return;
-
-        setData({
-            ...data,
-            customer: selectedCustomer.id || "",
-            customer_name: selectedCustomer.name || "",
-            customer_email: selectedCustomer.email || "",
-            customer_phone: selectedCustomer.main_phone || "",
-            customer_address: `${selectedCustomer.address || ""} ${selectedCustomer.city || ""}, ${selectedCustomer.state || ""} ${selectedCustomer.zip || ""}`,
-            customer_contact: selectedContact?.id || "",
-        });
-    }, [selectedCustomer, selectedContact]);
-
     const renderField = (
         field: keyof StraightSaleQuote,
         label: string,
@@ -81,12 +65,11 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                 {/* Customer info */}
                 <SectionBox title="Customer Information" isEditing={editAll}>
                     <div className="grid grid-cols-1 gap-2">
-                        {renderField("customer_name", "Customer Name")}
-                        {renderField("customer_contact", "Customer Contact", "text", true)}
-                        {renderField("customer_email", "Customer Email")}
-                        {renderField("customer_phone", "Customer Phone")}
-                        {renderField("customer_address", "Customer Address")}
-                        {renderField("customer_job_number", "Customer Job Number")}
+                        {renderField("customer_name", "Customer Name", "text", true)}
+                        {renderField("customer_contact", "Customer Point Of Contact", "text", true)}
+                        {renderField("customer_email", "Customer Email", "text", true)}
+                        {renderField("customer_phone", "Customer Phone", "text", true)}
+                        {renderField("customer_address", "Customer Address", "text", true)}
                         {renderField("purchase_order", "Purchase Order")}
                     </div>
                 </SectionBox>

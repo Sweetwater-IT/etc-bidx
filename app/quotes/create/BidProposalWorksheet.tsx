@@ -92,7 +92,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
               <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
               <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
-              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
             <div className="p-1  border-b border-black">
@@ -142,6 +141,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
               <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
               <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">ETC Job Number:</span> {data.etc_job_number || ''}</p>
             </div>
 
             <div className="p-1 border-r border-black">
@@ -175,7 +175,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
               <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
               <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
-              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
               <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
             </div>
             <div className="p-1">

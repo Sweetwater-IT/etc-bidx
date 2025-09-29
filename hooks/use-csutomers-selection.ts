@@ -24,8 +24,10 @@ export const useCustomerSelection = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedContact, setSelectedContact] = useState<CustomerContact | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const getCustomers = async () => {
+        setLoading(true); 
         try {
             const res = await fetch("/api/contractors?offset=0&limit=1000");
             const result = await res.json();
@@ -34,6 +36,8 @@ export const useCustomerSelection = () => {
             }
         } catch (error) {
             console.error(error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -83,6 +87,7 @@ export const useCustomerSelection = () => {
         addCustomer,
         addContact,
         refreshCustomers: getCustomers,
+        loading, 
     };
 };
 

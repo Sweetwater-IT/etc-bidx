@@ -45,7 +45,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
             customer_email: selectedBid?.customer_email || "",
             customer_phone: selectedBid?.customer_phone || "",
             customer_address: selectedBid?.customer_address || "",
-            customer_job_number: selectedBid.job_number || "",
+            customer_job_number: selectedBid.admin_data.contractNumber || "",
             township: admin.location || "",
             county: admin.county?.name || "",
             sr_route: admin.srRoute || "",
@@ -69,7 +69,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
     ) => (
         <div className="mb-4">
             <label className="font-semibold block mb-1">{label}</label>
-            {editAll ? (
+            {editAll? (
                 <Input
                     type={type === "date" ? "datetime-local" : type}
                     value={data[field] ?? ""}
@@ -89,12 +89,11 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
-                    {renderField("customer_name", "Customer")}
-                    {renderField("customer_contact", "Customer Contact")}
-                    {renderField("customer_phone", "Customer Phone")}
-                    {renderField("customer_email", "Customer Email")}
-                    {renderField("customer_address", "Customer Address")}
-                    {renderField("customer_job_number", "Customer Job Number")}
+                    {renderField("customer_name", "Customer", 'text', true)}
+                    {renderField("customer_contact", "Customer Point Of Contact", 'text', true)}
+                    {renderField("customer_phone", "Customer Phone", 'text', true)}
+                    {renderField("customer_email", "Customer Email", 'text', true)}
+                    {renderField("customer_address", "Customer Address", 'text', true)}
                 </div>
             </SectionBox>
 

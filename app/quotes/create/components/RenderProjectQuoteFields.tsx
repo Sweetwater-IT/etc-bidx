@@ -47,7 +47,8 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             customer_email: job?.customer_email || "",
             customer_phone: job?.customer_phone || "",
             customer_address: job?.customer_address || "",
-            customer_job_number: job.job_number || "",
+            customer_job_number: job.admin_data.contractNumber || "",
+            etc_job_number: job.job_number ?? "",
             purchase_order: "",
             township: job.admin_data?.location || "",
             county: job.admin_data?.county?.name || "",
@@ -60,7 +61,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             duration,
             project_title: "",
             description: "",
-            job_id: selectedJob.id
+            job_id: selectedJob.id,
         }));
     }, [selectedJob, setData]);
 
@@ -90,12 +91,12 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
-                    {renderField("customer_name", "Customer")}
-                    {renderField("customer_contact", "Customer Contact")}
-                    {renderField("customer_phone", "Customer Phone")}
-                    {renderField("customer_email", "Customer Email")}
-                    {renderField("customer_address", "Customer Address")}
-                    {renderField("customer_job_number", "Customer Job Number")}
+                    {renderField("customer_name", "Customer", "text", true)}
+                    {renderField("customer_contact", "Customer Point Of Contact", 'text', true)}
+                    {renderField("customer_phone", "Customer Phone", "text", true)}
+                    {renderField("customer_email", "Customer Email", "text", true)}
+                    {renderField("customer_address", "Customer Address", "text", true)}
+                    {renderField("customer_job_number", "Customer Job Number", 'text', true)}
                     {renderField("purchase_order", "Purchase Order #")}
                 </div>
             </SectionBox>
@@ -122,6 +123,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             </SectionBox>
 
             <RenderEtcSection
+                showldJobNumber={true}
                 data={data}
                 setData={setData}
                 onSaveData={onSaveData}

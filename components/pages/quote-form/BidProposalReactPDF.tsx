@@ -167,6 +167,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>ETC Email: {data.etc_poc_email || ""}</Text>
               <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
               <Text>ETC Branch: {data.etc_branch || ""}</Text>
+              <Text>ETC Job Number: {data.etc_job_number || ""}</Text>
             </View>
 
             {/* Job Info */}
@@ -178,7 +179,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Job Address: {data.job_address || ""}</Text>
               <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
             </View>
-            
+
             {/* Additional */}
             <View style={{ width: "50%", padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
