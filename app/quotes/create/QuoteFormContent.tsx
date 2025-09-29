@@ -21,7 +21,7 @@ import RenderEstimateBidQuoteFields from './components/RenderEstimateBidQuoteFie
 import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
 import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
-import { Loader, Loader2 } from 'lucide-react';
+import { Check, Edit2, Loader, Loader2, X } from 'lucide-react';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
@@ -133,6 +133,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const router = useRouter()
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">("")
   const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
+
+  const [editAll, setEditAll] = useState(false)
+  const [tempData, setTempData] = useState<QuoteState | null>(null)
 
   const {
     selectedCustomers,
@@ -312,6 +315,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   ) => {
     setQuoteType(type);
     if (!needSetObject) return;
+    const today = new Date().toISOString().slice(0, 10); 
+
 
     const defaultValues = {
       etc_point_of_contact: user?.user_metadata?.name ?? "",
@@ -362,9 +367,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         sr_route: "",
         job_address: "",
         ecsm_contract_number: "",
-        bid_date: "",
-        start_date: "",
-        end_date: "",
+        bid_date: today,
+        start_date: today,
+        end_date: today,
         duration: 0,
         project_title: "jajajja",
         description: "",
@@ -389,9 +394,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         sr_route: "",
         job_address: "",
         ecsm_contract_number: "",
-        bid_date: "",
-        start_date: "",
-        end_date: "",
+        bid_date: today,
+        start_date: today,
+        end_date: today,
         duration: 0,
         project_title: "",
         description: "",
@@ -516,7 +521,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }
 
-
   const handleSendQuote = async () => {
     if (!numericQuoteId || !pointOfContact) {
       toast.error("A point of contact is required to send the quote.");
@@ -595,6 +599,25 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
     }
   }, [quoteMetadata, user, userBranch]);
+
+  const handleEditClick = () => {
+    setTempData(quoteData)
+    setEditAll(true)
+  }
+
+  const handleSaveClick = async () => {
+    if (quoteData) {
+      await handleSaveQuote(quoteData)
+    }
+    setEditAll(false)
+    setTempData(null)
+  }
+
+  const handleCancelClick = () => {
+    if (tempData) setQuoteData(tempData)
+    setEditAll(false)
+    setTempData(null)
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -680,12 +703,29 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 )}
               </div>
 
-              {/* Fields */}
+              <div className="flex flex-row justify-end gap-2 mb-4">
+                {!editAll ? (
+                  <Button size="sm" onClick={handleEditClick} className="flex items-center gap-2">
+                    <Edit2 className="w-2 h-2" /> Edit
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="sm" onClick={handleSaveClick} className="flex items-center gap-2">
+                      <Check className="w-2 h-2" /> Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelClick} className="flex items-center gap-2">
+                      <X className="w-2 h-2" /> Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
+
               <div className='my-4'>
                 {quoteType === "straight_sale" && quoteData && (
                   <RenderSaleQuoteFields
                     data={quoteData as Partial<StraightSaleQuote>}
                     setData={setQuoteData}
+                    editAll={editAll}
                   />
                 )}
 
@@ -695,6 +735,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     data={quoteData as Partial<ToProjectQuote>}
                     setData={setQuoteData}
                     onSaveData={handleSaveQuote}
+                    editAll={editAll}
                   />
                 )}
 
@@ -704,6 +745,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     data={quoteData as Partial<EstimateBidQuote>}
                     setData={setQuoteData}
                     onSaveData={handleSaveQuote}
+                    editAll={editAll}
                   />
                 )}
               </div>

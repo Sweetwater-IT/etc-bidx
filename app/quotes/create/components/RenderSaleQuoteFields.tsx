@@ -3,59 +3,34 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StraightSaleQuote } from "../types";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import RenderEtcSection from "./RenderEtcSection";
-import { Edit } from "lucide-react";
 import { useCustomerSelection } from "@/hooks/use-csutomers-selection";
 
 interface IRenderSaleQuoteFields {
     data: Partial<StraightSaleQuote>;
     setData: (data: Partial<StraightSaleQuote>) => void;
+    editAll?: boolean; 
 }
 
 const SectionBox = ({
     title,
     children,
     isEditing,
-    onEdit,
-    onCancel,
-    onSave,
 }: {
     title: string;
     children: React.ReactNode;
     isEditing: boolean;
-    onEdit: () => void;
-    onCancel: () => void;
-    onSave: () => void;
 }) => (
     <div className="rounded-lg p-4 mb-6 text-[12px]">
-        <div className="flex justify-between items-start h-[50px]">
-            <h4 className="font-bold ">{title}</h4>
-            {!isEditing ? (
-                <span
-                    className="text-gray-600 underline cursor-pointer hover:text-blue-800 text-[12px]"
-                    onClick={onEdit}
-                >
-                    Edit
-                </span>
-            ) : (
-                <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={onCancel}>
-                        <p className="text-[12px]">Cancel</p>
-                    </Button>
-                    <Button size="sm" onClick={onSave}>
-                        <p className="text-[12px]">Save</p>
-                    </Button>
-                </div>
-            )}
+        <div className="flex justify-between items-start h-[40px]">
+            <p className="font-bold">{title}</p>
         </div>
         {children}
     </div>
 );
 
-
-const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
-    const [editingSection, setEditingSection] = useState<string | null>(null);
+const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQuoteFields) => {
     const { selectedCustomer, selectedContact } = useCustomerSelection();
 
     useEffect(() => {
@@ -80,7 +55,7 @@ const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
     ) => (
         <div className="mb-4">
             <label className="font-semibold block mb-1">{label}</label>
-            {editingSection === "customer" ? (
+            {editAll ? (
                 <Input
                     type={type}
                     value={data[field] ?? ""}
@@ -95,22 +70,16 @@ const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
                             ? new Date(data[field] as string).toISOString().slice(0, 10)
                             : String(data[field])
                         : "-"}
-                </p>)}
+                </p>
+            )}
         </div>
     );
 
     return (
         <div className="flex flex-col w-full text-[12px]">
-            {/* Customer selection */}
             <div className="grid grid-cols-2 w-full gap-4">
                 {/* Customer info */}
-                <SectionBox
-                    title="Customer Information"
-                    isEditing={editingSection === "customer"}
-                    onEdit={() => setEditingSection("customer")}
-                    onCancel={() => setEditingSection(null)}
-                    onSave={() => setEditingSection(null)}
-                >
+                <SectionBox title="Customer Information" isEditing={editAll}>
                     <div className="grid grid-cols-1 gap-2">
                         {renderField("customer_name", "Customer Name")}
                         {renderField("customer_contact", "Customer Contact", "text", true)}
@@ -122,10 +91,10 @@ const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
                     </div>
                 </SectionBox>
 
-                {/* ETC Section */}
                 <RenderEtcSection
                     data={data}
                     setData={setData}
+                    editAll={editAll}
                     onSaveData={(updatedData) => {
                         setData({
                             ...data,
@@ -137,7 +106,6 @@ const RenderSaleQuoteFields = ({ data, setData }: IRenderSaleQuoteFields) => {
                     }}
                 />
             </div>
-
         </div>
     );
 };

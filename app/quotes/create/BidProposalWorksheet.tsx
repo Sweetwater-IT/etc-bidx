@@ -95,7 +95,15 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
-            <div className="p-1 border-b border-black">
+            <div className="p-1  border-b border-black">
+              <p className='font-extrabold mb-2'>ETC Information</p>
+              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+            </div>
+
+            <div className="p-1 border-r border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
               <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
               <p><span className="font-semibold">County:</span> {data.county || ''}</p>
@@ -104,20 +112,12 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
-            <div className="p-1  border-r border-black">
-              <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
-            </div>
-
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
               <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
               <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
               <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
-              <p><span className="font-semibold">Duration:</span> {data.duration || ''}</p>
+              <p><span className="font-semibold">{"Duration (Days):"}:</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -136,7 +136,15 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
-            <div className="p-1 border-b border-black">
+            <div className="p-1  border-b border-black">
+              <p className='font-extrabold mb-2'>ETC Information</p>
+              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
+              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
+              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
+              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+            </div>
+
+            <div className="p-1 border-r border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
               <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
               <p><span className="font-semibold">County:</span> {data.county || ''}</p>
@@ -145,20 +153,12 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
-            <div className="p-1  border-r border-black">
-              <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
-            </div>
-
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
               <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
               <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
               <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
-              <p><span className="font-semibold">Duration:</span> {data.duration || ''}</p>
+              <p><span className="font-semibold">{"Duration (Days):"}</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -223,7 +223,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <th className="px-2 py-1 text-center">Row </th>
               <th className="px-2 py-1 text-center">Item #</th>
               <th className="px-2 py-1 text-center">Description</th>
-              <th className="px-2 py-1 text-center">Qty/Units</th>
+              <th className="px-2 py-1 text-center">UON</th>
+              <th className="px-2 py-1 text-center">Quantity</th>
               <th className="px-2 py-1 text-center">Unit Price</th>
               <th className="px-2 py-1 text-center">Extended</th>
             </tr>
@@ -241,15 +242,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                       {item.itemNumber || index + 1}
                     </td>
                     <td className="px-1 text-center  py-1 font-bold align-top">
-                      {item.description}
-                      {item.notes && (
-                        <div className="text-[10px] font-normal text-gray-600 mt-1">
-                          {item.notes}
-                        </div>
-                      )}
+                      {item.description ?? "-"}
                     </td>
                     <td className="px-1 py-1 text-center align-top">
-                      {item.quantity} {item.uom || 'EA'}
+                      {item.uom || 'EA'}
+                    </td>
+                    <td className="px-1 py-1 text-center align-top">
+                      {item.quantity}
                     </td>
                     <td className="px-1 text-center py-1 align-top">
                       {formatMoney(item.unitPrice || 0)}
@@ -283,7 +282,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             <tr className='w-full border-b-black border-1 my-2'></tr>
             <tr className="">
-              <td colSpan={4}></td>
+              <td colSpan={5}></td>
               <td colSpan={1} className="px-1 py-1 text-center font-bold">
                 SUBTOTAL
               </td>
@@ -292,7 +291,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               </td>
             </tr>
             <tr>
-              <td colSpan={4}></td>
+              <td colSpan={5}></td>
               <td colSpan={1} className="px-2 py-1 text-center font-bold">
                 TOTAL
               </td>

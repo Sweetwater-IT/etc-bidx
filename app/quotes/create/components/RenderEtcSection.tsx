@@ -3,18 +3,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import React from "react";
-import { Edit } from "lucide-react";
 
 interface IRenderEtcSection {
     data: any;
     setData: (data: any) => void;
     onSaveData: (data: any) => void;
+    editAll?: boolean;
 }
 
-const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
+const RenderEtcSection = ({ data, setData, editAll = false }: IRenderEtcSection) => {
     const { user } = useAuth();
     const [userBranch, setUserBranch] = React.useState<any>(null);
-    const [isEditing, setIsEditing] = React.useState(false);
 
     React.useEffect(() => {
         const getUserBranchByEmail = async () => {
@@ -34,50 +33,24 @@ const RenderEtcSection = ({ data, setData, onSaveData }: IRenderEtcSection) => {
         label: string,
         fallbackValue: string = ""
     ) => (
-        <div className="flex-1">
+        <div className="flex-1 mb-4">
             <label className="block font-semibold mb-1">{label}</label>
-            {isEditing ? (
+            {editAll ? (
                 <Input
                     value={data[field] ?? fallbackValue}
                     onChange={(e) => setData({ ...data, [field]: e.target.value })}
                 />
             ) : (
-                <p className="text-sm text-gray-700">
-                    {data[field] ?? fallbackValue ?? "-"}
-                </p>
+                <p className="text-sm text-gray-700">{data[field] ?? fallbackValue ?? "-"}</p>
             )}
         </div>
     );
 
     return (
         <div className="rounded-lg p-4 mb-6 text-[12px]">
-            <div className="flex justify-between items-start h-[50px]">
-                <h4 className="font-bold ">ETC Contact</h4>
-                {!isEditing ? (
-                    <span
-                        className="text-gray-600 underline cursor-pointer text-[12px] hover:text-blue-800"
-                        onClick={() => setIsEditing(true)}
-                    >
-                        Edit
-                    </span>
-                ) : (
-                    <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
-                            <p className="text-[12px]">Cancel</p>
-                        </Button>
-                        <Button
-                            size="sm"
-                            onClick={() => {
-                                onSaveData(data);
-                                setIsEditing(false);
-                            }}
-                        >
-                            <p className="text-[12px]">Save</p>
-                        </Button>
-                    </div>
-                )}
+            <div className="h-[50px]">
+                <h4 className="font-bold mb-4">ETC Contact</h4>
             </div>
-
 
             <div className="flex flex-col gap-2 mb-4">
                 {renderField("etc_point_of_contact", "ETC Point of Contact", user?.user_metadata?.name)}

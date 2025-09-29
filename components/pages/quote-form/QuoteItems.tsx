@@ -29,11 +29,18 @@ async function createQuoteItem(item: QuoteItem) {
 }
 
 async function updateQuoteItem(item: QuoteItem) {
+  const normalizedItem = {
+    ...item,
+    unitPrice: Number(item.unitPrice) || 0,
+    tax: Number(item.tax) || 0,
+  };
+
   const res = await fetch(`/api/quotes/quoteItems/${item.id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(item),
+    body: JSON.stringify(normalizedItem),
   });
+
   return res.json();
 }
 
@@ -83,11 +90,10 @@ export function QuoteItems() {
       .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // --- CRUD Handlers ---
   const handleAddNewItem = async () => {
     const newId = generateUniqueId();
     const newItem: QuoteItem = {
-      quote_id: quoteId, 
+      quote_id: quoteId,
       id: newId,
       itemNumber: "",
       description: "",
@@ -144,7 +150,7 @@ export function QuoteItems() {
       uom: "",
       quantity: 0,
       unitPrice: 0,
-      notes: "",
+      notes: '',
     };
 
     setQuoteItems((prevItems: any[]) =>

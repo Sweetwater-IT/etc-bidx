@@ -75,7 +75,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
-  
+
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
@@ -113,23 +113,23 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Job #: {data.customer_job_number || ""}</Text>
             </View>
 
-            {/* Job Info */}
-            <View style={{ width: "50%", borderBottomWidth: 1, padding: 4 }}>
-              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
-              <Text>Township: {data.township || ""}</Text>
-              <Text>County: {data.county || ""}</Text>
-              <Text>S.R./Route: {data.sr_route || ""}</Text>
-              <Text>Job Address: {data.job_address || ""}</Text>
-              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
-            </View>
-
             {/* ETC */}
-            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
+            <View style={{ width: "50%", padding: 4, borderBottomWidth: 1 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
               <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
               <Text>ETC Email: {data.etc_poc_email || ""}</Text>
               <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
               <Text>ETC Branch: {data.etc_branch || ""}</Text>
+            </View>
+
+            {/* Job Info */}
+            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black', }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
+              <Text>Township: {data.township || ""}</Text>
+              <Text>County: {data.county || ""}</Text>s
+              <Text>S.R./Route: {data.sr_route || ""}</Text>
+              <Text>Job Address: {data.job_address || ""}</Text>
+              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
             </View>
 
             {/* Additional */}
@@ -138,7 +138,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Bid Date: {data.bid_date || ""}</Text>
               <Text>Start Date: {data.start_date || ""}</Text>
               <Text>End Date: {data.end_date || ""}</Text>
-              <Text>Duration: {data.duration || ""}</Text>
+              <Text>{"Duration (Days):"} {data.duration || ""}</Text>
             </View>
           </View>
         );
@@ -150,7 +150,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
         return (
           <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
             {/* Customer Info */}
-            <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
+            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
               <Text>Customer: {data.customer_name || ""}</Text>
               <Text>Contact: {data.customer_contact?.name || ""}</Text>
@@ -158,6 +158,15 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Phone: {data.customer_phone || ""}</Text>
               <Text>Address: {data.customer_address || ""}</Text>
               <Text>Job #: {data.customer_job_number || ""}</Text>
+            </View>
+
+            {/* ETC */}
+            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderBottomWidth: 1, }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
+              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
+              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
+              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
+              <Text>ETC Branch: {data.etc_branch || ""}</Text>
             </View>
 
             {/* Job Info */}
@@ -169,23 +178,14 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Job Address: {data.job_address || ""}</Text>
               <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
             </View>
-
-            {/* ETC */}
-            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
-              <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
-              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
-              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
-              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
-              <Text>ETC Branch: {data.etc_branch || ""}</Text>
-            </View>
-
+            
             {/* Additional */}
             <View style={{ width: "50%", padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
               <Text>Bid Date: {data.bid_date || ""}</Text>
               <Text>Start Date: {data.start_date || ""}</Text>
               <Text>End Date: {data.end_date || ""}</Text>
-              <Text>Duration: {data.duration || ""}</Text>
+              <Text>{"Duration (Days):"} {data.duration || ""}</Text>
             </View>
           </View>
         )
@@ -245,7 +245,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
         {/* Items Table */}
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            {['Row', 'Item #', 'Description', 'Qty/Units', 'Unit Price', 'Extended'].map((h, i) => (
+            {['Row', 'Item #', 'Description', 'UOM', 'Quantity', 'Unit Price', 'Extended'].map((h, i) => (
               <Text key={i} style={[styles.tableCell, styles.tableHeader]}>{h}</Text>
             ))}
           </View>
@@ -259,9 +259,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   <Text style={styles.tableCell}>{item.itemNumber || idx + 1}</Text>
                   <Text style={styles.tableCell}>
                     {item.description}
-                    {item.notes && `\n${item.notes}`}
                   </Text>
-                  <Text style={styles.tableCell}>{item.quantity} {item.uom || 'EA'}</Text>
+                  <Text style={styles.tableCell}>{item.uom || 'EA'}</Text>
+                  <Text style={styles.tableCell}>{item.quantity}</Text>
                   <Text style={styles.tableCell}>{formatMoney(item.unitPrice || 0)}</Text>
                   <Text style={styles.tableCell}>{formatMoney(ext)}</Text>
                 </View>
@@ -285,10 +285,12 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
+            <Text style={styles.tableCell}></Text>
             <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>SUBTOTAL</Text>
             <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{formatMoney(total)}</Text>
           </View>
           <View style={styles.tableRow}>
+            <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
             <Text style={styles.tableCell}></Text>
