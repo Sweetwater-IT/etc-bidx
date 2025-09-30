@@ -195,20 +195,23 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
     <div key="main-proposal" className="bg-white min-h-[600px] text-black p-4 font-sans text-[10px] border border-gray-400">
       <header className="flex justify-between items-start pb-2">
         <div className="flex items-start justify-between w-full">
-          <div className='flex flex-col items-start'>
+          <div className='flex flex-col items-start w-1/4'>
             <Image src="/logo.jpg" alt="ETC Logo" width={120} height={120} />
             <a className='mt-1 text-blue-500' href="http://www.establishedtraffic.com/">www.establishedtraffic.com</a>
           </div>
-          <div className='flex flex-col items-center'>
+          <div className='flex flex-col items-center w-2/4'>
             <h1 className="font-bold text-lg">Established Traffic Control, Inc.</h1>
             <p>3162 Unionville Pike</p>
             <p>Hatfield, PA 19440</p>
             <p>O: 215.997.8801</p>
             <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
           </div>
-          <div className="text-center">
+          <div className="text-center w-1/4 ">
             <h2 className="text-xl font-bold">PROPOSAL</h2>
             <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
+            <p>
+              Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+            </p>
             <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
           </div>
         </div>
@@ -219,8 +222,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         <table className="w-full border-[1.5px] border-black border-collapse">
           <thead>
             <tr className='border-black border-b-[1.5px]'>
-              <th className="px-2 py-1 text-center">Row </th>
-              <th className="px-2 py-1 text-center">Item #</th>
+              <th className="w-[40px] px-1 py-1 text-center">Row</th>
+              <th className="w-[80px] px-1 py-1 text-center">Item #</th>
               <th className="px-2 py-1 text-center">Description</th>
               <th className="px-2 py-1 text-center">UON</th>
               <th className="px-2 py-1 text-center">Quantity</th>
@@ -234,10 +237,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               return (
                 <React.Fragment key={item.id || index}>
                   <tr>
-                    <td className="px-1 py-1 align-top text-center">
+                    <td className="w-[40px] px-1 py-1 align-top text-center">
                       {index + 1}
                     </td>
-                    <td className="px-1 py-1 align-top text-center">
+                    <td className="w-[40px] px-1 py-1 align-top text-center">
                       {item.itemNumber || index + 1}
                     </td>
                     <td className="px-1 text-center  py-1 font-bold align-top">
@@ -280,7 +283,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             })}
 
             <tr className='w-full border-b-black border-1 my-2'></tr>
-            <tr className="">
+            <tr className="text-[12px]">
               <td colSpan={5}></td>
               <td colSpan={1} className="px-1 py-1 text-center font-bold">
                 SUBTOTAL
@@ -289,7 +292,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 {formatMoney(total)}
               </td>
             </tr>
-            <tr>
+            <tr className='text-[12px]'>
               <td colSpan={5}></td>
               <td colSpan={1} className="px-2 py-1 text-center font-bold">
                 TOTAL

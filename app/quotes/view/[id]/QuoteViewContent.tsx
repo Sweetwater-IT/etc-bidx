@@ -173,7 +173,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       const result = await res.json();
       if (result.ok) {
         setQuote((prev) =>
-          prev ? { ...prev, notes: [...(prev.notes || []), result.data] } : prev
+          prev ? { ...prev, notes: [...(prev.notes || []), {...result.data, timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now()}] } : prev
         );
       }
     } catch (err) {

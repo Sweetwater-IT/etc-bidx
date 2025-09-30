@@ -43,7 +43,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteTyp
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}
-        quoteDate={quoteDate ? new Date(quoteDate) : new Date()}
+        quoteDate={new Date()}
         quoteNumber={quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A"}
         sender={sender}
         pointOfContact={pointOfContact ?? { name: "", email: "" }}

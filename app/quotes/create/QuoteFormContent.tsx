@@ -374,7 +374,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         start_date: today,
         end_date: today,
         duration: 0,
-        project_title: "jajajja",
+        project_title: "",
         description: "",
         ...defaultValues,
       };
