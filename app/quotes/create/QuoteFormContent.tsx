@@ -216,7 +216,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
 
     const shouldCreate =
-      (quoteType === "straight_sale" && quoteData?.customer) ||
+      (quoteType === "straight_sale" && quoteData?.customer && quoteData.customer_name) ||
       (quoteType === "to_project" && quoteData?.job_id) ||
       (quoteType === "estimate_bid" && quoteData?.estimate_id);
 
@@ -858,7 +858,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className="my-4">
-                  <p className="font-semibold mb-2">Notes</p>
+                <p className="font-semibold mb-2">Notes</p>
                 <textarea
                   value={quoteData?.notes}
                   onChange={(e) => setQuoteData((prev: any) => ({
