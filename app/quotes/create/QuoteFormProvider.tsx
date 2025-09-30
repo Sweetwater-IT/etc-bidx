@@ -226,7 +226,7 @@ export default function QuoteFormProvider({
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(
-    mergedData.items.length > 0 ? mergedData.items : [createEmptyQuoteItem()]
+    mergedData.items || []
   );
 
   const [adminData, setAdminData] = useState<AdminData | undefined>(

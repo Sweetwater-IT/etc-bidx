@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AttachmentNames, useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { toast } from "sonner";
@@ -26,7 +26,15 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
     },
     folder: 'quotes'
   });
+
   const { files: filesUp, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
+
+  useEffect(() => {
+    if (!quoteId && filesUp.length > 0) {
+      setFiles(filesUp || []);
+    }
+  }, [filesUp, setFiles]);
+
 
   useEffect(() => {
     setFiles(localFiles || []);
@@ -63,38 +71,55 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
   return (
     <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
-      <Dropzone {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
-        <DropzoneContent />
+      <Dropzone  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
+        <DropzoneContent hideUploadButton={!quoteId} />
         <DropzoneEmptyState />
       </Dropzone>
       <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
-      {files.length > 0 && (
-        <div className="grid grid-cols-1 gap-2">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-2 rounded hover:bg-gray-50 transition"
-            >
-              <Checkbox
-                id={`file-${file.id}`}
-                checked={quoteData?.selectedfilesids?.includes(file.id)}
-                onCheckedChange={(checked: boolean) => {
-                  const isAlreadySelected = quoteData?.selectedfilesids?.includes(file.id);
+      <div className="grid grid-cols-1 gap-2">
+        {files.length > 0 && files.map((file: any) => (
+          <div key={file.id} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
+            <Checkbox
+              id={`file-${file.id}`}
+              checked={quoteData?.selectedfilesids?.includes(file.id)}
+              onCheckedChange={(checked: boolean) => {
+                const isAlreadySelected = quoteData?.selectedfilesids?.includes(file.id);
+                if (checked && !isAlreadySelected) {
+                  setPreviewFile(file);
+                } else if (!checked && isAlreadySelected) {
+                  handleFileSelect(file.id);
+                }
+              }}
+            />
+            <Label htmlFor={`file-${file.id}`} className="truncate">
+              {file.filename}
+            </Label>
+          </div>
+        ))}
 
-                  if (checked && !isAlreadySelected) {
+        {!quoteId && filesUp.length > 0 && filesUp.map((file: any, idx) => {
+          const tempId = `up-${idx}-${file.name}`; // id temporal único
+          const isSelected = quoteData?.selectedfilesids?.includes(tempId);
+
+          return (
+            <div key={tempId} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
+              <Checkbox
+                id={`file-${tempId}`}
+                checked={isSelected}
+                onCheckedChange={(checked: boolean) => {
+                  if (checked && !isSelected) {
                     setPreviewFile(file);
-                  } else if (!checked && isAlreadySelected) {
-                    handleFileSelect(file.id);
                   }
+                  handleFileSelect(tempId);
                 }}
               />
-              <Label htmlFor={`file-${file.id}`} className="truncate">
-                {file.filename}
+              <Label htmlFor={`file-${tempId}`} className="truncate">
+                {file.name}
               </Label>
             </div>
-          ))}
-        </div>
-      )}
+          )
+        })}
+      </div>
 
       <div className="flex flex-row gap-6 mt-4">
         <div className="flex items-center space-x-2">
@@ -112,9 +137,9 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
         file={
           previewFile
             ? {
-              id: previewFile.id,
-              url: previewFile.file_url,
-              filename: previewFile.filename,
+              id: previewFile.id ?? previewFile.name,
+              url: previewFile.file_url ?? previewFile.preview,
+              filename: previewFile.filename ?? previewFile.name,
             }
             : null
         }

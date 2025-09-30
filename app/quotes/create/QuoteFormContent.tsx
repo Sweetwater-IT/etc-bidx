@@ -60,6 +60,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     aditionalFiles: meta.aditionalFiles,
     aditionalTerms: meta.aditionalTerms,
     pdf_url: meta.pdf_url,
+    notes: meta.notes || '',
   };
 
   const commonFields = {
@@ -136,6 +137,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const router = useRouter()
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">("")
   const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
+  const [creatingQuote, setCreatingQuote] = useState<boolean>(false);
 
   const [editAll, setEditAll] = useState(false)
   const [tempData, setTempData] = useState<QuoteState | null>(null)
@@ -208,27 +210,118 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [user.email, edit]);
 
   useEffect(() => {
-    async function initDraft() {
-      if (initCalled.current) return;
-      initCalled.current = true;
-
-      if (!quoteId) {
-        try {
-          const res = await fetch("/api/quotes", { method: "POST" });
-          if (!res.ok) throw new Error("Failed to create draft");
-          const data = await res.json();
-          setQuoteId(data.data.id);
-          setQuoteNumber(data.data.quote_number || "");
-
-          console.log("🚀 Draft initialized with:", data.data.id, data.data.quote_number);
-        } catch (err) {
-          console.error("Error creating draft", err);
-          toast.error("Could not start a new draft");
-        }
-      }
+    if (quoteId) {
+      autosave();
+      return;
     }
-    initDraft();
-  }, [quoteId, setQuoteId, setQuoteNumber]);
+
+    const shouldCreate =
+      (quoteType === "straight_sale" && quoteData?.customer) ||
+      (quoteType === "to_project" && quoteData?.job_id) ||
+      (quoteType === "estimate_bid" && quoteData?.estimate_id);
+
+    if (shouldCreate) {
+      handleCreateDraft().then((data: any) => {
+        if (data?.success) {
+          setQuoteId(data.data.id);
+        }
+      });
+    }
+  }, [
+    quoteType,
+    quoteData?.customer,
+    quoteData?.job_id,
+    quoteData?.estimate_id,
+    selectedJob,
+  ]);
+
+  const createQuoteBase = async (status: "DRAFT" | "NOT SENT") => {
+    const payload = {
+      type_quote: quoteType,
+      status,
+      subject,
+      body: emailBody,
+      from_email: sender?.email || null,
+      recipients: [
+        ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+        ...ccEmails.map((email) => ({ email, cc: true })),
+        ...bccEmails.map((email) => ({ email, bcc: true })),
+      ],
+      notes,
+      ...quoteData,
+      items: quoteItems,
+      quoteId: quoteId
+    };
+
+    const res = await fetch("/api/quotes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    return res.json();
+  };
+
+  const handleCreateDraft = async () => {
+    const res = await createQuoteBase("DRAFT");
+    if (res.success) {
+      setQuoteId(res.data.id);
+      setQuoteNumber(res.data.quote_number);
+      setQuoteData((prev) => ({
+        ...prev,
+        id: res.data.id,
+        quote_number: res.data.quote_number,
+        status: "DRAFT",
+      }));
+    }
+    return res;
+  };
+  const handleCreateQuote = async () => {
+    try {
+      setCreatingQuote(true);
+
+      const data = await createQuoteBase("NOT SENT");
+
+      if (data.success) {
+        const uploadedFiles: { name: string; url: string }[] = [];
+        for (const file of files) {
+          try {
+            const response = await fetch(file.preview);
+            const blob = await response.blob();
+
+            const formData = new FormData();
+            formData.append("file", new File([blob], file.name, { type: file.type }));
+            formData.append("uniqueIdentifier", data.data.id?.toString() || "temp");
+            formData.append("folder", "quotes");
+
+            const uploadRes = await fetch("/api/files", {
+              method: "POST",
+              body: formData,
+            });
+
+            const uploadData = await uploadRes.json();
+            if (uploadData.success) {
+              uploadedFiles.push({
+                name: file.name,
+                url: uploadData.url,
+              });
+            }
+          } catch (err) {
+            console.error(`Unexpected error uploading file ${file.name}:`, err);
+          }
+        }
+
+        router.push('/quotes')
+        toast.success("Quote created successfully!");
+      }
+
+    } catch (err) {
+      console.error("Error creating quote", err);
+      toast.error("Could not create quote");
+    } finally {
+      setCreatingQuote(false);
+    }
+  };
 
   const autosave = React.useCallback(async () => {
     if (!numericQuoteId) return false;
@@ -248,9 +341,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           ...bccEmails.map((email) => ({ email, bcc: true })),
         ],
         customers: selectedCustomers.map(c => ({ id: c.id })),
-        include_terms: includeTerms,
-        custom_terms: customTerms,
-        payment_terms: paymentTerms,
         ...quoteData,
       };
 
@@ -440,7 +530,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
-          notes={notes}
+          notes={quoteData?.notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
           customers={selectedCustomers}
@@ -645,6 +735,16 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <Button disabled={sending || !pointOfContact} onClick={handleSendQuote}>
                 {sending ? 'Sending...' : 'Send Quote'}
               </Button>
+              {!edit && (
+                <Button disabled={!quoteType} onClick={handleCreateQuote}>
+                  {
+                    creatingQuote ?
+                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                      :
+                      "Create quote"
+                  }
+                </Button>
+              )}
             </div>
           </div>
         }
@@ -757,6 +857,19 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 <QuoteItems />
               </div>
 
+              <div className="my-4">
+                  <p className="font-semibold mb-2">Notes</p>
+                <textarea
+                  value={quoteData?.notes}
+                  onChange={(e) => setQuoteData((prev: any) => ({
+                    ...prev,
+                    notes: e.target.value
+                  }))}
+                  placeholder="Add your notes here..."
+                  className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                />
+              </div>
+
               <div className='my-4'>
                 <QuoteAdditionalFiles
                   setQuoteData={setQuoteData}
@@ -776,7 +889,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <BidProposalWorksheet
                 quoteData={quoteData}
                 quoteType={quoteType || "straight_sale"}
-                notes={notes}
+                notes={quoteData?.notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers}

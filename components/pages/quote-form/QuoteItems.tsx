@@ -109,7 +109,7 @@ export function QuoteItems() {
     };
 
     const response = await createQuoteItem(newItem);
-    if (response.success) {
+    if (response.success) {      
       setQuoteItems((prevItems) => [...prevItems, response.item]);
       setEditingItemId(response.item.id);
     }

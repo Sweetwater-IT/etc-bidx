@@ -30,7 +30,7 @@ interface Props {
   sr: string;
   ecms: string;
   pointOfContact: { name: string; email: string };
-  notes: INote[];
+  notes: string | undefined;
   quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
@@ -371,21 +371,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           <View style={styles.notesSection}>
             <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Notes:</Text>
             <View style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              {notes.length > 0 && (
-                notes.map((nt, i) => (
-                  <View key={i} style={styles.noteItem}>
-                    <Text>{nt.text}</Text>
-                    <Text style={{ fontSize: 8, color: 'gray' }}>
-                      {new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}
-                    </Text>
-                  </View>
-                ))
-              )
-              }
+              {notes}
             </View>
           </View>
-
-
         </View>
 
         <View style={styles.endPage}>

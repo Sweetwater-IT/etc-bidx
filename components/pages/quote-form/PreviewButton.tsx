@@ -31,7 +31,6 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteTyp
     stateRoute,
     ecmsPoNumber,
     pointOfContact,
-    notes,
     quoteMetadata,
   } = useQuoteForm();
 
@@ -39,7 +38,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteTyp
   const pdfDocument = useMemo(() => {
     return (
       <BidProposalReactPDF
-        notes={notes}
+        notes={quoteMetadata?.notes}
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}

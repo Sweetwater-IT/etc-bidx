@@ -2,26 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export interface QuoteGridView {
-  id: number;
-  quote_number: string | null;
-  status: "Not Sent" | "Sent" | "Accepted" | "DRAFT" | null;
-  date_sent: string | null;
-  customer_name: string;
-  point_of_contact: string;
-  point_of_contact_email: string;
-  total_items: number;
-  county: string | null;
-  updated_at: string | null;
-  has_attachments: boolean;
-  estimate_contract_number?: string;
-  job_number?: string;
-  quote_created_at?: string | null;
-  estimate_id?: number | null;
-  job_id?: number | null;
-  created_at?: any
-}
-
 // --------------------
 // GET → listado con filtros, paginación, counts y nextNumber
 // -------------------- 
@@ -98,15 +78,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("quotes")
       .select(`
-        id,
-        quote_number,
-        status,
-        date_sent,
-        county,
-        estimate_id,
-        job_id,
-        created_at,
-        updated_at,
+        *,
         quotes_customers (
           contractors ( id, name )
         ),
@@ -132,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     console.log("🪵 [GET /quotes] Raw data:", JSON.stringify(rawData, null, 2));
 
-    const transformedData: QuoteGridView[] = [];
+    const transformedData: any[] = [];
 
     for (const row of rawData) {
       let adminData: any = null;
@@ -157,15 +129,15 @@ export async function GET(request: NextRequest) {
       const customerName =
         contractor && "name" in contractor ? contractor.name : "Unknown Customer";
 
-      const transformedRow: QuoteGridView = {
+      const transformedRow: any = {
         id: row.id,
         quote_number: row.quote_number,
         status: row.status,
         date_sent: row.date_sent,
         estimate_id: row.estimate_id ?? null,
         job_id: row.job_id ?? null,
-        customer_name: String(customerName),
-        point_of_contact: row.quote_recipients?.find((r: any) => r.point_of_contact)?.email || "",
+        customer_name: row.customer_name,
+        point_of_contact: row.customer_contact,
         point_of_contact_email: row.quote_recipients?.[0]?.email || "",
         total_items: row.quote_items?.length || 0,
         county: row.county,
@@ -209,7 +181,44 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { estimate_id = null, job_id = null } = body;
+    const {
+      estimate_id = null,
+      job_id = null,
+      admin_data,
+      customers,
+      recipients,
+      items,
+      quoteId: quoteIdCreated,
+      bid_date, start_date, end_date,
+      ...rest
+    } = body;
+
+    if (quoteIdCreated) {
+      const { data: updated, error: updateError } = await supabase
+        .from("quotes")
+        .update({
+          ...rest,
+          estimate_id,
+          job_id,
+          bid_date: bid_date || null,
+          start_date: start_date || null,
+          end_date: end_date || null,
+          status: "Not Sent",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", quoteIdCreated)
+        .select("id, quote_number, estimate_id, job_id")
+        .single();
+
+      if (updateError) {
+        return NextResponse.json(
+          { success: false, message: "Failed to update quote", error: updateError.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true, data: updated });
+    }
 
 
     const { data: latest, error: latestError } = await supabase
@@ -236,8 +245,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const cleanRest = {
+      ...rest,
+      bid_date: bid_date || null,
+      start_date: start_date || null,
+      end_date: end_date || null,
+    };
 
-    const { data, error } = await supabase
+    const { data: quoteData, error: quoteError } = await supabase
       .from("quotes")
       .insert([{
         quote_number: nextQuoteNumber,
@@ -246,19 +261,84 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         estimate_id,
         job_id,
+        ...cleanRest
       }])
       .select("id, quote_number, estimate_id, job_id")
       .single();
 
-    if (error || !data) {
-      console.error("Error creating draft:", error);
+
+    if (quoteError || !quoteData) {
+      console.error("Error creating draft:", quoteError);
       return NextResponse.json(
-        { success: false, message: "Failed to create draft", error: error?.message || "No data" },
+        { success: false, message: "Failed to create draft", error: quoteError?.message || "No data" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    const quoteId = quoteData.id;
+
+    if (admin_data) {
+      const adminPayload: any = {
+        contract_number: admin_data.contract_number ?? admin_data.contractNumber ?? null,
+        estimator: admin_data.estimator ?? null,
+        division: admin_data.division ?? null,
+        bid_date: admin_data.bid_date ?? admin_data.letting_date ?? null,
+        owner: admin_data.owner ?? null,
+        county: admin_data.county ?? null,
+        location: admin_data.location ?? null,
+        start_date: admin_data.start_date ?? admin_data.startDate ?? null,
+        end_date: admin_data.end_date ?? admin_data.endDate ?? null,
+        bid_estimate_id: estimate_id,
+        job_id: job_id,
+      };
+
+      let conflictKey: "bid_estimate_id" | "job_id" | null = null;
+      if (estimate_id) conflictKey = "bid_estimate_id";
+      else if (job_id) conflictKey = "job_id";
+
+      if (conflictKey) {
+        await supabase
+          .from("admin_data_entries")
+          .upsert(adminPayload, { onConflict: conflictKey });
+      }
+    }
+
+    // Insertar customers
+    if (Array.isArray(customers) && customers.length > 0) {
+      const customersToInsert = customers.map((c: any) => ({
+        quote_id: quoteId,
+        contractor_id: c.id ?? c.contractor_id,
+      }));
+      await supabase.from("quotes_customers").insert(customersToInsert);
+    }
+
+    // Insertar recipients
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      const recipientsToInsert = recipients.map((r: any) => ({
+        quote_id: quoteId,
+        email: r.email ?? null,
+        cc: r.cc ?? false,
+        bcc: r.bcc ?? false,
+        point_of_contact: r.point_of_contact ?? false,
+        customer_contacts_id: r.customer_contacts_id ?? null,
+      }));
+      await supabase.from("quote_recipients").insert(recipientsToInsert);
+    }
+
+    // Asociar items
+    if (Array.isArray(items) && items.length > 0) {
+      const { error: itemsError } = await supabase
+        .from("quote_items")
+        .update({ quote_id: quoteId })
+        .in("id", items.map((i: any) => i.id));
+
+      if (itemsError) {
+        console.error("Error linking items:", itemsError);
+        return NextResponse.json({ success: false, message: "Failed to link items", error: itemsError.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, data: quoteData });
   } catch (err) {
     console.error("Unexpected error POST /quotes:", err);
     return NextResponse.json(

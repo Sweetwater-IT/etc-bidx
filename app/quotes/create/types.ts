@@ -42,7 +42,8 @@ export interface Quote {
     aditionalTerms: boolean;
     pdf_url: string;
     comment: "",
-    digital_signature: ""
+    digital_signature: "",
+    notes: "",
 }
 
 export interface StraightSaleQuote extends Quote {

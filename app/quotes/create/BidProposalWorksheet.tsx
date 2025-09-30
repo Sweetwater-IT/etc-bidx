@@ -24,7 +24,7 @@ interface BidProposalWorksheetProps {
   county: string
   sr: string
   ecms: string
-  notes: INote[],
+  notes: string | undefined,
   quoteType: "straight_sale" | "to_project" | "estimate_bid";
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
@@ -327,13 +327,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       <section className="mt-2 text-[9px] flex flex-row gap-4">
         <p className="uppercase font-bold">Notes:</p>
         <div className='flex flex-col flex-1'>
-          {notes.length > 0 ?
-            notes.map((nt, index) => (
-              <div key={index} className='flex flex-col'>
-                <p className='text-md'>{nt.text}</p>
-                <p className='text-[8px] text-gray-400'>{new Date(nt.timestamp).toLocaleString()} by {nt.user_email ?? ''}</p>
-              </div>
-            ))
+          {notes? <p>{notes}</p>
             : <p>No notes available</p>
           }
         </div>

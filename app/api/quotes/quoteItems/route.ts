@@ -47,14 +47,11 @@ export async function POST(req: NextRequest) {
         associatedItems = [],
     } = body;
 
-    if (!quote_id) {
-        return NextResponse.json({ success: false, message: "quote_id is required" }, { status: 400 });
-    }
 
     const { data: mainItem, error: mainError } = await supabase
         .from("quote_items")
         .insert([{
-            quote_id,
+            quote_id: quote_id ?? null,
             item_number: itemNumber || null,
             description: description || null,
             uom: uom || null,

@@ -71,7 +71,7 @@ const Dropzone = ({
     </DropzoneContext.Provider>
   )
 }
-const DropzoneContent = ({ className }: { className?: string }) => {
+const DropzoneContent = ({ className, hideUploadButton }: { className?: string, hideUploadButton?: boolean }) => {
   const {
     files,
     setFiles,
@@ -179,7 +179,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
         </div>
       )}
 
-      {files.length > 0 && !exceedMaxFiles && (
+      {files.length > 0 && !exceedMaxFiles && !hideUploadButton && (
         <div className="mt-2 mb-2">
           <Button
             variant="outline"

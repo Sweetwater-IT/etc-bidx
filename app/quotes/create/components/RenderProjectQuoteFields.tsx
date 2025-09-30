@@ -47,7 +47,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             customer_email: job?.customer_email || "",
             customer_phone: job?.customer_phone || "",
             customer_address: job?.customer_address || "",
-            customer_job_number: job.admin_data.contractNumber || "",
+            customer_job_number: job?.admin_data?.contractNumber || "",
             etc_job_number: job.job_number ?? "",
             purchase_order: "",
             township: job.admin_data?.location || "",
