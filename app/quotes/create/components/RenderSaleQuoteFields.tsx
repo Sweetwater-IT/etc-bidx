@@ -26,7 +26,9 @@ const SectionBox = ({
         <div className="flex justify-between items-start h-[40px]">
             <p className="font-bold">{title}</p>
         </div>
-        {children}
+        <div className="break-words">
+            {children}
+        </div>
     </div>
 );
 

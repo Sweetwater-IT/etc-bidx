@@ -16,24 +16,34 @@ export async function GET(request: NextRequest) {
             data.map(async (job) => {
                 let contractorInfo = {};
 
-                if (job.contractor_name) {
-                    const { data: contract, error: contractError } = await supabase
-                        .from("contractors")
-                        .select("*")
-                        .eq("name", job.contractor_name)
-                        .single();
+                if (job.id) {
+                    console.log('el job id es', job.id);
 
-                    if (!contractError && contract) {
+                    const { data: p_metadata, error: pm_tError } = await supabase
+                        .from("project_metadata")
+                        .select(`
+                            *,
+                            contractors (
+                            id,
+                            name,
+                            address
+                            )
+                        `)
+                        .eq("job_id", job.id)
+                        .maybeSingle();
+
+                    if (!pm_tError && p_metadata) {
                         contractorInfo = {
-                            customer: contract.id || "",
-                            customer_name: contract.name || "",
-                            customer_email: contract.email || "",
-                            customer_phone: contract.main_phone || "",
-                            customer_address: `${contract.address || ""} ${contract.city || ""}, ${contract.state || ""} ${contract.zip || ""}`,
+                            customer: p_metadata?.contractors?.id || "",
+                            customer_name: p_metadata?.contractors?.name || "",
+                            customer_contact: p_metadata.project_manager || "",
+                            customer_email: p_metadata.pm_email || "",
+                            customer_phone: p_metadata.pm_phone || "",
+                            customer_address: p_metadata?.contractors?.address
                         };
                     }
                 }
-                
+
                 return {
                     ...job,
                     ...contractorInfo,

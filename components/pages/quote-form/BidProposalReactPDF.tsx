@@ -166,7 +166,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
               <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Contact: {data.customer_contact || ""}</Text>
               <Text>Email: {data.customer_email || ""}</Text>
               <Text>Phone: {data.customer_phone || ""}</Text>
               <Text>Address: {data.customer_address || ""}</Text>
@@ -212,7 +212,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
               <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Contact: {data.customer_contact || ""}</Text>
               <Text>Email: {data.customer_email || ""}</Text>
               <Text>Phone: {data.customer_phone || ""}</Text>
               <Text>Address: {data.customer_address || ""}</Text>
@@ -259,7 +259,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={{ width: "50%", borderRightWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
               <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact?.name || ""}</Text>
+              <Text>Contact: {data.customer_contact || ""}</Text>
               <Text>Email: {data.customer_email || ""}</Text>
               <Text>Phone: {data.customer_phone || ""}</Text>
               <Text>Address: {data.customer_address || ""}</Text>

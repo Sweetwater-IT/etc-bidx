@@ -49,7 +49,7 @@ const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: I
     );
 
     return (
-        <div className="rounded-lg p-4 mb-6 text-[12px]">
+        <div className="rounded-lg p-4 mb-6 text-[12px] break-words">
             <div className="h-[50px]">
                 <h4 className="font-bold mb-4">ETC Contact</h4>
             </div>

@@ -27,7 +27,9 @@ const SectionBox = ({
         <div className="flex justify-between items-start h-[40px]">
             <p className="font-bold">{title}</p>
         </div>
-        {children}
+        <div className="break-words">
+            {children}
+        </div>
     </div>
 );
 
@@ -121,7 +123,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         }
 
         importItems();
-    }, [quoteId]); 
+    }, [quoteId]);
 
 
     const renderField = (
@@ -146,7 +148,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                 </p>
             )}
         </div>
-    );    
+    );
 
     return (
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">

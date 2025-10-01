@@ -24,13 +24,16 @@ const SectionBox = ({
         <div className="flex justify-between items-start h-[40px]">
             <p className="font-bold">{title}</p>
         </div>
-        {children}
+        <div className="break-words">{children}</div>
     </div>
 );
 
 const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, editAll = false }: IRenderProjectQuoteFields) => {
 
     useEffect(() => {
+
+        console.log(selectedJob);
+
         if (!selectedJob) return;
         const job = selectedJob;
 
@@ -47,6 +50,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             customer_email: job?.customer_email || "",
             customer_phone: job?.customer_phone || "",
             customer_address: job?.customer_address || "",
+            customer_contact: job?.customer_contact || "",
             customer_job_number: job?.admin_data?.contractNumber || "",
             etc_job_number: job.job_number ?? "",
             purchase_order: "",
@@ -59,8 +63,6 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             start_date: start ? start.toISOString().slice(0, 10) : "",
             end_date: end ? end.toISOString().slice(0, 10) : "",
             duration,
-            project_title: "",
-            description: "",
             job_id: selectedJob.id,
         }));
     }, [selectedJob, setData]);
@@ -92,7 +94,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
                     {renderField("customer_name", "Customer", "text", true)}
-                    {renderField("customer_contact", "Customer Point Of Contact", 'text', true)}
+                    {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
                     {renderField("customer_phone", "Customer Phone", "text", true)}
                     {renderField("customer_email", "Customer Email", "text", true)}
                     {renderField("customer_address", "Customer Address", "text", true)}
