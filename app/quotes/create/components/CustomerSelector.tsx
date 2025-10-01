@@ -41,8 +41,8 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
             ...data,
             customer: selectedCustomer.id || "",
             customer_name: selectedCustomer.name || "",
-            customer_email: selectedCustomer.email || "",
-            customer_phone: selectedCustomer.main_phone || "",
+            customer_email: selectedContact?.email || "",
+            customer_phone: selectedContact?.phone || "",
             customer_address: `${selectedCustomer.address || ""} ${selectedCustomer.city || ""}, ${selectedCustomer.state || ""} ${selectedCustomer.zip || ""}`,
             customer_contact: selectedContact?.name || "",
         });

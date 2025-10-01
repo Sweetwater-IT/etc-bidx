@@ -4,10 +4,13 @@ import { Input } from "@/components/ui/input";
 import { EstimateBidQuote } from "../types";
 import React, { useEffect } from "react";
 import RenderEtcSection from "./RenderEtcSection";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { useQuoteForm } from "../QuoteFormProvider";
 
 interface IRenderEstimateBidQuoteFields {
     data: Partial<EstimateBidQuote>;
     setData: React.Dispatch<any>;
+    setQuoteItems: React.Dispatch<any>;
     onSaveData: (data: Partial<EstimateBidQuote>) => void;
     selectedBid?: any;
     editAll?: boolean;
@@ -28,7 +31,17 @@ const SectionBox = ({
     </div>
 );
 
-const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false }: IRenderEstimateBidQuoteFields) => {
+async function createQuoteItem(item: QuoteItem) {
+    const res = await fetch("/api/quotes/quoteItems", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+    });
+    return res.json();
+}
+
+const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false, setQuoteItems }: IRenderEstimateBidQuoteFields) => {
+    const { quoteId } = useQuoteForm()
 
     useEffect(() => {
         if (!selectedBid) return;
@@ -38,14 +51,14 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         const end = admin.endDate ? new Date(admin.endDate) : null;
         const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-        setData((prev) => ({
+        setData((prev: any) => ({
             ...prev,
             customer: selectedBid?.customer || "",
             customer_name: selectedBid?.customer_name || "",
             customer_email: selectedBid?.customer_email || "",
             customer_phone: selectedBid?.customer_phone || "",
             customer_address: selectedBid?.customer_address || "",
-            customer_job_number: selectedBid.admin_data.contractNumber || "",
+            customer_job_number: admin.contractNumber || "",
             township: admin.location || "",
             county: admin.county?.name || "",
             sr_route: admin.srRoute || "",
@@ -57,9 +70,59 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
             duration,
             project_title: "",
             description: "",
-            estimate_id: selectedBid?.id
+            estimate_id: selectedBid?.id,
         }));
     }, [selectedBid, setData]);
+
+    useEffect(() => {
+        if (!selectedBid || !quoteId) return;
+
+        const importItems = async () => {
+            const rentalItems: QuoteItem[] = (selectedBid.equipment_rental || []).map((item: any) => ({
+                itemNumber: item.name,
+                description: item.name,
+                uom: 'ea',
+                notes: "",
+                quantity: item.quantity,
+                unitPrice: item.revenue / item.quantity,
+                discount: 0,
+                discountType: 'dollar',
+                associatedItems: [],
+                isCustom: false,
+                tax: 0,
+                is_tax_percentage: false,
+                quote_id: quoteId
+            }));
+
+            const saleItems: QuoteItem[] = (selectedBid.sale_items || []).map((item: any) => ({
+                itemNumber: item.itemNumber,
+                description: item.name,
+                uom: 'ea',
+                notes: "",
+                quantity: item.quantity,
+                unitPrice: item.quotePrice / item.quantity,
+                discount: 0,
+                discountType: 'dollar',
+                associatedItems: [],
+                isCustom: false,
+                tax: 0,
+                is_tax_percentage: false,
+                quote_id: quoteId,
+            }));
+
+            if (rentalItems.length > 0 || saleItems.length > 0) {
+                const allItems = [...rentalItems, ...saleItems];
+                const finalList = await Promise.all(allItems.map(async item => {
+                    const result = await createQuoteItem(item);
+                    return result.item;
+                }));
+                setQuoteItems(finalList);
+            }
+        }
+
+        importItems();
+    }, [quoteId]); 
+
 
     const renderField = (
         field: keyof EstimateBidQuote,
@@ -69,7 +132,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
     ) => (
         <div className="mb-4">
             <label className="font-semibold block mb-1">{label}</label>
-            {editAll? (
+            {editAll ? (
                 <Input
                     type={type === "date" ? "datetime-local" : type}
                     value={data[field] ?? ""}
@@ -83,7 +146,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                 </p>
             )}
         </div>
-    );
+    );    
 
     return (
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
@@ -113,8 +176,6 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                     {renderField("start_date", "Start Date", "date")}
                     {renderField("end_date", "End Date", "date")}
                     {renderField("duration", "Duration (days)", "number", true)}
-                    {renderField("project_title", "Project Title")}
-                    {renderField("description", "Description")}
                 </div>
             </SectionBox>
 

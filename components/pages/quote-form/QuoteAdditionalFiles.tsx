@@ -71,12 +71,19 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
   return (
     <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
-      <Dropzone  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
-        <DropzoneContent hideUploadButton={!quoteId} />
-        <DropzoneEmptyState />
-      </Dropzone>
-      <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 mb-4 gap-2">
+        <div className="flex flex-row gap-6">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="terms"
+              checked={quoteData?.aditionalTerms || false}
+              onCheckedChange={(checked) =>
+                setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
+              }
+            />
+            <Label htmlFor="terms">Terms and Conditions</Label>
+          </div>
+        </div>
         {files.length > 0 && files.map((file: any) => (
           <div key={file.id} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
             <Checkbox
@@ -120,19 +127,12 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
           )
         })}
       </div>
+      <Dropzone  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
+        <DropzoneContent hideUploadButton={!quoteId} />
+        <DropzoneEmptyState />
+      </Dropzone>
+      <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
 
-      <div className="flex flex-row gap-6 mt-4">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="terms"
-            checked={quoteData?.aditionalTerms || false}
-            onCheckedChange={(checked) =>
-              setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
-            }
-          />
-          <Label htmlFor="terms">Terms and Conditions</Label>
-        </div>
-      </div>
       <PdfPreviewDialog
         file={
           previewFile

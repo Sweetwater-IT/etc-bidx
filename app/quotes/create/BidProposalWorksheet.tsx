@@ -192,152 +192,159 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   const pages: any[] = [];
 
   pages.push(
-    <div key="main-proposal" className="bg-white min-h-[600px] text-black p-4 font-sans text-[10px] border border-gray-400">
-      <header className="flex justify-between items-start pb-2">
-        <div className="flex items-start justify-between w-full">
-          <div className='flex flex-col items-start w-1/4'>
-            <Image src="/logo.jpg" alt="ETC Logo" width={120} height={120} />
-            <a className='mt-1 text-blue-500' href="http://www.establishedtraffic.com/">www.establishedtraffic.com</a>
+    <div key="main-proposal" className="bg-white min-h-[100vh] flex flex-col text-black p-4 font-sans text-[10px] border border-gray-400">
+      <div className='flex-1'>
+        <header className="flex justify-between items-start pb-2">
+          <div className="flex items-start justify-between w-full">
+            <div className='flex flex-col items-start w-1/4'>
+              <Image src="/logo.jpg" alt="ETC Logo" width={120} height={120} />
+              <a className='mt-1 text-blue-500' href="http://www.establishedtraffic.com/">www.establishedtraffic.com</a>
+            </div>
+            <div className='flex flex-col items-center w-2/4'>
+              <h1 className="font-bold text-lg">Established Traffic Control, Inc.</h1>
+              <p>3162 Unionville Pike</p>
+              <p>Hatfield, PA 19440</p>
+              <p>O: 215.997.8801</p>
+              <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
+            </div>
+            <div className="text-center w-1/4 ">
+              <h2 className="text-xl font-bold">PROPOSAL</h2>
+              <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
+              <p>
+                Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+              </p>
+              <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
+            </div>
           </div>
-          <div className='flex flex-col items-center w-2/4'>
-            <h1 className="font-bold text-lg">Established Traffic Control, Inc.</h1>
-            <p>3162 Unionville Pike</p>
-            <p>Hatfield, PA 19440</p>
-            <p>O: 215.997.8801</p>
-            <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
-          </div>
-          <div className="text-center w-1/4 ">
-            <h2 className="text-xl font-bold">PROPOSAL</h2>
-            <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
-            <p>
-              Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
-            </p>
-            <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {renderCustomerInfo()}
-      <section className="mt-3 text-[12px]">
-        <table className="w-full border-[1.5px] border-black border-collapse">
-          <thead>
-            <tr className='border-black border-b-[1.5px]'>
-              <th className="w-[40px] px-1 py-1 text-center">Row</th>
-              <th className="w-[80px] px-1 py-1 text-center">Item #</th>
-              <th className="px-2 py-1 text-center">Description</th>
-              <th className="px-2 py-1 text-center">UON</th>
-              <th className="px-2 py-1 text-center">Quantity</th>
-              <th className="px-2 py-1 text-center">Unit Price</th>
-              <th className="px-2 py-1 text-center">Extended</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => {
-              const extended = calculateExtendedPrice(item);
-              return (
-                <React.Fragment key={item.id || index}>
-                  <tr>
-                    <td className="w-[40px] px-1 py-1 align-top text-center">
-                      {index + 1}
-                    </td>
-                    <td className="w-[40px] px-1 py-1 align-top text-center">
-                      {item.itemNumber || index + 1}
-                    </td>
-                    <td className="px-1 text-center  py-1 font-bold align-top">
-                      {item.description ?? "-"}
-                    </td>
-                    <td className="px-1 py-1 text-center align-top">
-                      {item.uom || 'EA'}
-                    </td>
-                    <td className="px-1 py-1 text-center align-top">
-                      {item.quantity}
-                    </td>
-                    <td className="px-1 text-center py-1 align-top">
-                      {formatMoney(item.unitPrice || 0)}
-                    </td>
-                    <td className="px-1 text-center py-1 align-top">
-                      {formatMoney(extended)}
-                    </td>
-                  </tr>
-
-                  {item.associatedItems?.map((assoc, assocIndex) => (
-                    <tr
-                      key={`assoc-${item.id}-${assocIndex}`}
-                      className="bg-gray-50"
-                    >
-                      <td className="border border-black px-2 py-1"></td>
-                      <td className="border border-black px-2 py-1 pl-4 text-[10px]">
-                        - {assoc.description}
+        {renderCustomerInfo()}
+        <section className="mt-3 text-[12px]">
+          <table className="w-full border-[1.5px] border-black border-collapse">
+            <thead>
+              <tr className='border-black border-b-[1.5px]'>
+                <th className="w-[40px] px-1 py-1 text-center">Row</th>
+                <th className="w-[80px] px-1 py-1 text-center">Item #</th>
+                <th className="px-2 py-1 text-center">Description</th>
+                <th className="px-2 py-1 text-center">UON</th>
+                <th className="px-2 py-1 text-center">Quantity</th>
+                <th className="px-2 py-1 text-center">Unit Price</th>
+                <th className="px-2 py-1 text-center">Extended</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => {
+                const extended = calculateExtendedPrice(item);
+                return (
+                  <React.Fragment key={item.id || index}>
+                    <tr>
+                      <td className="w-[40px] px-1 py-1 align-top text-center">
+                        {index + 1}
                       </td>
-                      <td className="border border-black px-2 py-1 text-center text-[10px]">
-                        {assoc.quantity}
+                      <td className="w-[40px] px-1 py-1 align-top text-center">
+                        {item.itemNumber || index + 1}
                       </td>
-                      <td className="border border-black px-2 py-1 text-right text-[10px]">
-                        {formatMoney(assoc.unitPrice || 0)}
+                      <td className="px-1 text-center  py-1 font-bold align-top">
+                        {item.description ?? "-"}
                       </td>
-                      <td className="border border-black px-2 py-1"></td>
+                      <td className="px-1 py-1 text-center align-top">
+                        {item.uom || 'EA'}
+                      </td>
+                      <td className="px-1 py-1 text-center align-top">
+                        {item.quantity}
+                      </td>
+                      <td className="px-1 text-center py-1 align-top">
+                        {formatMoney(item.unitPrice || 0)}
+                      </td>
+                      <td className="px-1 text-center py-1 align-top">
+                        {formatMoney(extended)}
+                      </td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              );
-            })}
 
-            <tr className='w-full border-b-black border-1 my-2'></tr>
-            <tr className="text-[12px]">
-              <td colSpan={5}></td>
-              <td colSpan={1} className="px-1 py-1 text-center font-bold">
-                SUBTOTAL
-              </td>
-              <td colSpan={1} className=" py-1 text-center font-bold">
-                {formatMoney(total)}
-              </td>
-            </tr>
-            <tr className='text-[12px]'>
-              <td colSpan={5}></td>
-              <td colSpan={1} className="px-2 py-1 text-center font-bold">
-                TOTAL
-              </td>
-              <td colSpan={1} className="px-2 py-1 text-center font-bold">
-                {formatMoney(total)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+                    {item.associatedItems?.map((assoc, assocIndex) => (
+                      <tr
+                        key={`assoc-${item.id}-${assocIndex}`}
+                        className="bg-gray-50"
+                      >
+                        <td className="border border-black px-2 py-1"></td>
+                        <td className="border border-black px-2 py-1 pl-4 text-[10px]">
+                          - {assoc.description}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center text-[10px]">
+                          {assoc.quantity}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-right text-[10px]">
+                          {formatMoney(assoc.unitPrice || 0)}
+                        </td>
+                        <td className="border border-black px-2 py-1"></td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
 
-      <p className='text-center my-4 w-3/4 m-auto font-semibold'>Sales tax not included in price. Please add 3% to total if paying by MC or VISA, 4% for AMEX.
-        Due to extreme market volatility, all pricing and availability are subject to change without notice.
-        All quotes to be confirmed at time of order placement</p>
+              <tr className='w-full border-b-black border-1 my-2'></tr>
+              <tr className="text-[12px]">
+                <td colSpan={5}></td>
+                <td colSpan={1} className="px-1 py-1 text-center font-bold">
+                  SUBTOTAL
+                </td>
+                <td colSpan={1} className=" py-1 text-center font-bold">
+                  {formatMoney(total)}
+                </td>
+              </tr>
+              <tr className='text-[12px]'>
+                <td colSpan={5}></td>
+                <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                  TOTAL
+                </td>
+                <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                  {formatMoney(total)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
 
-      <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
-        <div className="flex items-end gap-2 flex-1">
-          <span>X</span>
-          <span className="border-b flex-1 border-black min-w-[150px] inline-block">
-            <span className="pl-1 italic text-[11px]"></span>
-          </span>
+        <section className="mt-2 text-[9px] flex flex-row gap-4">
+          <p className="uppercase font-bold">Notes:</p>
+          <div className='flex flex-col flex-1'>
+            {notes ? <p>{notes}</p>
+              : <p>No notes available</p>
+            }
+          </div>
+        </section>
+
+      </div>
+      <div className='flex flex-col items-center'>
+
+        <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
+          <div className="flex items-end gap-2 flex-1">
+            <span>X</span>
+            <span className="border-b flex-1 border-black min-w-[150px] inline-block">
+              <span className="pl-1 italic text-[11px]"></span>
+            </span>
+          </div>
+          <div className="flex items-end gap-8 flex-1">
+            <span>Date</span>
+            <span className="border-b flex-1 border-black min-w-[150px] inline-block">
+              <span className="pl-1 italic text-[11px]"></span>
+            </span>
+          </div>
         </div>
-        <div className="flex items-end gap-8 flex-1">
-          <span>Date</span>
-          <span className="border-b flex-1 border-black min-w-[150px] inline-block">
-            <span className="pl-1 italic text-[11px]"></span>
-          </span>
-        </div>
+        <p className='text-center my-4 w-3/4 m-auto font-semibold text-gray-400 text-[10px]'>Please add 3% to total if paying by MC or VISA, 4% for AMEX.
+          Due to extreme market volatility, all pricing and availability are subject to change without notice.
+          All quotes to be confirmed at time of order placement
+        </p>
+
       </div>
 
-      <section className="mt-2 text-[9px] flex flex-row gap-4">
-        <p className="uppercase font-bold">Notes:</p>
-        <div className='flex flex-col flex-1'>
-          {notes? <p>{notes}</p>
-            : <p>No notes available</p>
-          }
-        </div>
-      </section>
     </div>
   );
 
   if (termsAndConditions) {
     pages.push(
-      <div key="terms" className="min-h-[600px] bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
+      <div key="terms" className="min-h-[100vh]  bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
         <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
         <div className="space-y-2">
           <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
@@ -379,35 +386,38 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   return (
     <div className="relative">
       {/* Controles de navegación */}
-      <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={prevPage}
-          disabled={currentPage === 0}
-          className={`px-4 py-2 rounded ${currentPage === 0
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-black text-white'
-            }`}
-        >
-          ← Prev
-        </button>
+      {
+        pages.length > 1 &&
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={prevPage}
+            disabled={currentPage === 0}
+            className={`px-4 py-2 rounded ${currentPage === 0
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-black text-white'
+              }`}
+          >
+            ← Prev
+          </button>
 
-        <span className="text-sm font-medium">
-          Page  {currentPage + 1} de {pages.length}
-        </span>
+          <span className="text-sm font-medium">
+            Page  {currentPage + 1} de {pages.length}
+          </span>
 
-        <button
-          onClick={nextPage}
-          disabled={currentPage === pages.length - 1}
-          className={`px-4 py-2 rounded ${currentPage === pages.length - 1
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-black text-white'
-            }`}
-        >
-          Next →
-        </button>
-      </div>
+          <button
+            onClick={nextPage}
+            disabled={currentPage === pages.length - 1}
+            className={`px-4 py-2 rounded ${currentPage === pages.length - 1
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-black text-white'
+              }`}
+          >
+            Next →
+          </button>
+        </div>
+      }
 
-      <div className="min-h-[600px]">
+      <div className="min-h-[100vh]">
         {pages[currentPage]}
       </div>
 

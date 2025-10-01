@@ -388,7 +388,6 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
           </View>
           <Text style={styles.disclaimerText}>
-            Sales tax not included in price.{"\n"}
             Due to extreme market volatility, all pricing and availability are subject to change without notice.{"\n"}
             All quotes to be confirmed at time of order placement.
           </Text>

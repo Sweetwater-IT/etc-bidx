@@ -172,6 +172,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     quoteMetadata,
     loadingMetadata,
     setQuoteMetadata,
+    setQuoteItems
   } = useQuoteForm()
 
   const [isSaving, setIsSaving] = useState(false)
@@ -181,7 +182,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [firstSave, setFirstSave] = useState(false)
   const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteData || quoteMetadata })
   const numericQuoteId = useNumericQuoteId(quoteId)
-  const initCalled = useRef(false);
   const [userBranch, setUserBranch] = useState<any>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
@@ -614,42 +614,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }
 
-  const handleSendQuote = async () => {
-    if (!numericQuoteId || !pointOfContact) {
-      toast.error("A point of contact is required to send the quote.");
-      return;
-    }
-
-    setSending(true);
-    try {
-      const saved = await autosave();
-      if (!saved) {
-        throw new Error("Could not save the latest draft before sending.");
-      }
-
-      const res = await fetch('/api/quotes/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quoteId: numericQuoteId }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok || !result.success) {
-        throw new Error(result.message || "Failed to send quote email.");
-      }
-
-      toast.success("Quote sent successfully!");
-      router.push('/quotes');
-
-    } catch (error: any) {
-      console.error("Error sending quote:", error);
-      toast.error(error.message || "An unexpected error occurred while sending the quote.");
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleSaveAndExit = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
@@ -732,9 +696,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   "Download"
                 )}
               </Button>
-              <Button disabled={sending || !pointOfContact} onClick={handleSendQuote}>
-                {sending ? 'Sending...' : 'Send Quote'}
-              </Button>
               {!edit && (
                 <Button disabled={!quoteType} onClick={handleCreateQuote}>
                   {
@@ -808,8 +769,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
               <div className="flex flex-row justify-end gap-2 mb-4">
                 {!editAll ? (
-                  <Button size="sm" onClick={handleEditClick} className="flex items-center gap-2">
-                    <Edit2 className="w-2 h-2" /> Edit
+                  <Button variant={'link'} size="sm" onClick={handleEditClick} className="flex items-center gap-2 underline">
+                    Edit
                   </Button>
                 ) : (
                   <>
@@ -849,12 +810,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     setData={setQuoteData}
                     onSaveData={handleSaveQuote}
                     editAll={editAll}
+                    setQuoteItems={setQuoteItems}
                   />
                 )}
               </div>
 
               <div className='my-4'>
-                <QuoteItems />
+                <QuoteItems/>
               </div>
 
               <div className="my-4">
