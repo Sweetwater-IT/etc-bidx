@@ -34,6 +34,7 @@ interface Props {
   quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
+  exclusions?: string;
 }
 
 const styles = StyleSheet.create({
@@ -137,7 +138,8 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   notes,
   quoteType,
   quoteData,
-  termsAndConditions
+  termsAndConditions,
+  exclusions
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
@@ -395,46 +397,60 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           </Text>
         </View>
       </Page>
-      {termsAndConditions && (
+      {(termsAndConditions || exclusions) && (
         <Page size="A4" style={styles.page}>
-          <View style={{ marginTop: 12, fontSize: 9 }}>
-            <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
+          <View>
+            {exclusions &&
+              <View style={{ fontSize: 9, width: '100%' }}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
+                <Text>
+                  {exclusions}
+                </Text>
 
-            <Text>
-              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-            </Text>
+              </View>
+            }
 
-            <Text>
-              --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
-            </Text>
+            {termsAndConditions &&
+              <View style={{ marginTop: 12, fontSize: 9 }}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
 
-            <Text>
-              --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-            </Text>
+                <Text>
+                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
+                </Text>
 
-            <Text>
-              --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
-            </Text>
+                <Text>
+                  --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
+                </Text>
 
-            <Text>
-              --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless if owner has paid contractor.
-            </Text>
+                <Text>
+                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
+                </Text>
 
-            <Text>
-              --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
-            </Text>
+                <Text>
+                  --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
+                </Text>
 
-            <Text>
-              --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
-            </Text>
+                <Text>
+                  --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless if owner has paid contractor.
+                </Text>
 
-            <Text>
-              --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
-            </Text>
+                <Text>
+                  --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
+                </Text>
 
-            <Text>
-              --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
-            </Text>
+                <Text>
+                  --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
+                </Text>
+
+                <Text>
+                  --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
+                </Text>
+
+                <Text>
+                  --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
+                </Text>
+              </View>
+            }
           </View>
         </Page>
       )}

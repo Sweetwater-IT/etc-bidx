@@ -15,7 +15,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 
-export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteType: any, termsAndConditions: boolean }) => {
+export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }: { quoteType: any, termsAndConditions: boolean, exclusion: string; }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -39,6 +39,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions }: { quoteTyp
     return (
       <BidProposalReactPDF
         notes={quoteMetadata?.notes}
+        exclusions={exclusion}
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}

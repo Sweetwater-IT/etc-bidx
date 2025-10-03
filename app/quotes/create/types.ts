@@ -44,6 +44,7 @@ export interface Quote {
     comment: "",
     digital_signature: "",
     notes: "",
+    exclusions: string;
 }
 
 export interface StraightSaleQuote extends Quote {

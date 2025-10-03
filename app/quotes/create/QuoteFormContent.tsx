@@ -42,6 +42,8 @@ const typeQuotes = [
   }
 ]
 
+const exclusions = "Arrow Panels/Changeable Message Sign/Radar Trailer unless specified\nShadow vehicles/Truck Mounted Attenuators and operators unless specified\nTraffic Signal activation/deactivation/flash (contractors responsibility)\nTemporary signals, lighting, related signage and traffic control unless specified\nAll Traffic Signal Work, modifying\nShop/plan drawings and/or layout for MPT signing – professional engineering services\nWork Zone Liquidated Damages\nHoliday or work stoppage removal of signs and/or devices\nPavement Marking and Removal\nNotification of (including permits from) officials (i.e., Police, Government, DOT)/business and property owners\nAll electrical work/line and grade work/Location of Utilities Not Covered by PA One Call\nIncidental items not specifically included above";
+
 function normalizeQuoteMetadata(meta: any): QuoteState {
   const base: Partial<Quote> = {
     id: meta.id,
@@ -61,6 +63,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     aditionalTerms: meta.aditionalTerms,
     pdf_url: meta.pdf_url,
     notes: meta.notes || '',
+    exclusions: meta.exclusions || '',
   };
 
   const commonFields = {
@@ -419,7 +422,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       aditionalFiles: false,
       aditionalTerms: false,
       selectedfilesids: [],
-      pdf_url: ""
+      pdf_url: "",
+      exclusions: exclusions
     };
 
     let newQuoteData: QuoteState = { ...quoteData };
@@ -530,6 +534,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
+          exclusions={quoteData?.exclusions}
           notes={quoteData?.notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
@@ -688,7 +693,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton quoteType={quoteType} termsAndConditions={quoteData?.aditionalTerms || false} />
+              <QuotePreviewButton exclusion={quoteData?.exclusions ?? ''} quoteType={quoteType} termsAndConditions={quoteData?.aditionalTerms || false} />
               <Button disabled={downloading} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
@@ -816,7 +821,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className='my-4'>
-                <QuoteItems/>
+                <QuoteItems />
               </div>
 
               <div className="my-4">
@@ -828,6 +833,19 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     notes: e.target.value
                   }))}
                   placeholder="Add your notes here..."
+                  className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                />
+              </div>
+
+              <div className="my-4">
+                <p className="font-semibold mb-2">Exclusions</p>
+                <textarea
+                  value={quoteData?.exclusions}
+                  onChange={(e) => setQuoteData((prev: any) => ({
+                    ...prev,
+                    exclusions: e.target.value
+                  }))}
+                  placeholder="Add your exclusion here..."
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
               </div>
@@ -849,6 +867,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
+                exclusions={quoteData?.exclusions}
                 quoteData={quoteData}
                 quoteType={quoteType || "straight_sale"}
                 notes={quoteData?.notes}

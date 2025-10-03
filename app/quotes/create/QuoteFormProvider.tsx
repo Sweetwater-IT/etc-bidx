@@ -218,6 +218,7 @@ export default function QuoteFormProvider({
   );
 
   const [jobId, setJobId] = useState<number | null>(
+    
     typeof mergedData.job_id === "number" ? mergedData.job_id : null
   );
 
