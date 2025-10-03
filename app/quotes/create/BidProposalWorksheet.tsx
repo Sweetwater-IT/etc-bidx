@@ -96,7 +96,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       case "estimate_bid":
         data = quoteData as Partial<EstimateBidQuote>;
         return (
-          <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
+          <section className="grid grid-cols-2 border border-black mt-2 text-[9px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
@@ -130,7 +130,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       case "to_project":
         data = quoteData as Partial<ToProjectQuote>;
         return (
-          <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
+          <section className="grid grid-cols-2 border border-black mt-2 text-[9px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
@@ -167,7 +167,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       default:
         data = quoteData as Partial<StraightSaleQuote>;
         return (
-          <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[10px]">
+          <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[9px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
@@ -176,7 +176,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email)}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
               <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
             </div>
           </section>

@@ -179,7 +179,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
       case "estimate_bid": {
         const data = quoteData as Partial<EstimateBidQuote>;
         return (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 9 }}>
             {/* Customer Info */}
             <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
@@ -218,7 +218,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
       case "to_project": {
         const data = quoteData as Partial<ToProjectQuote>;
         return (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 9 }}>
             {/* Customer Info */}
             <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
@@ -260,7 +260,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
       default: {
         const data = quoteData as Partial<StraightSaleQuote>;
         return (
-          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
+          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 9 }}>
             {/* Customer Info */}
             <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
