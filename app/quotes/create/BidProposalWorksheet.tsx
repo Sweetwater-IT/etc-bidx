@@ -31,6 +31,12 @@ interface BidProposalWorksheetProps {
   files: any
 }
 
+const formatDate = (date?: string) => {
+  if (!date) return "";
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US");
+};
+
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   adminData,
   items,
@@ -75,6 +81,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
     return basePrice - discountAmount;
   };
 
+  const joinWithSlash = (...values: (string | undefined | null)[]) => {
+    return values.filter(Boolean).join(" / ");
+  };
+
   const renderCustomerInfo = () => {
     if (!quoteData) return null;
 
@@ -87,36 +97,30 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact || ''}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
             </div>
 
-            <div className="p-1  border-b border-black">
+            <div className="p-1 border-b border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
+              <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
             </div>
 
             <div className="p-1 border-r border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
-              <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
-              <p><span className="font-semibold">County:</span> {data.county || ''}</p>
-              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || ''}</p>
+              <p><span className="font-semibold">Township/County:</span> {joinWithSlash(data.township, data.county)}</p>
+              <p><span className="font-semibold">State Route:</span> {data.sr_route || ''}</p>
               <p><span className="font-semibold">Job Address:</span> {data.job_address || ''}</p>
               <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
-              <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
-              <p><span className="font-semibold">{"Duration (Days):"}:</span> {data.duration || ''}</p>
+              <p><span className="font-semibold">Bid Date:</span> {formatDate(data.bid_date)}</p>
+              <p><span className="font-semibold">Start Date:</span> {formatDate(data.start_date)}</p>
+              <p><span className="font-semibold">End Date:</span> {formatDate(data.end_date)}</p>
+              <p><span className="font-semibold">Duration (Days):</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -127,38 +131,32 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <section className="grid grid-cols-2 border border-black mt-2 text-[10px]">
             <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact || ''}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
               <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
 
-            <div className="p-1  border-b border-black">
+            <div className="p-1 border-b border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
+              <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
               <p><span className="font-semibold">ETC Job Number:</span> {data.etc_job_number || ''}</p>
             </div>
 
             <div className="p-1 border-r border-black">
               <p className='font-extrabold mb-2'>Job Location / Details</p>
-              <p><span className="font-semibold">Township:</span> {data.township || ''}</p>
-              <p><span className="font-semibold">County:</span> {data.county || ''}</p>
-              <p><span className="font-semibold">S.R./Route:</span> {data.sr_route || ''}</p>
+              <p><span className="font-semibold">Township/County:</span> {joinWithSlash(data.township, data.county)}</p>
+              <p><span className="font-semibold">State Route:</span> {data.sr_route || ''}</p>
               <p><span className="font-semibold">Job Address:</span> {data.job_address || ''}</p>
               <p><span className="font-semibold">ECMS / Contract Number:</span> {data.ecsm_contract_number || ''}</p>
             </div>
 
             <div className="p-1">
               <p className='font-extrabold mb-2'>Additional Project Details</p>
-              <p><span className="font-semibold">Bid Date:</span> {data.bid_date || ''}</p>
-              <p><span className="font-semibold">Start Date:</span> {data.start_date || ''}</p>
-              <p><span className="font-semibold">End Date:</span> {data.end_date || ''}</p>
-              <p><span className="font-semibold">{"Duration (Days):"}</span> {data.duration || ''}</p>
+              <p><span className="font-semibold">Bid Date:</span> {formatDate(data.bid_date)}</p>
+              <p><span className="font-semibold">Start Date:</span> {formatDate(data.start_date)}</p>
+              <p><span className="font-semibold">End Date:</span> {formatDate(data.end_date)}</p>
+              <p><span className="font-semibold">Duration (Days):</span> {data.duration || ''}</p>
             </div>
           </section>
         );
@@ -168,26 +166,22 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         data = quoteData as Partial<StraightSaleQuote>;
         return (
           <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[10px]">
-            <div className="p-1 border-r border-black">
+            <div className="p-1 border-r border-b border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
-              <p><span className="font-semibold">Customer:</span> {data.customer_name || ''}</p>
-              <p><span className="font-semibold">Customer Contact:</span> {data.customer_contact || ''}</p>
-              <p><span className="font-semibold">Customer Email:</span> {data.customer_email || ''}</p>
-              <p><span className="font-semibold">Customer Phone:</span> {data.customer_phone || ''}</p>
-              <p><span className="font-semibold">Customer Address:</span> {data.customer_address || ''}</p>
+              <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
+              <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
               <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">ETC Point of Contact:</span> {data.etc_point_of_contact || ''}</p>
-              <p><span className="font-semibold">ETC Email:</span> {data.etc_poc_email || ''}</p>
-              <p><span className="font-semibold">ETC Phone:</span> {data.etc_poc_phone_number || ''}</p>
-              <p><span className="font-semibold">ETC Branch:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
+              <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
             </div>
           </section>
         );
     }
   };
+
 
   const pages: any[] = [];
 

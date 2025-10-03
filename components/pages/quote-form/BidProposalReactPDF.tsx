@@ -115,6 +115,12 @@ const styles = StyleSheet.create({
   }
 });
 
+const formatDate = (date?: string) => {
+  if (!date) return "";
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US");
+};
+
 export const BidProposalReactPDF: React.FC<Props> = ({
   adminData,
   items,
@@ -154,6 +160,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
   const total = items.reduce((acc, item) => acc + calculateExtendedPrice(item), 0);
 
+  const joinWithSlash = (...values: (string | undefined | null)[]) => {
+    return values.filter(Boolean).join(" / ");
+  };
+
+  const safeFormatDate = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  };
+
   const renderCustomerInfo = () => {
     if (!quoteData) return null;
 
@@ -165,39 +181,33 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             {/* Customer Info */}
             <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
-              <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact || ""}</Text>
-              <Text>Email: {data.customer_email || ""}</Text>
-              <Text>Phone: {data.customer_phone || ""}</Text>
-              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Customer: {joinWithSlash(data.customer_name, data.customer_address)}</Text>
+              <Text>Customer Contact: {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</Text>
             </View>
 
-            {/* ETC */}
+            {/* Point of Contact */}
             <View style={{ width: "50%", padding: 4, borderBottomWidth: 1 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
-              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
-              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
-              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
-              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+              <Text>Point of Contact: {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</Text>
+              <Text>Branch: {data.etc_branch || ""}</Text>
             </View>
 
             {/* Job Info */}
-            <View style={{ width: "50%", padding: 4, borderRight: 1, borderTop: 1, borderColor: 'black', }}>
+            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderTopWidth: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
-              <Text>Township: {data.township || ""}</Text>
-              <Text>County: {data.county || ""}</Text>s
-              <Text>S.R./Route: {data.sr_route || ""}</Text>
+              <Text>Township / County: {joinWithSlash(data.township, data.county)}</Text>
+              <Text>State Route: {data.sr_route || ""}</Text>
               <Text>Job Address: {data.job_address || ""}</Text>
-              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
+              <Text>ECMS / Contract Number: {data.ecsm_contract_number || ""}</Text>
             </View>
 
             {/* Additional */}
             <View style={{ width: "50%", padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
-              <Text>Bid Date: {data.bid_date || ""}</Text>
-              <Text>Start Date: {data.start_date || ""}</Text>
-              <Text>End Date: {data.end_date || ""}</Text>
-              <Text>{"Duration (Days):"} {data.duration || ""}</Text>
+              <Text>Bid Date: {safeFormatDate(data.bid_date)}</Text>
+              <Text>Start Date: {safeFormatDate(data.start_date)}</Text>
+              <Text>End Date: {safeFormatDate(data.end_date)}</Text>
+              <Text>Duration (Days): {data.duration || ""}</Text>
             </View>
           </View>
         );
@@ -205,50 +215,43 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
       case "to_project": {
         const data = quoteData as Partial<ToProjectQuote>;
-
         return (
           <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
             {/* Customer Info */}
-            <View style={{ width: "50%", padding: 4, borderRight: 1, borderColor: 'black' }}>
+            <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
-              <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact || ""}</Text>
-              <Text>Email: {data.customer_email || ""}</Text>
-              <Text>Phone: {data.customer_phone || ""}</Text>
-              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Customer: {joinWithSlash(data.customer_name, data.customer_address)}</Text>
+              <Text>Customer Contact: {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</Text>
               <Text>Customer Job #: {data.customer_job_number || ""}</Text>
             </View>
 
-            {/* ETC */}
+            {/* Point of Contact */}
             <View style={{ width: "50%", padding: 4, borderBottomWidth: 1 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
-              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
-              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
-              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
-              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+              <Text>Point of Contact: {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</Text>
+              <Text>Branch: {data.etc_branch || ""}</Text>
               <Text>ETC Job Number: {data.etc_job_number || ""}</Text>
             </View>
 
             {/* Job Info */}
-            <View style={{ width: "50%", padding: 4, borderRight: 1, borderTop: 1, borderColor: 'black', }}>
+            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderTopWidth: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
-              <Text>Township: {data.township || ""}</Text>
-              <Text>County: {data.county || ""}</Text>
-              <Text>S.R./Route: {data.sr_route || ""}</Text>
+              <Text>Township/County: {joinWithSlash(data.township, data.county)}</Text>
+              <Text>State Route: {data.sr_route || ""}</Text>
               <Text>Job Address: {data.job_address || ""}</Text>
-              <Text>ECMS #: {data.ecsm_contract_number || ""}</Text>
+              <Text>ECMS / Contract Number: {data.ecsm_contract_number || ""}</Text>
             </View>
 
             {/* Additional */}
             <View style={{ width: "50%", padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Additional Project Details</Text>
-              <Text>Bid Date: {data.bid_date || ""}</Text>
-              <Text>Start Date: {data.start_date || ""}</Text>
-              <Text>End Date: {data.end_date || ""}</Text>
-              <Text>{"Duration (Days):"} {data.duration || ""}</Text>
+              <Text>Bid Date: {safeFormatDate(data.bid_date)}</Text>
+              <Text>Start Date: {safeFormatDate(data.start_date)}</Text>
+              <Text>End Date: {safeFormatDate(data.end_date)}</Text>
+              <Text>Duration (Days): {data.duration || ""}</Text>
             </View>
           </View>
-        )
+        );
       }
 
       case "straight_sale":
@@ -256,27 +259,26 @@ export const BidProposalReactPDF: React.FC<Props> = ({
         const data = quoteData as Partial<StraightSaleQuote>;
         return (
           <View style={{ flexDirection: "row", borderWidth: 1, borderColor: "#000", marginTop: 8, fontSize: 10 }}>
-            <View style={{ width: "50%", borderRightWidth: 1, padding: 4 }}>
+            {/* Customer Info */}
+            <View style={{ width: "50%", borderRightWidth: 1, borderBottomWidth: 1, padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Customer Information</Text>
-              <Text>Customer: {data.customer_name || ""}</Text>
-              <Text>Contact: {data.customer_contact || ""}</Text>
-              <Text>Email: {data.customer_email || ""}</Text>
-              <Text>Phone: {data.customer_phone || ""}</Text>
-              <Text>Address: {data.customer_address || ""}</Text>
+              <Text>Customer: {joinWithSlash(data.customer_name, data.customer_address)}</Text>
+              <Text>Customer Contact: {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</Text>
               <Text>Purchase Order #: {data.purchase_order || ""}</Text>
             </View>
+
+            {/* Point of Contact */}
             <View style={{ width: "50%", padding: 4 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
-              <Text>ETC Point Of Contact: {data.etc_point_of_contact || ""}</Text>
-              <Text>ETC Email: {data.etc_poc_email || ""}</Text>
-              <Text>ETC Phone: {data.etc_poc_phone_number || ""}</Text>
-              <Text>ETC Branch: {data.etc_branch || ""}</Text>
+              <Text>Point of Contact: {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</Text>
+              <Text>Branch: {data.etc_branch || ""}</Text>
             </View>
           </View>
         );
       }
     }
   };
+
 
   return (
     <Document>
