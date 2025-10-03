@@ -77,7 +77,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     purchase_order: meta.purchase_order ?? "",
     etc_point_of_contact: meta.etc_point_of_contact ?? "",
     etc_poc_email: meta.etc_poc_email ?? "",
-    etc_poc_phone_number: meta.etc_poc_phone_number ?? "",
+    etc_poc_phone_number:  "",
     etc_branch: meta.etc_branch ?? "",
     etc_job_number: meta.etc_job_number ?? ""
   };
@@ -417,7 +417,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     const defaultValues = {
       etc_point_of_contact: user?.user_metadata?.name ?? "",
       etc_poc_email: user?.email ?? "",
-      etc_poc_phone_number: userBranch?.address ?? "",
+      etc_poc_phone_number:  "",
       etc_branch: userBranch?.name ?? "",
       aditionalFiles: false,
       aditionalTerms: false,
@@ -655,7 +655,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         ...normalizedQuote,
         etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
         etc_poc_email: prev?.etc_poc_email || user?.email || "",
-        etc_poc_phone_number: prev?.etc_poc_phone_number || userBranch?.address || "",
+        etc_poc_phone_number: prev?.etc_poc_phone_number  || "",
         etc_branch: prev?.etc_branch || userBranch?.name || "",
       }));
       handleQuoteTypeChange(normalizedQuote.type_quote as any, false);

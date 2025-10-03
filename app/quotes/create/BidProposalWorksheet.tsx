@@ -176,7 +176,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email)}</p>
               <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
             </div>
           </section>
