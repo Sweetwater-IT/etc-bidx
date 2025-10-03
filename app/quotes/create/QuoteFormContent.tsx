@@ -833,6 +833,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     notes: e.target.value
                   }))}
                   placeholder="Add your notes here..."
+                  maxLength={5000}
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
               </div>
@@ -845,6 +846,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     ...prev,
                     exclusions: e.target.value
                   }))}
+                  maxLength={5000}
                   placeholder="Add your exclusion here..."
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
