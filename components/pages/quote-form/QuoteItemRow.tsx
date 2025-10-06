@@ -77,15 +77,6 @@ export default function QuoteItemRow({
       : "000",
   });
 
-  const [subItemDropdown, setSubItemDropdown] = useState({});
-  const [subItemInput, setSubItemInput] = useState({});
-
-  const [isCustomLocal, setIsCustomLocal] = useState(!!item.isCustom);
-  useEffect(() => {
-    setIsCustomLocal(!!item.isCustom);
-  }, [item.isCustom]);
-
-  // Sincroniza el estado local del input cuando el item prop cambia desde el padre
   useEffect(() => {
     setProductInput(item.itemNumber || "");
   }, [item.itemNumber]);

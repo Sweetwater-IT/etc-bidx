@@ -17,8 +17,6 @@ export async function GET(request: NextRequest) {
                 let contractorInfo = {};
 
                 if (job.id) {
-                    console.log('el job id es', job.id);
-
                     const { data: p_metadata, error: pm_tError } = await supabase
                         .from("project_metadata")
                         .select(`

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
         const baseQuery = supabase
             .from('sale_items')
-            .select('item_number, name, item_description, vendor, quantity, quote_price, markup_percentage');
+            .select('item_number, name, item_description, vendor, quantity, quote_price, markup_percentage, notes');
 
         // Aplica filtro si search existe
         const query = search

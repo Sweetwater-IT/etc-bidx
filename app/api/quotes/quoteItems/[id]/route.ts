@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest, context: { params: any }) {
         discountType,
         tax,
         is_tax_percentage,
-        notes = [],
+        notes,
         associatedItems = [],
     } = body;
 

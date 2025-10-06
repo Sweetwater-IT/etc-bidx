@@ -66,7 +66,6 @@ export function ProductSheet({
               : "000",
           });
         } else {
-          // Novo subitem: limpa tudo!
           setNewProduct({
             itemNumber: "",
             description: "",
@@ -405,6 +404,7 @@ export function ProductSheet({
                     tax: newProduct.tax ? Number(newProduct.tax) : 0,
                     is_tax_percentage: newProduct.is_tax_percentage,
                     isCustom: true,
+                    notes: newProduct.notes,
                   };
 
                   handleItemUpdate(item.id, "fullItem", updatedItem);

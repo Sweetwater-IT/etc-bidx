@@ -82,14 +82,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setIncludeTerms(data.include_terms || {});
         setIncludeFiles(data.include_files || {});
         setAssociatedContractNumber(data.associated_contract_number || "");
-
-
-        const parsedNotes: any[] = typeof data.notes === 'string'
-          ? JSON.parse(data.notes)
-          : data.notes || [];
-
-        setNotes(parsedNotes);
-
         setPaymentTerms(data.payment_terms || "NET30");
       } catch (err) {
         console.error("💥 [QuoteEditLoader] Error loading quote:", err);

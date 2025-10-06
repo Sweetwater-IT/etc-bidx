@@ -684,7 +684,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading="Create Quote"
+        heading={(edit? "Edit" : "Create") + " Quote"}
         handleSubmit={handleSaveAndExit}
         showX
         saveButtons={

@@ -183,8 +183,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         );
     }
   };
-
-
+  
   const pages: any[] = [];
 
   pages.push(
@@ -304,10 +303,18 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
         <section className="mt-2 text-[9px] flex flex-col gap-4">
           <p className="uppercase font-bold">Notes:</p>
-          <div className='flex flex-col flex-1'>
+          <div style={{ whiteSpace: "pre-wrap" }} className='flex flex-col flex-1'>
             {notes ? <p>{notes}</p>
               : <p>No notes available</p>
             }
+
+            {items.map((i, idx) =>
+              i.notes ? (
+                <p  key={idx} style={{ whiteSpace: "pre-wrap" }}>
+                  {i.notes}
+                </p>
+              ) : null
+            )}
           </div>
         </section>
 

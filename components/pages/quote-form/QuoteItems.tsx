@@ -102,14 +102,14 @@ export function QuoteItems() {
       unitPrice: 0,
       discount: 0,
       discountType: "dollar",
-      notes: [],
+      notes: "",
       associatedItems: [],
       is_tax_percentage: false,
       tax: 0,
     };
 
     const response = await createQuoteItem(newItem);
-    if (response.success) {      
+    if (response.success) {
       setQuoteItems((prevItems) => [...prevItems, response.item]);
       setEditingItemId(response.item.id);
     }

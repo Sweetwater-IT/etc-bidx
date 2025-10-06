@@ -374,8 +374,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
           <View style={styles.notesSection}>
             <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Notes:</Text>
-            <View style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              {notes}
+            <View style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
+              {notes?.split('\n').map((line, index) => (
+                <Text key={index}>{line}</Text>
+              ))}
+
+              {items.map((i, idx) =>
+                i.notes ? (
+                  <Text key={idx}>{i.notes}</Text>
+                ) : null
+              )}
             </View>
           </View>
         </View>

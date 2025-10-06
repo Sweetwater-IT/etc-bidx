@@ -546,7 +546,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            alreadyExist:true,
+            alreadyExist: true,
             message: `A bid with contract_number "${adminData.contractNumber}" already exists.`,
           },
           { status: 400 }
@@ -797,6 +797,7 @@ export async function POST(request: NextRequest) {
           bid_estimate_id: bidEstimateId,
           name: item.name,
           quantity: item.quantity,
+          notes: item.notes,
           months: item.months,
           rent_price: item.rentPrice,
           re_rent_price: item.reRentPrice,
@@ -920,7 +921,8 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         quote_price: item.quotePrice,
         markup_percentage: item.markupPercentage,
-        status: 'pending'
+        status: 'pending',
+        notes: item.notes
       }));
 
       const { error: saleError } = await supabase

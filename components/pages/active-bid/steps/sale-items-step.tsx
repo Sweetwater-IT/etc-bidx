@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/popover";
 import EmptyContainer from "@/components/BidItems/empty-container";
 import { DataTable } from "@/components/data-table";
+import { Textarea } from "@/components/ui/textarea";
 
 const SaleItemsStep = () => {
   const { saleItems, dispatch } = useEstimate();
@@ -71,6 +72,7 @@ const SaleItemsStep = () => {
       quantity: 0,
       quotePrice: 0,
       markupPercentage: 0,
+      notes: "",
     });
     setEditingItemNumber(null);
     setDrawerOpen(true);
@@ -213,7 +215,7 @@ const SaleItemsStep = () => {
         )}
 
       </div>
-      
+
       {/* Drawer for adding/editing sale items */}
       <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
         <DrawerContent>
@@ -385,6 +387,16 @@ const SaleItemsStep = () => {
                     ${calculateTotal(formData).toFixed(2)}
                   </div>
                 </div>
+
+              </div>
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Notes</Label>
+                <Textarea
+                  value={formData.notes || ""}
+                  onChange={(e) => handleFormUpdate("notes", e.target.value)}
+                  placeholder="Add any notes related to this sale item..."
+                  className="w-full h-24 p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
               </div>
             </div>
           )}
