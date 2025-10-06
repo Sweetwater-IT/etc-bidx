@@ -275,7 +275,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (res.success) {
       setQuoteId(res.data.id);
       setQuoteNumber(res.data.quote_number);
-      quoteMetadata((prev) => ({
+      setQuoteMetadata((prev) => ({
         ...prev,
         id: res.data.id,
         quote_number: res.data.quote_number,

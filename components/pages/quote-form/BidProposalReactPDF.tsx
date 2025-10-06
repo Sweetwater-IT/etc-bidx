@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center', fontSize: '10px', marginBottom: 2 },
   table: { display: 'flex', width: '100%', borderWidth: 1, borderColor: '#000', marginTop: 12, flexDirection: 'column' },
   tableRow: { flexDirection: 'row', width: '100%' },
+  tableRowWithBorder: { flexDirection: 'row', width: '100%', borderBottomWidth: 1, borderColor: '#000', paddingTop:2, paddingBottom:2 },
   lineSeparator: { borderBottomWidth: 1, borderColor: '#000' },
   tableCell: { padding: 4, fontSize: 9, textAlign: 'center' },
   tableHeader: { fontWeight: 'bold', },
@@ -303,7 +304,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
           {/* Items Table */}
           <View style={styles.table}>
-            <View style={styles.tableRow}>
+            <View style={styles.tableRowWithBorder}>
               <Text style={[styles.tableHeader, styles.cellRow]}>Row</Text>
               <Text style={[styles.tableHeader, styles.cellItem]}>Item #</Text>
               <Text style={[styles.tableHeader, styles.cellDescription]}>Description</Text>
@@ -406,19 +407,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
       </Page>
       {(termsAndConditions || exclusions) && (
         <Page size="A4" style={styles.page}>
-          <View>
-            {exclusions &&
-              <View style={{ fontSize: 9, width: '100%' }}>
+          <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '50px' }}>
+
+            {exclusions && (
+              <View style={{ fontSize: 9, flex: 1, width: '100%' }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
-                <Text>
-                  {exclusions}
-                </Text>
-
+                <Text >{exclusions}</Text>
               </View>
-            }
-
+            )}
             {termsAndConditions &&
-              <View style={{ marginTop: 12, fontSize: 9 }}>
+              <View style={{ fontSize: 9 }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
 
                 <Text>
