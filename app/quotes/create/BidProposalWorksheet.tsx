@@ -183,7 +183,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         );
     }
   };
-  
+
+  const totalTax = items.reduce((acc, item) => {
+    const extended = calculateExtendedPrice(item);
+    const itemTax = item.tax || 0;
+    return acc + (itemTax > 1 ? itemTax : extended * itemTax);
+  }, 0);
+
   const pages: any[] = [];
 
   pages.push(
@@ -218,13 +224,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <table className="w-full border-[1.5px] border-black border-collapse">
             <thead>
               <tr className='border-black border-b-[1.5px]'>
-                <th className="w-[40px] px-1 py-1 text-center">Row</th>
+                <th className="w-[80px] px-1 py-1 text-center">Row</th>
                 <th className="w-[80px] px-1 py-1 text-center">Item #</th>
                 <th className="px-2 py-1 text-center">Description</th>
-                <th className="px-2 py-1 text-center">UON</th>
-                <th className="px-2 py-1 text-center">Quantity</th>
-                <th className="px-2 py-1 text-center">Unit Price</th>
-                <th className="px-2 py-1 text-center">Extended</th>
+                <th className="w-[80px] px-2 py-1 text-center">UOM</th>
+                <th className="w-[80px] px-2 py-1 text-center">Qty</th>
+                <th className="w-[80px] px-2 py-1 text-center">Unit Price</th>
+                <th className="w-[80px] px-2 py-1 text-center">Ext. Price</th>
               </tr>
             </thead>
             <tbody>
@@ -291,6 +297,15 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <tr className='text-[12px]'>
                 <td colSpan={5}></td>
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                  TAX
+                </td>
+                <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                  {formatMoney(totalTax)}
+                </td>
+              </tr>
+              <tr className='text-[12px]'>
+                <td colSpan={5}></td>
+                <td colSpan={1} className="px-2 py-1 text-center font-bold">
                   TOTAL
                 </td>
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
@@ -310,7 +325,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             {items.map((i, idx) =>
               i.notes ? (
-                <p  key={idx} style={{ whiteSpace: "pre-wrap" }}>
+                <p key={idx} style={{ whiteSpace: "pre-wrap" }}>
                   {i.notes}
                 </p>
               ) : null

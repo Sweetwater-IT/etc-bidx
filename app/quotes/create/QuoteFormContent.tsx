@@ -77,7 +77,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     purchase_order: meta.purchase_order ?? "",
     etc_point_of_contact: meta.etc_point_of_contact ?? "",
     etc_poc_email: meta.etc_poc_email ?? "",
-    etc_poc_phone_number:  "",
+    etc_poc_phone_number: "",
     etc_branch: meta.etc_branch ?? "",
     etc_job_number: meta.etc_job_number ?? ""
   };
@@ -138,8 +138,6 @@ const useNumericQuoteId = (rawId: unknown) => {
 export default function QuoteFormContent({ showInitialAdminState = false, edit }: { showInitialAdminState?: boolean, edit?: true }) {
   const { user } = useAuth()
   const router = useRouter()
-  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">("")
-  const [quoteData, setQuoteData] = useState<QuoteState | null>(null);
   const [creatingQuote, setCreatingQuote] = useState<boolean>(false);
 
   const [editAll, setEditAll] = useState(false)
@@ -183,15 +181,22 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
-  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteData || quoteMetadata })
+  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteMetadata || quoteMetadata })
   const numericQuoteId = useNumericQuoteId(quoteId)
   const [userBranch, setUserBranch] = useState<any>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
+  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">(quoteMetadata?.type_quote || "")
+
+  React.useEffect(()=> {
+    if(quoteMetadata?.type_quote) {
+      setQuoteType(quoteMetadata.type_quote)
+    }
+  },[quoteMetadata?.type_quote])
 
   const handleFileSelect = (fileId: string) => {
-    setQuoteData((prev: any) => ({
+    setQuoteMetadata((prev: any) => ({
       ...prev,
       selectedfilesids: (prev?.selectedfilesids ?? []).includes(fileId)
         ? prev.selectedfilesids!.filter((id) => id !== fileId)
@@ -219,9 +224,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
 
     const shouldCreate =
-      (quoteType === "straight_sale" && quoteData?.customer && quoteData.customer_name) ||
-      (quoteType === "to_project" && quoteData?.job_id) ||
-      (quoteType === "estimate_bid" && quoteData?.estimate_id);
+      (quoteType === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
+      (quoteType === "to_project" && quoteMetadata?.job_id) ||
+      (quoteType === "estimate_bid" && quoteMetadata?.estimate_id);
 
     if (shouldCreate) {
       handleCreateDraft().then((data: any) => {
@@ -232,9 +237,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }, [
     quoteType,
-    quoteData?.customer,
-    quoteData?.job_id,
-    quoteData?.estimate_id,
+    quoteMetadata?.customer,
+    quoteMetadata?.job_id,
+    quoteMetadata?.estimate_id,
     selectedJob,
   ]);
 
@@ -251,7 +256,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         ...bccEmails.map((email) => ({ email, bcc: true })),
       ],
       notes,
-      ...quoteData,
+      ...quoteMetadata,
       items: quoteItems,
       quoteId: quoteId
     };
@@ -270,7 +275,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (res.success) {
       setQuoteId(res.data.id);
       setQuoteNumber(res.data.quote_number);
-      setQuoteData((prev) => ({
+      quoteMetadata((prev) => ({
         ...prev,
         id: res.data.id,
         quote_number: res.data.quote_number,
@@ -332,8 +337,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     try {
       const payload = {
         id: numericQuoteId,
-        estimate_id: estimateId || quoteData?.estimate_id,
-        job_id: jobId || quoteData?.job_id,
+        estimate_id: estimateId || quoteMetadata?.estimate_id,
+        job_id: jobId || quoteMetadata?.job_id,
         status: 'DRAFT',
         subject,
         body: emailBody,
@@ -344,7 +349,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           ...bccEmails.map((email) => ({ email, bcc: true })),
         ],
         customers: selectedCustomers.map(c => ({ id: c.id })),
-        ...quoteData,
+        ...quoteMetadata,
       };
 
       const res = await fetch(`/api/quotes`, {
@@ -355,7 +360,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       if (!res.ok) throw new Error(await res.text());
 
-      prevStateRef.current = { quoteItems, adminData, notes, quoteData };
+      prevStateRef.current = { quoteItems, adminData, notes, quoteData: quoteMetadata };
       setSecondCounter(1);
       if (!firstSave) setFirstSave(true);
 
@@ -365,7 +370,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       return false;
     }
   }, [
-    numericQuoteId, adminData, notes, quoteData, estimateId, jobId,
+    numericQuoteId, adminData, notes, quoteMetadata, estimateId, jobId,
     subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
     includeTerms, customTerms, paymentTerms, firstSave
   ]);
@@ -377,9 +382,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     const hasChanges =
       !isEqual(adminData, prevStateRef.current.adminData) ||
       !isEqual(notes, prevStateRef.current.notes) ||
-      !isEqual(quoteData, prevStateRef.current.quoteData) ||
+      !isEqual(quoteMetadata, prevStateRef.current.quoteData) ||
       !isEqual(
-        [quoteData?.selectedfilesids, quoteData?.aditionalFiles, quoteData?.aditionalTerms],
+        [quoteMetadata?.selectedfilesids, quoteMetadata?.aditionalFiles, quoteMetadata?.aditionalTerms],
         [prevStateRef.current.quoteData?.selectedfilesids,
         prevStateRef.current.quoteData?.aditionalFiles,
         prevStateRef.current.quoteData?.aditionalTerms]
@@ -395,7 +400,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [adminData, notes, quoteData, numericQuoteId, autosave]);
+  }, [adminData, notes, quoteMetadata, numericQuoteId, autosave]);
 
 
   useEffect(() => {
@@ -417,7 +422,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     const defaultValues = {
       etc_point_of_contact: user?.user_metadata?.name ?? "",
       etc_poc_email: user?.email ?? "",
-      etc_poc_phone_number:  "",
+      etc_poc_phone_number: "",
       etc_branch: userBranch?.name ?? "",
       aditionalFiles: false,
       aditionalTerms: false,
@@ -426,7 +431,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       exclusions: exclusions
     };
 
-    let newQuoteData: QuoteState = { ...quoteData };
+    let newQuoteData: QuoteState = { ...quoteMetadata };
 
     if (type === "straight_sale") {
       newQuoteData = {
@@ -501,14 +506,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       };
     }
 
-    setQuoteData(newQuoteData);
+    setQuoteMetadata(newQuoteData);
     handleSaveQuote(newQuoteData);
   };
 
   async function handleSaveQuote(dataToSave?: QuoteState) {
     if (!quoteId) return;
 
-    const payload = { ...dataToSave || quoteData, id: quoteId };
+    const payload = { ...dataToSave || quoteMetadata, id: quoteId };
 
     try {
       const result = await fetch('/api/quotes', {
@@ -534,8 +539,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
-          exclusions={quoteData?.exclusions}
-          notes={quoteData?.notes}
+          exclusions={quoteMetadata?.exclusions}
+          notes={quoteMetadata?.notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
           customers={selectedCustomers}
@@ -549,9 +554,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           county={adminData?.county?.country || ''}
           sr={adminData?.srRoute || ''}
           ecms={adminData?.contractNumber || ''}
-          quoteData={quoteData}
+          quoteData={quoteMetadata}
           quoteType={quoteType || "straight_sale"}
-          termsAndConditions={quoteData?.aditionalTerms}
+          termsAndConditions={quoteMetadata?.aditionalTerms}
         />
       ).toBlob()
 
@@ -560,7 +565,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       formData.append("uniqueIdentifier", quoteId.toString())
       formData.append("file", new File([pdfBlob], `Quote-${quoteId}.pdf`, { type: "application/pdf" }))
 
-      const filesToUpload = files.filter((f) => quoteData?.selectedfilesids?.includes(f.id))
+      const filesToUpload = files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))
 
       for (const f of filesToUpload) {
         const response = await fetch(f.file_url)
@@ -576,7 +581,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Error merging PDFs")
 
-      setQuoteData((prev: any) => ({
+      setQuoteMetadata((prev: any) => ({
         ...prev,
         pdf_url: data.url
       }))
@@ -651,32 +656,32 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   React.useEffect(() => {
     if (quoteMetadata?.id) {
       const normalizedQuote = normalizeQuoteMetadata(quoteMetadata);
-      setQuoteData(prev => ({
+      setQuoteMetadata(prev => ({
         ...normalizedQuote,
         etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
         etc_poc_email: prev?.etc_poc_email || user?.email || "",
-        etc_poc_phone_number: prev?.etc_poc_phone_number  || "",
+        etc_poc_phone_number: prev?.etc_poc_phone_number || "",
         etc_branch: prev?.etc_branch || userBranch?.name || "",
       }));
       handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
     }
-  }, [quoteMetadata, user, userBranch]);
+  }, []);
 
   const handleEditClick = () => {
-    setTempData(quoteData)
+    setTempData(quoteMetadata)
     setEditAll(true)
   }
 
   const handleSaveClick = async () => {
-    if (quoteData) {
-      await handleSaveQuote(quoteData)
+    if (quoteMetadata) {
+      await handleSaveQuote(quoteMetadata)
     }
     setEditAll(false)
     setTempData(null)
   }
 
   const handleCancelClick = () => {
-    if (tempData) setQuoteData(tempData)
+    if (tempData) setQuoteMetadata(tempData)
     setEditAll(false)
     setTempData(null)
   }
@@ -684,7 +689,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
-        heading={(edit? "Edit" : "Create") + " Quote"}
+        heading={(edit ? "Edit" : "Create") + " Quote"}
         handleSubmit={handleSaveAndExit}
         showX
         saveButtons={
@@ -693,7 +698,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton exclusion={quoteData?.exclusions ?? ''} quoteType={quoteType} termsAndConditions={quoteData?.aditionalTerms || false} />
+              <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteType} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
               <Button disabled={downloading} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
@@ -739,32 +744,32 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </Select>
                 </div>
 
-                {quoteType === "straight_sale" && quoteData && (
+                {quoteType === "straight_sale" && quoteMetadata && (
                   <div className='w-1/2'>
                     <CustomerSelect
-                      data={quoteData as any}
-                      setData={setQuoteData}
+                      data={quoteMetadata as any}
+                      setData={setQuoteMetadata}
                     />
                   </div>
                 )}
 
-                {quoteType === "to_project" && quoteData && (
+                {quoteType === "to_project" && quoteMetadata && (
                   <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a job number</p>
                     <SelectJob
-                      quoteData={quoteData}
-                      onChangeQuote={setQuoteData}
+                      quoteData={quoteMetadata}
+                      onChangeQuote={setQuoteMetadata}
                       selectedJob={selectedJob}
                       onChange={setSelectedJob}
                     />
                   </div>
                 )}
 
-                {quoteType === "estimate_bid" && quoteData && (
+                {quoteType === "estimate_bid" && quoteMetadata && (
                   <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
-                      quoteData={quoteData}
+                      quoteData={quoteMetadata}
                       selectedBid={selectedBid}
                       onChange={setSelectedBid}
                     />
@@ -790,29 +795,29 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className='my-4'>
-                {quoteType === "straight_sale" && quoteData && (
+                {quoteType === "straight_sale" && quoteMetadata && (
                   <RenderSaleQuoteFields
-                    data={quoteData as Partial<StraightSaleQuote>}
-                    setData={setQuoteData}
+                    data={quoteMetadata as Partial<StraightSaleQuote>}
+                    setData={setQuoteMetadata}
                     editAll={editAll}
                   />
                 )}
 
-                {quoteType === "to_project" && quoteData && (
+                {quoteType === "to_project" && quoteMetadata && (
                   <RenderProjectQuoteFields
                     selectedJob={selectedJob}
-                    data={quoteData as Partial<ToProjectQuote>}
-                    setData={setQuoteData}
+                    data={quoteMetadata as Partial<ToProjectQuote>}
+                    setData={setQuoteMetadata}
                     onSaveData={handleSaveQuote}
                     editAll={editAll}
                   />
                 )}
 
-                {quoteType === "estimate_bid" && quoteData && (
+                {quoteType === "estimate_bid" && quoteMetadata && (
                   <RenderEstimateBidQuoteFields
                     selectedBid={selectedBid}
-                    data={quoteData as Partial<EstimateBidQuote>}
-                    setData={setQuoteData}
+                    data={quoteMetadata as Partial<EstimateBidQuote>}
+                    setData={setQuoteMetadata}
                     onSaveData={handleSaveQuote}
                     editAll={editAll}
                     setQuoteItems={setQuoteItems}
@@ -827,8 +832,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <div className="my-4">
                 <p className="font-semibold mb-2">Notes</p>
                 <textarea
-                  value={quoteData?.notes}
-                  onChange={(e) => setQuoteData((prev: any) => ({
+                  value={quoteMetadata?.notes}
+                  onChange={(e) => setQuoteMetadata((prev: any) => ({
                     ...prev,
                     notes: e.target.value
                   }))}
@@ -841,8 +846,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <div className="my-4">
                 <p className="font-semibold mb-2">Exclusions</p>
                 <textarea
-                  value={quoteData?.exclusions}
-                  onChange={(e) => setQuoteData((prev: any) => ({
+                  value={quoteMetadata?.exclusions}
+                  onChange={(e) => setQuoteMetadata((prev: any) => ({
                     ...prev,
                     exclusions: e.target.value
                   }))}
@@ -854,8 +859,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
               <div className='my-4'>
                 <QuoteAdditionalFiles
-                  setQuoteData={setQuoteData}
-                  quoteData={quoteData}
+                  setQuoteData={setQuoteMetadata}
+                  quoteData={quoteMetadata}
                   handleFileSelect={(field: any) => handleFileSelect(field)}
                   files={files}
                   setFiles={setFiles} />
@@ -869,10 +874,10 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
-                exclusions={quoteData?.exclusions}
-                quoteData={quoteData}
+                exclusions={quoteMetadata?.exclusions}
+                quoteData={quoteMetadata}
                 quoteType={quoteType || "straight_sale"}
-                notes={quoteData?.notes}
+                notes={quoteMetadata?.notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
                 customers={selectedCustomers}
@@ -886,8 +891,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 county={adminData ? adminData.county?.name || '' : ''}
                 sr={adminData ? adminData.srRoute || '' : ''}
                 ecms={adminData ? adminData.contractNumber || '' : ''}
-                termsAndConditions={quoteData?.aditionalTerms}
-                files={files.filter((f) => quoteData?.selectedfilesids?.includes(f.id))}
+                termsAndConditions={quoteMetadata?.aditionalTerms}
+                files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
               />
             </div>
           </div>

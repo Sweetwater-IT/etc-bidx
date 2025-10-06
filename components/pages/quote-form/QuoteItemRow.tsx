@@ -176,12 +176,17 @@ export default function QuoteItemRow({
   }, [openProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
+    console.log('seleccioné', product);
+
     setProductInput(product.item_number);
     setShowDropdown(false);
 
-    handleItemUpdate(item.id, "itemNumber", product.item_number);
-    handleItemUpdate(item.id, "description", product.description);
-    handleItemUpdate(item.id, "uom", product.uom);
+    handleItemUpdate(item.id, "fullItem", {
+      ...item,
+      itemNumber: product.item_number,
+      description: product.description,
+      uom: product.uom,
+    });
   };
 
   const handleSubItemProductSelect = (product: any, subItemId: string) => {

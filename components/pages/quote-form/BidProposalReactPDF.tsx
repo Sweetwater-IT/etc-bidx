@@ -67,7 +67,8 @@ const styles = StyleSheet.create({
   headerCenter: { textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
   centerText: { textAlign: 'center', fontSize: '10px', marginBottom: 2 },
   table: { display: 'flex', width: '100%', borderWidth: 1, borderColor: '#000', marginTop: 12, flexDirection: 'column' },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#000' },
+  tableRow: { flexDirection: 'row', width: '100%' },
+  lineSeparator: { borderBottomWidth: 1, borderColor: '#000' },
   tableCell: { padding: 4, fontSize: 9, textAlign: 'center' },
   tableHeader: { fontWeight: 'bold', },
   notesSection: { marginTop: 12, flexDirection: 'column', flex: 1, width: '100%' },
@@ -85,35 +86,13 @@ const styles = StyleSheet.create({
   signatureField: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: 8 },
   signatureLabel: { marginRight: 4, fontSize: 9 },
   signatureLine: { flex: 1, borderBottomWidth: 1, borderColor: '#000', minWidth: 150 },
-  cellRow: {
-    width: '6%',
-    textAlign: 'center',
-  },
-  cellItem: {
-    width: '14%',
-    textAlign: 'center',
-  },
-  cellDescription: {
-    width: '30%',
-    textAlign: 'center',
-    paddingRight: 4,
-  },
-  cellUOM: {
-    width: '12.5%',
-    textAlign: 'center',
-  },
-  cellQuantity: {
-    width: '12.5%',
-    textAlign: 'center',
-  },
-  cellUnitPrice: {
-    width: '12.5%',
-    textAlign: 'center',
-  },
-  cellExtended: {
-    width: '10%',
-    textAlign: 'center',
-  }
+  cellRow: { width: '6%', textAlign: 'center' },
+  cellItem: { width: '18%', textAlign: 'center' },
+  cellDescription: { width: '36%', textAlign: 'center', paddingRight: 4 },
+  cellUOM: { width: '10%', textAlign: 'center' },
+  cellQuantity: { width: '10%', textAlign: 'center' },
+  cellUnitPrice: { width: '10%', textAlign: 'center' },
+  cellExtended: { width: '10%', textAlign: 'center' },
 });
 
 const formatDate = (date?: string) => {
@@ -172,6 +151,13 @@ export const BidProposalReactPDF: React.FC<Props> = ({
     return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
   };
 
+
+  const totalTax = items.reduce((acc, item) => {
+    const extended = calculateExtendedPrice(item);
+    const itemTax = item.tax || 0;
+    return acc + (itemTax > 1 ? itemTax : extended * itemTax);
+  }, 0);
+
   const renderCustomerInfo = () => {
     if (!quoteData) return null;
 
@@ -195,7 +181,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
 
             {/* Job Info */}
-            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderTopWidth: 1, borderColor: 'black' }}>
+            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
               <Text>Township / County: {joinWithSlash(data.township, data.county)}</Text>
               <Text>State Route: {data.sr_route || ""}</Text>
@@ -236,7 +222,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
 
             {/* Job Info */}
-            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderTopWidth: 1, borderColor: 'black' }}>
+            <View style={{ width: "50%", padding: 4, borderRightWidth: 1, borderColor: 'black' }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>Job Location / Details</Text>
               <Text>Township/County: {joinWithSlash(data.township, data.county)}</Text>
               <Text>State Route: {data.sr_route || ""}</Text>
@@ -322,9 +308,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text style={[styles.tableHeader, styles.cellItem]}>Item #</Text>
               <Text style={[styles.tableHeader, styles.cellDescription]}>Description</Text>
               <Text style={[styles.tableHeader, styles.cellUOM]}>UOM</Text>
-              <Text style={[styles.tableHeader, styles.cellQuantity]}>Quantity</Text>
+              <Text style={[styles.tableHeader, styles.cellQuantity]}>Qty</Text>
               <Text style={[styles.tableHeader, styles.cellUnitPrice]}>Unit Price</Text>
-              <Text style={[styles.tableHeader, styles.cellExtended]}>Extended</Text>
+              <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
             </View>
 
             {items.map((item, idx) => {
@@ -341,7 +327,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 </View>
               );
             })}
-
+            <View style={styles.lineSeparator}></View>
             {/* Totals */}
             <View style={styles.tableRow}>
               <Text style={[styles.tableHeader, styles.cellRow]}></Text>
@@ -356,6 +342,19 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total)}</Text>
               </View>
 
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableHeader, styles.cellRow]}></Text>
+              <Text style={[styles.tableHeader, styles.cellItem]}></Text>
+              <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
+              <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
+              <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
+              <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TAX</Text>
+              </View>
+              <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(totalTax)}</Text>
+              </View>
             </View>
             <View style={styles.tableRow}>
               <Text style={[styles.tableHeader, styles.cellRow]}></Text>

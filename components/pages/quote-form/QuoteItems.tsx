@@ -113,27 +113,29 @@ export function QuoteItems() {
       setQuoteItems((prevItems) => [...prevItems, response.item]);
       setEditingItemId(response.item.id);
     }
-  };
+  };  
 
   const handleItemUpdate = async (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
+    let updatedItem: QuoteItem | null = null;
+    
     setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId
-          ? field === "fullItem"
-            ? value
-            : { ...item, [field]: value }
-          : item
-      )
+      prevItems.map((item) => {
+        if (item.id === itemId) {
+          const newItem = field === "fullItem" ? value : { ...item, [field]: value };
+          updatedItem = newItem; 
+          return newItem;
+        }
+        return item;
+      })
     );
-
-    const itemToUpdate = quoteItems.find((i) => i.id === itemId);
-    if (itemToUpdate) {
-      const updated = field === "fullItem" ? value : { ...itemToUpdate, [field]: value };
-      await updateQuoteItem(updated);
+    
+    if (updatedItem) {
+      await updateQuoteItem(updatedItem);
     }
 
     setEditingSubItemId(null);
   };
+
 
   const handleRemoveItem = async (itemId: string) => {
     const response = await deleteQuoteItem(itemId);
