@@ -64,6 +64,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     pdf_url: meta.pdf_url,
     notes: meta.notes || '',
     exclusions: meta.exclusions || '',
+    tax_rate: meta.tax_rate,
   };
 
   const commonFields = {
@@ -189,11 +190,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [files, setFiles] = useState<any>([])
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">(quoteMetadata?.type_quote || "")
 
-  React.useEffect(()=> {
-    if(quoteMetadata?.type_quote) {
+  React.useEffect(() => {
+    if (quoteMetadata?.type_quote) {
       setQuoteType(quoteMetadata.type_quote)
     }
-  },[quoteMetadata?.type_quote])
+  }, [quoteMetadata?.type_quote])
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -428,6 +429,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       aditionalTerms: false,
       selectedfilesids: [],
       pdf_url: "",
+      tax_rate: 6,
       exclusions: exclusions
     };
 

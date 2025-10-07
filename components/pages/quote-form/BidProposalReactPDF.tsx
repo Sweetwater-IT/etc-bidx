@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center', fontSize: '10px', marginBottom: 2 },
   table: { display: 'flex', width: '100%', borderWidth: 1, borderColor: '#000', marginTop: 12, flexDirection: 'column' },
   tableRow: { flexDirection: 'row', width: '100%' },
-  tableRowWithBorder: { flexDirection: 'row', width: '100%', borderBottomWidth: 1, borderColor: '#000', paddingTop:2, paddingBottom:2 },
+  tableRowWithBorder: { flexDirection: 'row', width: '100%', borderBottomWidth: 1, borderColor: '#000', paddingTop: 2, paddingBottom: 2 },
   lineSeparator: { borderBottomWidth: 1, borderColor: '#000' },
   tableCell: { padding: 4, fontSize: 9, textAlign: 'center' },
   tableHeader: { fontWeight: 'bold', },
@@ -154,9 +154,13 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
 
   const totalTax = items.reduce((acc, item) => {
-    const extended = calculateExtendedPrice(item);
-    const itemTax = item.tax || 0;
-    return acc + (itemTax > 1 ? itemTax : extended * itemTax);
+    if (!item.is_tax_percentage) return acc;
+
+    const extended = Number(calculateExtendedPrice(item)) || 0;
+    const taxRate = Number(item.tax) || 0;
+    const itemTax = extended * (taxRate / 100);
+
+    return acc + itemTax;
   }, 0);
 
   const renderCustomerInfo = () => {
@@ -367,7 +371,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TOTAL</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total + totalTax)}</Text>
               </View>
             </View>
           </View>
@@ -407,14 +411,15 @@ export const BidProposalReactPDF: React.FC<Props> = ({
       </Page>
       {(termsAndConditions || exclusions) && (
         <Page size="A4" style={styles.page}>
-          <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '50px' }}>
+          <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '25px' }}>
 
             {exclusions && (
-              <View style={{ fontSize: 9, flex: 1, width: '100%' }}>
+              <View style={{ fontSize: 9, width: '100%' }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
                 <Text >{exclusions}</Text>
               </View>
             )}
+
             {termsAndConditions &&
               <View style={{ fontSize: 9 }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>

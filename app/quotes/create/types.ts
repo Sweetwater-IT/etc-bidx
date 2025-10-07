@@ -45,6 +45,7 @@ export interface Quote {
     digital_signature: "",
     notes: "",
     exclusions: string;
+    tax_rate: number;
 }
 
 export interface StraightSaleQuote extends Quote {

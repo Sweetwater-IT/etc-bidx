@@ -19,6 +19,8 @@ import { useProductsSearch } from "@/hooks/useProductsSearch";
 import { SubItemRow } from "./SubItemRow";
 import { createPortal } from "react-dom";
 import { ProductSheet } from "./ProductSheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 
 export default function QuoteItemRow({
   item,
@@ -51,6 +53,7 @@ export default function QuoteItemRow({
     left: 0,
     width: 0,
   });
+  const { quoteMetadata } = useQuoteForm()
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { products, loading } = useProductsSearch(productInput);
@@ -211,7 +214,7 @@ export default function QuoteItemRow({
         className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
           }`}
         style={{
-          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
+          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px",
         }}
       >
         {/* Produto: input sempre disponível */}
@@ -370,6 +373,16 @@ export default function QuoteItemRow({
           ) : (
             <span className="opacity-50">—</span>
           )}
+        </div>
+        <div className="flex items-center justify-center">
+          <Checkbox
+            className="w-4 h-4 shadow-md"
+            checked={item.is_tax_percentage}
+            onCheckedChange={(checked) => {
+              handleItemUpdate(item.id, "is_tax_percentage", checked);
+              handleItemUpdate(item.id, "tax", checked ? (quoteMetadata?.tax_rate ?? 6) : 0);
+            }}
+          />
         </div>
         <div className="text-foreground w-full text-base text-center">
           {item.unitPrice && item.quantity ? (

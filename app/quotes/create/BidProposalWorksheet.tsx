@@ -185,9 +185,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   };
 
   const totalTax = items.reduce((acc, item) => {
-    const extended = calculateExtendedPrice(item);
-    const itemTax = item.tax || 0;
-    return acc + (itemTax > 1 ? itemTax : extended * itemTax);
+    if (!item.is_tax_percentage) return acc;
+
+    const extended = Number(calculateExtendedPrice(item)) || 0;
+    const taxRate = Number(item.tax) || 0;
+    const itemTax = extended * (taxRate / 100);
+
+    return acc + itemTax;
   }, 0);
 
   const pages: any[] = [];
@@ -309,7 +313,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                   TOTAL
                 </td>
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
-                  {formatMoney(total)}
+                  {formatMoney(total + totalTax)}
                 </td>
               </tr>
             </tbody>

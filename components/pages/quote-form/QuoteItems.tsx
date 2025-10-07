@@ -7,6 +7,7 @@ import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
 import { useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
+import { Input } from "@/components/ui/input";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -50,7 +51,7 @@ async function deleteQuoteItem(itemId: string) {
 }
 
 export function QuoteItems() {
-  const { quoteItems, setQuoteItems, quoteId } = useQuoteForm();
+  const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
 
@@ -113,22 +114,22 @@ export function QuoteItems() {
       setQuoteItems((prevItems) => [...prevItems, response.item]);
       setEditingItemId(response.item.id);
     }
-  };  
+  };
 
   const handleItemUpdate = async (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
     let updatedItem: QuoteItem | null = null;
-    
+
     setQuoteItems((prevItems) =>
       prevItems.map((item) => {
         if (item.id === itemId) {
           const newItem = field === "fullItem" ? value : { ...item, [field]: value };
-          updatedItem = newItem; 
+          updatedItem = newItem;
           return newItem;
         }
         return item;
       })
     );
-    
+
     if (updatedItem) {
       await updateQuoteItem(updatedItem);
     }
@@ -217,16 +218,31 @@ export function QuoteItems() {
     <div className="rounded-lg">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Quote Items</h2>
-        <Button onClick={handleAddNewItem}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Item
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            value={quoteMetadata?.tax_rate ?? ""}
+            onChange={(e) =>
+              setQuoteMetadata((prev) => ({
+                ...prev,
+                tax_rate: Number(e.target.value),
+              }))
+            }
+            className="w-16 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <span className="text-sm font-medium">%</span>
+        </div>
+
       </div>
 
       <div className="space-y-4">
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
-          style={{ gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px" }}
+          style={{ gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px" }}
         >
           <div className="uppercase">Item # / SKU</div>
           <div className="uppercase pl-2">Description</div>
@@ -234,7 +250,9 @@ export function QuoteItems() {
           <div className="uppercase">Qty</div>
           <div className="uppercase">Unit Price</div>
           <div className="uppercase">Discount</div>
+          <div className="uppercase text-center">Tax?</div>
           <div className="uppercase">Extended Price</div>
+
         </div>
 
         <QuoteItemsList
@@ -252,6 +270,13 @@ export function QuoteItems() {
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
         />
+      </div>
+
+      <div className="mt-4">
+        <Button onClick={handleAddNewItem}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Item
+        </Button>
       </div>
 
       <div className="mt-6 flex justify-end space-y-1 text-sm">
