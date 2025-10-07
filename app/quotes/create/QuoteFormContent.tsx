@@ -632,6 +632,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   const handleSaveAndExit = async () => {
+    if (!quoteId) {
+      router.push('/quotes')
+    }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
       setIsSaving(true)
