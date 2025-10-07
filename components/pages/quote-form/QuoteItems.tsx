@@ -22,7 +22,7 @@ enum UOM_TYPES {
 // --- Endpoints ---
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
-  
+
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -113,7 +113,7 @@ export function QuoteItems() {
 
     const response = await createQuoteItem(newItem);
     if (response.success) {
-      setQuoteItems((prevItems) => [...prevItems, response.item]);
+      setQuoteItems((prevItems) => [...prevItems, {...response.item, created: false}]);
       setEditingItemId(response.item.id);
     }
   };
@@ -244,17 +244,16 @@ export function QuoteItems() {
       <div className="space-y-4">
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
-          style={{ gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px" }}
+          style={{ gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px" }}
         >
           <div className="uppercase">Item # / SKU</div>
-          <div className="uppercase pl-2">Description</div>
-          <div className="uppercase">UOM</div>
+          <div className="uppercase text-center">Description</div>
+          <div className="uppercase text-center">UOM</div>
           <div className="uppercase text-center">Qty</div>
           <div className="uppercase">Unit Price</div>
           <div className="uppercase">Discount</div>
-          <div className="uppercase text-center">Tax?</div>
-          <div className="uppercase">Extended Price</div>
-
+          <div className="uppercase text-start">Tax?</div>
+          <div className="uppercase">Ext Price</div>
         </div>
 
         <QuoteItemsList

@@ -27,7 +27,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
     setBccEmails,
     setNotes,
     setQuoteMetadata,
-    setLoadingMetadata
+    setLoadingMetadata,
+    setCanAutosave
   } = useQuoteForm();
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         const res = await fetch(`/api/quotes/edit/${quoteId}`);
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
+        
         setQuoteMetadata({
           id: data.id,
           from_email: data.from_email,
@@ -97,6 +99,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           etc_job_number: data.etc_job_number,
           notes: data.notes,
           exclusions: data.exclusions,
+          aditionalExclusions: data.aditionalExclusions,
+          tax_rate: data.tax_rate
         });
         setQuoteId(data.id);
         setQuoteNumber(data.quote_number);
@@ -146,7 +150,9 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         toast.error("Could not load quote for editing");
       } finally {
         setLoadingMetadata(false)
+        setCanAutosave(true)
       }
+
     }
 
     fetchQuote();

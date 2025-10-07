@@ -56,6 +56,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }:
         quoteType={quoteType}
         quoteData={quoteMetadata}
         termsAndConditions={termsAndConditions}
+        allowExclusions={quoteMetadata?.aditionalExclusions}
       />
     );
   }, [

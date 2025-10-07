@@ -30,6 +30,7 @@ interface BidProposalWorksheetProps {
   termsAndConditions?: boolean;
   files: any;
   exclusions?: string;
+  allowExclusions: boolean;
 }
 
 const formatDate = (date?: string) => {
@@ -57,7 +58,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   quoteData,
   termsAndConditions,
   files,
-  exclusions
+  exclusions,
+  allowExclusions
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const formatMoney = (v: number) =>
@@ -240,6 +242,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             <tbody>
               {items.map((item, index) => {
                 const extended = calculateExtendedPrice(item);
+                if (item?.created === false) return;
                 return (
                   <React.Fragment key={item.id || index}>
                     <tr>
@@ -362,12 +365,12 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
     </div>
   );
 
-  if (termsAndConditions || exclusions) {
+  if (termsAndConditions || allowExclusions) {
     pages.push(
       <div className='flex flex-col '>
         <div key="terms" className="min-h-[100vh]  bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
           {
-            exclusions &&
+            allowExclusions &&
             <div>
               <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
               <p>{exclusions}</p>
@@ -437,7 +440,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </button>
 
           <span className="text-sm font-medium">
-            Page  {currentPage + 1} de {pages.length}
+            Page  {currentPage + 1} of {pages.length}
           </span>
 
           <button

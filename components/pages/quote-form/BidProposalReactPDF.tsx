@@ -35,6 +35,7 @@ interface Props {
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
   exclusions?: string;
+  allowExclusions: boolean;
 }
 
 const styles = StyleSheet.create({
@@ -119,7 +120,8 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   quoteType,
   quoteData,
   termsAndConditions,
-  exclusions
+  exclusions,
+  allowExclusions
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
@@ -409,11 +411,11 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           </Text>
         </View>
       </Page>
-      {(termsAndConditions || exclusions) && (
+      {(termsAndConditions || allowExclusions) && (
         <Page size="A4" style={styles.page}>
           <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '25px' }}>
 
-            {exclusions && (
+            {allowExclusions && (
               <View style={{ fontSize: 9, width: '100%' }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
                 <Text >{exclusions}</Text>

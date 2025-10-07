@@ -27,6 +27,8 @@ import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
 import CustomerSelect from './components/CustomerSelector';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from 'recharts';
 
 const typeQuotes = [
   {
@@ -66,6 +68,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     notes: meta.notes || '',
     exclusions: meta.exclusions || '',
     tax_rate: meta.tax_rate,
+    aditionalExclusions: meta.aditionalExclusions,
   };
 
   const commonFields = {
@@ -175,7 +178,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     quoteMetadata,
     loadingMetadata,
     setQuoteMetadata,
-    setQuoteItems
+    setQuoteItems,
+    canAutosave
   } = useQuoteForm()
 
   const [isSaving, setIsSaving] = useState(false)
@@ -189,13 +193,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
-  const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid" | "">(quoteMetadata?.type_quote || "")
 
-  React.useEffect(() => {
-    if (quoteMetadata?.type_quote) {
-      setQuoteType(quoteMetadata.type_quote)
-    }
-  }, [quoteMetadata?.type_quote])
+
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -226,9 +225,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
 
     const shouldCreate =
-      (quoteType === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
-      (quoteType === "to_project" && quoteMetadata?.job_id) ||
-      (quoteType === "estimate_bid" && quoteMetadata?.estimate_id);
+      (quoteMetadata?.type_quote === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
+      (quoteMetadata?.type_quote === "to_project" && quoteMetadata?.job_id) ||
+      (quoteMetadata?.type_quote === "estimate_bid" && quoteMetadata?.estimate_id);
 
     if (shouldCreate) {
       handleCreateDraft().then((data: any) => {
@@ -238,7 +237,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       });
     }
   }, [
-    quoteType,
+    quoteMetadata?.type_quote,
     quoteMetadata?.customer,
     quoteMetadata?.job_id,
     quoteMetadata?.estimate_id,
@@ -247,7 +246,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
   const createQuoteBase = async (status: "DRAFT" | "NOT SENT") => {
     const payload = {
-      type_quote: quoteType,
+      type_quote: quoteMetadata?.type_quote,
       status,
       subject,
       body: emailBody,
@@ -334,7 +333,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   };
 
   const autosave = React.useCallback(async () => {
-    if (!numericQuoteId) return false;
+    if (!numericQuoteId || !canAutosave) return false;
 
     try {
       const payload = {
@@ -416,7 +415,10 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     type: "straight_sale" | "to_project" | "estimate_bid",
     needSetObject = true
   ) => {
-    setQuoteType(type);
+    setQuoteMetadata((prev) => ({
+      ...prev,
+      type_quote: type
+    }));
     if (!needSetObject) return;
     const today = new Date().toISOString().slice(0, 10);
 
@@ -431,7 +433,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       selectedfilesids: [],
       pdf_url: "",
       tax_rate: 6,
-      exclusions: exclusions
+      exclusions: exclusions,
+      aditionalExclusions: false
     };
 
     let newQuoteData: QuoteState = { ...quoteMetadata };
@@ -558,8 +561,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           sr={adminData?.srRoute || ''}
           ecms={adminData?.contractNumber || ''}
           quoteData={quoteMetadata}
-          quoteType={quoteType || "straight_sale"}
+          quoteType={quoteMetadata?.type_quote || "straight_sale"}
           termsAndConditions={quoteMetadata?.aditionalTerms}
+          allowExclusions={quoteMetadata?.aditionalExclusions}
         />
       ).toBlob()
 
@@ -657,10 +661,10 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   React.useEffect(() => {
-    if (quoteMetadata?.id) {
+    if (quoteMetadata?.id && quoteMetadata?.type_quote && canAutosave) {
       const normalizedQuote = normalizeQuoteMetadata(quoteMetadata);
       setQuoteMetadata(prev => ({
-        ...normalizedQuote,
+        ...prev,
         etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
         etc_poc_email: prev?.etc_poc_email || user?.email || "",
         etc_poc_phone_number: prev?.etc_poc_phone_number || "",
@@ -668,7 +672,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       }));
       handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
     }
-  }, []);
+  }, [quoteMetadata?.type_quote]);
 
   const handleEditClick = () => {
     setTempData(quoteMetadata)
@@ -701,7 +705,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteType} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
+              <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
               <Button disabled={downloading} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
@@ -710,7 +714,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 )}
               </Button>
               {!edit && (
-                <Button disabled={!quoteType} onClick={handleCreateQuote}>
+                <Button disabled={!quoteMetadata?.type_quote} onClick={handleCreateQuote}>
                   {
                     creatingQuote ?
                       <Loader className="animate-spin w-5 h-5 text-gray-600" />
@@ -724,7 +728,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
       />
 
-      <div className="flex gap-6 p-6 max-w-full">
+      <div className="flex gap-6 p-6 pt-0 pr-0 max-w-full">
         {
           loadingMetadata ? (
             <div className=' w-1/2 h-full flex flex-row items-center justify-center'>
@@ -735,7 +739,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <div className="flex flex-row gap-4 mb-4 w-full">
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>
-                  <Select onValueChange={handleQuoteTypeChange} value={quoteType || ""}>
+                  <Select onValueChange={handleQuoteTypeChange} value={quoteMetadata?.type_quote || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select Quote Type" />
                     </SelectTrigger>
@@ -747,7 +751,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </Select>
                 </div>
 
-                {quoteType === "straight_sale" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "straight_sale" && quoteMetadata && (
                   <div className='w-1/2'>
                     <CustomerSelect
                       data={quoteMetadata as any}
@@ -756,7 +760,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </div>
                 )}
 
-                {quoteType === "to_project" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "to_project" && quoteMetadata && (
                   <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a job number</p>
                     <SelectJob
@@ -768,7 +772,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </div>
                 )}
 
-                {quoteType === "estimate_bid" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "estimate_bid" && quoteMetadata && (
                   <div className="w-1/2">
                     <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
@@ -798,7 +802,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className='my-4'>
-                {quoteType === "straight_sale" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "straight_sale" && quoteMetadata && (
                   <RenderSaleQuoteFields
                     data={quoteMetadata as Partial<StraightSaleQuote>}
                     setData={setQuoteMetadata}
@@ -806,7 +810,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   />
                 )}
 
-                {quoteType === "to_project" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "to_project" && quoteMetadata && (
                   <RenderProjectQuoteFields
                     selectedJob={selectedJob}
                     data={quoteMetadata as Partial<ToProjectQuote>}
@@ -816,7 +820,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   />
                 )}
 
-                {quoteType === "estimate_bid" && quoteMetadata && (
+                {quoteMetadata?.type_quote === "estimate_bid" && quoteMetadata && (
                   <RenderEstimateBidQuoteFields
                     selectedBid={selectedBid}
                     data={quoteMetadata as Partial<EstimateBidQuote>}
@@ -852,8 +856,21 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               </div>
 
               <div className="my-4">
-                <p className="font-semibold mb-2">Exclusions</p>
-                <textarea
+                <div className='flex justify-between items-center'>
+                  <p className="font-semibold mb-2">Exclusions</p>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      className='shadow-sm'
+                      id="terms"
+                      checked={quoteMetadata?.aditionalExclusions || false}
+                      onCheckedChange={(checked) =>
+                        setQuoteMetadata(prev => ({ ...prev, aditionalExclusions: !!checked }))
+                      }
+                    />
+                    <p>Include?</p>
+                  </div>
+                </div>
+                <Textarea
                   value={quoteMetadata?.exclusions}
                   onChange={(e) => setQuoteMetadata((prev: any) => ({
                     ...prev,
@@ -878,13 +895,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
 
         <div className="w-1/2 space-y-6">
-          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky top-4">
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky mt-[-22px]">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
+                allowExclusions={quoteMetadata?.aditionalExclusions}
                 exclusions={quoteMetadata?.exclusions}
                 quoteData={quoteMetadata}
-                quoteType={quoteType || "straight_sale"}
+                quoteType={quoteMetadata?.type_quote || "straight_sale"}
                 notes={quoteMetadata?.notes}
                 adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}

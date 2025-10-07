@@ -82,6 +82,9 @@ interface QuoteFormState {
   quoteDate: string;
   setQuoteDate: Dispatch<SetStateAction<string>>;
 
+  canAutosave: boolean;
+  setCanAutosave: Dispatch<SetStateAction<boolean>>;
+
   ecmsPoNumber: string;
   setEcmsPoNumber: Dispatch<SetStateAction<string>>;
 
@@ -187,6 +190,8 @@ export default function QuoteFormProvider({
   const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>(
     mergedData.customers
   );
+  const [canAutosave, setCanAutosave] = useState(false);
+
 
   const [pointOfContact, setPointOfContact] = useState<
     PointOfContact | undefined
@@ -218,7 +223,7 @@ export default function QuoteFormProvider({
   );
 
   const [jobId, setJobId] = useState<number | null>(
-    
+
     typeof mergedData.job_id === "number" ? mergedData.job_id : null
   );
 
@@ -247,8 +252,6 @@ export default function QuoteFormProvider({
   const [sending, setSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
-
-
 
   const [quoteId, setQuoteId] = useState<number | null>(
     typeof mergedData.id === "number" ? mergedData.id : null
@@ -352,6 +355,8 @@ export default function QuoteFormProvider({
     setUniqueToken,
     sender,
     setSender,
+    canAutosave,
+    setCanAutosave
   };
 
   return (

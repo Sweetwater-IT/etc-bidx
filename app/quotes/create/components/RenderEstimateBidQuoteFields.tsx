@@ -136,7 +136,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
             <label className="font-semibold block mb-1">{label}</label>
             {editAll ? (
                 <Input
-                    type={type === "date" ? "datetime-local" : type}
+                    type={type === "date" ? "date" : type}
                     value={data[field] ?? ""}
                     onChange={(e) => setData({ ...data, [field]: e.target.value })}
                     className="w-full"

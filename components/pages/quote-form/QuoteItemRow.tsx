@@ -21,6 +21,7 @@ import { createPortal } from "react-dom";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 export default function QuoteItemRow({
   item,
@@ -179,7 +180,6 @@ export default function QuoteItemRow({
   }, [openProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
-    console.log('seleccioné', product);
 
     setProductInput(product.item_number);
     setShowDropdown(false);
@@ -190,6 +190,10 @@ export default function QuoteItemRow({
       description: product.description,
       uom: product.uom,
     });
+
+    setOpenProductSheet(true);
+    setEditingItemId(item.id);
+    setEditingSubItemId(null);
   };
 
   const handleSubItemProductSelect = (product: any, subItemId: string) => {
@@ -214,7 +218,7 @@ export default function QuoteItemRow({
         className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
           }`}
         style={{
-          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px",
+          gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px",
         }}
       >
         {/* Produto: input sempre disponível */}
@@ -295,62 +299,60 @@ export default function QuoteItemRow({
             )}
         </div>
         {/* Descrição */}
-        <div className="text-foreground w-full truncate ml-2 text-base pr-2">
+        <div className="text-foreground w-full text-center text-base">
           {item.description ? (
             item.description
           ) : (
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="text-foreground text-base">
+        <div className="text-foreground text-base text-center">
           {item.uom ? item.uom : <span className="opacity-50">—</span>}
         </div>
         {/* Qty: stepper com input */}
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="w-7 h-7 flex items-center justify-center border rounded bg-muted hover:bg-accent "
-            onClick={() =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Math.max(0, Number(item.quantity || 0) - 1)
-              )
-            }
-            tabIndex={-1}
-          >
-            -
-          </Button>
-          <Input
-            min={0}
-            value={item.quantity || 0}
-            onChange={(e) =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Math.max(0, Number(e.target.value))
-              )
-            }
-            className="no-spinner w-16 h-6 px-2 py-1 border rounded text-center bg-background !border-none shadow-none"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="w-7 h-7 flex items-center justify-center border rounded bg-muted  hover:bg-accent "
-            onClick={() =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Number(item.quantity || 0) + 1
-              )
-            }
-            tabIndex={-1}
-          >
-            +
-          </Button>
+        <div className="flex flex-row  justify-center items-center">
+          <ButtonGroup className="items-center flex flex-row justify-center">
+            {/* <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
+              onClick={() =>
+                handleItemUpdate(
+                  item.id,
+                  "quantity",
+                  Math.max(0, Number(item.quantity || 0) - 1)
+                )
+              }
+              tabIndex={-1}
+            >
+              -
+            </Button> */}
+            <Input
+              min={0}
+              value={item.quantity || 0}
+              onChange={(e) =>
+                handleItemUpdate(
+                  item.id,
+                  "quantity",
+                  Math.max(0, Number(e.target.value))
+                )
+              }
+              className="no-spinner w-14 h-7 text-center rounded-none border-x-0 bg-background focus-visible:ring-0"
+            />
+            {/* <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
+              onClick={() =>
+                handleItemUpdate(item.id, "quantity", Number(item.quantity || 0) + 1)
+              }
+              tabIndex={-1}
+            >
+              +
+            </Button> */}
+          </ButtonGroup>
         </div>
         <div className="text-foreground text-sm">
           {item.unitPrice ? (
@@ -374,7 +376,7 @@ export default function QuoteItemRow({
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-start">
           <Checkbox
             className="w-4 h-4 shadow-md"
             checked={item.is_tax_percentage}
@@ -384,7 +386,7 @@ export default function QuoteItemRow({
             }}
           />
         </div>
-        <div className="text-foreground w-full text-base text-center">
+        <div className="text-foreground w-full text-base text-start">
           {item.unitPrice && item.quantity ? (
             `$${calculateExtendedPrice(item)}`
           ) : (

@@ -13,6 +13,7 @@ export interface QuoteItem {
   tax: any
   is_tax_percentage: boolean
   quote_id: any
+  created?: boolean
 }
 
 export interface AssociatedItem {

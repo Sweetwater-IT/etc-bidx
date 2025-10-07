@@ -72,7 +72,7 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
     <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
       <div className="grid grid-cols-1 mb-4 gap-2">
-        <div className="flex flex-row gap-6">
+        <div className="flex flex-col gap-6">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="terms"

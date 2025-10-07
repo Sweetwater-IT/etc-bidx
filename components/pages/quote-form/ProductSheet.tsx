@@ -408,6 +408,10 @@ export function ProductSheet({
                     notes: newProduct.notes,
                   };
 
+                  if ('created' in updatedItem) {
+                    delete updatedItem.created;
+                  }
+                  
                   handleItemUpdate(item.id, "fullItem", updatedItem);
                   setProductInput(newProduct.itemNumber);
                   setEditingItemId(null);

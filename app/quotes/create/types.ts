@@ -40,6 +40,7 @@ export interface Quote {
     selectedfilesids: any[];
     aditionalFiles: boolean;
     aditionalTerms: boolean;
+    aditionalExclusions: boolean;
     pdf_url: string;
     comment: "",
     digital_signature: "",
