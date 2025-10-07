@@ -292,7 +292,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text style={styles.centerText}>O: 215.997.8801</Text>
               <Text style={[styles.centerText]}>Email:
                 <Text style={{ color: 'blue' }}>
-                  {sender.email}</Text>
+                  estimating@establishedtraffic.com</Text>
               </Text>
             </View>
             <View style={styles.header3}>

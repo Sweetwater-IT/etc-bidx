@@ -212,7 +212,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p>3162 Unionville Pike</p>
               <p>Hatfield, PA 19440</p>
               <p>O: 215.997.8801</p>
-              <p>Email: <span className='underline text-blue-600'>{sender.email}</span></p>
+              <p>Email: <span className='underline text-blue-600'>estimating@establishedtraffic.com</span></p>
             </div>
             <div className="text-center w-1/4 ">
               <h2 className="text-xl font-bold">PROPOSAL</h2>
