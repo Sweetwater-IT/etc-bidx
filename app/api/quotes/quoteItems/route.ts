@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         tax,
         is_tax_percentage,
         associatedItems = [],
+        notes,
     } = body;
 
 
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
             discount_type: discountType || "dollar",
             tax: tax ?? 0,
             is_tax_percentage: is_tax_percentage ?? false,
-            notes: [],
+            notes: notes,
         }])
         .select()
         .single();

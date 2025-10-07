@@ -306,7 +306,7 @@ export default function QuoteItemRow({
           {item.uom ? item.uom : <span className="opacity-50">—</span>}
         </div>
         {/* Qty: stepper com input */}
-        <div className="flex items-center justify-start gap-2">
+        <div className="flex items-center justify-center gap-2">
           <Button
             type="button"
             variant="outline"

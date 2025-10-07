@@ -93,12 +93,12 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
-                    {renderField("customer_name", "Customer", "text", true)}
+                    {renderField("customer_name", "Customer", "text")}
                     {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
-                    {renderField("customer_phone", "Customer Phone", "text", true)}
-                    {renderField("customer_email", "Customer Email", "text", true)}
-                    {renderField("customer_address", "Customer Address", "text", true)}
-                    {renderField("customer_job_number", "Customer Job Number", 'text', true)}
+                    {renderField("customer_phone", "Customer Phone", "text")}
+                    {renderField("customer_email", "Customer Email", "text")}
+                    {renderField("customer_address", "Customer Address", "text")}
+                    {renderField("customer_job_number", "Customer Job Number", 'text')}
                     {renderField("purchase_order", "Purchase Order #")}
                 </div>
             </SectionBox>

@@ -26,6 +26,7 @@ import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
 import CustomerSelect from './components/CustomerSelector';
+import { Textarea } from '@/components/ui/textarea';
 
 const typeQuotes = [
   {
@@ -833,16 +834,21 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
               <div className="my-4">
                 <p className="font-semibold mb-2">Notes</p>
-                <textarea
-                  value={quoteMetadata?.notes}
-                  onChange={(e) => setQuoteMetadata((prev: any) => ({
-                    ...prev,
-                    notes: e.target.value
-                  }))}
+                <Textarea
+                  value={quoteMetadata?.notes || ""}
+                  onChange={(e) =>
+                    setQuoteMetadata((prev: any) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
                   placeholder="Add your notes here..."
                   maxLength={5000}
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
+                <p className="text-sm text-gray-500 text-right mt-1">
+                  {5000 - (quoteMetadata?.notes?.length || 0)} characters remaining
+                </p>
               </div>
 
               <div className="my-4">

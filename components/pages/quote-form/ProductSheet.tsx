@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function ProductSheet({
   open,
@@ -303,14 +304,14 @@ export function ProductSheet({
               Tax
             </Label>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={newProduct?.is_tax_percentage}
-                onChange={(e) =>
+              <Checkbox
+                className="w-4 shadow-md"
+                checked={!!newProduct?.is_tax_percentage}
+                onCheckedChange={(checked) =>
                   setNewProduct((prev) => ({
                     ...prev,
-                    is_tax_percentage: e.target.checked,
-                    tax: e.target.checked ? prev.tax : "",
+                    is_tax_percentage: !!checked,
+                    tax: checked ? prev.tax : "",
                   }))
                 }
               />

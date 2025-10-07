@@ -21,6 +21,8 @@ enum UOM_TYPES {
 
 // --- Endpoints ---
 async function createQuoteItem(item: QuoteItem) {
+  console.log('recibo', item);
+  
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -247,7 +249,7 @@ export function QuoteItems() {
           <div className="uppercase">Item # / SKU</div>
           <div className="uppercase pl-2">Description</div>
           <div className="uppercase">UOM</div>
-          <div className="uppercase">Qty</div>
+          <div className="uppercase text-center">Qty</div>
           <div className="uppercase">Unit Price</div>
           <div className="uppercase">Discount</div>
           <div className="uppercase text-center">Tax?</div>
