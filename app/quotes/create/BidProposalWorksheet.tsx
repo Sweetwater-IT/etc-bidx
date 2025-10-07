@@ -368,12 +368,12 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   if (termsAndConditions || allowExclusions) {
     pages.push(
       <div className='flex flex-col '>
-        <div key="terms" className="min-h-[100vh]  bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
+        <div key="terms" className="min-h-[100vh] bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
           {
             allowExclusions &&
             <div>
               <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
-              <p>{exclusions}</p>
+              <p style={{ whiteSpace: "pre-wrap" }}>{exclusions}</p>
             </div>
           }
 
