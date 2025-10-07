@@ -14,14 +14,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Trash2, Plus, Pencil, Check, MoreVertical, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useProductsSearch } from "@/hooks/useProductsSearch";
 import { SubItemRow } from "./SubItemRow";
 import { createPortal } from "react-dom";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { useState, useEffect, useRef } from "react";
 
 export default function QuoteItemRow({
   item,
@@ -37,8 +36,6 @@ export default function QuoteItemRow({
   UOM_TYPES,
   calculateCompositeUnitPrice,
   calculateExtendedPrice,
-  createQuoteItem,
-  updateQuoteItem
 }) {
   const hasAssociatedItems =
     item.associatedItems && item.associatedItems.length > 0;
@@ -214,10 +211,10 @@ export default function QuoteItemRow({
   return (
     <>
       <div
-        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-gray-300 pb-2" : ""
+        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
           }`}
         style={{
-          gridTemplateColumns: "2fr 2.5fr 0.3fr 1.5fr 1fr 1fr 1fr 1fr 40px",
+          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px",
         }}
       >
         {/* Produto: input sempre disponível */}
@@ -298,7 +295,7 @@ export default function QuoteItemRow({
             )}
         </div>
         {/* Descrição */}
-        <div className="text-foreground w-full ml-2 text-base text-center pr-2 break-words">
+        <div className="text-foreground w-full truncate ml-2 text-base pr-2">
           {item.description ? (
             item.description
           ) : (
@@ -309,49 +306,51 @@ export default function QuoteItemRow({
           {item.uom ? item.uom : <span className="opacity-50">—</span>}
         </div>
         {/* Qty: stepper com input */}
-        <div className="flex flex-row  justify-center items-center">
-          <ButtonGroup className="items-center flex flex-row justify-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
-              onClick={() =>
-                handleItemUpdate(
-                  item.id,
-                  "quantity",
-                  Math.max(0, Number(item.quantity || 0) - 1)
-                )
-              }
-              tabIndex={-1}
-            >
-              -
-            </Button>
-            <Input
-              min={0}
-              value={item.quantity || 0}
-              onChange={(e) =>
-                handleItemUpdate(
-                  item.id,
-                  "quantity",
-                  Math.max(0, Number(e.target.value))
-                )
-              }
-              className="no-spinner w-14 h-7 text-center rounded-none border-x-0 bg-background focus-visible:ring-0"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
-              onClick={() =>
-                handleItemUpdate(item.id, "quantity", Number(item.quantity || 0) + 1)
-              }
-              tabIndex={-1}
-            >
-              +
-            </Button>
-          </ButtonGroup>
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="w-7 h-7 flex items-center justify-center border rounded bg-muted hover:bg-accent "
+            onClick={() =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Math.max(0, Number(item.quantity || 0) - 1)
+              )
+            }
+            tabIndex={-1}
+          >
+            -
+          </Button>
+          <Input
+            min={0}
+            value={item.quantity || 0}
+            onChange={(e) =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Math.max(0, Number(e.target.value))
+              )
+            }
+            className="no-spinner w-16 h-6 px-2 py-1 border rounded text-center bg-background !border-none shadow-none"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="w-7 h-7 flex items-center justify-center border rounded bg-muted  hover:bg-accent "
+            onClick={() =>
+              handleItemUpdate(
+                item.id,
+                "quantity",
+                Number(item.quantity || 0) + 1
+              )
+            }
+            tabIndex={-1}
+          >
+            +
+          </Button>
         </div>
         <div className="text-foreground text-sm">
           {item.unitPrice ? (
@@ -464,14 +463,15 @@ export default function QuoteItemRow({
         digits={digits}
         setDigits={setDigits}
         UOM_TYPES={UOM_TYPES}
+        formatDecimal={formatDecimal}
+        formatPercentage={formatPercentage}
+        handleNextDigits={handleNextDigits}
         editingSubItemId={editingSubItemId}
         handleItemUpdate={handleItemUpdate}
         item={item}
         setProductInput={setProductInput}
         setEditingItemId={setEditingItemId}
         setEditingSubItemId={setEditingSubItemId}
-        createQuoteItem={createQuoteItem}
-        updateQuoteItem={updateQuoteItem}
       />
     </>
   );

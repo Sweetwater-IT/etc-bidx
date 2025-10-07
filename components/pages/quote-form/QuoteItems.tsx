@@ -8,7 +8,6 @@ import { useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
-import { ProductSheet } from "./ProductSheet";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -23,7 +22,7 @@ enum UOM_TYPES {
 // --- Endpoints ---
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
-
+  
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -57,10 +56,6 @@ export function QuoteItems() {
   const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
-  const [openProductSheet, setOpenProductSheet] = useState(false);
-
-  const [editingItem, setEditingItem] = useState<QuoteItem | null>(null);
-  const [digits, setDigits] = useState([]);
 
   // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
@@ -99,19 +94,48 @@ export function QuoteItems() {
   };
 
   const handleAddNewItem = async () => {
-    setOpenProductSheet(true); // 👈 abre el sheet
+    const newId = generateUniqueId();
+    const newItem: QuoteItem = {
+      quote_id: quoteId,
+      id: newId,
+      itemNumber: "",
+      description: "",
+      uom: "",
+      quantity: 0,
+      unitPrice: 0,
+      discount: 0,
+      discountType: "dollar",
+      notes: "",
+      associatedItems: [],
+      is_tax_percentage: false,
+      tax: 0,
+    };
+
+    const response = await createQuoteItem(newItem);
+    if (response.success) {
+      setQuoteItems((prevItems) => [...prevItems, response.item]);
+      setEditingItemId(response.item.id);
+    }
   };
 
-  const handleItemUpdate = (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
+  const handleItemUpdate = async (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
+    let updatedItem: QuoteItem | null = null;
+
     setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId
-          ? field === "fullItem"
-            ? value
-            : { ...item, [field]: value }
-          : item
-      )
+      prevItems.map((item) => {
+        if (item.id === itemId) {
+          const newItem = field === "fullItem" ? value : { ...item, [field]: value };
+          updatedItem = newItem;
+          return newItem;
+        }
+        return item;
+      })
     );
+
+    if (updatedItem) {
+      await updateQuoteItem(updatedItem);
+    }
+
     setEditingSubItemId(null);
   };
 
@@ -220,16 +244,17 @@ export function QuoteItems() {
       <div className="space-y-4">
         <div
           className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
-          style={{ gridTemplateColumns: "2fr 2.5fr 0.3fr 1.5fr 1fr 1fr 1fr 1fr 40px" }}
+          style={{ gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr 40px" }}
         >
           <div className="uppercase">Item # / SKU</div>
-          <div className="uppercase text-center">Description</div>
+          <div className="uppercase pl-2">Description</div>
           <div className="uppercase">UOM</div>
           <div className="uppercase text-center">Qty</div>
           <div className="uppercase">Unit Price</div>
           <div className="uppercase">Discount</div>
           <div className="uppercase text-center">Tax?</div>
-          <div className="uppercase">Ext Price</div>
+          <div className="uppercase">Extended Price</div>
+
         </div>
 
         <QuoteItemsList
@@ -246,11 +271,8 @@ export function QuoteItems() {
           UOM_TYPES={UOM_TYPES}
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
-          createQuoteItem={createQuoteItem}
-          updateQuoteItem={updateQuoteItem}
         />
       </div>
-
 
       <div className="mt-4">
         <Button onClick={handleAddNewItem}>
@@ -265,30 +287,6 @@ export function QuoteItems() {
           <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
         </div>
       </div>
-
-      <ProductSheet
-        open={openProductSheet}
-        onOpenChange={setOpenProductSheet}
-        item={editingItem}
-        newProduct={editingItem}
-        setNewProduct={setEditingItem}
-        digits={digits}
-        setDigits={setDigits}
-        UOM_TYPES={UOM_TYPES}
-        editingSubItemId={null}
-        handleItemUpdate={handleItemUpdate}
-        setProductInput={() => { }}
-        setEditingItemId={setEditingItemId}
-        setEditingSubItemId={() => { }}
-        createQuoteItem={createQuoteItem}
-        updateQuoteItem={updateQuoteItem}
-        onCreateItem={(item: QuoteItem) => {
-          setQuoteItems(prev => [...prev, item]);
-          setEditingItemId(item.id);
-        }}
-
-      />
-
     </div>
   );
 }

@@ -24,24 +24,15 @@ interface QuoteItemsListProps {
   UOM_TYPES: any;
   calculateCompositeUnitPrice: (item: QuoteItem) => number;
   calculateExtendedPrice: (item: QuoteItem) => string;
-  createQuoteItem?: (item: any) => Promise<any>;
-  updateQuoteItem?: (item: any) => Promise<any>;
 }
 
 const QuoteItemsList = ({
   quoteItems,
   editingItemId,
-  createQuoteItem,
-  updateQuoteItem,
   ...rest
 }: QuoteItemsListProps) => {
   return (
-    <>{quoteItems.map((item) => <QuoteItemRow 
-      createQuoteItem={createQuoteItem}
-      updateQuoteItem={updateQuoteItem}
-      key={item.id} 
-      item={item} 
-      isEditing={editingItemId === item.id} {...rest} />)}</>
+    <>{quoteItems.map((item) => <QuoteItemRow key={item.id} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
   );
 };
 
