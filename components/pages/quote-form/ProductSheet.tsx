@@ -19,6 +19,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 
 export function ProductSheet({
   open,
@@ -38,6 +41,7 @@ export function ProductSheet({
   setEditingItemId,
   setEditingSubItemId,
 }) {
+  const { setQuoteItems, quoteId } = useQuoteForm()
   useEffect(() => {
     if (open) {
       if (editingSubItemId) {
@@ -411,27 +415,37 @@ export function ProductSheet({
                   if ('created' in updatedItem) {
                     delete updatedItem.created;
                   }
-                  
+
                   handleItemUpdate(item.id, "fullItem", updatedItem);
                   setProductInput(newProduct.itemNumber);
                   setEditingItemId(null);
                 }
 
-                setNewProduct({
-                  itemNumber: "",
-                  description: "",
-                  uom: "",
-                  quantity: "",
-                  unitPrice: "",
-                  discountType: "dollar",
-                  discount: "",
-                  notes: "",
-                });
-
                 setDigits({
                   unitPrice: "000",
                   discount: "000",
                 });
+
+                const baseItem: QuoteItem = {
+                  id: generateUniqueId(),
+                  itemNumber: "",
+                  description: "",
+                  uom: "",
+                  quantity: 0,
+                  unitPrice: 0,
+                  discountType: "dollar",
+                  discount: 0,
+                  notes: "",
+                  tax: 0,
+                  is_tax_percentage: false,
+                  associatedItems: [],
+                  quote_id: quoteId || null,
+                  created: false,
+
+                };
+
+                setNewProduct(baseItem);
+                setQuoteItems((prev) => ([...prev, baseItem]))
               }}
 
             >

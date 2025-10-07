@@ -231,9 +231,11 @@ export default function QuoteFormProvider({
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(
-    mergedData.items || []
-  );
+
+  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(() => {
+    const items = mergedData.items || [];
+    return [...items, createEmptyQuoteItem()];
+  });
 
   const [adminData, setAdminData] = useState<AdminData | undefined>(
     mergedData.adminData

@@ -1,5 +1,5 @@
 export interface QuoteItem {
-  id: string;
+  id?: string;
   itemNumber: string;
   description: string;
   uom: string;

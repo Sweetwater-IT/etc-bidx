@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
@@ -113,7 +113,7 @@ export function QuoteItems() {
 
     const response = await createQuoteItem(newItem);
     if (response.success) {
-      setQuoteItems((prevItems) => [...prevItems, {...response.item, created: false}]);
+      setQuoteItems((prevItems) => [...prevItems, { ...response.item, created: false }]);
       setEditingItemId(response.item.id);
     }
   };
@@ -227,7 +227,7 @@ export function QuoteItems() {
             type="number"
             min={1}
             max={100}
-            value={quoteMetadata?.tax_rate ?? ""}
+            value={quoteMetadata?.tax_rate ?? "6"}
             onChange={(e) =>
               setQuoteMetadata((prev) => ({
                 ...prev,

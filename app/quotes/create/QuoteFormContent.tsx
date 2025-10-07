@@ -66,7 +66,7 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     aditionalTerms: meta.aditionalTerms,
     pdf_url: meta.pdf_url,
     notes: meta.notes || '',
-    exclusions: meta.exclusions || '',
+    exclusions: meta.exclusions ?? exclusions,
     tax_rate: meta.tax_rate,
     aditionalExclusions: meta.aditionalExclusions,
   };
@@ -871,7 +871,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </div>
                 </div>
                 <Textarea
-                  value={quoteMetadata?.exclusions}
+                  value={quoteMetadata?.exclusions || exclusions}
                   onChange={(e) => setQuoteMetadata((prev: any) => ({
                     ...prev,
                     exclusions: e.target.value
