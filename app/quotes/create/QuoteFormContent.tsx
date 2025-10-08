@@ -194,10 +194,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
 
-
-    console.log(quoteMetadata);
-
-
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
       ...prev,
