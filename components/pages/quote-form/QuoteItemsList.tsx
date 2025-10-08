@@ -31,6 +31,8 @@ const QuoteItemsList = ({
   editingItemId,
   ...rest
 }: QuoteItemsListProps) => {  
+  console.log(quoteItems);
+  
   return (
     <>{quoteItems.map((item,ix) => <QuoteItemRow key={ix} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
   );

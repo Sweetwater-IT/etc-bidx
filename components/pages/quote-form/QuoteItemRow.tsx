@@ -379,10 +379,17 @@ export default function QuoteItemRow({
         <div className="flex items-center justify-start">
           <Checkbox
             className="w-4 h-4 shadow-md"
-            checked={item.is_tax_percentage}
+            checked={!!item.is_tax_percentage}
             onCheckedChange={(checked) => {
-              handleItemUpdate(item.id, "is_tax_percentage", checked);
-              handleItemUpdate(item.id, "tax", checked ? (quoteMetadata?.tax_rate ?? 6) : 0);
+              const isChecked = checked === true;
+
+              const newItem = {
+                ...item,
+                is_tax_percentage: isChecked,
+                tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
+              };
+
+              handleItemUpdate(item.id, "fullItem", newItem);
             }}
           />
         </div>
@@ -414,14 +421,6 @@ export default function QuoteItemRow({
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleAddCompositeItem(item);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sub Item
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
@@ -430,32 +429,6 @@ export default function QuoteItemRow({
           </DropdownMenu>
         </div>
       </div>
-
-      {hasSubItems && (
-        <div className="relative border-b border-border mb-1">
-          <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
-          {item.associatedItems.map((subItem, idx) => (
-            <div key={subItem.id || idx} className="pl-4 relative z-10">
-              {/* Linha horizontal para conectar à vertical */}
-              <div
-                className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
-                style={{ transform: "translateY(-50%)" }}
-              />
-              <SubItemRow
-                item={item}
-                subItem={subItem}
-                handleCompositeItemUpdate={handleCompositeItemUpdate}
-                handleDeleteComposite={handleDeleteComposite}
-                editingSubItemId={editingSubItemId}
-                setEditingSubItemId={setEditingSubItemId}
-                UOM_TYPES={UOM_TYPES}
-                setOpenProductSheet={setOpenProductSheet}
-                handleSubItemProductSelect={handleSubItemProductSelect}
-              />
-            </div>
-          ))}
-        </div>
-      )}
 
       <ProductSheet
         open={openProductSheet}

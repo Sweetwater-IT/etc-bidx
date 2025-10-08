@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -56,6 +57,7 @@ export function QuoteItems() {
   const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
+  const [applyToAll, setApplyToAll] = useState<boolean>(false);
 
   // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
@@ -123,30 +125,37 @@ export function QuoteItems() {
     field: keyof QuoteItem | "fullItem",
     value: any
   ) => {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId
-          ? field === "fullItem"
-            ? value
-            : { ...item, [field]: value }
-          : item
-      )
-    );
+    let updatedItem: QuoteItem | undefined;
 
-    const parsedId = Number(itemId);
+    const updatedItems = quoteItems.map((item) => {
+      if (item.id === itemId) {
+        const newItem = field === "fullItem" ? value : { ...item, [field]: value };
+        updatedItem = newItem as QuoteItem;
+        return newItem;
+      }
+      return item;
+    });
 
-    if (!isNaN(parsedId) && isFinite(parsedId)) {
-      const updatedItem = value as QuoteItem;
+    setQuoteItems(updatedItems);
+
+    const parsedId = Number(updatedItem?.id);
+    if (updatedItem && !isNaN(parsedId) && isFinite(parsedId)) {
       await updateQuoteItem(updatedItem);
     }
 
     setEditingSubItemId(null);
-
   };
 
 
 
   const handleRemoveItem = async (itemId: string) => {
+    const parsedId = Number(itemId);
+
+    if (isNaN(parsedId)) {
+      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+      return;
+    }
+
     const response = await deleteQuoteItem(itemId);
     if (response.success) {
       setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
@@ -227,22 +236,58 @@ export function QuoteItems() {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Quote Items</h2>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
-          <Input
-            type="number"
-            min={1}
-            max={100}
-            value={quoteMetadata?.tax_rate ?? "6"}
-            onChange={(e) =>
-              setQuoteMetadata((prev) => ({
-                ...prev,
-                tax_rate: Number(e.target.value),
-              }))
-            }
-            className="w-16 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <span className="text-sm font-medium">%</span>
+        <div className="flex items-center gap-[50px]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={quoteMetadata?.tax_rate ?? "6"}
+              onChange={(e) =>
+                setQuoteMetadata((prev) => ({
+                  ...prev,
+                  tax_rate: Number(e.target.value),
+                }))
+              }
+              className="w-16 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <span className="text-sm font-medium">%</span>
+
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                className="shadow-sm"
+                id="terms"
+                checked={applyToAll}
+                onCheckedChange={async (checked) => {
+                  const isChecked = !!checked;
+                  setApplyToAll(isChecked);
+
+                  const updatedItems = await Promise.all(
+                    quoteItems.map(async (item) => {
+                      if (!item.id) return item;
+
+                      const updatedItem = {
+                        ...item,
+                        is_tax_percentage: isChecked,
+                        tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
+                      };
+
+                      await updateQuoteItem(updatedItem);
+                      return updatedItem;
+                    })
+                  );
+
+                  setQuoteItems(updatedItems);
+                }}
+              />
+
+
+              <p>Apply to all?</p>
+            </div>
+          </div>
         </div>
 
       </div>
