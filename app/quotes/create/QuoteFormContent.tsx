@@ -465,7 +465,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         customer_name: "",
         customer: null,
         customer_contact: "",
-        customer_email: "juancho",
+        customer_email: "",
         customer_phone: "",
         customer_address: "",
         customer_job_number: "",
@@ -897,8 +897,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           )
         }
 
-        <div className="w-1/2 space-y-6 overflow-y-auto ">
-          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky">
+        <div className="w-1/2 overflow-y-auto ">
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky ">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
