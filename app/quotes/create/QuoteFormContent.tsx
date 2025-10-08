@@ -731,14 +731,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
       />
 
-      <div className="flex gap-6 p-6 pt-0 pr-0 max-w-full h-[calc(100vh-80px)] overflow-hidden">
+      <div className="flex gap-4 p-6 pt-0 pr-0 max-w-full h-[calc(100vh-80px)] overflow-hidden">
         {
           loadingMetadata ? (
             <div className=' w-1/2 h-full flex flex-row items-center justify-center'>
               <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
             </div>
           ) : (
-            <div className="flex w-1/2 flex-col overflow-y-auto pr-2">
+            <div className="flex w-1/2 flex-col overflow-y-auto">
               <div className="flex flex-row gap-4 mb-4 w-full">
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>
@@ -897,7 +897,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           )
         }
 
-        <div className="w-1/2 space-y-6 overflow-y-auto pl-2">
+        <div className="w-1/2 space-y-6 overflow-y-auto ">
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
