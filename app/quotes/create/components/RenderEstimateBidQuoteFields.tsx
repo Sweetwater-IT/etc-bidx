@@ -125,6 +125,19 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         importItems();
     }, [quoteId]);
 
+    useEffect(() => {
+        if (!data.start_date || !data.end_date) return;
+
+        const start = new Date(data.start_date);
+        const end = new Date(data.end_date);
+
+        const duration = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+        setData(prev => ({
+            ...prev,
+            duration,
+        }));
+    }, [data.start_date, data.end_date, setData]);
 
     const renderField = (
         field: keyof EstimateBidQuote,
@@ -144,7 +157,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                 />
             ) : (
                 <p className="text-sm text-gray-700">
-                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : "-"}
+                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : ( type === 'number'? 0 : "-")}
                 </p>
             )}
         </div>

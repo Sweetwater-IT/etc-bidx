@@ -67,6 +67,20 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
         }));
     }, [selectedJob, setData]);
 
+    useEffect(() => {
+        if (!data.start_date || !data.end_date) return;
+
+        const start = new Date(data.start_date);
+        const end = new Date(data.end_date);
+
+        const duration = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+        setData(prev => ({
+            ...prev,
+            duration,
+        }));
+    }, [data.start_date, data.end_date, setData]);
+
     const renderField = (
         field: keyof ToProjectQuote,
         label: string,
@@ -84,10 +98,13 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
                     disabled={disabled}
                 />
             ) : (
-                <p className="text-sm text-gray-700">{data[field] ? String(data[field]) : "-"}</p>
+                <p className="text-sm text-gray-700">
+                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : ( type === 'number'? 0 : "-")}
+                </p>
             )}
         </div>
     );
+
 
     return (
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
