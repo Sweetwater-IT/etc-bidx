@@ -195,6 +195,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [files, setFiles] = useState<any>([])
 
 
+    console.log(quoteMetadata);
+
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -385,10 +387,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       !isEqual(notes, prevStateRef.current.notes) ||
       !isEqual(quoteMetadata, prevStateRef.current.quoteData) ||
       !isEqual(
-        [quoteMetadata?.selectedfilesids, quoteMetadata?.aditionalFiles, quoteMetadata?.aditionalTerms],
+        [quoteMetadata?.selectedfilesids, quoteMetadata?.aditionalFiles, quoteMetadata?.aditionalTerms, quoteMetadata?.aditionalExclusions],
         [prevStateRef.current.quoteData?.selectedfilesids,
         prevStateRef.current.quoteData?.aditionalFiles,
-        prevStateRef.current.quoteData?.aditionalTerms]
+        prevStateRef.current.quoteData?.aditionalTerms,
+        prevStateRef.current.quoteData?.aditionalExclusions, ]
       );
 
     if (!hasChanges) return;

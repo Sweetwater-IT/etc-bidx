@@ -56,7 +56,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }:
         quoteType={quoteType}
         quoteData={quoteMetadata}
         termsAndConditions={termsAndConditions}
-        allowExclusions={quoteMetadata?.aditionalExclusions}
+        allowExclusions={quoteMetadata?.aditionalExclusions || false}
       />
     );
   }, [
@@ -73,7 +73,8 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }:
     stateRoute,
     ecmsPoNumber,
     quoteType,
-    termsAndConditions
+    termsAndConditions,
+    quoteMetadata?.aditionalExclusions
   ]);
 
   return (

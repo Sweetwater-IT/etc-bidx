@@ -121,7 +121,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   quoteData,
   termsAndConditions,
   exclusions,
-  allowExclusions
+  allowExclusions = false
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
