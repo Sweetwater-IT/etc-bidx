@@ -154,11 +154,11 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
-                    {renderField("customer_name", "Customer", 'text', true)}
-                    {renderField("customer_contact", "Customer Point Of Contact", 'text', true)}
-                    {renderField("customer_phone", "Customer Phone", 'text', true)}
-                    {renderField("customer_email", "Customer Email", 'text', true)}
-                    {renderField("customer_address", "Customer Address", 'text', true)}
+                    {renderField("customer_name", "Customer", 'text', false)}
+                    {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
+                    {renderField("customer_phone", "Customer Phone", 'text', false)}
+                    {renderField("customer_email", "Customer Email", 'text', false)}
+                    {renderField("customer_address", "Customer Address", 'text', false)}
                 </div>
             </SectionBox>
 
