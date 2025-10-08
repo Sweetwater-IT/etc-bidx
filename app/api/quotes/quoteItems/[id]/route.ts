@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, context: { params: any }) {
         is_tax_percentage,
         notes,
         associatedItems = [],
+        quote_id
     } = body;
 
     const { data: mainItem, error: mainError } = await supabase
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest, context: { params: any }) {
             tax: tax ?? 0,
             is_tax_percentage: is_tax_percentage ?? false,
             notes,
+            quote_id:quote_id
         })
         .eq("id", itemId)
         .select()

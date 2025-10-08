@@ -118,26 +118,32 @@ export function QuoteItems() {
     }
   };
 
-  const handleItemUpdate = async (itemId: string, field: keyof QuoteItem | "fullItem", value: any) => {
-    let updatedItem: QuoteItem | null = null;
-
+  const handleItemUpdate = async (
+    itemId: string | number,
+    field: keyof QuoteItem | "fullItem",
+    value: any
+  ) => {
     setQuoteItems((prevItems) =>
-      prevItems.map((item) => {
-        if (item.id === itemId) {
-          const newItem = field === "fullItem" ? value : { ...item, [field]: value };
-          updatedItem = newItem;
-          return newItem;
-        }
-        return item;
-      })
+      prevItems.map((item) =>
+        item.id === itemId
+          ? field === "fullItem"
+            ? value
+            : { ...item, [field]: value }
+          : item
+      )
     );
 
-    if (updatedItem) {
+    const parsedId = Number(itemId);
+
+    if (!isNaN(parsedId) && isFinite(parsedId)) {
+      const updatedItem = value as QuoteItem;
       await updateQuoteItem(updatedItem);
     }
 
     setEditingSubItemId(null);
+
   };
+
 
 
   const handleRemoveItem = async (itemId: string) => {

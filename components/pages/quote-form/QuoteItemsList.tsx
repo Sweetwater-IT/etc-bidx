@@ -30,9 +30,9 @@ const QuoteItemsList = ({
   quoteItems,
   editingItemId,
   ...rest
-}: QuoteItemsListProps) => {
+}: QuoteItemsListProps) => {  
   return (
-    <>{quoteItems.map((item) => <QuoteItemRow key={item.id} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
+    <>{quoteItems.map((item,ix) => <QuoteItemRow key={ix} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
   );
 };
 

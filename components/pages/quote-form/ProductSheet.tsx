@@ -23,6 +23,17 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 
+async function createQuoteItem(item: QuoteItem) {
+  console.log('recibo', item);
+
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
+
 export function ProductSheet({
   open,
   onOpenChange,
@@ -367,9 +378,9 @@ export function ProductSheet({
             <Button
               type="button"
               className=" text-white py-2 flex-1 text-sm  transition rounded-md"
-              onClick={() => {
+              onClick={async () => {
                 onOpenChange(false);
-
+                let needAddItem = true;
                 if (editingSubItemId) {
                   const subItemData = {
                     id: editingSubItemId,
@@ -410,13 +421,30 @@ export function ProductSheet({
                     is_tax_percentage: newProduct.is_tax_percentage,
                     isCustom: true,
                     notes: newProduct.notes,
+                    quote_id: quoteId || null,
+
                   };
 
                   if ('created' in updatedItem) {
                     delete updatedItem.created;
                   }
 
-                  handleItemUpdate(item.id, "fullItem", updatedItem);
+                  if (updatedItem?.id && !isNaN(parseInt(updatedItem.id))) {
+                    handleItemUpdate(item.id, "fullItem", updatedItem);
+                    needAddItem = false;
+                  } else {
+                    const { success, item: createdItem } = await createQuoteItem(updatedItem);
+                    if (success) {
+                      setQuoteItems((prev) => prev.map((item) => {
+                        if (item.id === updatedItem.id) {
+                          return createdItem
+                        } else {
+                          return item
+                        }
+                      }));
+                    }
+                  }
+
                   setProductInput(newProduct.itemNumber);
                   setEditingItemId(null);
                 }
@@ -426,26 +454,27 @@ export function ProductSheet({
                   discount: "000",
                 });
 
-                const baseItem: QuoteItem = {
-                  id: generateUniqueId(),
-                  itemNumber: "",
-                  description: "",
-                  uom: "",
-                  quantity: 0,
-                  unitPrice: 0,
-                  discountType: "dollar",
-                  discount: 0,
-                  notes: "",
-                  tax: 0,
-                  is_tax_percentage: false,
-                  associatedItems: [],
-                  quote_id: quoteId || null,
-                  created: false,
+                if (needAddItem) {
+                  const baseItem: QuoteItem = {
+                    itemNumber: "",
+                    description: "",
+                    uom: "",
+                    quantity: 0,
+                    unitPrice: 0,
+                    discountType: "dollar",
+                    discount: 0,
+                    notes: "",
+                    tax: 0,
+                    is_tax_percentage: false,
+                    associatedItems: [],
+                    quote_id: quoteId || null,
+                    created: false,
 
-                };
+                  };
 
-                setNewProduct(baseItem);
-                setQuoteItems((prev) => ([...prev, baseItem]))
+                  setNewProduct(baseItem);
+                  setQuoteItems((prev) => ([...prev, baseItem]))
+                }
               }}
 
             >

@@ -387,7 +387,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         [prevStateRef.current.quoteData?.selectedfilesids,
         prevStateRef.current.quoteData?.aditionalFiles,
         prevStateRef.current.quoteData?.aditionalTerms,
-        prevStateRef.current.quoteData?.aditionalExclusions, ]
+        prevStateRef.current.quoteData?.aditionalExclusions,]
       );
 
     if (!hasChanges) return;
@@ -708,7 +708,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
             <div className="flex items-center gap-2">
               <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
-              <Button disabled={downloading} variant="outline" onClick={handleDownload}>
+              <Button disabled={downloading || !quoteId} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
                 ) : (

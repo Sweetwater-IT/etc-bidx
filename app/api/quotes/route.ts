@@ -325,16 +325,25 @@ export async function POST(request: NextRequest) {
       await supabase.from("quote_recipients").insert(recipientsToInsert);
     }
 
-    // Asociar items
     if (Array.isArray(items) && items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from("quote_items")
-        .update({ quote_id: quoteId })
-        .in("id", items.map((i: any) => i.id));
+      const validItems = items.filter((i: any) => {
+        const parsedId = Number(i.id);
+        return !isNaN(parsedId) && isFinite(parsedId);
+      });
+      
+      if (validItems.length > 0) {
+        const { error: itemsError } = await supabase
+          .from("quote_items")
+          .update({ quote_id: quoteId })
+          .in("id", validItems.map((i: any) => i.id));
 
-      if (itemsError) {
-        console.error("Error linking items:", itemsError);
-        return NextResponse.json({ success: false, message: "Failed to link items", error: itemsError.message }, { status: 500 });
+        if (itemsError) {
+          console.error("Error linking items:", itemsError);
+          return NextResponse.json(
+            { success: false, message: "Failed to link items", error: itemsError.message },
+            { status: 500 }
+          );
+        }
       }
     }
 
