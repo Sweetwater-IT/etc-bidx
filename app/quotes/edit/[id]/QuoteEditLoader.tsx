@@ -80,8 +80,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           start_date: data.start_date,
           end_date: data.end_date,
           duration: data.duration,
-          description: data.description,
-          project_title: data.project_title,
           job_number: data.job_number,
           customer_name: data.customer_name,
           customer_email: data.customer_email,

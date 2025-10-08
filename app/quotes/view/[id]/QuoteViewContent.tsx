@@ -79,8 +79,6 @@ export interface Quote {
   start_date?: string;
   end_date?: string | null;
   duration?: number;
-  description?: string;
-  project_title?: string;
   pdf_url: string;
   digital_signature: string;
   comments: string;
@@ -424,10 +422,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                         {quote.type_quote === "to_project" && (
                           <>
                             <div>
-                              <div className="text-sm text-muted-foreground">Project Title</div>
-                              <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                            </div>
-                            <div>
                               <div className="text-sm text-muted-foreground">Bid Date</div>
                               <div className="text-base mt-1">{quote.bid_date || "-"}</div>
                             </div>
@@ -452,10 +446,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
                         {quote.type_quote === "estimate_bid" && (
                           <>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Project Title</div>
-                              <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                            </div>
                             <div>
                               <div className="text-sm text-muted-foreground">Bid Date</div>
                               <div className="text-base mt-1">{quote.bid_date || "-"}</div>

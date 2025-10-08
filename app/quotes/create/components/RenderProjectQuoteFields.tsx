@@ -150,8 +150,6 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
                     {renderField("start_date", "Start Date", "date")}
                     {renderField("end_date", "End Date", "date")}
                     {renderField("duration", "Duration (days)", "number", true)}
-                    {renderField("project_title", "Project Title")}
-                    {renderField("description", "Description")}
                 </div>
             </SectionBox>
 

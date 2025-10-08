@@ -54,8 +54,6 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     type_quote: meta.type_quote,
     status: meta.status,
     date_sent: meta.date_sent,
-    project_title: meta.project_title,
-    description: meta.description,
     estimate_id: meta.estimate_id,
     job_id: meta.job_id,
     county: meta.county,
@@ -450,8 +448,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         customer_address: "",
         customer_job_number: "",
         purchase_order: "",
-        project_title: "",
-        description: "",
         ...defaultValues,
       };
     }
@@ -478,8 +474,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         start_date: today,
         end_date: today,
         duration: 0,
-        project_title: "",
-        description: "",
         ...defaultValues,
       };
     }
@@ -505,8 +499,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         start_date: today,
         end_date: today,
         duration: 0,
-        project_title: "",
-        description: "",
         ...defaultValues,
       };
     }

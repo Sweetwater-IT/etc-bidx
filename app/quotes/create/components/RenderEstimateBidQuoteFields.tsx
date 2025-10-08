@@ -71,8 +71,6 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
             start_date: start ? start.toISOString().slice(0, 10) : "",
             end_date: end ? end.toISOString().slice(0, 10) : "",
             duration,
-            project_title: "",
-            description: "",
             estimate_id: selectedBid?.id,
         }));
     }, [selectedBid, setData]);

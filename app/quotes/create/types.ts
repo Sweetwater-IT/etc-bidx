@@ -35,8 +35,6 @@ export interface Quote {
     estimate_id?: number | null;
     job_id?: number | null;
     created_at?: any
-    project_title?: string;
-    description?: string;
     selectedfilesids: any[];
     aditionalFiles: boolean;
     aditionalTerms: boolean;
