@@ -6,6 +6,7 @@ import React, { useEffect } from "react";
 import RenderEtcSection from "./RenderEtcSection";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { useQuoteForm } from "../QuoteFormProvider";
+import CustomerSelect from "./CustomerSelector";
 
 interface IRenderEstimateBidQuoteFields {
     data: Partial<EstimateBidQuote>;
@@ -157,7 +158,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                 />
             ) : (
                 <p className="text-sm text-gray-700">
-                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : ( type === 'number'? 0 : "-")}
+                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : (type === 'number' ? 0 : "-")}
                 </p>
             )}
         </div>
@@ -167,11 +168,24 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
             <SectionBox title="Customer & Contact Information">
                 <div className="grid grid-cols-1 gap-2">
-                    {renderField("customer_name", "Customer", 'text', false)}
-                    {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
-                    {renderField("customer_phone", "Customer Phone", 'text', false)}
-                    {renderField("customer_email", "Customer Email", 'text', false)}
-                    {renderField("customer_address", "Customer Address", 'text', false)}
+                    {
+                        editAll ?
+                            <CustomerSelect
+                                data={data as any}
+                                setData={setData}
+                                direction="column"
+                                columnCustomerTitle={"Customer"}
+                                columnContactTitle={"Customer Point Of Contact"}
+                            />
+                            :
+                            <div className="grid grid-cols-1 gap-2">
+                                {renderField("customer_name", "Customer", "text", false)}
+                                {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
+                            </div>
+                    }
+                    {renderField("customer_phone", "Customer Phone", 'text', true)}
+                    {renderField("customer_email", "Customer Email", 'text', true)}
+                    {renderField("customer_address", "Customer Address", 'text', true)}
                 </div>
             </SectionBox>
 

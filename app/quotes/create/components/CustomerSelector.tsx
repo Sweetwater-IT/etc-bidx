@@ -9,7 +9,7 @@ import CreateModal from './CreateModal'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { Loader } from 'lucide-react'
 
-const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<any> }) => {
+const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle ,columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
     const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, refreshCustomers, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
@@ -112,10 +112,11 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
 
     return (
         <div className="w-full">
-            <p className="font-semibold mb-1">Customer Selection</p>
-            <div className="flex flex-row justify-between gap-4 mb-4 flex-1">
-
-                <div className="w-1/2">
+            <div
+                className={`flex ${direction === "row" ? "flex-row" : "flex-col"} justify-between gap-4 mb-4 flex-1`}
+            >
+                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"}  flex flex-col`}>
+                    <label className="font-semibold block mb-1">{columnCustomerTitle || "Customer Selection"}</label>
                     <Select
                         onValueChange={val => {
                             if (val === "__new__") return openModal("customer");
@@ -159,7 +160,8 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
                     </Select>
                 </div>
 
-                <div className="w-1/2">
+                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"} flex flex-col`}>
+                    <label className="font-semibold block mb-1">{columnContactTitle || "Contact Selection"}</label>
                     <Select
                         onValueChange={val => {
                             if (val === "__new__") return openModal("contact");
@@ -215,6 +217,7 @@ const CustomerSelect = ({ data, setData }: { data: any, setData: React.Dispatch<
                         </SelectContent>
                     </Select>
                 </div>
+
             </div>
 
             <CreateModal
