@@ -15,7 +15,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 
-export const QuotePreviewButton = () => {
+export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }: { quoteType: any, termsAndConditions: boolean, exclusion: string; }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -31,20 +31,19 @@ export const QuotePreviewButton = () => {
     stateRoute,
     ecmsPoNumber,
     pointOfContact,
-    notes,
     quoteMetadata,
-    quoteType
   } = useQuoteForm();
 
 
   const pdfDocument = useMemo(() => {
     return (
       <BidProposalReactPDF
-        notes={notes}
+        notes={quoteMetadata?.notes}
+        exclusions={exclusion}
         adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
         customers={selectedCustomers}
-        quoteDate={quoteDate ? new Date(quoteDate) : new Date()}
+        quoteDate={new Date()}
         quoteNumber={quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A"}
         sender={sender}
         pointOfContact={pointOfContact ?? { name: "", email: "" }}
@@ -56,6 +55,8 @@ export const QuotePreviewButton = () => {
         ecms={ecmsPoNumber}
         quoteType={quoteType}
         quoteData={quoteMetadata}
+        termsAndConditions={termsAndConditions}
+        allowExclusions={quoteMetadata?.aditionalExclusions || false}
       />
     );
   }, [
@@ -71,6 +72,9 @@ export const QuotePreviewButton = () => {
     customTerms,
     stateRoute,
     ecmsPoNumber,
+    quoteType,
+    termsAndConditions,
+    quoteMetadata?.aditionalExclusions
   ]);
 
   return (

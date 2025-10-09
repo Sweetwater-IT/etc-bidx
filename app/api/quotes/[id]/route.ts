@@ -7,6 +7,10 @@ export async function GET(
   context: { params: any }
 ) {
   const resolvedParams = await context.params
+
+
+  console.log('en los params recibo : ', resolvedParams);
+
   const quoteId = Number(resolvedParams.id);
 
   if (isNaN(quoteId)) {
@@ -19,7 +23,8 @@ export async function GET(
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select(`
-      *
+      *,
+      notes(*)
     `)
     .eq("id", quoteId)
     .single();
@@ -36,7 +41,7 @@ export async function GET(
   // 2️⃣ Items
   const { data: items } = await supabase
     .from("quote_items")
-    .select("id, description, quantity, unit_price")
+    .select("id, description, quantity, unit_price, confirmed, uom, tax, is_tax_percentage")
     .eq("quote_id", quoteId);
 
   // 3️⃣ Customer
@@ -123,7 +128,8 @@ export async function GET(
   }
   const files: any[] = [];
 
-  const { data: allNotes } = await supabase.from('notes').select('*').eq('quote_id', quote.id)
+
+
 
   const response = {
     id: quote.id,
@@ -143,11 +149,18 @@ export async function GET(
       description: i.description,
       quantity: i.quantity,
       unitPrice: i.unit_price,
+      confirmed: i.confirmed,
+      uom: i.uom,
+      tax: i.tax,
+      is_tax_percentage: i.is_tax_percentage
     })),
     admin_data: adminData || null,
     files,
-    notes: allNotes,
     ...quote,
+    notes: quote?.notes?.map(note => ({
+      ...note,
+      timestamp: new Date(note.created_at).getTime(),
+    }))
   };
 
   console.log("✅ [GET /quotes/:id] Final response3", response);

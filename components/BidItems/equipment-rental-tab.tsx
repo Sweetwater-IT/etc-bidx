@@ -35,6 +35,7 @@ import { fetchReferenceData } from '@/lib/api-client';
 import EmptyContainer from './empty-container';
 import { DataTable } from '@/components/data-table';
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
+import { Textarea } from '../ui/textarea';
 
 interface StaticPriceData {
   usefulLife: number;
@@ -78,7 +79,7 @@ const EquipmentSummaryStep = () => {
     setItemPrices();
 
     return () => { isMounted = false; };
-  }, []); 
+  }, []);
 
   const handleAddEquipment = () => {
     setFormData({
@@ -92,6 +93,7 @@ const EquipmentSummaryStep = () => {
       reRentForCurrentJob: false,
       totalCost: 0,
       usefulLifeYrs: 0,
+      notes: ''
     });
     setIsCustom(false);
     setEditingIndex(null);
@@ -111,7 +113,7 @@ const EquipmentSummaryStep = () => {
   const handleFormUpdate = (updates: Partial<EquipmentRentalItem>) => {
     if (formData) {
       const updatedFormData = { ...formData, ...updates };
-      setFormData(updatedFormData); 
+      setFormData(updatedFormData);
     }
   };
 
@@ -168,7 +170,7 @@ const EquipmentSummaryStep = () => {
 
   const confirmDelete = async () => {
     if (itemToDelete) {
-      handleEquipmentDelete(itemToDelete.index); 
+      handleEquipmentDelete(itemToDelete.index);
 
     }
     setDeleteDialogOpen(false);
@@ -269,7 +271,7 @@ const EquipmentSummaryStep = () => {
         }}
         onConfirm={confirmDelete}
         itemCount={1}
-        itemType="equipment" 
+        itemType="equipment"
       />
 
       <Drawer open={drawerOpen} direction='right' onOpenChange={setDrawerOpen}>
@@ -381,7 +383,7 @@ const EquipmentSummaryStep = () => {
                     onChange={e =>
                       handleFormUpdate({
                         quantity:
-                        parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0
                       })
                     }
                     min={0}
@@ -415,7 +417,7 @@ const EquipmentSummaryStep = () => {
                     onChange={e =>
                       handleFormUpdate({
                         rentPrice:
-                        parseFloat(e.target.value) || 0
+                          parseFloat(e.target.value) || 0
                       })
                     }
                     min={0}
@@ -433,7 +435,7 @@ const EquipmentSummaryStep = () => {
                       onChange={e =>
                         handleFormUpdate({
                           reRentPrice:
-                          parseFloat(e.target.value) || 0
+                            parseFloat(e.target.value) || 0
                         })
                       }
                       min={0}
@@ -475,7 +477,7 @@ const EquipmentSummaryStep = () => {
                       onChange={e =>
                         handleFormUpdate({
                           totalCost:
-                          parseFloat(e.target.value) || 0
+                            parseFloat(e.target.value) || 0
                         })
                       }
                       min={0}
@@ -493,7 +495,7 @@ const EquipmentSummaryStep = () => {
                       onChange={e =>
                         handleFormUpdate({
                           usefulLifeYrs:
-                          parseInt(e.target.value) || 0
+                            parseInt(e.target.value) || 0
                         })
                       }
                       min={0}
@@ -502,6 +504,16 @@ const EquipmentSummaryStep = () => {
                   </div>
                 </div>
               )}
+
+              <div className="w-full">
+                <Label className="text-sm font-medium mb-2 block">Notes</Label>
+                <Textarea
+                  value={formData.notes || ""}
+                  onChange={(e) => handleFormUpdate({notes: e.target.value})}
+                  placeholder="Add any notes related to this sale item..."
+                  className="w-full h-24 p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
             </div>
           )}
 

@@ -5,7 +5,7 @@ import { FileUploadResult } from '@/types/FileTypes';
 // Map folder names to database column names
 const FOLDER_TO_COLUMN_MAP = {
   'jobs': 'job_id',
-  'bid_estimates': 'bid_estimate_id', 
+  'bid_estimates': 'bid_estimate_id',
   'quotes': 'quote_id'
 } as const;
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const folder = searchParams.get('folder') as FolderType;
     const id = searchParams.get('id');
-    
+
     if (!id || !folder) {
       return NextResponse.json(
         { error: 'Id or folder parameter not present' },
@@ -43,23 +43,23 @@ export async function GET(req: NextRequest) {
 
     // Get the corresponding database column
     const columnName = FOLDER_TO_COLUMN_MAP[folder];
-    
-    // Query the database for file metadata (no binary data needed anymore)
+
     const { data, error } = await supabase
       .from('files')
       .select(`
-        id,
-        filename,
-        file_type,
-        upload_date,
-        file_size,
-        file_path,
-        file_url,
-        ${columnName}
-      `)
+    id,
+    filename,
+    file_type,
+    upload_date,
+    file_size,
+    file_path,
+    file_url,
+    ${columnName}
+  `)
       .eq(columnName, parsedId)
+      .not('file_path', 'like', `%/pdf/%`)
       .order('upload_date', { ascending: false });
-    
+
     if (error) {
       console.error('Error fetching files:', error);
       return NextResponse.json(
@@ -67,12 +67,12 @@ export async function GET(req: NextRequest) {
         { status: 500 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       data: data || []
     });
-    
+
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const uniqueIdentifier = formData.get('uniqueIdentifier') as string;
     const folder = formData.get('folder') as string;
-    
+
     // Validate identifier
     if (!uniqueIdentifier) {
       return NextResponse.json(
@@ -96,13 +96,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Handle both single file and multiple files
     let filesArray: File[] = [];
-    
+
     // Check if it's a single file or multiple files
     const filesOrFile = formData.getAll('file');
-    
+
     if (filesOrFile.length > 0) {
       // Convert all items to File objects
       filesArray = filesOrFile.filter(item => item instanceof File) as File[];
@@ -113,26 +113,27 @@ export async function POST(req: NextRequest) {
         filesArray = [singleFile];
       }
     }
-    
+
     if (filesArray.length === 0) {
       return NextResponse.json(
         { error: 'No files found in the request' },
         { status: 400 }
       );
     }
-    
+
     // Initialize the results array
     const results: FileUploadResult[] = [];
-    
+
     for (const file of filesArray) {
       const filename = file.name;
       const contentType = file.type || 'application/pdf';
-      
+
       // Create a unique file path to avoid naming conflicts
       const timestamp = Date.now();
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+
       const storagePath = `${folder}/${uniqueIdentifier}/${timestamp}_${sanitizedFilename}`;
-      
       try {
         // Upload file to Supabase Storage
         const { data: storageData, error: storageError } = await supabase.storage
@@ -172,15 +173,15 @@ export async function POST(req: NextRequest) {
           })
           .select('id, filename, file_type, upload_date, file_size, file_url')
           .single();
-        
+
         if (dbError) {
           console.error(`Database error for ${filename}:`, dbError);
-          
+
           // Clean up: delete the uploaded file from storage if DB insert failed
           await supabase.storage
             .from('files')
             .remove([storagePath]);
-          
+
           results.push({
             filename,
             success: false,
@@ -190,7 +191,7 @@ export async function POST(req: NextRequest) {
           results.push({
             success: true,
             fileId: dbData.id,
-            fileUrl: dbData.file_url, // Include the public URL in response
+            fileUrl: dbData.file_url,
             ...dbData
           });
         }
@@ -203,25 +204,25 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    
+
     // Check if all uploads failed
     const allFailed = results.every(result => !result.success);
     if (allFailed) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: 'All file uploads failed',
-          results 
+          results
         },
         { status: 500 }
       );
     }
-    
+
     // Some or all uploads succeeded
     const successCount = results.filter(r => r.success).length;
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         message: `Successfully uploaded ${successCount} of ${results.length} files`,
         results
       },
@@ -242,7 +243,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const fileId = searchParams.get('fileId');
-    
+
     if (!fileId) {
       return NextResponse.json(
         { error: 'File ID is required' },

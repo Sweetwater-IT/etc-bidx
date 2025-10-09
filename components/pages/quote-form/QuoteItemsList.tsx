@@ -1,7 +1,6 @@
 import QuoteItemRow from "./QuoteItemRow";
 import { QuoteItem, AssociatedItem } from "@/types/IQuoteItem";
 
-// Define los props basándose en lo que se pasa desde QuoteItems.tsx
 interface QuoteItemsListProps {
   quoteItems: QuoteItem[];
   editingItemId: string | null;
@@ -31,9 +30,11 @@ const QuoteItemsList = ({
   quoteItems,
   editingItemId,
   ...rest
-}: QuoteItemsListProps) => {
+}: QuoteItemsListProps) => {  
+  console.log(quoteItems);
+  
   return (
-    <>{quoteItems.map((item) => <QuoteItemRow key={item.id} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
+    <>{quoteItems.map((item,ix) => <QuoteItemRow key={ix} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
   );
 };
 

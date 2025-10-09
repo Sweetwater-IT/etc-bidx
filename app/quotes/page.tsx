@@ -112,21 +112,6 @@ export default function QuotesPage() {
       toast.error("Unexpected error deleting quote");
     }
   };
-
-  const handleDeleteMultiple = async (quotesToDelete: QuoteGridView[]) => {
-    try {
-      for (const q of quotesToDelete) {
-        await fetch(`/api/quotes/delete/${q.id}`, { method: "DELETE" });
-      }
-      toast.success(`${quotesToDelete.length} quotes deleted`);
-      fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-      fetchQuoteCounts();
-    } catch (err) {
-      console.error("Error deleting quotes:", err);
-      toast.error("Unexpected error deleting quotes");
-    }
-  };
-
   
   const handleSegmentChange = (value: string) => {
     setActiveSegment(value);

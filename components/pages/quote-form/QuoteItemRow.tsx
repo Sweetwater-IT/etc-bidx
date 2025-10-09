@@ -1,11 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -19,6 +19,9 @@ import { useProductsSearch } from "@/hooks/useProductsSearch";
 import { SubItemRow } from "./SubItemRow";
 import { createPortal } from "react-dom";
 import { ProductSheet } from "./ProductSheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 export default function QuoteItemRow({
   item,
@@ -51,6 +54,7 @@ export default function QuoteItemRow({
     left: 0,
     width: 0,
   });
+  const { quoteMetadata } = useQuoteForm()
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { products, loading } = useProductsSearch(productInput);
@@ -64,6 +68,8 @@ export default function QuoteItemRow({
     discountType: "dollar",
     discount: "",
     notes: "",
+    tax: "",
+    is_tax_percentage: false,
   });
 
   const [digits, setDigits] = useState({
@@ -75,15 +81,6 @@ export default function QuoteItemRow({
       : "000",
   });
 
-  const [subItemDropdown, setSubItemDropdown] = useState({});
-  const [subItemInput, setSubItemInput] = useState({});
-
-  const [isCustomLocal, setIsCustomLocal] = useState(!!item.isCustom);
-  useEffect(() => {
-    setIsCustomLocal(!!item.isCustom);
-  }, [item.isCustom]);
-
-  // Sincroniza el estado local del input cuando el item prop cambia desde el padre
   useEffect(() => {
     setProductInput(item.itemNumber || "");
   }, [item.itemNumber]);
@@ -153,10 +150,6 @@ export default function QuoteItemRow({
   }
 
   useEffect(() => {
-    console.log("openProductSheet", openProductSheet);
-  }, [openProductSheet]);
-
-  useEffect(() => {
     if (openProductSheet && editingSubItemId) {
       const subItem = item.associatedItems?.find(
         (s) => s.id === editingSubItemId
@@ -171,6 +164,8 @@ export default function QuoteItemRow({
           discountType: subItem.discountType || "dollar",
           discount: subItem.discount || "",
           notes: subItem.notes || "",
+          tax: "",
+          is_tax_percentage: false,
         });
         setDigits({
           unitPrice: subItem.unitPrice
@@ -185,12 +180,20 @@ export default function QuoteItemRow({
   }, [openProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
+
     setProductInput(product.item_number);
     setShowDropdown(false);
 
-    handleItemUpdate(item.id, "itemNumber", product.item_number);
-    handleItemUpdate(item.id, "description", product.description);
-    handleItemUpdate(item.id, "uom", product.uom);
+    handleItemUpdate(item.id, "fullItem", {
+      ...item,
+      itemNumber: product.item_number,
+      description: product.description,
+      uom: product.uom,
+    });
+
+    setOpenProductSheet(true);
+    setEditingItemId(item.id);
+    setEditingSubItemId(null);
   };
 
   const handleSubItemProductSelect = (product: any, subItemId: string) => {
@@ -212,11 +215,10 @@ export default function QuoteItemRow({
   return (
     <>
       <div
-        className={`grid items-center mb-1 gap-2 ${
-          !hasSubItems ? "border-b border-border pb-1" : ""
-        }`}
+        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
+          }`}
         style={{
-          gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
+          gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px",
         }}
       >
         {/* Produto: input sempre disponível */}
@@ -240,19 +242,18 @@ export default function QuoteItemRow({
             </>
           ) : (
             <Input
-            ref={inputRef}
-            className={`w-full h-9 text-base text-foreground bg-transparent ${
-              item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
-            }`}
-            placeholder="Search or add a product..."
-            value={productInput}
-            onChange={(e) => {
-              const value = e.target.value;
-              setProductInput(value);
-              setShowDropdown(true);
-            }}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+              ref={inputRef}
+              className={`w-full h-9 text-base text-foreground bg-transparent ${item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
+                }`}
+              placeholder="Search or add a product..."
+              value={productInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                setProductInput(value);
+                setShowDropdown(true);
+              }}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={!!item.itemNumber}
             />
           )}
@@ -298,62 +299,60 @@ export default function QuoteItemRow({
             )}
         </div>
         {/* Descrição */}
-        <div className="text-foreground w-full truncate ml-2 text-base pr-2">
+        <div className="text-foreground w-full text-center text-base">
           {item.description ? (
             item.description
           ) : (
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="text-foreground text-base">
+        <div className="text-foreground text-base text-center">
           {item.uom ? item.uom : <span className="opacity-50">—</span>}
         </div>
         {/* Qty: stepper com input */}
-        <div className="flex items-center justify-start gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="w-7 h-7 flex items-center justify-center border rounded bg-muted hover:bg-accent "
-            onClick={() =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Math.max(0, Number(item.quantity || 0) - 1)
-              )
-            }
-            tabIndex={-1}
-          >
-            -
-          </Button>
-          <Input
-            min={0}
-            value={item.quantity || 0}
-            onChange={(e) =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Math.max(0, Number(e.target.value))
-              )
-            }
-            className="no-spinner w-16 h-6 px-2 py-1 border rounded text-center bg-background !border-none shadow-none"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="w-7 h-7 flex items-center justify-center border rounded bg-muted  hover:bg-accent "
-            onClick={() =>
-              handleItemUpdate(
-                item.id,
-                "quantity",
-                Number(item.quantity || 0) + 1
-              )
-            }
-            tabIndex={-1}
-          >
-            +
-          </Button>
+        <div className="flex flex-row  justify-center items-center">
+          <ButtonGroup className="items-center flex flex-row justify-center">
+            {/* <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
+              onClick={() =>
+                handleItemUpdate(
+                  item.id,
+                  "quantity",
+                  Math.max(0, Number(item.quantity || 0) - 1)
+                )
+              }
+              tabIndex={-1}
+            >
+              -
+            </Button> */}
+            <Input
+              min={0}
+              value={item.quantity || 0}
+              onChange={(e) =>
+                handleItemUpdate(
+                  item.id,
+                  "quantity",
+                  Math.max(0, Number(e.target.value))
+                )
+              }
+              className="no-spinner w-14 h-7 text-center rounded-none border-x-0 bg-background focus-visible:ring-0"
+            />
+            {/* <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="w-5 h-5 flex items-center justify-center bg-muted hover:bg-accent"
+              onClick={() =>
+                handleItemUpdate(item.id, "quantity", Number(item.quantity || 0) + 1)
+              }
+              tabIndex={-1}
+            >
+              +
+            </Button> */}
+          </ButtonGroup>
         </div>
         <div className="text-foreground text-sm">
           {item.unitPrice ? (
@@ -377,7 +376,24 @@ export default function QuoteItemRow({
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="text-foreground w-full text-base text-center">
+        <div className="flex items-center justify-start">
+          <Checkbox
+            className="w-4 h-4 shadow-md"
+            checked={!!item.is_tax_percentage}
+            onCheckedChange={(checked) => {
+              const isChecked = checked === true;
+
+              const newItem = {
+                ...item,
+                is_tax_percentage: isChecked,
+                tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
+              };
+
+              handleItemUpdate(item.id, "fullItem", newItem);
+            }}
+          />
+        </div>
+        <div className="text-foreground w-full text-base text-start">
           {item.unitPrice && item.quantity ? (
             `$${calculateExtendedPrice(item)}`
           ) : (
@@ -405,14 +421,6 @@ export default function QuoteItemRow({
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleAddCompositeItem(item);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sub Item
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
@@ -421,32 +429,6 @@ export default function QuoteItemRow({
           </DropdownMenu>
         </div>
       </div>
-
-      {hasSubItems && (
-        <div className="relative border-b border-border mb-1">
-          <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-300 z-0 mb-[15px]" />
-          {item.associatedItems.map((subItem, idx) => (
-            <div key={subItem.id || idx} className="pl-4 relative z-10">
-              {/* Linha horizontal para conectar à vertical */}
-              <div
-                className="absolute top-1/2 left-2 w-2 h-[0.01rem] bg-gray-300"
-                style={{ transform: "translateY(-50%)" }}
-              />
-              <SubItemRow
-                item={item}
-                subItem={subItem}
-                handleCompositeItemUpdate={handleCompositeItemUpdate}
-                handleDeleteComposite={handleDeleteComposite}
-                editingSubItemId={editingSubItemId}
-                setEditingSubItemId={setEditingSubItemId}
-                UOM_TYPES={UOM_TYPES}
-                setOpenProductSheet={setOpenProductSheet}
-                handleSubItemProductSelect={handleSubItemProductSelect}
-              />
-            </div>
-          ))}
-        </div>
-      )}
 
       <ProductSheet
         open={openProductSheet}

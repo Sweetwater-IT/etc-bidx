@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import { Loader } from "lucide-react"
 
 interface Bid {
     id: number
@@ -69,9 +70,16 @@ const SelectBid = ({ selectedBid, onChange, quoteData }: ISelectBid) => {
                     <Button
                         variant="outline"
                         role="combobox"
-                        className="w-full justify-between"
+                        className="w-full justify-between flex items-center gap-2"
+                        disabled={loading}
                     >
-                        {selectedBid ? selectedBid.admin_data?.contractNumber : "Select bid..."}
+                        {loading ? (
+                            <div className="flex items-center gap-2">
+                                <Loader className="animate-spin w-4 h-4 text-gray-600" />
+                                <span>Loading...</span>
+                            </div>) : (
+                            selectedBid ? selectedBid.admin_data?.contractNumber : "Select bid"
+                        )}
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full min-w-[var(--radix-popover-trigger-width)] p-0">

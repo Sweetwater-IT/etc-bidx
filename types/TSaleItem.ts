@@ -6,4 +6,5 @@ export type SaleItem = {
     quantity : number
     quotePrice : number
     markupPercentage : number
+    notes: string;
 }

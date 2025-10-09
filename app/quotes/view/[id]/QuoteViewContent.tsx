@@ -15,6 +15,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
+import { Copy, Edit, ExternalLink, Eye, EyeIcon } from "lucide-react";
 
 export interface ContactInfo {
   id?: number;
@@ -30,7 +31,7 @@ export interface Quote {
   status?: "DRAFT" | "Not Sent" | "Sent" | "Accepted" | null;
   created_at?: string | null;
   date_sent?: string | null;
-  customer?: Record<string, any>;
+  customer?: any;
   contact?: ContactInfo | null;
   ccEmails?: string[];
   bccEmails?: string[];
@@ -78,61 +79,50 @@ export interface Quote {
   start_date?: string;
   end_date?: string | null;
   duration?: number;
-  description?: string;
-  project_title?: string;
+  pdf_url: string;
+  digital_signature: string;
+  comments: string;
 }
 
-
-interface QuoteItem {
-  id: number;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total?: number;
-}
 
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
-  const [files, setFiles] = useState<FileMetadata[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   const QUOTE_COLUMNS = [
     { key: "description", title: "Description", sortable: false },
     { key: "quantity", title: "Quantity", sortable: false },
     { key: "unitPrice", title: "Unit Price", sortable: false },
     { key: "total", title: "Total", sortable: false },
+    { key: "tax", title: "Tax", sortable: false },
+    { key: "confirmed", title: "Confirmed", sortable: false },
   ];
 
   useEffect(() => {
     const fetchQuote = async () => {
+      if (!quoteId) return;
       try {
-        if (!quoteId) return;
-
         const res = await fetch(`/api/quotes/${quoteId}`);
         const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.message || "Failed to fetch quote");
-        }
+        if (!res.ok) throw new Error(data.message || "Failed to fetch quote");
 
-        setQuote(data);
-        setQuoteItems(
-          Array.isArray(data.items)
+        setQuote({
+          ...data,
+          items: Array.isArray(data.items)
             ? data.items.map((item: any, idx: number) => ({
               id: idx + 1,
               description: item.description || "N/A",
               quantity: item.quantity || 0,
               unitPrice: item.unitPrice || 0,
               total: (item.quantity || 0) * (item.unitPrice || 0),
+              tax: item.tax || "0",
+              confirmed: item.confirmed || "NO",
             }))
-            : []
-        );
-        setNotes(Array.isArray(data.notes) ? data.notes : []);
-        setFiles(Array.isArray(data.files) ? data.files : []);
+            : [],
+        });
       } catch (err) {
         console.error("Error fetching quote:", err);
         toast.error("Error loading quote");
@@ -140,7 +130,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
         setLoading(false);
       }
     };
-
     fetchQuote();
   }, [quoteId]);
 
@@ -166,57 +155,73 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     );
   }
 
-  const handleSave = async (note: INote, index: number) => {
-    const updated = [...notes, { ...note, user_email: user.email }];
-    setNotes(updated);
-
-    const response = await fetch('/api/quotes/addNotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        quote_id: quoteId,
-        timestamp: note.timestamp,
-        text: note.text,
-        user_email: user.email
-      })
-    });
-    const result = await response.json();
-
-    if (result.ok) {
-      setNotes((prev) =>
-        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
-      );
+  const handleSaveNote = async (note: INote) => {
+    if (!quote) return;
+    try {
+      const res = await fetch("/api/quotes/addNotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_id: quote.id,
+          timestamp: note.timestamp,
+          text: note.text,
+          user_email: user.email,
+        }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setQuote((prev) =>
+          prev ? { ...prev, notes: [...(prev.notes || []), {...result.data, timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now()}] } : prev
+        );
+      }
+    } catch (err) {
+      toast.error("Error saving note");
     }
   };
 
-  const handleEdit = async (index: number, updatedNote: INote) => {
-    const updated = notes.map((n, i) => (i === index ? updatedNote : n));
-    setNotes(updated);
+  const handleEditNote = async (index: number, updatedNote: INote) => {
+    if (!quote) return;
+    try {
+      const res = await fetch("/api/quotes/addNotes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setQuote((prev) => {
+          if (!prev?.notes) return prev;
+          const updatedNotes = [...prev.notes];
+          updatedNotes[index] = {
+            ...result.data,
+            timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now(),
 
-    const resp = await fetch('/api/quotes/addNotes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: updatedNote.id, text: updatedNote.text })
-    });
-    const result = await resp.json();
-
-    if (result.ok) {
-      setNotes((prev) =>
-        prev.map((n, i) => (i === index ? { ...result.data, timestamp: result.data.created_at } : n))
-      );
+          };
+          return { ...prev, notes: updatedNotes };
+        });
+      }
+    } catch (err) {
+      toast.error("Error editing note");
     }
   };
 
-  const handleDelete = async (index: number) => {
-    const noteToDelete = notes[index];
-    const updated = notes.filter((_, i) => i !== index);
-    setNotes(updated);
-
-    await fetch('/api/quotes/addNotes', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: noteToDelete.id })
-    });
+  const handleDeleteNote = async (index: number) => {
+    if (!quote || !quote.notes) return;
+    const noteToDelete = quote.notes[index];
+    try {
+      await fetch("/api/quotes/addNotes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: noteToDelete.id }),
+      });
+      setQuote((prev) => {
+        if (!prev?.notes) return prev;
+        const updatedNotes = prev.notes.filter((_, i) => i !== index);
+        return { ...prev, notes: updatedNotes };
+      });
+    } catch (err) {
+      toast.error("Error deleting note");
+    }
   };
 
   return (
@@ -233,7 +238,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">View Quote</h1>
+            <h1 className="text-3xl font-bold mt-2 ml-0">{quote?.quote_number}</h1>
             <div className="flex gap-2">
               <Button
                 onClick={handleEditQuote}
@@ -250,172 +255,257 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             </div>
           </div>
         </SiteHeader>
+        <div className="p-6">
+          <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
+          <div className="w-full flex flex-row gap-4 items-center">
+            <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
+              <p className="truncate text-gray-600">{process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id}</p>
+            </div>
+
+            <button
+              className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60"
+              role="button"
+              title="Copy link"
+              onClick={() => {
+                navigator.clipboard.writeText(process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id);
+                toast.success("Link copied!");
+              }}
+            >
+              <Copy className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+            </button>
+
+            <button
+              className="cursor-pointer p-4 rounded-md hover:bg-gray-200/60"
+              role="button"
+              title="Open link"
+              disabled={!quote.pdf_url}
+              onClick={() =>
+                window.open(
+                  process.env.NEXT_PUBLIC_BASE_APP_URL + '/customer-view-quote/' + quote.id,
+                  "_blank"
+                )
+              }
+            >
+              <Eye className="w-5 h-5 text-gray-600 hover:text-gray-800" />
+            </button>
+          </div>
+          <p className="mt-2 text-gray-500">
+            Share this link with your customer so they can view and accept/decline the quote.
+          </p>
+        </div>
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
+
+
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">                <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                <h2 className="text-xl font-semibold mb-4">
-                  Quote Information
-                </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Quote ID</div>
-                    <div className="text-base mt-1 flex items-center gap-2">
-                      {quote.id}
-                      {quote.status?.toLowerCase() === "submitted" && (
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                          Submitted
-                        </Badge>
-                      )}
+              <div className="flex flex-row w-full gap-4 ">
+                <div className="w-3/4 flex flex-col gap-4">
+                  <div className="grid grid-cols-1 w-full gap-8">
+                    <div className="lg:col-span-2 w-full bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">
+                        Customer Information
+                      </h2>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Customer Name
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.customer || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Customer Address
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.customer_address || "-"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Email</div>
+                          <div className="text-base mt-1">{quote.customer_email || "-"}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Job Number</div>
+                          <div className="text-base mt-1">
+                            {quote.customer_job_number || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer Phone</div>
+                          <div className="text-base mt-1">
+                            {quote.customer_phone || "-"}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <div className="grid grid-cols-1  gap-8">
+                    <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">
+                        Quote Information
+                      </h2>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contract Number
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contract_number || "-"}
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Quote ID</div>
+                          <div className="text-base mt-1 flex items-center gap-2">
+                            {quote.id}
+                            {quote.status?.toLowerCase() === "submitted" && (
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                Submitted
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">Requestor</div>
-                    <div className="text-base mt-1">{quote.requestor || "-"}</div>
-                  </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Contract Number
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.contract_number || "-"}
+                          </div>
+                        </div>
 
-                  <div>
-                    <div className="text-sm text-muted-foreground">Customer</div>
-                    <div className="text-base mt-1">
-                      {quote.customer?.displayName || "-"}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Requestor</div>
+                          <div className="text-base mt-1">{quote.requestor || "-"}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Customer</div>
+                          <div className="text-base mt-1">
+                            {quote.customer || "-"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Quote Date
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.quote_date
+                              ? format(new Date(quote.quote_date), "MM/dd/yyyy")
+                              : "-"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">
+                            Created At
+                          </div>
+                          <div className="text-base mt-1">
+                            {quote.created_at
+                              ? format(new Date(quote.created_at), "MM/dd/yyyy")
+                              : "-"}
+                          </div>
+                        </div>
+
+                        {quote.type_quote === "straight_sale" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Purchase Order</div>
+                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Job Number</div>
+                              <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
+                            </div>
+                          </>
+                        )}
+
+                        {quote.type_quote === "to_project" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bid Date</div>
+                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Start Date</div>
+                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">End Date</div>
+                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Duration</div>
+                              <div className="text-base mt-1">{quote.duration || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Purchase Order</div>
+                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                            </div>
+                          </>
+                        )}
+
+                        {quote.type_quote === "estimate_bid" && (
+                          <>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bid Date</div>
+                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Start Date</div>
+                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">End Date</div>
+                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Duration</div>
+                              <div className="text-base mt-1">{quote.duration || "-"}</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+
                     </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Quote Date
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.quote_date
-                        ? format(new Date(quote.quote_date), "MM/dd/yyyy")
-                        : "-"}
-                    </div>
+                <div className="w-1/4">
+                  <div className="flex flex-col gap-y-2">
+                    <QuoteNotes
+                      notes={quote?.notes || []}
+                      onSave={handleSaveNote}
+                      onEdit={handleEditNote}
+                      onDelete={handleDeleteNote}
+                      title="Recent Activity"
+                    />
                   </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Created At
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.created_at
-                        ? format(new Date(quote.created_at), "MM/dd/yyyy")
-                        : "-"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contact Name
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contact?.name ?? "-"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Contact Email
-                    </div>
-                    <div className="text-base mt-1">
-                      {quote.contact?.email ?? "-"}
-                    </div>
-                  </div>
-
-                  {quote.type_quote === "straight_sale" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Purchase Order</div>
-                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Job Number</div>
-                        <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
-                  {quote.type_quote === "to_project" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Project Title</div>
-                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bid Date</div>
-                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Start Date</div>
-                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">End Date</div>
-                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Duration</div>
-                        <div className="text-base mt-1">{quote.duration || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Purchase Order</div>
-                        <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
-                  {quote.type_quote === "estimate_bid" && (
-                    <>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Project Title</div>
-                        <div className="text-base mt-1">{quote.project_title || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bid Date</div>
-                        <div className="text-base mt-1">{quote.bid_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Start Date</div>
-                        <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">End Date</div>
-                        <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Duration</div>
-                        <div className="text-base mt-1">{quote.duration || "-"}</div>
-                      </div>
-                    </>
-                  )}
-
                 </div>
               </div>
+              <div className="grid grid-cols-1 gap-8">
+                {
+                  quote.comments && (
+                    <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                      <h2 className="text-xl font-semibold mb-4">Customer Comments</h2>
+                      <p className="text-base text-gray-700 whitespace-pre-line">
+                        {quote.comments || "No comments provided"}
+                      </p>
+                    </div>
+                  )
+                }
 
-                <div className="flex flex-col gap-y-2">
-                  <FileViewingContainer files={files} onFilesChange={setFiles} />
+                {
+                  quote.digital_signature &&
+                  <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-semibold mb-4">Digital Signature</h2>
+                    <p className="text-base text-gray-700 whitespace-pre-line">
+                      {quote.digital_signature || "No digital signature provided"}
+                    </p>
+                  </div>
+                }
 
-                  <QuoteNotes
-                    notes={notes}
-                    onSave={(note: INote) => handleSave(note, notes.length)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    title="Notes"
-                  />
-                </div>
               </div>
+
 
 
               <div className="grid grid-cols-1 gap-8">
@@ -423,7 +513,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
                   <DataTable
                     data={
-                      quoteItems.length === 0
+                      quote?.items?.length === 0
                         ? [
                           {
                             description: "-",
@@ -432,7 +522,14 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                             total: "-",
                           } as any,
                         ]
-                        : quoteItems
+                        : (quote.items?.map((q) => ({
+                          description: q.description,
+                          quantity: q.quantity,
+                          unitPrice: q.unitPrice,
+                          total: q.quantity * q.unitPrice,
+                          tax: (q.tax ?? 0) + " %",
+                          confirmed: q.confirmed ? "YES" : "NO"
+                        })) ?? [])
                     }
                     columns={QUOTE_COLUMNS}
                     hideDropdown

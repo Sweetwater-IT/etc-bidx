@@ -29,9 +29,12 @@ const createEmptyQuoteItem = (): QuoteItem => ({
   unitPrice: 0,
   discount: 0,
   discountType: "dollar",
-  notes: [],
+  notes: '',
   associatedItems: [],
   isCustom: false,
+  is_tax_percentage: false,
+  quote_id: null,
+  tax: null
 });
 
 export function QuoteAdminInformation({

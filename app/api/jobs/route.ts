@@ -608,7 +608,7 @@ export async function POST(req: NextRequest) {
       .from('jobs')
       .insert({
         job_number_id: jobNumberData.id,
-        reserved_job_number: requestData.reserved_job_number || null
+        reserved_job_number: jobNumberStr.toString()
       })
       .select('id')
       .single();
