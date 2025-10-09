@@ -12,7 +12,7 @@ import FileViewingContainer from "@/components/file-viewing-container";
 import { fetchAssociatedFiles } from "@/lib/api-client";
 import { PdfPreviewDialog } from "@/app/quotes/create/components/ModalPreviewPdf";
 
-export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; }) {
+export function QuoteAdditionalFiles({ useButton, setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; useButton: boolean; }) {
   const { quoteId } = useQuoteForm();
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([]);
   const [previewFile, setPreviewFile] = useState<any | null>(null);
@@ -127,7 +127,7 @@ export function QuoteAdditionalFiles({ setFiles, files, quoteData, handleFileSel
           )
         })}
       </div>
-      <Dropzone  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
+      <Dropzone useButton={useButton}  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
         <DropzoneContent hideUploadButton={!quoteId} />
         <DropzoneEmptyState />
       </Dropzone>
