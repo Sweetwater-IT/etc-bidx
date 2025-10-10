@@ -879,50 +879,49 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {
                 quoteMetadata?.type_quote && (quoteMetadata?.estimate_id || quoteMetadata?.job_id || quoteMetadata?.customer) &&
                 < div className='my-4'>
-              <QuoteAdditionalFiles
-                useButton={true}
-                setQuoteData={setQuoteMetadata}
-                quoteData={quoteMetadata}
-                handleFileSelect={(field: any) => handleFileSelect(field)}
-                files={files}
-                setFiles={setFiles} />
-            </div>
+                  <QuoteAdditionalFiles
+                    useButton={true}
+                    setQuoteData={setQuoteMetadata}
+                    quoteData={quoteMetadata}
+                    handleFileSelect={(field: any) => handleFileSelect(field)}
+                    files={files}
+                    setFiles={setFiles} />
+                </div>
               }
-
-      </div>
-      )
+            </div>
+          )
         }
 
-      <div className="w-1/2 overflow-y-auto ">
-        <div className="bg-[#F4F5F7] p-6 rounded-lg sticky ">
-          <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
-          <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
-            <BidProposalWorksheet
-              allowExclusions={quoteMetadata?.aditionalExclusions}
-              exclusions={quoteMetadata?.exclusions}
-              quoteData={quoteMetadata}
-              quoteType={quoteMetadata?.type_quote || "straight_sale"}
-              notes={quoteMetadata?.notes}
-              adminData={adminData ?? defaultAdminObject}
-              items={quoteItems}
-              customers={selectedCustomers}
-              quoteDate={new Date()}
-              quoteNumber={quoteNumber || quoteId?.toString() || ''}
-              pointOfContact={pointOfContact ?? { name: '', email: '' }}
-              sender={sender}
-              paymentTerms={paymentTerms as PaymentTerms}
-              includedTerms={includeTerms}
-              customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-              county={adminData ? adminData.county?.name || '' : ''}
-              sr={adminData ? adminData.srRoute || '' : ''}
-              ecms={adminData ? adminData.contractNumber || '' : ''}
-              termsAndConditions={quoteMetadata?.aditionalTerms}
-              files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
-            />
+        <div className="w-1/2 overflow-y-auto ">
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky ">
+            <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              <BidProposalWorksheet
+                allowExclusions={quoteMetadata?.aditionalExclusions}
+                exclusions={quoteMetadata?.exclusions}
+                quoteData={quoteMetadata}
+                quoteType={quoteMetadata?.type_quote || "straight_sale"}
+                notes={quoteMetadata?.notes}
+                adminData={adminData ?? defaultAdminObject}
+                items={quoteItems}
+                customers={selectedCustomers}
+                quoteDate={new Date()}
+                quoteNumber={quoteNumber || quoteId?.toString() || ''}
+                pointOfContact={pointOfContact ?? { name: '', email: '' }}
+                sender={sender}
+                paymentTerms={paymentTerms as PaymentTerms}
+                includedTerms={includeTerms}
+                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
+                county={adminData ? adminData.county?.name || '' : ''}
+                sr={adminData ? adminData.srRoute || '' : ''}
+                ecms={adminData ? adminData.contractNumber || '' : ''}
+                termsAndConditions={quoteMetadata?.aditionalTerms}
+                files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div >
   )
 }

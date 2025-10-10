@@ -15,7 +15,6 @@ export function useProductsSearch(searchTerm: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all products on mount
   useEffect(() => {
     const fetchAllProducts = async () => {
       setLoading(true);
@@ -41,20 +40,19 @@ export function useProductsSearch(searchTerm: string) {
     fetchAllProducts();
   }, []);
 
-  // Filter products based on search term
   useEffect(() => {
     if (!searchTerm) {
-      setProducts(allProducts.slice(0, 10));
+      setProducts(allProducts);
       return;
     }
 
     const searchLower = searchTerm.toLowerCase();
-    const filteredProducts = allProducts.filter((product) => 
+    const filteredProducts = allProducts.filter((product) =>
       product.item_number.toLowerCase().includes(searchLower) ||
       product.description.toLowerCase().includes(searchLower)
     );
 
-    setProducts(filteredProducts.slice(0, 10));
+    setProducts(filteredProducts);
   }, [searchTerm, allProducts]);
 
   return { products, loading, error };

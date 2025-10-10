@@ -52,7 +52,7 @@ export default function QuoteItemRow({
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
-    width: 0,
+    width: 300,
   });
   const { quoteMetadata } = useQuoteForm()
   const inputRef = useRef<HTMLInputElement>(null);
@@ -196,22 +196,6 @@ export default function QuoteItemRow({
     setEditingSubItemId(null);
   };
 
-  const handleSubItemProductSelect = (product: any, subItemId: string) => {
-    handleCompositeItemUpdate(
-      item.id,
-      subItemId,
-      "itemNumber",
-      product.item_number
-    );
-    handleCompositeItemUpdate(
-      item.id,
-      subItemId,
-      "description",
-      product.description
-    );
-    handleCompositeItemUpdate(item.id, subItemId, "uom", product.uom);
-  };
-
   return (
     <>
       <div
@@ -261,11 +245,11 @@ export default function QuoteItemRow({
           {showDropdown && isSearching &&
             createPortal(
               <div
-                className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
+                className="absolute bg-background border  rounded shadow z-[100] max-h-60 overflow-auto"
                 style={{
                   top: `${dropdownPosition.top}px`,
                   left: `${dropdownPosition.left}px`,
-                  width: `${dropdownPosition.width}px`,
+                  width: `${dropdownPosition.width + 300}px` ,
                 }}
               >
                 <div
