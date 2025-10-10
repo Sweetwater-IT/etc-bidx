@@ -905,32 +905,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Delete existing sale items before inserting new ones
-    await supabase
-      .from('sale_items')
-      .delete()
-      .eq('bid_estimate_id', bidEstimateId);
-
-    // Insert sale items
+    // Insert sale item entries (no delete needed; static sale_items unchanged)
     if (saleItems && saleItems.length > 0) {
-      const saleInserts = saleItems.map(item => ({
-        bid_estimate_id: bidEstimateId,
-        item_number: item.itemNumber,
-        name: item.name,
-        vendor: item.vendor,
-        quantity: item.quantity,
-        quote_price: item.quotePrice,
-        markup_percentage: item.markupPercentage,
-        status: 'pending',
-        notes: item.notes
-      }));
-
+      const saleInserts = saleItems.map(item => {
+        const sellingPrice = item.quotePrice * (1 + (item.markupPercentage / 100)); // Inline calc (or use calculateSellingPrice if imported)
+        const revenue = item.quantity * sellingPrice;
+        const total_cost = item.quantity * item.quotePrice;
+        const gross_profit = revenue - total_cost;
+        const gross_profit_margin = revenue > 0 ? (gross_profit / revenue) * 100 : 0;
+        return {
+          bid_estimate_id: bidEstimateId, // Link to bid
+          job_id: null, // For bids only
+          name: item.name || item.itemNumber, // Required; fallback to itemNumber
+          quantity: item.quantity,
+          item_number: item.itemNumber,
+          display_name: item.name, // From frontend
+          notes: item.notes,
+          total_cost: total_cost,
+          revenue: revenue,
+          gross_profit: gross_profit,
+          gross_profit_margin: gross_profit_margin,
+          cost: total_cost, // Same as total_cost; adjust if separate logic needed
+        };
+      });
       const { error: saleError } = await supabase
-        .from('sale_items')
+        .from('sale_item_entries') // FIXED: Dynamic entries table
         .insert(saleInserts);
-
       if (saleError) {
-        throw new Error(`Failed to create sale items: ${saleError.message}`);
+        throw new Error(`Failed to create sale item entries: ${saleError.message}`);
       }
     }
 
