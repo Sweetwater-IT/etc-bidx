@@ -117,7 +117,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                     const result = await createQuoteItem(item);
                     return result.item;
                 }));
-                setQuoteItems(finalList);
+                setQuoteItems((prev) => ([...prev, finalList]));
             }
         }
 

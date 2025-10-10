@@ -9,6 +9,7 @@ import { TermsNames } from '@/app/quotes/create/QuoteFormProvider'
 import { INote } from '@/types/TEstimate'
 import { EstimateBidQuote, StraightSaleQuote, ToProjectQuote } from './types'
 import { PdfViewer } from './components/PdfViewer'
+import { InitialsLine } from './components/InitialsLine'
 
 interface BidProposalWorksheetProps {
   adminData: AdminData
@@ -31,6 +32,7 @@ interface BidProposalWorksheetProps {
   files: any;
   exclusions?: string;
   allowExclusions: boolean;
+  terms: string;
 }
 
 const formatDate = (date?: string) => {
@@ -59,7 +61,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   termsAndConditions,
   files,
   exclusions,
-  allowExclusions
+  allowExclusions,
+  terms
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const formatMoney = (v: number) =>
@@ -198,8 +201,22 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
   const pages: any[] = [];
 
+  const wrappedPages = pages.map((page, index) => {
+    if (index === 0) return page;
+
+    return (
+      <div key={`page-${index}`} className="relative min-h-[100vh]">
+        {page}
+        <div className="absolute bottom-4 right-4 flex flex-col items-end">
+          <InitialsLine label="Prepared By" width="w-[120px]" />
+          <InitialsLine label="Approved By" width="w-[120px]" />
+        </div>
+      </div>
+    )
+  })
+
   pages.push(
-    <div key="main-proposal" className="bg-white min-h-[100vh] flex flex-col text-black p-4 font-sans text-[10px] border border-gray-400">
+    <div key="main-proposal" className="bg-white min-h-[100vh] flex flex-col text-black font-sans text-[10px]">
       <div className='flex-1'>
         <header className="flex justify-between items-start pb-2">
           <div className="flex items-start justify-between w-full">
@@ -331,7 +348,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             {items.map((i, idx) =>
               i.notes ? (
                 <p key={idx} style={{ whiteSpace: "pre-wrap" }}>
-                  {i.notes}
+                  {i.itemNumber + ' - ' + i.description + ' - ' + i.notes}
                 </p>
               ) : null
             )}
@@ -359,38 +376,27 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           Due to extreme market volatility, all pricing and availability are subject to change without notice.
           All quotes to be confirmed at time of order placement
         </p>
-
       </div>
 
     </div>
   );
 
-  if (termsAndConditions || allowExclusions) {
+  if (termsAndConditions) {
     pages.push(
       <div className='flex flex-col '>
-        <div key="terms" className="min-h-[100vh] bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
-          {
-            allowExclusions &&
-            <div>
-              <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
-              <p style={{ whiteSpace: "pre-wrap" }}>{exclusions}</p>
-            </div>
-          }
-
+        <div key="terms" className="min-h-[100vh] bg-white text-black font-sans text-[9px]">
           {
             termsAndConditions &&
             <div className='mt-4'>
-              <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
-              <div className="space-y-2">
-                <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
-                <p>--- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.</p>
-                <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
-                <p>--- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.</p>
-                <p>--- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor.</p>
-                <p>--- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.</p>
-                <p>--- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.</p>
-                <p>--- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.</p>
-                <p>--- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.</p>
+              <div>
+                <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
+                <p style={{ whiteSpace: "pre-wrap" }}>{exclusions}</p>
+              </div>
+
+              <div className="space-y-2 mt-[25px]">
+                <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
+                <div className='mb-4'></div>
+                <p style={{ whiteSpace: "pre-wrap" }}>{terms}</p>
               </div>
             </div>
           }
@@ -421,6 +427,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       setCurrentPage(currentPage - 1);
     }
   };
+
 
   return (
     <div className="relative">
@@ -456,8 +463,19 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       }
 
-      <div className="min-h-[100vh]">
-        {pages[currentPage]}
+      <div className="min-h-[100vh] w-full flex flex-col border border-gray-400 p-4 justify-between">
+        <div className="flex-1">
+          {pages[currentPage]}
+        </div>
+
+        {currentPage !== 0 && (
+          <div className="mt-0  flex justify-end items-center text-[10px] font-medium">
+            <div className='bg-yellow-200/70  p-1'>
+              <span>Initials</span>
+              <span className="border-b border-black min-w-[150px] pl-1 italic text-[11px] ml-2 inline-block"></span>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

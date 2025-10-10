@@ -13,7 +13,6 @@ import { PaymentTerms } from '../../../components/pages/quote-form/QuoteAdminInf
 import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
 import { User } from '@/types/User';
 import { Customer } from '@/types/Customer';
-import { INote } from '@/types/TEstimate';
 import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/quotes/create/types';
 
 interface Props {
@@ -36,6 +35,7 @@ interface Props {
   termsAndConditions?: boolean;
   exclusions?: string;
   allowExclusions: boolean;
+  terms: string;
 }
 
 const styles = StyleSheet.create({
@@ -97,6 +97,17 @@ const styles = StyleSheet.create({
   cellExtended: { width: '10%', textAlign: 'center' },
 });
 
+const SignatureLine: React.FC = () => (
+  <View style={{ marginTop: 8, width: '100%', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', fontSize: 10 }}>
+    <View style={{ backgroundColor: 'rgba(253, 224, 71, 0.7)', padding: 4, flexDirection: 'row', alignItems: 'center' }}>
+      <Text>Initials</Text>
+      <View style={{ borderBottomWidth: 1, borderColor: '#000', minWidth: 150, marginLeft: 8 }}>
+        <Text style={{ fontStyle: 'italic', fontSize: 11 }}></Text>
+      </View>
+    </View>
+  </View>
+);
+
 const formatDate = (date?: string) => {
   if (!date) return "";
   const d = new Date(date);
@@ -121,7 +132,8 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   quoteData,
   termsAndConditions,
   exclusions,
-  allowExclusions = false
+  allowExclusions = false,
+  terms
 
 }) => {
   const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
@@ -274,7 +286,6 @@ export const BidProposalReactPDF: React.FC<Props> = ({
     }
   };
 
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -387,7 +398,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
               {items.map((i, idx) =>
                 i.notes ? (
-                  <Text key={idx}>{i.notes}</Text>
+                  <Text key={idx}>{i.itemNumber + ' - ' + i.description + ' - ' + i.notes}</Text>
                 ) : null
               )}
             </View>
@@ -410,60 +421,27 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             All quotes to be confirmed at time of order placement.
           </Text>
         </View>
+
       </Page>
-      {(termsAndConditions || allowExclusions) && (
+      {(termsAndConditions) && (
         <Page size="A4" style={styles.page}>
           <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '25px' }}>
 
-            {allowExclusions && (
-              <View style={{ fontSize: 9, width: '100%' }}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
-                <Text >{exclusions}</Text>
-              </View>
-            )}
+            (
+            <View style={{ fontSize: 9, width: '100%' }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
+              <Text >{exclusions}</Text>
+            </View>
+            )
 
-            {termsAndConditions &&
-              <View style={{ fontSize: 9 }}>
+            {
+              <View style={{ fontSize: 9, marginTop: '25px' }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
-
-                <Text>
-                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-                </Text>
-
-                <Text>
-                  --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
-                </Text>
-
-                <Text>
-                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-                </Text>
-
-                <Text>
-                  --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
-                </Text>
-
-                <Text>
-                  --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless if owner has paid contractor.
-                </Text>
-
-                <Text>
-                  --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
-                </Text>
-
-                <Text>
-                  --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
-                </Text>
-
-                <Text>
-                  --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
-                </Text>
-
-                <Text>
-                  --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
-                </Text>
+                <Text >{terms}</Text>
               </View>
             }
           </View>
+          <SignatureLine />
         </Page>
       )}
     </Document>

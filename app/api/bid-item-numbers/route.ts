@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function GET() {
@@ -15,25 +15,33 @@ export async function GET() {
       );
     }
 
-    const formatted = [
-      ...(bidRes.data ?? []),
-      ...(saleRes.data ?? []).map(i => ({
-        id: i.id,
-        item_number: i.item_number,
-        description: i.item_description,
-        uom: i.uom,
-        is_custom: false
-      })),
-      ...(rentalRes.data ?? []).map(i => ({
-        id: i.id,
-        item_number: i.item_number,
-        description: i.item_description,
-        uom: i.uom_1,
-        is_custom: false
-      }))
-    ];
+    const bidItems = bidRes.data ?? [];
 
-    const res = NextResponse.json({ status: 200, data: formatted });
+    const saleItems = (saleRes.data ?? []).map(i => ({
+      id: i.id,
+      item_number: i.item_number,
+      description: i.item_description,
+      uom: i.uom,
+      is_custom: false
+    }));
+
+    const rentalItems = (rentalRes.data ?? []).map(i => ({
+      id: i.id,
+      item_number: i.item_number,
+      description: i.item_description,
+      uom: i.uom_1,
+      is_custom: false
+    }));
+
+    const res = NextResponse.json({
+      status: 200,
+      data: {
+        bidItems,
+        saleItems,
+        rentalItems,
+      },
+    });
+
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.headers.set('Pragma', 'no-cache');
     res.headers.set('Expires', '0');

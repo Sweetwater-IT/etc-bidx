@@ -43,7 +43,8 @@ export interface Quote {
     comment: "",
     digital_signature: "",
     notes: "",
-    exclusions: string;
+    exclusionsText: string;
+    termsText: string;
     tax_rate: number;
 }
 

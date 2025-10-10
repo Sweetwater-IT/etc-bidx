@@ -1,3 +1,4 @@
+import { useProductsSearch } from "@/hooks/useProductsSearch";
 import QuoteItemRow from "./QuoteItemRow";
 import { QuoteItem, AssociatedItem } from "@/types/IQuoteItem";
 
@@ -26,16 +27,24 @@ interface QuoteItemsListProps {
   calculateExtendedPrice: (item: QuoteItem) => string;
 }
 
-const QuoteItemsList = ({
-  quoteItems,
-  editingItemId,
-  ...rest
-}: QuoteItemsListProps) => {  
-  console.log(quoteItems);
-  
+// QuoteItemsList
+const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListProps) => {
+  const { products, loading } = useProductsSearch(""); // fetch global
   return (
-    <>{quoteItems.map((item,ix) => <QuoteItemRow key={ix} item={item} isEditing={editingItemId === item.id} {...rest} />)}</>
+    <>
+      {quoteItems.map((item, ix) => (
+        <QuoteItemRow
+          key={ix}
+          item={item}
+          isEditing={editingItemId === item.id}
+          products={products}
+          loading={loading}
+          {...rest}
+        />
+      ))}
+    </>
   );
 };
+
 
 export default QuoteItemsList;

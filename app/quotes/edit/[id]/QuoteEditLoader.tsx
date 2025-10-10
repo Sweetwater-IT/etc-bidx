@@ -99,7 +99,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           digital_signature: data.digital_signature,
           etc_job_number: data.etc_job_number,
           notes: data.notes,
-          exclusions: data.exclusions || exclusionsText,
+          exclusionsText: data.exclusionsText || exclusionsText,
+          termsText: data.termsText,
           aditionalExclusions: data.aditionalExclusions,
           tax_rate: data.tax_rate
         });
@@ -108,7 +109,6 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setStatus(data.status || "Not Sent");
         setQuoteDate(data.date_sent || data.created_at);
         setSelectedCustomers(data.customers || []);
-
 
         setQuoteItems([
           ...(data.items || []),

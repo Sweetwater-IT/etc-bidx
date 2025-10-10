@@ -72,18 +72,6 @@ export function QuoteAdditionalFiles({ useButton, setFiles, files, quoteData, ha
     <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
       <div className="grid grid-cols-1 mb-4 gap-2">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              checked={quoteData?.aditionalTerms || false}
-              onCheckedChange={(checked) =>
-                setQuoteData(prev => ({ ...prev, aditionalTerms: !!checked }))
-              }
-            />
-            <Label htmlFor="terms">Terms and Conditions</Label>
-          </div>
-        </div>
         {files.length > 0 && files.map((file: any) => (
           <div key={file.id} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
             <Checkbox

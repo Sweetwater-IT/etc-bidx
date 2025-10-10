@@ -46,6 +46,16 @@ const typeQuotes = [
 ]
 
 const exclusions = "Arrow Panels/Changeable Message Sign/Radar Trailer unless specified\nShadow vehicles/Truck Mounted Attenuators and operators unless specified\nTraffic Signal activation/deactivation/flash (contractors responsibility)\nTemporary signals, lighting, related signage and traffic control unless specified\nAll Traffic Signal Work, modifying\nShop/plan drawings and/or layout for MPT signing – professional engineering services\nWork Zone Liquidated Damages\nHoliday or work stoppage removal of signs and/or devices\nPavement Marking and Removal\nNotification of (including permits from) officials (i.e., Police, Government, DOT)/business and property owners\nAll electrical work/line and grade work/Location of Utilities Not Covered by PA One Call\nIncidental items not specifically included above";
+const termsString = `--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal. \n
+--- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days. \n
+--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal. \n
+--- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed. \n
+--- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor. \n
+--- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included. \n
+--- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing. \n
+--- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing. \n
+--- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.`;
+
 
 function normalizeQuoteMetadata(meta: any): QuoteState {
   const base: Partial<Quote> = {
@@ -64,7 +74,8 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     aditionalTerms: meta.aditionalTerms,
     pdf_url: meta.pdf_url,
     notes: meta.notes || '',
-    exclusions: meta.exclusions ?? exclusions,
+    exclusionsText: meta.exclusionsText ?? exclusions,
+    termsText: meta.termsText ?? termsString,
     tax_rate: meta.tax_rate,
     aditionalExclusions: meta.aditionalExclusions,
   };
@@ -426,13 +437,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       etc_poc_email: user?.email ?? "",
       etc_poc_phone_number: "",
       etc_branch: userBranch?.name ?? "",
-      aditionalFiles: false,
-      aditionalTerms: false,
+      aditionalFiles: true,
+      aditionalTerms: true,
       selectedfilesids: [],
       pdf_url: "",
       tax_rate: 6,
-      exclusions: exclusions,
-      aditionalExclusions: false
+      exclusionsText: exclusions,
+      termsText: termsString,
+      aditionalExclusions: true
     };
 
     let newQuoteData: QuoteState = { ...quoteMetadata };
@@ -537,7 +549,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
-          exclusions={quoteMetadata?.exclusions}
+          exclusions={quoteMetadata?.exclusionsText}
+          terms={quoteMetadata?.termsText}
           notes={quoteMetadata?.notes}
           adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
@@ -688,6 +701,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setTempData(null)
   }
 
+  const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
+
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -700,7 +716,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
+              <QuotePreviewButton terms={quoteMetadata?.termsText} exclusion={quoteMetadata?.exclusionsText ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
               <Button disabled={downloading || !quoteId} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
@@ -852,29 +868,52 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
               <div className="my-4">
                 <div className='flex justify-between items-center'>
-                  <p className="font-semibold mb-2">Exclusions</p>
+                  <p className="font-semibold mb-2">Terms and Condition</p>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       className='shadow-sm'
                       id="terms"
-                      checked={quoteMetadata?.aditionalExclusions || false}
+                      checked={quoteMetadata?.aditionalTerms || false}
                       onCheckedChange={(checked) =>
-                        setQuoteMetadata(prev => ({ ...prev, aditionalExclusions: !!checked }))
+                        setQuoteMetadata(prev => ({ ...prev, aditionalTerms: !!checked }))
                       }
                     />
                     <p>Include?</p>
                   </div>
                 </div>
                 <Textarea
-                  value={quoteMetadata?.exclusions || exclusions}
-                  onChange={(e) => setQuoteMetadata((prev: any) => ({
-                    ...prev,
-                    exclusions: e.target.value
-                  }))}
+                  value={combinedText}
+                  onChange={(e) => {
+                    let value = e.target.value;
+
+                    if (!value.includes('---TERMS---')) {
+                      value = value + '\n---TERMS---';
+                    }
+
+                    const lines = value.split("\n");
+                    const separatorIndex = lines.indexOf("---TERMS---");
+
+                    let newExclusions: string[] = [];
+                    let newTerms: string[] = [];
+
+                    if (separatorIndex >= 0) {
+                      newExclusions = lines.slice(0, separatorIndex);
+                      newTerms = lines.slice(separatorIndex + 1);
+                    } else {
+                      newExclusions = lines;
+                    }
+
+                    setQuoteMetadata((prev: any) => ({
+                      ...prev,
+                      exclusionsText: newExclusions.join("\n"),
+                      termsText: newTerms.join("\n"),
+                    }));
+                  }}
                   maxLength={5000}
-                  placeholder="Add your exclusion here..."
-                  className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                  placeholder="Add your exclusions and terms..."
+                  className="w-full h-50 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
+
               </div>
               {
                 quoteMetadata?.type_quote && (quoteMetadata?.estimate_id || quoteMetadata?.job_id || quoteMetadata?.customer) &&
@@ -898,7 +937,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
                 allowExclusions={quoteMetadata?.aditionalExclusions}
-                exclusions={quoteMetadata?.exclusions}
+                exclusions={quoteMetadata?.exclusionsText}
+                terms={quoteMetadata?.termsText}
                 quoteData={quoteMetadata}
                 quoteType={quoteMetadata?.type_quote || "straight_sale"}
                 notes={quoteMetadata?.notes}
