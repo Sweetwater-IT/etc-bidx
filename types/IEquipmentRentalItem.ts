@@ -1,4 +1,5 @@
 export interface EquipmentRentalItem {
+  id?: number;
   // phase: number;
   name: string;
   itemNumber: string;

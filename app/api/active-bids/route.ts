@@ -782,9 +782,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert equipment rental items (no delete needed; unique constraint handles overwrites)
+
+
     if (equipmentRental && equipmentRental.length > 0) {
-      const rentalSummary = calculateRentalSummary(equipmentRental)
-      
+      const rentalSummary = calculateRentalSummary(equipmentRental);
+
+      const { error: deleteError } = await supabase
+        .from('equipment_rental_entries')
+        .delete()
+        .eq('bid_estimate_id', bidEstimateId);
+
+      if (deleteError) throw new Error(`Failed to delete existing equipment rentals: ${deleteError.message}`);
+
       const rentalInserts = equipmentRental.map(item => ({
         bid_estimate_id: bidEstimateId,
         job_id: null,
@@ -798,21 +807,19 @@ export async function POST(request: NextRequest) {
         re_rent_for_current_job: item.reRentForCurrentJob,
         total_cost: item.totalCost,
         useful_life_yrs: item.usefulLifeYrs,
-        revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
-        gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
-        gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
-        cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
+        revenue: rentalSummary.items.find(r => r.name === item.name)?.totalRevenue,
+        gross_profit: rentalSummary.items.find(r => r.name === item.name)?.grossProfit,
+        gross_profit_margin: rentalSummary.items.find(r => r.name === item.name)?.grossProfitMargin,
+        cost: rentalSummary.items.find(r => r.name === item.name)?.depreciation
       }));
-      
-      const { error: rentalError } = await supabase
+
+      const { error: insertError } = await supabase
         .from('equipment_rental_entries')
         .insert(rentalInserts);
-      if (rentalError) {
-        throw new Error(`Failed to create equipment rentals: ${rentalError.message}`);
-      }
+
+      if (insertError) throw new Error(`Failed to insert equipment rentals: ${insertError.message}`);
     }
 
-    // Upsert flagging data
     if (flagging) {
 
       const flaggingSummary = calculateFlaggingCostSummary(adminData, flagging, false)
@@ -900,34 +907,43 @@ export async function POST(request: NextRequest) {
 
     // Insert sale item entries (no delete needed; static sale_items unchanged)
     if (saleItems && saleItems.length > 0) {
+      const { error: deleteSaleError } = await supabase
+        .from('sale_item_entries')
+        .delete()
+        .eq('bid_estimate_id', bidEstimateId);
+
+      if (deleteSaleError) throw new Error(`Failed to delete existing sale items: ${deleteSaleError.message}`);
+
       const saleInserts = saleItems.map(item => {
-        const sellingPrice = item.quotePrice * (1 + (item.markupPercentage / 100)); // Inline calc (or use calculateSellingPrice if imported)
+        const sellingPrice = item.quotePrice * (1 + (item.markupPercentage / 100));
         const revenue = item.quantity * sellingPrice;
         const total_cost = item.quantity * item.quotePrice;
         const gross_profit = revenue - total_cost;
         const gross_profit_margin = revenue > 0 ? (gross_profit / revenue) * 100 : 0;
+
         return {
-          bid_estimate_id: bidEstimateId, // Link to bid
-          job_id: null, // For bids only
-          name: item.name || item.itemNumber, // Required; fallback to itemNumber
+          bid_estimate_id: bidEstimateId,
+          job_id: null,
+          name: item.name || item.itemNumber,
           quantity: item.quantity,
           item_number: item.itemNumber,
-          display_name: item.name, // From frontend
+          display_name: item.name,
           notes: item.notes,
-          total_cost: total_cost,
-          revenue: revenue,
-          gross_profit: gross_profit,
-          gross_profit_margin: gross_profit_margin,
-          cost: total_cost, // Same as total_cost; adjust if separate logic needed
+          total_cost,
+          revenue,
+          gross_profit,
+          gross_profit_margin,
+          cost: total_cost,
         };
       });
-      const { error: saleError } = await supabase
-        .from('sale_item_entries') // FIXED: Dynamic entries table
+
+      const { error: insertSaleError } = await supabase
+        .from('sale_item_entries')
         .insert(saleInserts);
-      if (saleError) {
-        throw new Error(`Failed to create sale item entries: ${saleError.message}`);
-      }
+
+      if (insertSaleError) throw new Error(`Failed to insert sale items: ${insertSaleError.message}`);
     }
+
 
     // Upsert permanent signs data
     if (permanentSigns) {

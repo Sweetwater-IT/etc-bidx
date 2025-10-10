@@ -44,7 +44,7 @@ async function createQuoteItem(item: QuoteItem) {
 }
 
 const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false, setQuoteItems }: IRenderEstimateBidQuoteFields) => {
-    const { quoteId } = useQuoteForm()
+    const { quoteId, quoteItems } = useQuoteForm()
 
     useEffect(() => {
         if (!selectedBid) return;
@@ -76,40 +76,47 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
     }, [selectedBid, setData]);
 
     useEffect(() => {
+
         if (!selectedBid || !quoteId) return;
 
         const importItems = async () => {
-            const rentalItems: QuoteItem[] = (selectedBid.equipment_rental || []).map((item: any) => ({
-                itemNumber: item.name,
-                description: item.name,
-                uom: 'ea',
-                notes: item.notes || "",
-                quantity: item.quantity,
-                unitPrice: item.revenue / item.quantity,
-                discount: 0,
-                discountType: 'dollar',
-                associatedItems: [],
-                isCustom: false,
-                tax: 0,
-                is_tax_percentage: false,
-                quote_id: quoteId
-            }));
+            const existingNumbers = quoteItems.map(item => item.itemNumber);
 
-            const saleItems: QuoteItem[] = (selectedBid.sale_items || []).map((item: any) => ({
-                itemNumber: item.itemNumber,
-                description: item.name,
-                uom: 'ea',
-                notes: item.notes || "",
-                quantity: item.quantity,
-                unitPrice: item.quotePrice / item.quantity,
-                discount: 0,
-                discountType: 'dollar',
-                associatedItems: [],
-                isCustom: false,
-                tax: 0,
-                is_tax_percentage: false,
-                quote_id: quoteId,
-            }));
+            const rentalItems: QuoteItem[] = (selectedBid.equipment_rental || [])
+                .filter((item: any) => !existingNumbers.includes(item.name))
+                .map((item: any) => ({
+                    itemNumber: item.item_number,
+                    description: item.name,
+                    uom: 'ea',
+                    notes: item.notes || "",
+                    quantity: item.quantity,
+                    unitPrice: item.revenue / item.quantity,
+                    discount: 0,
+                    discountType: 'dollar',
+                    associatedItems: [],
+                    isCustom: false,
+                    tax: 0,
+                    is_tax_percentage: false,
+                    quote_id: quoteId
+                }));
+
+            const saleItems: QuoteItem[] = (selectedBid.sale_items || [])
+                .filter((item: any) => !existingNumbers.includes(item.itemNumber))
+                .map((item: any) => ({
+                    itemNumber: item.item_number,
+                    description: item.name,
+                    uom: 'ea',
+                    notes: item.notes || "",
+                    quantity: item.quantity,
+                    unitPrice: item.quotePrice / item.quantity,
+                    discount: 0,
+                    discountType: 'dollar',
+                    associatedItems: [],
+                    isCustom: false,
+                    tax: 0,
+                    is_tax_percentage: false,
+                    quote_id: quoteId,
+                }));
 
             if (rentalItems.length > 0 || saleItems.length > 0) {
                 const allItems = [...rentalItems, ...saleItems];
@@ -117,12 +124,12 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                     const result = await createQuoteItem(item);
                     return result.item;
                 }));
-                setQuoteItems((prev) => ([...prev, finalList]));
+                setQuoteItems((prev) => ([...prev, ...finalList]));
             }
         }
 
         importItems();
-    }, [quoteId]);
+    }, [quoteId, selectedBid, quoteItems]);
 
     useEffect(() => {
         if (!data.start_date || !data.end_date) return;
