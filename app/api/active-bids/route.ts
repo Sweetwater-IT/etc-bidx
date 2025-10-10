@@ -781,39 +781,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Delete existing equipment rental items before inserting new ones
-    await supabase
-      .from('equipment_rental_entries')
-      .delete()
-      .eq('bid_estimate_id', bidEstimateId);
-
-    // Insert equipment rental items
+    // Insert equipment rental items (no delete needed; unique constraint handles overwrites)
     if (equipmentRental && equipmentRental.length > 0) {
-
       const rentalSummary = calculateRentalSummary(equipmentRental)
-
-      const rentalInserts = equipmentRental.map(item => (
-        {
-          bid_estimate_id: bidEstimateId,
-          name: item.name,
-          quantity: item.quantity,
-          notes: item.notes,
-          months: item.months,
-          rent_price: item.rentPrice,
-          re_rent_price: item.reRentPrice,
-          re_rent_for_current_job: item.reRentForCurrentJob,
-          total_cost: item.totalCost,
-          useful_life_yrs: item.usefulLifeYrs,
-          revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
-          gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
-          gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
-          cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
-        }));
-
+      
+      const rentalInserts = equipmentRental.map(item => ({
+        bid_estimate_id: bidEstimateId,
+        job_id: null,
+        name: item.name,
+        item_number: item.itemNumber,
+        quantity: item.quantity,
+        notes: item.notes,
+        months: item.months,
+        rent_price: item.rentPrice,
+        re_rent_price: item.reRentPrice,
+        re_rent_for_current_job: item.reRentForCurrentJob,
+        total_cost: item.totalCost,
+        useful_life_yrs: item.usefulLifeYrs,
+        revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
+        gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
+        gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
+        cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
+      }));
+      
       const { error: rentalError } = await supabase
         .from('equipment_rental_entries')
         .insert(rentalInserts);
-
       if (rentalError) {
         throw new Error(`Failed to create equipment rentals: ${rentalError.message}`);
       }
