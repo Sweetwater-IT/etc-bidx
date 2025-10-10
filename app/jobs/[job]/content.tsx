@@ -385,7 +385,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const loadAvailableJobs = useCallback(async () => {
-        
+
         try {
             console.log("Loading available jobs with activeSegment:", activeSegment);
             startLoading();
@@ -484,7 +484,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     'Perm Signs': job.perm_signs || false,
                     'Other': job.other || false
                 };
-                
+
                 return {
                     id: job.id,
                     contractNumber: contractNumberValue,
@@ -538,7 +538,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         setSelectedJob(availableJobs[nextIndex])
     }
 
-    const loadActiveBids = useCallback(async () => {
+    const loadActiveBids = useCallback(async () => {        
         try {
             startLoading();
             const ops: any = {
@@ -614,8 +614,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 id: e.id,
                 service_work: e.service_work ?? {},
                 bid_notes: Array.isArray(e.notes)
-                        ? e.notes
-                        : JSON.parse(e.notes || "[]"), 
+                    ? e.notes
+                    : JSON.parse(e.notes || "[]"),
                 contractNumber: e.contractNumber,
                 originalContractNumber: e.contractNumber,
                 contractor: (e.contractor_name && customers) ? customers.find(c => c.name === e.contractor_name)?.displayName || customers.find(c => c.name === e.contractor_name)?.name : '-',
@@ -642,7 +642,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 rentalValue: e.equipment_rental?.reduce((sum: number, item: any) =>
                     sum + (item.revenue || 0), 0) || 0,
                 createdAt: e.created_at ? e.created_at : "",
-                total: e.mpt_rental?._summary?.revenue || 0
+                total: e.mpt_rental?._summary?.revenue || 0,
+                adminData: e.admin_data,
             }));
 
             setActiveBids(transformedData);
@@ -673,7 +674,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder]);
 
-    const loadActiveJobs = useCallback(async () => {
+    const loadActiveJobs = useCallback(async () => {        
         try {
             startLoading();
 
@@ -1041,8 +1042,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
 
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
-        console.log('Marking job as bid job:', job);
-
         // Pass the job ID and source as query parameters
         // The API will fetch the complete job data using this ID
         const queryParams = new URLSearchParams({
@@ -1379,7 +1378,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    const initiateArchiveBids = (selectedBids: ActiveBid[]) => {
+    const initiateArchiveBids = (selectedBids: ActiveBid[]) => {        
         setSelectedActiveBids(selectedBids);
         setShowArchiveBidsDialog(true);
     };
@@ -1452,7 +1451,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    const fetchAllFilteredActiveBids = async () => {
+    const fetchAllFilteredActiveBids = async () => {        
         const options: any = {
             limit: activeBidsTotalCount || 10000,
             page: 1,
@@ -1941,7 +1940,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    };
+    };    
 
     const handleExportActiveBids = async () => {
         startLoading();
@@ -2334,6 +2333,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             {isActiveBids && selectedActiveBid && (
                                 <>
                                     <ActiveBidDetailsSheet
+                                        adminData={selectedActiveBid.adminData}
                                         open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
                                         onOpenChange={setActiveBidDetailsSheetOpen}
                                         bid={selectedActiveBid}
@@ -2372,7 +2372,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                         onOpenChange={setEditActiveJobSheetOpen}
                                         job={selectedActiveJob || undefined}
                                         onSuccess={loadActiveJobs}
-
                                     />
                                 </>
                             )}
