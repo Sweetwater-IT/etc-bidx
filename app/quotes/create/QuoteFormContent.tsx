@@ -29,6 +29,7 @@ import CustomerSelect from './components/CustomerSelector';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from 'recharts';
+import { QuoteItem } from '@/types/IQuoteItem';
 
 const typeQuotes = [
   {
@@ -55,6 +56,16 @@ const termsString = `--- This quote including all terms and conditions will be i
 --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing. \n
 --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing. \n
 --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.`;
+
+
+async function createQuoteItem(item: QuoteItem) {
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
 
 
 function normalizeQuoteMetadata(meta: any): QuoteState {
@@ -701,7 +712,63 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setTempData(null)
   }
 
+  const importItems = async (
+    bid: any
+  ) => {
+    if (!bid || !quoteId) return;
+
+    const existingNumbers = quoteItems.map(item => item.itemNumber);
+
+    const rentalItems = (bid.equipment_rental || [])
+      .filter((item: any) => !existingNumbers.includes(item.item_number))
+      .map((item: any) => ({
+        itemNumber: item.item_number,
+        description: item.name,
+        uom: 'ea',
+        notes: item.notes || "",
+        quantity: item.quantity,
+        unitPrice: item.revenue / item.quantity,
+        discount: 0,
+        discountType: 'dollar',
+        associatedItems: [],
+        isCustom: false,
+        tax: 0,
+        is_tax_percentage: false,
+        quote_id: quoteId
+      }));
+
+    const saleItems = (bid.sale_items || [])
+      .filter((item: any) => !existingNumbers.includes(item.item_number))
+      .map((item: any) => ({
+        itemNumber: item.item_number,
+        description: item.name,
+        uom: 'ea',
+        notes: item.notes || "",
+        quantity: item.quantity,
+        unitPrice: item.quotePrice / item.quantity,
+        discount: 0,
+        discountType: 'dollar',
+        associatedItems: [],
+        isCustom: false,
+        tax: 0,
+        is_tax_percentage: false,
+        quote_id: quoteId,
+      }));
+
+    if (rentalItems.length === 0 && saleItems.length === 0) return;
+
+    const allItems = [...rentalItems, ...saleItems];
+    const finalList = await Promise.all(allItems.map(async item => {
+      const result = await createQuoteItem(item);
+      return result.item;
+    }));
+
+    setQuoteItems(prev => [...prev, ...finalList]);
+  };
+
+
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
+
 
 
   return (
@@ -790,6 +857,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                       quoteData={quoteMetadata}
                       selectedBid={selectedBid}
                       onChange={setSelectedBid}
+                      extraFunctionCall={(bid) =>
+                        importItems(bid)
+                      }
                     />
                   </div>
                 )}

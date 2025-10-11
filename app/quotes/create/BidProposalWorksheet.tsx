@@ -348,7 +348,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             {items.map((i, idx) =>
               i.notes ? (
                 <p key={idx} style={{ whiteSpace: "pre-wrap" }}>
-                  {i.itemNumber + ' - ' + i.description + ' - ' + i.notes}
+                  {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
                 </p>
               ) : null
             )}

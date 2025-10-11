@@ -22,8 +22,6 @@ enum UOM_TYPES {
 
 // --- Endpoints ---
 async function createQuoteItem(item: QuoteItem) {
-  console.log('recibo', item);
-
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

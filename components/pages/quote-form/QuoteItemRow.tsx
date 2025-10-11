@@ -151,6 +151,7 @@ export default function QuoteItemRow({
       itemNumber: product.item_number,
       description: product.description,
       uom: product.uom,
+      notes: product.notes
     });
 
     setOpenProductSheet(true);

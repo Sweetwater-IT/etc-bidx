@@ -8,6 +8,7 @@ interface Product {
   grouping?: string | null;
   is_custom: boolean;
   source?: 'service_items' | 'sale' | 'rental';
+  notes: string;
 }
 
 export function useProductsSearch(searchTerm: string) {

@@ -34,15 +34,6 @@ const SectionBox = ({
     </div>
 );
 
-async function createQuoteItem(item: QuoteItem) {
-    const res = await fetch("/api/quotes/quoteItems", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-    });
-    return res.json();
-}
-
 const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false, setQuoteItems }: IRenderEstimateBidQuoteFields) => {
     const { quoteId, quoteItems } = useQuoteForm()
 
@@ -75,61 +66,6 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         }));
     }, [selectedBid, setData]);
 
-    useEffect(() => {
-
-        if (!selectedBid || !quoteId) return;
-
-        const importItems = async () => {
-            const existingNumbers = quoteItems.map(item => item.itemNumber);
-
-            const rentalItems: QuoteItem[] = (selectedBid.equipment_rental || [])
-                .filter((item: any) => !existingNumbers.includes(item.name))
-                .map((item: any) => ({
-                    itemNumber: item.item_number,
-                    description: item.name,
-                    uom: 'ea',
-                    notes: item.notes || "",
-                    quantity: item.quantity,
-                    unitPrice: item.revenue / item.quantity,
-                    discount: 0,
-                    discountType: 'dollar',
-                    associatedItems: [],
-                    isCustom: false,
-                    tax: 0,
-                    is_tax_percentage: false,
-                    quote_id: quoteId
-                }));
-
-            const saleItems: QuoteItem[] = (selectedBid.sale_items || [])
-                .filter((item: any) => !existingNumbers.includes(item.itemNumber))
-                .map((item: any) => ({
-                    itemNumber: item.item_number,
-                    description: item.name,
-                    uom: 'ea',
-                    notes: item.notes || "",
-                    quantity: item.quantity,
-                    unitPrice: item.quotePrice / item.quantity,
-                    discount: 0,
-                    discountType: 'dollar',
-                    associatedItems: [],
-                    isCustom: false,
-                    tax: 0,
-                    is_tax_percentage: false,
-                    quote_id: quoteId,
-                }));
-
-            if (rentalItems.length > 0 || saleItems.length > 0) {
-                const allItems = [...rentalItems, ...saleItems];
-                const finalList = await Promise.all(allItems.map(async item => {
-                    const result = await createQuoteItem(item);
-                    return result.item;
-                }));
-                setQuoteItems((prev) => ([...prev, ...finalList]));
-            }
-        }
-
-        importItems();
-    }, [quoteId, selectedBid, quoteItems]);
 
     useEffect(() => {
         if (!data.start_date || !data.end_date) return;

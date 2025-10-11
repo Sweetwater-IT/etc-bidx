@@ -22,7 +22,8 @@ export async function GET() {
       item_number: i.item_number,
       description: i.item_description,
       uom: i.uom,
-      is_custom: false
+      is_custom: false,
+      notes: i.notes
     }));
 
     const rentalItems = (rentalRes.data ?? []).map(i => ({
@@ -30,7 +31,8 @@ export async function GET() {
       item_number: i.item_number,
       description: i.item_description,
       uom: i.uom_1,
-      is_custom: false
+      is_custom: false,
+      notes: i.notes
     }));
 
     const res = NextResponse.json({

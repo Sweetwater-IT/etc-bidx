@@ -8,9 +8,6 @@ export async function GET(
 ) {
   const resolvedParams = await context.params
 
-
-  console.log('en los params recibo : ', resolvedParams);
-
   const quoteId = Number(resolvedParams.id);
 
   if (isNaN(quoteId)) {

@@ -398,7 +398,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
 
               {items.map((i, idx) =>
                 i.notes ? (
-                  <Text key={idx}>{i.itemNumber + ' - ' + i.description + ' - ' + i.notes}</Text>
+                  <Text key={idx}>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
                 ) : null
               )}
             </View>
