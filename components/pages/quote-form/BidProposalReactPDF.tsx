@@ -202,6 +202,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Customer: {joinWithSlash(data.customer_name, data.customer_address)}</Text>
               <Text>Customer Contact: {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</Text>
               <Text>Customer Job #: {data.customer_job_number || ""}</Text>
+              <Text>Purchase Order #: {data.purchase_order || ""}</Text>
             </View>
 
             {/* Point of Contact */}

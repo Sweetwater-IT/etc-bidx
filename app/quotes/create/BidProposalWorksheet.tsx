@@ -117,6 +117,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
               <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
               <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
+              <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
             </div>
 
             <div className="p-1 border-b border-black">
@@ -149,7 +150,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         data = quoteData as Partial<StraightSaleQuote>;
         return (
           <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[9px]">
-            <div className="p-1 border-r border-b border-black">
+            <div className="p-1 border-r  border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
               <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
@@ -323,11 +324,11 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             {items.map((i, idx) =>
               i.notes ? (
-                <div  key={idx}>
+                <div key={idx}>
                   <p style={{ whiteSpace: "pre-wrap" }}>
                     {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
                   </p>
-                  <br/>
+                  <br />
                 </div>
               ) : null
             )}
