@@ -27,12 +27,15 @@ export const useCustomerSelection = () => {
     const [loading, setLoading] = useState(true);
 
     const getCustomers = async () => {
-        setLoading(true); 
+        setLoading(true);
         try {
             const res = await fetch("/api/contractors?offset=0&limit=1000");
             const result = await res.json();
             if (result.success) {
-                setCustomers(result.data);
+                const sorted = [...result.data].sort((a: Customer, b: Customer) =>
+                    a.name.localeCompare(b.name)
+                );
+                setCustomers(sorted);
             }
         } catch (error) {
             console.error(error);
@@ -87,7 +90,7 @@ export const useCustomerSelection = () => {
         addCustomer,
         addContact,
         refreshCustomers: getCustomers,
-        loading, 
+        loading,
     };
 };
 

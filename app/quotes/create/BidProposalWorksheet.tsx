@@ -12,26 +12,14 @@ import { PdfViewer } from './components/PdfViewer'
 import { InitialsLine } from './components/InitialsLine'
 
 interface BidProposalWorksheetProps {
-  adminData: AdminData
   items: QuoteItem[]
-  customers: Customer[]
   quoteDate: Date
-  quoteNumber: string
-  pointOfContact: { name: string; email: string }
-  sender: User
-  paymentTerms: PaymentTerms
-  includedTerms: Record<TermsNames, boolean>
-  customTaC: string
-  county: string
-  sr: string
-  ecms: string
   notes: string | undefined,
   quoteType: "straight_sale" | "to_project" | "estimate_bid";
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
   files: any;
   exclusions?: string;
-  allowExclusions: boolean;
   terms: string;
 }
 
@@ -42,27 +30,15 @@ const formatDate = (date?: string) => {
 };
 
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
-  adminData,
   items,
-  customers,
-  quoteDate,
-  quoteNumber,
-  pointOfContact,
-  sender,
-  paymentTerms,
-  includedTerms,
-  customTaC,
-  county,
-  sr,
-  ecms,
   notes,
   quoteType,
   quoteData,
   termsAndConditions,
   files,
   exclusions,
-  allowExclusions,
-  terms
+  terms,
+  quoteDate
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const formatMoney = (v: number) =>
@@ -347,9 +323,12 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             {items.map((i, idx) =>
               i.notes ? (
-                <p key={idx} style={{ whiteSpace: "pre-wrap" }}>
-                  {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
-                </p>
+                <div  key={idx}>
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
+                  </p>
+                  <br/>
+                </div>
               ) : null
             )}
           </div>

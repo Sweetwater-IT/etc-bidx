@@ -7,34 +7,18 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer';
-import { AdminData } from '@/types/TAdminData';
 import { QuoteItem } from '@/types/IQuoteItem';
-import { PaymentTerms } from '../../../components/pages/quote-form/QuoteAdminInformation';
-import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
-import { User } from '@/types/User';
 import { Customer } from '@/types/Customer';
 import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/quotes/create/types';
 
 interface Props {
-  adminData: AdminData;
   items: QuoteItem[];
-  customers: Customer[];
-  sender: User;
   quoteDate: Date;
-  quoteNumber: string;
-  paymentTerms: PaymentTerms;
-  includedTerms: Record<TermsNames, boolean>;
-  customTaC?: string;
-  county: string;
-  sr: string;
-  ecms: string;
-  pointOfContact: { name: string; email: string };
   notes: string | undefined;
   quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
   exclusions?: string;
-  allowExclusions: boolean;
   terms: string;
 }
 
@@ -115,28 +99,16 @@ const formatDate = (date?: string) => {
 };
 
 export const BidProposalReactPDF: React.FC<Props> = ({
-  adminData,
   items,
-  customers,
   quoteDate,
-  quoteNumber,
-  pointOfContact,
-  sender,
-  includedTerms,
-  customTaC,
-  county,
-  sr,
-  ecms,
   notes,
   quoteType,
   quoteData,
   termsAndConditions,
   exclusions,
-  allowExclusions = false,
   terms
 
 }) => {
-  const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
 
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -393,12 +365,13 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Notes:</Text>
             <View style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
               {notes?.split('\n').map((line, index) => (
-                <Text key={index}>{line}</Text>
+                <Text key={index}>
+                  {line}
+                </Text>
               ))}
-
               {items.map((i, idx) =>
                 i.notes ? (
-                  <Text key={idx}>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  <Text key={idx}>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>{i.description}</Text> {' - ' + i.notes}</Text>
                 ) : null
               )}
             </View>

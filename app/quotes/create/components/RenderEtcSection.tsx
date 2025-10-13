@@ -63,7 +63,7 @@ const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: I
             <div className="flex flex-col gap-2 ">
                 {renderField("etc_point_of_contact", "ETC Point of Contact", user?.user_metadata?.name)}
                 {renderField("etc_poc_email", "ETC POC Email", user?.email)}
-                {renderField("etc_poc_phone_number", "ETC POC Phone", userBranch?.address)}
+                {renderField("etc_poc_phone_number", "ETC POC Phone", "(215) 997-8801")}
                 <div className="flex-1 mb-4">
                     <label className="block font-semibold mb-1">ETC Branch</label>
                     {editAll ? (

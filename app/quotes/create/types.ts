@@ -46,6 +46,8 @@ export interface Quote {
     exclusionsText: string;
     termsText: string;
     tax_rate: number;
+    items: any
+    files: any
 }
 
 export interface StraightSaleQuote extends Quote {

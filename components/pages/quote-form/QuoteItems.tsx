@@ -283,7 +283,7 @@ export function QuoteItems() {
               />
 
 
-              <p>Apply to all?</p>
+              <p>Apply tax to all?</p>
             </div>
           </div>
         </div>

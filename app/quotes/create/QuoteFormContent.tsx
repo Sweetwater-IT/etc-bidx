@@ -46,16 +46,36 @@ const typeQuotes = [
   }
 ]
 
-const exclusions = "Arrow Panels/Changeable Message Sign/Radar Trailer unless specified\nShadow vehicles/Truck Mounted Attenuators and operators unless specified\nTraffic Signal activation/deactivation/flash (contractors responsibility)\nTemporary signals, lighting, related signage and traffic control unless specified\nAll Traffic Signal Work, modifying\nShop/plan drawings and/or layout for MPT signing – professional engineering services\nWork Zone Liquidated Damages\nHoliday or work stoppage removal of signs and/or devices\nPavement Marking and Removal\nNotification of (including permits from) officials (i.e., Police, Government, DOT)/business and property owners\nAll electrical work/line and grade work/Location of Utilities Not Covered by PA One Call\nIncidental items not specifically included above";
-const termsString = `--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal. \n
---- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days. \n
---- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal. \n
---- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed. \n
---- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor. \n
---- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included. \n
---- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing. \n
---- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing. \n
---- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.`;
+const exclusions = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
+• Traffic control supervisor, unless otherwise noted
+• Notification of (including permits from) officials (i.e. police, government, DOT), business and/or property owners
+• Core drilling, backfilling, grading, excavation or removal of excavated material
+• Snow and/or ice removal for placement, maintenance and/or removal of temporary signs
+• Short-term signs and stands
+• Constant surveillance, daily adjustments/resets, pedestrian protection
+• Shop/plan drawings and/or layout for MPT signing
+• High reach trucks and/or overhead signage
+• Shadow vehicles and operators, unless specified above
+• Arrow panels, message boards, shadow vehicles, radar trailers, shadow vehicles (and operators), unless specified above
+• Reinstallation of signs removed by the contractor for construction
+• Restoration or surface repairs
+• Temporary signals, lighting, related signage
+• Temporary rumble strips, pavement marking or delineators, unless otherwise specified
+• Holiday or work stoppage removal of signs and/or devices`;
+
+const termsString = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
+• The Contractor is responsible for all lost, stolen, damaged materials and equipment. In the event of lost, stolen or damaged material or equipment the contractor will be invoiced at replacement cost. Payment terms for lost, stolen, or damaged material are Net 30 days.
+• All material supplied and quoted pricing is project specific and shall only be used for the quoted project.
+• Payment terms for sale items accepted as a part of this proposal are Net 14 days. All rental invoices accepted as a part of this proposal are Net 30 days.
+• Quoted pricing does not include sales tax, delivery or shipping unless explicitly stated
+• No additional work will be performed without a written change order. Extra work orders signed by an agent of the contractor shall provide full payment within 30 days of invoice date, regardless of whether the project owner has paid the contractor
+• If payment by owner to contractor is delayed due to a dispute between owner and contractor, not involving the work performed by Established Traffic Control, Inc. (“ETC”), then payment by the contractor to ETC shall not likewise be delayed.
+• All pricing for sale items is valid for 60 days from quote date. Sale items requested 60 days or more after quote date require a revised quote.
+• Permanent sign items are subject to a 5% escalation per year throughout the contract duration, effective December 31 of every year from original quote date to contract end.
+• ETC requires a minimum notice of 14 business days’ (28 days for permanent signs) for all projects start and/or changes with approved drawings or additional fees may apply.
+• Retainage will not be withheld on subcontractor agreements less than $50,000
+• No retainage will be withheld on rental or sale items regardless of value / price
+• Contractor must supply certificate of insurance for rental items upon pick-up`;
 
 
 async function createQuoteItem(item: QuoteItem) {
@@ -563,23 +583,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           exclusions={quoteMetadata?.exclusionsText}
           terms={quoteMetadata?.termsText}
           notes={quoteMetadata?.notes}
-          adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
-          customers={selectedCustomers}
           quoteDate={new Date()}
-          quoteNumber={quoteId?.toString() ?? ""}
-          pointOfContact={pointOfContact ?? { name: "", email: "" }}
-          sender={sender}
-          paymentTerms={paymentTerms as PaymentTerms}
-          includedTerms={includeTerms}
-          customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-          county={adminData?.county?.country || ''}
-          sr={adminData?.srRoute || ''}
-          ecms={adminData?.contractNumber || ''}
           quoteData={quoteMetadata}
           quoteType={quoteMetadata?.type_quote || "straight_sale"}
           termsAndConditions={quoteMetadata?.aditionalTerms}
-          allowExclusions={quoteMetadata?.aditionalExclusions}
         />
       ).toBlob()
 
@@ -786,7 +794,10 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <QuotePreviewButton terms={quoteMetadata?.termsText} exclusion={quoteMetadata?.exclusionsText ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
               <Button disabled={downloading || !quoteId} variant="outline" onClick={handleDownload}>
                 {downloading ? (
+                  <>
+                  <p>Downloading </p>
                   <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  </>
                 ) : (
                   "Download"
                 )}
@@ -1006,25 +1017,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
             <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
               <BidProposalWorksheet
-                allowExclusions={quoteMetadata?.aditionalExclusions}
                 exclusions={quoteMetadata?.exclusionsText}
                 terms={quoteMetadata?.termsText}
                 quoteData={quoteMetadata}
                 quoteType={quoteMetadata?.type_quote || "straight_sale"}
                 notes={quoteMetadata?.notes}
-                adminData={adminData ?? defaultAdminObject}
                 items={quoteItems}
-                customers={selectedCustomers}
                 quoteDate={new Date()}
-                quoteNumber={quoteNumber || quoteId?.toString() || ''}
-                pointOfContact={pointOfContact ?? { name: '', email: '' }}
-                sender={sender}
-                paymentTerms={paymentTerms as PaymentTerms}
-                includedTerms={includeTerms}
-                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-                county={adminData ? adminData.county?.name || '' : ''}
-                sr={adminData ? adminData.srRoute || '' : ''}
-                ecms={adminData ? adminData.contractNumber || '' : ''}
                 termsAndConditions={quoteMetadata?.aditionalTerms}
                 files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
               />

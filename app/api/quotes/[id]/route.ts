@@ -20,9 +20,9 @@ export async function GET(
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select(`
-      *,
-      notes(*)
-    `)
+    *,
+    notes_relation:notes(*)
+  `)
     .eq("id", quoteId)
     .single();
 
@@ -113,14 +113,14 @@ export async function GET(
       .from("admin_data_entries")
       .select("*")
       .eq("bid_estimate_id", quote.estimate_id)
-      .maybeSingle<AdminDataEntry>(); // 👈 tipado aquí
+      .maybeSingle<AdminDataEntry>();
     adminData = data;
   } else if (quote.job_id) {
     const { data } = await supabase
       .from("admin_data_entries")
       .select("*")
       .eq("job_id", quote.job_id)
-      .maybeSingle<AdminDataEntry>(); // 👈 tipado aquí
+      .maybeSingle<AdminDataEntry>();
     adminData = data;
   }
   const files: any[] = [];
@@ -154,10 +154,11 @@ export async function GET(
     admin_data: adminData || null,
     files,
     ...quote,
-    notes: quote?.notes?.map(note => ({
+    notes: quote?.notes_relation?.map(note => ({
       ...note,
       timestamp: new Date(note.created_at).getTime(),
-    }))
+    })),
+    notesText: quote.notes
   };
 
   console.log("✅ [GET /quotes/:id] Final response3", response);
