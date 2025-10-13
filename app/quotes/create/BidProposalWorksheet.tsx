@@ -284,13 +284,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 );
               })}
 
-              <tr className='w-full border-b-black border-1 my-2'></tr>
+              <tr className='w-full border-b-black border-1 my-2 '></tr>
               <tr className="text-[12px]">
                 <td colSpan={5}></td>
                 <td colSpan={1} className="px-1 py-1 text-center font-bold">
                   SUBTOTAL
                 </td>
-                <td colSpan={1} className=" py-1 text-right font-bold">
+                <td colSpan={1} className=" py-1 text-right font-bold pr-1">
                   {formatMoney(total)}
                 </td>
               </tr>
@@ -299,7 +299,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
                   TAX
                 </td>
-                <td colSpan={1} className="px-2 py-1 text-right font-bold">
+                <td colSpan={1} className="py-1 text-right font-bold  pr-1">
                   {formatMoney(totalTax)}
                 </td>
               </tr>
@@ -308,7 +308,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
                   TOTAL
                 </td>
-                <td colSpan={1} className="px-2 py-1 text-right font-bold">
+                <td colSpan={1} className=" py-1 text-right font-bold  pr-1">
                   {formatMoney(total + totalTax)}
                 </td>
               </tr>
