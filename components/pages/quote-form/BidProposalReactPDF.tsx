@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
   cellDescription: { width: '36%', textAlign: 'center', paddingRight: 4 },
   cellUOM: { width: '10%', textAlign: 'center' },
   cellQuantity: { width: '10%', textAlign: 'center' },
-  cellUnitPrice: { width: '10%', textAlign: 'center' },
-  cellExtended: { width: '10%', textAlign: 'center' },
+  cellUnitPrice: { width: '10%', textAlign: 'right' },
+  cellExtended: { width: '10%', textAlign: 'right' },
 });
 
 const SignatureLine: React.FC = () => (
@@ -329,7 +329,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>SUBTOTAL</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total)}</Text>
               </View>
 
             </View>
@@ -343,7 +343,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TAX</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(totalTax)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(totalTax)}</Text>
               </View>
             </View>
             <View style={styles.tableRow}>
@@ -356,7 +356,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TOTAL</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total + totalTax)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total + totalTax)}</Text>
               </View>
             </View>
           </View>
