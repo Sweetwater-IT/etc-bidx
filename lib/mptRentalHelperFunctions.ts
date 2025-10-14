@@ -40,12 +40,8 @@ export function getEquipmentTotalsPerPhase(mptRental: MPTRentalEstimating): Reco
     // Get all entries for a given phase's standard equipment
     Object.entries(phase.standardEquipment).forEach(([key, value]) => {
       const equipmentType = key as EquipmentType;
-
       if (value.quantity >= 0 && phase?.days >= 0) {
-        if (!equipmentTotals[equipmentType]) {
-          equipmentTotals[equipmentType] = { totalQuantity: 0, totalDaysRequired: 0 };
-        }
-
+        // Add the quantity and days from the phase to the totals
         equipmentTotals[equipmentType].totalQuantity += value.quantity;
         equipmentTotals[equipmentType].totalDaysRequired += phase.days;
       }

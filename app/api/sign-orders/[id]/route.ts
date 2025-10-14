@@ -39,12 +39,7 @@ export async function GET(
     }
 
     const signs: SignItem[] = Array.isArray(data.signs) ? data.signs : Object.values(data.signs || {});
-
-    const { data: allNotes, error: notesError } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('sign_id', data.id);
-
+    
     const transformedData = {
       ...data,
       signs: signs.map((sign) => ({ ...sign, associatedStructure: sign.associated_structure || '' })),
@@ -54,11 +49,7 @@ export async function GET(
         role: data.customer_contacts.role || '',
         email: data.customer_contacts.email || '',
         phone: data.customer_contacts.phone || ''
-      } : undefined,
-      notes: allNotes?.map(note => ({
-        ...note,
-        timestamp: new Date(note.created_at).getTime()
-      })) || []
+      } : undefined
     };
 
     return NextResponse.json({

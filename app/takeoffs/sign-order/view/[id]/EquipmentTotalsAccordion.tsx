@@ -44,13 +44,16 @@ const EquipmentTotalsAccordion = () => {
   
   // Calculate equipment totals whenever mptRental changes
   useEffect(() => {
-
+    console.log('EquipmentTotalsAccordion useEffect - mptRental:', mptRental);
+    console.log('EquipmentTotalsAccordion useEffect - phases:', mptRental?.phases);
+    console.log('EquipmentTotalsAccordion useEffect - phase[0] signs:', mptRental?.phases?.[0]?.signs);
+    
     if (mptRental?.phases?.[0]) {
       const equipTotals = getAssociatedSignEquipment(mptRental.phases[0]);
       console.log('EquipmentTotalsAccordion useEffect - calculated equipment totals:', equipTotals);
       setEquipmentTotals(equipTotals);
     }
-  }, [mptRental?.phases?.[0]?.signs]); 
+  }, [mptRental?.phases?.[0]?.signs]); // Re-run when signs change
 
   const handleEditClick = () => {
     setEditingMode(!editingMode)
