@@ -466,10 +466,12 @@ export async function GET(req: NextRequest) {
           status: item.status || '',
           shop_status: item.shop_status || 'not-started',
           order_number: item.order_number || '',
-          signs: item.signs.map((sign) => ({
-            ...sign,
-            associatedStructure: sign.associated_structure
-          }))
+          signs: Array.isArray(item.signs)
+            ? item.signs.map(sign => ({
+              ...sign,
+              associatedStructure: sign.associated_structure
+            }))
+            : []
         })) || [];
 
         const pageCount = Math.ceil(totalCount / limit);
@@ -479,10 +481,10 @@ export async function GET(req: NextRequest) {
           totalCount,
           pageCount
         });
-        
+
       } catch (error: any) {
         console.error('Error fetching sign orders:', error);
-        
+
         // If there's an error with the database query, return a fallback with empty data
         // This ensures the frontend doesn't break completely
         return NextResponse.json({
