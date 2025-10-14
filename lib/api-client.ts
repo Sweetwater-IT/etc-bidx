@@ -1146,8 +1146,7 @@ export const fetchAssociatedFiles = async (
 
   try {
     const filesResponse = await fetch(
-      //example contract-management?job_id
-      `/api/files/${folder}=${uniqueIdentifier}`
+      `/api/files?folder=${folder}&id=${uniqueIdentifier}`
     )
     if (filesResponse.ok) {
       const filesData = await filesResponse.json()
