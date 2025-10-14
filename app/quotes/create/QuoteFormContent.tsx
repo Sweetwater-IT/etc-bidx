@@ -774,11 +774,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setQuoteItems(prev => [...prev, ...finalList]);
   };
 
-
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
-
-
-
+  
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -795,8 +792,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <Button disabled={downloading || !quoteId} variant="outline" onClick={handleDownload}>
                 {downloading ? (
                   <>
-                  <p>Downloading </p>
-                  <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                    <p>Downloading </p>
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
                   </>
                 ) : (
                   "Download"
@@ -824,7 +821,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
             </div>
           ) : (
-            <div className="flex w-1/2 flex-col overflow-y-auto">
+            <div className="flex w-1/2 flex-col overflow-y-auto px-2">
               <div className="flex flex-row gap-4 mb-4 w-full">
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>

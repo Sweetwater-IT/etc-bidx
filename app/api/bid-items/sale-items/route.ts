@@ -8,8 +8,7 @@ export async function GET(request: NextRequest) {
         console.log(`Search parameter: ${search || 'not provided'}`);
         const baseQuery = supabase
             .from('sale_items')
-            .select('id, item_number, display_name, uom, notes, item_description'); // FIXED: Match schema columns (dropped vendor/quantity/quote_price/markup_percentage; no 'name')
-        // Aplica filtro si search existe
+            .select('id, item_number, display_name, uom, notes, item_description');
         const query = search
             ? baseQuery.ilike('item_number', `%${search}%`)
             : baseQuery;
@@ -19,10 +18,9 @@ export async function GET(request: NextRequest) {
             console.error("Error fetching sale items:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
-        // FIXED: Map 'display_name' to 'name' for frontend compatibility
         const mappedData = data?.map(item => ({
             ...item,
-            name: item.display_name, // NEW: Alias for component's { item_number, name }
+            name: item.display_name,
         })) ?? [];
         console.log(`Successfully fetched ${mappedData.length} sale items.`);
         console.log("Data fetched:", mappedData);

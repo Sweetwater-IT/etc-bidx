@@ -209,7 +209,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p>Email: <span className='underline text-blue-600'>estimating@establishedtraffic.com</span></p>
             </div>
             <div className="text-center w-1/4 ">
-              <h2 className="text-xl font-bold">PROPOSAL</h2>
+              <h2 className="text-xl font-bold">{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</h2>
               <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
               <p>
                 Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
@@ -321,7 +321,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           <p className="uppercase font-bold">Notes:</p>
           <div style={{ whiteSpace: "pre-wrap" }} className='flex flex-col flex-1'>
             {notes && <p>{notes}</p>}
-
+            <br />
             {items.map((i, idx) =>
               i.notes ? (
                 <div key={idx}>

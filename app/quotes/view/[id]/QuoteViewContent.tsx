@@ -203,13 +203,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
   const handleDownload = async () => {
     try {
-      let url = quote?.pdf_url ?? null;
-
-      if (!url) {
-        url = await handleGenerateAndUpload();
-        if (!url) return;
-      }
-
+      const url : any = await handleGenerateAndUpload();
       window.open(url, "_blank");
     } catch (err) {
       console.error(err);
@@ -406,7 +400,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                     <Loader className="animate-spin w-5 h-5 text-gray-600" />
                   </>
                 ) : (
-                  "Downloading"
+                  "Download " + (quote.status === 'Accepted' ? "Sale Ticket" : "Quote")
                 )}
               </Button>
             </div>

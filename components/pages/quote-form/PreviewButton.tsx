@@ -28,8 +28,6 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion, t
     sender,
     customTerms,
     paymentTerms,
-    stateRoute,
-    ecmsPoNumber,
     pointOfContact,
     quoteMetadata,
   } = useQuoteForm();
@@ -51,19 +49,11 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion, t
   }, [
     adminData,
     quoteItems,
-    selectedCustomers,
-    quoteDate,
     quoteId,
-    pointOfContact,
-    sender,
-    paymentTerms,
-    includeTerms,
     customTerms,
-    stateRoute,
-    ecmsPoNumber,
-    quoteType,
     termsAndConditions,
-    quoteMetadata?.aditionalExclusions
+    quoteMetadata?.aditionalExclusions,
+    quoteMetadata,
   ]);
 
   return (

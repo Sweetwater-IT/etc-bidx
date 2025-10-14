@@ -280,7 +280,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               </Text>
             </View>
             <View style={styles.header3}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>Proposal</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
               <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
               <Text style={styles.centerText}>
                 Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
@@ -370,6 +370,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   {line}
                 </Text>
               ))}
+              <View style={{marginBottom: 6}}/>
               {items.map((i, idx) =>
                 i.notes ? (
                   <Text key={idx}>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>{i.description}</Text> {' - ' + i.notes}</Text>
