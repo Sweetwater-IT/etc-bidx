@@ -1143,6 +1143,9 @@ export const fetchAssociatedFiles = async (
 ) => {
   if (!uniqueIdentifier) return;
 
+  console.log('uniqueIdentifier',uniqueIdentifier);
+  console.log('folder',folder);
+
   try {
     const filesResponse = await fetch(
       `/api/files?folder=${folder}&id=${uniqueIdentifier}`

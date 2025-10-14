@@ -212,7 +212,10 @@ export default function SignOrderContentSimple({
         setAlreadySubmitted(true)
       }
 
-      // Extract sign items from the signs JSON field
+      if (data.data.notes) {
+        setNotes(data.data.notes)
+      }
+
       if (data.data.signs) {
         try {
           // Convert the signs object to an array and prepare for shop tracking
@@ -410,7 +413,7 @@ export default function SignOrderContentSimple({
 
   const fetchFiles = () => {
     if (!signOrderId) return
-    fetchAssociatedFiles(signOrderId, 'sign-orders?sign_order_id', setLocalFiles)
+    fetchAssociatedFiles(signOrderId, 'sign-orders', setLocalFiles)
   }
 
   useEffect(() => {
@@ -423,57 +426,63 @@ export default function SignOrderContentSimple({
     }
   }, [isSuccess, files, successes, setLocalFiles])
 
-  useEffect(() => {
-    async function fetchNotes() {
-      setLoadingNotes(true)
-      try {
-        if (!signOrderId) return
-        const res = await fetch(`/api/sign-orders?id=${signOrderId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setNotes(Array.isArray(data.notes) ? data.notes : [])
-        }
-      } finally {
-        setLoadingNotes(false)
-      }
-    }
-    fetchNotes()
-  }, [signOrderId])
-
   const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notes, note]
-    setNotes(updatedNotes)
+    const updatedNotes = [...notes, note];
     if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
+      const resp = await fetch(`/api/sign-orders/addNotes`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, timestamp: note.timestamp, notes: updatedNotes, user_email: user.email })
-      })
+        body: JSON.stringify({
+          sign_id: signOrderId,
+          text: note.text,
+          user_email: user.email,
+          timestamp: note.timestamp
+        })
+      });
+      const data = await resp.json();
+
+      if (data.ok && data.data) {
+        setNotes((prev) => ([...prev,
+        { ...data.data, timestamp: new Date(data.data.created_at).getTime() }
+        ]))
+      }
+
     }
   }
 
-
   const handleEditNote = async (index: number, updatedNote: Note) => {
-    const updatedNotes = notes.map((n, i) => (i === index ? updatedNote : n))
-    setNotes(updatedNotes)
-    if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
-      })
+    const noteToEdit = notes[index];
+    if (!noteToEdit) return;
+
+    const resp = await fetch(`/api/sign-orders/addNotes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: noteToEdit.id, text: updatedNote.text })
+    });
+    const data = await resp.json();
+
+    if (data.ok && data.data) {
+      setNotes(notes.map(n => (n.id === noteToEdit.id ? { ...data.data, timestamp: new Date(data.data.created_at).getTime() } : n)));
+    } else {
+      console.error('Error updating note:', data.error || data.message);
     }
   }
 
   const handleDeleteNote = async (index: number) => {
-    const updatedNotes = notes.filter((_, i) => i !== index)
-    setNotes(updatedNotes)
-    if (signOrderId) {
-      await fetch(`/api/sign-orders`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: signOrderId, notes: updatedNotes })
-      })
+    const noteToDelete = notes[index];
+    if (!noteToDelete) return;
+
+    const resp = await fetch(`/api/sign-orders/addNotes`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: noteToDelete.id })
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      setNotes(notes.filter(n => n.id !== noteToDelete.id));
+    } else {
+      console.error('Error deleting note:', data.error || data.message);
     }
   }
 
@@ -568,7 +577,7 @@ export default function SignOrderContentSimple({
       console.error('Error generating PDF:', error);
       toast.error('Error generating PDF');
     }
-  };  
+  };
 
   return mptRental.phases.length > 0 ? (
     <div className="flex flex-1 flex-col">
@@ -634,7 +643,6 @@ export default function SignOrderContentSimple({
             onSave={handleSaveNote}
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
-            loading={loadingNotes}
           />
           <div className="bg-[#F4F5F7] p-6 rounded-lg">
             <div className="flex justify-end">
