@@ -210,17 +210,22 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
             </div>
             <div className="text-center w-1/4 ">
               <h2 className="text-xl font-bold">{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</h2>
-              <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
-              <p>
-                Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
-              </p>
+              {
+                quoteData?.status !== "Accepted" &&
+                <div>
+                  <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
+                  <p>
+                    Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+                  </p>
+                </div>
+              }
               <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
             </div>
           </div>
         </header>
 
         {renderCustomerInfo()}
-        <section className="mt-3 text-[12px]">
+        < section className="mt-3 text-[12px]" >
           <table className="w-full border-[1.5px] border-black border-collapse">
             <thead>
               <tr className='border-black border-b-[1.5px]'>
@@ -315,7 +320,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               </tr>
             </tbody>
           </table>
-        </section>
+        </section >
 
         <section className="mt-2 text-[9px] flex flex-col gap-4">
           <p className="uppercase font-bold">Notes:</p>
@@ -335,7 +340,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           </div>
         </section>
 
-      </div>
+      </div >
       <div className='flex flex-col items-center'>
 
         <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
@@ -358,7 +363,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </p>
       </div>
 
-    </div>
+    </div >
   );
 
   if (termsAndConditions) {

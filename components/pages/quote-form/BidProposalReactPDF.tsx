@@ -281,10 +281,15 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             </View>
             <View style={styles.header3}>
               <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
-              <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
-              <Text style={styles.centerText}>
-                Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
-              </Text>
+              {
+                quoteData?.status !== "Accepted" &&
+                <View>
+                  <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
+                  <Text style={styles.centerText}>
+                    Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+                  </Text>
+                </View>
+              }
               <Text style={[styles.centerText]}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
             </View>
           </View>
@@ -371,9 +376,12 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 </Text>
               ))}
               <View style={{marginBottom: 6}}/>
+            
               {items.map((i, idx) =>
                 i.notes ? (
-                  <Text key={idx}>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  <View key={idx} style={{marginBottom: 6}}>
+                    <Text>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  </View>
                 ) : null
               )}
             </View>

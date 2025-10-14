@@ -775,7 +775,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   };
 
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
-  
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -1012,18 +1012,26 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         <div className="w-1/2 overflow-y-auto ">
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky ">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
-            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
-              <BidProposalWorksheet
-                exclusions={quoteMetadata?.exclusionsText}
-                terms={quoteMetadata?.termsText}
-                quoteData={quoteMetadata}
-                quoteType={quoteMetadata?.type_quote || "straight_sale"}
-                notes={quoteMetadata?.notes}
-                items={quoteItems}
-                quoteDate={new Date()}
-                termsAndConditions={quoteMetadata?.aditionalTerms}
-                files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
-              />
+            <div className=" min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              {
+                loadingMetadata ?
+                  <div className='flex-1 h-[1000px] flex flex-row justify-center items-center'>
+                    <Loader2 className="w-6 h-6 animate-spin m-auto text-gray-500" />
+                  </div>
+                  :
+                  <BidProposalWorksheet
+                    exclusions={quoteMetadata?.exclusionsText}
+                    terms={quoteMetadata?.termsText}
+                    quoteData={quoteMetadata}
+                    quoteType={quoteMetadata?.type_quote || "straight_sale"}
+                    notes={quoteMetadata?.notes}
+                    items={quoteItems}
+                    quoteDate={new Date()}
+                    termsAndConditions={quoteMetadata?.aditionalTerms}
+                    files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
+                  />
+
+              }
             </div>
           </div>
         </div>
