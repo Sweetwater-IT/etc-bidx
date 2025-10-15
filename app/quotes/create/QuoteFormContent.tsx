@@ -584,6 +584,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           terms={quoteMetadata?.termsText}
           notes={quoteMetadata?.notes}
           items={quoteItems}
+          quoteStatus={quoteMetadata?.status || ""}
           quoteDate={new Date()}
           quoteData={quoteMetadata}
           quoteType={quoteMetadata?.type_quote || "straight_sale"}

@@ -14,7 +14,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ArrowLeft, Loader } from "lucide-react"
+import { ChevronDown, ArrowLeft, Loader, Download } from "lucide-react"
 import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
 import ReactPDF from '@react-pdf/renderer'
 
@@ -140,7 +140,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     fetchQuote();
   }, [quoteId]);
 
-  const handleGenerateAndUpload = async (): Promise<string | null> => {
+  const handleGenerateAndUpload = async (type: 'saleTicket' | 'quote'): Promise<string | null> => {
     setDownloading(true)
     try {
       if (!quote || !quote.id) {
@@ -155,6 +155,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           notes={quote?.notesText}
           items={quote?.items ?? []}
           quoteDate={new Date()}
+          quoteStatus={type === 'quote' ? ("DRAFT") : (quote?.status ?? '')}
           quoteData={quote as any}
           quoteType={quote?.type_quote || "straight_sale"}
           termsAndConditions={quote?.aditionalTerms}
@@ -201,9 +202,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   };
 
 
-  const handleDownload = async () => {
+  const handleDownload = async (type: 'saleTicket' | 'quote') => {
     try {
-      const url : any = await handleGenerateAndUpload();
+      const url: any = await handleGenerateAndUpload(type);
       window.open(url, "_blank");
     } catch (err) {
       console.error(err);
@@ -316,22 +317,21 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     }
   }
 
-  const getStatusColor = (status: string) => {
-
-    const statusLowwer = status.toLowerCase()
-    switch (statusLowwer) {
+  const getStatusStyles = (status: string) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
       case "accepted":
-        return "bg-green-500"
+        return "bg-green-100 text-green-700 border-green-300";
       case "declined":
-        return "bg-red-500"
+        return "bg-red-100 text-red-700 border-red-300";
       case "sent":
-        return "bg-blue-500"
+        return "bg-blue-100 text-blue-700 border-blue-300";
       case "draft":
-        return "bg-gray-500"
+        return "bg-gray-100 text-gray-700 border-gray-300";
       default:
-        return "bg-gray-400"
+        return "bg-gray-100 text-gray-600 border-gray-300";
     }
-  }
+  };
 
   return (
     <SidebarProvider
@@ -345,67 +345,87 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       <AppSidebar variant="inset" />
 
       <SidebarInset>
-        <SiteHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-                className="rounded-full"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+        <SiteHeader paddingTop={12} marginBottom={6}>
+        </SiteHeader>
+        <div className="flex w-full px-8 items-center justify-between">
+          <div className="flex w-full flex-col items-center gap-3">
+            <div className="flex w-full flex-row items-center justify-between">
+              <div className="flex flex-row items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.back()}
+                  className="rounded-full flex flex-row"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </Button>
+                <p>Back to Quotes</p>
 
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Button
+                  onClick={handleEditQuote}
+                  className="bg-primary text-white hover:bg-primary/90"
+                >
+                  Edit Quote
+                </Button>
+
+                <Button variant="outline" size={'sm'} onClick={() => handleDownload('quote')}>
+                  <Download />
+                  {downloading ? (
+                    <>
+                      <p>Downloading </p>
+                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                    </>
+                  ) : (
+                    "Download Quote"
+                  )}
+                </Button>
+                {
+                  quote.status === 'Accepted' &&
+                  <Button variant="outline" size={'sm'} onClick={() => handleDownload('saleTicket')}>
+                    <Download />
+                    {downloading ? (
+                      <>
+                        <p>Downloading </p>
+                        <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                      </>
+                    ) : (
+                      "Download Sale Ticket"
+                    )}
+                  </Button>
+                }
+              </div>
+            </div>
+
+            <div className="flex w-full flex-row items-center justify-start gap-4">
               <h2 className="text-3xl font-semibold">Quote {quote?.quote_number}</h2>
-
-              <Badge variant="outline" className="flex items-center gap-2 text-sm px-3 py-1.5">
-                <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor(quote?.status ?? '')}`} />
+              <Badge
+                variant="outline"
+                className={`flex items-center rounded-2xl gap-2 text-sm px-3 py-1 ${getStatusStyles(quote?.status ?? '')}`}
+              >
                 {quote?.status || "N/A"}
               </Badge>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size={'sm'} className="flex items-center gap-2">
+                    {quote?.status}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {["Sent", "Declined", "Accepted"].map((s) => (
+                    <DropdownMenuItem key={s} onClick={() => onStatusChange(s)}>
+                      {s}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* Right side */}
-            <div className="flex items-center gap-3">
-              <div className="flex flex-row justify-center items-center gap-4 ">
-                <span className="text-xs text-muted-foreground">Quote Status</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size={'lg'} className="flex items-center gap-2">
-                      {quote?.status}
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {["Sent", "Declined", "Accepted"].map((s) => (
-                      <DropdownMenuItem key={s} onClick={() => onStatusChange(s)}>
-                        {s}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <Button
-                onClick={handleEditQuote}
-                className="bg-primary text-white hover:bg-primary/90"
-              >
-                Edit Quote
-              </Button>
-
-              <Button variant="outline" onClick={handleDownload}>
-                {downloading ? (
-                  <>
-                    <p>Downloading </p>
-                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                  </>
-                ) : (
-                  "Download " + (quote.status === 'Accepted' ? "Sale Ticket" : "Quote")
-                )}
-              </Button>
-            </div>
           </div>
-        </SiteHeader>
+        </div>
         {/* <div className="p-6">
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">
