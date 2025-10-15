@@ -72,7 +72,7 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                         {renderField("customer_email", "Customer Email", "text", true)}
                         {renderField("customer_phone", "Customer Phone", "text", true)}
                         {renderField("customer_address", "Customer Address", "text", true)}
-                        {renderField("purchase_order", "Purchase Order")}
+                        {renderField("purchase_order", "Purchase Order #")}
                     </div>
                 </SectionBox>
 

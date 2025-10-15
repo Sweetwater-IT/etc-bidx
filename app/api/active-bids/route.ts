@@ -781,45 +781,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Delete existing equipment rental items before inserting new ones
-    await supabase
-      .from('equipment_rental_entries')
-      .delete()
-      .eq('bid_estimate_id', bidEstimateId);
+    // Insert equipment rental items (no delete needed; unique constraint handles overwrites)
 
-    // Insert equipment rental items
+
     if (equipmentRental && equipmentRental.length > 0) {
+      const rentalSummary = calculateRentalSummary(equipmentRental);
 
-      const rentalSummary = calculateRentalSummary(equipmentRental)
+      const { error: deleteError } = await supabase
+        .from('equipment_rental_entries')
+        .delete()
+        .eq('bid_estimate_id', bidEstimateId);
 
-      const rentalInserts = equipmentRental.map(item => (
-        {
-          bid_estimate_id: bidEstimateId,
-          name: item.name,
-          quantity: item.quantity,
-          notes: item.notes,
-          months: item.months,
-          rent_price: item.rentPrice,
-          re_rent_price: item.reRentPrice,
-          re_rent_for_current_job: item.reRentForCurrentJob,
-          total_cost: item.totalCost,
-          useful_life_yrs: item.usefulLifeYrs,
-          revenue: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.totalRevenue,
-          gross_profit: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfit,
-          gross_profit_margin: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.grossProfitMargin,
-          cost: rentalSummary.items.find(rentalSummaryItem => rentalSummaryItem.name === item.name)?.depreciation
-        }));
+      if (deleteError) throw new Error(`Failed to delete existing equipment rentals: ${deleteError.message}`);
 
-      const { error: rentalError } = await supabase
+      const rentalInserts = equipmentRental.map(item => ({
+        bid_estimate_id: bidEstimateId,
+        job_id: null,
+        name: item.name,
+        item_number: item.itemNumber,
+        quantity: item.quantity,
+        notes: item.notes,
+        months: item.months,
+        rent_price: item.rentPrice,
+        re_rent_price: item.reRentPrice,
+        re_rent_for_current_job: item.reRentForCurrentJob,
+        total_cost: item.totalCost,
+        useful_life_yrs: item.usefulLifeYrs,
+        revenue: rentalSummary.items.find(r => r.name === item.name)?.totalRevenue,
+        gross_profit: rentalSummary.items.find(r => r.name === item.name)?.grossProfit,
+        gross_profit_margin: rentalSummary.items.find(r => r.name === item.name)?.grossProfitMargin,
+        cost: rentalSummary.items.find(r => r.name === item.name)?.depreciation
+      }));
+
+      const { error: insertError } = await supabase
         .from('equipment_rental_entries')
         .insert(rentalInserts);
 
-      if (rentalError) {
-        throw new Error(`Failed to create equipment rentals: ${rentalError.message}`);
-      }
+      if (insertError) throw new Error(`Failed to insert equipment rentals: ${insertError.message}`);
     }
 
-    // Upsert flagging data
     if (flagging) {
 
       const flaggingSummary = calculateFlaggingCostSummary(adminData, flagging, false)
@@ -905,34 +905,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Delete existing sale items before inserting new ones
-    await supabase
-      .from('sale_items')
-      .delete()
-      .eq('bid_estimate_id', bidEstimateId);
-
-    // Insert sale items
+    // Insert sale item entries (no delete needed; static sale_items unchanged)
     if (saleItems && saleItems.length > 0) {
-      const saleInserts = saleItems.map(item => ({
-        bid_estimate_id: bidEstimateId,
-        item_number: item.itemNumber,
-        name: item.name,
-        vendor: item.vendor,
-        quantity: item.quantity,
-        quote_price: item.quotePrice,
-        markup_percentage: item.markupPercentage,
-        status: 'pending',
-        notes: item.notes
-      }));
+      const { error: deleteSaleError } = await supabase
+        .from('sale_item_entries')
+        .delete()
+        .eq('bid_estimate_id', bidEstimateId);
 
-      const { error: saleError } = await supabase
-        .from('sale_items')
+      if (deleteSaleError) throw new Error(`Failed to delete existing sale items: ${deleteSaleError.message}`);
+
+      const saleInserts = saleItems.map(item => {
+        const sellingPrice = item.quotePrice * (1 + (item.markupPercentage / 100));
+        const revenue = item.quantity * sellingPrice;
+        const total_cost = item.quantity * item.quotePrice;
+        const gross_profit = revenue - total_cost;
+        const gross_profit_margin = revenue > 0 ? (gross_profit / revenue) * 100 : 0;
+
+        return {
+          bid_estimate_id: bidEstimateId,
+          job_id: null,
+          name: item.name || item.itemNumber,
+          quantity: item.quantity,
+          item_number: item.itemNumber,
+          display_name: item.name,
+          notes: item.notes,
+          total_cost,
+          revenue,
+          gross_profit,
+          gross_profit_margin,
+          cost: total_cost,
+        };
+      });
+
+      const { error: insertSaleError } = await supabase
+        .from('sale_item_entries')
         .insert(saleInserts);
 
-      if (saleError) {
-        throw new Error(`Failed to create sale items: ${saleError.message}`);
-      }
+      if (insertSaleError) throw new Error(`Failed to insert sale items: ${insertSaleError.message}`);
     }
+
 
     // Upsert permanent signs data
     if (permanentSigns) {

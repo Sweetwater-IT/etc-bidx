@@ -13,15 +13,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Plus, Pencil, Check, MoreVertical, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { useProductsSearch } from "@/hooks/useProductsSearch";
-import { SubItemRow } from "./SubItemRow";
-import { createPortal } from "react-dom";
+import { Trash2, Pencil, MoreVertical, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
 
 export default function QuoteItemRow({
   item,
@@ -37,27 +35,18 @@ export default function QuoteItemRow({
   UOM_TYPES,
   calculateCompositeUnitPrice,
   calculateExtendedPrice,
+  products,
+  loading
 }) {
+  const [productInput, setProductInput] = useState(item.itemNumber || "");
+  const [activeSection, setActiveSection] = useState<'all' | 'service_items' | 'sale' | 'rental'>('all');
+
   const hasAssociatedItems =
     item.associatedItems && item.associatedItems.length > 0;
   const hasSubItems = hasAssociatedItems;
-  const displayUnitPrice = hasAssociatedItems
-    ? calculateCompositeUnitPrice(item)
-    : item.unitPrice;
-
   const [openProductSheet, setOpenProductSheet] = useState(false);
-  const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
   const { quoteMetadata } = useQuoteForm()
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const { products, loading } = useProductsSearch(productInput);
 
   const [newProduct, setNewProduct] = useState({
     itemNumber: "",
@@ -84,32 +73,6 @@ export default function QuoteItemRow({
   useEffect(() => {
     setProductInput(item.itemNumber || "");
   }, [item.itemNumber]);
-
-  const updateDropdownPosition = () => {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  };
-
-  const handleFocus = () => {
-    if (!item.itemNumber) {
-      setIsSearching(true);
-      updateDropdownPosition();
-      setShowDropdown(true);
-    }
-  };
-
-  const handleBlur = () => {
-    setTimeout(() => {
-      setShowDropdown(false);
-      setIsSearching(false);
-    }, 150);
-  };
 
   useEffect(() => {
     if (isEditing) {
@@ -181,7 +144,6 @@ export default function QuoteItemRow({
 
   const handleProductSelect = (product: any) => {
 
-    setProductInput(product.item_number);
     setShowDropdown(false);
 
     handleItemUpdate(item.id, "fullItem", {
@@ -189,6 +151,7 @@ export default function QuoteItemRow({
       itemNumber: product.item_number,
       description: product.description,
       uom: product.uom,
+      notes: product.notes
     });
 
     setOpenProductSheet(true);
@@ -196,108 +159,97 @@ export default function QuoteItemRow({
     setEditingSubItemId(null);
   };
 
-  const handleSubItemProductSelect = (product: any, subItemId: string) => {
-    handleCompositeItemUpdate(
-      item.id,
-      subItemId,
-      "itemNumber",
-      product.item_number
-    );
-    handleCompositeItemUpdate(
-      item.id,
-      subItemId,
-      "description",
-      product.description
-    );
-    handleCompositeItemUpdate(item.id, subItemId, "uom", product.uom);
-  };
+  const filteredProducts = products?.filter((p) => {
+    const matchesSearch =
+      p.item_number.toLowerCase().includes(productInput.toLowerCase()) ||
+      p.description.toLowerCase().includes(productInput.toLowerCase());
+
+    const matchesSection = activeSection === 'all' || p.source === activeSection;
+
+    return matchesSearch && matchesSection;
+  });
 
   return (
     <>
       <div
-        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border pb-1" : ""
+        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border py-2" : ""
           }`}
         style={{
           gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px",
         }}
       >
-        {/* Produto: input sempre disponível */}
-        <div className="relative flex items-center">
-          {!!item.itemNumber ? (
-            <>
-              <div className="text-foreground w-full truncate text-sm ml-2 flex-grow">
-                {item.itemNumber}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => {
-                  handleItemUpdate(item.id, "itemNumber", "");
-                  handleItemUpdate(item.id, "description", "");
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <Input
-              ref={inputRef}
-              className={`w-full h-9 text-base text-foreground bg-transparent ${item.itemNumber ? "border-none p-0 shadow-none" : "px-3"
-                }`}
-              placeholder="Search or add a product..."
-              value={productInput}
-              onChange={(e) => {
-                const value = e.target.value;
-                setProductInput(value);
-                setShowDropdown(true);
-              }}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              readOnly={!!item.itemNumber}
-            />
-          )}
+        <div className="w-[150px]">
+          <Select
+            value={item.itemNumber || undefined}
+            open={showDropdown}
+            onOpenChange={setShowDropdown}
+            onValueChange={(value) => {
+              if (value === "add_new") {
+                setOpenProductSheet(true);
+                return;
+              }
+              const selected = filteredProducts?.find(p => p.item_number === value);
+              if (selected) handleProductSelect(selected);
+            }}
+          >
+            <SelectTrigger className="w-full h-9 text-base text-foreground bg-transparent">
+              <SelectValue placeholder="Search or add a product...">
+                {item.itemNumber
+                  ? `${item.itemNumber} - ${item.description}`
+                  : "Search or add a product..."} 
+              </SelectValue>
+            </SelectTrigger>
 
-          {showDropdown && isSearching &&
-            createPortal(
-              <div
-                className="absolute bg-background border rounded shadow z-[100] max-h-48 overflow-auto"
-                style={{
-                  top: `${dropdownPosition.top}px`,
-                  left: `${dropdownPosition.left}px`,
-                  width: `${dropdownPosition.width}px`,
-                }}
-              >
-                <div
-                  className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted border-b"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setOpenProductSheet(true);
-                  }}
-                >
-                  + Add new product
-                </div>
-                {loading ? (
-                  <div className="px-3 py-2 text-foreground">Loading...</div>
-                ) : products.length > 0 ? (
-                  products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="px-3 py-2 cursor-pointer text-foreground hover:bg-muted"
-                      onMouseDown={() => handleProductSelect(product)}
-                    >
-                      {product.item_number} - {product.description}
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-3 py-2 text-foreground">
-                    No products found
-                  </div>
-                )}
-              </div>,
-              document.body
-            )}
+            <SelectContent className="max-h-80 w-[450px] p-2">
+              <Command>
+                <CommandInput
+                  placeholder="Search..."
+                  value={productInput}
+                  onValueChange={(value) => setProductInput(value)}
+                  autoFocus
+                />
+                <CommandList>
+                  <CommandGroup heading="Service Items">
+                    {filteredProducts
+                      .filter(p => p.source === 'service_items')
+                      .map((p) => (
+                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
+                          {p.item_number} - {p.description}
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                  <CommandGroup heading="Rental Items">
+                    {filteredProducts
+                      .filter(p => p.source === 'rental')
+                      .map((p) => (
+                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
+                          {p.item_number} - {p.description}
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+
+                  <CommandGroup heading="Sale Items">
+                    {filteredProducts
+                      .filter(p => p.source === 'sale')
+                      .map((p) => (
+                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
+                          {p.item_number} - {p.description}
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+
+                  {filteredProducts.length === 0 && !loading && (
+                    <div className="px-3 py-2 text-foreground">No products found</div>
+                  )}
+
+                  {loading && <div className="px-3 py-2 text-foreground">Loading...</div>}
+                </CommandList>
+              </Command>
+            </SelectContent>
+          </Select>
+
         </div>
+
         {/* Descrição */}
         <div className="text-foreground w-full text-center text-base">
           {item.description ? (

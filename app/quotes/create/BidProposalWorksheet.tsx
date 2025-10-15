@@ -9,28 +9,18 @@ import { TermsNames } from '@/app/quotes/create/QuoteFormProvider'
 import { INote } from '@/types/TEstimate'
 import { EstimateBidQuote, StraightSaleQuote, ToProjectQuote } from './types'
 import { PdfViewer } from './components/PdfViewer'
+import { InitialsLine } from './components/InitialsLine'
 
 interface BidProposalWorksheetProps {
-  adminData: AdminData
   items: QuoteItem[]
-  customers: Customer[]
   quoteDate: Date
-  quoteNumber: string
-  pointOfContact: { name: string; email: string }
-  sender: User
-  paymentTerms: PaymentTerms
-  includedTerms: Record<TermsNames, boolean>
-  customTaC: string
-  county: string
-  sr: string
-  ecms: string
   notes: string | undefined,
   quoteType: "straight_sale" | "to_project" | "estimate_bid";
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
   files: any;
   exclusions?: string;
-  allowExclusions: boolean;
+  terms: string;
 }
 
 const formatDate = (date?: string) => {
@@ -40,26 +30,15 @@ const formatDate = (date?: string) => {
 };
 
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
-  adminData,
   items,
-  customers,
-  quoteDate,
-  quoteNumber,
-  pointOfContact,
-  sender,
-  paymentTerms,
-  includedTerms,
-  customTaC,
-  county,
-  sr,
-  ecms,
   notes,
   quoteType,
   quoteData,
   termsAndConditions,
   files,
   exclusions,
-  allowExclusions
+  terms,
+  quoteDate
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const formatMoney = (v: number) =>
@@ -138,6 +117,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
               <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
               <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
+              <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
             </div>
 
             <div className="p-1 border-b border-black">
@@ -170,7 +150,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         data = quoteData as Partial<StraightSaleQuote>;
         return (
           <section className="grid grid-cols-2 grid-rows-1 border border-black mt-2 text-[9px]">
-            <div className="p-1 border-r border-b border-black">
+            <div className="p-1 border-r  border-black">
               <p className='font-extrabold mb-2'>Customer Information</p>
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
               <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
@@ -198,8 +178,22 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
   const pages: any[] = [];
 
+  const wrappedPages = pages.map((page, index) => {
+    if (index === 0) return page;
+
+    return (
+      <div key={`page-${index}`} className="relative min-h-[100vh]">
+        {page}
+        <div className="absolute bottom-4 right-4 flex flex-col items-end">
+          <InitialsLine label="Prepared By" width="w-[120px]" />
+          <InitialsLine label="Approved By" width="w-[120px]" />
+        </div>
+      </div>
+    )
+  })
+
   pages.push(
-    <div key="main-proposal" className="bg-white min-h-[100vh] flex flex-col text-black p-4 font-sans text-[10px] border border-gray-400">
+    <div key="main-proposal" className="bg-white min-h-[100vh] flex flex-col text-black font-sans text-[10px]">
       <div className='flex-1'>
         <header className="flex justify-between items-start pb-2">
           <div className="flex items-start justify-between w-full">
@@ -215,18 +209,23 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p>Email: <span className='underline text-blue-600'>estimating@establishedtraffic.com</span></p>
             </div>
             <div className="text-center w-1/4 ">
-              <h2 className="text-xl font-bold">PROPOSAL</h2>
-              <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
-              <p>
-                Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
-              </p>
+              <h2 className="text-xl font-bold">{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</h2>
+              {
+                quoteData?.status !== "Accepted" &&
+                <div>
+                  <p>Quote Date: {quoteDate.toLocaleDateString('en-US')}</p>
+                  <p>
+                    Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+                  </p>
+                </div>
+              }
               <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
             </div>
           </div>
         </header>
 
         {renderCustomerInfo()}
-        <section className="mt-3 text-[12px]">
+        < section className="mt-3 text-[12px]" >
           <table className="w-full border-[1.5px] border-black border-collapse">
             <thead>
               <tr className='border-black border-b-[1.5px]'>
@@ -235,8 +234,8 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <th className="px-2 py-1 text-center">Description</th>
                 <th className="w-[80px] px-2 py-1 text-center">UOM</th>
                 <th className="w-[80px] px-2 py-1 text-center">Qty</th>
-                <th className="w-[80px] px-2 py-1 text-center">Unit Price</th>
-                <th className="w-[80px] px-2 py-1 text-center">Ext. Price</th>
+                <th className="w-[80px] px-2 py-1 text-right">Unit Price</th>
+                <th className="w-[80px] px-2 py-1 text-right">Ext. Price</th>
               </tr>
             </thead>
             <tbody>
@@ -261,10 +260,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                       <td className="px-1 py-1 text-center align-top">
                         {item.quantity}
                       </td>
-                      <td className="px-1 text-center py-1 align-top">
+                      <td className="px-1 text-right py-1 align-top">
                         {formatMoney(item.unitPrice || 0)}
                       </td>
-                      <td className="px-1 text-center py-1 align-top">
+                      <td className="px-1 text-right py-1 align-top">
                         {formatMoney(extended)}
                       </td>
                     </tr>
@@ -291,13 +290,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 );
               })}
 
-              <tr className='w-full border-b-black border-1 my-2'></tr>
+              <tr className='w-full border-b-black border-1 my-2 '></tr>
               <tr className="text-[12px]">
                 <td colSpan={5}></td>
                 <td colSpan={1} className="px-1 py-1 text-center font-bold">
                   SUBTOTAL
                 </td>
-                <td colSpan={1} className=" py-1 text-center font-bold">
+                <td colSpan={1} className=" py-1 text-right font-bold pr-1">
                   {formatMoney(total)}
                 </td>
               </tr>
@@ -306,7 +305,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
                   TAX
                 </td>
-                <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                <td colSpan={1} className="py-1 text-right font-bold  pr-1">
                   {formatMoney(totalTax)}
                 </td>
               </tr>
@@ -315,30 +314,33 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <td colSpan={1} className="px-2 py-1 text-center font-bold">
                   TOTAL
                 </td>
-                <td colSpan={1} className="px-2 py-1 text-center font-bold">
+                <td colSpan={1} className=" py-1 text-right font-bold  pr-1">
                   {formatMoney(total + totalTax)}
                 </td>
               </tr>
             </tbody>
           </table>
-        </section>
+        </section >
 
         <section className="mt-2 text-[9px] flex flex-col gap-4">
           <p className="uppercase font-bold">Notes:</p>
           <div style={{ whiteSpace: "pre-wrap" }} className='flex flex-col flex-1'>
             {notes && <p>{notes}</p>}
-
+            <br />
             {items.map((i, idx) =>
               i.notes ? (
-                <p key={idx} style={{ whiteSpace: "pre-wrap" }}>
-                  {i.notes}
-                </p>
+                <div key={idx}>
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
+                  </p>
+                  <br />
+                </div>
               ) : null
             )}
           </div>
         </section>
 
-      </div>
+      </div >
       <div className='flex flex-col items-center'>
 
         <div className="mt-2 bg-yellow-200/70 gap-8 p-1 w-full flex justify-between items-center text-[10px] font-medium">
@@ -359,38 +361,27 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
           Due to extreme market volatility, all pricing and availability are subject to change without notice.
           All quotes to be confirmed at time of order placement
         </p>
-
       </div>
 
-    </div>
+    </div >
   );
 
-  if (termsAndConditions || allowExclusions) {
+  if (termsAndConditions) {
     pages.push(
       <div className='flex flex-col '>
-        <div key="terms" className="min-h-[100vh] bg-white text-black p-4 font-sans text-[9px] border border-gray-400">
-          {
-            allowExclusions &&
-            <div>
-              <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
-              <p style={{ whiteSpace: "pre-wrap" }}>{exclusions}</p>
-            </div>
-          }
-
+        <div key="terms" className="min-h-[100vh] bg-white text-black font-sans text-[9px]">
           {
             termsAndConditions &&
             <div className='mt-4'>
-              <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
-              <div className="space-y-2">
-                <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
-                <p>--- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.</p>
-                <p>--- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control Established Traffic Control must be notified within 14 days of bid date if Contractor is utilizing our proposal.</p>
-                <p>--- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.</p>
-                <p>--- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless regardless if owner has paid contractor.</p>
-                <p>--- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.</p>
-                <p>--- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.</p>
-                <p>--- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.</p>
-                <p>--- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.</p>
+              <div>
+                <h2 className="font-bold text-start mb-4 text-[12px]">EXCLUSIONS</h2>
+                <p style={{ whiteSpace: "pre-wrap" }}>{exclusions}</p>
+              </div>
+
+              <div className="space-y-2 mt-[25px]">
+                <h2 className="font-bold text-start mb-4 text-[12px]">STANDARD CONDITIONS</h2>
+                <div className='mb-4'></div>
+                <p style={{ whiteSpace: "pre-wrap" }}>{terms}</p>
               </div>
             </div>
           }
@@ -421,6 +412,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
       setCurrentPage(currentPage - 1);
     }
   };
+
 
   return (
     <div className="relative">
@@ -456,8 +448,19 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
         </div>
       }
 
-      <div className="min-h-[100vh]">
-        {pages[currentPage]}
+      <div className="min-h-[100vh] w-full flex flex-col border border-gray-400 p-4 justify-between">
+        <div className="flex-1">
+          {pages[currentPage]}
+        </div>
+
+        {currentPage !== 0 && (
+          <div className="mt-0  flex justify-end items-center text-[10px] font-medium">
+            <div className='bg-yellow-200/70  p-1'>
+              <span>Initials</span>
+              <span className="border-b border-black min-w-[150px] pl-1 italic text-[11px] ml-2 inline-block"></span>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

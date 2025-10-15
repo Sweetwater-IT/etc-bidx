@@ -23,6 +23,7 @@ export type ActiveBid = {
   createdAt: string;
   total?: string | number; // Add total field
   notes: {bid_id: number; text:string, created_at:Date, id: number, user_email?: string}[]
+  adminData: any;
 }
 
 export const ACTIVE_BIDS_COLUMNS = [

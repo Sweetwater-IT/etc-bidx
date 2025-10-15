@@ -93,7 +93,7 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
             {editAll ? (
                 <Input
                     type={type === "date" ? "date" : type}
-                    value={data[field] ? String(data[field]) : ""}
+                    value={data[field] ?? ""}
                     onChange={(e) => setData({ ...data, [field]: e.target.value })}
                     className="w-full"
                     disabled={disabled}

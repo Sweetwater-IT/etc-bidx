@@ -399,7 +399,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Status seguro
-    const allowedStatuses = new Set(["Not Sent", "Sent", "Accepted", "DRAFT"]);
+    const allowedStatuses = new Set(["Not Sent", "Sent", "Accepted", "DRAFT", 'Declined']);
     const safeStatus = allowedStatuses.has(status) ? status : "DRAFT";
 
     // County flexible

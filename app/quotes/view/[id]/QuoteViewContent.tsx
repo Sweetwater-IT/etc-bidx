@@ -1,21 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { SiteHeader } from "@/components/site-header";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import FileViewingContainer from "@/components/file-viewing-container";
-import { FileMetadata } from "@/types/FileTypes";
-import { Note, QuoteNotes } from "@/components/pages/quote-form/QuoteNotes";
+import { QuoteNotes } from "@/components/pages/quote-form/QuoteNotes";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
-import { Copy, Edit, ExternalLink, Eye, EyeIcon } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { ChevronDown, ArrowLeft, Loader } from "lucide-react"
+import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
+import ReactPDF from '@react-pdf/renderer'
+
 
 export interface ContactInfo {
   id?: number;
@@ -82,14 +84,19 @@ export interface Quote {
   pdf_url: string;
   digital_signature: string;
   comments: string;
+  exclusionsText: string;
+  termsText: string;
+  aditionalTerms: boolean;
+  selectedfilesids: any[];
+  notesText: string;
 }
-
 
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [downloading, setDownloading] = useState(false)
 
   const QUOTE_COLUMNS = [
     { key: "description", title: "Description", sortable: false },
@@ -133,9 +140,77 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     fetchQuote();
   }, [quoteId]);
 
-  const handleExport = () => {
-    alert("Export functionality not implemented yet");
+  const handleGenerateAndUpload = async (): Promise<string | null> => {
+    setDownloading(true)
+    try {
+      if (!quote || !quote.id) {
+        toast.error("No quote available");
+        return null;
+      }
+
+      const pdfBlob = await ReactPDF.pdf(
+        <BidProposalReactPDF
+          exclusions={quote.exclusionsText}
+          terms={quote?.termsText ?? ''}
+          notes={quote?.notesText}
+          items={quote?.items ?? []}
+          quoteDate={new Date()}
+          quoteData={quote as any}
+          quoteType={quote?.type_quote || "straight_sale"}
+          termsAndConditions={quote?.aditionalTerms}
+        />
+      ).toBlob();
+
+      const formData = new FormData();
+      formData.append("quoteId", quote.id.toString());
+      formData.append("uniqueIdentifier", quote.id.toString());
+      formData.append(
+        "file",
+        new File([pdfBlob], `Quote-${quote.quote_number}.pdf`, { type: "application/pdf" })
+      );
+
+      const filesToUpload = quote?.files?.filter((f) =>
+        quote.selectedfilesids?.includes(f.id)
+      );
+
+      for (const f of filesToUpload ?? []) {
+        const response = await fetch(f.file_url);
+        if (!response.ok) continue;
+        const blob = await response.blob();
+        formData.append("file", new File([blob], f.filename, { type: f.file_type }));
+      }
+
+      const res = await fetch("/api/files/combine-pdfs", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Error merging PDFs");
+
+      setQuote((prev) => (prev ? { ...prev, pdf_url: data.url } : prev));
+
+      return data.url;
+    } catch (err) {
+      console.error("Error generating/uploading PDF:", err);
+      toast.error("Could not generate PDF");
+      return null;
+    } finally {
+      setDownloading(false)
+    }
   };
+
+
+  const handleDownload = async () => {
+    try {
+      const url : any = await handleGenerateAndUpload();
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error opening PDF");
+    }
+  };
+
 
   const handleEditQuote = () => {
     router.push(`/quotes/edit/${quoteId}`);
@@ -171,7 +246,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       const result = await res.json();
       if (result.ok) {
         setQuote((prev) =>
-          prev ? { ...prev, notes: [...(prev.notes || []), {...result.data, timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now()}] } : prev
+          prev ? { ...prev, notes: [...(prev.notes || []), { ...result.data, timestamp: result.data.created_at ? new Date(result.data.created_at).getTime() : Date.now() }] } : prev
         );
       }
     } catch (err) {
@@ -224,6 +299,40 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     }
   };
 
+  const onStatusChange = async (status: string) => {
+    try {
+      const res = await fetch("/api/quotes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: quote.id, status }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed to update status")
+
+      setQuote((prev: any) => ({ ...prev, status }))
+    } catch (error) {
+      console.error("Error updating quote status:", error)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+
+    const statusLowwer = status.toLowerCase()
+    switch (statusLowwer) {
+      case "accepted":
+        return "bg-green-500"
+      case "declined":
+        return "bg-red-500"
+      case "sent":
+        return "bg-blue-500"
+      case "draft":
+        return "bg-gray-500"
+      default:
+        return "bg-gray-400"
+    }
+  }
+
   return (
     <SidebarProvider
       style={
@@ -238,24 +347,66 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       <SidebarInset>
         <SiteHeader>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">{quote?.quote_number}</h1>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.back()}
+                className="rounded-full"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+
+              <h2 className="text-3xl font-semibold">Quote {quote?.quote_number}</h2>
+
+              <Badge variant="outline" className="flex items-center gap-2 text-sm px-3 py-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor(quote?.status ?? '')}`} />
+                {quote?.status || "N/A"}
+              </Badge>
+            </div>
+
+            {/* Right side */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-row justify-center items-center gap-4 ">
+                <span className="text-xs text-muted-foreground">Quote Status</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size={'lg'} className="flex items-center gap-2">
+                      {quote?.status}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {["Sent", "Declined", "Accepted"].map((s) => (
+                      <DropdownMenuItem key={s} onClick={() => onStatusChange(s)}>
+                        {s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <Button
                 onClick={handleEditQuote}
                 className="bg-primary text-white hover:bg-primary/90"
               >
-                Edit
+                Edit Quote
               </Button>
-              <Button variant="outline" onClick={handleExport}>
-                Export
-              </Button>
-              <Button variant="outline" onClick={() => alert("Send Email pending")}>
-                Send Email
+
+              <Button variant="outline" onClick={handleDownload}>
+                {downloading ? (
+                  <>
+                    <p>Downloading </p>
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  </>
+                ) : (
+                  "Download " + (quote.status === 'Accepted' ? "Sale Ticket" : "Quote")
+                )}
               </Button>
             </div>
           </div>
         </SiteHeader>
-        <div className="p-6">
+        {/* <div className="p-6">
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">
             <div className="flex-1 bg-gray-200/60 rounded-md p-4 flex items-center justify-between">
@@ -292,11 +443,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           <p className="mt-2 text-gray-500">
             Share this link with your customer so they can view and accept/decline the quote.
           </p>
-        </div>
+        </div> */}
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
-
-
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
 
               <div className="flex flex-row w-full gap-4 ">
@@ -313,7 +462,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                             Customer Name
                           </div>
                           <div className="text-base mt-1">
-                            {quote.customer || "-"}
+                            {quote?.customer || "-"}
                           </div>
                         </div>
                         <div>
@@ -321,7 +470,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                             Customer Address
                           </div>
                           <div className="text-base mt-1">
-                            {quote.customer_address || "-"}
+                            {quote?.customer_address || "-"}
                           </div>
                         </div>
 
@@ -410,7 +559,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                           <>
                             <div>
                               <div className="text-sm text-muted-foreground">Purchase Order</div>
-                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
+                              <div className="text-base mt-1">{quote?.purchase_order || "-"}</div>
                             </div>
                             <div>
                               <div className="text-sm text-muted-foreground">Job Number</div>
@@ -448,7 +597,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                           <>
                             <div>
                               <div className="text-sm text-muted-foreground">Bid Date</div>
-                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
+                              <div className="text-base mt-1">{quote?.bid_date ?? "-"}</div>
                             </div>
                             <div>
                               <div className="text-sm text-muted-foreground">Start Date</div>

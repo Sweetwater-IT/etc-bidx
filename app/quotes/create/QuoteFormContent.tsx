@@ -29,6 +29,7 @@ import CustomerSelect from './components/CustomerSelector';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from 'recharts';
+import { QuoteItem } from '@/types/IQuoteItem';
 
 const typeQuotes = [
   {
@@ -45,7 +46,47 @@ const typeQuotes = [
   }
 ]
 
-const exclusions = "Arrow Panels/Changeable Message Sign/Radar Trailer unless specified\nShadow vehicles/Truck Mounted Attenuators and operators unless specified\nTraffic Signal activation/deactivation/flash (contractors responsibility)\nTemporary signals, lighting, related signage and traffic control unless specified\nAll Traffic Signal Work, modifying\nShop/plan drawings and/or layout for MPT signing – professional engineering services\nWork Zone Liquidated Damages\nHoliday or work stoppage removal of signs and/or devices\nPavement Marking and Removal\nNotification of (including permits from) officials (i.e., Police, Government, DOT)/business and property owners\nAll electrical work/line and grade work/Location of Utilities Not Covered by PA One Call\nIncidental items not specifically included above";
+const exclusions = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
+• Traffic control supervisor, unless otherwise noted
+• Notification of (including permits from) officials (i.e. police, government, DOT), business and/or property owners
+• Core drilling, backfilling, grading, excavation or removal of excavated material
+• Snow and/or ice removal for placement, maintenance and/or removal of temporary signs
+• Short-term signs and stands
+• Constant surveillance, daily adjustments/resets, pedestrian protection
+• Shop/plan drawings and/or layout for MPT signing
+• High reach trucks and/or overhead signage
+• Shadow vehicles and operators, unless specified above
+• Arrow panels, message boards, shadow vehicles, radar trailers, shadow vehicles (and operators), unless specified above
+• Reinstallation of signs removed by the contractor for construction
+• Restoration or surface repairs
+• Temporary signals, lighting, related signage
+• Temporary rumble strips, pavement marking or delineators, unless otherwise specified
+• Holiday or work stoppage removal of signs and/or devices`;
+
+const termsString = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
+• The Contractor is responsible for all lost, stolen, damaged materials and equipment. In the event of lost, stolen or damaged material or equipment the contractor will be invoiced at replacement cost. Payment terms for lost, stolen, or damaged material are Net 30 days.
+• All material supplied and quoted pricing is project specific and shall only be used for the quoted project.
+• Payment terms for sale items accepted as a part of this proposal are Net 14 days. All rental invoices accepted as a part of this proposal are Net 30 days.
+• Quoted pricing does not include sales tax, delivery or shipping unless explicitly stated
+• No additional work will be performed without a written change order. Extra work orders signed by an agent of the contractor shall provide full payment within 30 days of invoice date, regardless of whether the project owner has paid the contractor
+• If payment by owner to contractor is delayed due to a dispute between owner and contractor, not involving the work performed by Established Traffic Control, Inc. (“ETC”), then payment by the contractor to ETC shall not likewise be delayed.
+• All pricing for sale items is valid for 60 days from quote date. Sale items requested 60 days or more after quote date require a revised quote.
+• Permanent sign items are subject to a 5% escalation per year throughout the contract duration, effective December 31 of every year from original quote date to contract end.
+• ETC requires a minimum notice of 14 business days’ (28 days for permanent signs) for all projects start and/or changes with approved drawings or additional fees may apply.
+• Retainage will not be withheld on subcontractor agreements less than $50,000
+• No retainage will be withheld on rental or sale items regardless of value / price
+• Contractor must supply certificate of insurance for rental items upon pick-up`;
+
+
+async function createQuoteItem(item: QuoteItem) {
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
+
 
 function normalizeQuoteMetadata(meta: any): QuoteState {
   const base: Partial<Quote> = {
@@ -64,7 +105,8 @@ function normalizeQuoteMetadata(meta: any): QuoteState {
     aditionalTerms: meta.aditionalTerms,
     pdf_url: meta.pdf_url,
     notes: meta.notes || '',
-    exclusions: meta.exclusions ?? exclusions,
+    exclusionsText: meta.exclusionsText ?? exclusions,
+    termsText: meta.termsText ?? termsString,
     tax_rate: meta.tax_rate,
     aditionalExclusions: meta.aditionalExclusions,
   };
@@ -281,6 +323,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
     return res;
   };
+
   const handleCreateQuote = async () => {
     try {
       setCreatingQuote(true);
@@ -425,13 +468,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       etc_poc_email: user?.email ?? "",
       etc_poc_phone_number: "",
       etc_branch: userBranch?.name ?? "",
-      aditionalFiles: false,
-      aditionalTerms: false,
+      aditionalFiles: true,
+      aditionalTerms: true,
       selectedfilesids: [],
       pdf_url: "",
       tax_rate: 6,
-      exclusions: exclusions,
-      aditionalExclusions: false
+      exclusionsText: exclusions,
+      termsText: termsString,
+      aditionalExclusions: true
     };
 
     let newQuoteData: QuoteState = { ...quoteMetadata };
@@ -536,25 +580,14 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const pdfBlob = await ReactPDF.pdf(
         <BidProposalReactPDF
-          exclusions={quoteMetadata?.exclusions}
+          exclusions={quoteMetadata?.exclusionsText}
+          terms={quoteMetadata?.termsText}
           notes={quoteMetadata?.notes}
-          adminData={adminData ?? defaultAdminObject}
           items={quoteItems}
-          customers={selectedCustomers}
           quoteDate={new Date()}
-          quoteNumber={quoteId?.toString() ?? ""}
-          pointOfContact={pointOfContact ?? { name: "", email: "" }}
-          sender={sender}
-          paymentTerms={paymentTerms as PaymentTerms}
-          includedTerms={includeTerms}
-          customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-          county={adminData?.county?.country || ''}
-          sr={adminData?.srRoute || ''}
-          ecms={adminData?.contractNumber || ''}
           quoteData={quoteMetadata}
           quoteType={quoteMetadata?.type_quote || "straight_sale"}
           termsAndConditions={quoteMetadata?.aditionalTerms}
-          allowExclusions={quoteMetadata?.aditionalExclusions}
         />
       ).toBlob()
 
@@ -687,6 +720,62 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     setTempData(null)
   }
 
+  const importItems = async (
+    bid: any
+  ) => {
+    if (!bid || !quoteId) return;
+
+    const existingNumbers = quoteItems.map(item => item.itemNumber);
+
+    const rentalItems = (bid.equipment_rental || [])
+      .filter((item: any) => !existingNumbers.includes(item.item_number))
+      .map((item: any) => ({
+        itemNumber: item.item_number,
+        description: item.name,
+        uom: 'ea',
+        notes: item.notes || "",
+        quantity: item.quantity,
+        unitPrice: item.revenue / item.quantity,
+        discount: 0,
+        discountType: 'dollar',
+        associatedItems: [],
+        isCustom: false,
+        tax: 0,
+        is_tax_percentage: false,
+        quote_id: quoteId
+      }));
+
+    const saleItems = (bid.sale_items || [])
+      .filter((item: any) => !existingNumbers.includes(item.item_number))
+      .map((item: any) => ({
+        itemNumber: item.item_number,
+        description: item.name,
+        uom: 'ea',
+        notes: item.notes || "",
+        quantity: item.quantity,
+        unitPrice: item.quotePrice / item.quantity,
+        discount: 0,
+        discountType: 'dollar',
+        associatedItems: [],
+        isCustom: false,
+        tax: 0,
+        is_tax_percentage: false,
+        quote_id: quoteId,
+      }));
+
+    if (rentalItems.length === 0 && saleItems.length === 0) return;
+
+    const allItems = [...rentalItems, ...saleItems];
+    const finalList = await Promise.all(allItems.map(async item => {
+      const result = await createQuoteItem(item);
+      return result.item;
+    }));
+
+    setQuoteItems(prev => [...prev, ...finalList]);
+  };
+
+  const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
@@ -699,10 +788,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               {getSaveStatusMessage()}
             </div>
             <div className="flex items-center gap-2">
-              <QuotePreviewButton exclusion={quoteMetadata?.exclusions ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
+              <QuotePreviewButton terms={quoteMetadata?.termsText} exclusion={quoteMetadata?.exclusionsText ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
               <Button disabled={downloading || !quoteId} variant="outline" onClick={handleDownload}>
                 {downloading ? (
-                  <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  <>
+                    <p>Downloading </p>
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  </>
                 ) : (
                   "Download"
                 )}
@@ -729,7 +821,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
               <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
             </div>
           ) : (
-            <div className="flex w-1/2 flex-col overflow-y-auto">
+            <div className="flex w-1/2 flex-col overflow-y-auto px-2">
               <div className="flex flex-row gap-4 mb-4 w-full">
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>
@@ -773,6 +865,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                       quoteData={quoteMetadata}
                       selectedBid={selectedBid}
                       onChange={setSelectedBid}
+                      extraFunctionCall={(bid) =>
+                        importItems(bid)
+                      }
                     />
                   </div>
                 )}
@@ -851,39 +946,65 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
               <div className="my-4">
                 <div className='flex justify-between items-center'>
-                  <p className="font-semibold mb-2">Exclusions</p>
+                  <p className="font-semibold mb-2">Terms and Condition</p>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       className='shadow-sm'
                       id="terms"
-                      checked={quoteMetadata?.aditionalExclusions || false}
+                      checked={quoteMetadata?.aditionalTerms || false}
                       onCheckedChange={(checked) =>
-                        setQuoteMetadata(prev => ({ ...prev, aditionalExclusions: !!checked }))
+                        setQuoteMetadata(prev => ({ ...prev, aditionalTerms: !!checked }))
                       }
                     />
                     <p>Include?</p>
                   </div>
                 </div>
                 <Textarea
-                  value={quoteMetadata?.exclusions || exclusions}
-                  onChange={(e) => setQuoteMetadata((prev: any) => ({
-                    ...prev,
-                    exclusions: e.target.value
-                  }))}
-                  maxLength={5000}
-                  placeholder="Add your exclusion here..."
-                  className="w-full h-32 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                />
-              </div>
+                  value={combinedText}
+                  onChange={(e) => {
+                    let value = e.target.value;
 
-              <div className='my-4'>
-                <QuoteAdditionalFiles
-                  setQuoteData={setQuoteMetadata}
-                  quoteData={quoteMetadata}
-                  handleFileSelect={(field: any) => handleFileSelect(field)}
-                  files={files}
-                  setFiles={setFiles} />
+                    if (!value.includes('---TERMS---')) {
+                      value = value + '\n---TERMS---';
+                    }
+
+                    const lines = value.split("\n");
+                    const separatorIndex = lines.indexOf("---TERMS---");
+
+                    let newExclusions: string[] = [];
+                    let newTerms: string[] = [];
+
+                    if (separatorIndex >= 0) {
+                      newExclusions = lines.slice(0, separatorIndex);
+                      newTerms = lines.slice(separatorIndex + 1);
+                    } else {
+                      newExclusions = lines;
+                    }
+
+                    setQuoteMetadata((prev: any) => ({
+                      ...prev,
+                      exclusionsText: newExclusions.join("\n"),
+                      termsText: newTerms.join("\n"),
+                    }));
+                  }}
+                  maxLength={5000}
+                  placeholder="Add your exclusions and terms..."
+                  className="w-full h-50 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                />
+
               </div>
+              {
+                quoteMetadata?.type_quote && (quoteMetadata?.estimate_id || quoteMetadata?.job_id || quoteMetadata?.customer) &&
+                < div className='my-4'>
+                  <QuoteAdditionalFiles
+                    useButton={true}
+                    setQuoteData={setQuoteMetadata}
+                    quoteData={quoteMetadata}
+                    handleFileSelect={(field: any) => handleFileSelect(field)}
+                    files={files}
+                    setFiles={setFiles} />
+                </div>
+              }
             </div>
           )
         }
@@ -891,29 +1012,26 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         <div className="w-1/2 overflow-y-auto ">
           <div className="bg-[#F4F5F7] p-6 rounded-lg sticky ">
             <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
-            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
-              <BidProposalWorksheet
-                allowExclusions={quoteMetadata?.aditionalExclusions}
-                exclusions={quoteMetadata?.exclusions}
-                quoteData={quoteMetadata}
-                quoteType={quoteMetadata?.type_quote || "straight_sale"}
-                notes={quoteMetadata?.notes}
-                adminData={adminData ?? defaultAdminObject}
-                items={quoteItems}
-                customers={selectedCustomers}
-                quoteDate={new Date()}
-                quoteNumber={quoteNumber || quoteId?.toString() || ''}
-                pointOfContact={pointOfContact ?? { name: '', email: '' }}
-                sender={sender}
-                paymentTerms={paymentTerms as PaymentTerms}
-                includedTerms={includeTerms}
-                customTaC={includeTerms['custom-terms'] ? customTerms : ''}
-                county={adminData ? adminData.county?.name || '' : ''}
-                sr={adminData ? adminData.srRoute || '' : ''}
-                ecms={adminData ? adminData.contractNumber || '' : ''}
-                termsAndConditions={quoteMetadata?.aditionalTerms}
-                files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
-              />
+            <div className=" min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              {
+                loadingMetadata ?
+                  <div className='flex-1 h-[1000px] flex flex-row justify-center items-center'>
+                    <Loader2 className="w-6 h-6 animate-spin m-auto text-gray-500" />
+                  </div>
+                  :
+                  <BidProposalWorksheet
+                    exclusions={quoteMetadata?.exclusionsText}
+                    terms={quoteMetadata?.termsText}
+                    quoteData={quoteMetadata}
+                    quoteType={quoteMetadata?.type_quote || "straight_sale"}
+                    notes={quoteMetadata?.notes}
+                    items={quoteItems}
+                    quoteDate={new Date()}
+                    termsAndConditions={quoteMetadata?.aditionalTerms}
+                    files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
+                  />
+
+              }
             </div>
           </div>
         </div>

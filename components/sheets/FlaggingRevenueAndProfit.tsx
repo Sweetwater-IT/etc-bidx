@@ -23,7 +23,7 @@ const FlaggingRevenueAndProfit = () => {
 
   useEffect(() => {
     if (!flagging) return
-
+    
     const flaggingTotals = calculateFlaggingCostSummary(adminData, flagging, false)
     const serviceWorkTotals = calculateFlaggingCostSummary(
       adminData,
@@ -58,6 +58,9 @@ const FlaggingRevenueAndProfit = () => {
       grossProfitPercent: `${totalGrossProfitPercent.toFixed(2)}%`
     })
   }, [flagging, serviceWork, adminData])
+
+  console.log('rows', rows);
+  
 
   return (
     <div className="bg-white p-2 md:row-span-1">

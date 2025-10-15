@@ -15,7 +15,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 
-export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }: { quoteType: any, termsAndConditions: boolean, exclusion: string; }) => {
+export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion, terms }: { quoteType: any, termsAndConditions: boolean, exclusion: string; terms: string; }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -28,8 +28,6 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }:
     sender,
     customTerms,
     paymentTerms,
-    stateRoute,
-    ecmsPoNumber,
     pointOfContact,
     quoteMetadata,
   } = useQuoteForm();
@@ -38,43 +36,24 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion }:
   const pdfDocument = useMemo(() => {
     return (
       <BidProposalReactPDF
+        terms={terms}
         notes={quoteMetadata?.notes}
         exclusions={exclusion}
-        adminData={adminData ?? defaultAdminObject}
         items={quoteItems}
-        customers={selectedCustomers}
         quoteDate={new Date()}
-        quoteNumber={quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A"}
-        sender={sender}
-        pointOfContact={pointOfContact ?? { name: "", email: "" }}
-        paymentTerms={paymentTerms as PaymentTerms}
-        includedTerms={includeTerms ?? {}}
-        customTaC={includeTerms?.["custom-terms"] ? customTerms : ""}
-        county={typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? ""}
-        sr={stateRoute}
-        ecms={ecmsPoNumber}
         quoteType={quoteType}
         quoteData={quoteMetadata}
         termsAndConditions={termsAndConditions}
-        allowExclusions={quoteMetadata?.aditionalExclusions || false}
       />
     );
   }, [
     adminData,
     quoteItems,
-    selectedCustomers,
-    quoteDate,
     quoteId,
-    pointOfContact,
-    sender,
-    paymentTerms,
-    includeTerms,
     customTerms,
-    stateRoute,
-    ecmsPoNumber,
-    quoteType,
     termsAndConditions,
-    quoteMetadata?.aditionalExclusions
+    quoteMetadata?.aditionalExclusions,
+    quoteMetadata,
   ]);
 
   return (

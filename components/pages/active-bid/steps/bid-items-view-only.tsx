@@ -972,16 +972,15 @@ const BidItemsViewOnly = () => {
         // { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
     ];
 
-    // Función para calcular el total
     const calculateTotal = (item: any): number => {
         const monthlyTotal = (item.quantity || 0) * (item.months || 0) * (item.rentPrice || 0);
         const reRentTotal = item.reRentForCurrentJob ? (item.quantity || 0) * (item.reRentPrice || 0) : 0;
         return monthlyTotal + reRentTotal;
     };
 
-    // Función para transformar los datos
     const transformEquipmentData = (equipmentRental: any[]): EquipmentRentalTableData[] => {
         return equipmentRental.map(item => ({
+            id: item.id || null,
             name: item.name || '-',
             quantity: item.quantity || null,
             months: item.months || null,

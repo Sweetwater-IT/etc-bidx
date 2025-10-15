@@ -7,35 +7,19 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer';
-import { AdminData } from '@/types/TAdminData';
 import { QuoteItem } from '@/types/IQuoteItem';
-import { PaymentTerms } from '../../../components/pages/quote-form/QuoteAdminInformation';
-import { TermsNames } from '@/app/quotes/create/QuoteFormProvider';
-import { User } from '@/types/User';
 import { Customer } from '@/types/Customer';
-import { INote } from '@/types/TEstimate';
 import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/quotes/create/types';
 
 interface Props {
-  adminData: AdminData;
   items: QuoteItem[];
-  customers: Customer[];
-  sender: User;
   quoteDate: Date;
-  quoteNumber: string;
-  paymentTerms: PaymentTerms;
-  includedTerms: Record<TermsNames, boolean>;
-  customTaC?: string;
-  county: string;
-  sr: string;
-  ecms: string;
-  pointOfContact: { name: string; email: string };
   notes: string | undefined;
   quoteType: 'straight_sale' | 'to_project' | 'estimate_bid';
   quoteData: Partial<StraightSaleQuote | ToProjectQuote | EstimateBidQuote> | null;
   termsAndConditions?: boolean;
   exclusions?: string;
-  allowExclusions: boolean;
+  terms: string;
 }
 
 const styles = StyleSheet.create({
@@ -93,9 +77,20 @@ const styles = StyleSheet.create({
   cellDescription: { width: '36%', textAlign: 'center', paddingRight: 4 },
   cellUOM: { width: '10%', textAlign: 'center' },
   cellQuantity: { width: '10%', textAlign: 'center' },
-  cellUnitPrice: { width: '10%', textAlign: 'center' },
-  cellExtended: { width: '10%', textAlign: 'center' },
+  cellUnitPrice: { width: '10%', textAlign: 'right' },
+  cellExtended: { width: '10%', textAlign: 'right' },
 });
+
+const SignatureLine: React.FC = () => (
+  <View style={{ marginTop: 8, width: '100%', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', fontSize: 10 }}>
+    <View style={{ backgroundColor: 'rgba(253, 224, 71, 0.7)', padding: 4, flexDirection: 'row', alignItems: 'center' }}>
+      <Text>Initials</Text>
+      <View style={{ borderBottomWidth: 1, borderColor: '#000', minWidth: 150, marginLeft: 8 }}>
+        <Text style={{ fontStyle: 'italic', fontSize: 11 }}></Text>
+      </View>
+    </View>
+  </View>
+);
 
 const formatDate = (date?: string) => {
   if (!date) return "";
@@ -104,27 +99,16 @@ const formatDate = (date?: string) => {
 };
 
 export const BidProposalReactPDF: React.FC<Props> = ({
-  adminData,
   items,
-  customers,
   quoteDate,
-  quoteNumber,
-  pointOfContact,
-  sender,
-  includedTerms,
-  customTaC,
-  county,
-  sr,
-  ecms,
   notes,
   quoteType,
   quoteData,
   termsAndConditions,
   exclusions,
-  allowExclusions = false
+  terms
 
 }) => {
-  const customer = customers?.[0] ?? { name: '', address: '', mainPhone: '' };
 
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -218,6 +202,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text>Customer: {joinWithSlash(data.customer_name, data.customer_address)}</Text>
               <Text>Customer Contact: {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</Text>
               <Text>Customer Job #: {data.customer_job_number || ""}</Text>
+              <Text>Purchase Order #: {data.purchase_order || ""}</Text>
             </View>
 
             {/* Point of Contact */}
@@ -274,7 +259,6 @@ export const BidProposalReactPDF: React.FC<Props> = ({
     }
   };
 
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -296,11 +280,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               </Text>
             </View>
             <View style={styles.header3}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>Proposal</Text>
-              <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
-              <Text style={styles.centerText}>
-                Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
-              </Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
+              {
+                quoteData?.status !== "Accepted" &&
+                <View>
+                  <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
+                  <Text style={styles.centerText}>
+                    Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
+                  </Text>
+                </View>
+              }
               <Text style={[styles.centerText]}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
             </View>
           </View>
@@ -346,7 +335,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>SUBTOTAL</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total)}</Text>
               </View>
 
             </View>
@@ -360,7 +349,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TAX</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(totalTax)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(totalTax)}</Text>
               </View>
             </View>
             <View style={styles.tableRow}>
@@ -373,7 +362,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TOTAL</Text>
               </View>
               <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>{formatMoney(total + totalTax)}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total + totalTax)}</Text>
               </View>
             </View>
           </View>
@@ -382,12 +371,17 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Notes:</Text>
             <View style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
               {notes?.split('\n').map((line, index) => (
-                <Text key={index}>{line}</Text>
+                <Text key={index}>
+                  {line}
+                </Text>
               ))}
-
+              <View style={{marginBottom: 6}}/>
+            
               {items.map((i, idx) =>
                 i.notes ? (
-                  <Text key={idx}>{i.notes}</Text>
+                  <View key={idx} style={{marginBottom: 6}}>
+                    <Text>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  </View>
                 ) : null
               )}
             </View>
@@ -410,60 +404,27 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             All quotes to be confirmed at time of order placement.
           </Text>
         </View>
+
       </Page>
-      {(termsAndConditions || allowExclusions) && (
+      {(termsAndConditions) && (
         <Page size="A4" style={styles.page}>
           <View style={{ flex: 1, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: '25px' }}>
 
-            {allowExclusions && (
-              <View style={{ fontSize: 9, width: '100%' }}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
-                <Text >{exclusions}</Text>
-              </View>
-            )}
+            (
+            <View style={{ fontSize: 9, width: '100%' }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>EXCLUSIONS</Text>
+              <Text >{exclusions}</Text>
+            </View>
+            )
 
-            {termsAndConditions &&
-              <View style={{ fontSize: 9 }}>
+            {
+              <View style={{ fontSize: 9, marginTop: '25px' }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>STANDARD CONDITIONS</Text>
-
-                <Text>
-                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-                </Text>
-
-                <Text>
-                  --- Payment for lump sum items shall be 50% paid on the 1st estimate for mobilization. The remaining balance will be prorated over the remaining pay estimates. A pro-rated charge or use of PennDOT Publication 408, Section 110.03(d) 3a will be assessed if contract exceeds the MPT completion date and/or goes over the MPT Days.
-                </Text>
-
-                <Text>
-                  --- This quote including all terms and conditions will be included In any contract between contractor and Established Traffic Control. ETC must be notified within 14 days of bid date if Contractor is utilizing our proposal.
-                </Text>
-
-                <Text>
-                  --- In the event that payment by owner to contractor is delayed due to a dispute between owner, and contractor not involving the work performed by Established Traffic Control, Inc (ETC), then payment by contractor to ETC shall not likewise be delayed.
-                </Text>
-
-                <Text>
-                  --- No extra work will be performed without proper written authorization. Extra work orders signed by an agent of the contractor shall provide for full payment of work within 30 days of invoice date, regardless if owner has paid contractor.
-                </Text>
-
-                <Text>
-                  --- All sale and rental invoices are NET 30 days. Sales tax is not included. Equipment Delivery/Pickup fee is not included.
-                </Text>
-
-                <Text>
-                  --- All material supplied by ETC is project specific (shall be kept on this project) and will remain our property at the project completion. The contractor is responsible for all lost/stolen or damaged materials and will be invoiced to contractor at replacement price. Payment for lost/stolen or damaged materials invoices are net 30 days regardless of payment from the owner or responsible party. Materials moved to other projects will be subject to additional invoicing.
-                </Text>
-
-                <Text>
-                  --- ETC will require a minimum notice of 2 weeks (4–5 weeks for permanent signing) for all project start and/or changes with approved stamped drawings or additional fees may apply. Permanent signing proposal includes an original set of shop drawings, prepared per original contract plans. Additional permanent signing shop drawing requests are $150.00/drawing.
-                </Text>
-
-                <Text>
-                  --- In the event that any terms in our exclusions/conditions conflict with other terms of the contract documents, the terms of our exclusions shall govern.
-                </Text>
+                <Text >{terms}</Text>
               </View>
             }
           </View>
+          <SignatureLine />
         </Page>
       )}
     </Document>

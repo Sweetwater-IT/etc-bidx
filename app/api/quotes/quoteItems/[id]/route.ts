@@ -30,7 +30,8 @@ function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
 }
 
 export async function PATCH(req: NextRequest, context: { params: any }) {
-    const itemId = Number(context.params.id);
+    const { params } = await context; 
+    const itemId = Number(params.id);
     if (isNaN(itemId)) return NextResponse.json({ success: false, message: "Invalid item id" }, { status: 400 });
 
     const body = await req.json();
@@ -62,7 +63,7 @@ export async function PATCH(req: NextRequest, context: { params: any }) {
             tax: tax ?? 0,
             is_tax_percentage: is_tax_percentage ?? false,
             notes,
-            quote_id:quote_id
+            quote_id: quote_id
         })
         .eq("id", itemId)
         .select()

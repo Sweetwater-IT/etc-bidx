@@ -26,10 +26,11 @@ interface Bid {
 interface ISelectBid {
     selectedBid?: Bid | null
     onChange: (bid: Bid) => void
-    quoteData: any
+    quoteData: any;
+    extraFunctionCall?: (bid: any) => void | Promise<void>;
 }
 
-const SelectBid = ({ selectedBid, onChange, quoteData }: ISelectBid) => {
+const SelectBid = ({ selectedBid, onChange, quoteData, extraFunctionCall }: ISelectBid) => {
     const [bids, setBids] = useState<Bid[]>([])
     const [loading, setLoading] = useState(false)
     const [open, setOpen] = useState(false)
@@ -95,6 +96,9 @@ const SelectBid = ({ selectedBid, onChange, quoteData }: ISelectBid) => {
                                         onSelect={() => {
                                             onChange(bid)
                                             setOpen(false)
+                                            if (extraFunctionCall) {
+                                                extraFunctionCall(bid)
+                                            }
                                         }}
                                     >
                                         <div className="flex flex-col">
