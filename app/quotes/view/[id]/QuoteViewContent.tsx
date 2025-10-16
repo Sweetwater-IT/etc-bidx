@@ -256,7 +256,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       if (status === 'Sent') {
         setQuote((prev: any) => ({ ...prev, status, user_sent: user.email, date_sent: new Date() }))
       } else {
-        setQuote((prev: any) => ({ ...prev, status }))
+        setQuote((prev: any) => ({ ...prev, status, user_sent: null, date_sent: null  }))
       }
     } catch (error) {
       console.error("Error updating quote status:", error)
