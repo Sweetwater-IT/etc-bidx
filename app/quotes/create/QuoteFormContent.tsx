@@ -297,7 +297,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       notes,
       ...quoteMetadata,
       items: quoteItems,
-      quoteId: quoteId
+      quoteId: quoteId,
+      userEmail: user.email,
     };
 
     const res = await fetch("/api/quotes", {

@@ -190,6 +190,7 @@ export async function POST(request: NextRequest) {
       items,
       quoteId: quoteIdCreated,
       bid_date, start_date, end_date,
+      userEmail,
       ...rest
     } = body;
 
@@ -261,6 +262,7 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         estimate_id,
         job_id,
+        user_created: userEmail,
         ...cleanRest
       }])
       .select("id, quote_number, estimate_id, job_id")
@@ -330,7 +332,7 @@ export async function POST(request: NextRequest) {
         const parsedId = Number(i.id);
         return !isNaN(parsedId) && isFinite(parsedId);
       });
-      
+
       if (validItems.length > 0) {
         const { error: itemsError } = await supabase
           .from("quote_items")
@@ -386,6 +388,7 @@ export async function PATCH(request: NextRequest) {
       payment_terms,
       include_terms,
       custom_terms,
+      userEmail,
       ...restQuote
     } = body;
 
@@ -408,7 +411,7 @@ export async function PATCH(request: NextRequest) {
     else if (typeof admin_data?.county === "object" && admin_data?.county?.country)
       countyValue = admin_data.county.country;
 
-    
+
     let quoteUpdate: any = {
       status: safeStatus,
       subject: subject ?? null,
@@ -424,9 +427,14 @@ export async function PATCH(request: NextRequest) {
       flagging_terms: include_terms?.["flagging-terms"] ?? false,
       ...restQuote,
     };
-    
-    if(status === 'Sent') {
+
+    if (status === 'Sent') {
+      quoteUpdate.user_sent = userEmail;
       quoteUpdate.date_sent = new Date();
+    } else {
+      quoteUpdate.user_sent = '';
+      quoteUpdate.date_sent = null
+
     }
 
     quoteUpdate = sanitizeDates(quoteUpdate, ["start_date", "end_date", "bid_date"]);
