@@ -1031,7 +1031,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     termsAndConditions={quoteMetadata?.aditionalTerms}
                     files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
                   />
-
               }
             </div>
           </div>

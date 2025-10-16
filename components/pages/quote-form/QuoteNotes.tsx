@@ -26,7 +26,9 @@ interface QuoteNotesProps {
   onDelete: (index: number) => void
   loading?: boolean
   title?: string;
-  canEdit?: boolean
+  canEdit?: boolean,
+  activities?: { type: string; date: string; icon?: React.ReactNode }[]
+
 }
 
 function formatDateTime(ts: number) {
@@ -77,7 +79,8 @@ export function QuoteNotes({
   onDelete,
   loading,
   title = "Recent activity",
-  canEdit = true
+  canEdit = true,
+  activities
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -92,7 +95,7 @@ export function QuoteNotes({
     setNewNote('')
     setEditIndex(null)
   }
-  
+
   const handleSaveNote = () => {
     if (newNote.trim() === '') return
     const noteObj = { text: newNote.trim(), timestamp: new Date().getTime() }
@@ -136,6 +139,21 @@ export function QuoteNotes({
   return (
     <div className='rounded-lg border p-6'>
       <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
+      {activities?.length ? (
+        <div className="mb-4 space-y-1 text-sm text-muted-foreground">
+          {activities.map((activity, i) => (
+            <div key={i} className="flex items-center gap-3 mt-2">
+              <div className='bg-gray-300 p-2 rounded-full'>
+                {activity.icon}
+              </div>
+              <div className='flex flex-col gap-1'>
+                <p className='font-bold'>{activity.type.replaceAll('_', ' ')}</p>
+                <p className='text-gray-400'>{activity.date}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className='space-y-4'>
         {loading ? (
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>

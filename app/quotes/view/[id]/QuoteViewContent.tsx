@@ -14,9 +14,10 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ArrowLeft, Loader, Download } from "lucide-react"
+import { ChevronDown, ArrowLeft, Loader, Download, Loader2, FileText, Send } from "lucide-react"
 import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
 import ReactPDF from '@react-pdf/renderer'
+import BidProposalWorksheet from "../../create/BidProposalWorksheet";
 
 
 export interface ContactInfo {
@@ -97,15 +98,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [downloading, setDownloading] = useState(false)
-
-  const QUOTE_COLUMNS = [
-    { key: "description", title: "Description", sortable: false },
-    { key: "quantity", title: "Quantity", sortable: false },
-    { key: "unitPrice", title: "Unit Price", sortable: false },
-    { key: "total", title: "Total", sortable: false },
-    { key: "tax", title: "Tax", sortable: false },
-    { key: "confirmed", title: "Confirmed", sortable: false },
-  ];
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -352,6 +344,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             <div className="flex w-full flex-row items-center justify-between">
               <div className="flex flex-row items-center gap-2">
                 <Button
+                  role="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => router.back()}
@@ -364,13 +357,15 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               </div>
               <div className="flex flex-row items-center gap-2">
                 <Button
+                  role="button"
                   onClick={handleEditQuote}
                   className="bg-primary text-white hover:bg-primary/90"
                 >
                   Edit Quote
                 </Button>
 
-                <Button variant="outline" size={'sm'} onClick={() => handleDownload('quote')}>
+                <Button role="button"
+                  variant="outline" size={'sm'} onClick={() => handleDownload('quote')}>
                   <Download />
                   {downloading ? (
                     <>
@@ -469,184 +464,54 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
 
               <div className="flex flex-row w-full gap-4 ">
-                <div className="w-3/4 flex flex-col gap-4">
-                  <div className="grid grid-cols-1 w-full gap-8">
-                    <div className="lg:col-span-2 w-full bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                      <h2 className="text-xl font-semibold mb-4">
-                        Customer Information
-                      </h2>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div>
-                          <div className="text-sm text-muted-foreground">
-                            Customer Name
-                          </div>
-                          <div className="text-base mt-1">
-                            {quote?.customer || "-"}
-                          </div>
+                <div className="bg-[#F4F5F7] w-3/5 p-6 rounded-lg sticky ">
+                  <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
+                  <div className=" min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+                    {
+                      loading ?
+                        <div className='flex-1 h-[1000px] flex flex-row justify-center items-center'>
+                          <Loader2 className="w-6 h-6 animate-spin m-auto text-gray-500" />
                         </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">
-                            Customer Address
-                          </div>
-                          <div className="text-base mt-1">
-                            {quote?.customer_address || "-"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">Customer Email</div>
-                          <div className="text-base mt-1">{quote.customer_email || "-"}</div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">Customer Job Number</div>
-                          <div className="text-base mt-1">
-                            {quote.customer_job_number || "-"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Customer Phone</div>
-                          <div className="text-base mt-1">
-                            {quote.customer_phone || "-"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1  gap-8">
-                    <div className="lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100">
-                      <h2 className="text-xl font-semibold mb-4">
-                        Quote Information
-                      </h2>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div>
-                          <div className="text-sm text-muted-foreground">Quote ID</div>
-                          <div className="text-base mt-1 flex items-center gap-2">
-                            {quote.id}
-                            {quote.status?.toLowerCase() === "submitted" && (
-                              <Badge className="bg-green-100 text-green-800 border-green-200">
-                                Submitted
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">
-                            Contract Number
-                          </div>
-                          <div className="text-base mt-1">
-                            {quote.contract_number || "-"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">Requestor</div>
-                          <div className="text-base mt-1">{quote.requestor || "-"}</div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">Customer</div>
-                          <div className="text-base mt-1">
-                            {quote.customer || "-"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">
-                            Quote Date
-                          </div>
-                          <div className="text-base mt-1">
-                            {quote.quote_date
-                              ? format(new Date(quote.quote_date), "MM/dd/yyyy")
-                              : "-"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">
-                            Created At
-                          </div>
-                          <div className="text-base mt-1">
-                            {quote.created_at
-                              ? format(new Date(quote.created_at), "MM/dd/yyyy")
-                              : "-"}
-                          </div>
-                        </div>
-
-                        {quote.type_quote === "straight_sale" && (
-                          <>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Purchase Order</div>
-                              <div className="text-base mt-1">{quote?.purchase_order || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Job Number</div>
-                              <div className="text-base mt-1">{quote.customer_job_number || "-"}</div>
-                            </div>
-                          </>
-                        )}
-
-                        {quote.type_quote === "to_project" && (
-                          <>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Bid Date</div>
-                              <div className="text-base mt-1">{quote.bid_date || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Start Date</div>
-                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">End Date</div>
-                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Duration</div>
-                              <div className="text-base mt-1">{quote.duration || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Purchase Order</div>
-                              <div className="text-base mt-1">{quote.purchase_order || "-"}</div>
-                            </div>
-                          </>
-                        )}
-
-                        {quote.type_quote === "estimate_bid" && (
-                          <>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Bid Date</div>
-                              <div className="text-base mt-1">{quote?.bid_date ?? "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Start Date</div>
-                              <div className="text-base mt-1">{quote.start_date || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">End Date</div>
-                              <div className="text-base mt-1">{quote.end_date || "-"}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Duration</div>
-                              <div className="text-base mt-1">{quote.duration || "-"}</div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-
-                    </div>
+                        :
+                        <BidProposalWorksheet
+                          exclusions={quote?.exclusionsText}
+                          terms={quote?.termsText}
+                          quoteData={quote  as any}
+                          quoteType={quote?.type_quote || "straight_sale"}
+                          notes={quote?.notesText}
+                          items={quote?.items ?? []}
+                          quoteDate={new Date()}
+                          termsAndConditions={quote?.aditionalTerms}
+                          files={quote?.files?.filter((f) => quote?.selectedfilesids?.includes(f.id))}
+                        />
+                    }
                   </div>
                 </div>
-                <div className="w-1/4">
+
+                <div className="w-2/5">
                   <div className="flex flex-col gap-y-2">
                     <QuoteNotes
-                      notes={quote?.notes || []}
+                      notes={quote?.notes?.map(n => ({
+                        id: n.id,
+                        text: n.text,
+                        created_at: n.created_at
+                      })) || []}
                       onSave={handleSaveNote}
                       onEdit={handleEditNote}
                       onDelete={handleDeleteNote}
-                      title="Recent Activity"
+                      title="Quote Activity"
+                      activities={[
+                        {
+                          type: "Quote Created",
+                          date: new Date(quote?.created_at!).toLocaleString(),
+                          icon: <FileText className="w-4 h-4 text-black" />,
+                        },
+                        {
+                          type: "Quote Sent To Customer",
+                          date: quote.date_sent ? new Date(quote?.date_sent!).toLocaleString() : "-",
+                          icon: <Send className="w-4 h-4 text-black" />,
+                        },
+                      ]}
                     />
                   </div>
                 </div>
@@ -677,7 +542,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
 
 
-              <div className="grid grid-cols-1 gap-8">
+              {/* <div className="grid grid-cols-1 gap-8">
                 <div className="bg-white p-8 rounded-md shadow-sm border border-gray-100">
                   <h2 className="text-xl font-semibold mb-4">Quote Items</h2>
                   <DataTable
@@ -704,7 +569,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                     hideDropdown
                   />
                 </div>
-              </div>
+              </div> */}
 
             </div>
           </div>

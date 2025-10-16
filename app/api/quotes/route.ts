@@ -408,6 +408,7 @@ export async function PATCH(request: NextRequest) {
     else if (typeof admin_data?.county === "object" && admin_data?.county?.country)
       countyValue = admin_data.county.country;
 
+    
     let quoteUpdate: any = {
       status: safeStatus,
       subject: subject ?? null,
@@ -423,6 +424,10 @@ export async function PATCH(request: NextRequest) {
       flagging_terms: include_terms?.["flagging-terms"] ?? false,
       ...restQuote,
     };
+    
+    if(status === 'Sent') {
+      quoteUpdate.date_sent = new Date();
+    }
 
     quoteUpdate = sanitizeDates(quoteUpdate, ["start_date", "end_date", "bid_date"]);
 
