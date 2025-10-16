@@ -13,17 +13,12 @@ import { toast } from "sonner";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
-  { key: "estimate_id", title: "Estimate ID" }, 
-  { key: "job_id", title: "Job ID" },
   { key: "status", title: "Status" },
   { key: "date_sent", title: "Date Sent" },
   { key: "customer_name", title: "Customer" },
   { key: "point_of_contact", title: "Contact" },
-  { key: "total_items", title: "Items" },
   { key: "county", title: "County" },
   { key: "created_at", title: "Created" },
-  { key: "has_attachments", title: "Attachments" },
-
 ];
 
 const SEGMENTS = [
@@ -113,21 +108,6 @@ export default function QuotesPage() {
     }
   };
 
-  const handleDeleteMultiple = async (quotesToDelete: QuoteGridView[]) => {
-    try {
-      for (const q of quotesToDelete) {
-        await fetch(`/api/quotes/delete/${q.id}`, { method: "DELETE" });
-      }
-      toast.success(`${quotesToDelete.length} quotes deleted`);
-      fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-      fetchQuoteCounts();
-    } catch (err) {
-      console.error("Error deleting quotes:", err);
-      toast.error("Unexpected error deleting quotes");
-    }
-  };
-
-  
   const handleSegmentChange = (value: string) => {
     setActiveSegment(value);
     setPageIndex(0);

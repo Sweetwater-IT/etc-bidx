@@ -1,44 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AttachmentNames, useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { toast } from "sonner";
 import { FileMetadata } from "@/types/FileTypes";
 import FileViewingContainer from "@/components/file-viewing-container";
 import { fetchAssociatedFiles } from "@/lib/api-client";
+import { PdfPreviewDialog } from "@/app/quotes/create/components/ModalPreviewPdf";
 
-export function QuoteAdditionalFiles() {
-  const { includeFiles, setIncludeFiles, quoteId } = useQuoteForm();
+export function QuoteAdditionalFiles({ useButton, setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; useButton: boolean; }) {
+  const { quoteId } = useQuoteForm();
   const [localFiles, setLocalFiles] = useState<FileMetadata[]>([]);
-
-  const handleFileToggle = (fileId: AttachmentNames, checked: boolean) => {
-    setIncludeFiles(prev => ({ ...prev, [fileId as AttachmentNames]: checked }));
-  };
+  const [previewFile, setPreviewFile] = useState<any | null>(null);
 
   const fileUploadProps = useFileUpload({
-    maxFileSize: 50 * 1024 * 1024, 
-    maxFiles: 10, 
+    maxFileSize: 50 * 1024 * 1024,
+    maxFiles: 10,
     uniqueIdentifier: quoteId ?? '',
-    apiEndpoint: '/api/files/quotes',
     accept: {
       'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/gif': ['.gif'],
-      'application/zip': ['.zip'],
-      'text/plain': ['.txt'],
-      'text/csv': ['.csv']
-    }
+    },
+    folder: 'quotes'
   });
 
+  const { files: filesUp, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
 
-  const { files, successes, isSuccess, errors: fileErrors } = fileUploadProps || {};
+  useEffect(() => {
+    if (!quoteId && filesUp.length > 0) {
+      setFiles(filesUp || []);
+    }
+  }, [filesUp, setFiles]);
+
+
+  useEffect(() => {
+    setFiles(localFiles || []);
+  }, [localFiles, setFiles]);
 
   useEffect(() => {
     if (!fileErrors || fileErrors.length === 0) return;
@@ -54,7 +54,7 @@ export function QuoteAdditionalFiles() {
 
   const fetchFiles = () => {
     if (!quoteId) return;
-    fetchAssociatedFiles(quoteId, 'quotes?quote_id', setLocalFiles);
+    fetchAssociatedFiles(quoteId, 'quotes', setLocalFiles);
   };
 
   useEffect(() => {
@@ -62,48 +62,78 @@ export function QuoteAdditionalFiles() {
   }, [quoteId]);
 
   useEffect(() => {
-    if (isSuccess && files && files.length > 0) {
+    if (isSuccess && filesUp && filesUp.length > 0) {
       fetchFiles();
     }
-  }, [isSuccess, files]);
+  }, [isSuccess, filesUp]);
+
 
   return (
-    <div className="rounded-lg border p-6">
+    <div className="rounded-lg p-6">
       <h2 className="mb-4 text-lg font-semibold">Additional Files</h2>
-      <Dropzone {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
-        <DropzoneContent />
+      <div className="grid grid-cols-1 mb-4 gap-2">
+        {files.length > 0 && files.map((file: any) => (
+          <div key={file.id} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
+            <Checkbox
+              id={`file-${file.id}`}
+              checked={quoteData?.selectedfilesids?.includes(file.id)}
+              onCheckedChange={(checked: boolean) => {
+                const isAlreadySelected = quoteData?.selectedfilesids?.includes(file.id);
+                if (checked && !isAlreadySelected) {
+                  setPreviewFile(file);
+                } else if (!checked && isAlreadySelected) {
+                  handleFileSelect(file.id);
+                }
+              }}
+            />
+            <Label htmlFor={`file-${file.id}`} className="truncate">
+              {file.filename}
+            </Label>
+          </div>
+        ))}
+
+        {!quoteId && filesUp.length > 0 && filesUp.map((file: any, idx) => {
+          const tempId = `up-${idx}-${file.name}`; // id temporal único
+          const isSelected = quoteData?.selectedfilesids?.includes(tempId);
+
+          return (
+            <div key={tempId} className="flex items-center gap-2 rounded hover:bg-gray-50 transition">
+              <Checkbox
+                id={`file-${tempId}`}
+                checked={isSelected}
+                onCheckedChange={(checked: boolean) => {
+                  if (checked && !isSelected) {
+                    setPreviewFile(file);
+                  }
+                  handleFileSelect(tempId);
+                }}
+              />
+              <Label htmlFor={`file-${tempId}`} className="truncate">
+                {file.name}
+              </Label>
+            </div>
+          )
+        })}
+      </div>
+      <Dropzone useButton={useButton}  {...fileUploadProps} files={fileUploadProps?.files || []} className="p-4 mb-4 cursor-pointer">
+        <DropzoneContent hideUploadButton={!quoteId} />
         <DropzoneEmptyState />
       </Dropzone>
       <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
 
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="flagging-price-list"
-            checked={includeFiles["flagging-price-list"]}
-            onCheckedChange={(checked) => handleFileToggle("flagging-price-list", !!checked)}
-          />
-          <Label htmlFor="flagging-price-list">Flagging Price List</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="flagging-service-area"
-            checked={includeFiles["flagging-service-area"]}
-            onCheckedChange={(checked) => handleFileToggle("flagging-service-area", !!checked)}
-          />
-          <Label htmlFor="flagging-service-area">Flagging Service Area</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="bedford-branch"
-            checked={includeFiles["bedford-branch"]}
-            onCheckedChange={(checked) => handleFileToggle("bedford-branch", !!checked)}
-          />
-          <Label htmlFor="bedford-branch">Bedford Branch Sell Sheet</Label>
-        </div>
-      </div>
+      <PdfPreviewDialog
+        file={
+          previewFile
+            ? {
+              id: previewFile.id ?? previewFile.name,
+              url: previewFile.file_url ?? previewFile.preview,
+              filename: previewFile.filename ?? previewFile.name,
+            }
+            : null
+        }
+        onClose={() => setPreviewFile(null)}
+        onConfirm={(fileId) => handleFileSelect(fileId)}
+      />
     </div>
   );
 }

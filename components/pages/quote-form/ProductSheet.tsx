@@ -18,6 +18,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
+
+async function createQuoteItem(item: QuoteItem) {
+  console.log('recibo', item);
+
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
 
 export function ProductSheet({
   open,
@@ -37,6 +52,7 @@ export function ProductSheet({
   setEditingItemId,
   setEditingSubItemId,
 }) {
+  const { setQuoteItems, quoteId } = useQuoteForm()
   useEffect(() => {
     if (open) {
       if (editingSubItemId) {
@@ -53,6 +69,9 @@ export function ProductSheet({
             discountType: subItem.discountType || "dollar",
             discount: subItem.discount || "",
             notes: subItem.notes || "",
+            tax: subItem.tax || "",
+            is_tax_percentage: subItem.is_tax_percentage || false,
+
           });
           setDigits({
             unitPrice: subItem.unitPrice
@@ -63,7 +82,6 @@ export function ProductSheet({
               : "000",
           });
         } else {
-          // Novo subitem: limpa tudo!
           setNewProduct({
             itemNumber: "",
             description: "",
@@ -73,6 +91,8 @@ export function ProductSheet({
             discountType: "dollar",
             discount: "",
             notes: "",
+            tax: "",
+            is_tax_percentage: false,
           });
           setDigits({
             unitPrice: "000",
@@ -89,6 +109,8 @@ export function ProductSheet({
           discountType: item.discountType || "dollar",
           discount: item.discount || "",
           notes: item.notes || "",
+          tax: item.tax || "",
+          is_tax_percentage: item.is_tax_percentage || false,
         });
         setDigits({
           unitPrice: item.unitPrice
@@ -109,6 +131,8 @@ export function ProductSheet({
         discountType: "dollar",
         discount: "",
         notes: "",
+        tax: "",
+        is_tax_percentage: false,
       });
       setDigits({
         unitPrice: "000",
@@ -292,6 +316,41 @@ export function ProductSheet({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-[15px] font-medium text-muted-foreground">
+              Tax
+            </Label>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                className="w-4 shadow-md"
+                checked={!!newProduct?.is_tax_percentage}
+                onCheckedChange={(checked) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    is_tax_percentage: !!checked,
+                    tax: checked ? prev.tax : "",
+                  }))
+                }
+              />
+              <span className="text-sm text-muted-foreground">Is Percentage</span>
+            </div>
+            {newProduct.is_tax_percentage && (
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                className="bg-background"
+                placeholder="Enter tax %"
+                value={newProduct.tax ?? ''}
+                onChange={(e) =>
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    tax: e.target.value,
+                  }))
+                }
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-[15px] font-medium text-muted-foreground">
               Notes
             </Label>
             <Textarea
@@ -319,8 +378,9 @@ export function ProductSheet({
             <Button
               type="button"
               className=" text-white py-2 flex-1 text-sm  transition rounded-md"
-              onClick={() => {
+              onClick={async () => {
                 onOpenChange(false);
+                let needAddItem = true;
                 if (editingSubItemId) {
                   const subItemData = {
                     id: editingSubItemId,
@@ -333,79 +393,90 @@ export function ProductSheet({
                     discount: Number(newProduct.discount),
                     notes: newProduct.notes,
                     isCustom: true,
+                    tax: newProduct.tax,
+                    is_tax_percentage: newProduct.is_tax_percentage,
                   };
 
-                  const exists = item.associatedItems?.some(
+                  const updatedAssociatedItems = item.associatedItems?.some(
                     (ai) => ai.id === editingSubItemId
-                  );
+                  )
+                    ? item.associatedItems.map((ai) =>
+                      ai.id === editingSubItemId ? subItemData : ai
+                    )
+                    : [...(item.associatedItems || []), subItemData];
 
-                  if (exists) {
-                    handleItemUpdate(
-                      item.id,
-                      "associatedItems",
-                      item.associatedItems.map((ai) =>
-                        ai.id === editingSubItemId ? subItemData : ai
-                      )
-                    );
-                  } else {
-                    handleItemUpdate(item.id, "associatedItems", [
-                      ...(item.associatedItems || []),
-                      subItemData,
-                    ]);
-                  }
-
+                  handleItemUpdate(item.id, "associatedItems", updatedAssociatedItems);
                   setEditingSubItemId(null);
                 } else {
-                  handleItemUpdate(
-                    item.id,
-                    "itemNumber",
-                    newProduct.itemNumber
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "description",
-                    newProduct.description
-                  );
-                  handleItemUpdate(item.id, "uom", newProduct.uom);
-                  handleItemUpdate(
-                    item.id,
-                    "quantity",
-                    Number(newProduct.quantity)
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "unitPrice",
-                    Number(newProduct.unitPrice)
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "discountType",
-                    newProduct.discountType
-                  );
-                  handleItemUpdate(
-                    item.id,
-                    "discount",
-                    Number(newProduct.discount)
-                  );
-                  handleItemUpdate(item.id, "isCustom", true);
+                  const updatedItem = {
+                    ...item,
+                    itemNumber: newProduct.itemNumber,
+                    description: newProduct.description,
+                    uom: newProduct.uom,
+                    quantity: Number(newProduct.quantity),
+                    unitPrice: Number(newProduct.unitPrice),
+                    discountType: newProduct.discountType,
+                    discount: Number(newProduct.discount),
+                    tax: newProduct.tax ? Number(newProduct.tax) : 0,
+                    is_tax_percentage: newProduct.is_tax_percentage,
+                    isCustom: true,
+                    notes: newProduct.notes,
+                    quote_id: quoteId || null,
+
+                  };
+
+                  if ('created' in updatedItem) {
+                    delete updatedItem.created;
+                  }
+
+                  if (updatedItem?.id && !isNaN(parseInt(updatedItem.id))) {
+                    handleItemUpdate(item.id, "fullItem", updatedItem);
+                    needAddItem = false;
+                  } else {
+                    const { success, item: createdItem } = await createQuoteItem(updatedItem);
+                    if (success) {
+                      setQuoteItems((prev) => prev.map((item) => {
+                        if (item.id === updatedItem.id) {
+                          return createdItem
+                        } else {
+                          return item
+                        }
+                      }));
+                    }
+                  }
+
                   setProductInput(newProduct.itemNumber);
                   setEditingItemId(null);
                 }
-                setNewProduct({
-                  itemNumber: "",
-                  description: "",
-                  uom: "",
-                  quantity: "",
-                  unitPrice: "",
-                  discountType: "dollar",
-                  discount: "",
-                  notes: "",
-                });
+
                 setDigits({
                   unitPrice: "000",
                   discount: "000",
                 });
+
+                if (needAddItem) {
+                  const baseItem: QuoteItem = {
+                    itemNumber: "",
+                    description: "",
+                    uom: "",
+                    quantity: 0,
+                    unitPrice: 0,
+                    discountType: "dollar",
+                    discount: 0,
+                    notes: "",
+                    tax: 0,
+                    is_tax_percentage: false,
+                    associatedItems: [],
+                    quote_id: quoteId || null,
+                    created: false,
+
+                  };
+
+                  setNewProduct(baseItem);
+                  setQuoteItems((prev) => ([...prev, baseItem]))
+                }
               }}
+
             >
               Save Product
             </Button>

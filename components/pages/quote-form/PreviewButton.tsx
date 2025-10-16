@@ -15,7 +15,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 
-export const QuotePreviewButton = () => {
+export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion, terms }: { quoteType: any, termsAndConditions: boolean, exclusion: string; terms: string; }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -28,49 +28,33 @@ export const QuotePreviewButton = () => {
     sender,
     customTerms,
     paymentTerms,
-    stateRoute,
-    ecmsPoNumber,
     pointOfContact,
-    notes,
     quoteMetadata,
-    quoteType
   } = useQuoteForm();
 
 
   const pdfDocument = useMemo(() => {
     return (
       <BidProposalReactPDF
-        notes={notes}
-        adminData={adminData ?? defaultAdminObject}
+        terms={terms}
+        notes={quoteMetadata?.notes}
+        exclusions={exclusion}
         items={quoteItems}
-        customers={selectedCustomers}
-        quoteDate={quoteDate ? new Date(quoteDate) : new Date()}
-        quoteNumber={quoteId !== undefined && quoteId !== null ? String(quoteId) : "N/A"}
-        sender={sender}
-        pointOfContact={pointOfContact ?? { name: "", email: "" }}
-        paymentTerms={paymentTerms as PaymentTerms}
-        includedTerms={includeTerms ?? {}}
-        customTaC={includeTerms?.["custom-terms"] ? customTerms : ""}
-        county={typeof adminData?.county === "string" ? adminData?.county : adminData?.county?.name ?? ""}
-        sr={stateRoute}
-        ecms={ecmsPoNumber}
+        quoteDate={new Date()}
+        quoteStatus={quoteMetadata?.status ?? ''}
         quoteType={quoteType}
         quoteData={quoteMetadata}
+        termsAndConditions={termsAndConditions}
       />
     );
   }, [
     adminData,
     quoteItems,
-    selectedCustomers,
-    quoteDate,
     quoteId,
-    pointOfContact,
-    sender,
-    paymentTerms,
-    includeTerms,
     customTerms,
-    stateRoute,
-    ecmsPoNumber,
+    termsAndConditions,
+    quoteMetadata?.aditionalExclusions,
+    quoteMetadata,
   ]);
 
   return (

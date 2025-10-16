@@ -39,6 +39,7 @@ const EquipmentSummaryStep = ({
         reRentForCurrentJob: false,
         usefulLifeYrs: 0,
         totalCost: 0,
+        notes: ''
       };
       setEquipment([...equipment, newEquipment]);
       setNewItemName("");

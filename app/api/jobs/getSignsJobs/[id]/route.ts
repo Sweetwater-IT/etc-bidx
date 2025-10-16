@@ -14,9 +14,6 @@ export async function GET(req: Request,
 ) {
     const resolvedParams = await context.params;
     const jobNumber = resolvedParams.id;
-
-    console.log('recibo como paraam: ___________ jobNumber', jobNumber);
-
     try {
         const { data: job, error: jobError } = await supabase
             .from("jobs_list")

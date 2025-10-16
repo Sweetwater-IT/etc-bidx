@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
-
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -19,30 +20,55 @@ enum UOM_TYPES {
   HR = "HR",
 }
 
+// --- Endpoints ---
+async function createQuoteItem(item: QuoteItem) {
+  const res = await fetch("/api/quotes/quoteItems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  return res.json();
+}
+
+async function updateQuoteItem(item: QuoteItem) {
+  const normalizedItem = {
+    ...item,
+    unitPrice: Number(item.unitPrice) || 0,
+    tax: Number(item.tax) || 0,
+  };
+
+  const res = await fetch(`/api/quotes/quoteItems/${item.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(normalizedItem),
+  });
+
+  return res.json();
+}
+
+async function deleteQuoteItem(itemId: string) {
+  const res = await fetch(`/api/quotes/quoteItems/${itemId}`, { method: "DELETE" });
+  return res.json();
+}
+
 export function QuoteItems() {
-  const { quoteItems, setQuoteItems } = useQuoteForm();
+  const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
+  const [applyToAll, setApplyToAll] = useState<boolean>(false);
 
-
+  // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
-    if (!item.associatedItems || item.associatedItems.length === 0) {
-      return item.unitPrice;
-    }
-
+    if (!item.associatedItems || item.associatedItems.length === 0) return item.unitPrice;
     return item.associatedItems.reduce(
-      (acc, associatedItem) =>
-        acc + associatedItem.quantity * associatedItem.unitPrice,
+      (acc, associatedItem) => acc + associatedItem.quantity * associatedItem.unitPrice,
       0
     );
   };
 
-  
   const calculateExtendedPrice = (item: QuoteItem) => {
     const unitPrice = calculateCompositeUnitPrice(item);
     const basePrice = item.quantity * unitPrice;
-
-   
     const discountAmount =
       item.discountType === "dollar"
         ? item.discount
@@ -53,165 +79,232 @@ export function QuoteItems() {
     });
   };
 
-  
   const totalValueCalculation = () => {
     return quoteItems
       .reduce((sum, item) => {
         const unitPrice = calculateCompositeUnitPrice(item);
         const basePrice = (item.quantity || 0) * unitPrice;
-
-        
         const discountAmount =
           item.discountType === "dollar"
             ? item.discount
             : basePrice * (item.discount / 100);
         return sum + (basePrice - discountAmount);
       }, 0)
-      .toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
- 
-  const handleItemUpdate = (
-    itemId: string,
-    field: keyof QuoteItem,
-    value: string | number
+  const handleAddNewItem = async () => {
+    const newId = generateUniqueId();
+    const newItem: QuoteItem = {
+      quote_id: quoteId,
+      id: newId,
+      itemNumber: "",
+      description: "",
+      uom: "",
+      quantity: 0,
+      unitPrice: 0,
+      discount: 0,
+      discountType: "dollar",
+      notes: "",
+      associatedItems: [],
+      is_tax_percentage: false,
+      tax: 0,
+    };
+
+    const response = await createQuoteItem(newItem);
+    if (response.success) {
+      setQuoteItems((prevItems) => [...prevItems, { ...response.item, created: false }]);
+      setEditingItemId(response.item.id);
+    }
+  };
+
+  const handleItemUpdate = async (
+    itemId: string | number,
+    field: keyof QuoteItem | "fullItem",
+    value: any
   ) => {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      )
-    );
-    
+    let updatedItem: QuoteItem | undefined;
+
+    const updatedItems = quoteItems.map((item) => {
+      if (item.id === itemId) {
+        const newItem = field === "fullItem" ? value : { ...item, [field]: value };
+        updatedItem = newItem as QuoteItem;
+        return newItem;
+      }
+      return item;
+    });
+
+    setQuoteItems(updatedItems);
+
+    const parsedId = Number(updatedItem?.id);
+    if (updatedItem && !isNaN(parsedId) && isFinite(parsedId)) {
+      await updateQuoteItem(updatedItem);
+    }
+
     setEditingSubItemId(null);
   };
 
- 
-  const handleRemoveItem = (itemId: string) => {
-    setQuoteItems((prevItems) =>
-      prevItems.filter((item) => item.id !== itemId)
-    );
+
+
+  const handleRemoveItem = async (itemId: string) => {
+    const parsedId = Number(itemId);
+
+    if (isNaN(parsedId)) {
+      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+      return;
+    }
+
+    const response = await deleteQuoteItem(itemId);
+    if (response.success) {
+      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    }
   };
 
-  
-  const handleAddCompositeItem = (parentItem: QuoteItem) => {
-    const newId = generateUniqueId();
-    setQuoteItems((prevItems) =>
+  const handleAddCompositeItem = async (parentItem: QuoteItem) => {
+    const newSubItem: AssociatedItem = {
+      id: generateUniqueId(),
+      itemNumber: "",
+      description: "",
+      uom: "",
+      quantity: 0,
+      unitPrice: 0,
+      notes: '',
+    };
+
+    setQuoteItems((prevItems: any[]) =>
       prevItems.map((item) =>
         item.id === parentItem.id
-          ? {
-            ...item,
-            associatedItems: [
-              ...(item.associatedItems || []),
-              {
-                id: newId,
-                itemNumber: "",
-                description: "",
-                uom: "",
-                quantity: 0,
-                unitPrice: 0,
-                discount: 0,
-                discountType: "dollar",
-                notes: "",
-                isCustom: true,
-              },
-            ],
-          }
+          ? { ...item, associatedItems: [...(item.associatedItems || []), newSubItem] }
           : item
       )
     );
+
+    const updatedParent = {
+      ...parentItem,
+      associatedItems: [...(parentItem.associatedItems || []), newSubItem],
+    };
+
+    await updateQuoteItem(updatedParent as any);
   };
 
-  
-  const handleCompositeItemUpdate = (
+
+  const handleCompositeItemUpdate = async (
     parentItemId: string,
     subItemId: string,
     field: keyof AssociatedItem,
     value: string | number
   ) => {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-              ...item,
-              associatedItems:
-                item.associatedItems?.map((ai) =>
-                  ai.id === subItemId ? { ...ai, [field]: value } : ai
-                ) || [],
-            }
-            : item
-        )
-      );
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+            ...item,
+            associatedItems:
+              item.associatedItems?.map((ai) =>
+                ai.id === subItemId ? { ...ai, [field]: value } : ai
+              ) || [],
+          }
+          : item
+      )
+    );
+
+    const parentItem = quoteItems.find((i) => i.id === parentItemId);
+    if (parentItem) await updateQuoteItem(parentItem);
   };
 
- 
-  const handleDeleteComposite = (parentItemId: string, subItemId: string) => {
-      setQuoteItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === parentItemId
-            ? {
-              ...item,
-              associatedItems:
-                item.associatedItems?.filter((ai) => ai.id !== subItemId) ||
-                [],
-            }
-            : item
-        )
-      );
-  };
-  
- 
-  const handleAddNewItem = () => {
-    const newId = generateUniqueId();
-    setQuoteItems((prevItems) => [
-      ...prevItems,
-      {
-        id: newId,
-        itemNumber: "",
-        description: "",
-        uom: "",
-        quantity: 0,
-        unitPrice: 0,
-        discount: 0,
-        discountType: "dollar",
-        notes: [],
-        associatedItems: [],
-      },
-    ]);
-    setEditingItemId(newId);
+  const handleDeleteComposite = async (parentItemId: string, subItemId: string) => {
+    setQuoteItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === parentItemId
+          ? {
+            ...item,
+            associatedItems: item.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
+          }
+          : item
+      )
+    );
+
+    const parentItem = quoteItems.find((i) => i.id === parentItemId);
+    if (parentItem) await updateQuoteItem({ ...parentItem, associatedItems: parentItem.associatedItems?.filter((ai) => ai.id !== subItemId) || [] });
   };
 
+  // --- Render ---
   return (
     <div className="rounded-lg">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Quote Items</h2>
-        <Button onClick={handleAddNewItem}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Item
-        </Button>
-      </div>
 
-     
-      <div className="space-y-4">
-        
-        <div
-          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
-          style={{
-            gridTemplateColumns: "2fr 2fr 1fr 2fr 1fr 1fr 2fr 40px",
-          }}
-        >
-          <div className="uppercase">Item # / SKU</div>
-          <div className="uppercase pl-2">Description</div>
-          <div className="uppercase">UOM</div>
-          <div className="uppercase">Qty</div>
-          <div className="uppercase">Unit Price</div>
-          <div className="uppercase">Discount</div>
-          <div className="uppercase">Extended Price</div>
+        <div className="flex items-center gap-[50px]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={quoteMetadata?.tax_rate ?? "6"}
+              onChange={(e) =>
+                setQuoteMetadata((prev) => ({
+                  ...prev,
+                  tax_rate: Number(e.target.value),
+                }))
+              }
+              className="w-16 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <span className="text-sm font-medium">%</span>
+
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                className="shadow-sm"
+                id="terms"
+                checked={applyToAll}
+                onCheckedChange={async (checked) => {
+                  const isChecked = !!checked;
+                  setApplyToAll(isChecked);
+
+                  const updatedItems = await Promise.all(
+                    quoteItems.map(async (item) => {
+                      if (!item.id) return item;
+
+                      const updatedItem = {
+                        ...item,
+                        is_tax_percentage: isChecked,
+                        tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
+                      };
+
+                      await updateQuoteItem(updatedItem);
+                      return updatedItem;
+                    })
+                  );
+
+                  setQuoteItems(updatedItems);
+                }}
+              />
+
+
+              <p>Apply tax to all?</p>
+            </div>
+          </div>
         </div>
 
-        
+      </div>
+
+      <div className="space-y-4">
+        <div
+          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
+          style={{ gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px" }}
+        >
+          <div className="uppercase">Item # / SKU</div>
+          <div className="uppercase text-center">Description</div>
+          <div className="uppercase text-center">UOM</div>
+          <div className="uppercase text-center">Qty</div>
+          <div className="uppercase">Unit Price</div>
+          <div className="uppercase">Discount</div>
+          <div className="uppercase text-start">Tax?</div>
+          <div className="uppercase">Ext Price</div>
+        </div>
+
         <QuoteItemsList
           quoteItems={quoteItems}
           editingItemId={editingItemId}
@@ -229,13 +322,17 @@ export function QuoteItems() {
         />
       </div>
 
-      
+      <div className="mt-4">
+        <Button onClick={handleAddNewItem}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Item
+        </Button>
+      </div>
+
       <div className="mt-6 flex justify-end space-y-1 text-sm">
         <div className="text-right">
           <div>Total Items: {quoteItems.length}</div>
-          <div className="font-medium">
-            Total Value: ${totalValueCalculation()}
-          </div>
+          <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
         </div>
       </div>
     </div>

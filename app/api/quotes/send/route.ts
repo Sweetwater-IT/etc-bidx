@@ -52,7 +52,10 @@ function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
         unitPrice: item.unit_price || 0,
         discount: item.discount || 0,
         discountType: item.discount_type || "dollar",
-        associatedItems: [], // Not queried, so default to empty
+        associatedItems: [],
+        is_tax_percentage: item.is_tax_percentage,
+        quote_id: item.quote_id,
+        tax: item.tax,
     };
 }
 

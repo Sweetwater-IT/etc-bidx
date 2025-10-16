@@ -875,6 +875,7 @@ export function getTotalTripsPerPhase(phase: Phase): number {
 }
 
 export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Flagging, isServiceWork: boolean): FlaggingSummary {
+  
   // Helper function to ensure values are valid numbers  
   const toNumber = (value: any): number => {
     const num = Number(value);
@@ -929,6 +930,7 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
   const totalFuelCost = numberTrucks > 0 ? ((numberTrucks * owMiles * fuelCostPerGallon) / (fuelEconomyMPG === 0 ? 20 : fuelEconomyMPG)) + (truckDispatchFee === 0 ? 18.75 : truckDispatchFee) : 0;
 
   // Total flagging cost
+  
   const totalFlaggingCost = flagging.standardPricing ? 0 : totalLaborCost + totalFuelCost + additionalEquipmentCost;
 
   // Total hours (on-site + round-trip travel)

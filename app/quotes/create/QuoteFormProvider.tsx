@@ -82,6 +82,9 @@ interface QuoteFormState {
   quoteDate: string;
   setQuoteDate: Dispatch<SetStateAction<string>>;
 
+  canAutosave: boolean;
+  setCanAutosave: Dispatch<SetStateAction<boolean>>;
+
   ecmsPoNumber: string;
   setEcmsPoNumber: Dispatch<SetStateAction<string>>;
 
@@ -164,9 +167,12 @@ const createEmptyQuoteItem = (): QuoteItem => ({
   unitPrice: 0,
   discount: 0,
   discountType: "dollar",
-  notes: [],
+  notes: "",
   associatedItems: [],
   isCustom: false,
+  is_tax_percentage: false,
+  quote_id: null,
+  tax: null
 });
 
 export default function QuoteFormProvider({
@@ -184,6 +190,8 @@ export default function QuoteFormProvider({
   const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>(
     mergedData.customers
   );
+  const [canAutosave, setCanAutosave] = useState(false);
+
 
   const [pointOfContact, setPointOfContact] = useState<
     PointOfContact | undefined
@@ -215,6 +223,7 @@ export default function QuoteFormProvider({
   );
 
   const [jobId, setJobId] = useState<number | null>(
+
     typeof mergedData.job_id === "number" ? mergedData.job_id : null
   );
 
@@ -222,9 +231,11 @@ export default function QuoteFormProvider({
   const [stateRoute, setStateRoute] = useState(mergedData.stateRoute);
   const [subject, setSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(
-    mergedData.items.length > 0 ? mergedData.items : [createEmptyQuoteItem()]
-  );
+
+  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(() => {
+    const items = mergedData.items || [];
+    return [...items, createEmptyQuoteItem()];
+  });
 
   const [adminData, setAdminData] = useState<AdminData | undefined>(
     mergedData.adminData
@@ -243,8 +254,6 @@ export default function QuoteFormProvider({
   const [sending, setSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
-
-
 
   const [quoteId, setQuoteId] = useState<number | null>(
     typeof mergedData.id === "number" ? mergedData.id : null
@@ -270,19 +279,12 @@ export default function QuoteFormProvider({
   });
 
   useEffect(() => {
-    console.log("🔍 [Provider] adminData cambió:", adminData)
-  }, [adminData])
-
-  useEffect(() => {
     if (selectedCustomers.length > 0) {
       setPaymentTerms(
         (selectedCustomers[0].paymentTerms as PaymentTerms) || "NET30"
       );
     }
   }, [selectedCustomers]);
-
-
-
 
   useEffect(() => {
     setPointOfContact(undefined);
@@ -355,6 +357,8 @@ export default function QuoteFormProvider({
     setUniqueToken,
     sender,
     setSender,
+    canAutosave,
+    setCanAutosave
   };
 
   return (

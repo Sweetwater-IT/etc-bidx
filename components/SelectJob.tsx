@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Loader } from "lucide-react";
 
 interface Job {
     id: number;
@@ -43,7 +44,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
 
     useEffect(() => {
         if (jobs?.length > 0 && quoteData?.job_id) {
-            const findJob = jobs.find((j) => j.id === quoteData?.job_id)            
+            const findJob = jobs.find((j) => j.id === quoteData?.job_id)
             if (findJob) {
                 onChange(findJob)
             }
@@ -56,11 +57,18 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
                 const job = jobs.find(j => j.id.toString() === value);
                 if (job) onChange(job);
             }}
-            value={selectedJob?.id?.toString()} // <-- usar el ID, no job_number
+            value={selectedJob?.id?.toString()}
             disabled={loading}
         >
-            <SelectTrigger className="w-[300px]">
-                <SelectValue placeholder={loading ? "Loading..." : "Choose an option"} />
+            <SelectTrigger className="w-[300px] flex items-center justify-between">
+                {loading ? (
+                    <div className="flex items-center gap-2">
+                        <Loader className="animate-spin w-4 h-4 text-gray-600" />
+                        <span>Loading...</span>
+                    </div>
+                ) : (
+                    <SelectValue placeholder="Choose an option" />
+                )}
             </SelectTrigger>
             <SelectContent>
                 {jobs.map((job: any) => (

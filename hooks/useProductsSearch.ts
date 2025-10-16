@@ -5,19 +5,19 @@ interface Product {
   item_number: string;
   description: string;
   uom: string;
-  grouping: string | null;
+  grouping?: string | null;
   is_custom: boolean;
+  source?: 'service_items' | 'sale' | 'rental';
+  notes: string;
 }
 
 export function useProductsSearch(searchTerm: string) {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all products on mount
   useEffect(() => {
-    const fetchAllProducts = async () => {
+    const fetchProducts = async () => {
       setLoading(true);
       setError(null);
 
@@ -29,33 +29,37 @@ export function useProductsSearch(searchTerm: string) {
           throw new Error(result.error || 'Failed to fetch products');
         }
 
-        setAllProducts(result.data);
+        const { bidItems = [], saleItems = [], rentalItems = [] } = result.data || {};
+
+        const combined: Product[] = [
+          ...bidItems.map((p: Product) => ({ ...p, source: 'service_items' })), 
+          ...saleItems.map((p: Product) => ({ ...p, source: 'sale' })),
+          ...rentalItems.map((p: Product) => ({ ...p, source: 'rental' })),
+        ];
+
+        // Filtrado inicial según searchTerm
+        if (!searchTerm) {
+          setProducts(combined);
+        } else {
+          const searchLower = searchTerm.toLowerCase();
+          setProducts(
+            combined.filter(
+              (p) =>
+                p.item_number.toLowerCase().includes(searchLower) ||
+                p.description.toLowerCase().includes(searchLower)
+            )
+          );
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
-        setAllProducts([]);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllProducts();
-  }, []);
-
-  // Filter products based on search term
-  useEffect(() => {
-    if (!searchTerm) {
-      setProducts(allProducts.slice(0, 10));
-      return;
-    }
-
-    const searchLower = searchTerm.toLowerCase();
-    const filteredProducts = allProducts.filter((product) => 
-      product.item_number.toLowerCase().includes(searchLower) ||
-      product.description.toLowerCase().includes(searchLower)
-    );
-
-    setProducts(filteredProducts.slice(0, 10));
-  }, [searchTerm, allProducts]);
+    fetchProducts();
+  }, [searchTerm]);
 
   return { products, loading, error };
-} 
+}

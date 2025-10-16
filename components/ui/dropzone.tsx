@@ -33,9 +33,10 @@ const Dropzone = ({
   children,
   getRootProps,
   getInputProps,
+  useButton,
   ...restProps
-}: PropsWithChildren<DropzoneProps>) => {
-  const { loading } = restProps; // tu state de carga ya viene del hook
+}: PropsWithChildren<DropzoneProps & { useButton?: boolean }>) => {
+  const { loading, inputRef } = restProps;
 
   const isSuccess = restProps.isSuccess
   const isActive = restProps.isDragActive
@@ -53,25 +54,41 @@ const Dropzone = ({
           </div>
         )}
 
-        <div
-          {...getRootProps({
-            className: cn(
-              'border-2 border-gray-300 cursor-pointer rounded-lg p-6 text-center bg-card transition-colors duration-300 text-foreground',
-              className,
-              isSuccess ? 'border-solid' : 'border-dashed',
-              isActive && 'border-primary bg-primary/10',
-              isInvalid && 'border-destructive bg-destructive/10'
-            ),
-          })}
-        >
-          <input {...getInputProps()} />
-          {children}
-        </div>
+        {useButton ? (
+          <div className={cn('flex flex-col items-center gap-2 w-full', className)}>
+            {restProps.files.length === 0 && (
+              <Button variant="outline" size={'lg'} onClick={() => inputRef.current?.click()}>
+                Upload Files
+              </Button>
+            )}
+            <div className='w-full'>
+              <input {...getInputProps()} ref={inputRef} className="hidden" />
+              <DropzoneContent />
+            </div>
+          </div>
+        ) : (
+          <div
+            {...getRootProps({
+              className: cn(
+                'border-2 border-gray-300 cursor-pointer rounded-lg p-6 text-center bg-card transition-colors duration-300 text-foreground',
+                className,
+                isSuccess ? 'border-solid' : 'border-dashed',
+                isActive && 'border-primary bg-primary/10',
+                isInvalid && 'border-destructive bg-destructive/10'
+              ),
+            })}
+          >
+            <input {...getInputProps()} ref={inputRef} />
+            {children}
+            <DropzoneContent />
+          </div>
+        )}
       </div>
     </DropzoneContext.Provider>
   )
 }
-const DropzoneContent = ({ className }: { className?: string }) => {
+
+const DropzoneContent = ({ className, hideUploadButton }: { className?: string, hideUploadButton?: boolean }) => {
   const {
     files,
     setFiles,
@@ -179,7 +196,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
         </div>
       )}
 
-      {files.length > 0 && !exceedMaxFiles && (
+      {files.length > 0 && !exceedMaxFiles && !hideUploadButton && (
         <div className="mt-2 mb-2">
           <Button
             variant="outline"
@@ -187,6 +204,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
               e.stopPropagation()
               onUpload()
             }}
+            className='mt-2'
             disabled={files.some((file) => file.errors.length !== 0) || loading}
           >
             {loading ? (
@@ -195,7 +213,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
                 Uploading...
               </>
             ) : (
-              <>Upload files</>
+              <>Save files</>
             )}
           </Button>
         </div>

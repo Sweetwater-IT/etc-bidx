@@ -176,8 +176,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(contractNumber)
-    // Fetch job data using the contract number
     const { data: jobData, error: jobError } = await supabase
       .from('jobs_complete')
       .select('*')
@@ -193,10 +191,8 @@ export async function POST(request: NextRequest) {
 
     const job = jobData as JobCompleteView;
 
-    // Get job_id for additional file lookups
     const job_id = job.id;
 
-    // Check for additional files in the jobs table
     const { data: jobFilesData, error: jobFilesError } = await supabase
       .from('jobs')
       .select(`

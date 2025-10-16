@@ -24,8 +24,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
-  console.log('ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  console.log('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   useEffect(() => {
     const fetchSession = async () => {

@@ -300,8 +300,8 @@ export async function createActiveBid(
         notes
       }
     }),
-  });  
-  if (!response.ok) {    
+  });
+  if (!response.ok) {
     const errorData = await response.json();
     throw {
       message: errorData.message || "Error creating bid",
@@ -1136,7 +1136,6 @@ export const saveSignOrder = async (signOrderData: {
   return { id: data.id };
 }
 
-
 export const fetchAssociatedFiles = async (
   uniqueIdentifier: number,
   folder: string,
@@ -1144,15 +1143,21 @@ export const fetchAssociatedFiles = async (
 ) => {
   if (!uniqueIdentifier) return;
 
+  console.log('uniqueIdentifier',uniqueIdentifier);
+  console.log('folder',folder);
+
   try {
     const filesResponse = await fetch(
       `/api/files?folder=${folder}&id=${uniqueIdentifier}`
-    )
+    );
+
     if (filesResponse.ok) {
-      const filesData = await filesResponse.json()
-      setFiles(filesData.data)
+      const filesData = await filesResponse.json();
+      setFiles(filesData.data);
+    } else {
+      console.error('Error fetching files:', filesResponse.statusText);
     }
   } catch (error) {
-    console.error('Error fetching files:', error)
+    console.error('Error fetching files:', error);
   }
-}
+};

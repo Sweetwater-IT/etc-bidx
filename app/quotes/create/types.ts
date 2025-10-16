@@ -1,9 +1,3 @@
-import { PaymentTerms } from "@/components/pages/quote-form/AdminInformationSheet";
-import { Note } from "@/components/pages/quote-form/QuoteNotes";
-import { Customer } from "@/types/Customer";
-import { QuoteItem } from "@/types/IQuoteItem";
-import { AdminData } from "@/types/TAdminData";
-import { User } from "@supabase/supabase-js";
 
 export type QuoteStatus = "Not Sent" | "Sent" | "Accepted";
 
@@ -41,8 +35,19 @@ export interface Quote {
     estimate_id?: number | null;
     job_id?: number | null;
     created_at?: any
-    project_title?: string;
-    description?: string;
+    selectedfilesids: any[];
+    aditionalFiles: boolean;
+    aditionalTerms: boolean;
+    aditionalExclusions: boolean;
+    pdf_url: string;
+    comment: "",
+    digital_signature: "",
+    notes: "",
+    exclusionsText: string;
+    termsText: string;
+    tax_rate: number;
+    items: any
+    files: any
 }
 
 export interface StraightSaleQuote extends Quote {
@@ -58,6 +63,7 @@ export interface StraightSaleQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
 }
 
 export interface ToProjectQuote extends Quote {
@@ -74,6 +80,7 @@ export interface ToProjectQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
 
     township: string;
     county: string;
@@ -99,6 +106,7 @@ export interface EstimateBidQuote extends Quote {
     etc_poc_email: string;
     etc_poc_phone_number: string;
     etc_branch: string;
+    etc_job_number: string;
     township: string;
     county: string;
     sr_route: string;

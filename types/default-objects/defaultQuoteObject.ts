@@ -93,7 +93,7 @@ export interface DefaultQuote {
   county: string;
   stateRoute: string;
   ecmsPoNumber: string;
-  notes: any[];
+  notes: string;
   additionalFiles: any[];
   includedTerms: Record<TermsNames, boolean>;
   quoteDate: Date;
@@ -113,7 +113,7 @@ export const defaultQuote: DefaultQuote = {
   county: "",
   stateRoute: "",
   ecmsPoNumber: "",
-  notes: [],
+  notes: "",
   additionalFiles: [],
   includedTerms: defaultIncludedTerms,
   quoteDate: new Date(),

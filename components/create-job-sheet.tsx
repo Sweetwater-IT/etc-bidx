@@ -311,9 +311,6 @@ export function CreateJobSheet({
     }
   }
 
-  console.log(formData);
-
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='sm:max-w-[500px] overflow-y-auto p-0'>

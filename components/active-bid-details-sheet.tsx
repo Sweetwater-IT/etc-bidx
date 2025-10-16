@@ -50,6 +50,7 @@ import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
+import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -60,6 +61,7 @@ interface ActiveBidDetailsSheetProps {
   onRefresh?: () => void; // Callback to refresh the data table
   onViewBidSummary: (item: ActiveBid) => void;
   onUpdateStatus?: (bid: ActiveBid, status: 'WON' | 'PENDING' | 'LOST' | 'DRAFT') => void;
+  adminData: any
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -90,10 +92,10 @@ export function ActiveBidDetailsSheet({
   onNavigate,
   onRefresh,
   onViewBidSummary,
-  onUpdateStatus
+  onUpdateStatus,
+  adminData
 }: ActiveBidDetailsSheetProps) {
   const { user } = useAuth()
-  const { adminData, flagging, serviceWork } = useEstimate()
 
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -114,8 +116,21 @@ export function ActiveBidDetailsSheet({
   });
   const [notesInfo, setNoteInfo] = useState<INote[]>([])
 
-  const flaggingTotals = calculateFlaggingCostSummary(adminData, bid?.flagging, false)
-  const serviceWorkTotals = calculateFlaggingCostSummary(adminData, bid?.service_work, true)
+  const [flaggingTotals, setFlaggingTotals] = useState<any | 0>(0);
+  const [serviceWorkTotals, setServiceWorkTotals] = useState<any | 0>(0);  
+  
+  useEffect(() => {
+    if (adminData && bid?.flagging && open) {
+      const result = calculateFlaggingCostSummary(adminData, bid?.flagging, false);            
+      setFlaggingTotals(result.totalRevenue);
+    }
+
+    if (adminData && bid?.service_work && open) {
+      const result = calculateFlaggingCostSummary(adminData, bid?.service_work, true);
+      setServiceWorkTotals(result.totalRevenue);
+    }
+  }, [bid?.service_work, bid?.flagging, adminData, open]);
+
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -158,32 +173,32 @@ export function ActiveBidDetailsSheet({
     }
   }, []);
 
-useEffect(() => {
-  if (!open) return;
+  useEffect(() => {
+    if (!open) return;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
 
-   // Check if any dropdown is open
+      // Check if any dropdown is open
 
-    const dropdowns = document.querySelectorAll('[role="listbox"], [role="combobox"][aria-expanded="true"]');
-    const isAnyDropdownOpen = dropdowns.length > 0;
-    
-    if (isAnyDropdownOpen) {
-      return; // Do nothing if there are any open dropdowns
-    }
+      const dropdowns = document.querySelectorAll('[role="listbox"], [role="combobox"][aria-expanded="true"]');
+      const isAnyDropdownOpen = dropdowns.length > 0;
 
-    if (e.key === "ArrowDown" && onNavigate) {
-      e.preventDefault();
-      onNavigate("down");
-    } else if (e.key === "ArrowUp" && onNavigate) {
-      e.preventDefault();
-      onNavigate("up");
-    }
-  };
+      if (isAnyDropdownOpen) {
+        return; // Do nothing if there are any open dropdowns
+      }
 
-  window.addEventListener("keydown", handleKeyDown);
-  return () => window.removeEventListener("keydown", handleKeyDown);
-}, [open, onNavigate, openStates.contractor, openStates.subContractor]);
+      if (e.key === "ArrowDown" && onNavigate) {
+        e.preventDefault();
+        onNavigate("down");
+      } else if (e.key === "ArrowUp" && onNavigate) {
+        e.preventDefault();
+        onNavigate("up");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onNavigate, openStates.contractor, openStates.subContractor]);
 
   useEffect(() => {
     if (!open) {
@@ -203,12 +218,12 @@ useEffect(() => {
       try {
         const response = await fetch(`/api/active-bids/addNotes?bid_id=${bid.id}`);
         const result = await response.json();
-          
+
         if (result.ok && Array.isArray(result.data)) {
           const parsedNotes: INote[] = result.data.map((note: any) => ({
             ...note,
             timestamp: new Date(note.created_at).getTime(),
-          }));          
+          }));
 
           setNoteInfo(parsedNotes);
         } else {
@@ -483,7 +498,7 @@ useEffect(() => {
       currency: "USD",
     }).format(numValue);
   };
-  
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -797,7 +812,7 @@ useEffect(() => {
                     Flagging Value
                   </Label>
                   <div className="text-muted-foreground">
-                    {formatCurrency(Number(flaggingTotals.totalRevenue)) ?? '-'}
+                    {formatCurrency(Number(flaggingTotals)) ?? '-'}
                   </div>
                 </div>
               </div>
@@ -807,7 +822,7 @@ useEffect(() => {
                   Patterns Value
                 </Label>
                 <div className="text-muted-foreground">
-                  {formatCurrency(Number(serviceWorkTotals.totalRevenue)) ?? '-'}
+                  {formatCurrency(Number(serviceWorkTotals)) ?? '-'}
                 </div>
               </div>
 

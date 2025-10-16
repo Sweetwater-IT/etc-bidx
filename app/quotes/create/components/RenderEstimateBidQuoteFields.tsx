@@ -1,54 +1,43 @@
 'use client'
 
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { EstimateBidQuote } from "../types";
-import React, { useState } from "react";
-import SelectBid from "@/components/SelectBid";
+import React, { useEffect } from "react";
 import RenderEtcSection from "./RenderEtcSection";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { useQuoteForm } from "../QuoteFormProvider";
+import CustomerSelect from "./CustomerSelector";
 
 interface IRenderEstimateBidQuoteFields {
     data: Partial<EstimateBidQuote>;
     setData: React.Dispatch<any>;
+    setQuoteItems: React.Dispatch<any>;
     onSaveData: (data: Partial<EstimateBidQuote>) => void;
+    selectedBid?: any;
+    editAll?: boolean;
 }
 
 const SectionBox = ({
     title,
     children,
-    isEditing,
-    onEdit,
-    onCancel,
-    onSave,
 }: {
     title: string;
     children: React.ReactNode;
-    isEditing: boolean;
-    onEdit: () => void;
-    onCancel: () => void;
-    onSave: () => void;
 }) => (
-    <div className="border rounded-lg p-4 mb-6 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold">{title}</h4>
-            {!isEditing ? (
-                <Button size="sm" onClick={onEdit}>Edit</Button>
-            ) : (
-                <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button size="sm" onClick={onSave}>Save</Button>
-                </div>
-            )}
+    <div className="rounded-lg p-4 mb-6 text-[12px]">
+        <div className="flex justify-between items-start h-[40px]">
+            <p className="font-bold">{title}</p>
         </div>
-        {children}
+        <div className="break-words">
+            {children}
+        </div>
     </div>
 );
 
-const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEstimateBidQuoteFields) => {
-    const [selectedBid, setSelectedBid] = useState<any>(null);
-    const [editingSection, setEditingSection] = useState<string | null>(null);
+const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false, setQuoteItems }: IRenderEstimateBidQuoteFields) => {
+    const { quoteId, quoteItems } = useQuoteForm()
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!selectedBid) return;
 
         const admin = selectedBid.admin_data || {};
@@ -56,136 +45,107 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEsti
         const end = admin.endDate ? new Date(admin.endDate) : null;
         const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-        setData((prev) => (
-            {
-                ...prev,
-                customer: selectedBid?.customer || "",
-                customer_name: selectedBid?.customer_name || "",
-                customer_email: selectedBid?.customer_email || "",
-                customer_phone: selectedBid?.customer_phone || "",
-                customer_address: selectedBid?.customer_address || "",
-                customer_job_number: selectedBid.job_number || "",
-                township: admin.location || "",
-                county: admin.county?.name || "",
-                sr_route: admin.srRoute || "",
-                job_address: admin.location || "",
-                ecsm_contract_number: admin.contractNumber || "",
-                bid_date: admin.lettingDate ? new Date(admin.lettingDate).toISOString().slice(0, 16) : "",
-                start_date: start ? start.toISOString().slice(0, 16) : "",
-                end_date: end ? end.toISOString().slice(0, 16) : "",
-                duration,
-                project_title: "",
-                description: "",
-            }
-        ));
+        setData((prev: any) => ({
+            ...prev,
+            customer: selectedBid?.customer || "",
+            customer_name: selectedBid?.customer_name || "",
+            customer_email: selectedBid?.customer_email || "",
+            customer_phone: selectedBid?.customer_phone || "",
+            customer_address: selectedBid?.customer_address || "",
+            customer_job_number: admin.contractNumber || "",
+            township: admin.location || "",
+            county: admin.county?.name || "",
+            sr_route: admin.srRoute || "",
+            job_address: admin.location || "",
+            ecsm_contract_number: admin.contractNumber || "",
+            bid_date: admin.lettingDate ? new Date(admin.lettingDate).toISOString().slice(0, 10) : "",
+            start_date: start ? start.toISOString().slice(0, 10) : "",
+            end_date: end ? end.toISOString().slice(0, 10) : "",
+            duration,
+            estimate_id: selectedBid?.id,
+        }));
     }, [selectedBid, setData]);
+
+
+    useEffect(() => {
+        if (!data.start_date || !data.end_date) return;
+
+        const start = new Date(data.start_date);
+        const end = new Date(data.end_date);
+
+        const duration = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+        setData(prev => ({
+            ...prev,
+            duration,
+        }));
+    }, [data.start_date, data.end_date, setData]);
 
     const renderField = (
         field: keyof EstimateBidQuote,
         label: string,
         type: string = "text",
         disabled?: boolean
-    ) => {
-        const isEditing = editingSection !== null;
-        const isDateField = type === "date";
-
-        return (
-            <div className="mb-4">
-                <label className="font-semibold block mb-1">{label}</label>
-                {isEditing ? (
-                    <Input
-                        type={isDateField ? "datetime-local" : type}
-                        value={data[field] ?? ""}
-                        onChange={(e) => setData({ ...data, [field]: e.target.value })}
-                        className="w-full"
-                        readOnly={disabled}
-                    />
-                ) : (
-                    <p className="text-sm text-gray-700">{data[field] ? String(data[field]) : "-"}</p>
-                )}
-            </div>
-        );
-    };
-
-    React.useEffect(() => {
-        if (selectedBid?.id) {
-            setData((prev)=> ({
-                ...prev,
-                estimate_id: selectedBid.id
-            }))
-        }
-    }, [selectedBid])
+    ) => (
+        <div className="mb-4">
+            <label className="font-semibold block mb-1">{label}</label>
+            {editAll ? (
+                <Input
+                    type={type === "date" ? "date" : type}
+                    value={data[field] ?? ""}
+                    onChange={(e) => setData({ ...data, [field]: e.target.value })}
+                    className="w-full"
+                    readOnly={disabled}
+                />
+            ) : (
+                <p className="text-sm text-gray-700">
+                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : (type === 'number' ? 0 : "-")}
+                </p>
+            )}
+        </div>
+    );
 
     return (
-        <div>
-            <div className="mb-8">
-                <p className="font-bold mb-2">Bid Selection</p>
-                <SelectBid
-                    onChangeQuote={(partial) => setData((prev) => ({ ...(prev as any), ...partial }))}
-                    quoteData={data}
-                    selectedJob={selectedBid}
-                    onChange={setSelectedBid}
-                />
-            </div>
-
-            <SectionBox
-                title="Customer & Contact Information"
-                isEditing={editingSection === "customer"}
-                onEdit={() => setEditingSection("customer")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
-                    {renderField("customer_name", "Customer")}
-                    {renderField("customer_contact", "Customer Contact")}
-                    {renderField("customer_phone", "Customer Phone")}
-                    {renderField("customer_email", "Customer Email")}
-                    {renderField("customer_address", "Customer Address")}
-                    {renderField("customer_job_number", "Customer Job Number")}
+        <div className="grid grid-cols-4 w-full gap-4 text-[12px]">
+            <SectionBox title="Customer & Contact Information">
+                <div className="grid grid-cols-1 gap-2">
+                    {
+                        editAll ?
+                            <CustomerSelect
+                                data={data as any}
+                                setData={setData}
+                                direction="column"
+                                columnCustomerTitle={"Customer"}
+                                columnContactTitle={"Customer Point Of Contact"}
+                            />
+                            :
+                            <div className="grid grid-cols-1 gap-2">
+                                {renderField("customer_name", "Customer", "text", false)}
+                                {renderField("customer_contact", "Customer Point Of Contact", 'text', false)}
+                            </div>
+                    }
+                    {renderField("customer_phone", "Customer Phone", 'text', true)}
+                    {renderField("customer_email", "Customer Email", 'text', true)}
+                    {renderField("customer_address", "Customer Address", 'text', true)}
                 </div>
             </SectionBox>
 
-            <SectionBox
-                title="Job / Location"
-                isEditing={editingSection === "jobLocation"}
-                onEdit={() => setEditingSection("jobLocation")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
+            <SectionBox title="Job / Location">
+                <div className="grid grid-cols-1 gap-2">
                     {renderField("township", "Township")}
                     {renderField("county", "County")}
                     {renderField("sr_route", "SR Route")}
                     {renderField("job_address", "Job Address")}
-                    {renderField("ecsm_contract_number", "ECSM Contract Number")}
+                    {renderField("ecsm_contract_number", "ECMS / Contract Number")}
                 </div>
             </SectionBox>
 
-            <SectionBox
-                title="Project Details"
-                isEditing={editingSection === "project"}
-                onEdit={() => setEditingSection("project")}
-                onCancel={() => setEditingSection(null)}
-                onSave={() => {
-                    onSaveData(data);
-                    setEditingSection(null);
-                }}
-            >
-                <div className="grid grid-cols-2 gap-4">
+            <SectionBox title="Project Details">
+                <div className="grid grid-cols-1 gap-2">
                     {renderField("bid_date", "Bid Date", "date")}
                     {renderField("start_date", "Start Date", "date")}
                     {renderField("end_date", "End Date", "date")}
                     {renderField("duration", "Duration (days)", "number", true)}
-                </div>
-                <div>
-                    {renderField("project_title", "Project Title")}
-                    {renderField("description", "Description")}
                 </div>
             </SectionBox>
 
@@ -193,6 +153,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData }: IRenderEsti
                 data={data}
                 setData={setData}
                 onSaveData={() => onSaveData(data)}
+                editAll={editAll}
             />
         </div>
     );

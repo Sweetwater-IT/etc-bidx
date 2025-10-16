@@ -14,9 +14,19 @@ export async function POST(request: NextRequest) {
       customerNumber
     } = await request.json();
 
+    const { data: lastContractor } = await supabase
+      .from('contractors')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+
+    const newId = lastContractor ? lastContractor.id + 1 : 1;
+
     const { data, error } = await supabase
       .from('contractors')
       .insert({
+        id: newId,
         name,
         address,
         web: url,
@@ -40,10 +50,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Contractor created successfully',
-      data 
+      data
     }, { status: 201 });
   } catch (error) {
     console.error('Unexpected error:', error);
