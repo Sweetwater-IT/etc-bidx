@@ -491,11 +491,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                 <div className="w-2/5">
                   <div className="flex flex-col gap-y-2">
                     <QuoteNotes
-                      notes={quote?.notes?.map(n => ({
-                        id: n.id,
-                        text: n.text,
-                        created_at: n.created_at
-                      })) || []}
+                      notes={quote?.notes}
                       onSave={handleSaveNote}
                       onEdit={handleEditNote}
                       onDelete={handleDeleteNote}
