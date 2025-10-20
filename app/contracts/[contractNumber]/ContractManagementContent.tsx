@@ -187,7 +187,6 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
         setJobNumber(response.job_number)
       }
     } catch (error) {
-      console.error('Error fetching contract data:', error)
       toast(`Failed to fetch contract data: ${error}`)
     } finally {
       stopLoading()
@@ -301,7 +300,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
               Boolean(jobId) && !!jobNumber && !jobNumber?.startsWith('P-')
             }
           >
-            Create Job
+            Create Jobb
           </Button>
         </div>
 

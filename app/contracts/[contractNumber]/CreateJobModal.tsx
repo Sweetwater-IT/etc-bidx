@@ -87,9 +87,10 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   onJobCreated,
   onCustomerChange
 }) => {
+
+
   const [itemNumbers, setItemNumbers] = useState<ItemNumber[]>([])
 
-  // State for form values
   const [formValues, setFormValues] = useState({
     contractor: customer?.name || '',
     customer_contract_number: customerContractNumber || '',
@@ -102,14 +103,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
 
   const [customJobNumber, setCustomJobNumber] = React.useState<boolean>(false)
   const [isValidJobNumber, setIsValidJobNumber] = React.useState<boolean>(true)
-  // State for decimal masking - track digits for each contract value field
-  const [contractValueDigits, setContractValueDigits] = useState<
-    Record<string, string>
-  >({})
-  const [customItemDigits, setCustomItemDigits] = useState<string>('000')
-  // State for validation errors
-  const [emailError, setEmailError] = useState<string>()
-  // State for job creation flag
   const [jobCreated, setJobCreated] = useState(false)
 
   const [localContact, setLocalContact] = useState<any | null>(null);
@@ -146,7 +139,11 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         .then(response => response.json())
         .then(data => {
           if (data.status === 200 && data.data) {
-            setItemNumbers(data.data)
+            setItemNumbers([
+              ...(data.data.bidItems || []),
+              ...(data.data.rentalItems || []),
+              ...(data.data.saleItems || [])
+            ]);
           } else {
             console.error('Failed to fetch item numbers:', data)
             toast.error('Failed to load item numbers')
@@ -162,7 +159,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }
   }, [isOpen])
 
-  // State for custom item form
   const [showCustomForm, setShowCustomForm] = useState(false)
   const [newCustomItem, setNewCustomItem] = useState<
     Omit<JobItem, 'onJob' | 'aiaBilling'>
@@ -186,28 +182,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }))
   }
 
-  // Handle email change with validation
-  const handleEmailChange = (value: string) => {
-    handleInputChange('project_email', value)
-
-    // Validate email
-    const validation = validateEmail(value)
-    setEmailError(validation.isValid ? undefined : validation.message)
-  }
-
-  // Handle phone change
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const ev = e.nativeEvent as InputEvent
-    const { inputType } = ev
-    const data = ev.data || ''
-    const newValue = handlePhoneInput(
-      inputType,
-      data,
-      formValues.project_phone || ''
-    )
-    handleInputChange('project_phone', newValue)
-  }
-
   // Toggle item on job
   const handleOnJobToggle = (item: ItemNumber, checked: boolean) => {
     if (checked) {
@@ -228,10 +202,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       }))
 
       // Initialize digits for this item
-      setContractValueDigits(prev => ({
-        ...prev,
-        [item.item_number]: '000'
-      }))
     } else {
       // Remove item from form data when unchecked
       const updatedItems = formValues.items.filter(
@@ -244,11 +214,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       }))
 
       // Remove digits for this item
-      setContractValueDigits(prev => {
-        const newDigits = { ...prev }
-        delete newDigits[item.item_number]
-        return newDigits
-      })
     }
   }
 
@@ -282,25 +247,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         items: updatedItems
       }
     })
-  }
-
-  // Handle next digits for contract values (higher limit than standard rates)
-  function handleNextDigitsContractValue(
-    current: string,
-    inputType: string,
-    data: string
-  ): string {
-    let digits = current
-
-    if (inputType === 'insertText' && /\d/.test(data)) {
-      const candidate = current + data
-      // Allow up to 9,999,999.99 (9 digits total)
-      if (parseInt(candidate, 10) <= 999999999) digits = candidate
-    } else if (inputType === 'deleteContentBackward') {
-      digits = current.slice(0, -1)
-    }
-
-    return digits.padStart(3, '0')
   }
 
   // Handle contract value change with decimal masking
@@ -380,7 +326,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
         uom: '',
         contractValue: 0
       })
-      setCustomItemDigits('000')
       setShowCustomForm(false)
     }
   }
@@ -391,13 +336,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       ...prev,
       items: prev.items.filter(item => item.itemNumber !== itemNumber)
     }))
-
-    // Remove digits for this item
-    setContractValueDigits(prev => {
-      const newDigits = { ...prev }
-      delete newDigits[itemNumber]
-      return newDigits
-    })
   }
 
   useEffect(() => {
@@ -509,7 +447,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
       setIsSubmitting(false)
     }
   }
-  
+
   // Check if an item is in the form
   const isItemInForm = (itemNumber: string) => {
     return formValues.items.some(item => item.itemNumber === itemNumber)
@@ -681,7 +619,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  itemNumbers.map((item, index) => {
+                  itemNumbers?.length > 0 &&
+                  itemNumbers?.map((item, index) => {
                     const isOnJob = isItemInForm(item.item_number)
                     const formItemIndex = getFormItemIndex(item.item_number)
 
