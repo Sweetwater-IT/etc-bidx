@@ -20,6 +20,7 @@ interface Props {
   termsAndConditions?: boolean;
   exclusions?: string;
   terms: string;
+  quoteStatus: string;
 }
 
 const styles = StyleSheet.create({
@@ -106,7 +107,8 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   quoteData,
   termsAndConditions,
   exclusions,
-  terms
+  terms,
+  quoteStatus
 
 }) => {
 
@@ -280,9 +282,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               </Text>
             </View>
             <View style={styles.header3}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteStatus === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
               {
-                quoteData?.status !== "Accepted" &&
+                quoteStatus !== "Accepted" &&
                 <View>
                   <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
                   <Text style={styles.centerText}>

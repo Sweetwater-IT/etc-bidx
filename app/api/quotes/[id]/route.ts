@@ -6,6 +6,7 @@ export async function GET(
   req: NextRequest,
   context: { params: any }
 ) {
+
   const resolvedParams = await context.params
 
   const quoteId = Number(resolvedParams.id);
@@ -38,7 +39,7 @@ export async function GET(
   // 2️⃣ Items
   const { data: items } = await supabase
     .from("quote_items")
-    .select("id, description, quantity, unit_price, confirmed, uom, tax, is_tax_percentage")
+    .select("id, description, quantity, unit_price, confirmed, uom, tax, is_tax_percentage, notes")
     .eq("quote_id", quoteId);
 
   // 3️⃣ Customer
@@ -123,9 +124,13 @@ export async function GET(
       .maybeSingle<AdminDataEntry>();
     adminData = data;
   }
-  const files: any[] = [];
 
-
+  const { data: allFiles, error } = await supabase
+    .from('files')
+    .select('id, filename, file_type, upload_date, file_size, file_path, file_url, quote_id')
+    .eq('quote_id', quoteId)
+    .not('file_path', 'ilike', '%/pdf/%')
+    .order('upload_date', { ascending: false });
 
 
   const response = {
@@ -149,10 +154,11 @@ export async function GET(
       confirmed: i.confirmed,
       uom: i.uom,
       tax: i.tax,
-      is_tax_percentage: i.is_tax_percentage
+      is_tax_percentage: i.is_tax_percentage,
+      notes: i.notes
     })),
     admin_data: adminData || null,
-    files,
+    files: allFiles,
     ...quote,
     notes: quote?.notes_relation?.map(note => ({
       ...note,
