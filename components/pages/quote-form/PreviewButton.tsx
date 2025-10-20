@@ -41,6 +41,7 @@ export const QuotePreviewButton = ({ quoteType, termsAndConditions, exclusion, t
         exclusions={exclusion}
         items={quoteItems}
         quoteDate={new Date()}
+        quoteStatus={quoteMetadata?.status ?? ''}
         quoteType={quoteType}
         quoteData={quoteMetadata}
         termsAndConditions={termsAndConditions}

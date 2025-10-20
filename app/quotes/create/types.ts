@@ -116,6 +116,8 @@ export interface EstimateBidQuote extends Quote {
     start_date: string;
     end_date: string;
     duration: number;
+    user_created?: string;
+    user_sent?: string;
 }
 
 export type AnyPartialQuote =

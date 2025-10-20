@@ -28,9 +28,11 @@ import React from "react";
 interface SiteHeaderProps {
   customTitle?: string;
   children?: React.ReactNode;
+  marginBottom?: number;
+  paddingTop?: number;
 }
 
-export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
+export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTop= 16 }: SiteHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -82,7 +84,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
               <DropdownMenuItem onClick={() => handleNewItem(action.route)}>
                 <action.icon className="size-4 mr-2" />
                 {action.label}
-          </DropdownMenuItem>
+              </DropdownMenuItem>
               {action.withSeparator && <DropdownMenuSeparator />}
             </React.Fragment>
           ))}
@@ -92,7 +94,7 @@ export function SiteHeader({ customTitle, children }: SiteHeaderProps) {
   }
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) pt-16 mb-12">
+    <header className={`flex h-(--header-height) shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) pt-${paddingTop} mb-${marginBottom}`}>
       <div className="flex w-full flex-col gap-2 px-4 lg:gap-4 lg:px-6">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />

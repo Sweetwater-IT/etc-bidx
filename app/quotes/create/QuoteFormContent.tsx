@@ -297,7 +297,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       notes,
       ...quoteMetadata,
       items: quoteItems,
-      quoteId: quoteId
+      quoteId: quoteId,
+      userEmail: user.email,
     };
 
     const res = await fetch("/api/quotes", {
@@ -584,6 +585,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           terms={quoteMetadata?.termsText}
           notes={quoteMetadata?.notes}
           items={quoteItems}
+          quoteStatus={quoteMetadata?.status || ""}
           quoteDate={new Date()}
           quoteData={quoteMetadata}
           quoteType={quoteMetadata?.type_quote || "straight_sale"}
@@ -1030,7 +1032,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     termsAndConditions={quoteMetadata?.aditionalTerms}
                     files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
                   />
-
               }
             </div>
           </div>
