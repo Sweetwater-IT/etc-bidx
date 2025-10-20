@@ -94,7 +94,7 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
   }
 
   return (
-    <header className={`flex h-(--header-height) shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) pt-${paddingTop} mb-${marginBottom}`}>
+    <header className={`flex shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) mb-${marginBottom}`}>
       <div className="flex w-full flex-col gap-2 px-4 lg:gap-4 lg:px-6">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
