@@ -115,6 +115,21 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         setModalOpen(false)
     }
 
+    const handleContactClick = (contactId: string) => {
+        const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === contactId);
+        if (!contact) return;
+
+        selectContact(contact.id.toString());
+
+        setData((prev: any) => ({
+            ...prev,
+            customer_contact: contact.name || "",
+            customer_email: contact.email || "",
+            customer_phone: contact.phone || "",
+            customer_address: contact.address || ""
+        }));
+    };
+
     return (
         <div className="w-full">
             <div
@@ -170,7 +185,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                     <Select
                         onValueChange={val => {
                             if (val === "__new__") return openModal("contact");
-                            selectContact(val);
+                            handleContactClick(val);
                         }}
                         value={selectedContact?.id?.toString() || ""}
                         disabled={!selectedCustomer || loading}

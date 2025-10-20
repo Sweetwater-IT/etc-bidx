@@ -32,43 +32,6 @@ const SectionBox = ({
 const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, editAll = false }: IRenderProjectQuoteFields) => {
 
     useEffect(() => {
-
-        console.log(selectedJob);
-
-        if (!selectedJob) return;
-        const job = selectedJob;
-
-        const today = new Date();
-        const start = job.admin_data?.startDate ? new Date(job.admin_data.startDate) : today;
-        const end = job.admin_data?.endDate ? new Date(job.admin_data.endDate) : today;
-
-        const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-        setData((prev) => ({
-            ...prev,
-            customer: job?.customer || "",
-            customer_name: job?.customer_name || "",
-            customer_email: job?.customer_email || "",
-            customer_phone: job?.customer_phone || "",
-            customer_address: job?.customer_address || "",
-            customer_contact: job?.customer_contact || "",
-            customer_job_number: job?.admin_data?.contractNumber || "",
-            etc_job_number: job.job_number ?? "",
-            purchase_order: "",
-            township: job.admin_data?.location || "",
-            county: job.admin_data?.county?.name || "",
-            sr_route: job.admin_data?.srRoute || "",
-            job_address: job.admin_data?.location || "",
-            ecsm_contract_number: job.admin_data?.contractNumber || "",
-            bid_date: job.admin_data?.lettingDate ? new Date(job.admin_data.lettingDate).toISOString().slice(0, 10) : "",
-            start_date: start ? start.toISOString().slice(0, 10) : "",
-            end_date: end ? end.toISOString().slice(0, 10) : "",
-            duration,
-            job_id: selectedJob.id,
-        }));
-    }, [selectedJob, setData]);
-
-    useEffect(() => {
         if (!data.start_date || !data.end_date) return;
 
         const start = new Date(data.start_date);

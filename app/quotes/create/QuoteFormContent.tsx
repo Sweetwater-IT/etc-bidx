@@ -701,7 +701,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           etc_poc_phone_number: prev?.etc_poc_phone_number || "",
           etc_branch: prev?.etc_branch || userBranch?.name || "",
         };
-        return isEqual(prev, updated) ? prev : updated; 
+        return isEqual(prev, updated) ? prev : updated;
       });
 
       if (quoteMetadata.type_quote !== normalizedQuote.type_quote) {
@@ -873,6 +873,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
                       quoteData={quoteMetadata}
+                      onChangeQuote={setQuoteMetadata}
                       selectedBid={selectedBid}
                       onChange={setSelectedBid}
                       extraFunctionCall={(bid) =>
