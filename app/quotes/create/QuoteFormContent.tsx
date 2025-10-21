@@ -233,6 +233,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
+  const didInitRef = useRef(false);
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -257,10 +258,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [user.email, edit]);
 
   useEffect(() => {
-    if (quoteId) {
-      autosave();
-      return;
-    }
+    if (loadingMetadata) return;
 
     const shouldCreate =
       (quoteMetadata?.type_quote === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
@@ -274,12 +272,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
       });
     }
+
   }, [
     quoteMetadata?.type_quote,
     quoteMetadata?.customer,
     quoteMetadata?.job_id,
     quoteMetadata?.estimate_id,
-    selectedJob,
+    loadingMetadata
   ]);
 
   const createQuoteBase = async (status: "DRAFT" | "NOT SENT") => {
@@ -373,7 +372,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   };
 
   const autosave = React.useCallback(async () => {
-    if (!numericQuoteId || !canAutosave) return false;
+    if (!numericQuoteId || !canAutosave || loadingMetadata) return false;
 
     try {
       const payload = {
@@ -413,12 +412,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [
     numericQuoteId, adminData, notes, quoteMetadata, estimateId, jobId,
     subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
-    includeTerms, customTerms, paymentTerms, firstSave
+    includeTerms, customTerms, paymentTerms, firstSave, quoteItems
   ]);
 
 
   useEffect(() => {
-    if (!numericQuoteId) return;
+    if (!numericQuoteId || loadingMetadata) return;
 
     const hasChanges =
       !isEqual(adminData, prevStateRef.current.adminData) ||
@@ -809,14 +808,21 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   "Download"
                 )}
               </Button>
-              {!edit && (
+              {!edit ? (
                 <Button disabled={!quoteMetadata?.type_quote} onClick={handleCreateQuote}>
-                  {
-                    creatingQuote ?
-                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                      :
-                      "Create quote"
-                  }
+                  {creatingQuote ? (
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  ) : (
+                    "Create quote"
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  disabled={!firstSave}
+                  onClick={() => router.push(`/quotes/view/${quoteId}`)}
+                >
+                  Update Quote
                 </Button>
               )}
             </div>

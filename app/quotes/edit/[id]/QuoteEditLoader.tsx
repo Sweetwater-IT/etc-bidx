@@ -170,8 +170,8 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         console.error("💥 [QuoteEditLoader] Error loading quote:", err);
         toast.error("Could not load quote for editing");
       } finally {
-        setLoadingMetadata(false)
         setCanAutosave(true)
+        setLoadingMetadata(false)
       }
 
     }
