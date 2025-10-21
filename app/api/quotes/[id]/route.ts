@@ -39,8 +39,9 @@ export async function GET(
   // 2️⃣ Items
   const { data: items } = await supabase
     .from("quote_items")
-    .select("id, description, quantity, unit_price, confirmed, uom, tax, is_tax_percentage, notes")
-    .eq("quote_id", quoteId);
+    .select("id, description, quantity, item_number, unit_price, confirmed, uom, tax, is_tax_percentage, notes, created_at")
+    .eq("quote_id", quoteId)
+    .order('created_at', { ascending: true });
 
   // 3️⃣ Customer
   const { data: customerJoin } = await supabase
@@ -155,7 +156,9 @@ export async function GET(
       uom: i.uom,
       tax: i.tax,
       is_tax_percentage: i.is_tax_percentage,
-      notes: i.notes
+      notes: i.notes,
+      item_number: i.item_number,
+      created_at: i.created_at
     })),
     admin_data: adminData || null,
     files: allFiles,
