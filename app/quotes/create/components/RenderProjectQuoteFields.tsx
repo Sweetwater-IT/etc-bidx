@@ -45,28 +45,38 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
         }));
     }, [data.start_date, data.end_date, setData]);
 
-    const renderField = (
-        field: keyof ToProjectQuote,
-        label: string,
-        type: "text" | "date" | "number" = "text",
-        disabled?: boolean
-    ) => (
-        <div className="mb-4">
-            <label className="font-semibold block mb-1">{label}</label>
-            {editAll ? (
-                <Input
-                    type={type === "date" ? "date" : type}
-                    value={data[field] ?? ""}
-                    onChange={(e) => setData({ ...data, [field]: e.target.value })}
-                    className="w-full"
-                    disabled={disabled}
-                />
-            ) : (
-                <p className="text-sm text-gray-700">
-                    {data[field] ? (type === "date" ? new Date(data[field] as string).toISOString().slice(0, 10) : String(data[field])) : (type === 'number' ? 0 : "-")}
-                </p>
-            )}
-        </div>
+    const renderField = React.useCallback(
+        (
+            field: keyof ToProjectQuote,
+            label: string,
+            type: "text" | "date" | "number" = "text",
+            disabled?: boolean
+        ) => {                        
+            return (
+            <div className="mb-4">
+                <label className="font-semibold block mb-1">{label}</label>
+                {editAll ? (
+                    <Input
+                        type={type === "date" ? "date" : type}
+                        value={data[field] ?? ""}
+                        onChange={(e) => setData({ ...data, [field]: e.target.value })}
+                        className="w-full"
+                        disabled={disabled}
+                    />
+                ) : (
+                    <p className="text-sm text-gray-700">
+                        {data[field]
+                            ? type === "date"
+                                ? new Date(data[field] as string).toISOString().slice(0, 10)
+                                : String(data[field])
+                            : type === "number"
+                                ? 0
+                                : "-"}
+                    </p>
+                )}
+            </div>
+        )},
+        [data, editAll, setData]
     );
 
 
@@ -128,5 +138,4 @@ const RenderProjectQuoteFields = ({ data, setData, onSaveData, selectedJob, edit
 };
 
 export default RenderProjectQuoteFields;
-
 

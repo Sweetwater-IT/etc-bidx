@@ -33,7 +33,7 @@ const SectionBox = ({
 );
 
 const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQuoteFields) => {
-    const renderField = (
+    const renderField = React.useCallback((
         field: keyof StraightSaleQuote,
         label: string,
         type: string = "text",
@@ -59,7 +59,7 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                 </p>
             )}
         </div>
-    );
+    ), [data, editAll, setData]);
 
     return (
         <div className="flex flex-col w-full text-[12px]">

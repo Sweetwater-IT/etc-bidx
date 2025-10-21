@@ -474,6 +474,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                       onEdit={handleEditNote}
                       onDelete={handleDeleteNote}
                       title="Quote Activity"
+                      showBorder={false}
+                      showNoActivities={false}
                       activities={[
                         {
                           type: "Quote Created",

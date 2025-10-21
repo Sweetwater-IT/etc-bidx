@@ -87,8 +87,12 @@ export default function QuoteItemRow({
     }
   }, [isEditing, item.unitPrice, item.discount]);
 
-  function formatDecimal(value: string): string {
-    return (parseInt(value, 10) / 100).toFixed(2);
+  function formatDecimal(value: number): string {
+    if (isNaN(value)) return "0.00";
+    return value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
 
   function formatPercentage(value: string): string {
@@ -196,7 +200,7 @@ export default function QuoteItemRow({
               <SelectValue placeholder="Search or add a product...">
                 {item.itemNumber
                   ? `${item.itemNumber} - ${item.description}`
-                  : "Search or add a product..."} 
+                  : "Search or add a product..."}
               </SelectValue>
             </SelectTrigger>
 
@@ -308,21 +312,17 @@ export default function QuoteItemRow({
         </div>
         <div className="text-foreground text-sm">
           {item.unitPrice ? (
-            `$${Number(item.unitPrice).toFixed(2)}`
+            "$" + formatDecimal(Number(item.unitPrice))
           ) : (
             <span className="opacity-50">—</span>
           )}
         </div>
         <div className="text-foreground text-base">
-          {item.discount ? (
+          {item.discount !== undefined && item.discount !== null && item.discount !== 0 ? (
             item.discountType === "dollar" ? (
-              `$${Number(item.discount).toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}`
+              "$" + formatDecimal(Number(item.discount)) 
             ) : (
-              `${Number(item.discount).toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}%`
+              `${Number(item.discount).toFixed(2)}%`
             )
           ) : (
             <span className="opacity-50">—</span>

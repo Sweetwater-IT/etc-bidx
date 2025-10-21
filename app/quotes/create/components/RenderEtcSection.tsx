@@ -16,6 +16,18 @@ interface IRenderEtcSection {
 
 const BRANCHES = [{ value: 'Turbotville', label: 'Turbotville' }, { value: 'Hatfield', label: 'Hatfield' }, { value: 'Bedford', label: 'Bedford' }]
 
+const formatPhone = (phone: string | undefined) => {
+    if (!phone) return "-";
+
+    const digits = phone.replace(/\D/g, "");
+
+    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+
+    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+    const extra = digits.length > 10 ? digits.slice(10) : "";
+
+    return main + extra;
+};
 
 const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: IRenderEtcSection) => {
     const { user } = useAuth();
@@ -34,24 +46,29 @@ const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: I
         getUserBranchByEmail();
     }, [user.email]);
 
-    const renderField = (
-        field: keyof typeof data,
-        label: string,
-        fallbackValue: string = ""
-    ) => (
-        <div className="flex-1 mb-4">
-            <label className="block font-semibold mb-1">{label}</label>
-            {editAll ? (
-                <Input
-                    value={data[field] ?? fallbackValue}
-                    onChange={(e) => setData({ ...data, [field]: e.target.value })}
-                />
-            ) : (
-                <p className="text-sm text-gray-700">
-                    {data[field] ? data[field] : fallbackValue ? fallbackValue : "-"}
-                </p>)}
-        </div>
-        
+    const renderField = React.useCallback(
+        (field: keyof typeof data, label: string, fallbackValue: string = "") => {
+            const rawValue =
+                data[field] && data[field].toString().trim() !== "" ? data[field] : fallbackValue;
+
+            const displayValue =
+                field === "etc_poc_phone_number" ? formatPhone(rawValue) : rawValue || "-";
+            return (
+                
+                <div className="flex-1 mb-4">
+                    <label className="block font-semibold mb-1">{label}</label>
+                    {editAll ? (
+                        <Input
+                            value={data[field] ?? ""}
+                            onChange={(e) => setData({ ...data, [field]: e.target.value })}
+                        />
+                    ) : (
+                        <p className="text-sm text-gray-700">{displayValue}</p>
+                    )}
+                </div>
+            );
+        },
+        [data, editAll, setData]
     );
 
     return (
