@@ -462,7 +462,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }, [isSaving, firstSave]);
 
-  const SecondCounter = React.memo(({ getSaveStatusMessage }: { getSaveStatusMessage: () => string }) => {
+  const SecondCounterComponent = ({ getSaveStatusMessage }: { getSaveStatusMessage: () => string }) => {
     const [, forceUpdate] = useState(0);
 
     useEffect(() => {
@@ -474,7 +474,10 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }, []);
 
     return <span>{getSaveStatusMessage()}</span>;
-  });
+  };
+
+  const SecondCounter = React.memo(SecondCounterComponent);
+  SecondCounter.displayName = 'SecondCounter';
 
   const handleQuoteTypeChange = (
     type: "straight_sale" | "to_project" | "estimate_bid",
