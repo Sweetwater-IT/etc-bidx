@@ -35,37 +35,6 @@ const SectionBox = ({
 );
 
 const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, editAll = false, setQuoteItems }: IRenderEstimateBidQuoteFields) => {
-    const { quoteId, quoteItems } = useQuoteForm()
-
-    useEffect(() => {
-        if (!selectedBid) return;
-
-        const admin = selectedBid.admin_data || {};
-        const start = admin.startDate ? new Date(admin.startDate) : null;
-        const end = admin.endDate ? new Date(admin.endDate) : null;
-        const duration = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-        setData((prev: any) => ({
-            ...prev,
-            customer: selectedBid?.customer || "",
-            customer_name: selectedBid?.customer_name || "",
-            customer_email: selectedBid?.customer_email || "",
-            customer_phone: selectedBid?.customer_phone || "",
-            customer_address: selectedBid?.customer_address || "",
-            customer_job_number: admin.contractNumber || "",
-            township: admin.location || "",
-            county: admin.county?.name || "",
-            sr_route: admin.srRoute || "",
-            job_address: admin.location || "",
-            ecsm_contract_number: admin.contractNumber || "",
-            bid_date: admin.lettingDate ? new Date(admin.lettingDate).toISOString().slice(0, 10) : "",
-            start_date: start ? start.toISOString().slice(0, 10) : "",
-            end_date: end ? end.toISOString().slice(0, 10) : "",
-            duration,
-            estimate_id: selectedBid?.id,
-        }));
-    }, [selectedBid, setData]);
-
 
     useEffect(() => {
         if (!data.start_date || !data.end_date) return;

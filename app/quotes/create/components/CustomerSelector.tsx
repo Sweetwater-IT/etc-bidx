@@ -9,7 +9,7 @@ import CreateModal from './CreateModal'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { Loader } from 'lucide-react'
 
-const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle ,columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
+const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
     const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, refreshCustomers, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
@@ -17,27 +17,23 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle 
     const [modalType, setModalType] = useState<'customer' | 'contact' | null>(null)
 
     useEffect(() => {
-        if (data.customer && customers.length > 0) {
-            const cust = customers.find(c => c.id.toString() === data.customer.toString());
-            if (cust) {
-                selectCustomer(cust.id.toString());
-                const contact = cust?.customer_contacts?.find(c => c.name === data.customer_contact);
-                if (contact) selectContact(contact.id.toString());
-            }
-        }
-    }, [data.customer, customers]);
+        if (!data.customer || customers.length === 0) return;
 
-    useEffect(() => {
-        if (data.customer_contact) {
-            const contact = selectedCustomer?.customer_contacts?.find(c => c.name === data.customer_contact);
+        const cust = customers.find(c => c.id.toString() === data.customer.toString());
+        if (!cust) return;
+
+        selectCustomer(cust.id.toString());
+
+        if (data.customer_contact && cust.customer_contacts?.length) {
+            const contact = cust.customer_contacts.find(c => c.name === data.customer_contact);
             if (contact) selectContact(contact.id.toString());
         }
-    }, [selectedCustomer, data.customer_contact]);
+    }, [data.customer, data.customer_contact, customers]);
 
     useEffect(() => {
         if (!selectedCustomer) return;
 
-        setData({
+        const newData = {
             ...data,
             customer: selectedCustomer.id || "",
             customer_name: selectedCustomer.name || "",
@@ -45,7 +41,16 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle 
             customer_phone: selectedContact?.phone || "",
             customer_address: `${selectedCustomer.address || ""} ${selectedCustomer.city || ""}, ${selectedCustomer.state || ""} ${selectedCustomer.zip || ""}`,
             customer_contact: selectedContact?.name || "",
-        });
+        };
+
+        // Solo actualizar si cambió algo
+        const hasChanged = Object.keys(newData).some(
+            key => newData[key] !== data[key]
+        );
+
+        if (hasChanged) {
+            setData(newData);
+        }
     }, [selectedCustomer, selectedContact]);
 
     const openModal = (type: 'customer' | 'contact') => {
@@ -110,6 +115,21 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle 
         setModalOpen(false)
     }
 
+    const handleContactClick = (contactId: string) => {
+        const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === contactId);
+        if (!contact) return;
+
+        selectContact(contact.id.toString());
+
+        setData((prev: any) => ({
+            ...prev,
+            customer_contact: contact.name || "",
+            customer_email: contact.email || "",
+            customer_phone: contact.phone || "",
+            customer_address: contact.address || ""
+        }));
+    };
+
     return (
         <div className="w-full">
             <div
@@ -165,7 +185,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle 
                     <Select
                         onValueChange={val => {
                             if (val === "__new__") return openModal("contact");
-                            selectContact(val);
+                            handleContactClick(val);
                         }}
                         value={selectedContact?.id?.toString() || ""}
                         disabled={!selectedCustomer || loading}

@@ -297,7 +297,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       notes,
       ...quoteMetadata,
       items: quoteItems,
-      quoteId: quoteId
+      quoteId: quoteId,
+      userEmail: user.email,
     };
 
     const res = await fetch("/api/quotes", {
@@ -691,16 +692,24 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   React.useEffect(() => {
     if (quoteMetadata?.id && quoteMetadata?.type_quote && canAutosave) {
       const normalizedQuote = normalizeQuoteMetadata(quoteMetadata);
-      setQuoteMetadata(prev => ({
-        ...prev,
-        etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
-        etc_poc_email: prev?.etc_poc_email || user?.email || "",
-        etc_poc_phone_number: prev?.etc_poc_phone_number || "",
-        etc_branch: prev?.etc_branch || userBranch?.name || "",
-      }));
-      handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
+
+      setQuoteMetadata(prev => {
+        const updated = {
+          ...prev,
+          etc_point_of_contact: prev?.etc_point_of_contact || user?.user_metadata?.name || "",
+          etc_poc_email: prev?.etc_poc_email || user?.email || "",
+          etc_poc_phone_number: prev?.etc_poc_phone_number || "",
+          etc_branch: prev?.etc_branch || userBranch?.name || "",
+        };
+        return isEqual(prev, updated) ? prev : updated;
+      });
+
+      if (quoteMetadata.type_quote !== normalizedQuote.type_quote) {
+        handleQuoteTypeChange(normalizedQuote.type_quote as any, false);
+      }
     }
   }, [quoteMetadata?.type_quote]);
+
 
   const handleEditClick = () => {
     setTempData(quoteMetadata)
@@ -864,6 +873,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     <p className="font-semibold mb-1">Select a contract number</p>
                     <SelectBid
                       quoteData={quoteMetadata}
+                      onChangeQuote={setQuoteMetadata}
                       selectedBid={selectedBid}
                       onChange={setSelectedBid}
                       extraFunctionCall={(bid) =>
@@ -1031,7 +1041,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                     termsAndConditions={quoteMetadata?.aditionalTerms}
                     files={files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))}
                   />
-
               }
             </div>
           </div>
