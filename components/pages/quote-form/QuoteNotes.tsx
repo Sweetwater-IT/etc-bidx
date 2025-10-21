@@ -28,7 +28,8 @@ interface QuoteNotesProps {
   title?: string;
   canEdit?: boolean,
   activities?: { type: string; date: string; icon?: React.ReactNode }[]
-
+  showNoActivities?: boolean;
+  showBorder?: boolean;
 }
 
 function formatDateTime(ts: number) {
@@ -80,7 +81,9 @@ export function QuoteNotes({
   loading,
   title = "Recent activity",
   canEdit = true,
-  activities
+  activities,
+  showNoActivities = true,
+  showBorder = true
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -137,7 +140,7 @@ export function QuoteNotes({
   }
 
   return (
-    <div className='rounded-lg border p-6'>
+    <div className={`rounded-lg ${showBorder && "border" }  p-6`}>
       <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
       {activities?.length ? (
         <div className="mb-4 space-y-1 text-sm text-muted-foreground">
@@ -159,7 +162,7 @@ export function QuoteNotes({
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
             Loading activity...
           </div>
-        ) : notes.length === 0 && !isAdding ? (
+        ) : (notes.length === 0 && !isAdding && showNoActivities) ? (
           <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
             No {title}
           </div>
@@ -175,10 +178,10 @@ export function QuoteNotes({
                 {idx !== notes.length - 1 && (
                   <span className='absolute left-2.5 top-6 w-px h-[calc(100%+1.5rem)] bg-gray-200 z-0' />
                 )}
-                <div className='flex flex-row items-start w-full'>
-                  <span className='mt-1 mr-1 z-10'>
+                <div className='flex flex-row items-center justify-center w-full'>
+                  <div className='z-10'>
                     <NoteIcon />
-                  </span>
+                  </div>
                   <div className='bg-white px-4 w-full'>
                     {editIndex === idx ? (
                       <div className='space-y-2'>
@@ -205,7 +208,7 @@ export function QuoteNotes({
                         </div>
                       </div>
                     ) : (
-                      <>
+                      <div className='flex flex-col items-start'>
                         <div className='text-sm mb-1 flex items-center'>
                           <span>{note.text}</span>
                           {
@@ -241,7 +244,7 @@ export function QuoteNotes({
                           {formatDateTime(note.timestamp)} by{' '}
                           {note.user_email || ''}
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>

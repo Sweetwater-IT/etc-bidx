@@ -68,6 +68,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
               total: (item.quantity || 0) * (item.unitPrice || 0),
               tax: item.tax || "0",
               confirmed: item.confirmed || "NO",
+              itemNumber: item.item_number
             }))
             : [],
         });
@@ -278,7 +279,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
         return "bg-gray-100 text-gray-600 border-gray-300";
     }
   };
-
+  
   return (
     <SidebarProvider
       style={
@@ -473,6 +474,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                       onEdit={handleEditNote}
                       onDelete={handleDeleteNote}
                       title="Quote Activity"
+                      showBorder={false}
+                      showNoActivities={false}
                       activities={[
                         {
                           type: "Quote Created",

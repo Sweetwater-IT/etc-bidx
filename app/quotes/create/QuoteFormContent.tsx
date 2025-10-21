@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
@@ -46,36 +46,37 @@ const typeQuotes = [
   }
 ]
 
-const exclusions = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
-• Traffic control supervisor, unless otherwise noted
-• Notification of (including permits from) officials (i.e. police, government, DOT), business and/or property owners
-• Core drilling, backfilling, grading, excavation or removal of excavated material
-• Snow and/or ice removal for placement, maintenance and/or removal of temporary signs
-• Short-term signs and stands
-• Constant surveillance, daily adjustments/resets, pedestrian protection
-• Shop/plan drawings and/or layout for MPT signing
-• High reach trucks and/or overhead signage
-• Shadow vehicles and operators, unless specified above
-• Arrow panels, message boards, shadow vehicles, radar trailers, shadow vehicles (and operators), unless specified above
-• Reinstallation of signs removed by the contractor for construction
-• Restoration or surface repairs
-• Temporary signals, lighting, related signage
-• Temporary rumble strips, pavement marking or delineators, unless otherwise specified
-• Holiday or work stoppage removal of signs and/or devices`;
-
 const termsString = `PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
-• The Contractor is responsible for all lost, stolen, damaged materials and equipment. In the event of lost, stolen or damaged material or equipment the contractor will be invoiced at replacement cost. Payment terms for lost, stolen, or damaged material are Net 30 days.
-• All material supplied and quoted pricing is project specific and shall only be used for the quoted project.
-• Payment terms for sale items accepted as a part of this proposal are Net 14 days. All rental invoices accepted as a part of this proposal are Net 30 days.
-• Quoted pricing does not include sales tax, delivery or shipping unless explicitly stated
-• No additional work will be performed without a written change order. Extra work orders signed by an agent of the contractor shall provide full payment within 30 days of invoice date, regardless of whether the project owner has paid the contractor
-• If payment by owner to contractor is delayed due to a dispute between owner and contractor, not involving the work performed by Established Traffic Control, Inc. (“ETC”), then payment by the contractor to ETC shall not likewise be delayed.
-• All pricing for sale items is valid for 60 days from quote date. Sale items requested 60 days or more after quote date require a revised quote.
-• Permanent sign items are subject to a 5% escalation per year throughout the contract duration, effective December 31 of every year from original quote date to contract end.
-• ETC requires a minimum notice of 14 business days’ (28 days for permanent signs) for all projects start and/or changes with approved drawings or additional fees may apply.
-• Retainage will not be withheld on subcontractor agreements less than $50,000
-• No retainage will be withheld on rental or sale items regardless of value / price
-• Contractor must supply certificate of insurance for rental items upon pick-up`;
+\t• The Contractor is responsible for all lost, stolen, damaged materials and equipment. In the event of lost, stolen or damaged material or equipment the contractor will be invoiced at replacement cost. Payment terms for lost, stolen, or damaged material are Net 30 days.
+\t• All material supplied and quoted pricing is project specific and shall only be used for the quoted project.
+\t• Payment terms for sale items accepted as a part of this proposal are Net 14 days. All rental invoices accepted as a part of this proposal are net 30 days.
+\t• Quoted pricing does not include sales tax, delivery or shipping unless explicitly stated.
+\t• No additional work will be performed without a written change order. Extra work orders signed by an agent of the contractor shall provide full payment within 30 days of invoice date, regardless of whether the project owner has paid the contractor.
+\t• If payment by owner to contractor is delayed due to a dispute between owner and contractor, not involving the work performed by Established Traffic Control, Inc. (“ETC”), then payment by the contractor to ETC shall not likewise be delayed.
+\t• All pricing for sale items is valid for 60 days from quote date. Sale items requested 60 days or more after quote date require a revised quote.
+\t• Permanent sign items are subject to a 5% escalation per year throughout the contract duration, effective December 31 of every year from original quote date to contract end.
+\t• ETC requires a minimum notice of 14 business days’ (28 days for permanent signs) for all projects start and/or changes with approved drawings or additional fees may apply.
+\t• Retainage will not be withheld on subcontractor agreements less than $50,000.
+\t• No retainage will be withheld on rental or sale items regardless of value / price.
+\t• Contractor must supply certificate of insurance for rental items upon pick-up.`;
+
+const exclusions = `PLEASE NOTE THE FOLLOWING ITEMS OR SERVICES ARE EXCLUDED FROM OUR PROPOSAL UNLESS OTHERWISE STATED:
+\t• Traffic control supervisor, unless otherwise noted.
+\t• Notification of (including permits from) officials (i.e. police, government, DOT), business and / or property owners.
+\t• Core drilling, backfilling, grading, excavation or removal of excavated material.
+\t• Snow and / or ice removal for placement maintenance and / or removal of temporary signs.
+\t• Short-term signs and stands.
+\t• Constant surveillance, daily adjustments / resets, pedestrian protection.
+\t• Shop / plan drawings and / or layout for MPT signing.
+\t• High reach trucks and / or overhead signage.
+\t• Shadow vehicles and operators, unless specified above.
+\t• Arrow panels, message boards, shadow vehicles, radar trailers, shadow vehicles (and operators), unless specified above.
+\t• Reinstallation of signs removed by the contractor for construction.
+\t• Restoration or surface repairs.
+\t• Temporary signals, lighting, related signage.
+\t• Temporary rumble strips, pavement marking or delineators, unless otherwise specified.
+\t• Holiday or work stoppage removal of signs and / or devices.`;
+
 
 
 async function createQuoteItem(item: QuoteItem) {
@@ -233,6 +234,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
+  const didInitRef = useRef(false);
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -257,10 +259,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [user.email, edit]);
 
   useEffect(() => {
-    if (quoteId) {
-      autosave();
-      return;
-    }
+    if (loadingMetadata) return;
 
     const shouldCreate =
       (quoteMetadata?.type_quote === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
@@ -274,12 +273,13 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
       });
     }
+
   }, [
     quoteMetadata?.type_quote,
     quoteMetadata?.customer,
     quoteMetadata?.job_id,
     quoteMetadata?.estimate_id,
-    selectedJob,
+    loadingMetadata
   ]);
 
   const createQuoteBase = async (status: "DRAFT" | "NOT SENT") => {
@@ -373,7 +373,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   };
 
   const autosave = React.useCallback(async () => {
-    if (!numericQuoteId || !canAutosave) return false;
+    if (!numericQuoteId || !canAutosave || loadingMetadata) return false;
 
     try {
       const payload = {
@@ -413,12 +413,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [
     numericQuoteId, adminData, notes, quoteMetadata, estimateId, jobId,
     subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
-    includeTerms, customTerms, paymentTerms, firstSave
+    includeTerms, customTerms, paymentTerms, firstSave, quoteItems
   ]);
 
 
   useEffect(() => {
-    if (!numericQuoteId) return;
+    if (!numericQuoteId || loadingMetadata) return;
 
     const hasChanges =
       !isEqual(adminData, prevStateRef.current.adminData) ||
@@ -444,13 +444,40 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     };
   }, [adminData, notes, quoteMetadata, numericQuoteId, autosave]);
 
+  const secondCounterRef = useRef(0);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setSecondCounter((prev) => prev + 1)
-    }, 1000)
-    return () => clearInterval(intervalId)
-  }, [])
+
+  const getSaveStatusMessage = useCallback(() => {
+    const secondCounter = secondCounterRef.current;
+    if (isSaving && !firstSave) return 'Saving...';
+    if (!firstSave) return '';
+    if (secondCounter < 60) {
+      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+    } else if (secondCounter < 3600) {
+      const minutesAgo = Math.floor(secondCounter / 60);
+      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+    } else {
+      const hoursAgo = Math.floor(secondCounter / 3600);
+      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
+    }
+  }, [isSaving, firstSave]);
+
+  const SecondCounterComponent = ({ getSaveStatusMessage }: { getSaveStatusMessage: () => string }) => {
+    const [, forceUpdate] = useState(0);
+
+    useEffect(() => {
+      const intervalId = setInterval(() => {
+        secondCounterRef.current += 1;
+        forceUpdate((prev) => prev + 1);
+      }, 1000);
+      return () => clearInterval(intervalId);
+    }, []);
+
+    return <span>{getSaveStatusMessage()}</span>;
+  };
+
+  const SecondCounter = React.memo(SecondCounterComponent);
+  SecondCounter.displayName = 'SecondCounter';
 
   const handleQuoteTypeChange = (
     type: "straight_sale" | "to_project" | "estimate_bid",
@@ -673,21 +700,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }
 
-  const getSaveStatusMessage = () => {
-    if (isSaving && !firstSave) return 'Saving...'
-    if (!firstSave) return ''
-    if (secondCounter < 60) {
-      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''
-        } ago`
-    } else if (secondCounter < 3600) {
-      const minutesAgo = Math.floor(secondCounter / 60)
-      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''
-        } ago`
-    } else {
-      const hoursAgo = Math.floor(secondCounter / 3600)
-      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`
-    }
-  }
 
   React.useEffect(() => {
     if (quoteMetadata?.id && quoteMetadata?.type_quote && canAutosave) {
@@ -795,7 +807,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         saveButtons={
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              {getSaveStatusMessage()}
+              <SecondCounter getSaveStatusMessage={getSaveStatusMessage} />
+
             </div>
             <div className="flex items-center gap-2">
               <QuotePreviewButton terms={quoteMetadata?.termsText} exclusion={quoteMetadata?.exclusionsText ?? ''} quoteType={quoteMetadata?.type_quote} termsAndConditions={quoteMetadata?.aditionalTerms || false} />
@@ -809,14 +822,21 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   "Download"
                 )}
               </Button>
-              {!edit && (
+              {!edit ? (
                 <Button disabled={!quoteMetadata?.type_quote} onClick={handleCreateQuote}>
-                  {
-                    creatingQuote ?
-                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                      :
-                      "Create quote"
-                  }
+                  {creatingQuote ? (
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  ) : (
+                    "Create quote"
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  disabled={!firstSave}
+                  onClick={() => router.push(`/quotes/view/${quoteId}`)}
+                >
+                  Update Quote
                 </Button>
               )}
             </div>

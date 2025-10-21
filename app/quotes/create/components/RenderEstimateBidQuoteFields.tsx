@@ -50,7 +50,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
         }));
     }, [data.start_date, data.end_date, setData]);
 
-    const renderField = (
+    const renderField = React.useCallback((
         field: keyof EstimateBidQuote,
         label: string,
         type: string = "text",
@@ -72,7 +72,7 @@ const RenderEstimateBidQuoteFields = ({ data, setData, onSaveData, selectedBid, 
                 </p>
             )}
         </div>
-    );
+    ), [data, editAll, setData]);
 
     return (
         <div className="grid grid-cols-4 w-full gap-4 text-[12px]">

@@ -153,14 +153,11 @@ export async function GET(
     if (!adminErr) adminDataEntry = data;
   }
 
-
-
   const { data: items, error: itemsErr } = await supabase
     .from("quote_items")
-    .select("*") // Seleccionamos todo para el mapeo
-    .eq("quote_id", quoteId);
-
-
+    .select("*")
+    .eq("quote_id", quoteId)
+    .order('created_at', { ascending: true });
 
   const { data: customers, error: custErr } = await supabase
     .from("quotes_customers")

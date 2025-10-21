@@ -21,7 +21,6 @@ import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
-import { generateUniqueId } from "../active-bid/signs/generate-stable-id";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -52,24 +51,26 @@ export function ProductSheet({
   setEditingItemId,
   setEditingSubItemId,
 }) {
-  const { setQuoteItems, quoteId } = useQuoteForm()
+  const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   useEffect(() => {
     if (open) {
+      const defaultTax = quoteMetadata?.tax ?? 0;
       if (editingSubItemId) {
         const subItem = item.associatedItems?.find(
           (s) => s.id === editingSubItemId
         );
+
         if (subItem) {
           setNewProduct({
             itemNumber: subItem.itemNumber || "",
             description: subItem.description || "",
             uom: subItem.uom || "",
-            quantity: subItem.quantity || "",
+            quantity: subItem.quantity || 1,
             unitPrice: subItem.unitPrice || "",
             discountType: subItem.discountType || "dollar",
             discount: subItem.discount || "",
             notes: subItem.notes || "",
-            tax: subItem.tax || "",
+            tax: subItem.tax ?? defaultTax,
             is_tax_percentage: subItem.is_tax_percentage || false,
 
           });
@@ -86,7 +87,7 @@ export function ProductSheet({
             itemNumber: "",
             description: "",
             uom: "",
-            quantity: "",
+            quantity: 1,
             unitPrice: "",
             discountType: "dollar",
             discount: "",
@@ -104,12 +105,12 @@ export function ProductSheet({
           itemNumber: item.itemNumber || "",
           description: item.description || "",
           uom: item.uom || "",
-          quantity: item.quantity || "",
+          quantity: item.quantity || 1,
           unitPrice: item.unitPrice || "",
           discountType: item.discountType || "dollar",
           discount: item.discount || "",
           notes: item.notes || "",
-          tax: item.tax || "",
+          tax: item.tax ?? defaultTax,
           is_tax_percentage: item.is_tax_percentage || false,
         });
         setDigits({
@@ -126,7 +127,7 @@ export function ProductSheet({
         itemNumber: "",
         description: "",
         uom: "",
-        quantity: "",
+        quantity: 1,
         unitPrice: "",
         discountType: "dollar",
         discount: "",
@@ -241,23 +242,20 @@ export function ProductSheet({
             <Input
               type="text"
               className="bg-background"
-              placeholder="$0.00"
-              value={
-                digits.unitPrice ? `$ ${formatDecimal(digits.unitPrice)}` : ""
-              }
+              placeholder="0.00"
+              value={digits.unitPrice ? formatDecimal(digits.unitPrice / 100) : ""}
               onChange={(e: any) => {
                 const ev = e.nativeEvent;
                 const { inputType } = ev;
-                const data = (ev.data || "").replace(/\$/g, "");
-                const nextDigits = handleNextDigits(
-                  digits.unitPrice,
-                  inputType,
-                  data
-                );
+                const data = (ev.data || "").replace(/,/g, "");
+
+                const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
+
                 setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
+
                 setNewProduct((prev) => ({
                   ...prev,
-                  unitPrice: formatDecimal(nextDigits),
+                  unitPrice: nextDigits / 100,
                 }));
               }}
             />
@@ -270,30 +268,34 @@ export function ProductSheet({
               <Input
                 type="text"
                 className="bg-background rounded-r-none"
-                placeholder={
-                  newProduct.discountType === "percentage" ? "10" : "10"
-                }
+                placeholder="0"
                 value={
                   digits.discount
                     ? newProduct.discountType === "dollar"
-                      ? formatDecimal(digits.discount)
+                      ? formatDecimal(digits.discount / 100)
                       : formatPercentage(digits.discount)
                     : ""
                 }
                 onChange={(e: any) => {
                   const ev = e.nativeEvent;
                   const { inputType } = ev;
-                  const data = (ev.data || "").replace(/[$%\s]/g, "");
-                  const nextDigits = handleNextDigits(
-                    digits.discount,
-                    inputType,
-                    data
-                  );
+                  const data = (ev.data || "").replace(/[$%\s,]/g, "");
+
+                  const nextDigits = handleNextDigits(digits.discount, inputType, data);
+
                   setDigits((prev) => ({ ...prev, discount: nextDigits }));
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    discount: formatDecimal(nextDigits),
-                  }));
+
+                  if (newProduct.discountType === "dollar") {
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      discount: nextDigits / 100,
+                    }));
+                  } else {
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      discount: nextDigits,
+                    }));
+                  }
                 }}
               />
               <div className="w-[80px]">
@@ -326,11 +328,13 @@ export function ProductSheet({
                   setNewProduct((prev) => ({
                     ...prev,
                     is_tax_percentage: !!checked,
-                    tax: checked ? prev.tax : "",
+                    tax: checked
+                      ? prev.tax || quoteMetadata?.tax_rate || 0
+                      : "",
                   }))
                 }
               />
-              <span className="text-sm text-muted-foreground">Is Percentage</span>
+              <span className="text-sm text-muted-foreground">Apply Tax?</span>
             </div>
             {newProduct.is_tax_percentage && (
               <Input
