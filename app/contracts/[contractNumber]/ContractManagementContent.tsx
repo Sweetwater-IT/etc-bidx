@@ -300,7 +300,7 @@ const ContractManagementContent = ({ contractNumber }: Props) => {
               Boolean(jobId) && !!jobNumber && !jobNumber?.startsWith('P-')
             }
           >
-            Create Jobb
+            Create Job
           </Button>
         </div>
 
