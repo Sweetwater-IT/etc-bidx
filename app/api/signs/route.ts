@@ -10,13 +10,8 @@ export async function GET() {
 
     while (true) {
       const { data, error } = await supabase
-        .from('sign_dimension_options')
-        .select(
-          `
-          sign_designations (designation, description, sheeting),
-          sign_dimensions (width, height)
-        `
-        )
+        .from('mutcd_signs')
+        .select('mutcd_code, description, manufacturing_process, sign_shape, sign_type, type, vendor, unit_of_measure, variants')
         .range(from, to);
 
       if (error) {
@@ -37,13 +32,7 @@ export async function GET() {
       to += pageSize;
     }
 
-    const sortedData = allData
-      ?.filter(obj => !!(obj.sign_designations as any).designation)
-      ?.sort((a, b) =>
-        (a.sign_designations as any).designation.localeCompare(
-          (b.sign_designations as any).designation
-        )
-      );
+    const sortedData = allData.sort((a, b) => a.mutcd_code.localeCompare(b.mutcd_code));
 
     return NextResponse.json({ success: true, data: sortedData });
   } catch (error) {

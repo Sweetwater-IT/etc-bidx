@@ -1,75 +1,60 @@
-import { SheetingType, SignDesignation } from "@/types/MPTEquipment";
+import { SheetingType, SignDesignation, SignVariant } from "@/types/MPTEquipment";
 
-export async function processSignData (apiData: any[]) {
-    if (!Array.isArray(apiData)) {
-      console.error("API data is not an array");
-      return [];
-    }
 
-    const processedData: SignDesignation[] = [];
 
-    try {
-      apiData.forEach((item) => {
-        if (!item) return;
+export async function processSignData(apiData: any[]) {
+  if (!Array.isArray(apiData)) {
+    console.error("API data is not an array");
+    return [];
+  }
 
-        // Validate that necessary properties exist
-        if (!item.sign_designations || !item.sign_dimensions) return;
+  const processedData: SignDesignation[] = [];
 
-        const designation = item.sign_designations.designation;
-        if (!designation) return;
+  try {
+    apiData.forEach((item) => {
+      if (!item) return;
 
-        const description = item.sign_designations.description || "";
-        const sheeting =
-          (item.sign_designations.sheeting as SheetingType) || "DG";
+      const designation = item.mutcd_code;
+      if (!designation) return;
 
-        let width: number;
-        let height: number;
+      const description = item.description || "";
 
-        try {
-          width = parseFloat(item.sign_dimensions.width);
-          height = parseFloat(item.sign_dimensions.height);
+      // Parse variants JSON
+      let variants: SignVariant[] = [];
+      try {
+        variants = Array.isArray(item.variants)
+          ? item.variants
+          : JSON.parse(item.variants);
+      } catch (e) {
+        console.warn(`Skipping designation ${designation} due to invalid variants`);
+        return;
+      }
 
-          // Skip if dimensions are invalid
-          if (isNaN(width) || isNaN(height)) return;
-        } catch (e) {
-          return; // Skip this item if dimensions can't be parsed
-        }
+      const mappedVariants = variants
+        .map((v: any) => {   
+          const width = parseFloat(v.width_inches);
+          const height = parseFloat(v.length_inches);
+          const sheeting = (v.sheeting_abbreviated || "DG") as SheetingType;
 
-        // Find if this designation already exists in our processed data
-        const existingIndex = processedData.findIndex(
-          (d) => d.designation === designation
-        );
+          if (isNaN(width) || isNaN(height)) return null;
+          return { width, height, sheeting };
+        })
+        .filter(Boolean) as SignVariant[];
 
-        if (existingIndex >= 0) {
-          // Add the dimension to the existing designation
-          processedData[existingIndex].dimensions.push({ width, height });
-        } else {
-          // Create a new designation entry
-          processedData.push({
-            designation,
-            description,
-            sheeting,
-            dimensions: [{ width, height }],
-          });
-        }
+      if (mappedVariants.length === 0) return;
+
+      processedData.push({
+        designation,
+        description,
+        variants: mappedVariants,
       });
+    });
 
-      // Sort dimensions within each designation for consistent display
-      processedData.forEach((designation) => {
-        if (!designation.dimensions) designation.dimensions = [];
+    processedData.sort((a, b) => a.designation.localeCompare(b.designation));
 
-        designation.dimensions.sort((a, b) => {
-          // Sort first by width, then by height
-          if (a.width !== b.width) {
-            return a.width - b.width;
-          }
-          return a.height - b.height;
-        });
-      });
-
-      return processedData;
-    } catch (error) {
-      console.error("Error processing sign data:", error);
-      return [];
-    }
-  };
+    return processedData;
+  } catch (error) {
+    console.error("Error processing sign data:", error);
+    return [];
+  }
+};

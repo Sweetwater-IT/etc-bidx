@@ -468,18 +468,28 @@ export async function fetchReferenceData(type: 'counties' | 'users' | 'owners' |
  */
 export async function fetchSignDesignations(search?: string) {
   try {
-    const url = '/api/signs';
+    const baseUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/mutcd_signs`;
+    const apiKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    const response = await fetch(url);
+    const headers = {
+      apikey: apiKey,
+      Authorization: `Bearer ${apiKey}`,
+    };
+
+    const url = search
+      ? `${baseUrl}?name=ilike.%25${encodeURIComponent(search)}%25`
+      : baseUrl;
+
+    const response = await fetch(url, { headers });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch sign designations: ${response.status}`);
     }
 
     const data = await response.json();
-    return data.data;
+    return data;
   } catch (error) {
-    console.error('Error fetching sign designations:', error);
+    console.error("Error fetching sign designations:", error);
     return [];
   }
 }
@@ -1143,8 +1153,8 @@ export const fetchAssociatedFiles = async (
 ) => {
   if (!uniqueIdentifier) return;
 
-  console.log('uniqueIdentifier',uniqueIdentifier);
-  console.log('folder',folder);
+  console.log('uniqueIdentifier', uniqueIdentifier);
+  console.log('folder', folder);
 
   try {
     const filesResponse = await fetch(

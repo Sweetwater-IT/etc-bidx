@@ -1,25 +1,17 @@
 import { Button } from '@/components/ui/button';
-import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, Command } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { fetchSignDesignations } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { PrimarySign, SecondarySign, SheetingType } from '@/types/MPTEquipment';
-import { Command } from 'cmdk';
+import { PrimarySign, SecondarySign, SignDesignation } from '@/types/MPTEquipment';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import React, { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { processSignData } from './process-sign-data';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
-interface SignDesignation {
-  designation: string;
-  description: string;
-  sheeting: SheetingType;
-  dimensions: SignDimension[];
-}
-
-interface SignDimension {
-  width: number;
-  height: number;
-}
+type FlatRow =
+  | { kind: 'designation'; designation: string; description: string; variantsCount: number }
+  | { kind: 'variant'; designation: string; width: number; height: number; sheeting: string; description: string };
 
 interface Props {
   localSign: PrimarySign | SecondarySign;
@@ -31,6 +23,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
   const [open, setOpen] = useState(false);
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
   const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const loadSignData = async () => {
@@ -41,7 +34,6 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
           setDesignationData(processedData);
           setFilteredDesignations(processedData);
         } else {
-          console.warn("No sign data returned from API or invalid format");
           setDesignationData([]);
           setFilteredDesignations([]);
         }
@@ -51,57 +43,81 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
         setFilteredDesignations([]);
       }
     };
-
     loadSignData();
   }, []);
 
-  const filterDesignations = (searchTerm: string) => {
-    if (!Array.isArray(designationData)) {
-      setFilteredDesignations([]);
-      return;
-    }
-
+  const filterDesignations = useCallback((searchTerm: string) => {
     if (!searchTerm || searchTerm.length < 2) {
       setFilteredDesignations(designationData);
       return;
     }
+    const q = searchTerm.toLowerCase();
+    setFilteredDesignations(designationData.filter(d =>
+      d.designation.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+    ));
+  }, [designationData]);
 
-    try {
-      const filtered = designationData.filter(
-        (item) =>
-          item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredDesignations(filtered);
-    } catch (error) {
-      console.error("Error filtering designations:", error);
-      setFilteredDesignations([]);
+  const flatRows = useMemo<FlatRow[]>(() => {
+    const rows: FlatRow[] = [];
+    for (const d of filteredDesignations) {
+      rows.push({ kind: 'designation', designation: d.designation, description: d.description, variantsCount: d.variants.length });
+      if (d.variants && d.variants.length > 1) {
+        for (const v of d.variants) {
+          rows.push({
+            kind: 'variant',
+            designation: d.designation,
+            width: v.width,
+            height: v.height,
+            sheeting: v.sheeting,
+            description: d.description
+          });
+        }
+      }
     }
-  };
+    return rows;
+  }, [filteredDesignations]);
 
-  const handleDesignationSelect = (designationValue: string) => {
-    const selectedDesignation = designationData.find((d) => d.designation === designationValue);
+  const handleSelectFromFlat = useCallback((row: FlatRow) => {
+    if (row.kind === 'designation') {
+      const d = designationData.find(x => x.designation === row.designation);
+      if (!d) return;
+      if (d.variants.length === 1) {
+        const v = d.variants[0];
+        const updated = {
+          ...localSign,
+          designation: d.designation,
+          width: v.width,
+          height: v.height,
+          sheeting: v.sheeting || 'DG',
+          description: d.description
+        };
+        setLocalSign(updated);
+        onDesignationSelected?.(updated);
+        setOpen(false);
+      } else {
+      }
+    } else {
+      const updated = {
+        ...localSign,
+        designation: row.designation,
+        width: row.width,
+        height: row.height,
+        sheeting: row.sheeting as any,
+        description: row.description
+      } as PrimarySign | SecondarySign;
 
-    if (!selectedDesignation) {
-      console.error("Selected designation not found");
-      return;
+      setLocalSign(updated);
+      onDesignationSelected?.(updated);
+      setOpen(false);
     }
+  }, [designationData, localSign, onDesignationSelected]);
 
-    const updatedSign = {
-      ...localSign,
-      designation: designationValue,
-      width: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].width : 0,
-      height: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].height : 0,
-      sheeting: selectedDesignation.sheeting,
-      description: selectedDesignation.description,
-    };
-
-    setLocalSign(updatedSign);
-
-    if (onDesignationSelected) {
-      onDesignationSelected(updatedSign);
-    }
-  };
+  const rowVirtualizer = useVirtualizer({
+    count: flatRows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) =>
+      flatRows[index].kind === 'designation' ? 48 : 30,
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -111,115 +127,61 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+
+      <PopoverContent className="w-[320px] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search designation..." onValueChange={filterDesignations} />
           <CommandEmpty>No designation found.</CommandEmpty>
-          <CommandList>
-            <CommandGroup>
-              <CommandItem
-                key="custom"
-                value="custom"
-                onSelect={() => {
-                  const updatedSign = {
-                    ...localSign,
-                    designation: "",
-                    width: 0,
-                    height: 0,
-                    sheeting: localSign.sheeting,
-                    description: "",
-                    isCustom: true,
-                  };
-                  setLocalSign(updatedSign);
-                  if (onDesignationSelected) {
-                    onDesignationSelected(updatedSign);
-                  }
-                  setOpen(false);
-                }}
-              >
-                <div className="flex items-center w-full">
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      localSign.designation === "Custom designation" ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="font-medium italic">+ Custom designation</span>
-                </div>
-              </CommandItem>
 
-
-              {filteredDesignations.map((item) => (
-                <div key={item.designation}>
-                  <CommandItem
-                    value={item.designation}
-                    onSelect={() => {
-                      if (item.dimensions.length === 1) {
-                        handleDesignationSelect(item.designation);
-                        setOpen(false);
-                      }
+          <div ref={parentRef} style={{ height: 340, overflow: 'auto', position: 'relative' }}>
+            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+              {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                const row = flatRows[virtualRow.index];
+                if (!row) return null;
+                return (
+                  <div
+                    key={virtualRow.index}
+                    ref={el => el && rowVirtualizer.measureElement(el) || undefined}
+                    style={{
+                      position: 'absolute',
+                      top: virtualRow.start,
+                      left: 0,
+                      width: '100%',
+                      paddingRight: 8,
+                      boxSizing: 'border-box'
                     }}
                   >
-                    <div className="flex items-center w-full">
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          localSign.designation === item.designation ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{item.designation}</span>
-                        {item.description && (
-                          <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                            {item.description}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CommandItem>
-
-                  {item.dimensions.length > 1 && (
-                    <div className="ml-0">
-                      {item.dimensions.map((dim, idx) => (
-                        <CommandItem
-                          key={`${item.designation}-${idx}`}
-                          value={`${item.designation}-${dim.width}x${dim.height}`}
-                          onSelect={() => {
-                            const updatedSign = {
-                              ...localSign,
-                              designation: item.designation,
-                              width: dim.width,
-                              height: dim.height,
-                              sheeting: item.sheeting,
-                              description: item.description,
-                            };
-                            setLocalSign(updatedSign);
-                            onDesignationSelected?.(updatedSign);
-                            setOpen(false);
-                          }}
-                        >
-                          <div className="flex items-center w-full pl-2">
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                localSign.designation === item.designation &&
-                                  localSign.width === dim.width &&
-                                  localSign.height === dim.height
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            <span className="text-sm">{dim.width} x {dim.height}</span>
+                    {row.kind === 'designation' ? (
+                      <CommandItem
+                        value={row.designation}
+                        onSelect={() => handleSelectFromFlat(row)}
+                      >
+                        <div className="flex items-center w-full">
+                          <Check className={cn("mr-2 h-4 w-4", localSign.designation === row.designation ? "opacity-100" : "opacity-0")} />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{row.designation}</span>
+                            {row.description && <span className="text-muted-foreground text-xs truncate max-w-[250px]">{row.description}</span>}
                           </div>
-                        </CommandItem>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        </div>
+                      </CommandItem>
+                    ) : (
+                      <CommandItem
+                        className="py-1 my-0 px-2"
 
-            </CommandGroup>
-          </CommandList>
+                        value={`${row.designation}-${row.width}x${row.height}-${row.sheeting}`}
+                        onSelect={() => handleSelectFromFlat(row)}
+                      >
+                        <div className="flex items-center w-full pl-6">
+                          <Check className={cn("mr-2 h-4 w-4", localSign.designation === row.designation && localSign.width === row.width && localSign.height === row.height ? "opacity-100" : "opacity-0")} />
+                          <span className="text-sm">{row.width} x {row.height} — {row.sheeting}</span>
+                        </div>
+                      </CommandItem>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>

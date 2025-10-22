@@ -43,6 +43,13 @@ interface Props {
     isSignOrder?: boolean;
 }
 
+const sheetingMap: Record<string, string> = {
+    "HIGH INTENSITY": "HI",
+    "DIAMOND GRADE - TYPE XI": "TYPEXI",
+    "DIAMOND GRADE - TYPE VII": "DG",
+    "FLUORESCENT YELLOW GREEN": "FYG",
+};
+
 // Type guard to check if sign is SecondarySign
 const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySign => {
     return 'primarySignId' in sign;
@@ -58,7 +65,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
 
     const isSecondary = isSecondarySign(sign);
-    // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
         : null;
@@ -280,21 +286,18 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             return;
         }
 
-        // Get default dimension from the selected designation
-        const shouldAutoSetDimensions = selectedDesignation.dimensions && selectedDesignation.dimensions.length === 1;
+        const variant = selectedDesignation.variants.length === 1 ? selectedDesignation.variants[0] : undefined;
 
-        const defaultDimension = shouldAutoSetDimensions
-            ? selectedDesignation.dimensions[0]
-            : { width: 0, height: 0 };
-        // Update the local sign with designation-related fields
-        setLocalSign((prev) => ({
-            ...prev,
+        const updatedSign = {
+            ...localSign,
             designation: designationValue,
-            width: defaultDimension.width,
-            height: defaultDimension.height,
-            sheeting: selectedDesignation.sheeting,
+            width: variant?.width || 0,
+            height: variant?.height || 0,
+            sheeting: variant?.sheeting || "DG",
             description: selectedDesignation.description,
-        }));
+        };
+
+        setLocalSign(updatedSign)
     };
 
     // Get available dimensions for the selected designation
@@ -308,7 +311,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
             if (!designationInfo) return [];
 
-            return (designationInfo.dimensions || []).filter(
+            return (designationInfo.variants || []).filter(
                 (dim) =>
                     typeof dim.width === "number" &&
                     !isNaN(dim.width) &&
@@ -319,10 +322,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             console.error("Error getting available dimensions:", error);
             return [];
         }
-    };    
+    };
 
     const handleSave = () => {
-        // For secondary signs, make sure the quantity matches the primary sign
         let signToSave = localSign;
         if (isSecondary && primarySign) {
             signToSave = {
@@ -546,7 +548,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 <Select
                                     value={
                                         (localSign.width && localSign.height && localSign.width > 0 && localSign.height > 0)
-                                            ? `${localSign.width}x${localSign.height}`
+                                            ? `${localSign.width}x${localSign.height}x${localSign.sheeting}`
                                             : undefined
                                     }
                                     onValueChange={handleDimensionSelect}
@@ -557,8 +559,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     </SelectTrigger>
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
-                                            <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
-                                                {dim.width} x {dim.height}
+                                            <SelectItem key={index} value={`${dim.width}x${dim.height}x${dim.sheeting}`}>
+                                                {dim.width} x {dim.height} x {dim.sheeting}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -571,19 +573,17 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
                             <Select
-                                value={localSign.sheeting || "HI"}
-                                onValueChange={(value) => handleSignUpdate("sheeting", value)}
-                                disabled={!localSign.isCustom}
+                                value={localSign.sheeting}
+                                onValueChange={(value) => handleSignUpdate("sheeting", Object.keys(sheetingMap).find(key => sheetingMap[key] === value) || value)}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="DGXI">DGXI</SelectItem>
+                                    <SelectItem value="DGVII">DGVII</SelectItem>
                                     <SelectItem value="HI">HI</SelectItem>
-                                    <SelectItem value="DG">DG</SelectItem>
                                     <SelectItem value="FYG">FYG</SelectItem>
-                                    <SelectItem value="TYPEXI">Type XI</SelectItem>
-                                    <SelectItem value="Special">Special</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

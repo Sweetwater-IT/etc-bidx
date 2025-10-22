@@ -197,7 +197,6 @@ export function SignOrderList({
   }, [currentPhase]);
 
   const handleDesignationSelected = useCallback((updatedSign: PrimarySign | SecondarySign) => {
-    console.log('Designation selected:', updatedSign.designation, 'for phase:', currentPhase);
     try {
       dispatch({
         type: 'ADD_MPT_SIGN',

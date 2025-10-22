@@ -52,15 +52,15 @@ interface AllEquipmentMapping {
 }
 
 export interface SignDesignation {
-  designation: string;
+  designation: string;       
   description: string;
-  sheeting: SheetingType;
-  dimensions: SignDimension[];
+  variants: SignVariant[];   
 }
 
-export interface SignDimension {
-  width: number;
-  height: number;
+export interface SignVariant {
+  width: number;             
+  height: number;            
+  sheeting: SheetingType;    
 }
 
 export const labelMapping: Record<string, string> = {
