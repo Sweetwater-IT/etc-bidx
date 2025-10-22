@@ -53,15 +53,35 @@ const RenderEtcSection = ({ data, setData, editAll = false, showldJobNumber }: I
 
             const displayValue =
                 field === "etc_poc_phone_number" ? formatPhone(rawValue) : rawValue || "-";
+
+            const handlePhoneInput = (value: string) => {
+                // Quitamos todo lo que no sean dígitos
+                const digits = value.replace(/\D/g, "").slice(0, 10);
+
+                // Aplicamos formato en tiempo real
+                let formatted = "";
+                if (digits.length > 0) formatted += `(${digits.slice(0, 3)}`;
+                if (digits.length >= 4) formatted += `) ${digits.slice(3, 6)}`;
+                if (digits.length >= 7) formatted += `-${digits.slice(6, 10)}`;
+
+                setData({ ...data, [field]: formatted });
+            };
+
             return (
-                
                 <div className="flex-1 mb-4">
                     <label className="block font-semibold mb-1">{label}</label>
                     {editAll ? (
-                        <Input
-                            value={data[field] ?? ""}
-                            onChange={(e) => setData({ ...data, [field]: e.target.value })}
-                        />
+                        field === "etc_poc_phone_number" ? (
+                            <Input
+                                value={data[field] ?? ""}
+                                onChange={(e) => handlePhoneInput(e.target.value)}
+                            />
+                        ) : (
+                            <Input
+                                value={data[field] ?? ""}
+                                onChange={(e) => setData({ ...data, [field]: e.target.value })}
+                            />
+                        )
                     ) : (
                         <p className="text-sm text-gray-700">{displayValue}</p>
                     )}

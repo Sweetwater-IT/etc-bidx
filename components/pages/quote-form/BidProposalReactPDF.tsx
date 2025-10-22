@@ -99,6 +99,20 @@ const formatDate = (date?: string) => {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US");
 };
 
+const formatPhone = (phone: string | undefined) => {
+    if (!phone) return "-";
+
+    const digits = phone.replace(/\D/g, "");
+
+    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+
+    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+    const extra = digits.length > 10 ? digits.slice(10) : "";
+
+    return main + extra;
+};
+
+
 export const BidProposalReactPDF: React.FC<Props> = ({
   items,
   quoteDate,
@@ -169,7 +183,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             {/* Point of Contact */}
             <View style={{ width: "50%", padding: 4, borderBottomWidth: 1 }}>
               <Text style={{ fontWeight: "bold", marginBottom: 2 }}>ETC Information</Text>
-              <Text>Point of Contact: {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</Text>
+              <Text>Point of Contact: {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, formatPhone(data.etc_poc_phone_number))}</Text>
               <Text>Branch: {data.etc_branch || ""}</Text>
             </View>
 
@@ -311,7 +325,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
             </View>
 
-            {items.map((item, idx) => {
+            {items.filter((i)=> i.itemNumber).map((item, idx) => {
               const ext = calculateExtendedPrice(item);
               return (
                 <View key={idx} style={styles.tableRow}>

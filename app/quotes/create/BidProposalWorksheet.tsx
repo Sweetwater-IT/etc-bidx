@@ -29,6 +29,19 @@ const formatDate = (date?: string) => {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US");
 };
 
+const formatPhone = (phone: string | undefined) => {
+    if (!phone) return "-";
+
+    const digits = phone.replace(/\D/g, "");
+
+    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+
+    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+    const extra = digits.length > 10 ? digits.slice(10) : "";
+
+    return main + extra;
+};
+
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
   items,
   notes,
@@ -86,7 +99,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
 
             <div className="p-1 border-b border-black">
               <p className='font-extrabold mb-2'>ETC Information</p>
-              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
+              <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, formatPhone(data.etc_poc_phone_number))}</p>
               <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
             </div>
 
