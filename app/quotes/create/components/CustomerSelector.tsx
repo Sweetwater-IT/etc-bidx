@@ -1,20 +1,28 @@
-'use client'
-
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import {
-    Select, SelectTrigger, SelectValue, SelectContent, SelectItem
-} from '@/components/ui/select'
+    Command,
+    CommandInput,
+    CommandList,
+    CommandEmpty,
+    CommandGroup,
+    CommandItem,
+} from '@/components/ui/command'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import CreateModal from './CreateModal'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
-import { Loader } from 'lucide-react'
+import { Loader, Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
-    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, refreshCustomers, addContact, addCustomer, loading } = useCustomerSelection();
+    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
     const [modalOpen, setModalOpen] = useState(false)
     const [modalType, setModalType] = useState<'customer' | 'contact' | null>(null)
+    const [openCustomer, setOpenCustomer] = useState(false)
+    const [openContact, setOpenContact] = useState(false)
 
     useEffect(() => {
         if (!data.customer || customers.length === 0) return;
@@ -43,14 +51,11 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             customer_contact: selectedContact?.name || "",
         };
 
-        // Solo actualizar si cambió algo
         const hasChanged = Object.keys(newData).some(
             key => newData[key] !== data[key]
         );
 
-        if (hasChanged) {
-            setData(newData);
-        }
+        if (hasChanged) setData(newData);
     }, [selectedCustomer, selectedContact]);
 
     const openModal = (type: 'customer' | 'contact') => {
@@ -60,56 +65,38 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
 
     const handleConfirm = async (data: Record<string, string>) => {
         if (modalType === 'customer') {
-            try {
-                const resp = await fetch('/api/contractors/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: data.name,
-                        address: data.address || null,
-                        url: data.url || null,
-                        city: data.city || null,
-                        state: data.state || null,
-                        zip: data.zip || null,
-                        phone: data.phone || null,
-                        customerNumber: data.customerNumber || null
-                    })
+            const resp = await fetch('/api/contractors/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: data.name,
+                    address: data.address || null,
+                    url: data.url || null,
+                    city: data.city || null,
+                    state: data.state || null,
+                    zip: data.zip || null,
+                    phone: data.phone || null,
+                    customerNumber: data.customerNumber || null
                 })
-
-                const result = await resp.json()
-                if (result.success) {
-                    addCustomer(result.data)
-                } else {
-                    console.error('Error creating customer:', result.message)
-                }
-            } catch (err) {
-                console.error(err)
-            }
+            })
+            const result = await resp.json()
+            if (result.success) addCustomer(result.data)
         }
 
         if (modalType === 'contact') {
-            try {
-                const resp = await fetch('/api/customer-contacts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contractor_id: selectedCustomer?.id,
-                        name: data.name,
-                        role: data.role || null,
-                        email: data.email,
-                        phone: data.phone || null,
-                    }),
-                });
-
-                const result = await resp.json();
-                if (result.success) {
-                    addContact(result.data)
-                } else {
-                    console.error('Error creating contact:', result.error);
-                }
-            } catch (err) {
-                console.error(err);
-            }
+            const resp = await fetch('/api/customer-contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contractor_id: selectedCustomer?.id,
+                    name: data.name,
+                    role: data.role || null,
+                    email: data.email,
+                    phone: data.phone || null,
+                }),
+            })
+            const result = await resp.json()
+            if (result.success) addContact(result.data)
         }
 
         setModalOpen(false)
@@ -120,7 +107,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         if (!contact) return;
 
         selectContact(contact.id.toString());
-
         setData((prev: any) => ({
             ...prev,
             customer_contact: contact.name || "",
@@ -130,114 +116,132 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         }));
     };
 
+    const filteredCustomers = useMemo(() => {
+        if (!customerSearch) return customers
+        return customers.filter(c =>
+            c.name.toLowerCase().includes(customerSearch)
+        )
+    }, [customers, customerSearch])
+
+    const filteredContacts = useMemo(() => {
+        if (!selectedCustomer?.customer_contacts) return []
+        if (!contactSearch) return selectedCustomer.customer_contacts
+        return selectedCustomer.customer_contacts.filter(
+            cc =>
+                cc.name.toLowerCase().includes(contactSearch) ||
+                cc.email.toLowerCase().includes(contactSearch)
+        )
+    }, [selectedCustomer, contactSearch])
+
     return (
         <div className="w-full">
-            <div
-                className={`flex ${direction === "row" ? "flex-row" : "flex-col"} justify-between gap-4 mb-4 flex-1`}
-            >
-                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"}  flex flex-col`}>
+            <div className={`flex ${direction === "row" ? "flex-row" : "flex-col"} justify-between gap-4 mb-4 flex-1`}>
+                {/* Customer */}
+                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"} flex flex-col`}>
                     <label className="font-semibold block mb-1">{columnCustomerTitle || "Customer Selection"}</label>
-                    <Select
-                        onValueChange={val => {
-                            if (val === "__new__") return openModal("customer");
-                            selectCustomer(val);
-                        }}
-                        value={selectedCustomer?.id?.toString() || ""}
-                        disabled={loading}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder={loading ? "Loading..." : "Select Customer"} />
-                            {loading && (
-                                <Loader className="animate-spin w-4 h-4 text-gray-600 ml-2" />
-                            )}
-                        </SelectTrigger>
-                        <SelectContent className="flex flex-col">
-                            <div className="p-2 border-b">
-                                <Input
-                                    type="text"
-                                    placeholder="Search customer..."
-                                    className="w-full px-2 py-1 text-sm"
-                                    onChange={e => setCustomerSearch(e.target.value.toLowerCase())}
+                    <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="justify-between">
+                                {loading
+                                    ? "Loading..."
+                                    : selectedCustomer?.name || "Select Customer"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                            <Command>
+                                <CommandInput
+                                    value={customerSearch.toLocaleLowerCase()}
+                                    placeholder="Search..."
+                                    onValueChange={(val: string) => setCustomerSearch(val.toLocaleLowerCase())}
                                 />
-                            </div>
-
-                            <div className="max-h-40 overflow-y-auto">
-                                {customers
-                                    .filter(c => c.name.toLowerCase().includes(customerSearch))
-                                    .map(c => (
-                                        <SelectItem key={c.id} value={c.id.toString()}>
-                                            {c.name}
-                                        </SelectItem>
-                                    ))}
-                            </div>
-
-                            <div className="border-t">
-                                <SelectItem value="__new__" className="font-bold">
-                                    ➕ Add new customer
-                                </SelectItem>
-                            </div>
-                        </SelectContent>
-                    </Select>
+                                <CommandList>
+                                    <CommandEmpty>No customers found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {filteredCustomers.map(c => (
+                                            <CommandItem
+                                                key={c.id}
+                                                value={c.name.toString().toLocaleLowerCase()}
+                                                onSelect={() => {
+                                                    if (c.id.toString() === "__new__") return openModal("customer");
+                                                    selectCustomer(c.id.toString());
+                                                    setOpenCustomer(false);
+                                                }}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", selectedCustomer?.id === c.id ? "opacity-100" : "opacity-0")} />
+                                                {c.name}
+                                            </CommandItem>
+                                        ))}
+                                        <CommandItem
+                                            value="__new__"
+                                            onSelect={() => {
+                                                openModal("customer");
+                                                setOpenCustomer(false);
+                                            }}
+                                        >
+                                            ➕ Add new customer
+                                        </CommandItem>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
+                {/* Contact */}
                 <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"} flex flex-col`}>
                     <label className="font-semibold block mb-1">{columnContactTitle || "Contact Selection"}</label>
-                    <Select
-                        onValueChange={val => {
-                            if (val === "__new__") return openModal("contact");
-                            handleContactClick(val);
-                        }}
-                        value={selectedContact?.id?.toString() || ""}
-                        disabled={!selectedCustomer || loading}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder={loading ? "Loading..." : "Select Contact"} />
-                            {loading && (
-                                <Loader className="animate-spin w-4 h-4 text-gray-600 ml-2" />
-                            )}
-                        </SelectTrigger>
-                        <SelectContent className="flex flex-col">
-                            <div className="p-2 border-b">
-                                <Input
-                                    type="text"
-                                    placeholder="Search contact..."
-                                    className="w-full px-2 py-1 text-sm"
-                                    onChange={e => setContactSearch(e.target.value.toLowerCase())}
+                    <Popover open={openContact} onOpenChange={setOpenContact}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="justify-between" disabled={!selectedCustomer || loading}>
+                                {loading
+                                    ? "Loading..."
+                                    : selectedContact?.name || "Select Contact"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                            <Command>
+                                <CommandInput
+                                    value={contactSearch}
+                                    placeholder="Search..."
+                                    onValueChange={(val: string) => setContactSearch(val.toLocaleLowerCase())}
                                 />
-                            </div>
-
-                            <div className="max-h-20 overflow-y-auto">
-                                {selectedCustomer?.customer_contacts?.filter(
-                                    (cc) =>
-                                        cc.name.toLowerCase().includes(contactSearch) ||
-                                        cc.email.toLowerCase().includes(contactSearch)
-                                ).length ? (
-                                    selectedCustomer.customer_contacts
-                                        .filter(
-                                            (cc) =>
-                                                cc.name.toLowerCase().includes(contactSearch) ||
-                                                cc.email.toLowerCase().includes(contactSearch)
-                                        )
-                                        .map((cc) => (
-                                            <SelectItem key={cc.id} value={cc.id.toString()}>
-                                                {cc.name} ({cc.email})
-                                            </SelectItem>
-                                        ))
-                                ) : (
-                                    <p className="p-2 text-sm text-gray-500">There are no contacts</p>
-                                )}
-                            </div>
-
-
-                            <div className="border-t">
-                                <SelectItem value="__new__" className="font-bold">
-                                    ➕ Add new contact
-                                </SelectItem>
-                            </div>
-                        </SelectContent>
-                    </Select>
+                                <CommandList>
+                                    <CommandEmpty>No contacts found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {filteredContacts.length ? (
+                                            filteredContacts.map(cc => (
+                                                <CommandItem
+                                                    key={cc.id}
+                                                    value={cc.id.toString()}
+                                                    onSelect={() => {
+                                                        handleContactClick(cc.id.toString());
+                                                        setOpenContact(false);
+                                                    }}
+                                                >
+                                                    <Check className={cn("mr-2 h-4 w-4", selectedContact?.id === cc.id ? "opacity-100" : "opacity-0")} />
+                                                    {cc.name} ({cc.email})
+                                                </CommandItem>
+                                            ))
+                                        ) : (
+                                            <p className="p-2 text-sm text-gray-500">There are no contacts</p>
+                                        )}
+                                        <CommandItem
+                                            value="__new__"
+                                            onSelect={() => {
+                                                openModal("contact");
+                                                setOpenContact(false);
+                                            }}
+                                        >
+                                            ➕ Add new contact
+                                        </CommandItem>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
-
             </div>
 
             <CreateModal
