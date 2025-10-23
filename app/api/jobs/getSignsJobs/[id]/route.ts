@@ -40,9 +40,22 @@ export async function GET(req: Request,
             .from("bid_estimates")
             .select("id, contract_number")
             .eq("contract_number", job.contract_number)
-            .single();
+            .maybeSingle();
 
         if (bidError) throw bidError;
+
+        if (!bid) {
+            return NextResponse.json({
+                success: true,
+                data: {
+                    id: job.id,
+                    label: job.job_number ? `${job.job_number} - ${job.contract_number}` : job.contract_number,
+                    status: "job",
+                    phases: [],
+                    permanent_signs_entries: [],
+                },
+            });
+        }
 
         const { data: entries, error: entriesError } = await supabase
             .from("mpt_rental_entries")
@@ -93,7 +106,7 @@ export async function GET(req: Request,
             {
                 success: false,
                 message: "Unexpected error fetching job by job_number",
-                error: String(err),
+                error: err,
             },
             { status: 500 }
         );
