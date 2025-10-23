@@ -63,10 +63,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
 
+
     const isSecondary = isSecondarySign(sign);
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
-        : null;    
+        : null;
 
     const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
         const desiredPhase = mptRental.phases[currentPhase];
@@ -140,11 +141,23 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     }, [open]);
 
     useEffect(() => {
-        setLocalSign({ ...sign });
-        setIsCustom(sign.isCustom || false);
-    }, [sign]);
+        if (!open) return; // sólo cuando abrimos
 
-    // Filter designations based on search term
+        const normalizedSign = {
+            ...sign,
+            associatedStructure: (sign as any).associated_structure ?? (sign as any).associatedStructure ?? 'none',
+            bLights: (sign as any).b_lights ?? (sign as any).bLights ?? 0,
+            bLightsColor: (sign as any).b_lights_color ?? (sign as any).bLightsColor ?? null,
+            cover: (sign as any).covers ?? (sign as any).cover ?? false,
+            isCustom: (sign as any).is_custom ?? (sign as any).isCustom ?? false,
+            displayStructure: (sign as any).display_structure ?? (sign as any).displayStructure ?? 'LOOSE',
+        } as PrimarySign | SecondarySign;
+
+        setLocalSign(normalizedSign);
+        setIsCustom(normalizedSign.isCustom || false);
+    }, [open, sign.id]);
+
+
     const filterDesignations = (searchTerm: string) => {
         if (!Array.isArray(designationData)) {
             setFilteredDesignations([]);
@@ -171,28 +184,26 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     const handleSignUpdate = (field: keyof PrimarySign, value: any) => {
+        if (field === 'displayStructure' && !isSecondary) {
+            const oldStructure = (localSign as PrimarySign).associatedStructure ?? 'none';
+            const newStructure = structureMap[value as DisplayStructures] ?? 'none';
+
+            setLocalSign(prev => ({
+                ...(prev as any),
+                displayStructure: value,
+                associatedStructure: newStructure,
+            }));
+
+            const signQuantity = (localSign as PrimarySign).quantity ?? 0;
+            handleStructureChange(newStructure, oldStructure, signQuantity);
+            return;
+        }
+
         const previousSign = { ...localSign };
         const updatedSign = { ...localSign, [field]: value };
 
-        if (field === "sheeting") {
-            const { width, height } = localSign;
-            if (width && height) {
-                setLocalSign({
-                    ...localSign,
-                    sheeting: value,
-                    width,
-                    height,
-                });
-                return;
-            }
-        }
-
         if (!isSecondary) {
-            if (field === 'displayStructure') {
-                const newStructure = structureMap[value];
-                (updatedSign as PrimarySign).associatedStructure = newStructure;
-                handleStructureChange(newStructure, (previousSign as PrimarySign).associatedStructure, updatedSign.quantity);
-            } else if (field === "bLights") {
+            if (field === "bLights") {
                 handleBLightsChange(value, updatedSign.quantity);
             } else if (field === "quantity") {
                 handleQuantityChange(value, (previousSign as PrimarySign).quantity, updatedSign as PrimarySign);
@@ -203,11 +214,13 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
         setLocalSign(updatedSign);
     };
+
     const handleStructureChange = (
         newStructure: AssociatedStructures,
         oldStructure: AssociatedStructures,
         signQuantity: number
     ) => {
+
         if (oldStructure !== 'none') {
             const currentOldQuantity = getCurrentEquipmentQuantity(oldStructure);
             const newOldQuantity = Math.max(0, currentOldQuantity - signQuantity);
@@ -338,373 +351,378 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-[400px] sm:w-[600px] flex flex-col p-0 overflow-y-auto"
+                className="w-[400px] sm:w-[600px] flex flex-col justify-between p-0 overflow-y-auto"
             >
-                <div className="flex flex-col gap-2 relative z-10 bg-background">
-                    <SheetHeader className="pb-4 p-6">
-                        <SheetTitle>
-                            {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
-                        </SheetTitle>
-                        {isSecondary && primarySign && (
-                            <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
-                                Secondary sign associated with primary sign: {primarySign.designation || "Unknown"}
-                            </div>
-                        )}
-                    </SheetHeader>
-                    <Separator className="w-full -mt-2" />
-                </div>
-                <div className="space-y-6 p-6">
-                    {/* Custom Sign Toggle */}
-                    <div className="flex items-center gap-2">
-                        <Switch
-                            id="custom-sign"
-                            checked={isCustom}
-                            onCheckedChange={(checked) => {
-                                setIsCustom(checked);
-                                handleSignUpdate("isCustom", checked);
-                            }}
-                        />
-                        <Label htmlFor="custom-sign">Custom Sign</Label>
-                    </div>
-
-                    {/* Designation Section */}
-                    <div>
-                        <Label className="text-base font-semibold mb-2.5 block">
-                            Designation
-                        </Label>
-                        {isCustom ? (
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        Designation Code
-                                    </Label>
-                                    <Input
-                                        value={localSign.designation || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("designation", e.target.value)
-                                        }
-                                        placeholder="Enter custom designation"
-                                    />
+                <div>
+                    <div className="flex flex-col gap-2 relative z-10 bg-background">
+                        <SheetHeader className="pb-4 p-6">
+                            <SheetTitle>
+                                {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
+                            </SheetTitle>
+                            {isSecondary && primarySign && (
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
+                                    Secondary sign associated with primary sign: {primarySign.designation || "Unknown"}
                                 </div>
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        Description
-                                    </Label>
-                                    <Input
-                                        value={localSign.description || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("description", e.target.value)
-                                        }
-                                        placeholder="Enter description"
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                            <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className="w-full justify-between"
-                                        disabled={Object.hasOwn(localSign, 'associatedStructure')}
-                                    >
-                                        <span className="truncate">
-                                            {localSign.designation || "Select designation..."}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0" align="start">
-                                    <Command shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search designation..."
-                                            onValueChange={filterDesignations}
-                                        />
-                                        <CommandEmpty>No designation found.</CommandEmpty>
-                                        <CommandList>
-                                            <CommandGroup>
-                                                {filteredDesignations.map((item) => (
-                                                    <CommandItem
-                                                        key={item.designation}
-                                                        value={item.designation}
-                                                        onSelect={() => {
-                                                            handleDesignationSelect(item.designation);
-                                                            setDesignationOpen(false);
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center w-full">
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    localSign.designation === item.designation
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">
-                                                                    {item.designation}
-                                                                </span>
-                                                                {item.description && (
-                                                                    <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                        {item.description}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        )}
+                            )}
+                        </SheetHeader>
+                        <Separator className="w-full mt-2" />
                     </div>
+                    <div className="space-y-6 p-6">
+                        {/* Custom Sign Toggle */}
+                        <div className="flex items-center gap-2">
+                            <Switch
+                                id="custom-sign"
+                                checked={isCustom}
+                                onCheckedChange={(checked) => {
+                                    setIsCustom(checked);
+                                    handleSignUpdate("isCustom", checked);
+                                }}
+                            />
+                            <Label htmlFor="custom-sign">Custom Sign</Label>
+                        </div>
 
-                    {/* Substrate (only for takeoff mode) */}
-                    {isTakeoff && (
+                        {/* Designation Section */}
                         <div>
                             <Label className="text-base font-semibold mb-2.5 block">
-                                Substrate
+                                Designation
                             </Label>
-                            <Select
-                                value={localSign.substrate}
-                                onValueChange={(value) => handleSignUpdate("substrate", value)}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select substrate" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Aluminum">Aluminum</SelectItem>
-                                    <SelectItem value="Aluminum-Composite">
-                                        Aluminum Composite
-                                    </SelectItem>
-                                    <SelectItem value="Plastic">Plastic</SelectItem>
-                                    {isSignOrder && (
-                                        <>
-                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                            <SelectItem value="Face">Face</SelectItem>
-                                        </>
-                                    )}
-                                </SelectContent>
-                            </Select>
+                            {isCustom ? (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Designation Code
+                                        </Label>
+                                        <Input
+                                            value={localSign.designation || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("designation", e.target.value)
+                                            }
+                                            placeholder="Enter custom designation"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Description
+                                        </Label>
+                                        <Input
+                                            value={localSign.description || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("description", e.target.value)
+                                            }
+                                            placeholder="Enter description"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className="w-full justify-between"
+                                            disabled={Object.hasOwn(localSign, 'associatedStructure')}
+                                        >
+                                            <span className="truncate">
+                                                {localSign.designation || "Select designation..."}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0" align="start">
+                                        <Command shouldFilter={false}>
+                                            <CommandInput
+                                                placeholder="Search designation..."
+                                                onValueChange={filterDesignations}
+                                            />
+                                            <CommandEmpty>No designation found.</CommandEmpty>
+                                            <CommandList>
+                                                <CommandGroup>
+                                                    {filteredDesignations.map((item) => (
+                                                        <CommandItem
+                                                            key={item.designation}
+                                                            value={item.designation}
+                                                            onSelect={() => {
+                                                                handleDesignationSelect(item.designation);
+                                                                setDesignationOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center w-full">
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        localSign.designation === item.designation
+                                                                            ? "opacity-100"
+                                                                            : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">
+                                                                        {item.designation}
+                                                                    </span>
+                                                                    {item.description && (
+                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                            {item.description}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
-                    )}
 
-                    {/* Dimensions and Core Properties */}
-                    <div className="grid grid-cols-2 gap-4">
-                        {isCustom ? (
-                            <>
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">Width</Label>
-                                    <Input
-                                        type="number"
-                                        value={localSign.width || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("width", parseFloat(e.target.value) || 0)
-                                        }
-                                        min={0}
-                                        step="0.1"
-                                    />
-                                </div>
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">Height</Label>
-                                    <Input
-                                        type="number"
-                                        value={localSign.height || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("height", parseFloat(e.target.value) || 0)
-                                        }
-                                        min={0}
-                                        step="0.1"
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <div className="col-span-2">
-                                <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
+                        {/* Substrate (only for takeoff mode) */}
+                        {isTakeoff && (
+                            <div>
+                                <Label className="text-base font-semibold mb-2.5 block">
+                                    Substrate
+                                </Label>
                                 <Select
-                                    value={`${localSign.width}x${localSign.height}x${sheetingMap[localSign.sheeting] || localSign.sheeting}`}
-                                    onValueChange={(value) => {
-                                        const [width, height, sheetingAbbrev] = value.split("x");
-                                        const fullSheeting =
-                                            Object.keys(sheetingMap).find((k) => sheetingMap[k] === sheetingAbbrev) || sheetingAbbrev;
-
-                                        handleSignUpdate("width", parseFloat(width));
-                                        handleSignUpdate("height", parseFloat(height));
-                                        handleSignUpdate("sheeting", fullSheeting);
-                                    }}
+                                    value={localSign.substrate}
+                                    onValueChange={(value) => handleSignUpdate("substrate", value)}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select" />
+                                        <SelectValue placeholder="Select substrate" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {getAvailableDimensions().map((variant, idx) => (
-                                            <SelectItem key={idx} value={`${variant.width}x${variant.height}x${variant.sheeting}`}>
-                                                {variant.width} x {variant.height} x {variant.sheeting}
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                        <SelectItem value="Aluminum-Composite">
+                                            Aluminum Composite
+                                        </SelectItem>
+                                        <SelectItem value="Plastic">Plastic</SelectItem>
+                                        {isSignOrder && (
+                                            <>
+                                                <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                <SelectItem value="Face">Face</SelectItem>
+                                            </>
+                                        )}
                                     </SelectContent>
                                 </Select>
-
                             </div>
                         )}
 
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                            <Select
-                                value={sheetingMap[localSign.sheeting] || localSign.sheeting}
-                                onValueChange={(value) =>
-                                    handleSignUpdate(
-                                        "sheeting",
-                                        Object.keys(sheetingMap).find((key) => sheetingMap[key] === value) || value
-                                    )
-                                }
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="DGXI">DGXI</SelectItem>
-                                    <SelectItem value="DGVII">DGVII</SelectItem>
-                                    <SelectItem value="HI">HI</SelectItem>
-                                    <SelectItem value="FYG">FYG</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                            <Input
-                                type="number"
-                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || ""}
-                                onChange={(e) =>
-                                    handleSignUpdate("quantity", parseInt(e.target.value) || 0)
-                                }
-                                min={0}
-                                className="w-full"
-                                disabled={isSecondary}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Primary Sign Specific Fields */}
-                    {!isSecondary && (
-                        <>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">Structure</Label>
+                        {/* Dimensions and Core Properties */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {isCustom ? (
+                                <>
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">Width</Label>
+                                        <Input
+                                            type="number"
+                                            value={localSign.width || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("width", parseFloat(e.target.value) || 0)
+                                            }
+                                            min={0}
+                                            step="0.1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">Height</Label>
+                                        <Input
+                                            type="number"
+                                            value={localSign.height || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("height", parseFloat(e.target.value) || 0)
+                                            }
+                                            min={0}
+                                            step="0.1"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="col-span-2">
+                                    <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
                                     <Select
-                                        value={(localSign as PrimarySign).displayStructure}
-                                        onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
+                                        value={`${localSign.width}x${localSign.height}`}
+                                        onValueChange={(value) => {
+                                            const [width, height] = value.split("x");
+                                            handleSignUpdate("width", parseFloat(width));
+                                            handleSignUpdate("height", parseFloat(height));
+                                        }}
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Choose structure" />
+                                            <SelectValue placeholder="Select" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
-                                            <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
-                                            <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                            <SelectItem value="8' POST">{`8'`} POST</SelectItem>
-                                            <SelectItem value="10' POST">{`10'`} POST</SelectItem>
-                                            <SelectItem value="12' POST">{`12'`} POST</SelectItem>
-                                            <SelectItem value="14' POST">{`14'`} POST</SelectItem>
-                                            <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                            {[...new Map(
+                                                getAvailableDimensions().map(v => [`${v.width}x${v.height}`, v])
+                                            ).values()].map((variant, idx) => (
+                                                <SelectItem key={idx} value={`${variant.width}x${variant.height}`}>
+                                                    {variant.width}” x {variant.height}”
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
 
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        B Light Quantity
-                                    </Label>
-                                    <Input
-                                        type="number"
-                                        value={(localSign as PrimarySign).bLights || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("bLights", parseInt(e.target.value) || 0)
-                                        }
-                                        min={0}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* B Light Color (only if takeoff and bLights > 0) */}
-                            {isTakeoff && (localSign as PrimarySign).bLights > 0 && (
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">B Light Color</Label>
-                                    <Select value={localSign.bLightsColor} onValueChange={(value) => handleSignUpdate('bLightsColor', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Choose color" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Red">Red</SelectItem>
-                                            <SelectItem value="Yellow">Yellow</SelectItem>
-                                            <SelectItem value="White">White</SelectItem>
-                                        </SelectContent>
-                                    </Select>
                                 </div>
                             )}
 
-                            {/* Covers and Stiffener */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        onCheckedChange={(checked) =>
-                                            handleSignUpdate("cover", checked)
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
+                                <div>
+                                    <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
+                                    <Select
+                                        value={sheetingMap[localSign.sheeting] || localSign.sheeting}
+                                        onValueChange={(value) =>
+                                            handleSignUpdate(
+                                                "sheeting",
+                                                Object.keys(sheetingMap).find((key) => sheetingMap[key] === value) || value
+                                            )
                                         }
-                                        checked={(localSign as PrimarySign).cover || false}
-                                        id="cover-checkbox"
-                                    />
-                                    <Label
-                                        htmlFor="cover-checkbox"
-                                        className="text-sm font-medium"
                                     >
-                                        Include cover
-                                    </Label>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {[...new Set(sign?.variants?.map(v => v.sheeting))].map((abbr) => (
+                                                <SelectItem key={abbr} value={abbr}>
+                                                    {abbr}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                {isTakeoff && (
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
-                                            checked={localSign.stiffener || false}
-                                            id="stiffener-checkbox"
-                                        />
-                                        <Label
-                                            htmlFor="stiffener-checkbox"
-                                            className="text-sm font-medium"
+                            </div>
+
+                            <div>
+                                <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                                <Input
+                                    type="number"
+                                    value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || ""}
+                                    onChange={(e) =>
+                                        handleSignUpdate("quantity", parseInt(e.target.value) || 0)
+                                    }
+                                    min={0}
+                                    className="w-full"
+                                    disabled={isSecondary}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Primary Sign Specific Fields */}
+                        {!isSecondary && (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">Structure</Label>
+                                        <Select
+                                            value={(localSign as PrimarySign).displayStructure}
+                                            onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
                                         >
-                                            Include stiffener
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Choose structure" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
+                                                <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
+                                                <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
+                                                <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+                                                <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                                <SelectItem value="8' POST">{`8'`} POST</SelectItem>
+                                                <SelectItem value="10' POST">{`10'`} POST</SelectItem>
+                                                <SelectItem value="12' POST">{`12'`} POST</SelectItem>
+                                                <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+                                                <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            B Light Quantity
                                         </Label>
+                                        <Input
+                                            type="number"
+                                            value={(localSign as PrimarySign).bLights || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("bLights", parseInt(e.target.value) || 0)
+                                            }
+                                            min={0}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* B Light Color (only if takeoff and bLights > 0) */}
+                                {isTakeoff && (localSign as PrimarySign).bLights > 0 && (
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">B Light Color</Label>
+                                        <Select value={localSign.bLightsColor} onValueChange={(value) => handleSignUpdate('bLightsColor', value)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Choose color" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Red">Red</SelectItem>
+                                                <SelectItem value="Yellow">Yellow</SelectItem>
+                                                <SelectItem value="White">White</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 )}
-                            </div>
-                        </>
-                    )}
-                </div>
-                {/* Action Buttons */}
-                {(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
-                    <AlertCircle size={14} />
-                    <span>
-                        Please fill out all necessary fields before saving.
-                    </span>
-                </div>}
-                <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
-                    <Button variant="outline" onClick={handleCancel}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
-                        Save Sign
-                    </Button>
+
+                                {/* Covers and Stiffener */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            onCheckedChange={(checked) =>
+                                                handleSignUpdate("cover", checked)
+                                            }
+                                            checked={(localSign as PrimarySign).cover || false}
+                                            id="cover-checkbox"
+                                        />
+                                        <Label
+                                            htmlFor="cover-checkbox"
+                                            className="text-sm font-medium"
+                                        >
+                                            Include cover
+                                        </Label>
+                                    </div>
+                                    {isTakeoff && (
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+                                                checked={localSign.stiffener || false}
+                                                id="stiffener-checkbox"
+                                            />
+                                            <Label
+                                                htmlFor="stiffener-checkbox"
+                                                className="text-sm font-medium"
+                                            >
+                                                Include stiffener
+                                            </Label>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
+                <div className='pb-6'>
+                    {(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
+                        <AlertCircle size={14} />
+                        <span>
+                            Please fill out all necessary fields before saving.
+                        </span>
+                    </div>}
+                    <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
+                        <Button variant="outline" onClick={handleCancel}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
+                            Save Sign
+                        </Button>
+                    </div>
+                </div>
             </SheetContent>
         </Sheet>
     );

@@ -52,10 +52,8 @@ const SignList = ({ currentPhase, isSignOrder }: SignListProps) => {
   return (
     <div className="space-y-6">
       <SignOrderList
-
         currentPhase={currentPhase}
         isSignOrder={isSignOrder}
-
       />
     </div>
   );

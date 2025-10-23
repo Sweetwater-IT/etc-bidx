@@ -73,17 +73,18 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
           width,
           height,
           sheeting: '',
-          description: d.description
+          description: d.description,
         });
       }
     }
     return rows;
   }, [filteredDesignations]);
 
-  const handleSelectFromFlat = useCallback((row: FlatRow) => {
+  const handleSelectFromFlat = useCallback((row: FlatRow) => {    
+    const d = designationData.find(x => x.designation === row.designation);
     if (row.kind === 'designation') {
-      const d = designationData.find(x => x.designation === row.designation);
       if (!d) return;
+
       if (d.variants.length === 1) {
         const v = d.variants[0];
         const updated = {
@@ -92,12 +93,22 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
           width: v.width,
           height: v.height,
           sheeting: 'HI' as any,
-          description: d.description
+          description: d.description,
+          quantity: 1,
+          variants: d.variants
         };
         setLocalSign(updated);
         onDesignationSelected?.(updated);
         setOpen(false);
       } else {
+        const updated = {
+          ...localSign,
+          designation: d.designation,
+          description: d.description,
+          variants: d.variants,
+        };
+        setLocalSign(updated);
+        onDesignationSelected?.(updated);
       }
     } else {
       const updated = {
@@ -106,8 +117,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
         width: row.width,
         height: row.height,
         sheeting: row.sheeting as any,
-        description: row.description
-      } as PrimarySign | SecondarySign;
+        description: row.description,
+        variants: d.variants,
+      } as any
 
       setLocalSign(updated);
       onDesignationSelected?.(updated);
@@ -130,6 +142,14 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
       filterDesignations(value);
     }, 400);
   }, [filterDesignations]);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        rowVirtualizer.measure();
+      }, 50);
+    }
+  }, [open, rowVirtualizer]);
 
   return (
     <Popover open={open} onOpenChange={(isOpen) => {
@@ -158,6 +178,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
               <CommandInput
                 placeholder="Search designation..."
                 onValueChange={handleDebouncedFilter}
+                value=""
               />
               <CommandEmpty>No designation found.</CommandEmpty>
 
@@ -194,12 +215,12 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
                         ) : (
                           <CommandItem
                             className="py-1 my-0 px-2"
-                            value={`${row.designation}-${row.width}x${row.height}-${row.sheeting}`}
+                            value={`${row.designation}-${row.width}x${row.height}`}
                             onSelect={() => handleSelectFromFlat(row)}
                           >
                             <div className="flex items-center w-full pl-6">
                               <Check className={cn("mr-2 h-4 w-4", localSign.designation === row.designation && localSign.width === row.width && localSign.height === row.height ? "opacity-100" : "opacity-0")} />
-                              <span className="text-sm">{row.width} x {row.height}</span>
+                              <span className="text-sm">{row.width}” x {row.height}”</span>
                             </div>
                           </CommandItem>
                         )}

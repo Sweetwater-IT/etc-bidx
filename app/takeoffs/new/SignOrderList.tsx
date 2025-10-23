@@ -210,7 +210,7 @@ export function SignOrderList({
           sign: updatedSign,
         },
       });
-      setLocalSign({ ...updatedSign, sheeting: "HI" });
+      setLocalSign({ ...updatedSign, sheeting: "HI", quantity: 1 });
       setOpen(true);
     } catch (error) {
       console.error('Error in handleDesignationSelected:', error);
@@ -695,7 +695,7 @@ export function SignOrderList({
             open={open}
             onOpenChange={handleClose}
             mode={mode}
-            sign={localSign}
+            sign={{...localSign, variants: ( designationData.find((d)=> (d.designation) === localSign.designation)?.variants ?? [])}}
             currentPhase={currentPhase}
             isSignOrder={isSignOrder}
           />

@@ -165,6 +165,7 @@ export interface DynamicSignInfo {
   bLightsColor?: 'Yellow' | 'Red' | 'White'
   substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'  | 'Roll Up' | 'Face';
   stiffener?: boolean;
+  variants?: any[]
 }
 export interface PrimarySign extends DynamicSignInfo {
   associatedStructure: AssociatedStructures
