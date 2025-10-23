@@ -45,13 +45,12 @@ const SelectJobOrBid = ({ currentPhase, jobNumber, needJobNumber = false, curren
     };
 
     const handleCopySignsFromPhases = useCallback(() => {
-
         selectedPhases.forEach(phase => {
             const allSigns = [
-                ...(phase.mpt_primary_signs || []),
-                ...(phase.mpt_secondary_signs || [])
+                ...(phase.mpt_primary_signs.map((e)=> ({...e, bLights: e.b_lights, displayStructure: e.display_structure}))  || []),
+                ...(phase.mpt_secondary_signs.map((e)=> ({...e, bLights: e.b_lights, displayStructure: e.display_structure})) || [])
             ];
-
+            
             allSigns.forEach(sign => {
                 dispatch({
                     type: 'ADD_MPT_SIGN',

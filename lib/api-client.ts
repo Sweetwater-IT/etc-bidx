@@ -1155,9 +1155,9 @@ export const fetchAssociatedFiles = async (
       const filesData = await filesResponse.json();
       setFiles(filesData.data);
     } else {
-      console.error('Error fetching files:', filesResponse.statusText);
+      console.log('Error fetching files:', filesResponse.statusText);
     }
   } catch (error) {
-    console.error('Error fetching files:', error);
+    console.log('Error fetching files:', error);
   }
 };
