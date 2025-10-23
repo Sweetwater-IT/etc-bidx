@@ -11,6 +11,15 @@ import TripAndLaborViewOnlyAll from './trip-and-labor-view-only';
 import { LegacyColumn, EquipmentRentalTableData } from '@/types/LegacyColumn'
 import { DataTable } from '@/components/data-table'
 
+const SALE_ITEMS_COLUMNS = [
+    { key: 'itemNumber', title: 'Item Number' },
+    { key: 'name', title: 'Item Display Name' },
+    { key: 'quantity', title: 'Quantity' },
+    { key: 'salePrice', title: 'Sale Price' },
+    { key: 'grossMargin', title: 'Gross Margin' },
+];
+
+
 // Mapping for equipment labels
 const labelMapping: Record<string, string> = {
     fourFootTypeIII: "4' Type III",
@@ -618,103 +627,39 @@ const SaleItemsViewOnly = () => {
     const { saleItems } = useEstimate();
 
     const formatCurrency = (value: number | null | undefined): string => {
-        if (!value) return "-";
+        if (value == null || isNaN(value)) return "-";
         return `$${value.toFixed(2)}`;
     };
 
-    const calculateMargin = (quotePrice: number, markupPercentage: number) => {
-        if (!quotePrice || !markupPercentage) return 0;
-        const sellingPrice = quotePrice * (1 + markupPercentage / 100);
-        return ((sellingPrice - quotePrice) / sellingPrice) * 100;
-    };
+    const transformSaleItems = (saleItems: any[]) => {
+        return saleItems.map(item => {
+            const quantity = Number(item.quantity) || 0;
+            const revenue = Number(item.revenue) || 0;
+            const totalCost = Number(item.totalCost) || 0;
 
-    const calculateSellingPrice = (quotePrice: number, markupPercentage: number) => {
-        if (!quotePrice || !markupPercentage) return quotePrice;
-        return quotePrice * (1 + markupPercentage / 100);
-    };
+            const salePrice = quantity ? revenue / quantity : 0;
+            const grossMargin = revenue ? ((revenue - totalCost) / revenue) * 100 : 0;
 
-    const calculateTotal = (item: any) => {
-        const sellingPrice = calculateSellingPrice(item.quotePrice, item.markupPercentage);
-        return item.quantity * sellingPrice;
+            return {
+                id: item.itemNumber,
+                itemNumber: item.itemNumber || '-',
+                name: item.name || '-',
+                quantity,
+                salePrice: formatCurrency(salePrice),
+                grossMargin: `${grossMargin.toFixed(2)}%`,
+            };
+        });
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
+        <div className="">
             {saleItems && saleItems.length > 0 ? (
-                saleItems.map((item, index) => (
-                    <React.Fragment key={item.itemNumber}>
-                        <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2">
-                            <label className="text-sm font-semibold">
-                                {item.itemNumber} - {item.name || 'Unnamed Item'}
-                            </label>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Vendor
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.vendor || "-"}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Quantity
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.quantity || "-"}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Quote Price
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {formatCurrency(item.quotePrice)}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Markup Percentage
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.markupPercentage ? `${item.markupPercentage}%` : "-"}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Margin
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {item.quotePrice && item.markupPercentage
-                                    ? `${calculateMargin(item.quotePrice, item.markupPercentage).toFixed(2)}%`
-                                    : "-"}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Selling Price (per unit)
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                {formatCurrency(calculateSellingPrice(item.quotePrice, item.markupPercentage))}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-sm font-semibold">
-                                Total Revenue
-                            </label>
-                            <div className="pr-3 py-1 select-text cursor-default text-muted-foreground font-medium">
-                                {formatCurrency(calculateTotal(item))}
-                            </div>
-                        </div>
-                    </React.Fragment>
-                ))
+                <div className='w-full'>
+                    <DataTable
+                        columns={SALE_ITEMS_COLUMNS}
+                        data={transformSaleItems(saleItems)}
+                    />
+                </div>
             ) : (
                 <div className="col-span-3 text-center py-8 text-muted-foreground">
                     No sale items configured
@@ -723,6 +668,7 @@ const SaleItemsViewOnly = () => {
         </div>
     );
 };
+
 
 const PermanentSignsViewOnly = () => {
     const { permanentSigns, adminData, mptRental } = useEstimate();
