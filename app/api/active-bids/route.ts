@@ -727,21 +727,20 @@ export async function POST(request: NextRequest) {
             primary_sign_id: sign.primarySignId,
             width: sign.width,
             height: sign.height,
-            sheeting: sign.sheeting,
+            sheeting: sign.sheeting || "HI",
             is_custom: sign.isCustom,
             designation: sign.designation,
             description: sign.description,
             substrate: sign.substrate
           };
         } else {
-          // Primary sign
           return {
             phase_id: phaseEntry.id,
             sign_id: sign.id,
             width: sign.width,
             height: sign.height,
             quantity: sign.quantity,
-            sheeting: sign.sheeting,
+            sheeting: sign.sheeting || "HI",
             is_custom: sign.isCustom,
             designation: sign.designation,
             description: sign.description,

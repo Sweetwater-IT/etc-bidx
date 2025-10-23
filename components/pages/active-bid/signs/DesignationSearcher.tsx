@@ -59,7 +59,6 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
         variantsCount: d.variants.length
       });
 
-      // Agrupar variantes por dimensiones únicas
       const uniqueDims = new Map<string, { width: number; height: number }>();
       for (const v of d.variants) {
         const key = `${v.width}x${v.height}`;
@@ -80,7 +79,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
     return rows;
   }, [filteredDesignations]);
 
-  const handleSelectFromFlat = useCallback((row: FlatRow) => {    
+  const handleSelectFromFlat = useCallback((row: FlatRow) => {
     const d = designationData.find(x => x.designation === row.designation);
     if (row.kind === 'designation') {
       if (!d) return;

@@ -1182,8 +1182,7 @@ const BidItemsStep5 = ({
       ?.quantity,
     dispatch,
     currentPhase
-  ])
-
+  ])  
 
   useEffect(() => {
     const phases = mptRental?.phases;
@@ -1311,7 +1310,6 @@ const BidItemsStep5 = ({
       mptRental.phases[currentPhase]
 
     )
-
 
     switch (equipmentKey) {
       case 'covers':

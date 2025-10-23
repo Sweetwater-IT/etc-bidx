@@ -41,28 +41,31 @@ interface Props {
     currentPhase?: number;
     isTakeoff?: boolean;
     isSignOrder?: boolean;
+    designationData: any[]
 }
 
-const sheetingMap: Record<string, string> = {
-    "HIGH INTENSITY": "HI",
-    "DIAMOND GRADE - TYPE XI": "DGXI",
-    "DIAMOND GRADE - TYPE VII": "DGVII",
-    "FLUORESCENT YELLOW GREEN": "FYG",
+const normalizeDimKey = (w: number | string, h: number | string) => {
+    // fuerza números y formatea con toString sin decimales innecesarios
+    const wn = parseFloat(String(w));
+    const hn = parseFloat(String(h));
+    // elimina .0 redundantes: 8.0 -> "8"
+    const wf = Number.isInteger(wn) ? String(wn) : String(wn);
+    const hf = Number.isInteger(hn) ? String(hn) : String(hn);
+    return `${wf}x${hf}`;
 };
+
 
 const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySign => {
     return 'primarySignId' in sign;
 };
 
-const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
+const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder, designationData }: Props) => {
     const { dispatch, mptRental } = useEstimate();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
-    const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
     const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
-
 
     const isSecondary = isSecondarySign(sign);
     const primarySign = isSecondary
@@ -113,35 +116,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     useEffect(() => {
-        const loadSignData = async () => {
-            setIsLoading(true);
-            try {
-                const data = await fetchSignDesignations();
-                if (data && Array.isArray(data) && data.length > 0) {
-                    const processedData = await processSignData(data);
-                    setDesignationData(processedData);
-                    setFilteredDesignations(processedData);
-                } else {
-                    console.warn("No sign data returned from API or invalid format");
-                    setDesignationData([]);
-                    setFilteredDesignations([]);
-                }
-            } catch (error) {
-                console.error("Error fetching sign data:", error);
-                setDesignationData([]);
-                setFilteredDesignations([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (open) {
-            loadSignData();
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return; // sólo cuando abrimos
+        if (!open) return;
 
         const normalizedSign = {
             ...sign,
@@ -285,14 +260,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             designation: designationValue,
             width: variant?.width || 0,
             height: variant?.height || 0,
-            sheeting: variant?.sheeting || "DG",
+            sheeting: variant?.sheeting && variant.sheeting.trim() !== "" ? variant.sheeting : "HI",
             description: selectedDesignation.description,
         };
 
         setLocalSign(updatedSign)
     };
 
-    // Get available dimensions for the selected designation
+
     const getAvailableDimensions = () => {
         try {
             if (!localSign || !localSign.designation) return [];
@@ -325,7 +300,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             };
         }
 
-        // Update the sign in the context using UPDATE_MPT_SIGN
         Object.entries(signToSave).forEach(([key, value]) => {
             if (key !== "id" && key !== "primarySignId") {
                 dispatch({
@@ -506,7 +480,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             </div>
                         )}
 
-                        {/* Dimensions and Core Properties */}
                         <div className="grid grid-cols-2 gap-4">
                             {isCustom ? (
                                 <>
@@ -541,9 +514,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <Select
                                         value={`${localSign.width}x${localSign.height}`}
                                         onValueChange={(value) => {
-                                            const [width, height] = value.split("x");
-                                            handleSignUpdate("width", parseFloat(width));
-                                            handleSignUpdate("height", parseFloat(height));
+                                            const [ws, hs] = value.split('x');
+                                            const w = parseFloat(ws);
+                                            const h = parseFloat(hs);
+
+                                            setLocalSign(prev => ({
+                                                ...(prev as any),
+                                                width: w,
+                                                height: h,
+                                            }));
                                         }}
                                     >
                                         <SelectTrigger className="w-full">
@@ -552,7 +531,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         <SelectContent>
                                             {[...new Map(
                                                 getAvailableDimensions().map(v => [`${v.width}x${v.height}`, v])
-                                            ).values()].map((variant, idx) => (
+                                            ).values()].map((variant: any, idx) => (
                                                 <SelectItem key={idx} value={`${variant.width}x${variant.height}`}>
                                                     {variant.width}” x {variant.height}”
                                                 </SelectItem>
@@ -568,29 +547,26 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         <div className="grid grid-cols-1 gap-4">
                             <div>
                                 <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                                    <Select
-                                        value={sheetingMap[localSign.sheeting] || localSign.sheeting}
-                                        onValueChange={(value) =>
-                                            handleSignUpdate(
-                                                "sheeting",
-                                                Object.keys(sheetingMap).find((key) => sheetingMap[key] === value) || value
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[...new Set(sign?.variants?.map(v => v.sheeting))].map((abbr) => (
-                                                <SelectItem key={abbr} value={abbr}>
-                                                    {abbr}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Select
+                                    value={localSign.sheeting || localSign.sheeting}
+                                    onValueChange={(value) =>
+                                        handleSignUpdate(
+                                            "sheeting",
+                                            value
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[...new Set(sign?.variants?.map(v => v.sheeting))].map((abbr) => (
+                                            <SelectItem key={abbr} value={abbr}>
+                                                {abbr}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div>

@@ -54,6 +54,20 @@ export const estimateReducer = (
 				},
 			};
 
+		case "UPDATE_MPT_PHASE":
+			if (!state.mptRental) return state;
+
+			return {
+				...state,
+				mptRental: {
+					...state.mptRental,
+					phases: state.mptRental.phases.map((phase, index) =>
+						index === action.payload.phaseNumber
+							? { ...phase, ...action.payload.updatedPhaseData }
+							: phase
+					),
+				},
+			};
 		case "ADD_MPT_RENTAL":
 			return {
 				...state,
@@ -317,7 +331,7 @@ export const estimateReducer = (
 						if (index === addSignPhase) {
 							return {
 								...phase,
-								signs: [...(phase.signs || []), sign], 
+								signs: [...(phase.signs || []), sign],
 							};
 						}
 						return phase;

@@ -33,6 +33,15 @@ export type EstimateAction =
 			value: number;
 		};
 	}
+	|
+	{
+		type: "UPDATE_MPT_PHASE";
+		payload: {
+			phaseNumber: number; // índice de la fase a actualizar
+			updatedPhaseData: Partial<Phase>; // datos que se van a reemplazar
+		};
+	}
+
 	| {
 		type: "UPDATE_ADMIN_DATA";
 		payload: {

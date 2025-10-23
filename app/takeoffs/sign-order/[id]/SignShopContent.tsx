@@ -322,7 +322,7 @@ const SignShopContent = ({ id }: Props) => {
       width: 0,
       height: 0,
       quantity: 0,
-      sheeting: 'DG',
+      sheeting: 'HI',
       displayStructure: 'LOOSE',
       associatedStructure: 'none',
       stiffener: false,

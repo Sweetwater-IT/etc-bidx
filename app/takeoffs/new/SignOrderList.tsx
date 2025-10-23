@@ -183,7 +183,7 @@ export function SignOrderList({
         designation: '',
         width: 0,
         height: 0,
-        sheeting: 'DG',
+        sheeting: 'HI',
         quantity: 0,
         associatedStructure: 'none',
         displayStructure: 'LOOSE',
@@ -693,6 +693,7 @@ export function SignOrderList({
         {localSign && open && (
           <SignEditingSheet
             open={open}
+            designationData={designationData}
             onOpenChange={handleClose}
             mode={mode}
             sign={{...localSign, variants: ( designationData.find((d)=> (d.designation) === localSign.designation)?.variants ?? [])}}
