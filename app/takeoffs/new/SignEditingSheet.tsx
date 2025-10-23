@@ -45,12 +45,11 @@ interface Props {
 
 const sheetingMap: Record<string, string> = {
     "HIGH INTENSITY": "HI",
-    "DIAMOND GRADE - TYPE XI": "TYPEXI",
-    "DIAMOND GRADE - TYPE VII": "DG",
+    "DIAMOND GRADE - TYPE XI": "DGXI",
+    "DIAMOND GRADE - TYPE VII": "DGVII",
     "FLUORESCENT YELLOW GREEN": "FYG",
 };
 
-// Type guard to check if sign is SecondarySign
 const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySign => {
     return 'primarySignId' in sign;
 };
@@ -67,9 +66,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const isSecondary = isSecondarySign(sign);
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
-        : null;
+        : null;    
 
-    // Helper to get all secondary signs for a primary sign
     const getSecondarySignsForPrimary = (primarySignId: string): SecondarySign[] => {
         const desiredPhase = mptRental.phases[currentPhase];
         if (!desiredPhase) return [];
@@ -80,7 +78,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         );
     };
 
-    // Helper to update all secondary sign quantities
     const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
         const secondarySigns = getSecondarySignsForPrimary(primarySignId);
 
@@ -97,13 +94,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         });
     };
 
-    // Helper to get current equipment quantity for a specific type
     const getCurrentEquipmentQuantity = (equipmentType: EquipmentType): number => {
         const currentPhaseData = mptRental.phases[currentPhase];
         return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0;
     };
 
-    // Helper to update equipment quantity
     const updateEquipmentQuantity = (equipmentType: EquipmentType, newQuantity: number) => {
         dispatch({
             type: "ADD_MPT_ITEM_NOT_SIGN",
@@ -116,7 +111,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         });
     };
 
-    // Fetch sign designations data
     useEffect(() => {
         const loadSignData = async () => {
             setIsLoading(true);
@@ -145,7 +139,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }
     }, [open]);
 
-    // Update local sign when prop changes
     useEffect(() => {
         setLocalSign({ ...sign });
         setIsCustom(sign.isCustom || false);
@@ -181,7 +174,19 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         const previousSign = { ...localSign };
         const updatedSign = { ...localSign, [field]: value };
 
-        // Special handling for equipment-related fields (only for primary signs)
+        if (field === "sheeting") {
+            const { width, height } = localSign;
+            if (width && height) {
+                setLocalSign({
+                    ...localSign,
+                    sheeting: value,
+                    width,
+                    height,
+                });
+                return;
+            }
+        }
+
         if (!isSecondary) {
             if (field === 'displayStructure') {
                 const newStructure = structureMap[value];
@@ -198,20 +203,17 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
         setLocalSign(updatedSign);
     };
-
     const handleStructureChange = (
         newStructure: AssociatedStructures,
         oldStructure: AssociatedStructures,
         signQuantity: number
     ) => {
-        // Handle old structure: decrement by the sign quantity
         if (oldStructure !== 'none') {
             const currentOldQuantity = getCurrentEquipmentQuantity(oldStructure);
             const newOldQuantity = Math.max(0, currentOldQuantity - signQuantity);
             updateEquipmentQuantity(oldStructure, newOldQuantity);
         }
 
-        // Handle new structure: increment by the sign quantity
         if (newStructure !== 'none') {
             const currentNewQuantity = getCurrentEquipmentQuantity(newStructure);
             const newNewQuantity = currentNewQuantity + signQuantity;
@@ -250,33 +252,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             updateEquipmentQuantity("covers" as EquipmentType, newQuantity);
         }
 
-        // Update all secondary sign quantities to match the new primary sign quantity
         updateSecondarySignQuantities(sign.id, newQuantity);
     };
 
-    const handleDimensionSelect = (value: string) => {
-        try {
-            // Parse dimensions from format "width x height"
-            const dimensionParts = value.split("x");
-            if (dimensionParts.length === 2) {
-                const width = parseFloat(dimensionParts[0].trim());
-                const height = parseFloat(dimensionParts[1].trim());
-
-                if (!isNaN(width) && !isNaN(height)) {
-                    setLocalSign({
-                        ...localSign,
-                        width,
-                        height,
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("Error handling dimension selection:", error);
-        }
-    };
-
     const handleDesignationSelect = (designationValue: string) => {
-        // Find the selected designation data
         const selectedDesignation = designationData.find(
             (d) => d.designation === designationValue
         );
@@ -546,35 +525,45 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             <div className="col-span-2">
                                 <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
                                 <Select
-                                    value={
-                                        (localSign.width && localSign.height && localSign.width > 0 && localSign.height > 0)
-                                            ? `${localSign.width}x${localSign.height}x${localSign.sheeting}`
-                                            : undefined
-                                    }
-                                    onValueChange={handleDimensionSelect}
-                                    disabled={getAvailableDimensions().length === 1}
+                                    value={`${localSign.width}x${localSign.height}x${sheetingMap[localSign.sheeting] || localSign.sheeting}`}
+                                    onValueChange={(value) => {
+                                        const [width, height, sheetingAbbrev] = value.split("x");
+                                        const fullSheeting =
+                                            Object.keys(sheetingMap).find((k) => sheetingMap[k] === sheetingAbbrev) || sheetingAbbrev;
+
+                                        handleSignUpdate("width", parseFloat(width));
+                                        handleSignUpdate("height", parseFloat(height));
+                                        handleSignUpdate("sheeting", fullSheeting);
+                                    }}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select dimensions" />
+                                        <SelectValue placeholder="Select" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {getAvailableDimensions().map((dim, index) => (
-                                            <SelectItem key={index} value={`${dim.width}x${dim.height}x${dim.sheeting}`}>
-                                                {dim.width} x {dim.height} x {dim.sheeting}
+                                        {getAvailableDimensions().map((variant, idx) => (
+                                            <SelectItem key={idx} value={`${variant.width}x${variant.height}x${variant.sheeting}`}>
+                                                {variant.width} x {variant.height} x {variant.sheeting}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+
                             </div>
                         )}
+
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
                             <Select
-                                value={localSign.sheeting}
-                                onValueChange={(value) => handleSignUpdate("sheeting", Object.keys(sheetingMap).find(key => sheetingMap[key] === value) || value)}
+                                value={sheetingMap[localSign.sheeting] || localSign.sheeting}
+                                onValueChange={(value) =>
+                                    handleSignUpdate(
+                                        "sheeting",
+                                        Object.keys(sheetingMap).find((key) => sheetingMap[key] === value) || value
+                                    )
+                                }
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select" />

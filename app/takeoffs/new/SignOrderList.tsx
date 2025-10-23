@@ -12,6 +12,7 @@ import {
   SecondarySign,
   ExtendedPrimarySign,
   ExtendedSecondarySign,
+  SignDesignation,
 } from '@/types/MPTEquipment';
 import {
   Table,
@@ -42,6 +43,8 @@ import {
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
 import SelectJobOrBid from './SelectJobOrBid';
+import { fetchSignDesignations } from '@/lib/api-client';
+import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -105,13 +108,15 @@ export function SignOrderList({
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [isLoading, setIsLoading] = useState(false);
+  const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
 
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
     setLocalSign(undefined);
     setOpen(false);
     setMode('create');
-  }, []);  
+  }, []);
 
   const getCurrentEquipmentQuantity = useCallback((equipmentType: EquipmentType): number => {
     const currentPhaseData = mptRental.phases[currentPhase];
@@ -205,7 +210,7 @@ export function SignOrderList({
           sign: updatedSign,
         },
       });
-      setLocalSign(updatedSign);
+      setLocalSign({ ...updatedSign, sheeting: "HI" });
       setOpen(true);
     } catch (error) {
       console.error('Error in handleDesignationSelected:', error);
@@ -279,6 +284,27 @@ export function SignOrderList({
       });
     }
   }, [mptRental.phases, currentPhase, dispatch, getCurrentEquipmentQuantity, updateEquipmentQuantity, updateSecondarySignQuantities]);
+
+  useEffect(() => {
+    const loadSignData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchSignDesignations();
+        if (data && Array.isArray(data) && data.length > 0) {
+          const processedData = await processSignData(data);
+          setDesignationData(processedData);
+        } else {
+          setDesignationData([]);
+        }
+      } catch (error) {
+        console.error("Error fetching sign data:", error);
+        setDesignationData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSignData();
+  }, [])
 
   useEffect(() => {
     if (!open) {
@@ -657,6 +683,8 @@ export function SignOrderList({
       <div className="space-y-4 mt-4">
         {localSign && (
           <DesignationSearcher
+            designationData={designationData}
+            loading={isLoading}
             localSign={localSign}
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
