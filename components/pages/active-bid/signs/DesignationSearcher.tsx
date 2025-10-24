@@ -25,6 +25,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
   const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
   const parentRef = useRef<HTMLDivElement | null>(null);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     if (designationData) {
@@ -176,8 +177,11 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, d
             <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Search designation..."
-                onValueChange={handleDebouncedFilter}
-                value=""
+                value={searchValue}
+                onValueChange={(value) => {
+                  setSearchValue(value);
+                  handleDebouncedFilter(value);
+                }}
               />
               <CommandEmpty>No designation found.</CommandEmpty>
 
