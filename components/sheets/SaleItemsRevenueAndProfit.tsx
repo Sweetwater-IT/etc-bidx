@@ -14,7 +14,7 @@ const SaleItemsRevenueAndProfit = () => {
     totalRevenue: number
     grossProfit: number
     grossMargin: number
-  } | null>(null)
+  } | null>(null)  
 
   useEffect(() => {
     if (!saleItems || saleItems.length === 0) {
@@ -27,14 +27,16 @@ const SaleItemsRevenueAndProfit = () => {
       return
     }
 
-    const summary = saleItems.reduce((acc, item) => {
-      acc.totalCost += item.quotePrice * item.quantity
-      acc.totalRevenue += item.quotePrice * item.quantity * (1 + (item.markupPercentage / 100))
-      return acc // Added return statement here
-    }, {
-      totalCost: 0,
-      totalRevenue: 0,
-    })
+    const summary = saleItems.reduce(
+      (acc, item) => {
+        const cost = item.totalCost ?? 0
+        const revenue = item.revenue ?? 0
+        acc.totalCost += cost
+        acc.totalRevenue += revenue
+        return acc
+      },
+      { totalCost: 0, totalRevenue: 0 }
+    )
 
     const grossProfit = summary.totalRevenue - summary.totalCost
     const grossMargin = summary.totalRevenue > 0 ? grossProfit / summary.totalRevenue : 0
@@ -42,11 +44,10 @@ const SaleItemsRevenueAndProfit = () => {
     setSaleTotals({
       totalCost: summary.totalCost,
       totalRevenue: summary.totalRevenue,
-      grossProfit: grossProfit,
-      grossMargin: grossMargin
+      grossProfit,
+      grossMargin
     })
   }, [saleItems])
-
 
   return (
     <div className="bg-white rounded-lg p-2 md:row-span-1">
@@ -103,7 +104,7 @@ const SaleItemsRevenueAndProfit = () => {
             </p>
           </div>
 
-          
+
         </>
       )}
     </div>

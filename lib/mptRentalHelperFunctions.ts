@@ -515,8 +515,8 @@ export function getAllTotals(adminData: AdminData, mptRental: MPTRentalEstimatin
   const flaggingTotalCost = flaggingCost + serviceWorkTotalCost;
   const flaggingTotalGrossProfit = flagging.standardPricing ? 0 : flaggingTotalRevenue - flaggingTotalCost;
 
-  const saleTotalRevenue = saleItems ? saleItems.reduce((sum, item) => sum + (item.quotePrice * (1 + (item.markupPercentage / 100)) * item.quantity), 0) : 0;
-  const saleTotalCost = saleItems ? saleItems.reduce((sum, item) => sum + (item.quotePrice * item.quantity), 0) : 0;
+  const saleTotalRevenue = saleItems ? saleItems.reduce((sum, item) => sum + (item.quote_price * (1 + (item.markup_percentage / 100)) * item.quantity), 0) : 0;
+  const saleTotalCost = saleItems ? saleItems.reduce((sum, item) => sum + (item.quote_price * item.quantity), 0) : 0;
   const saleTotalGrossProfit = saleTotalRevenue - saleTotalCost
 
   const totalRevenue = mptTotalRevenue + rentalTotalRevenue + saleTotalRevenue + flaggingTotalRevenue + totalPermanentSignStats.totalRevenue;
@@ -965,9 +965,9 @@ export function calculateFlaggingCostSummary(adminData: AdminData, flagging: Fla
 }
 
 export const calculateSaleItemMargin = (item: SaleItem) => {
-  const salePrice = item.quotePrice * (1 + item.markupPercentage / 100);
+  const salePrice = item.quote_price * (1 + item.markup_percentage / 100);
   const totalSale = salePrice * item.quantity;
-  const totalCost = item.quotePrice * item.quantity;
+  const totalCost = item.quote_price * item.quantity;
   const grossProfit = totalSale - totalCost;
   return {
     salePrice: totalSale,

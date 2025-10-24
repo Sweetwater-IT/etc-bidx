@@ -7,10 +7,12 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 const SaleItemsSummary = () => {
   const { saleItems } = useEstimate()
 
+  console.log(saleItems);
+  
   return (
     <div className="bg-white rounded-lg border p-4 md:row-span-1">
       <h3 className="text-lg font-medium mb-4 text-center">Sale Items</h3>
-      
+
       {saleItems && saleItems.length > 0 ? (
         <div className="overflow-x-auto">
           <Table>
@@ -31,13 +33,13 @@ const SaleItemsSummary = () => {
             <TableBody>
               {saleItems.map((row, index) => (
                 <TableRow key={index}>
-                  <TableCell>{row.itemNumber}</TableCell>
+                  <TableCell>{row.item_number}</TableCell>
                   <TableCell>{row.name}</TableCell>
                   <TableCell>{row.vendor}</TableCell>
-                  <TableCell>${row.quotePrice}</TableCell>
-                  <TableCell>{row.markupPercentage}%</TableCell>
+                  <TableCell>${row.quote_price}</TableCell>
+                  <TableCell>{row.markup_percentage}%</TableCell>
                   <TableCell>{(calculateSaleItemMargin(row).margin * 100).toFixed(0)}%</TableCell>
-                  <TableCell>${(row.quotePrice * (1 + (row.markupPercentage / 100))).toFixed(2)}</TableCell>
+                  <TableCell>${(row.quote_price * (1 + (row.markup_percentage / 100))).toFixed(2)}</TableCell>
                   <TableCell>{row.quantity}</TableCell>
                   <TableCell>${calculateSaleItemMargin(row).salePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell>${calculateSaleItemMargin(row).grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>

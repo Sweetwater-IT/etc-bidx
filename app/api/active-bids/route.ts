@@ -915,20 +915,23 @@ export async function POST(request: NextRequest) {
       if (deleteSaleError) throw new Error(`Failed to delete existing sale items: ${deleteSaleError.message}`);
 
       const saleInserts = saleItems.map(item => {
-        const sellingPrice = item.quotePrice * (1 + (item.markupPercentage / 100));
+        const sellingPrice = item.quote_price * (1 + (item.markup_percentage / 100));
         const revenue = item.quantity * sellingPrice;
-        const total_cost = item.quantity * item.quotePrice;
+        const total_cost = item.quantity * item.quote_price;
         const gross_profit = revenue - total_cost;
         const gross_profit_margin = revenue > 0 ? (gross_profit / revenue) * 100 : 0;
 
         return {
           bid_estimate_id: bidEstimateId,
           job_id: null,
-          name: item.name || item.itemNumber,
+          name: item.name || item.item_number,
           quantity: item.quantity,
-          item_number: item.itemNumber,
+          item_number: item.item_number,
           display_name: item.name,
           notes: item.notes,
+          vendor: item.vendor,
+          quote_price: item.quote_price,
+          markup_percentage: item.markup_percentage,
           total_cost,
           revenue,
           gross_profit,

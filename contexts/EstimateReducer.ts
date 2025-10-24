@@ -562,7 +562,7 @@ export const estimateReducer = (
 			return {
 				...state,
 				saleItems: state.saleItems.map((item) => {
-					if (item.itemNumber == action.payload.oldItemNumber) {
+					if (item.item_number == action.payload.oldItemNumber) {
 						return action.payload.item;
 					}
 					return item;
@@ -573,7 +573,7 @@ export const estimateReducer = (
 			return {
 				...state,
 				saleItems: state.saleItems.filter(
-					(item) => item.itemNumber !== action.payload
+					(item) => item.item_number !== action.payload
 				),
 			};
 
