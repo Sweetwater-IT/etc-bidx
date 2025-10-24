@@ -417,6 +417,30 @@ export function DataTable<TData extends object>({
   onDelete,
   onDeleteItem,
 }: DataTableProps<TData>) {
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const rowRefs = React.useRef<(HTMLTableRowElement | null)[]>([]);
+
+  React.useEffect(() => {
+    if (data.length > 0 && selectedIndex === -1) {
+      setSelectedIndex(0);
+      rowRefs.current[0]?.focus();
+    }
+  }, [data]);
+
+  const handleRowKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowDown') {
+      const next = Math.min(index + 1, table.getRowModel().rows.length - 1);
+      setSelectedIndex(next);
+      rowRefs.current[next]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      const prev = Math.max(index - 1, 0);
+      setSelectedIndex(prev);
+      rowRefs.current[prev]?.focus();
+    } else if (e.key === 'Enter') {
+      onViewDetails?.(table.getRowModel().rows[index].original);
+    }
+  };
+
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
       id: col.key,
@@ -1106,8 +1130,7 @@ export function DataTable<TData extends object>({
                                 {header.column.getCanSort() && (
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      // Clear sorting in both places
-                                      onSortChange?.('', 'asc') // Or however you handle clearing
+                                      onSortChange?.('', 'asc')
                                       header.column.clearSorting()
                                     }}
                                   >
@@ -1126,14 +1149,15 @@ export function DataTable<TData extends object>({
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map(row => (
+                  table.getRowModel().rows.map((row, index) => (
                     <TableRow
                       key={row.id}
+                      ref={el => { rowRefs.current[index] = el; }}
+                      tabIndex={selectedIndex === index ? 0 : -1}
                       data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
                       className={cn(
-                        'cursor-pointer',
-                        isRowSelected(row.original, selectedItem) &&
-                        'bg-muted/50'
+                        'cursor-pointer focus:outline-none',
+                        (isRowSelected(row.original, selectedItem) || selectedIndex === index) && 'bg-gray-100'
                       )}
                       onClick={(e) => {
                         const target = e.target as HTMLElement;
@@ -1145,6 +1169,7 @@ export function DataTable<TData extends object>({
                           onViewDetails(row.original as TData);
                         }
                       }}
+                      onKeyDown={e => handleRowKeyDown(e, index)}
                     >
                       {row.getVisibleCells().map(cell => {
                         const isActions = cell.column.id === 'actions'
