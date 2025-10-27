@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
       case 'rental_items':
         ({ data, error } = await supabase
-          .from('rental_items')
+          .from('master_rental_items')
           .select(`
             id,
             item_number,
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
       case 'rental_items':
         ({ data, error } = await supabase
-          .from('rental_items')
+          .from('master_rental_items')
           .select(`
             id,
             item_number,

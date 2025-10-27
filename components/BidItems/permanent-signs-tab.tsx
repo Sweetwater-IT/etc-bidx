@@ -65,6 +65,29 @@ import { toast } from "sonner";
 import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
 import { formatCurrencyValue } from "@/lib/formatDecimals";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+
+const typeMappings: { pattern: string; key: string }[] = [
+  { pattern: "POST MOUNTED SIGNS, TYPE B", key: "pmsTypeB" },
+  { pattern: "POST MOUNTED SIGNS, TYPE C", key: "pmsTypeC" },
+  { pattern: "POST MOUNTED SIGNS, TYPE F", key: "pmsTypeF" },
+  { pattern: "RESET POST MOUNTED SIGNS, TYPE B", key: "resetTypeB" },
+  { pattern: "RESET POST MOUNTED SIGNS, TYPE C", key: "resetTypeC" },
+  { pattern: "RESET POST MOUNTED SIGNS, TYPE F", key: "resetTypeF" },
+  { pattern: "REMOVE POST MOUNTED SIGNS, TYPE B", key: "removeTypeB" },
+  { pattern: "REMOVE POST MOUNTED SIGNS, TYPE C", key: "removeTypeC" },
+  { pattern: "REMOVE POST MOUNTED SIGNS, TYPE F", key: "removeTypeF" },
+  { pattern: "FLEXIBLE DELINEATOR", key: "flexibleDelineator" },
+  { pattern: "GUIDE RAIL MOUNTED DELINEATOR", key: "guideRailDelineator" },
+  { pattern: "BARRIER MOUNTED DELINEATOR", key: "barrierDelineator" },
+];
+
+const getTypeKey = (description: string): string | undefined => {
+  const desc = description.trim();
+  const mapping = typeMappings.find(m => desc.startsWith(m.pattern));
+  return mapping?.key;
+};
 
 const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
   const newPMSId = uuidv4();
@@ -140,11 +163,27 @@ const createDefaultItem = (keyToBeAdded: PMSItemKeys): PMSItemNumbers => {
 const PermanentSignsSummaryStep = () => {
   const [isCustomName, setIsCustomName] = useState(false);
   const { permanentSigns, dispatch, adminData, mptRental, } = useEstimate();
-  const [selectedType, setSelectedType] = useState<PMSItemKeys>();
+  const [selectedType, setSelectedType] = useState<string | undefined>('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PMSItemNumbers | null>(null);
   const [editOpened, setEditOpened] = useState<boolean>(false);
+  const [permanentSignsTypesItems, setPermanentSignsTypesItems] = useState<any[]>([false]);
+  const [openPopOver, setopenPopOver] = useState(false)
+
+  const getPermanentSignsTypesItems = async () => {
+    try {
+      const resp = await fetch('/api/permanent-signs/getPS')
+      const data = await resp.json()
+
+      if (data.success) {
+        setPermanentSignsTypesItems(data.data)
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   // Fetch static data
   useEffect(() => {
@@ -236,7 +275,7 @@ const PermanentSignsSummaryStep = () => {
   const handleOwTravelTimeChange = (type: 'hours' | 'minutes', value: number) => {
     const currentOwMinutes = safeNumber(adminData.owTravelTimeMins);
     const extraMinutes = currentOwMinutes % 60;
-    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) +  value;
+    const newOwMinutes = type === 'hours' ? (value * 60) + extraMinutes : (safeNumber(owHours) * 60) + value;
     dispatch({
       type: 'UPDATE_ADMIN_DATA',
       payload: {
@@ -331,6 +370,10 @@ const PermanentSignsSummaryStep = () => {
     }
   }, [drawerOpen]);
 
+  useEffect(() => {
+    getPermanentSignsTypesItems()
+  }, []);
+
   const handleAddSign = () => {
     setSelectedType(undefined);
     setFormData(null);
@@ -347,10 +390,14 @@ const PermanentSignsSummaryStep = () => {
       setSelectedType(itemType);
       setDrawerOpen(true);
     }
-  }, [permanentSigns]); // Wrapped in useCallback to stabilize function reference
+  }, [permanentSigns]);
 
-  const handleTypeChange = useCallback((value: PMSItemKeys) => {
-    const defaultItem = createDefaultItem(value);
+  const handleTypeChange = useCallback((value: string) => {
+    const key = getTypeKey(value) as PMSItemKeys
+
+    console.log('key es', key);
+
+    const defaultItem = createDefaultItem(key);
 
     if (
       defaultItem &&
@@ -930,11 +977,9 @@ const PermanentSignsSummaryStep = () => {
         <div className="flex flex-row items-center gap-[8px]">
           <label className="text-sm font-semibold">Total Days Required: </label>
           <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-            {getTotalDays() ?? " -"}
+            {Number.isNaN(getTotalDays()) ? " - " : getTotalDays()}
           </div>
         </div>
-
-
       </div>
       <div className="relative">
         {(!permanentSigns || permanentSigns.signItems.length === 0) && (
@@ -1151,25 +1196,47 @@ const PermanentSignsSummaryStep = () => {
           </DrawerHeader>
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
             {
-              // Selector de tipo original
               <div className="w-full">
                 <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-                <Select
-                  value={selectedType}
-                  onValueChange={handleTypeChange}
-                  disabled={!!editingId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose permanent sign item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PERMANENT_SIGN_ITEMS).map(([displayName, key]) => (
-                      <SelectItem key={key} value={key}>
-                        {displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={openPopOver} onOpenChange={setopenPopOver}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full text-left">
+                      {selectedType
+                        ? permanentSignsTypesItems.find(item => item.display_name === selectedType)?.display_name
+                        : "Choose permanent sign item"}
+                    </Button>
+                  </PopoverTrigger>
+                  {
+                    openPopOver &&
+                    <PopoverContent className="w-full p-0 ">
+                      <div className="">
+                        <Command>
+                          <CommandInput placeholder="Search..." />
+                          <CommandEmpty>No results found.</CommandEmpty>
+                          <CommandGroup className="max-h-[400px] w-full overflow-y-auto">
+                            <div className="">
+
+                              {permanentSignsTypesItems
+                                .filter(item => !!item.item_number && !!item.display_name)
+                                .map(item => (
+                                  <CommandItem
+                                    key={item.item_number}
+                                    onSelect={() => {
+                                      handleTypeChange(item.display_name as PMSItemKeys)
+                                      setopenPopOver(false);
+                                    }
+                                    }
+                                  >
+                                    {item.display_name} ({item.item_number})
+                                  </CommandItem>
+                                ))}
+                            </div>
+                          </CommandGroup>
+                        </Command>
+                      </div>
+                    </PopoverContent>
+                  }
+                </Popover>
               </div>
             }
             {

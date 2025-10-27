@@ -5,8 +5,8 @@ export async function GET() {
   try {
     const [bidRes, saleRes, rentalRes] = await Promise.all([
       supabase.from('bid_item_numbers').select('*').eq('is_custom', false),
-      supabase.from('sale_items').select('*'),
-      supabase.from('rental_items').select('*')
+      supabase.from('master_sale_items').select('*'),
+      supabase.from('master_rental_items').select('*')
     ]);
 
     if (bidRes.error || saleRes.error || rentalRes.error) {
