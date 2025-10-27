@@ -69,6 +69,7 @@ import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
 import { log } from 'node:console'
 
@@ -112,6 +113,8 @@ interface PhaseDrawerData {
   additionalRatedHours: number
   additionalNonRatedHours: number
   maintenanceTrips: number
+  itemNumber: string;
+  itemName: string;
 }
 
 // Phase Action Buttons Component
@@ -368,6 +371,21 @@ const BidItemsStep5 = ({
   const [emergencyJobState, setEmergencyJobState] = useState<{ [phaseIndex: number]: boolean }>({});
   const [modeEdit, setModeEdit] = useState<{ [phaseIndex: number]: { MPTEquipament: boolean; lightAndDrum: boolean, customEquipament: boolean } }>({});
   const [activeTab, setActiveTab] = useState('mpt')
+  const [allMptItems, setallMptItems] = useState<any[]>([])
+
+  const getAllMptItems = async () => {
+    try {
+      const resp = await fetch('/api/mpt/getMptItems')
+      const data = await resp.json()
+
+      if (data.success) {
+        setallMptItems(data.data)
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const toggleEditMode = (phaseIndex: number, section: 'MPTEquipament' | 'lightAndDrum' | 'customEquipament', value: boolean) => {
     setModeEdit(prev => ({
@@ -389,6 +407,11 @@ const BidItemsStep5 = ({
       setActiveTab('mpt')
     }
   }, [activeTab])
+
+  useEffect(() => {
+
+    getAllMptItems()
+  }, [])
 
   const handleToggleBidItem = (value: string) => {
     setActiveTab(value)
@@ -473,7 +496,9 @@ const BidItemsStep5 = ({
       numberTrucks: 0,
       additionalRatedHours: 0,
       additionalNonRatedHours: 0,
-      maintenanceTrips: 0
+      maintenanceTrips: 0,
+      itemName: '',
+      itemNumber: ''
     })
     setEditingPhaseIndex(null)
     setDrawerOpen(true)
@@ -492,7 +517,9 @@ const BidItemsStep5 = ({
       numberTrucks: phase.numberTrucks,
       additionalRatedHours: phase.additionalRatedHours,
       additionalNonRatedHours: phase.additionalNonRatedHours,
-      maintenanceTrips: phase.maintenanceTrips
+      maintenanceTrips: phase.maintenanceTrips,
+      itemName: phase.itemName,
+      itemNumber: phase.itemNumber
     })
     setEditingPhaseIndex(phaseIndex)
     setDrawerOpen(true)
@@ -2101,7 +2128,48 @@ const BidItemsStep5 = ({
                     Use same start and end dates as admin data
                   </div>
                 </div>
+                <div className='grid grid-cols-1 gap-4'>
+                  <div className="w-full">
+                    <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full text-left">
+                          {phaseFormData.itemNumber
+                            ? phaseFormData.itemNumber + " - " + phaseFormData.itemName
+                            : "Choose MPT Item"}
+                        </Button>
+                      </PopoverTrigger>
 
+                      <PopoverContent className="w-full p-0 ">
+                        <div className="">
+                          <Command>
+                            <CommandInput placeholder="Search..." />
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup className="max-h-[400px] w-full overflow-y-auto">
+                              <div className="">
+
+                                {allMptItems
+                                  .filter(item => !!item.item_number && !!item.display_name)
+                                  .map(item => (
+                                    <CommandItem
+                                      key={item.item_number}
+                                      onSelect={() => {
+                                        handlePhaseFormUpdate('itemName', item.item_number)
+                                        handlePhaseFormUpdate('itemNumber', item.display_name)
+                                      }
+                                      }
+                                    >
+                                      {item.display_name} ({item.item_number})
+                                    </CommandItem>
+                                  ))}
+                              </div>
+                            </CommandGroup>
+                          </Command>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='phase-name'>

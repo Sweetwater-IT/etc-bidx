@@ -17,7 +17,7 @@ export type EquipmentType =
 export type AssociatedStructures = 'fourFootTypeIII' | 'hStand' | 'post' | 'none'
 
 export type DisplayStructures = "4' T-III RIGHT" | "4' T-III LEFT" | "6' T-III RIGHT" | "6' T-III LEFT" | 'H-FOOT'
-| "8' POST" | "10' POST" | "12' POST" | "14' POST" | 'LOOSE'
+  | "8' POST" | "10' POST" | "12' POST" | "14' POST" | 'LOOSE'
 
 export interface StructureMapping {
   displayName: string;
@@ -25,13 +25,13 @@ export interface StructureMapping {
 }
 
 export const structureMap: Record<DisplayStructures, AssociatedStructures> = {
-  "4' T-III RIGHT" : 'fourFootTypeIII',
-  "4' T-III LEFT" : 'fourFootTypeIII',
-  "6' T-III RIGHT" : 'fourFootTypeIII',
-  "6' T-III LEFT" : 'fourFootTypeIII',
+  "4' T-III RIGHT": 'fourFootTypeIII',
+  "4' T-III LEFT": 'fourFootTypeIII',
+  "6' T-III RIGHT": 'fourFootTypeIII',
+  "6' T-III LEFT": 'fourFootTypeIII',
   "10' POST": 'post',
-  "12' POST" : 'post',
-  "14' POST" : 'post',
+  "12' POST": 'post',
+  "14' POST": 'post',
   "8' POST": 'post',
   "H-FOOT": 'hStand',
   'LOOSE': 'none'
@@ -108,7 +108,7 @@ export const signList: SignMapping[] = [
   { key: 'HI', label: 'HI', dbName: 'HI Signs' },
   { key: 'DG', label: 'DG', dbName: 'DG Signs' },
   { key: 'FYG', label: 'FYG', dbName: 'FYG Signs' },
-  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },  
+  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },
   { key: 'Special', label: 'Special', dbName: 'Special Signs' }
 ];
 
@@ -133,8 +133,8 @@ export const allEquipmentList: AllEquipmentMapping[] = [
   { key: 'sharps', label: 'Sharps', dbName: 'Sharps' },
   { key: 'HI', label: 'HI', dbName: 'HI Signs' },
   { key: 'DG', label: 'DG', dbName: 'DG Signs' },
-  { key: 'FYG', label: 'FYG', dbName: 'FYG Signs' }, 
-  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },  
+  { key: 'FYG', label: 'FYG', dbName: 'FYG Signs' },
+  { key: 'TYPEXI', label: 'Type XI', dbName: 'Type XI Signs' },
   { key: 'Special', label: 'Special', dbName: 'Special Signs' }
 ]
 
@@ -163,7 +163,7 @@ export interface DynamicSignInfo {
   designation: string;
   description: string;
   bLightsColor?: 'Yellow' | 'Red' | 'White'
-  substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite'  | 'Roll Up' | 'Face';
+  substrate?: 'Plastic' | 'Aluminum' | 'Aluminum-Composite' | 'Roll Up' | 'Face';
   stiffener?: boolean;
 }
 export interface PrimarySign extends DynamicSignInfo {
@@ -201,6 +201,8 @@ export interface Phase {
   standardEquipment: Record<EquipmentType, DynamicEquipmentInfo>;
   customLightAndDrumItems: CustomLightAndDrumItem[];
   signs: (PrimarySign | SecondarySign)[];
+  itemNumber: string;
+  itemName: string
 }
 
 export type MPTRentalEstimating = {
@@ -220,9 +222,9 @@ export interface ShopTrackingInfo {
   inStock: number;
 }
 
-export interface ExtendedPrimarySign extends PrimarySign, ShopTrackingInfo {}
+export interface ExtendedPrimarySign extends PrimarySign, ShopTrackingInfo { }
 
-export interface ExtendedSecondarySign extends SecondarySign, ShopTrackingInfo {}
+export interface ExtendedSecondarySign extends SecondarySign, ShopTrackingInfo { }
 
 export const hasShopTracking = (sign: PrimarySign | SecondarySign | ExtendedPrimarySign | ExtendedSecondarySign): sign is ExtendedPrimarySign | ExtendedSecondarySign => {
   return 'make' in sign && 'order' in sign && 'inStock' in sign;

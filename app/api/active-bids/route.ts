@@ -709,7 +709,9 @@ export async function POST(request: NextRequest) {
           four_foot_type_iii_quantity: phase.standardEquipment.fourFootTypeIII?.quantity || 0,
           emergency: phase.emergency ?? false,
           // Custom equipment
-          custom_light_and_drum_items: phase.customLightAndDrumItems
+          custom_light_and_drum_items: phase.customLightAndDrumItems,
+          item_number: phase.itemNumber,
+          item_name: phase.itemName,
         })
         .select('id')
         .single();
