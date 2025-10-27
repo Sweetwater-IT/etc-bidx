@@ -2217,6 +2217,16 @@ const BidItemsStep5 = ({
                     </Popover>
                   </div>
                 </div>
+                {(phaseFormData.itemNumber && phaseFormData.itemName) && (
+                  <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Item Number: </span>{phaseFormData.itemNumber}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
+                    </p>
+                  </div>
+                )}
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='phase-name'>
