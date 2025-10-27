@@ -79,6 +79,7 @@ const typeMappings: { pattern: string; key: string }[] = [
   { pattern: "REMOVE POST MOUNTED SIGNS, TYPE C", key: "removeTypeC" },
   { pattern: "REMOVE POST MOUNTED SIGNS, TYPE F", key: "removeTypeF" },
   { pattern: "FLEXIBLE DELINEATOR", key: "flexibleDelineator" },
+  { pattern: "FLEX. DELINEATOR", key: "flexibleDelineator" },
   { pattern: "GUIDE RAIL MOUNTED DELINEATOR", key: "guideRailDelineator" },
   { pattern: "BARRIER MOUNTED DELINEATOR", key: "barrierDelineator" },
 ];
