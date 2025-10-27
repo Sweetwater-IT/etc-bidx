@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
         const { search } = Object.fromEntries(request.nextUrl.searchParams);
         console.log(`Search parameter: ${search || 'not provided'}`);
         const baseQuery = supabase
-            .from('sale_items')
+            .from('master_sale_items')
             .select('id, item_number, display_name, uom, notes, item_description');
         const query = search
             ? baseQuery.ilike('item_number', `%${search}%`)

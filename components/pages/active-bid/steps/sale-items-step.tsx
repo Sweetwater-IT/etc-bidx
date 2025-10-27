@@ -267,7 +267,7 @@ const SaleItemsStep = () => {
                                 key={item.item_number}
                                 value={`${item.name} ${item.item_number}`}
                                 onSelect={(value) => {
-                                  const selected = availableItems.find(i => i.item_number === value.split(" ").pop());
+                                  const selected = availableItems.find(i => i.item_number.trim() === value.split(" ").pop());                                  
                                   if (selected && formData) {
                                     setFormData({ ...formData, item_number: selected.item_number, name: selected.name });
                                   } else if (formData) {
