@@ -882,7 +882,7 @@ const PermanentSignsSummaryStep = () => {
             <Label className="text-sm font-medium">Additional Equipment</Label>
             <Button type="button" variant="outline" size="sm" onClick={handleAddAdditionalItem}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
+              Add Equipmen
             </Button>
           </div>
           {(formData as any).additionalItems?.map((item: AdditionalPMSEquipment, index: number) => (
