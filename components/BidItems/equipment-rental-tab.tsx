@@ -352,7 +352,7 @@ const EquipmentSummaryStep = () => {
               {formData.itemNumber && formData.name && !isCustom && (
                 <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Item Number: </span><span className='text-gray-400 font-bold'>{formData.itemNumber}</span>
+                    <span className="font-medium text-foreground">Item Number: </span>{formData.itemNumber}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">Description: </span>{formData.item_description || formData.name}
