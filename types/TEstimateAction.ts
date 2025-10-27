@@ -48,7 +48,7 @@ export type EstimateAction =
 	| { type: "ADD_MPT_PHASE" }
 	| {
 		type: "UPDATE_MPT_PHASE_TRIP_AND_LABOR";
-		payload: { key: keyof Phase; value: number; phase: number };
+		payload: { key: keyof Phase; value: any; phase: number };
 	}
 	| {
 		type: "UPDATE_MPT_PHASE_START_END";

@@ -33,7 +33,9 @@ import {
   Edit,
   Calendar as CalendarIcon,
   Trash2,
-  X
+  X,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react'
 import React, { useState, useEffect, useMemo } from 'react'
 import { cn } from '@/lib/utils'
@@ -69,9 +71,8 @@ import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
-import { log } from 'node:console'
-
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
 const DEFAULT_MPG_PER_TRUCK = 8
@@ -112,6 +113,8 @@ interface PhaseDrawerData {
   additionalRatedHours: number
   additionalNonRatedHours: number
   maintenanceTrips: number
+  itemNumber: string;
+  itemName: string;
 }
 
 // Phase Action Buttons Component
@@ -368,6 +371,22 @@ const BidItemsStep5 = ({
   const [emergencyJobState, setEmergencyJobState] = useState<{ [phaseIndex: number]: boolean }>({});
   const [modeEdit, setModeEdit] = useState<{ [phaseIndex: number]: { MPTEquipament: boolean; lightAndDrum: boolean, customEquipament: boolean } }>({});
   const [activeTab, setActiveTab] = useState('mpt')
+  const [allMptItems, setallMptItems] = useState<any[]>([])
+  const [openPopverPhase, setOpenPopverPhase] = useState<boolean>(false)
+
+  const getAllMptItems = async () => {
+    try {
+      const resp = await fetch('/api/mpt/getMptItems')
+      const data = await resp.json()
+
+      if (data.success) {
+        setallMptItems(data.data)
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const toggleEditMode = (phaseIndex: number, section: 'MPTEquipament' | 'lightAndDrum' | 'customEquipament', value: boolean) => {
     setModeEdit(prev => ({
@@ -390,28 +409,29 @@ const BidItemsStep5 = ({
     }
   }, [activeTab])
 
+  useEffect(() => {
+
+    getAllMptItems()
+  }, [])
+
   const handleToggleBidItem = (value: string) => {
     setActiveTab(value)
   }
 
   // Format phase title for accordion trigger
-  const formatPhaseTitle = (phase: Phase, index: number): string => {
-    let title = `Phase ${index + 1}`
-
-    if (phase.startDate && phase.endDate) {
-      title += ` - ${format(phase.startDate, 'MMM dd, yyyy')} - ${format(
-        phase.endDate,
-        'MMM dd, yyyy'
-      )}`
-    }
-
-    if (phase.name && phase.name.trim()) {
-      title += ` - ${phase.name}`
-    }
-
-    return title
+  const formatPhaseTitle = (phase: Phase, index: number) => {
+    return (
+      <>
+        {phase.itemNumber && <strong className='text-gray-400'>{phase.itemNumber}</strong>}
+        {phase.itemNumber && " - "}
+        Phase {index + 1}
+        {phase.startDate && phase.endDate && (
+          <> - {format(phase.startDate, "MMM dd, yyyy")} - {format(phase.endDate, "MMM dd, yyyy")}</>
+        )}
+        {phase.name && phase.name.trim() && <> - {phase.name}</>}
+      </>
+    )
   }
-
 
   const handleRateChange = (
     formattedValue: string,
@@ -473,7 +493,9 @@ const BidItemsStep5 = ({
       numberTrucks: 0,
       additionalRatedHours: 0,
       additionalNonRatedHours: 0,
-      maintenanceTrips: 0
+      maintenanceTrips: 0,
+      itemName: '',
+      itemNumber: ''
     })
     setEditingPhaseIndex(null)
     setDrawerOpen(true)
@@ -492,7 +514,9 @@ const BidItemsStep5 = ({
       numberTrucks: phase.numberTrucks,
       additionalRatedHours: phase.additionalRatedHours,
       additionalNonRatedHours: phase.additionalNonRatedHours,
-      maintenanceTrips: phase.maintenanceTrips
+      maintenanceTrips: phase.maintenanceTrips,
+      itemName: phase.itemName,
+      itemNumber: phase.itemNumber
     })
     setEditingPhaseIndex(phaseIndex)
     setDrawerOpen(true)
@@ -630,6 +654,27 @@ const BidItemsStep5 = ({
           phase: editingPhaseIndex
         }
       })
+
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: {
+          key: 'itemName',
+          value: phaseFormData.itemName,
+          phase: editingPhaseIndex
+        }
+      })
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: {
+          key: 'itemNumber',
+          value: phaseFormData.itemNumber,
+          phase: editingPhaseIndex
+        }
+      })
+
+
 
       dispatch({
         type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
@@ -1262,6 +1307,9 @@ const BidItemsStep5 = ({
     }
   }
 
+  console.log(phaseFormData);
+
+
   // Handle emergency job toggle
   const handleEmergencyJobChange = (checked: boolean, phase: any, index: number) => {
     dispatch({
@@ -1395,7 +1443,7 @@ const BidItemsStep5 = ({
                         subtext='When you add phases, they will appear here as tabs.'
                       />
                     ) : (
-                      <Accordion type='multiple' className='w-full space-y-4'>
+                      <Accordion defaultValue={["phase-0"]} type='multiple' className='w-full space-y-4'>
                         {mptRental.phases.map((phase, index) => (
                           <AccordionItem
                             key={index}
@@ -2101,7 +2149,84 @@ const BidItemsStep5 = ({
                     Use same start and end dates as admin data
                   </div>
                 </div>
+                <div className='grid grid-cols-1 gap-4'>
+                  <div className="w-full">
+                    <Label className="text-sm font-medium mb-2 block">MPT Type</Label>
+                    <Popover open={openPopverPhase} onOpenChange={setOpenPopverPhase}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between overflow-hidden text-left"
+                        >
+                          <span className="truncate">
+                            {phaseFormData.itemNumber ? (
+                              <>
+                                <span className="text-gray-500">{phaseFormData.itemNumber}</span>
+                                {" - "}
+                                {phaseFormData.itemName}
+                              </>
+                            ) : (
+                              "Choose MPT Item"
+                            )}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search..." />
+                          {
+                            openPopverPhase &&
+                            <CommandList onWheel={(e) => e.stopPropagation()}>
+                              <div className="max-h-[200px] overflow-y-auto">
+                                <CommandEmpty>No results found.</CommandEmpty>
+                                <CommandGroup>
+                                  {allMptItems
+                                    .filter(item => !!item.item_number && !!item.display_name)
+                                    .map(item => (
+                                      <CommandItem
+                                        key={item.item_number.trim()}
+                                        onSelect={() => {
+                                          setPhaseFormData({ ...phaseFormData, itemName: item.display_name, itemNumber: item.item_number.trim() })
+                                          setOpenPopverPhase((prev) => (!prev))
+                                        }}
+                                        className="flex items-center"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            phaseFormData.itemNumber === item.item_number ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span>{item.display_name}</span>
+                                          <span className="text-xs text-muted-foreground">{item.item_number}</span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
 
+                                </CommandGroup>
+                              </div>
+                            </CommandList>
+
+                          }
+                        </Command>
+                      </PopoverContent>
+
+                    </Popover>
+                  </div>
+                </div>
+                {(phaseFormData.itemNumber && phaseFormData.itemName) && (
+                  <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Item Number: </span>{phaseFormData.itemNumber}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
+                    </p>
+                  </div>
+                )}
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='phase-name'>
@@ -2342,7 +2467,7 @@ const BidItemsStep5 = ({
                   Cancel
                 </Button>
               </DrawerClose>
-              <Button onClick={handleSavePhase} disabled={!phaseFormData}>
+              <Button onClick={handleSavePhase} disabled={!phaseFormData || !phaseFormData.itemNumber}>
                 {editingPhaseIndex !== null ? 'Update Phase' : 'Save Phase'}
               </Button>
             </div>
