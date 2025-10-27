@@ -1000,13 +1000,6 @@ const BidItemsViewOnly = () => {
                 <TabsContent value="mpt" className="mt-6">
                     <div className='text-xl font-semibold pl-6 mb-4 mt-6'>Phases</div>
                     <PhasesViewOnly />
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>Signs</div>
-                    <SignsViewOnly />
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>
-                        Trip and Labor
-                    </div>
-                    <TripAndLaborViewOnlyAll />
-                    <MPTViewOnly />
                 </TabsContent>
 
                 {/* Equipment Rental Tab - MODIFICADO */}
