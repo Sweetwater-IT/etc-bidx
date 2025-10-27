@@ -11,6 +11,8 @@ export const defaultPhaseObject : Phase = {
     additionalRatedHours: 0,
     additionalNonRatedHours: 0,
     maintenanceTrips: 0,
+    itemName: '',
+    itemNumber: '',
     standardEquipment: {
         fourFootTypeIII: { quantity: 0, emergencyRate: 0 },
         sixFootWings: { quantity: 0, emergencyRate: 0 },

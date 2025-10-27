@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Fetch a specific active bid by ID
 export async function GET(
   request: NextRequest,
   { params }: any
 ) {
-  try {    
+  try {
     const resolvedParams = await params;
     const type = request.nextUrl.searchParams.get('type')
-    
-    let data : any;
+
+    let data: any;
     let error: any;
     if (type === 'available-job') {
       const { data: jobData, error: jobError } = await supabase
@@ -18,7 +17,7 @@ export async function GET(
         .select('*')
         .eq('id', resolvedParams.id)
         .single();
-      
+
       if (!jobError) {
         data = jobData;
         error = null;
@@ -43,7 +42,7 @@ export async function GET(
         error = null;
       }
     }
-    
+
     if (error) {
       return NextResponse.json(
         { success: false, message: 'Failed to fetch active bid or available bid', error: error.message },
@@ -61,11 +60,11 @@ export async function GET(
             : data.admin_data.contractNumber + '-DRAFT'
         }
       }
-    }     
+    }
 
-    
+
     return NextResponse.json({ success: true, data });
-    
+
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -84,16 +83,16 @@ export async function PATCH(
     // Await params before accessing
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id);
-    
+
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, message: 'Invalid ID format' },
         { status: 400 }
       );
     }
-    
+
     const body = await request.json();
-     
+
     if (body.notes && Array.isArray(body.notes)) {
       const { error: deleteError } = await supabase
         .from('bid_notes')
@@ -127,7 +126,7 @@ export async function PATCH(
         );
       }
     }
-    
+
     const { data: updatedBid, error: updateError } = await supabase
       .from('bid_estimates')
       .update(body)
@@ -135,25 +134,25 @@ export async function PATCH(
       .select()
       .single();
 
-      if (body.status !== 'DRAFT' && updatedBid.contract_number.endsWith('-DRAFT')) {
-        const { error: contractUpdateError } = await supabase
-          .from('admin_data_entries')
-          .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })
-          .eq('bid_estimate_id', id);
-          
-        if (contractUpdateError) {
-          console.error('Error updating contract number:', contractUpdateError);
-          // Handle error as needed
-        }
+    if (body.status !== 'DRAFT' && updatedBid.contract_number.endsWith('-DRAFT')) {
+      const { error: contractUpdateError } = await supabase
+        .from('admin_data_entries')
+        .update({ contract_number: updatedBid.admin_data.contractNumber.slice(0, -6) })
+        .eq('bid_estimate_id', id);
+
+      if (contractUpdateError) {
+        console.error('Error updating contract number:', contractUpdateError);
+        // Handle error as needed
       }
-    
+    }
+
     if (updateError) {
       return NextResponse.json(
         { success: false, message: 'Failed to update active bid', error: updateError.message },
         { status: 500 }
       );
     }
-    
+
     // If status is being changed to WON, create a job
     if (body.status === 'WON' && updatedBid) {
       // Check if a job already exists for this estimate
@@ -162,12 +161,12 @@ export async function PATCH(
         .select('id')
         .eq('estimate_id', id)
         .single();
-      
+
       if (!existingJob) {
         // Generate a random job number with P- prefix
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
         const jobNumber = `P-${randomString}`;
-        
+
         // Create job_numbers entry
         const { data: jobNumberEntry, error: jobNumberError } = await supabase
           .from('job_numbers')
@@ -181,7 +180,7 @@ export async function PATCH(
           })
           .select()
           .single();
-        
+
         if (jobNumberError) {
           console.error('Failed to create job number:', jobNumberError);
           return NextResponse.json(
@@ -189,7 +188,7 @@ export async function PATCH(
             { status: 500 }
           );
         }
-        
+
         // Create job entry
         const { data: newJob, error: jobError } = await supabase
           .from('jobs')
@@ -204,7 +203,7 @@ export async function PATCH(
           })
           .select()
           .single();
-        
+
         if (jobError) {
           console.error('Failed to create job:', jobError);
           return NextResponse.json(
@@ -212,18 +211,18 @@ export async function PATCH(
             { status: 500 }
           );
         }
-        
-        return NextResponse.json({ 
-          success: true, 
+
+        return NextResponse.json({
+          success: true,
           data: updatedBid,
           job: newJob,
           jobNumber: jobNumber
         });
       }
     }
-    
+
     return NextResponse.json({ success: true, data: updatedBid });
-    
+
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -241,28 +240,28 @@ export async function DELETE(
   try {
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id);
-    
+
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, message: 'Invalid ID format' },
         { status: 400 }
       );
     }
-    
+
     const { error } = await supabase
       .from('bid_estimates')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
       return NextResponse.json(
         { success: false, message: 'Failed to delete active bid', error: error.message },
         { status: 500 }
       );
     }
-    
+
     return NextResponse.json({ success: true });
-    
+
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(

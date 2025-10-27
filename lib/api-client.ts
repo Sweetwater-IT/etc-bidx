@@ -272,7 +272,7 @@ export async function createActiveBid(
   status: 'PENDING' | 'DRAFT',
   notes: INote[],
   id?: number,
-): Promise<any> {
+): Promise<any> {  
   // Ensure division and owner fields have valid values
   const processedAdminData = {
     ...adminData,
