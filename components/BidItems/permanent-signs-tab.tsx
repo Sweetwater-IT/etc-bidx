@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import {
   Select,
@@ -66,7 +66,7 @@ import { Switch } from "../ui/switch";
 import { determineItemType } from "@/types/TPermanentSigns";
 import { formatCurrencyValue } from "@/lib/formatDecimals";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
 const typeMappings: { pattern: string; key: string }[] = [
   { pattern: "POST MOUNTED SIGNS, TYPE B", key: "pmsTypeB" },
@@ -1195,50 +1195,67 @@ const PermanentSignsSummaryStep = () => {
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 space-y-4 pb-12 overflow-y-auto">
-            {
-              <div className="w-full">
-                <Label className="text-sm font-medium mb-2 block">Sign Item Type</Label>
-                <Popover open={openPopOver} onOpenChange={setopenPopOver}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full text-left">
+            <div className="w-full">
+              <Popover open={openPopOver} onOpenChange={setopenPopOver}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openPopOver}
+                    className="w-full justify-between overflow-hidden"
+                  >
+                    <span className="truncate">
                       {selectedType
                         ? permanentSignsTypesItems.find(item => item.display_name === selectedType)?.display_name
                         : "Choose permanent sign item"}
-                    </Button>
-                  </PopoverTrigger>
-                  {
-                    openPopOver &&
-                    <PopoverContent className="w-full p-0 ">
-                      <div className="">
-                        <Command>
-                          <CommandInput placeholder="Search..." />
-                          <CommandEmpty>No results found.</CommandEmpty>
-                          <CommandGroup className="max-h-[400px] w-full overflow-y-auto">
-                            <div className="">
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
 
-                              {permanentSignsTypesItems
-                                .filter(item => !!item.item_number && !!item.display_name)
-                                .map(item => (
-                                  <CommandItem
-                                    key={item.item_number}
-                                    onSelect={() => {
-                                      handleTypeChange(item.display_name as PMSItemKeys)
-                                      setopenPopOver(false);
-                                    }
-                                    }
-                                  >
-                                    {item.display_name} ({item.item_number})
-                                  </CommandItem>
-                                ))}
-                            </div>
-                          </CommandGroup>
-                        </Command>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList onWheel={(e) => e.stopPropagation()}>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup>
+                          {permanentSignsTypesItems
+                            .filter(item => !!item.item_number && !!item.display_name)
+                            .map(item => (
+                              <CommandItem
+                                key={item.item_number}
+                                value={`${item.display_name} ${item.item_number}`}
+                                onSelect={(value) => {
+                                  const selected = permanentSignsTypesItems.find(
+                                    i => i.item_number === value.split(" ").pop()
+                                  );
+                                  if (selected) {
+                                    handleTypeChange(selected.display_name as PMSItemKeys);
+                                  }
+                                  setopenPopOver(false);
+                                }}
+                                className="flex items-center"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedType === item.display_name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{item.display_name}</span>
+                                  <span className="text-xs text-muted-foreground">{item.item_number}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
                       </div>
-                    </PopoverContent>
-                  }
-                </Popover>
-              </div>
-            }
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
             {
               selectedType &&
               <div className="flex flex-col items-start w-full">
