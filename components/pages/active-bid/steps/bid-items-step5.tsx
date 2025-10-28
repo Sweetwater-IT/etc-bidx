@@ -2130,28 +2130,13 @@ const BidItemsStep5 = ({
             </DrawerHeader>
             <Separator className='w-full -mt-2' />
           </div>
-
           {phaseFormData && (
             <div className='px-4 space-y-6 mt-4 overflow-y-auto h-full'>
               <div className='space-y-4'>
                 <h4 className='font-medium'>Phase Information</h4>
-
-                <div className='flex items-center gap-x-2'>
-                  <Checkbox
-                    checked={
-                      phaseFormData.startDate === adminData.startDate &&
-                      phaseFormData.endDate === adminData.endDate
-                    }
-                    aria-label='Use same start and end dates as admin data'
-                    onCheckedChange={handleUseAdminDates}
-                  />
-                  <div className='text-muted-foreground text-sm'>
-                    Use same start and end dates as admin data
-                  </div>
-                </div>
                 <div className='grid grid-cols-1 gap-4'>
                   <div className="w-full">
-                    <Label className="text-sm font-medium mb-2 block">MPT Type</Label>
+                    <Label className="text-sm font-medium mb-2 block">MPT Item Number</Label>
                     <Popover open={openPopverPhase} onOpenChange={setOpenPopverPhase}>
                       <PopoverTrigger asChild>
                         <Button
@@ -2205,15 +2190,12 @@ const BidItemsStep5 = ({
                                         </div>
                                       </CommandItem>
                                     ))}
-
                                 </CommandGroup>
                               </div>
                             </CommandList>
-
                           }
                         </Command>
                       </PopoverContent>
-
                     </Popover>
                   </div>
                 </div>
@@ -2242,128 +2224,135 @@ const BidItemsStep5 = ({
                         }`}
                     />
                   </div>
-
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='startDate'>Start Date</Label>
-                      <Popover
-                        open={startDateOpen}
-                        onOpenChange={setStartDateOpen}
-                        modal={true}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
-                          >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
-                            {phaseFormData.startDate ? (
-                              format(phaseFormData.startDate, 'PPP')
-                            ) : (
-                              <span>Select start date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
-                          <Calendar
-                            mode='single'
-                            selected={phaseFormData.startDate ?? undefined}
-                            onSelect={date =>
-                              handleDateChange(date, 'startDate')
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className='space-y-2'>
-                      <Label htmlFor='endDate'>End Date</Label>
-                      <Popover
-                        open={endDateOpen}
-                        onOpenChange={setEndDateOpen}
-                        modal={true}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
-                          >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
-                            {phaseFormData.endDate ? (
-                              format(phaseFormData.endDate, 'PPP')
-                            ) : (
-                              <span>Select end date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
-                          <Calendar
-                            mode='single'
-                            selected={phaseFormData.endDate ?? undefined}
-                            onSelect={date => handleDateChange(date, 'endDate')}
-                            initialFocus
-                            disabled={date =>
-                              phaseFormData.startDate
-                                ? date < phaseFormData.startDate
-                                : false
-                            }
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                </div>
+                <div className='flex items-center gap-x-2'>
+                  <Checkbox
+                    checked={
+                      phaseFormData.startDate === adminData.startDate &&
+                      phaseFormData.endDate === adminData.endDate
+                    }
+                    aria-label='Use same start and end dates as admin data'
+                    onCheckedChange={handleUseAdminDates}
+                  />
+                  <div className='text-muted-foreground text-sm'>
+                    Use same start and end dates as admin data
                   </div>
-
-                  {phaseFormData.startDate && (
-                    <div className='bg-muted p-4 rounded-md'>
-                      <div className='flex flex-col gap-4'>
-                        <div className='text-sm font-medium'>
-                          Set end date as number of days out from start date:
-                        </div>
-                        <div className='flex items-center gap-3'>
-                          <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
-                            onClick={() => setEndDateFromDays(30)}
-                          >
-                            30
-                          </Badge>
-                          <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
-                            onClick={() => setEndDateFromDays(60)}
-                          >
-                            60
-                          </Badge>
-                          <Badge
-                            className='px-3 py-1 cursor-pointer hover:bg-primary'
-                            onClick={() => setEndDateFromDays(90)}
-                          >
-                            90
-                          </Badge>
-                          <div className='flex items-center gap-2'>
-                            <Input
-                              className='w-20'
-                              onChange={e =>
-                                setEndDateFromDays(
-                                  safeNumber(parseInt(e.target.value))
-                                )
-                              }
-                              placeholder='Days'
-                              type='number'
-                              min='1'
-                            />
-                          </div>
+                </div>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='startDate'>Start Date</Label>
+                    <Popover
+                      open={startDateOpen}
+                      onOpenChange={setStartDateOpen}
+                      modal={true}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant='outline'
+                          className='w-full justify-start text-left font-normal'
+                        >
+                          <CalendarIcon className='mr-2 h-4 w-4' />
+                          {phaseFormData.startDate ? (
+                            format(phaseFormData.startDate, 'PPP')
+                          ) : (
+                            <span>Select start date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className='w-auto p-0'>
+                        <Calendar
+                          mode='single'
+                          selected={phaseFormData.startDate ?? undefined}
+                          onSelect={date =>
+                            handleDateChange(date, 'startDate')
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='endDate'>End Date</Label>
+                    <Popover
+                      open={endDateOpen}
+                      onOpenChange={setEndDateOpen}
+                      modal={true}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant='outline'
+                          className='w-full justify-start text-left font-normal'
+                        >
+                          <CalendarIcon className='mr-2 h-4 w-4' />
+                          {phaseFormData.endDate ? (
+                            format(phaseFormData.endDate, 'PPP')
+                          ) : (
+                            <span>Select end date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className='w-auto p-0'>
+                        <Calendar
+                          mode='single'
+                          selected={phaseFormData.endDate ?? undefined}
+                          onSelect={date => handleDateChange(date, 'endDate')}
+                          initialFocus
+                          disabled={date =>
+                            phaseFormData.startDate
+                              ? date < phaseFormData.startDate
+                              : false
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                {phaseFormData.startDate && (
+                  <div className='bg-muted p-4 rounded-md'>
+                    <div className='flex flex-col gap-4'>
+                      <div className='text-sm font-medium'>
+                        Set end date as number of days out from start date:
+                      </div>
+                      <div className='flex items-center gap-3'>
+                        <Badge
+                          className='px-3 py-1 cursor-pointer hover:bg-primary'
+                          onClick={() => setEndDateFromDays(30)}
+                        >
+                          30
+                        </Badge>
+                        <Badge
+                          className='px-3 py-1 cursor-pointer hover:bg-primary'
+                          onClick={() => setEndDateFromDays(60)}
+                        >
+                          60
+                        </Badge>
+                        <Badge
+                          className='px-3 py-1 cursor-pointer hover:bg-primary'
+                          onClick={() => setEndDateFromDays(90)}
+                        >
+                          90
+                        </Badge>
+                        <div className='flex items-center gap-2'>
+                          <Input
+                            className='w-20'
+                            onChange={e =>
+                              setEndDateFromDays(
+                                safeNumber(parseInt(e.target.value))
+                              )
+                            }
+                            placeholder='Days'
+                            type='number'
+                            min='1'
+                          />
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-
               <Separator />
-
               <div className='space-y-4'>
                 <h4 className='font-medium'>Trip and Labor</h4>
-
                 <div className='grid grid-cols-2 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='personnel'>
@@ -2400,7 +2389,6 @@ const BidItemsStep5 = ({
                     />
                   </div>
                 </div>
-
                 <div className='grid grid-cols-1 gap-4'>
                   <div>
                     <Label className='mb-2' htmlFor='maintenance-trips'>
@@ -2459,7 +2447,6 @@ const BidItemsStep5 = ({
               </div>
             </div>
           )}
-
           <DrawerFooter>
             <div className='flex justify-end space-x-3 w-full'>
               <DrawerClose asChild>
