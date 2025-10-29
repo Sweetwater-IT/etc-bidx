@@ -79,7 +79,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
             .map((item: any) => ({
                 itemNumber: item.item_number,
                 description: item.name,
-                uom: 'ea',
+                uom: 'EA',
                 notes: item.notes || "",
                 quantity: item.quantity,
                 unitPrice: item.revenue / item.quantity,
@@ -97,7 +97,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
             .map((item: any) => ({
                 itemNumber: item.item_number,
                 description: item.name,
-                uom: 'ea',
+                uom: 'EA',
                 notes: item.notes || "",
                 quantity: item.quantity,
                 unitPrice: item.quotePrice / item.quantity,
@@ -119,7 +119,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
                     itemNumber: phase.itemNumber || "N/A",
                     description: phase.itemName || "Phase Item",
                     uom: "ea",
-                    notes: "",
+                    notes: phase.notesMPTItem,
                     quantity: phase.days || 1,
                     unitPrice: totalRevenue / (phase.days || 1),
                     extendedPrice: totalRevenue,

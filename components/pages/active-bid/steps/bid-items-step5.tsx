@@ -72,6 +72,7 @@ import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Textarea } from '@/components/ui/textarea'
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
@@ -115,6 +116,7 @@ interface PhaseDrawerData {
   maintenanceTrips: number
   itemNumber: string;
   itemName: string;
+  notesMPTItem: string;
 }
 
 // Phase Action Buttons Component
@@ -495,7 +497,8 @@ const BidItemsStep5 = ({
       additionalNonRatedHours: 0,
       maintenanceTrips: 0,
       itemName: '',
-      itemNumber: ''
+      itemNumber: '',
+      notesMPTItem: ''
     })
     setEditingPhaseIndex(null)
     setDrawerOpen(true)
@@ -516,7 +519,8 @@ const BidItemsStep5 = ({
       additionalNonRatedHours: phase.additionalNonRatedHours,
       maintenanceTrips: phase.maintenanceTrips,
       itemName: phase.itemName,
-      itemNumber: phase.itemNumber
+      itemNumber: phase.itemNumber,
+      notesMPTItem: phase.notesMPTItem
     })
     setEditingPhaseIndex(phaseIndex)
     setDrawerOpen(true)
@@ -661,6 +665,15 @@ const BidItemsStep5 = ({
         payload: {
           key: 'itemName',
           value: phaseFormData.itemName,
+          phase: editingPhaseIndex
+        }
+      })
+
+      dispatch({
+        type: 'UPDATE_MPT_PHASE_TRIP_AND_LABOR',
+        payload: {
+          key: 'notesMPTItem',
+          value: phaseFormData.notesMPTItem,
           phase: editingPhaseIndex
         }
       })
@@ -2173,7 +2186,7 @@ const BidItemsStep5 = ({
                                       <CommandItem
                                         key={item.item_number.trim()}
                                         onSelect={() => {
-                                          setPhaseFormData({ ...phaseFormData, itemName: item.display_name, itemNumber: item.item_number.trim() })
+                                          setPhaseFormData({ ...phaseFormData, itemName: item.display_name, itemNumber: item.item_number.trim(), notesMPTItem: item.notes })
                                           setOpenPopverPhase((prev) => (!prev))
                                         }}
                                         className="flex items-center"
@@ -2207,6 +2220,14 @@ const BidItemsStep5 = ({
                     <p className="text-sm text-muted-foreground">
                       <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
                     </p>
+                    <div className="mt-4">
+                      <Label className="text-sm font-medium mb-2 block">Item Notes</Label>
+                      <Textarea
+                        placeholder='Enter notes'
+                        value={phaseFormData.notesMPTItem || ''}
+                        onChange={(e) => handlePhaseFormUpdate('notesMPTItem', e.target.value)}
+                      />
+                    </div>
                   </div>
                 )}
                 <div className='grid grid-cols-1 gap-4'>

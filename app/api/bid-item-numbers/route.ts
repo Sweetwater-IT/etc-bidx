@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function GET() {
   try {
     const [bidRes, saleRes, rentalRes] = await Promise.all([
-      supabase.from('bid_item_numbers').select('*').eq('is_custom', false),
+      supabase.from('mpt_items').select('*').select("*"),
       supabase.from('master_sale_items').select('*'),
       supabase.from('master_rental_items').select('*')
     ]);
@@ -15,7 +15,14 @@ export async function GET() {
       );
     }
 
-    const bidItems = bidRes.data ?? [];
+    const bidItems = (bidRes.data ?? []).map(i => ({
+      id: i.id,
+      item_number: i.item_number,
+      description: i.description,
+      uom: i.uom_1 || i.uom_2,
+      is_custom: false,
+      notes: i.notes
+    }));
 
     const saleItems = (saleRes.data ?? []).map(i => ({
       id: i.id,

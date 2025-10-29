@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from 'recharts';
 import { QuoteItem } from '@/types/IQuoteItem';
+import { ModalEnterDataOfNotes } from './components/ModalEnterDataOfNotes';
 
 const typeQuotes = [
   {
@@ -225,7 +226,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
   const [isSaving, setIsSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
   const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteMetadata || quoteMetadata })
@@ -234,7 +234,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
-  const didInitRef = useRef(false);
+  const [openModal, setOpenModal] = useState(false)
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -402,7 +402,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       if (!res.ok) throw new Error(await res.text());
 
       prevStateRef.current = { quoteItems, adminData, notes, quoteData: quoteMetadata };
-      setSecondCounter(1);
       if (!firstSave) setFirstSave(true);
 
       return true;
@@ -746,7 +745,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     bid: any
   ) => {
     if (!bid || !quoteId) return;
-    console.log(bid);
 
     const existingNumbers = quoteItems.map(item => item.itemNumber);
 
@@ -812,7 +810,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           itemNumber: phase.itemNumber,
           description: phase.itemName,
           uom: "EA",
-          notes: "",
+          notes: phase.notesMPTItem,
           quantity: 1,
           unitPrice: totalPhaseCost,
           extendedPrice: totalPhaseCost,
@@ -842,6 +840,19 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   };
 
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
+
+  useEffect(() => {
+    if (!quoteItems?.length) return
+    const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi
+
+    const itemsNeedingData = quoteItems.filter(
+      (item: any) => typeof item.notes === "string" && needsDataRegex.test(item.notes)
+    )
+
+    if (itemsNeedingData.length > 0) {
+      setOpenModal(true)
+    }
+  }, [quoteItems])
 
   return (
     <div className="flex flex-1 flex-col">
@@ -1110,6 +1121,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
           </div>
         </div>
+        <ModalEnterDataOfNotes open={openModal} setOpen={setOpenModal} />
       </div>
     </div >
   )
