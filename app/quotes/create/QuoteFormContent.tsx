@@ -79,7 +79,7 @@ const exclusions = `PLEASE NOTE THE FOLLOWING ITEMS OR SERVICES ARE EXCLUDED FRO
 
 
 
-async function createQuoteItem(item: QuoteItem) {
+export async function createQuoteItem(item: QuoteItem) {
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -755,7 +755,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .map((item: any) => ({
         itemNumber: item.item_number,
         description: item.name,
-        uom: 'ea',
+        uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
         unitPrice: item.revenue / item.quantity,
@@ -773,7 +773,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .map((item: any) => ({
         itemNumber: item.item_number,
         description: item.name,
-        uom: 'ea',
+        uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
         unitPrice: item.quotePrice / item.quantity,
@@ -811,7 +811,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         return {
           itemNumber: phase.itemNumber,
           description: phase.itemName,
-          uom: "ea",
+          uom: "EA",
           notes: "",
           quantity: 1,
           unitPrice: totalPhaseCost,
