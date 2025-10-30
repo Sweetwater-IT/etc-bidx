@@ -1365,7 +1365,7 @@ const BidItemsStep5 = ({
   }
 
   console.log(phaseFormData?.notesMPTItem);
-  
+
   // Get minimum allowed quantity for an equipment type
   const getMinQuantity = (equipmentKey: EquipmentType): number | undefined => {
     if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined
@@ -2214,19 +2214,15 @@ const BidItemsStep5 = ({
                   </div>
                 </div>
                 {(phaseFormData.itemNumber && phaseFormData.itemName) && (
-                  <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Item Number: </span>{phaseFormData.itemNumber}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
-                    </p>
-                    <div className="mt-4">
-                      <Label className="text-sm font-medium mb-2 block">Item Notes</Label>
-                      <NotesInputs
-                        value={phaseFormData.notesMPTItem || ""}
-                        onChange={(val) => handlePhaseFormUpdate("notesMPTItem", val)}
-                      />
+                  <div className="">
+
+                    <div className="p-4 mt-4 rounded-lg bg-muted/50 border" >
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Item Number: </span>{phaseFormData.itemNumber}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -2464,6 +2460,16 @@ const BidItemsStep5 = ({
                       }
                     />
                   </div>
+                </div>
+              </div>
+
+              <div className="">
+                <Label className="text-sm font-bold mb-2 block">Item Notes</Label>
+                <div className='bg-muted/50 p-4 rounded-md  border border-gray-300'>
+                    <NotesInputs
+                      value={phaseFormData.notesMPTItem || ""}
+                      onChange={(val) => handlePhaseFormUpdate("notesMPTItem", val)}
+                    />
                 </div>
               </div>
             </div>
