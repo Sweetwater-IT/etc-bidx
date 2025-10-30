@@ -19,16 +19,22 @@ const NotesInputs = ({
   }
 
   return (
-    <div className="flex flex-wrap items-baseline gap-1 text-sm leading-relaxed">
+    <div className="text-md leading-relaxed">
       {parts.map((part, i) => {
         const match = part.match(/^\[(.*?)\]$/)
         if (match) {
           return (
-            <AutoWidthInput
-              key={i}
-              value={match[1]}
-              onChange={(val) => handleInputChange(i, val)}
-            />
+            <span key={i} className="inline-block align-baseline">
+              <AutoWidthInput
+                value={
+                  match[1].toLowerCase().includes("enter") ||
+                    match[1].toLowerCase().includes("insert")
+                    ? "0"
+                    : match[1]
+                }
+                onChange={(val) => handleInputChange(i, val)}
+              />
+            </span>
           )
         }
         return (
@@ -38,6 +44,7 @@ const NotesInputs = ({
         )
       })}
     </div>
+
   )
 }
 
@@ -59,17 +66,18 @@ const AutoWidthInput = ({
   }, [value])
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-flex items-center mr-[2px]">
       <span
         ref={spanRef}
-        className="absolute opacity-0 whitespace-pre text-sm px-2"
+        className="absolute opacity-0 whitespace-pre text-md px-2 pointer-events-none"
       >
         {value || " "}
       </span>
       <Input
+        type="number"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="inline-block text-sm shadow-md"
+        className="text-sm h-[35px] min-w-[50px] px-2 text-gray-500 shadow-md border border-gray-300 rounded-md"
         style={{ width }}
       />
     </div>
