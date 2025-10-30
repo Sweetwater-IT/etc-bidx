@@ -64,7 +64,7 @@ const FlaggingViewOnly = () => {
     const { adminData, flagging } = useEstimate();
 
     const formatCurrency = (value: number | null | undefined): string => {
-        if (!value) return "-";
+        if (!value && value !== 0) return "-";
         return `$${value.toFixed(2)}`;
     };
 
@@ -73,166 +73,73 @@ const FlaggingViewOnly = () => {
         return (flagging.onSiteJobHours || 0) + Math.ceil(((adminData.owTravelTimeMins || 0) * 2) / 60);
     };
 
-    const getEquipCost = () => {
-        if (!flagging) return 0;
-
-        const arrowBoardsCost = (flagging?.arrowBoards.quantity || 0) * (flagging.arrowBoards.cost || 0);
-        const messageBoardsCost = (flagging?.messageBoards.quantity || 0) * (flagging.messageBoards.cost || 0);
-        const tmaCost = (flagging?.TMA.quantity || 0) * (flagging.TMA.cost || 0);
-
-        return arrowBoardsCost + messageBoardsCost + tmaCost;
-    };
-
-    const getTotalPrevailingWage = () => {
+    const getPrevailingWage = () => {
         if (!adminData?.county) return 0;
         return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
     };
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Standard Pricing
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {flagging?.standardPricing ? 'Yes' : 'No'}
-                </div>
-            </div>
+    const getHourlyRate = () => {
+        if (!flagging) return 0;
+        const totalHours = getTotalHours();
+        const personnel = flagging.personnel || 1;
+        if (totalHours === 0 || personnel === 0) return 0;
+        return flagging.standardLumpSum / (totalHours * personnel);
+    };
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Rate Type
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {adminData.rated || "-"}
-                </div>
-            </div>
+    const columns = [
+        {
+            key: 'grossMarginTarget',
+            header: 'Gross Margin Target',
+            render: () => flagging?.markupRate ? `${flagging.markupRate}%` : '-'
+        },
+        {
+            key: 'lumpSum',
+            header: 'Lump Sum',
+            render: () => formatCurrency(flagging?.standardLumpSum)
+        },
+        {
+            key: 'hourlyRate',
+            header: 'Hourly Rate/Man',
+            render: () => formatCurrency(getHourlyRate())
+        },
+        {
+            key: 'prevailingWage',
+            header: 'Prevailing Wage',
+            render: () => formatCurrency(getPrevailingWage())
+        },
+        {
+            key: 'personnel',
+            header: 'Personnel',
+            render: () => flagging?.personnel || '-'
+        },
+        {
+            key: 'trucks',
+            header: 'Trucks',
+            render: () => flagging?.numberTrucks || '-'
+        },
+        {
+            key: 'hoursOnSite',
+            header: 'Hours on Site',
+            render: () => flagging?.onSiteJobHours || '-'
+        },
+        {
+            key: 'overtimeHours',
+            header: 'Overtime Hours',
+            render: () => getTotalHours()
+        }
+    ];
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Prevailing Wage
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(getTotalPrevailingWage())}
-                </div>
-            </div>
+    const data = [flagging || {}];
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Personnel
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {flagging?.personnel || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Number of Trucks
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {flagging?.numberTrucks || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    One-Way Miles
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {adminData?.owMileage || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Arrow Boards
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.arrowBoards.quantity || 0} | Price: {formatCurrency(flagging?.arrowBoards.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Message Boards
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.messageBoards.quantity || 0} | Price: {formatCurrency(flagging?.messageBoards.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    TMA
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {flagging?.TMA.quantity || 0} | Price: {formatCurrency(flagging?.TMA.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    On Site Job Hour
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {flagging?.onSiteJobHours || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Hours
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getTotalHours()}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Gross Profit Margin
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {flagging?.markupRate ? `${flagging.markupRate}%` : "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Equipment Revenue
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(getEquipCost())}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Additional Costs
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(flagging?.additionalEquipmentCost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(flagging?.fuelCostPerGallon)}
-                </div>
-            </div>
-        </div>
-    );
+    return <DataTableBid columns={columns} data={data} />;
 };
 
-const ServiceWorkViewOnly = () => {
+
+export const ServiceWorkViewOnly = () => {
     const { adminData, serviceWork } = useEstimate();
 
     const formatCurrency = (value: number | null | undefined): string => {
-        if (!value) return "-";
+        if (!value && value !== 0) return "-";
         return `$${value.toFixed(2)}`;
     };
 
@@ -241,159 +148,70 @@ const ServiceWorkViewOnly = () => {
         return (serviceWork.onSiteJobHours || 0) + Math.ceil(((adminData.owTravelTimeMins || 0) * 2) / 60);
     };
 
-    const getEquipCost = () => {
-        if (!serviceWork) return 0;
-
-        const arrowBoardsCost = (serviceWork?.arrowBoards.quantity || 0) * (serviceWork.arrowBoards.cost || 0);
-        const messageBoardsCost = (serviceWork?.messageBoards.quantity || 0) * (serviceWork.messageBoards.cost || 0);
-        const tmaCost = (serviceWork?.TMA.quantity || 0) * (serviceWork.TMA.cost || 0);
-
-        return arrowBoardsCost + messageBoardsCost + tmaCost;
-    };
-
     const getTotalPrevailingWage = () => {
         if (!adminData?.county) return 0;
         return (adminData.county.laborRate || 0) + (adminData.county.fringeRate || 0);
     };
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 mb-4 pb-4">
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Rate Type
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {adminData.rated || "-"}
-                </div>
-            </div>
+    const getTotalCost = () => {
+        if (!serviceWork) return 0;
+        const arrowBoardsCost = (serviceWork?.arrowBoards.quantity || 0) * (serviceWork.arrowBoards.cost || 0);
+        const messageBoardsCost = (serviceWork?.messageBoards.quantity || 0) * (serviceWork.messageBoards.cost || 0);
+        const tmaCost = (serviceWork?.TMA.quantity || 0) * (serviceWork.TMA.cost || 0);
+        return arrowBoardsCost + messageBoardsCost + tmaCost + (serviceWork.additionalEquipmentCost || 0);
+    };
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Shop Rate
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(adminData.county?.shopRate)}
-                </div>
-            </div>
+    const columns = [
+        {
+            key: 'grossMarginTarget',
+            header: 'Gross Margin Target',
+            render: () => serviceWork?.markupRate ? `${serviceWork.markupRate}%` : "-",
+        },
+        {
+            key: 'lumpSum',
+            header: 'Lump Sum',
+            render: () => formatCurrency(serviceWork?.standardLumpSum),
+        },
+        {
+            key: 'hourlyRate',
+            header: 'Hourly Rate/Man',
+            render: () => {
+                const totalHours = getTotalHours();
+                const personnel = serviceWork?.personnel || 1;
+                const totalCost = getTotalCost();
+                return totalHours ? formatCurrency(totalCost / (totalHours * personnel)) : "-";
+            },
+        },
+        {
+            key: 'prevailingWage',
+            header: 'Prevailing Wage',
+            render: () => formatCurrency(getTotalPrevailingWage()),
+        },
+        {
+            key: 'personnel',
+            header: 'Personnel',
+            render: () => serviceWork?.personnel || "-",
+        },
+        {
+            key: 'trucks',
+            header: 'Trucks',
+            render: () => serviceWork?.numberTrucks || "-",
+        },
+        {
+            key: 'hoursOnSite',
+            header: 'Hours on Site',
+            render: () => serviceWork?.onSiteJobHours || "-",
+        },
+        {
+            key: 'overtimeHours',
+            header: 'Overtime Hours',
+            render: () => getTotalHours(),
+        },
+    ];
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Prevailing Wage
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(getTotalPrevailingWage())}
-                </div>
-            </div>
+    const data = [serviceWork || {}];
 
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Personnel
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {serviceWork?.personnel || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Number of Trucks
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {serviceWork?.numberTrucks || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    One-Way Miles
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {adminData?.owMileage || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Arrow Boards
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.arrowBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.arrowBoards.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Message Boards
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.messageBoards.quantity || 0} | Price: {formatCurrency(serviceWork?.messageBoards.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    TMA
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    Qty: {serviceWork?.TMA.quantity || 0} | Price: {formatCurrency(serviceWork?.TMA.cost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    On Site Job Hour
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {serviceWork?.onSiteJobHours || "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Hours
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {getTotalHours()}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Gross Profit Margin
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {serviceWork?.markupRate ? `${serviceWork.markupRate}%` : "-"}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Total Equipment Revenue
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(getEquipCost())}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Additional Costs
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(serviceWork?.additionalEquipmentCost)}
-                </div>
-            </div>
-
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold">
-                    Gas Cost Per Gallon
-                </label>
-                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                    {formatCurrency(serviceWork?.fuelCostPerGallon)}
-                </div>
-            </div>
-        </div>
-    );
+    return <DataTableBid columns={columns} data={data} />;
 };
 
 const MPTViewOnly = () => {
@@ -510,119 +328,6 @@ const MPTViewOnly = () => {
     );
 };
 
-// Add these components to your BidItemsViewOnly file
-
-// const EquipmentRentalViewOnly = () => {
-//     const { equipmentRental } = useEstimate();
-
-//     const formatCurrency = (value: number | null | undefined): string => {
-//         if (!value) return "-";
-//         return `$${value.toFixed(2)}`;
-//     };
-
-//     const calculateTotal = (item: any) => {
-//         const monthlyTotal = item.quantity * item.months * item.rentPrice;
-//         const reRentTotal = item.reRentForCurrentJob ? (item.quantity * item.reRentPrice) : 0;
-//         return monthlyTotal + reRentTotal;
-//     };
-
-//     return (
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-//             {equipmentRental && equipmentRental.length > 0 ? (
-//                 equipmentRental.map((item, index) => (
-//                     <React.Fragment key={index}>
-//                         <div className="flex flex-col col-span-3 border-b border-border pb-2 mb-2">
-//                             <label className="text-sm font-semibold">
-//                                 {item.name}
-//                             </label>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Quantity
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {item.quantity || "-"}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Months
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {item.months || "-"}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Rent Price
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {formatCurrency(item.rentPrice)}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Re-Rent Cost
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {formatCurrency(item.reRentPrice)}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Re-Rent for Current Job
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {item.reRentForCurrentJob ? 'Yes' : 'No'}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex flex-col">
-//                             <label className="text-sm font-semibold">
-//                                 Total Cost
-//                             </label>
-//                             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                 {formatCurrency(calculateTotal(item))}
-//                             </div>
-//                         </div>
-
-//                         {item.totalCost && (
-//                             <div className="flex flex-col">
-//                                 <label className="text-sm font-semibold">
-//                                     Equipment Cost
-//                                 </label>
-//                                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                     {formatCurrency(item.totalCost)}
-//                                 </div>
-//                             </div>
-//                         )}
-
-//                         {item.usefulLifeYrs && (
-//                             <div className="flex flex-col">
-//                                 <label className="text-sm font-semibold">
-//                                     Useful Life (Years)
-//                                 </label>
-//                                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-//                                     {item.usefulLifeYrs}
-//                                 </div>
-//                             </div>
-//                         )}
-//                     </React.Fragment>
-//                 ))
-//             ) : (
-//                 <div className="col-span-3 text-center py-8 text-muted-foreground">
-//                     No equipment rental items configured
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-
 const SaleItemsViewOnly = () => {
     const { saleItems } = useEstimate();
 
@@ -649,8 +354,8 @@ const SaleItemsViewOnly = () => {
             const grossMargin = revenue ? ((revenue - totalCost) / revenue) * 100 : 0;
 
             return {
-                id: item.itemNumber,
-                itemNumber: item.item_number || "-",
+                id: item.item_number,
+                item_number: item.item_number || "-",
                 name: item.name || "-",
                 quantity,
                 salePrice: formatCurrency(salePrice),
@@ -680,244 +385,103 @@ const SaleItemsViewOnly = () => {
 
 
 
-const PermanentSignsViewOnly = () => {
-    const { permanentSigns, adminData, mptRental } = useEstimate();
-    console.log('PermanentSignsViewOnly rendered with:', { permanentSigns });
+export const PermanentSignsViewOnly = () => {
+    const { permanentSigns, adminData, mptRental } = useEstimate()
+
     const formatCurrency = (value: number | null | undefined): string => {
-        if (!value) return "-";
-        return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
+        if (!value && value !== 0) return '-'
+        return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
 
     const formatNumber = (value: number | null | undefined): string => {
-        if (!value) return "-";
-        return value.toString();
-    };
+        if (!value && value !== 0) return '-'
+        return value.toString()
+    }
 
     if (!permanentSigns || permanentSigns.signItems.length === 0) {
         return (
             <div className="text-center py-8 text-muted-foreground">
                 No permanent signs configured
             </div>
-        );
+        )
     }
 
+    const columns = [
+        {
+            key: 'itemName',
+            header: 'Item Name',
+            render: (row: any) => getDisplayName(determineItemType(row)),
+        },
+        {
+            key: 'itemNumber',
+            header: 'Item Number',
+            render: (row: any) => row.itemNumber || '-',
+        },
+        {
+            key: 'totalRevenue',
+            header: 'Total Revenue',
+            render: (row: any) =>
+                formatCurrency(getPermanentSignRevenueAndMargin(permanentSigns, row, adminData, mptRental).revenue),
+        },
+        {
+            key: 'totalCost',
+            header: 'Total Cost',
+            render: (row: any) =>
+                formatCurrency(getPermSignTotalCost(determineItemType(row), permanentSigns, row, adminData, mptRental)),
+        },
+        {
+            key: 'grossMargin',
+            header: 'Gross Margin',
+            render: (row: any) => {
+                const gm = getPermanentSignRevenueAndMargin(permanentSigns, row, adminData, mptRental).grossMargin
+                return (!gm && gm !== 0) || isNaN(gm) ? 'N/A' : `${(gm * 100).toFixed(2)}%`
+            },
+        },
+        {
+            key: 'squareFootage',
+            header: 'Square Footage',
+            render: (row: any) => {
+                const type = determineItemType(row)
+                return type === 'pmsTypeB' || type === 'pmsTypeC' || type === 'pmsTypeF'
+                    ? formatNumber((row as PostMountedInstall | PostMountedInstallTypeC).signSqFootage)
+                    : '-'
+            },
+        },
+        {
+            key: 'signCostSqft',
+            header: 'Sign Cost/Sqft',
+            render: (row: any) => {
+                const type = determineItemType(row)
+                if (!(type === 'pmsTypeB' || type === 'pmsTypeC' || type === 'pmsTypeF')) return '-'
+                const cost = getPermSignTotalCost(type, permanentSigns, row, adminData, mptRental)
+                const sqft = (row as PostMountedInstall | PostMountedInstallTypeC).signSqFootage
+                return sqft ? formatCurrency(cost / sqft) : '-'
+            },
+        },
+        {
+            key: 'signPriceSqft',
+            header: 'Sign Price/Sqft',
+            render: (row: any) => {
+                const type = determineItemType(row)
+                if (!(type === 'pmsTypeB' || type === 'pmsTypeC' || type === 'pmsTypeF')) return '-'
+                const revenue = getPermanentSignRevenueAndMargin(permanentSigns, row, adminData, mptRental).revenue
+                const sqft = (row as PostMountedInstall | PostMountedInstallTypeC).signSqFootage
+                return sqft ? formatCurrency(revenue / sqft) : '-'
+            },
+        },
+    ]
 
-    return (
-        <div className="space-y-4">
-            {permanentSigns.signItems.map(pmsItem => {
-                const itemType = determineItemType(pmsItem);
-                const revenue = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).revenue;
-                const totalCost = getPermSignTotalCost(itemType, permanentSigns, pmsItem, adminData, mptRental);
-                const grossMargin = getPermanentSignRevenueAndMargin(permanentSigns, pmsItem, adminData, mptRental).grossMargin;
+    const data = permanentSigns.signItems || []
 
-
-                return (
-                    <div
-                        key={`sign-${pmsItem.id}`}
-                        className="rounded-lg border-0 p-4"
-                    >
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="font-medium text-lg">{getDisplayName(itemType)}</div>
-                            <div className="text-sm text-muted-foreground">
-                                Item: {pmsItem.itemNumber || 'N/A'}
-                            </div>
-                        </div>
-
-                        {/* Key Metrics Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Quantity
-                                </label>
-                                <div className="pr-3 py-1 text-muted-foreground">
-                                    {formatNumber(pmsItem.quantity)}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Personnel
-                                </label>
-                                <div className="pr-3 py-1 text-muted-foreground">
-                                    {formatNumber(pmsItem.personnel)}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <label className="text-sm font-semibold">
-                                    Install Hours
-                                </label>
-                                <div className="pr-3 py-1 text-muted-foreground">
-                                    {formatNumber(pmsItem.installHoursRequired)}
-                                </div>
-                            </div>
-
-                            {/* Sign Square Footage for relevant types */}
-                            {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Sign Sq. Footage
-                                    </label>
-                                    <div className="pr-3 py-1 text-muted-foreground">
-                                        {formatNumber((pmsItem as PostMountedInstall | PostMountedInstallTypeC).signSqFootage)}
-                                    </div>
-                                </div>
-                            )}
-
-
-
-                            {/* Perm Sign Bolts (if applicable) */}
-                            {pmsItem.permSignBolts && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Perm. Sign Bolts
-                                    </label>
-                                    <div className="pr-3 py-1 text-muted-foreground">
-                                        {formatNumber(pmsItem.permSignBolts)}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Flexible Delineator Cost */}
-                            {itemType === 'flexibleDelineator' && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Cost per Unit
-                                    </label>
-                                    <div className="pr-3 py-1 text-muted-foreground">
-                                        {formatCurrency((pmsItem as InstallFlexibleDelineators).flexibleDelineatorCost)}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Additional Items Count */}
-                            {'additionalItems' in pmsItem && pmsItem.additionalItems && pmsItem.additionalItems.length > 0 && (
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Additional Items
-                                    </label>
-                                    <div className="pr-3 py-1 text-muted-foreground">
-                                        {pmsItem.additionalItems.length} item(s)
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Additional Items Detail */}
-                        {'additionalItems' in pmsItem && pmsItem.additionalItems && pmsItem.additionalItems.length > 0 && (
-                            <div className="mb-4">
-                                <label className="text-sm font-semibold mb-2 block">
-                                    Additional Equipment Details
-                                </label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {pmsItem.additionalItems.map((item, index) => {
-                                        const displayName = Object.entries(ADDITIONAL_EQUIPMENT_OPTIONS).find(
-                                            ([_, value]) => value === item.equipmentType
-                                        )?.[0] || item.equipmentType;
-
-                                        return (
-                                            <div key={index} className="text-sm text-muted-foreground">
-                                                {displayName}: {item.quantity}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Financial Summary */}
-                        <div className="border-t pt-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Total Revenue
-                                    </label>
-                                    <div className="pr-3 py-1 text-green-600 font-medium">
-                                        {formatCurrency(revenue)}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Total Cost
-                                    </label>
-                                    <div className="pr-3 py-1 text-red-600 font-medium">
-                                        {formatCurrency(totalCost)}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Gross Margin
-                                    </label>
-                                    <div className="pr-3 py-1 text-blue-600 font-medium">
-                                        {(!grossMargin && grossMargin !== 0) || isNaN(grossMargin) ?
-                                            "N/A" :
-                                            `${(grossMargin * 100).toFixed(2)}%`}
-                                    </div>
-                                </div>
-
-                                {/* Price per unit for different types */}
-                                {(itemType === 'pmsTypeB' || itemType === 'pmsTypeF' || itemType === 'pmsTypeC') ? (
-                                    <div className="flex flex-col">
-                                        <label className="text-sm font-semibold">
-                                            Price per Sq. Ft.
-                                        </label>
-                                        <div className="pr-3 py-1 text-muted-foreground">
-                                            {formatCurrency(revenue / (pmsItem as PostMountedInstall | PostMountedInstallTypeC).signSqFootage)}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col">
-                                        <label className="text-sm font-semibold">
-                                            Price per Unit
-                                        </label>
-                                        <div className="pr-3 py-1 text-muted-foreground">
-                                            {formatCurrency(revenue / pmsItem.quantity)}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex flex-col">
-                                    <label className="text-sm font-semibold">
-                                        Days Required
-                                    </label>
-                                    <div className="pr-3 py-1 text-muted-foreground">
-                                        {getPermSignDaysRequired(pmsItem.installHoursRequired, permanentSigns.maxDailyHours)}
-                                    </div>
-                                </div>
-
-                                {!pmsItem.standardPricing && (
-                                    <div className="flex flex-col">
-                                        <label className="text-sm font-semibold">
-                                            Custom Margin
-                                        </label>
-                                        <div className="pr-3 py-1 text-orange-600 font-medium">
-                                            {pmsItem.customMargin ? `${(pmsItem.customMargin * 100).toFixed(2)}%` : 'N/A'}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
+    return <DataTableBid columns={columns} data={data} />
+}
 
 const BidItemsViewOnly = () => {
     const [activeTab, setActiveTab] = useState("mpt");
     const [equipmentData, setEquipmentData] = useState<EquipmentRentalTableData[]>([]);
     const [loading, setLoading] = useState(false);
-    const { equipmentRental } = useEstimate(); // ← Obtén los datos del contexto
+    const { equipmentRental } = useEstimate();
 
-
-    console.log('ejjeje', equipmentRental);
-    
-
-    // Define las columnas para el DataTable
     const EQUIPMENT_COLUMNS = [
         { key: 'item_number', header: 'Item Number', className: 'text-left' },
         { key: 'name', header: 'Equipment', className: 'text-left' },
@@ -935,12 +499,12 @@ const BidItemsViewOnly = () => {
     };
 
     const transformEquipmentData = (equipmentRental: any[]): EquipmentRentalTableData[] => {
-        console.log(equipmentRental);
-        
         return equipmentRental.map(item => ({
-            item_number: item.item_number || '-',
+            item_number: item.item_number,
             id: item.id || null,
             name: item.name || '-',
+            uom: item.uom || '-',
+            uom_type: item.uom_type || '-',
             quantity: item.quantity || null,
             months: item.months || null,
             rentPrice: item.rentPrice || null,
@@ -954,7 +518,7 @@ const BidItemsViewOnly = () => {
 
 
     console.log('transformed ', transformEquipmentData(equipmentRental || []));
-    
+
     useEffect(() => {
         if (equipmentRental && equipmentRental.length > 0) {
             const transformedData = transformEquipmentData(equipmentRental);

@@ -68,7 +68,6 @@ const EquipmentSummaryStep = () => {
     let isMounted = true;
     const setItemPrices = async () => {
       const rentalItemsData = await fetchReferenceData('rental_items');
-      console.log('Datos de rental_items:', rentalItemsData);
       if (isMounted) {
         const uniqueRentalItems = rentalItemsData.filter(
           (item: RentalItem, index: number, self: RentalItem[]) =>
@@ -130,7 +129,7 @@ const EquipmentSummaryStep = () => {
     const finalFormData = {
       ...formData,
       name: finalName,
-      ...(isCustom ? {} : { itemNumber: formData.item_number }),
+      ...(isCustom ? {} : { item_number: formData.item_number }),
     };
 
     if (editingIndex !== null) {
@@ -196,7 +195,7 @@ const EquipmentSummaryStep = () => {
 
   const EQUIPMENT_COLUMNS = [
     {
-      key: 'itemNumber',
+      key: 'item_number',
       title: 'Item Number',
       className: 'text-left'
     },
@@ -239,7 +238,7 @@ const EquipmentSummaryStep = () => {
 
   const formattedData = equipmentRental.map(item => ({
     ...item,
-    itemNumber: item.item_number || '-',
+    item_number: item.item_number || '-',
     rentPrice: formatCurrency(item.rentPrice),
     reRentPrice: formatCurrency(item.reRentPrice)
   }));
