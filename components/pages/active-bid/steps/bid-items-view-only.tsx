@@ -642,7 +642,7 @@ const SaleItemsViewOnly = () => {
 
             return {
                 id: item.itemNumber,
-                itemNumber: item.itemNumber || '-',
+                itemNumber: item.item_number || '-',
                 name: item.name || '-',
                 quantity,
                 salePrice: formatCurrency(salePrice),
@@ -903,19 +903,15 @@ const BidItemsViewOnly = () => {
     const [loading, setLoading] = useState(false);
     const { equipmentRental } = useEstimate(); // ← Obtén los datos del contexto
 
-
-
     // Define las columnas para el DataTable
-    const equipmentColumns: LegacyColumn[] = [
-        { key: 'name', title: 'Equipment Name', sortable: true },
-        { key: 'quantity', title: 'Qty', sortable: true },
-        { key: 'months', title: 'Months', sortable: true },
-        { key: 'rentPrice', title: 'Rent Price', sortable: true },
-        { key: 'reRentPrice', title: 'Re-Rent Price', sortable: true },
-        // { key: 'reRentForCurrentJob', title: 'Re-Rent Current Job', sortable: true },
-        // { key: 'totalCost', title: 'Total Cost', sortable: true },
-        // { key: 'equipmentCost', title: 'Equipment Cost', sortable: true },
-        // { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
+    const EQUIPMENT_COLUMNS = [
+        { key: 'item-number', title: 'Item Number', className: 'text-left' },
+        { key: 'name', title: 'Equipment', className: 'text-left' },
+        { key: 'quantity', title: 'Quantity', className: 'text-left' },
+        { key: 'uom', title: 'UOM', className: 'text-left' },
+        { key: 'uom_type', title: 'Type UOM', className: 'text-left' },
+        { key: 'rentPrice', title: 'Rent Price', className: 'text-left' },
+        { key: 'reRentPrice', title: 'Re-rent Price', className: 'text-left' },
     ];
 
     const calculateTotal = (item: any): number => {
@@ -929,16 +925,19 @@ const BidItemsViewOnly = () => {
             id: item.id || null,
             name: item.name || '-',
             quantity: item.quantity || null,
-            months: item.months || null,
-            rentPrice: item.rentPrice || null,
-            reRentPrice: item.reRentPrice || null,
+            item_number: item.item_number || '-', 
+            uom: item.uom || null,
+            uom_type: item.uom_type || null,
+            rentPrice: item.rentPrice ?? 0,
+            reRentPrice: item.reRentPrice ?? 0,
             reRentForCurrentJob: item.reRentForCurrentJob ? 'Yes' : 'No',
-            totalCost: calculateTotal(item) || null,
-            equipmentCost: item.totalCost || null,
-            usefulLifeYrs: item.usefulLifeYrs || null
+            totalCost: item.totalCost ?? 0,
+            usefulLifeYrs: item.usefulLifeYrs ?? 0,
+            notes: item.notes || '',
+            equipmentCost: 0,
+            months: item.uom
         }));
     };
-
     // Obtener los datos del equipment rental cuando cambie el contexto
     useEffect(() => {
         if (equipmentRental && equipmentRental.length > 0) {
@@ -1014,7 +1013,7 @@ const BidItemsViewOnly = () => {
                     {equipmentData.length > 0 ? (
                         <div className="px-6">
                             <DataTable
-                                columns={equipmentColumns}
+                                columns={EQUIPMENT_COLUMNS}
                                 data={equipmentData}
                                 pageSize={10}
                                 hideDropdown={true}

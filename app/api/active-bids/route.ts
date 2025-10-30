@@ -801,7 +801,7 @@ export async function POST(request: NextRequest) {
         bid_estimate_id: bidEstimateId,
         job_id: null,
         name: item.name,
-        item_number: item.itemNumber,
+        item_number: item.item_number,
         quantity: item.quantity,
         notes: item.notes,
         uom: item.uom,

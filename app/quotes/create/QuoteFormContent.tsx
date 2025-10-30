@@ -752,7 +752,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
+        item_name: item.name,
         uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
@@ -770,7 +770,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
+        item_name: item.name,
         uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
@@ -808,7 +808,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
         return {
           itemNumber: phase.itemNumber,
-          description: phase.itemName,
+          item_name: phase.itemName,
           uom: "EA",
           notes: phase.notesMPTItem,
           quantity: 1,
@@ -855,6 +855,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       setOpenModal(true);
     }
   }, [quoteItems]);
+
+  console.log(quoteItems);
+
 
   return (
     <div className="flex flex-1 flex-col">

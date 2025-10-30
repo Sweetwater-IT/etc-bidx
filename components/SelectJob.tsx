@@ -78,7 +78,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
             .filter((item: any) => !existingNumbers.includes(item.item_number))
             .map((item: any) => ({
                 itemNumber: item.item_number,
-                description: item.name,
+                item_name: item.name,
                 uom: 'EA',
                 notes: item.notes || "",
                 quantity: item.quantity,
@@ -96,7 +96,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
             .filter((item: any) => !existingNumbers.includes(item.item_number))
             .map((item: any) => ({
                 itemNumber: item.item_number,
-                description: item.name,
+                item_name: item.name,
                 uom: 'EA',
                 notes: item.notes || "",
                 quantity: item.quantity,
@@ -117,7 +117,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
                 const totalRevenue = job.mpt_rental?._summary?.revenue || 0;
                 return {
                     itemNumber: phase.itemNumber || "N/A",
-                    description: phase.itemName || "Phase Item",
+                    item_name: phase.itemName || "Phase Item",
                     uom: "ea",
                     notes: phase.notesMPTItem,
                     quantity: phase.days || 1,

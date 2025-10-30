@@ -3,6 +3,7 @@ export type SaleItem = {
   name: string
   notes: string
   quantity: number
+  description?: string;
   totalCost: number
   revenue: number
   gross_profit: number
@@ -11,5 +12,6 @@ export type SaleItem = {
   item_description: string
   quote_price: number;
   markup_percentage: number
+  uom?: any;
 
 }

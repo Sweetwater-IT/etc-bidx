@@ -8,7 +8,7 @@ function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
     return {
         id: String(item.id),
         itemNumber: item.item_number || "",
-        description: item.description || "",
+        item_name: item.item_name || "",
         uom: item.uom || "",
         notes: item.notes || "",
         quantity: item.quantity || 0,
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         is_tax_percentage,
         associatedItems = [],
         notes,
+        item_name,
     } = body;
 
 
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
         .insert([{
             quote_id: quote_id ?? null,
             item_number: itemNumber || null,
-            description: description || null,
+            item_name: item_name || null,
             uom: uom || null,
             quantity: quantity ?? 0,
             unit_price: unitPrice ?? 0,

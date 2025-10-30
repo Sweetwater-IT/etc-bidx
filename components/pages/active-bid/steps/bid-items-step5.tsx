@@ -2221,7 +2221,7 @@ const BidItemsStep5 = ({
                         <span className="font-medium text-foreground">Item Number: </span>{phaseFormData.itemNumber}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Description: </span>{phaseFormData.itemName}
+                        <span className="font-medium text-foreground">Item Name: </span>{phaseFormData.itemName}
                       </p>
                     </div>
                   </div>

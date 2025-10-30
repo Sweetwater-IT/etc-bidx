@@ -63,7 +63,7 @@ export function ProductSheet({
         if (subItem) {
           setNewProduct({
             itemNumber: subItem.itemNumber || "",
-            description: subItem.description || "",
+            item_item_name: subItem.item_name || "",
             uom: subItem.uom || "",
             quantity: subItem.quantity || 1,
             unitPrice: subItem.unitPrice || "",
@@ -85,7 +85,7 @@ export function ProductSheet({
         } else {
           setNewProduct({
             itemNumber: "",
-            description: "",
+            item_name: "",
             uom: "",
             quantity: 1,
             unitPrice: "",
@@ -103,7 +103,7 @@ export function ProductSheet({
       } else {
         setNewProduct({
           itemNumber: item.itemNumber || "",
-          description: item.description || "",
+          item_name: item.item_name || "",
           uom: item.uom || "",
           quantity: item.quantity || 1,
           unitPrice: item.unitPrice || "",
@@ -125,7 +125,7 @@ export function ProductSheet({
     } else {
       setNewProduct({
         itemNumber: "",
-        description: "",
+        item_name: "",
         uom: "",
         quantity: 1,
         unitPrice: "",
@@ -144,7 +144,7 @@ export function ProductSheet({
     open,
     editingSubItemId,
     item.associatedItems,
-    item.description,
+    item.item_name,
     item.discount,
     item.discountType,
     item.itemNumber,
@@ -182,16 +182,16 @@ export function ProductSheet({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-[15px] font-medium text-muted-foreground">
-              Description
+              Item Name
             </Label>
             <Input
               className="bg-background"
-              placeholder="Enter product description"
-              value={newProduct.description}
+              placeholder="Enter product name"
+              value={newProduct.item_name}
               onChange={(e) =>
                 setNewProduct((prev) => ({
                   ...prev,
-                  description: e.target.value,
+                  item_name: e.target.value,
                 }))
               }
             />
@@ -389,7 +389,7 @@ export function ProductSheet({
                   const subItemData = {
                     id: editingSubItemId,
                     itemNumber: newProduct.itemNumber,
-                    description: newProduct.description,
+                    item_name: newProduct.item_name,
                     uom: newProduct.uom,
                     quantity: Number(newProduct.quantity),
                     unitPrice: Number(newProduct.unitPrice),
@@ -415,7 +415,7 @@ export function ProductSheet({
                   const updatedItem = {
                     ...item,
                     itemNumber: newProduct.itemNumber,
-                    description: newProduct.description,
+                    item_name: newProduct.item_name,
                     uom: newProduct.uom,
                     quantity: Number(newProduct.quantity),
                     unitPrice: Number(newProduct.unitPrice),
@@ -461,7 +461,7 @@ export function ProductSheet({
                 if (needAddItem) {
                   const baseItem: QuoteItem = {
                     itemNumber: "",
-                    description: "",
+                    item_name: "",
                     uom: "",
                     quantity: 0,
                     unitPrice: 0,

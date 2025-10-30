@@ -17,6 +17,7 @@ export async function GET() {
 
     const bidItems = (bidRes.data ?? []).map(i => ({
       id: i.id,
+      item_name: i.display_name,
       item_number: i.item_number,
       description: i.description,
       uom: i.uom_1 || i.uom_2,
@@ -26,6 +27,7 @@ export async function GET() {
 
     const saleItems = (saleRes.data ?? []).map(i => ({
       id: i.id,
+      item_name: i.display_name,
       item_number: i.item_number,
       description: i.item_description,
       uom: i.uom,
@@ -35,6 +37,7 @@ export async function GET() {
 
     const rentalItems = (rentalRes.data ?? []).map(i => ({
       id: i.id,
+      item_name: i.display_name,
       item_number: i.item_number,
       description: i.item_description,
       uom: i.uom_1,

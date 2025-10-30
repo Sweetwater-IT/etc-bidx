@@ -35,7 +35,7 @@ const AdminInfoViewOnly = () => {
                 const bidNotes: INote[] = data.notes.map(note => ({
                     text: note.text,
                     timestamp: new Date(note.created_at).getTime()
-                }));
+                }));                
                 //estimate-view is not completley accurate yet, but eventually we could pass the whole down
                 //to one reducer functio nand update all the state at once
                 dispatch({ type: 'COPY_ADMIN_DATA', payload: data.admin_data as any });

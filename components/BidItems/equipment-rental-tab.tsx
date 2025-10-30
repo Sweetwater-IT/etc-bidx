@@ -48,6 +48,7 @@ interface RentalItem {
   item_number: string;
   display_name: string;
   item_description: string;
+  item_name: string;
 }
 
 const EquipmentSummaryStep = () => {
@@ -58,6 +59,7 @@ const EquipmentSummaryStep = () => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<EquipmentRentalItem | null>(null);
   const [isCustom, setIsCustom] = useState(false);
+
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ item: any, index: number } | null>(null);
@@ -85,7 +87,7 @@ const EquipmentSummaryStep = () => {
   const handleAddEquipment = () => {
     setFormData({
       name: '',
-      itemNumber: '',
+      item_number: '',
       item_description: '',
       quantity: 0,
       uom: 0,
@@ -107,7 +109,7 @@ const EquipmentSummaryStep = () => {
     setFormData({ ...itemToEdit });
     setEditingIndex(index);
     // Check if the item is a standard one or a custom one
-    const isStandard = rentalItems.some(item => item.item_number === itemToEdit.itemNumber);
+    const isStandard = rentalItems.some(item => item.item_number === itemToEdit.item_number);
     setIsCustom(!isStandard);
     setDrawerOpen(true);
   };
@@ -128,10 +130,12 @@ const EquipmentSummaryStep = () => {
     const finalFormData = {
       ...formData,
       name: finalName,
-      itemNumber: isCustom ? '' : formData.itemNumber,
+      ...(isCustom ? {} : { itemNumber: formData.item_number }),
     };
 
     if (editingIndex !== null) {
+      console.log('entro a dispatch update rental item', finalFormData);
+
       (Object.keys(finalFormData) as Array<keyof EquipmentRentalItem>).forEach(key => {
         dispatch({
           type: 'UPDATE_RENTAL_ITEM',
@@ -143,11 +147,14 @@ const EquipmentSummaryStep = () => {
         });
       });
     } else {
+      console.log('entro a dispatch add rental item', finalFormData);
+
       dispatch({
         type: 'ADD_RENTAL_ITEM',
         payload: finalFormData,
       });
     }
+
 
     setDrawerOpen(false);
     setFormData(null);
@@ -232,7 +239,7 @@ const EquipmentSummaryStep = () => {
 
   const formattedData = equipmentRental.map(item => ({
     ...item,
-    itemNumber: item.itemNumber || '-',
+    itemNumber: item.item_number || '-',
     rentPrice: formatCurrency(item.rentPrice),
     reRentPrice: formatCurrency(item.reRentPrice)
   }));
@@ -317,7 +324,7 @@ const EquipmentSummaryStep = () => {
                       <div className="max-h-[200px] overflow-y-auto">
                         <CommandEmpty>No equipment found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', itemNumber: '' }); }} className="flex items-center">
+                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', item_number: '' }); }} className="flex items-center">
                             <Check className={cn("mr-2 h-4 w-4", isCustom ? "opacity-100" : "opacity-0")} />
                             Custom
                           </CommandItem>
@@ -328,16 +335,16 @@ const EquipmentSummaryStep = () => {
                               value={`${item.display_name} ${item.item_number}`}
                               onSelect={() => {
                                 handleFormUpdate({
-                                  itemNumber: item.item_number,
+                                  item_number: item.item_number,
                                   name: item.display_name,
-                                  item_description: item.item_description
+                                  item_description: item.item_name
                                 });
                                 setIsCustom(false);
                                 setOpen(false);
                               }}
                               className="flex items-center"
                             >
-                              <Check className={cn("mr-2 h-4 w-4", formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0")} />
+                              <Check className={cn("mr-2 h-4 w-4", formData.item_number === item.item_number ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
                                 <span>{item.display_name}</span>
                                 <span className="text-xs text-muted-foreground">
@@ -354,13 +361,13 @@ const EquipmentSummaryStep = () => {
               </Popover>
 
               {/* Item Number and Description Display */}
-              {formData.itemNumber && formData.name && !isCustom && (
+              {formData.item_number && formData.name && !isCustom && (
                 <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Item Number: </span>{formData.itemNumber}
+                    <span className="font-medium text-foreground">Item Number: </span>{formData.item_number}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Description: </span>{formData.item_description || formData.name}
+                    <span className="font-medium text-foreground">Item Name: </span>{formData.item_description || formData.name}
                   </p>
                 </div>
               )}

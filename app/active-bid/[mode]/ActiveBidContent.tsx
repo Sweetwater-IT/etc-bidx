@@ -56,11 +56,10 @@ function ActiveBidContent({ mode }: { mode: string }) {
     const bidId = searchParams?.get('bidId')
 
     useEffect(() => {
-
         const getEstimateMetadata = async () => {
             startLoading();
 
-            if (bidId && bidId !== '') {
+            if (bidId && bidId !== '') {                
                 const response = await fetchActiveBidById(bidId)
 
                 if (!response) {
