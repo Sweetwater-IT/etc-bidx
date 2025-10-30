@@ -9,7 +9,6 @@ import PhasesViewOnly from './phases-view-only';
 import SignsViewOnly from './signs-view-only';
 import TripAndLaborViewOnlyAll from './trip-and-labor-view-only';
 import { LegacyColumn, EquipmentRentalTableData } from '@/types/LegacyColumn'
-import { DataTable } from '@/components/data-table'
 import { DataTableBid } from './DataTableBid';
 
 const SALE_ITEMS_COLUMNS = [
@@ -632,8 +631,16 @@ const SaleItemsViewOnly = () => {
         return `$${value.toFixed(2)}`;
     };
 
+    const SALE_ITEMS_COLUMNS = [
+        { key: "item_number", header: "Item Number" },
+        { key: "name", header: "Item Name" },
+        { key: "quantity", header: "Quantity" },
+        { key: "salePrice", header: "Sale Price" },
+        { key: "grossMargin", header: "Gross Margin" },
+    ];
+
     const transformSaleItems = (saleItems: any[]) => {
-        return saleItems.map(item => {
+        return saleItems.map((item) => {
             const quantity = Number(item.quantity) || 0;
             const revenue = Number(item.revenue) || 0;
             const totalCost = Number(item.totalCost) || 0;
@@ -643,8 +650,8 @@ const SaleItemsViewOnly = () => {
 
             return {
                 id: item.itemNumber,
-                itemNumber: item.itemNumber || '-',
-                name: item.name || '-',
+                itemNumber: item.item_number || "-",
+                name: item.name || "-",
                 quantity,
                 salePrice: formatCurrency(salePrice),
                 grossMargin: `${grossMargin.toFixed(2)}%`,
@@ -653,12 +660,13 @@ const SaleItemsViewOnly = () => {
     };
 
     return (
-        <div className="">
+        <div>
             {saleItems && saleItems.length > 0 ? (
-                <div className='w-full'>
-                    <DataTable
+                <div className="w-full">
+                    <DataTableBid
                         columns={SALE_ITEMS_COLUMNS}
                         data={transformSaleItems(saleItems)}
+                        onRowClick={(item) => console.log("Sale Item clicked:", item)}
                     />
                 </div>
             ) : (
@@ -669,6 +677,7 @@ const SaleItemsViewOnly = () => {
         </div>
     );
 };
+
 
 
 const PermanentSignsViewOnly = () => {
@@ -705,7 +714,7 @@ const PermanentSignsViewOnly = () => {
                 return (
                     <div
                         key={`sign-${pmsItem.id}`}
-                        className="rounded-lg border bg-card text-card-foreground shadow-sm p-4"
+                        className="rounded-lg border-0 p-4"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between mb-4">
@@ -904,17 +913,19 @@ const BidItemsViewOnly = () => {
     const [loading, setLoading] = useState(false);
     const { equipmentRental } = useEstimate(); // ← Obtén los datos del contexto
 
+
+    console.log('ejjeje', equipmentRental);
+    
+
     // Define las columnas para el DataTable
-    const equipmentColumns: LegacyColumn[] = [
-        { key: 'name', title: 'Equipment Name', sortable: true },
-        { key: 'quantity', title: 'Qty', sortable: true },
-        { key: 'months', title: 'Months', sortable: true },
-        { key: 'rentPrice', title: 'Rent Price', sortable: true },
-        { key: 'reRentPrice', title: 'Re-Rent Price', sortable: true },
-        // { key: 'reRentForCurrentJob', title: 'Re-Rent Current Job', sortable: true },
-        // { key: 'totalCost', title: 'Total Cost', sortable: true },
-        // { key: 'equipmentCost', title: 'Equipment Cost', sortable: true },
-        // { key: 'usefulLifeYrs', title: 'Useful Life (Yrs)', sortable: true }
+    const EQUIPMENT_COLUMNS = [
+        { key: 'item_number', header: 'Item Number', className: 'text-left' },
+        { key: 'name', header: 'Equipment', className: 'text-left' },
+        { key: 'quantity', header: 'Quantity', className: 'text-left' },
+        { key: 'uom', header: 'UOM', className: 'text-left' },
+        { key: 'uom_type', header: 'Type UOM', className: 'text-left' },
+        { key: 'rentPrice', header: 'Rent Price', className: 'text-left' },
+        { key: 'reRentPrice', header: 'Re-rent Price', className: 'text-left' },
     ];
 
     const calculateTotal = (item: any): number => {
@@ -924,7 +935,10 @@ const BidItemsViewOnly = () => {
     };
 
     const transformEquipmentData = (equipmentRental: any[]): EquipmentRentalTableData[] => {
+        console.log(equipmentRental);
+        
         return equipmentRental.map(item => ({
+            item_number: item.item_number || '-',
             id: item.id || null,
             name: item.name || '-',
             quantity: item.quantity || null,
@@ -938,7 +952,9 @@ const BidItemsViewOnly = () => {
         }));
     };
 
-    // Obtener los datos del equipment rental cuando cambie el contexto
+
+    console.log('transformed ', transformEquipmentData(equipmentRental || []));
+    
     useEffect(() => {
         if (equipmentRental && equipmentRental.length > 0) {
             const transformedData = transformEquipmentData(equipmentRental);
@@ -957,17 +973,20 @@ const BidItemsViewOnly = () => {
                 <PhasesViewOnly />
             </section>
 
+            {/* Sale Items */}
+            <section className='w-full' >
+                <div className="text-xl font-semibold mb-4">Sale Items</div>
+                <SaleItemsViewOnly />
+            </section>
+
             {/* Equipment Rental */}
             <section>
                 <div className="text-xl font-semibold mb-4">Equipment Rental</div>
                 {equipmentData.length > 0 ? (
                     <div className="w-full">
                         <DataTableBid
-                            columns={}={equipmentColumns}
+                            columns={EQUIPMENT_COLUMNS}
                             data={equipmentData}
-                            pageSize={10}
-                            hideDropdown
-                            totalCount={equipmentData.length}
                             onRowClick={(item) => console.log("Equipment clicked:", item)}
                         />
                     </div>
@@ -988,12 +1007,6 @@ const BidItemsViewOnly = () => {
             <section className='w-full'>
                 <div className="text-xl font-semibold mb-4">Flagging</div>
                 <FlaggingViewOnly />
-            </section>
-
-            {/* Sale Items */}
-            <section className='w-full' >
-                <div className="text-xl font-semibold mb-4">Sale Items</div>
-                <SaleItemsViewOnly />
             </section>
 
             {/* Patterns / Service Work */}
