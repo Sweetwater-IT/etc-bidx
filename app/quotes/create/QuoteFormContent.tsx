@@ -841,18 +841,18 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
 
-  useEffect(() => {
-    if (!quoteItems?.length) return
-    const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi
+  // useEffect(() => {
+  //   if (!quoteItems?.length) return
+  //   const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi
 
-    const itemsNeedingData = quoteItems.filter(
-      (item: any) => typeof item.notes === "string" && needsDataRegex.test(item.notes)
-    )
+  //   const itemsNeedingData = quoteItems.filter(
+  //     (item: any) => typeof item.notes === "string" && needsDataRegex.test(item.notes)
+  //   )
 
-    if (itemsNeedingData.length > 0) {
-      setOpenModal(true)
-    }
-  }, [quoteItems])
+  //   if (itemsNeedingData.length > 0) {
+  //     setOpenModal(true)
+  //   }
+  // }, [quoteItems])
 
   return (
     <div className="flex flex-1 flex-col">
@@ -1121,7 +1121,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
           </div>
         </div>
-        <ModalEnterDataOfNotes open={openModal} setOpen={setOpenModal} />
+        {/* <ModalEnterDataOfNotes open={openModal} setOpen={setOpenModal} /> */}
       </div>
     </div >
   )

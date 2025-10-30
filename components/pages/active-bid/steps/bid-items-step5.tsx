@@ -73,6 +73,7 @@ import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Textarea } from '@/components/ui/textarea'
+import NotesInputs from './NotesInput'
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
@@ -154,7 +155,6 @@ const PhaseActionButtons = ({
     )}
   </div>
 )
-
 
 // Trip and Labor Summary Component
 const TripAndLaborSummary = ({
@@ -1364,6 +1364,8 @@ const BidItemsStep5 = ({
     )
   }
 
+  console.log(phaseFormData?.notesMPTItem);
+  
   // Get minimum allowed quantity for an equipment type
   const getMinQuantity = (equipmentKey: EquipmentType): number | undefined => {
     if (!mptRental?.phases || !mptRental.phases[currentPhase]) return undefined
@@ -1372,7 +1374,6 @@ const BidItemsStep5 = ({
       mptRental.phases[currentPhase]
 
     )
-
 
     switch (equipmentKey) {
       case 'covers':
@@ -2222,10 +2223,9 @@ const BidItemsStep5 = ({
                     </p>
                     <div className="mt-4">
                       <Label className="text-sm font-medium mb-2 block">Item Notes</Label>
-                      <Textarea
-                        placeholder='Enter notes'
-                        value={phaseFormData.notesMPTItem || ''}
-                        onChange={(e) => handlePhaseFormUpdate('notesMPTItem', e.target.value)}
+                      <NotesInputs
+                        value={phaseFormData.notesMPTItem || ""}
+                        onChange={(val) => handlePhaseFormUpdate("notesMPTItem", val)}
                       />
                     </div>
                   </div>

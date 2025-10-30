@@ -265,8 +265,6 @@ const EquipmentSummaryStep = () => {
               if (index !== -1) handleEditEquipment(index);
             }}
           />
-
-
         )}
 
       </div>
@@ -366,7 +364,6 @@ const EquipmentSummaryStep = () => {
                   </p>
                 </div>
               )}
-
 
               {isCustom && (
                 <div className='w-full'>
