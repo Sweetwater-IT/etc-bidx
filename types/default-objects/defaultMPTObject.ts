@@ -3,6 +3,7 @@ import { Phase } from "@/types/MPTEquipment";
 
 export const defaultPhaseObject : Phase = {
     name: '',
+    notesMPTItem:'',
     startDate : null,
     endDate : null,
     personnel: 0,
