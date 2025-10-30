@@ -842,17 +842,19 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
 
   useEffect(() => {
-    if (!quoteItems?.length) return
-    const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi
+    if (!quoteItems?.length) return;
+
+    const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi;
 
     const itemsNeedingData = quoteItems.filter(
-      (item: any) => typeof item.notes === "string" && needsDataRegex.test(item.notes)
-    )
+      (item: any) =>
+        typeof item.notes === "string" && needsDataRegex.test(item.notes)
+    );
 
     if (itemsNeedingData.length > 0) {
-      setOpenModal(true)
+      setOpenModal(true);
     }
-  }, [quoteItems])
+  }, [quoteItems]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -959,7 +961,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </div>
                 )}
               </div>
-
               <div className="flex flex-row justify-end gap-2 mb-4">
                 {!editAll ? (
                   <Button variant={'link'} size="sm" onClick={handleEditClick} className="flex items-center gap-2 underline">

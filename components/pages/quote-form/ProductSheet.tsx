@@ -360,7 +360,7 @@ export function ProductSheet({
             <Textarea
               className="bg-background min-h-[100px]"
               placeholder="Enter any additional notes"
-              value={newProduct.notes}
+              value={newProduct.notes.replace(/\[|\]/g, '')}
               onChange={(e) =>
                 setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
               }

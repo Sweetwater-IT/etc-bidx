@@ -32,9 +32,11 @@ export function ModalEnterDataOfNotes({ open, setOpen }: ModalEnterDataOfNotesPr
     useEffect(() => {
         if (!quoteItems?.length) return
 
-        const regex = /\[[^\]]+\]/g
+        const regex = /\[(?:enter|insert)[^\]]*\]/gi
         const items = quoteItems.filter(
-            (item: any) => typeof item.notes === "string" && regex.test(item.notes)
+            (item: any) =>
+                typeof item.notes === "string" &&
+                regex.test(item.notes)
         )
 
         if (items.length > 0) {
@@ -105,7 +107,7 @@ export function ModalEnterDataOfNotes({ open, setOpen }: ModalEnterDataOfNotesPr
             setOpen(false)
         }
     }
-    
+
     const handleClose = (value: boolean) => {
         if (!value) {
             const hasEmptyFields = fields.some((field) => !values[field.key]?.trim())
@@ -156,7 +158,7 @@ export function ModalEnterDataOfNotes({ open, setOpen }: ModalEnterDataOfNotesPr
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={()=> handleClose(false)}>
+                    <Button variant="outline" onClick={() => handleClose(false)}>
                         Cancel
                     </Button>
                     <Button onClick={handleConfirm}>
