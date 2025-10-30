@@ -684,17 +684,15 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   const handleSaveAndExit = async () => {
-    if (!quoteId) {
-      router.push('/quotes')
-    }
+    if (!quoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
       setIsSaving(true)
       const success = await autosave()
-      if (success) router.push('/quotes')
     } catch (error) {
       toast.error('Could not save draft before exiting: ' + error)
     } finally {
+            router.push('/quotes')
       setIsSaving(false)
     }
   }
