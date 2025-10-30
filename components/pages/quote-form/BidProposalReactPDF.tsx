@@ -100,16 +100,16 @@ const formatDate = (date?: string) => {
 };
 
 const formatPhone = (phone: string | undefined) => {
-    if (!phone) return "-";
+  if (!phone) return "-";
 
-    const digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
 
-    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+  const firstTen = digits.slice(0, 10).padEnd(10, "0");
 
-    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
-    const extra = digits.length > 10 ? digits.slice(10) : "";
+  const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+  const extra = digits.length > 10 ? digits.slice(10) : "";
 
-    return main + extra;
+  return main + extra;
 };
 
 
@@ -318,20 +318,20 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={styles.tableRowWithBorder}>
               <Text style={[styles.tableHeader, styles.cellRow]}>Row</Text>
               <Text style={[styles.tableHeader, styles.cellItem]}>Item #</Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}>Description</Text>
+              <Text style={[styles.tableHeader, styles.cellDescription]}>Item Name</Text>
               <Text style={[styles.tableHeader, styles.cellUOM]}>UOM</Text>
               <Text style={[styles.tableHeader, styles.cellQuantity]}>Qty</Text>
               <Text style={[styles.tableHeader, styles.cellUnitPrice]}>Unit Price</Text>
               <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
             </View>
 
-            {items.filter((i)=> i.itemNumber).map((item, idx) => {
+            {items.filter((i) => i.itemNumber).map((item, idx) => {
               const ext = calculateExtendedPrice(item);
               return (
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.tableCell, styles.cellRow]}>{idx + 1}</Text>
                   <Text style={[styles.tableCell, styles.cellItem]}>{item.itemNumber || idx + 1}</Text>
-                  <Text style={[styles.tableCell, styles.cellDescription]}>{item.description}</Text>
+                  <Text style={[styles.tableCell, styles.cellDescription]}>{item.item_name}</Text>
                   <Text style={[styles.tableCell, styles.cellUOM]}>{item.uom || 'EA'}</Text>
                   <Text style={[styles.tableCell, styles.cellQuantity]}>{item.quantity}</Text>
                   <Text style={[styles.tableCell, styles.cellUnitPrice]}>{formatMoney(item.unitPrice || 0)}</Text>
@@ -391,12 +391,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   {line}
                 </Text>
               ))}
-              <View style={{marginBottom: 6}}/>
-            
+              <View style={{ marginBottom: 6 }} />
+
               {items.map((i, idx) =>
                 i.notes ? (
-                  <View key={idx} style={{marginBottom: 6}}>
-                    <Text>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  <View key={idx} style={{ marginBottom: 6 }}>
+                    <Text>
+                      {i.itemNumber + ' - '}
+                      <Text style={{ fontWeight: 'bold' }}>{i.item_name}</Text>
+                      {' - ' + i.notes.replace(/\[|\]/g, '')}
+                    </Text>
                   </View>
                 ) : null
               )}

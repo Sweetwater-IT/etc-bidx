@@ -4,6 +4,7 @@ interface Product {
   id: number;
   item_number: string;
   description: string;
+  item_name: string;
   uom: string;
   grouping?: string | null;
   is_custom: boolean;
@@ -46,7 +47,7 @@ export function useProductsSearch(searchTerm: string) {
             combined.filter(
               (p) =>
                 p.item_number.toLowerCase().includes(searchLower) ||
-                p.description.toLowerCase().includes(searchLower)
+                p.item_name.toLowerCase().includes(searchLower)
             )
           );
         }

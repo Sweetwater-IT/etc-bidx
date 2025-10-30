@@ -2,10 +2,9 @@ export interface EquipmentRentalItem {
   id?: number;
   // phase: number;
   name: string;
-  itemNumber: string;
+  item_number: string;
   item_description: string;
   quantity: number;
-  months: number;
   rentPrice: number;
   reRentPrice: number;
   reRentForCurrentJob: boolean;
@@ -18,4 +17,6 @@ export interface EquipmentRentalItem {
   notes: string;
   //this is the calculated depreciation cost
   cost?: number
+  uom?: number
+  uom_type: string
 };

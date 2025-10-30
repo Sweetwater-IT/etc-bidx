@@ -30,16 +30,17 @@ const EquipmentSummaryStep = ({
     if (newItemName.trim()) {
       const newEquipment: EquipmentRentalItem = {
         name: newItemName.trim(),
-        itemNumber: '',
+        item_number: '',
         item_description: '',
         quantity: 0,
-        months: 0,
+        uom: 0,
         rentPrice: 0,
         reRentPrice: 0,
         reRentForCurrentJob: false,
         usefulLifeYrs: 0,
         totalCost: 0,
-        notes: ''
+        notes: '',
+        uom_type: ''
       };
       setEquipment([...equipment, newEquipment]);
       setNewItemName("");
@@ -105,7 +106,7 @@ const EquipmentSummaryStep = ({
                 <div className="flex items-center space-x-4">
                   <div className="font-medium">{item.name}</div>
                   <div className="text-sm text-muted-foreground">
-                    Qty: {item.quantity} • Months: {item.months} • Rent: ${item.rentPrice}
+                    Qty: {item.quantity} • Months: {item.uom} • Rent: ${item.rentPrice}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -129,7 +130,8 @@ const EquipmentSummaryStep = ({
           </div>
         ))}
 
-        {/* Add Equipment Input or Button */}
+        {/* 
+        ment Input or Button */}
         {isAddingEquipment && (
           <div className="w-full max-w-sm mt-4">
             <Label className="text-sm font-medium mb-2 block">

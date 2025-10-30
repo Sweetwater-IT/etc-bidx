@@ -30,16 +30,16 @@ const formatDate = (date?: string) => {
 };
 
 const formatPhone = (phone: string | undefined) => {
-    if (!phone) return "-";
+  if (!phone) return "-";
 
-    const digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
 
-    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+  const firstTen = digits.slice(0, 10).padEnd(10, "0");
 
-    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
-    const extra = digits.length > 10 ? digits.slice(10) : "";
+  const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+  const extra = digits.length > 10 ? digits.slice(10) : "";
 
-    return main + extra;
+  return main + extra;
 };
 
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
@@ -244,7 +244,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <tr className='border-black border-b-[1.5px]'>
                 <th className="w-[80px] px-1 py-1 text-center">Row</th>
                 <th className="w-[80px] px-1 py-1 text-center">Item #</th>
-                <th className="px-2 py-1 text-center">Description</th>
+                <th className="px-2 py-1 text-center">Item Name</th>
                 <th className="w-[80px] px-2 py-1 text-center">UOM</th>
                 <th className="w-[80px] px-2 py-1 text-center">Qty</th>
                 <th className="w-[80px] px-2 py-1 text-right">Unit Price</th>
@@ -265,7 +265,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                         {item.itemNumber || index + 1}
                       </td>
                       <td className="px-1 text-center  py-1 font-bold align-top">
-                        {item.description ?? "-"}
+                        {item.item_name ?? "-"}
                       </td>
                       <td className="px-1 py-1 text-center align-top">
                         {item.uom || 'EA'}
@@ -288,7 +288,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                       >
                         <td className="border border-black px-2 py-1"></td>
                         <td className="border border-black px-2 py-1 pl-4 text-[10px]">
-                          - {assoc.description}
+                          - {assoc.item_name}
                         </td>
                         <td className="border border-black px-2 py-1 text-center text-[10px]">
                           {assoc.quantity}
@@ -344,7 +344,9 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               i.notes ? (
                 <div key={idx}>
                   <p style={{ whiteSpace: "pre-wrap" }}>
-                    {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
+                    {i.itemNumber + ' - '}
+                    <span className='font-bold'>{i.item_name}</span>
+                    {' - ' + (i.notes ? i.notes.replace(/\[|\]/g, '') : '')}
                   </p>
                   <br />
                 </div>

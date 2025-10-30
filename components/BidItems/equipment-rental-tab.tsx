@@ -36,6 +36,7 @@ import EmptyContainer from './empty-container';
 import { DataTable } from '@/components/data-table';
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 import { Textarea } from '../ui/textarea';
+import { SelectTrigger, Select, SelectContent, SelectValue, SelectItem } from '../ui/select';
 
 interface StaticPriceData {
   usefulLife: number;
@@ -47,6 +48,7 @@ interface RentalItem {
   item_number: string;
   display_name: string;
   item_description: string;
+  item_name: string;
 }
 
 const EquipmentSummaryStep = () => {
@@ -57,6 +59,7 @@ const EquipmentSummaryStep = () => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<EquipmentRentalItem | null>(null);
   const [isCustom, setIsCustom] = useState(false);
+
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ item: any, index: number } | null>(null);
@@ -84,16 +87,17 @@ const EquipmentSummaryStep = () => {
   const handleAddEquipment = () => {
     setFormData({
       name: '',
-      itemNumber: '',
+      item_number: '',
       item_description: '',
       quantity: 0,
-      months: 0,
+      uom: 0,
       rentPrice: 0,
       reRentPrice: 0,
       reRentForCurrentJob: false,
       totalCost: 0,
       usefulLifeYrs: 0,
-      notes: ''
+      notes: '',
+      uom_type: 'Weeks'
     });
     setIsCustom(false);
     setEditingIndex(null);
@@ -105,7 +109,7 @@ const EquipmentSummaryStep = () => {
     setFormData({ ...itemToEdit });
     setEditingIndex(index);
     // Check if the item is a standard one or a custom one
-    const isStandard = rentalItems.some(item => item.item_number === itemToEdit.itemNumber);
+    const isStandard = rentalItems.some(item => item.item_number === itemToEdit.item_number);
     setIsCustom(!isStandard);
     setDrawerOpen(true);
   };
@@ -126,10 +130,12 @@ const EquipmentSummaryStep = () => {
     const finalFormData = {
       ...formData,
       name: finalName,
-      itemNumber: isCustom ? '' : formData.itemNumber,
+      ...(isCustom ? {} : { itemNumber: formData.item_number }),
     };
 
     if (editingIndex !== null) {
+      console.log('entro a dispatch update rental item', finalFormData);
+
       (Object.keys(finalFormData) as Array<keyof EquipmentRentalItem>).forEach(key => {
         dispatch({
           type: 'UPDATE_RENTAL_ITEM',
@@ -141,11 +147,14 @@ const EquipmentSummaryStep = () => {
         });
       });
     } else {
+      console.log('entro a dispatch add rental item', finalFormData);
+
       dispatch({
         type: 'ADD_RENTAL_ITEM',
         payload: finalFormData,
       });
     }
+
 
     setDrawerOpen(false);
     setFormData(null);
@@ -202,8 +211,13 @@ const EquipmentSummaryStep = () => {
       className: 'text-left'
     },
     {
-      key: 'months',
-      title: 'Months',
+      key: 'uom',
+      title: 'UOM',
+      className: 'text-left'
+    },
+    {
+      key: 'uom_type',
+      title: 'Type UOM',
       className: 'text-left'
     },
     {
@@ -225,7 +239,7 @@ const EquipmentSummaryStep = () => {
 
   const formattedData = equipmentRental.map(item => ({
     ...item,
-    itemNumber: item.itemNumber || '-',
+    itemNumber: item.item_number || '-',
     rentPrice: formatCurrency(item.rentPrice),
     reRentPrice: formatCurrency(item.reRentPrice)
   }));
@@ -258,8 +272,6 @@ const EquipmentSummaryStep = () => {
               if (index !== -1) handleEditEquipment(index);
             }}
           />
-
-
         )}
 
       </div>
@@ -312,7 +324,7 @@ const EquipmentSummaryStep = () => {
                       <div className="max-h-[200px] overflow-y-auto">
                         <CommandEmpty>No equipment found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', itemNumber: '' }); }} className="flex items-center">
+                          <CommandItem onSelect={() => { setIsCustom(true); setOpen(false); handleFormUpdate({ name: '', item_number: '' }); }} className="flex items-center">
                             <Check className={cn("mr-2 h-4 w-4", isCustom ? "opacity-100" : "opacity-0")} />
                             Custom
                           </CommandItem>
@@ -323,16 +335,16 @@ const EquipmentSummaryStep = () => {
                               value={`${item.display_name} ${item.item_number}`}
                               onSelect={() => {
                                 handleFormUpdate({
-                                  itemNumber: item.item_number,
+                                  item_number: item.item_number,
                                   name: item.display_name,
-                                  item_description: item.item_description
+                                  item_description: item.item_name
                                 });
                                 setIsCustom(false);
                                 setOpen(false);
                               }}
                               className="flex items-center"
                             >
-                              <Check className={cn("mr-2 h-4 w-4", formData.itemNumber === item.item_number ? "opacity-100" : "opacity-0")} />
+                              <Check className={cn("mr-2 h-4 w-4", formData.item_number === item.item_number ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
                                 <span>{item.display_name}</span>
                                 <span className="text-xs text-muted-foreground">
@@ -349,17 +361,16 @@ const EquipmentSummaryStep = () => {
               </Popover>
 
               {/* Item Number and Description Display */}
-              {formData.itemNumber && formData.name && !isCustom && (
+              {formData.item_number && formData.name && !isCustom && (
                 <div className="p-4 mt-4 rounded-lg bg-muted/50 border">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Item Number: </span>{formData.itemNumber}
+                    <span className="font-medium text-foreground">Item Number: </span>{formData.item_number}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Description: </span>{formData.item_description || formData.name}
+                    <span className="font-medium text-foreground">Item Name: </span>{formData.item_description || formData.name}
                   </p>
                 </div>
               )}
-
 
               {isCustom && (
                 <div className='w-full'>
@@ -390,21 +401,38 @@ const EquipmentSummaryStep = () => {
                     className='w-full'
                   />
                 </div>
-                <div className='flex-1'>
-                  <Label className='text-sm font-medium mb-2 block'>
-                    Months
-                  </Label>
-                  <Input
-                    type='number'
-                    value={formData.months || ''
-                    }
-                    onChange={e => handleFormUpdate({ months: parseInt(e.target.value) || 0 }
-                    )
-                    }
-                    min={0}
-                    className='w-full'
-                  />
+                <div className="flex-1">
+                  <Label className="text-sm font-medium mb-2 block">UOM</Label>
+                  <div className="flex flex-row items-center flex-1">
+                    <div className=' w-2/5'>
+                      <Input
+                        type="number"
+                        value={formData.uom || ''}
+                        onChange={(e) =>
+                          handleFormUpdate({ uom: parseInt(e.target.value) || 0 })
+                        }
+                        min={0}
+                        className="flex-1 rounded-tr-none rounded-br-none"
+                      />
+                    </div>
+                    <div className='w-3/5'>
+                      <Select
+                        value={formData.uom_type || 'Months'}
+                        onValueChange={(value) => handleFormUpdate({ uom_type: value })}
+                      >
+                        <SelectTrigger className="rounded-tl-none rounded-bl-none h-full px-2">
+                          <SelectValue placeholder="Months" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Days">Days</SelectItem>
+                          <SelectItem value="Weeks">Weeks</SelectItem>
+                          <SelectItem value="Months">Months</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
+
               </div>
               <div className='flex gap-4 w-full'>
                 <div className='flex-1'>
@@ -509,7 +537,7 @@ const EquipmentSummaryStep = () => {
                 <Label className="text-sm font-medium mb-2 block">Notes</Label>
                 <Textarea
                   value={formData.notes || ""}
-                  onChange={(e) => handleFormUpdate({notes: e.target.value})}
+                  onChange={(e) => handleFormUpdate({ notes: e.target.value })}
                   placeholder="Add any notes related to this sale item..."
                   className="w-full h-24 p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />

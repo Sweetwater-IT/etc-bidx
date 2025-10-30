@@ -203,6 +203,8 @@ export interface Phase {
   signs: (PrimarySign | SecondarySign)[];
   itemNumber: string;
   itemName: string
+  notesMPTItem: string;
+
 }
 
 export type MPTRentalEstimating = {

@@ -99,7 +99,7 @@ export function QuoteItems() {
       quote_id: quoteId,
       id: newId,
       itemNumber: "",
-      description: "",
+      item_name: "",
       uom: "",
       quantity: 0,
       unitPrice: 0,
@@ -124,6 +124,7 @@ export function QuoteItems() {
     value: any
   ) => {
     let updatedItem: QuoteItem | undefined;
+    
 
     const updatedItems = quoteItems.map((item) => {
       if (item.id === itemId) {
@@ -134,7 +135,7 @@ export function QuoteItems() {
       return item;
     });
 
-    setQuoteItems(updatedItems);
+    setQuoteItems(updatedItems);    
 
     const parsedId = Number(updatedItem?.id);
     if (updatedItem && !isNaN(parsedId) && isFinite(parsedId)) {
@@ -296,7 +297,7 @@ export function QuoteItems() {
           style={{ gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px" }}
         >
           <div className="uppercase">Item # / SKU</div>
-          <div className="uppercase text-center">Description</div>
+          <div className="uppercase text-center">Item Name</div>
           <div className="uppercase text-center">UOM</div>
           <div className="uppercase text-center">Qty</div>
           <div className="uppercase">Unit Price</div>

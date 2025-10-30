@@ -45,7 +45,7 @@ function mapDbQuoteItemToQuoteItem(item: any): QuoteItem {
     return {
         id: String(item.id),
         itemNumber: item.item_number || "",
-        description: item.description || "",
+        item_name: item.item_name || "",
         uom: item.uom || "",
         notes: item.notes || "",
         quantity: item.quantity || 0,

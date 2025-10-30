@@ -558,7 +558,7 @@ export function calculateRentalSummary(rentalEquipment: EquipmentRentalItem[]): 
     ([name, items]) => {
       // Calculate total quantity and months
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-      const totalMonths = items.reduce((sum, item) => sum + item.months, 0);
+      const totalMonths = items.reduce((sum, item) => sum + (item?.uom || 0), 0);
 
       // Check if any item in the group is set for re-rent
       const reRentItem = items.find((item) => item.reRentForCurrentJob);

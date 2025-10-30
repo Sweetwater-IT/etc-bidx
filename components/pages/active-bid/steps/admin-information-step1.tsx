@@ -84,7 +84,7 @@ const AdminInformationStep1 = () => {
     laborRate: false,
     fringeRate: false,
     shopRate: false,
- //   winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
+    //   winterShutdown: !!adminData.winterStart || !!adminData.winterEnd,
   });
 
   const [digits, setDigits] = useState({
@@ -138,7 +138,7 @@ const AdminInformationStep1 = () => {
     });
   };
 
-  
+
   useEffect(() => {
     const totalMins = safeNumber(adminData.owTravelTimeMins);
     setOwHours(Math.floor(totalMins / 60));
@@ -233,10 +233,10 @@ const AdminInformationStep1 = () => {
           }
 
           // Set toggle states based on prefilled data
-         /* setToggleStates(prev => ({
-            ...prev,
-           winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
-          })); */
+          /* setToggleStates(prev => ({
+             ...prev,
+            winterShutdown: !!adminData.winterStart || !!adminData.winterEnd
+           })); */
         }
       } catch (error) {
         toast.error("Error fetching reference data:" + error);
@@ -689,73 +689,73 @@ const AdminInformationStep1 = () => {
                       ))}
                     </RadioGroup>
                   ) : field.name === "winterShutdown" ? (
-  /*              <div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={field.name}
-                          checked={toggleStates.winterShutdown}
-                          onCheckedChange={(checked) => {
-                            setToggleStates(prev => ({
-                              ...prev,
-                              winterShutdown: checked
-                            }));
-                          }}
-                        />
-                        <Label htmlFor={field.name} className="text-sm">
-                          {field.label}
-                        </Label>
-                      </div>
-
-                      {toggleStates.winterShutdown && (
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="winterStart" className="text-sm">Winter Start Date</Label>
-                            <Input
-                              id="winterStart"
-                              type="date"
-                              value={adminData.winterStart
-                                ? (typeof adminData.winterStart === 'string'
-                                  ? adminData.winterStart
-                                  : adminData.winterStart.toISOString().split('T')[0])
-                                : ""}
-                              onChange={(e) => {
-                                dispatch({
-                                  type: 'UPDATE_ADMIN_DATA',
-                                  payload: {
-                                    key: 'winterStart',
-                                    value: e.target.value ? new Date(e.target.value) : null
-                                  }
-                                });
-                              }}
-                              className="h-10"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="winterEnd" className="text-sm">Winter End Date</Label>
-                            <Input
-                              id="winterEnd"
-                              type="date"
-                              value={adminData.winterEnd
-                                ? (typeof adminData.winterEnd === 'string'
-                                  ? adminData.winterEnd
-                                  : adminData.winterEnd.toISOString().split('T')[0])
-                                : ""}
-                              onChange={(e) => {
-                                dispatch({
-                                  type: 'UPDATE_ADMIN_DATA',
-                                  payload: {
-                                    key: 'winterEnd',
-                                    value: e.target.value ? new Date(e.target.value) : null
-                                  }
-                                });
-                              }}
-                              className="h-10"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div> */
-                  <></>
+                    /*              <div>
+                                        <div className="flex items-center space-x-2">
+                                          <Switch
+                                            id={field.name}
+                                            checked={toggleStates.winterShutdown}
+                                            onCheckedChange={(checked) => {
+                                              setToggleStates(prev => ({
+                                                ...prev,
+                                                winterShutdown: checked
+                                              }));
+                                            }}
+                                          />
+                                          <Label htmlFor={field.name} className="text-sm">
+                                            {field.label}
+                                          </Label>
+                                        </div>
+                  
+                                        {toggleStates.winterShutdown && (
+                                          <div className="mt-4 grid grid-cols-2 gap-4">
+                                            <div>
+                                              <Label htmlFor="winterStart" className="text-sm">Winter Start Date</Label>
+                                              <Input
+                                                id="winterStart"
+                                                type="date"
+                                                value={adminData.winterStart
+                                                  ? (typeof adminData.winterStart === 'string'
+                                                    ? adminData.winterStart
+                                                    : adminData.winterStart.toISOString().split('T')[0])
+                                                  : ""}
+                                                onChange={(e) => {
+                                                  dispatch({
+                                                    type: 'UPDATE_ADMIN_DATA',
+                                                    payload: {
+                                                      key: 'winterStart',
+                                                      value: e.target.value ? new Date(e.target.value) : null
+                                                    }
+                                                  });
+                                                }}
+                                                className="h-10"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label htmlFor="winterEnd" className="text-sm">Winter End Date</Label>
+                                              <Input
+                                                id="winterEnd"
+                                                type="date"
+                                                value={adminData.winterEnd
+                                                  ? (typeof adminData.winterEnd === 'string'
+                                                    ? adminData.winterEnd
+                                                    : adminData.winterEnd.toISOString().split('T')[0])
+                                                  : ""}
+                                                onChange={(e) => {
+                                                  dispatch({
+                                                    type: 'UPDATE_ADMIN_DATA',
+                                                    payload: {
+                                                      key: 'winterEnd',
+                                                      value: e.target.value ? new Date(e.target.value) : null
+                                                    }
+                                                  });
+                                                }}
+                                                className="h-10"
+                                              />
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div> */
+                    <></>
                   ) : field.name === "oneWayTravelTime" ? (
                     <div className="space-y-2">
                       <div className="flex space-x-4">

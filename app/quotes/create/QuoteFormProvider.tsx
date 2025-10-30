@@ -161,7 +161,7 @@ interface QuoteFormProviderProps {
 const createEmptyQuoteItem = (): QuoteItem => ({
   id: generateUniqueId(),
   itemNumber: "",
-  description: "",
+  item_name: "",
   uom: "",
   quantity: 0,
   unitPrice: 0,

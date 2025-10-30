@@ -10,6 +10,7 @@ import SignsViewOnly from './signs-view-only';
 import TripAndLaborViewOnlyAll from './trip-and-labor-view-only';
 import { LegacyColumn, EquipmentRentalTableData } from '@/types/LegacyColumn'
 import { DataTable } from '@/components/data-table'
+import { DataTableBid } from './DataTableBid';
 
 const SALE_ITEMS_COLUMNS = [
     { key: 'itemNumber', title: 'Item Number' },
@@ -961,11 +962,11 @@ const BidItemsViewOnly = () => {
                 <div className="text-xl font-semibold mb-4">Equipment Rental</div>
                 {equipmentData.length > 0 ? (
                     <div className="w-full">
-                        <DataTable
-                            columns={equipmentColumns}
+                        <DataTableBid
+                            columns={}={equipmentColumns}
                             data={equipmentData}
                             pageSize={10}
-                            hideDropdown={true}
+                            hideDropdown
                             totalCount={equipmentData.length}
                             onRowClick={(item) => console.log("Equipment clicked:", item)}
                         />

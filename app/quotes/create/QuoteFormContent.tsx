@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from 'recharts';
 import { QuoteItem } from '@/types/IQuoteItem';
+import { ModalEnterDataOfNotes } from './components/ModalEnterDataOfNotes';
 
 const typeQuotes = [
   {
@@ -79,7 +80,7 @@ const exclusions = `PLEASE NOTE THE FOLLOWING ITEMS OR SERVICES ARE EXCLUDED FRO
 
 
 
-async function createQuoteItem(item: QuoteItem) {
+export async function createQuoteItem(item: QuoteItem) {
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -225,7 +226,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
   const [isSaving, setIsSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
   const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteMetadata || quoteMetadata })
@@ -234,7 +234,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
-  const didInitRef = useRef(false);
+  const [openModal, setOpenModal] = useState(false)
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -402,7 +402,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       if (!res.ok) throw new Error(await res.text());
 
       prevStateRef.current = { quoteItems, adminData, notes, quoteData: quoteMetadata };
-      setSecondCounter(1);
       if (!firstSave) setFirstSave(true);
 
       return true;
@@ -685,17 +684,15 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   const handleSaveAndExit = async () => {
-    if (!quoteId) {
-      router.push('/quotes')
-    }
+    if (!quoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
       setIsSaving(true)
       const success = await autosave()
-      if (success) router.push('/quotes')
     } catch (error) {
       toast.error('Could not save draft before exiting: ' + error)
     } finally {
+            router.push('/quotes')
       setIsSaving(false)
     }
   }
@@ -753,8 +750,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
-        uom: 'ea',
+        item_name: item.name,
+        uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
         unitPrice: item.revenue / item.quantity,
@@ -771,8 +768,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
-        uom: 'ea',
+        item_name: item.name,
+        uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
         unitPrice: item.quotePrice / item.quantity,
@@ -785,18 +782,80 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         quote_id: quoteId,
       }));
 
-    if (rentalItems.length === 0 && saleItems.length === 0) return;
+    const phaseItems = (bid.mpt_rental.phases || [])
+      .filter((phase: any) => phase.itemNumber && phase.itemName)
+      .filter((phase: any) => !existingNumbers.includes(phase.itemNumber))
+      .map((phase: any) => {
+        const baseRevenue = bid.mpt_rental._summary?.revenue || 0;
 
-    const allItems = [...rentalItems, ...saleItems];
-    const finalList = await Promise.all(allItems.map(async item => {
-      const result = await createQuoteItem(item);
-      return result.item;
-    }));
+        const serviceWorksCost = bid.service_work
+          ? Object.values(bid.service_work).reduce(
+            (sum: number, sw: any) => sum + (sw.cost || 0),
+            0
+          )
+          : 0;
 
-    setQuoteItems(prev => [...prev, ...finalList]);
+        const flaggingCost = bid.flagging
+          ? Object.values(bid.flagging).reduce(
+            (sum: number, fg: any) => sum + (fg.cost || 0),
+            0
+          )
+          : 0;
+
+        const totalPhaseCost = baseRevenue + serviceWorksCost + flaggingCost;
+
+        return {
+          itemNumber: phase.itemNumber,
+          item_name: phase.itemName,
+          uom: "EA",
+          notes: phase.notesMPTItem,
+          quantity: 1,
+          unitPrice: totalPhaseCost,
+          extendedPrice: totalPhaseCost,
+          discount: 0,
+          discountType: "dollar",
+          associatedItems: [],
+          isCustom: false,
+          tax: 0,
+          is_tax_percentage: false,
+          quote_id: quoteId,
+        };
+      });
+
+    if (rentalItems.length === 0 && saleItems.length === 0 && phaseItems.length === 0)
+      return;
+
+    const allItems = [...rentalItems, ...saleItems, ...phaseItems];
+
+    const finalList = await Promise.all(
+      allItems.map(async (item) => {
+        const result = await createQuoteItem(item);
+        return result.item;
+      })
+    );
+
+    setQuoteItems((prev) => [...finalList, ...prev,]);
   };
 
   const combinedText = `${quoteMetadata?.exclusionsText || ''}\n---TERMS---\n${quoteMetadata?.termsText || ''}`;
+
+  useEffect(() => {
+    if (!quoteItems?.length) return;
+
+    const needsDataRegex = /\[(?:enter|insert)[^\]]*\]/gi;
+
+    const itemsNeedingData = quoteItems.filter(
+      (item: any) =>
+        typeof item.notes === "string" && needsDataRegex.test(item.notes)
+    );
+
+    if (itemsNeedingData.length > 0) {
+      setOpenModal(true);
+    }
+  }, [quoteItems]);
+
+  console.log(quoteItems);
+
 
   return (
     <div className="flex flex-1 flex-col">
@@ -903,7 +962,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                   </div>
                 )}
               </div>
-
               <div className="flex flex-row justify-end gap-2 mb-4">
                 {!editAll ? (
                   <Button variant={'link'} size="sm" onClick={handleEditClick} className="flex items-center gap-2 underline">
@@ -1065,6 +1123,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
           </div>
         </div>
+        <ModalEnterDataOfNotes open={openModal} setOpen={setOpenModal} />
       </div>
     </div >
   )

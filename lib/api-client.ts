@@ -114,6 +114,7 @@ export async function fetchBids(options?: {
  * Fetch a specific bid by ID
  */
 export async function fetchBidById(id: number, isAvailableJob?: boolean): Promise<any> {
+  
   const url = `/api/active-bids/${id}${isAvailableJob ? '?type=available-job' : ''}`
   const response = await fetch(url);
 
@@ -246,7 +247,7 @@ export async function fetchActiveBids(options?: {
 /**
  * Fetch a specific active bid by ID
  */
-export async function fetchActiveBidById(id: string): Promise<EstimateCompleteView> {
+export async function fetchActiveBidById(id: string): Promise<EstimateCompleteView> {  
   const response = await fetch(`/api/active-bids/${id}`);
 
   if (!response.ok) {

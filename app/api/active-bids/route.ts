@@ -712,6 +712,7 @@ export async function POST(request: NextRequest) {
           custom_light_and_drum_items: phase.customLightAndDrumItems,
           item_number: phase.itemNumber,
           item_name: phase.itemName,
+          notesMPTItem: phase.notesMPTItem,
         })
         .select('id')
         .single();
@@ -800,10 +801,11 @@ export async function POST(request: NextRequest) {
         bid_estimate_id: bidEstimateId,
         job_id: null,
         name: item.name,
-        item_number: item.itemNumber,
+        item_number: item.item_number,
         quantity: item.quantity,
         notes: item.notes,
-        months: item.months,
+        uom: item.uom,
+        uom_type: item.uom_type,
         rent_price: item.rentPrice,
         re_rent_price: item.reRentPrice,
         re_rent_for_current_job: item.reRentForCurrentJob,

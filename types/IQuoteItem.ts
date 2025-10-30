@@ -1,7 +1,7 @@
 export interface QuoteItem {
   id?: string;
   itemNumber: string;
-  description: string;
+  item_name: string;
   uom: string;
   notes: string;
   quantity: number;
