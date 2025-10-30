@@ -901,7 +901,7 @@ export function DataTable<TData extends object>({
   return (
     <div className='space-y-4'>
       {/* Top Controls Section */}
-      <div className='px-6 mb-3'>
+      <div className=' mb-3'>
         {/* Segments Row - Always visible */}
         <div className='flex justify-between items-center mb-3'>
           <div>

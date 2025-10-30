@@ -903,8 +903,6 @@ const BidItemsViewOnly = () => {
     const [loading, setLoading] = useState(false);
     const { equipmentRental } = useEstimate(); // ← Obtén los datos del contexto
 
-
-
     // Define las columnas para el DataTable
     const equipmentColumns: LegacyColumn[] = [
         { key: 'name', title: 'Equipment Name', sortable: true },
@@ -950,100 +948,59 @@ const BidItemsViewOnly = () => {
     }, [equipmentRental]);
 
     return (
-        <div className="space-y-6 px-6">
-            <Tabs
-                defaultValue="mpt"
-                className="w-full"
-                onValueChange={setActiveTab}
-                value={activeTab}
-            >
-                <TabsList className="w-full border-0 bg-transparent p-0 [&_>_*]:border-0">
-                    <TabsTrigger
-                        value="mpt"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        MPT
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="equipment"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        Equipment Rental
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="permanent"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        Permanent Signs
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="flagging"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        Flagging
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="sale"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        Sale Items
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="patterns"
-                        className="relative px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-full before:scale-x-0 before:bg-foreground before:transition-transform data-[state=active]:before:scale-x-100 data-[state=active]:shadow-none"
-                    >
-                        Patterns
-                    </TabsTrigger>
-                </TabsList>
+        <div className="space-y-10 px-6">
 
-                {/* MPT Tab */}
-                <TabsContent value="mpt" className="mt-6">
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-6'>Phases</div>
-                    <PhasesViewOnly />
-                </TabsContent>
+            {/* MPT */}
+            <section>
+                <div className="text-xl font-semibold mb-4 mt-6">Phases</div>
+                <PhasesViewOnly />
+            </section>
 
-                {/* Equipment Rental Tab - MODIFICADO */}
-                <TabsContent value="equipment" className="mt-6">
-                    {equipmentData.length > 0 ? (
-                        <div className="px-6">
-                            <DataTable
-                                columns={equipmentColumns}
-                                data={equipmentData}
-                                pageSize={10}
-                                hideDropdown={true}
-                                totalCount={equipmentData.length}
-                                onRowClick={(item) => console.log('Equipment clicked:', item)}
-                            />
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-muted-foreground">
-                            No equipment rental items configured
-                        </div>
-                    )}
-                </TabsContent>
-
-                {/* Permanent Signs Tab */}
-                <TabsContent value="permanent" className="mt-6">
-                    <div className="text-center py-6 text-muted-foreground pl-6">
-                        <PermanentSignsViewOnly />
+            {/* Equipment Rental */}
+            <section>
+                <div className="text-xl font-semibold mb-4">Equipment Rental</div>
+                {equipmentData.length > 0 ? (
+                    <div className="w-full">
+                        <DataTable
+                            columns={equipmentColumns}
+                            data={equipmentData}
+                            pageSize={10}
+                            hideDropdown={true}
+                            totalCount={equipmentData.length}
+                            onRowClick={(item) => console.log("Equipment clicked:", item)}
+                        />
                     </div>
-                </TabsContent>
+                ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                        No equipment rental items configured
+                    </div>
+                )}
+            </section>
 
-                {/* Flagging Tab */}
-                <TabsContent value="flagging" className="mt-6">
-                    <FlaggingViewOnly />
-                </TabsContent>
+            {/* Permanent Signs */}
+            <section className='w-full'>
+                <div className="text-xl font-semibold mb-4">Permanent Signs</div>
+                <PermanentSignsViewOnly />
+            </section>
 
-                {/* Sale Items Tab */}
-                <TabsContent value="sale" className="mt-6">
-                    <SaleItemsViewOnly />
-                </TabsContent>
+            {/* Flagging */}
+            <section className='w-full'>
+                <div className="text-xl font-semibold mb-4">Flagging</div>
+                <FlaggingViewOnly />
+            </section>
 
-                {/* Patterns/Service Work Tab */}
-                <TabsContent value="patterns" className="mt-6">
-                    <ServiceWorkViewOnly />
-                </TabsContent>
-            </Tabs>
+            {/* Sale Items */}
+            <section className='w-full' >
+                <div className="text-xl font-semibold mb-4">Sale Items</div>
+                <SaleItemsViewOnly />
+            </section>
+
+            {/* Patterns / Service Work */}
+            <section className='w-full' >
+                <div className="text-xl font-semibold mb-4">Patterns</div>
+                <ServiceWorkViewOnly />
+            </section>
+
         </div>
     );
 };
