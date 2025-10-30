@@ -1,171 +1,209 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useQuoteForm } from "../QuoteFormProvider"
+import { CheckCircle2, Circle } from "lucide-react"
 import { toast } from "sonner"
+import { useQuoteForm } from "../QuoteFormProvider"
 
-interface ModalEnterDataOfNotesProps {
-    open: boolean
-    setOpen: (value: boolean) => void
-}
+export function ModalEnterDataOfNotes({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+  const { quoteItems, setQuoteItems } = useQuoteForm()
+  const [itemsNeedingData, setItemsNeedingData] = useState<any[]>([])
+  const [values, setValues] = useState<Record<string, Record<string, string>>>({})
+  const [openAccordion, setOpenAccordion] = useState<string>("")
 
-export function ModalEnterDataOfNotes({ open, setOpen }: ModalEnterDataOfNotesProps) {
-    const { quoteItems, setQuoteItems } = useQuoteForm()
-    const [fields, setFields] = useState<{ key: string; label: string }[]>([])
-    const [values, setValues] = useState<Record<string, string>>({})
-    const [itemsNeedingData, setItemsNeedingData] = useState<any[]>([])
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const [preview, setPreview] = useState("")
+  useEffect(() => {
+    if (!quoteItems?.length) return
+    const regex = /\[(?:enter|insert)[^\]]*\]/gi
+    const items = quoteItems.filter((item: any) => typeof item.notes === "string" && regex.test(item.notes))
+    if (items.length > 0) {
+      setItemsNeedingData(items)
+      setOpen(true)
+    }
+  }, [quoteItems, setOpen])
 
-    useEffect(() => {
-        if (!quoteItems?.length) return
+  const extractLabels = (text: string) => {
+    const regex = /\[(?:enter|insert)[^\]]*\]/gi
+    const labels: string[] = []
+    let match
+    let index = 0
+    while ((match = regex.exec(text)) !== null) {
+      const cleanLabel = match[0].replace(/[\[\]]/g, "").trim()
+      // agregar un índice único aunque el texto sea igual
+      labels.push(`${cleanLabel}__${index}`)
+      index++
+    }
+    return labels
+  }
 
-        const regex = /\[(?:enter|insert)[^\]]*\]/gi
-        const items = quoteItems.filter(
-            (item: any) =>
-                typeof item.notes === "string" &&
-                regex.test(item.notes)
-        )
+  const handleChange = (itemId: string, key: string, value: string) => {
+    setValues((prev) => ({
+      ...prev,
+      [itemId]: { ...(prev[itemId] || {}), [key]: value },
+    }))
+  }
 
-        if (items.length > 0) {
-            setItemsNeedingData(items)
-            setCurrentIndex(0)
-            setOpen(true)
-        }
-    }, [quoteItems, setOpen])
+  const getFilledPreview = (item: any) => {
+    const regex = /\[(?:enter|insert)[^\]]*\]/gi
+    const itemValues = values[item.id] || {}
+    let i = 0
+    return item.notes.replace(regex, (match) => {
+      const labelKey = `${match.replace(/[\[\]]/g, "").trim()}__${i}`
+      i++
+      return itemValues[labelKey]?.trim() || match
+    })
+  }
 
-    useEffect(() => {
-        if (!itemsNeedingData.length) return
-        const item = itemsNeedingData[currentIndex]
-        if (!item) return
+  const isItemCompleted = (item: any) => {
+    const labels = extractLabels(item.notes)
+    const vals = values[item.id] || {}
+    return labels.every((label) => {
+      const val = vals[label]?.trim() || ""
+      return val && !/enter|insert/i.test(val)
+    })
+  }
 
-        const regex = /\[([^\]]+)\]/g
-        const foundLabels = new Set<string>()
-        let match
-        while ((match = regex.exec(item.notes)) !== null) {
-            foundLabels.add(match[1].trim())
-        }
-
-        const newFields = Array.from(foundLabels).map((label) => ({
-            key: label.toLowerCase().replace(/\s+/g, "_"),
-            label,
-        }))
-        setFields(newFields)
-        setValues({})
-        setPreview(item.notes)
-    }, [currentIndex, itemsNeedingData])
-
-    const handleChange = (key: string, value: string) => {
-        setValues((prev) => {
-            const updated = { ...prev, [key]: value }
-            updatePreview(updated)
-            return updated
-        })
+  const handleSave = () => {
+    const allCompleted = itemsNeedingData.every(isItemCompleted)
+    if (!allCompleted) {
+      toast.error("Please complete all fields before saving.")
+      return
     }
 
-    const updatePreview = (currentValues: Record<string, string>) => {
-        const currentItem = itemsNeedingData[currentIndex]
-        if (!currentItem) return
-        const regex = /\[([^\]]+)\]/g
-        const updated = currentItem.notes.replace(regex, (_, label) => {
-            const key = label.trim().toLowerCase().replace(/\s+/g, "_")
-            return currentValues[key] || `[${label}]`
-        })
-        setPreview(updated)
-    }
+    const updatedItems = quoteItems.map((item: any) => {
+      if (!itemsNeedingData.find((i) => i === item)) return item
+      const regex = /\[(?:enter|insert)[^\]]*\]/gi
+      const itemValues = values[item.id] || {}
+      let i = 0
+      return {
+        ...item,
+        notes: item.notes.replace(regex, (match) => {
+          const labelKey = `${match.replace(/[\[\]]/g, "").trim()}__${i}`
+          i++
+          return itemValues[labelKey]?.trim() || match
+        }),
+      }
+    })
 
-    const handleConfirm = () => {
-        const currentItem = itemsNeedingData[currentIndex]
-        if (!currentItem) return
+    setQuoteItems(updatedItems)
+    setOpen(false)
+  }
 
-        const regex = /\[([^\]]+)\]/g
-        const newNotes = currentItem.notes.replace(regex, (_, label) => {
-            const key = label.trim().toLowerCase().replace(/\s+/g, "_")
-            return values[key] || `[${label}]`
-        })
+  const completedCount = itemsNeedingData.filter(isItemCompleted).length
+  const totalCount = itemsNeedingData.length
+  const progressPercentage = totalCount ? (completedCount / totalCount) * 100 : 0
 
-        const updatedItems = quoteItems.map((item: any) =>
-            item === currentItem ? { ...item, notes: newNotes } : item
-        )
-        setQuoteItems(updatedItems)
-
-        if (currentIndex < itemsNeedingData.length - 1) {
-            setCurrentIndex((prev) => prev + 1)
-        } else {
-            setOpen(false)
-        }
-    }
-
-    const handleClose = (value: boolean) => {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
         if (!value) {
-            const hasEmptyFields = fields.some((field) => !values[field.key]?.trim())
-
-            if (hasEmptyFields) {
-                toast.error("Please complete all fields before closing.")
-                return // 
-            }
+          const allCompleted = itemsNeedingData.every(isItemCompleted)
+          if (!allCompleted) {
+            toast.error("Please complete all fields before closing.")
+            return
+          }
         }
         setOpen(value)
-    }
+      }}
+    >
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Enter Required Data</DialogTitle>
+          <DialogDescription>
+            Fill in the missing values for each quote item.
+          </DialogDescription>
+        </DialogHeader>
 
-    return (
-        <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>
-                        {`Enter required data (${currentIndex + 1}/${itemsNeedingData.length})`}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {`Fill in the missing values for item #${currentIndex + 1}.`}
-                    </DialogDescription>
-                </DialogHeader>
+        {itemsNeedingData.length > 0 ? (
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-foreground">Progress</span>
+                <span className="text-muted-foreground">
+                  {completedCount} of {totalCount} completed
+                </span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+            </div>
 
-                <div className="flex flex-col items-start gap-2">
-                    <p className="font-bold">Text preview</p>
-                    <div className="bg-gray-100 rounded-md p-3 text-sm border border-gray-300 font-mono whitespace-pre-wrap">
-                        {preview}
-                    </div>
-                </div>
+            <Accordion
+              type="single"
+              collapsible
+              value={openAccordion}
+              onValueChange={setOpenAccordion}
+              className="space-y-2"
+            >
+              {itemsNeedingData.map((item: any) => {
+                const labels = extractLabels(item.notes)
+                const vals = values[item.id] || {}
+                const allFilled = isItemCompleted(item)
 
-                <div className="space-y-4 py-4">
-                    {fields.length > 0 ? (
-                        fields.map((field) => (
-                            <div key={field.key} className="space-y-1">
-                                <Label htmlFor={field.key}>{field.label}</Label>
-                                <Input
-                                    id={field.key}
-                                    value={values[field.key] || ""}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
-                                    placeholder={`Enter ${field.label.toLowerCase()}`}
-                                />
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground">No fields detected.</p>
-                    )}
-                </div>
+                return (
+                  <AccordionItem key={item.id} value={item.id} className="border rounded-lg px-4 bg-card">
+                    <AccordionTrigger className="hover:no-underline px-4">
+                      <div className="flex items-center gap-3 text-left">
+                        {allFilled ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <div className="font-semibold text-foreground">{item.itemNumber}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.description || "No description"}
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 pb-2 space-y-4">
+                      <div className="bg-muted/50 rounded-md border p-4 text-sm leading-relaxed text-foreground font-mono whitespace-pre-wrap">
+                        {getFilledPreview(item)}
+                      </div>
+                      {labels.map((label, index) => {
+                        const displayLabel = label.replace(/__\d+$/, "")
+                        const val = vals[label] || ""
+                        return (
+                          <div key={label} className="space-y-1">
+                            <span className="text-xs font-medium text-muted-foreground">{displayLabel}</span>
+                            <Input
+                              value={val}
+                              onChange={(e) => handleChange(item.id, label, e.target.value)}
+                              placeholder={`Enter ${displayLabel.toLowerCase()}`}
+                            />
+                          </div>
+                        )
+                      })}
+                    </AccordionContent>
+                  </AccordionItem>
+                )
+              })}
+            </Accordion>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => handleClose(false)}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleConfirm}>
-                        {currentIndex < itemsNeedingData.length - 1 ? "Next" : "Confirm"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={completedCount !== totalCount}>
+                Confirm ({completedCount}/{totalCount})
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <p className="text-center py-6 text-sm text-muted-foreground">No fields detected.</p>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 }
