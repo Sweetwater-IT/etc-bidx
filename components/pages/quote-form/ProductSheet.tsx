@@ -21,7 +21,6 @@ import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
-import NotesInputs from "../active-bid/steps/NotesInput";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -358,23 +357,14 @@ export function ProductSheet({
             <Label className="text-[15px] font-medium text-muted-foreground">
               Notes
             </Label>
-            {/\[.*?\]/.test(newProduct.notes) ? (
-              <NotesInputs
-                value={newProduct.notes}
-                onChange={(val) =>
-                  setNewProduct((prev) => ({ ...prev, notes: val }))
-                }
-              />
-            ) : (
-              <Textarea
-                className="bg-background min-h-[100px]"
-                placeholder="Enter any additional notes"
-                value={newProduct.notes}
-                onChange={(e) =>
-                  setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
-                }
-              />
-            )}
+            <Textarea
+              className="bg-background min-h-[100px]"
+              placeholder="Enter any additional notes"
+              value={newProduct.notes}
+              onChange={(e) =>
+                setNewProduct((prev) => ({ ...prev, notes: e.target.value }))
+              }
+            />
           </div>
         </form>
         <div className="px-4 py-4 border-t flex gap-4">
