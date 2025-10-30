@@ -480,7 +480,7 @@ const BidItemsViewOnly = () => {
     const [activeTab, setActiveTab] = useState("mpt");
     const [equipmentData, setEquipmentData] = useState<EquipmentRentalTableData[]>([]);
     const [loading, setLoading] = useState(false);
-    const { equipmentRental } = useEstimate();
+    const { equipmentRental, flagging, serviceWork, permanentSigns, saleItems } = useEstimate();
 
     const EQUIPMENT_COLUMNS = [
         { key: 'item_number', header: 'Item Number', className: 'text-left' },
@@ -516,9 +516,6 @@ const BidItemsViewOnly = () => {
         }));
     };
 
-
-    console.log('transformed ', transformEquipmentData(equipmentRental || []));
-
     useEffect(() => {
         if (equipmentRental && equipmentRental.length > 0) {
             const transformedData = transformEquipmentData(equipmentRental);
@@ -538,46 +535,64 @@ const BidItemsViewOnly = () => {
             </section>
 
             {/* Sale Items */}
-            <section className='w-full' >
-                <div className="text-xl font-semibold mb-4">Sale Items</div>
-                <SaleItemsViewOnly />
-            </section>
+            {
+                saleItems.length > 0 &&
+                <section className='w-full' >
+                    <div className="text-xl font-semibold mb-4">Sale Items</div>
+                    <SaleItemsViewOnly />
+                </section>
+            }
 
             {/* Equipment Rental */}
-            <section>
-                <div className="text-xl font-semibold mb-4">Equipment Rental</div>
-                {equipmentData.length > 0 ? (
-                    <div className="w-full">
-                        <DataTableBid
-                            columns={EQUIPMENT_COLUMNS}
-                            data={equipmentData}
-                            onRowClick={(item) => console.log("Equipment clicked:", item)}
-                        />
-                    </div>
-                ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                        No equipment rental items configured
-                    </div>
-                )}
-            </section>
+            {
+                equipmentData.length > 0 &&
+                <section>
+                    <div className="text-xl font-semibold mb-4">Equipment Rental</div>
+                    {equipmentData.length > 0 ? (
+                        <div className="w-full">
+                            <DataTableBid
+                                columns={EQUIPMENT_COLUMNS}
+                                data={equipmentData}
+                                onRowClick={(item) => console.log("Equipment clicked:", item)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                            No equipment rental items configured
+                        </div>
+                    )}
+                </section>
+            }
 
             {/* Permanent Signs */}
-            <section className='w-full'>
-                <div className="text-xl font-semibold mb-4">Permanent Signs</div>
-                <PermanentSignsViewOnly />
-            </section>
+            {
+                permanentSigns && permanentSigns.signItems.length > 0 &&
+                <section className='w-full'>
+                    <div className="text-xl font-semibold mb-4">Permanent Signs</div>
+                    <PermanentSignsViewOnly />
+                </section>
 
-            {/* Flagging */}
-            <section className='w-full'>
-                <div className="text-xl font-semibold mb-4">Flagging</div>
-                <FlaggingViewOnly />
-            </section>
+            }
 
-            {/* Patterns / Service Work */}
-            <section className='w-full' >
-                <div className="text-xl font-semibold mb-4">Patterns</div>
-                <ServiceWorkViewOnly />
-            </section>
+            {flagging && (
+                (flagging.personnel > 0 ||
+                    flagging.numberTrucks > 0 ||
+                    flagging.onSiteJobHours > 0 ||
+                    flagging.arrowBoards?.quantity > 0 ||
+                    flagging.messageBoards?.quantity > 0 ||
+                    flagging.TMA?.quantity > 0) && (
+                    <section className='w-full'>
+                        <div className="text-xl font-semibold mb-4">Flagging</div>
+                        <FlaggingViewOnly />
+                    </section>
+                ))}
+
+            {serviceWork && Object.keys(serviceWork).length > 0 && (
+                <section className='w-full' >
+                    <div className="text-xl font-semibold mb-4">Patterns</div>
+                    <ServiceWorkViewOnly />
+                </section>
+            )}
 
         </div>
     );
