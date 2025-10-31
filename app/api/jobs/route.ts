@@ -133,7 +133,8 @@ export async function GET(request: NextRequest) {
         service_work,
         sale_items,
         archived,
-        deleted
+        deleted,
+        service_items
       `, { count: 'exact' })
       .eq('deleted', false);
 
@@ -398,7 +399,8 @@ export async function GET(request: NextRequest) {
           createdAt: job.created_at || '',
           status: job.project_status || 'In Progress',
           wonBidItems: wonBidItems,
-          archived: job.archived
+          archived: job.archived,
+          serviceItems: job.service_items || []
         };
       }) || [];
 
@@ -521,6 +523,52 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    if (formData.service_items && formData.service_items.length > 0) {
+      for (const item of formData.service_items) {
+        if (item.id) {
+          const { error: updateError } = await supabase
+            .from('jobs_service_items_entries')
+            .update({
+              item_number: item.item_number || "",
+              description: item.description || item.item_name || "",
+              uom: item.uom || "",
+              quantity: item.quantity || 1,
+              unit_price: item.unitPrice || 0,
+              discount_type: item.discountType || "dollar",
+              discount: item.discount || 0,
+              notes: item.notes || "",
+              item_name: item.item_name || ""
+            })
+            .eq('id', item.id);
+
+          if (updateError) {
+            console.error('Failed to update service item:', updateError);
+            return NextResponse.json({ message: 'Failed to update service item', error: updateError.message }, { status: 500 });
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('jobs_service_items_entries')
+            .insert({
+              job_id: formData.id,
+              item_number: item.item_number || "",
+              description: item.description || item.item_name || "",
+              uom: item.uom || "",
+              quantity: item.quantity || 1,
+              unit_price: item.unitPrice || 0,
+              discount_type: item.discountType || "dollar",
+              discount: item.discount || 0,
+              notes: item.notes || "",
+              item_name: item.item_name || ""
+            });
+
+          if (insertError) {
+            console.error('Failed to insert service item:', insertError);
+            return NextResponse.json({ message: 'Failed to insert service item', error: insertError.message }, { status: 500 });
+          }
+        }
+      }
+    }
+
     return NextResponse.json(
       { message: 'Job updated successfully', data: { data, adminDataResult } },
       { status: 200 }
@@ -641,6 +689,33 @@ export async function POST(req: NextRequest) {
       winter_start: null,
       winter_end: null
     };
+
+    // después de crear jobData (job insert) y antes de retornar la respuesta:
+
+    if (requestData.service_items && requestData.service_items.length > 0) {
+      const itemsToInsert = requestData.service_items.map((item: any) => ({
+        job_id: jobData.id,
+        item_number: item.item_number || "",
+        description: item.description || item.item_name || "",
+        uom: item.uom || "",
+        quantity: item.quantity || 1,
+        unit_price: item.unitPrice || 0,
+        discount_type: item.discountType || "dollar",
+        discount: item.discount || 0,
+        notes: item.notes || "",
+        item_name: item.item_name || ""
+      }));
+
+      const { data: serviceItemsData, error: serviceItemsError } = await supabase
+        .from('jobs_service_items_entries')
+        .insert(itemsToInsert)
+        .select('id');
+
+      if (serviceItemsError) {
+        console.error('Error inserting service items:', serviceItemsError);
+        return NextResponse.json({ error: 'Failed to insert service items' }, { status: 500 });
+      }
+    }
 
     const { data: adminData, error: adminError } = await supabase
       .from('admin_data_entries')

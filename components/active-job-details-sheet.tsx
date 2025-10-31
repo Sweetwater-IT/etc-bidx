@@ -73,8 +73,8 @@ export function ActiveJobDetailsSheet({
   }, [job, open])
 
   const fileUploadProps = useFileUpload({
-    maxFileSize: 50 * 1024 * 1024, 
-    maxFiles: 5, 
+    maxFileSize: 50 * 1024 * 1024,
+    maxFiles: 5,
     uniqueIdentifier: job?.id,
     folder: 'jobs',
     apiEndpoint: '/api/files',
@@ -262,6 +262,35 @@ export function ActiveJobDetailsSheet({
                         : ""}
                     </div>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-2">Service Items List</div>
+                  {job?.service_items?.length ? (
+                    <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md divide-y">
+                      {job.service_items?.map((item: any, index: number) => (
+                        <li
+                          key={index}
+                          className="px-4 py-2 odd:bg-gray-50 flex justify-between items-start gap-2"
+                        >
+                          <div className="flex flex-col flex-1">
+                            <span className="font-medium text-gray-800">{item.item_number}</span>
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {item.item_name || "No name"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-700">
+                              ${item.unitPrice || "0.00"}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-gray-500">No service items added.</p>
+                  )}
                 </div>
 
                 <div className="space-y-1 w-full">

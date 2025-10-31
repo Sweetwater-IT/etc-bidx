@@ -38,11 +38,11 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
 
   const handleEdit = () => {
     if (job && onEdit) {
-      onOpenChange(false)  // Close the details sheet
+      onOpenChange(false) 
       onEdit(job)
     }
-  }
-
+  }  
+  
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col p-0">
@@ -50,20 +50,20 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
           <div className="flex items-center p-6 pb-2">
             <SheetTitle>Available Job Details {job?.contractNumber ? `- ${job.contractNumber}` : ''}</SheetTitle>
           </div>
-          <Separator/>
+          <Separator />
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
           <div className="-mt-2 space-y-6 p-6">
-          <div className='w-full flex justify-between items-start'>
-                <div className="flex flex-col gap-y-2">
+            <div className='w-full flex justify-between items-start'>
+              <div className="flex flex-col gap-y-2">
                 <Label className="font-medium">Status</Label>
-                <Badge variant={`${job?.status === 'Unset' ? 'secondary' : job?.status === 'Bid' ? 'successful' : 'destructive' }`}>
+                <Badge variant={`${job?.status === 'Unset' ? 'secondary' : job?.status === 'Bid' ? 'successful' : 'destructive'}`}>
                   {job?.status || '-'}
                 </Badge>
-                </div>
-                <span className="text-xs h-1/2 bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
               </div>
+              <span className="text-xs h-1/2 bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1">View Only <EyeIcon className="h-3 w-3" /></span>
+            </div>
             {/* Contract Number and Requestor */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1 w-full">
@@ -160,13 +160,42 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
                   {job?.noBidReason || '-'}
                 </div>
               </div>}
-            {/* Branch */}
-            <div className="space-y-1 w-1/2">
-              <Label className="font-medium">Branch</Label>
-              <div className="text-sm text-muted-foreground">
-                {job?.county.secondary || '-'}
+              {/* Branch */}
+              <div className="space-y-1 w-1/2">
+                <Label className="font-medium">Branch</Label>
+                <div className="text-sm text-muted-foreground">
+                  {job?.county.secondary || '-'}
+                </div>
               </div>
             </div>
+
+            <div className="mt-4">
+              <div className="text-sm font-medium mb-2">Service Items List</div>
+              {job?.service_items?.length ? (
+                <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md divide-y">
+                  {job.service_items?.map((item: any, index: number) => (
+                    <li
+                      key={index}
+                      className="px-4 py-2 odd:bg-gray-50 flex justify-between items-start gap-2"
+                    >
+                      <div className="flex flex-col flex-1">
+                        <span className="font-medium text-gray-800">{item.item_number}</span>
+                        <span className="text-xs text-gray-500 mt-0.5">
+                          {item.item_name || "No name"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-700">
+                          ${item.unitPrice || "0.00"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">No service items added.</p>
+              )}
             </div>
 
             {/* Services Required */}

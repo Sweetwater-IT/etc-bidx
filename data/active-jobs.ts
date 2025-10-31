@@ -26,6 +26,7 @@ export type ActiveJob = {
   status: string
   wonBidItems: string[]
   newJobNumber?: any
+  service_items?: Array<any[]>  
 }
 
 export const ACTIVE_JOBS_SEGMENTS = [
