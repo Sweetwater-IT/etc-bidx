@@ -1516,7 +1516,7 @@ const BidItemsStep5 = ({
 
                                 {sectionState.structure && (
                                   <TableRow className='w-full'>
-                                    <TableCell colSpan={10} className="p-4 bg-muted/30 border-t">
+                                    <TableCell colSpan={10} className="p-4 border-t">
                                       <div className="w-full ">
 
                                         <div className="flex flex-row items-center justify-between my-4">
@@ -1527,6 +1527,26 @@ const BidItemsStep5 = ({
                                           </div>
 
                                           <div className="flex flex-row items-center justify-end">
+
+                                            <div className="flex flex-row gap-2 mx-2 items-center">
+                                              <span className="text-sm font-medium whitespace-nowrap">Emergency Job?</span>
+                                              <Switch
+                                                checked={phase?.emergency || false}
+                                                onCheckedChange={(value: boolean) =>
+                                                  handleEmergencyJobChange(value, phase, index)
+                                                }
+                                              />
+                                            </div>
+
+                                            <Button
+                                              onClick={toggleDrawerAddEquipament}
+                                              className=' mx-2 cursor-pointer'
+                                              size={'sm'}
+                                            >
+                                              <Plus className='mr-2 h-4 w-4' /> Add Custom
+                                              Item
+                                            </Button>
+
                                             {modeEdit[index]?.structure ? (
                                               <div className="flex gap-2">
                                                 <Button
@@ -1641,6 +1661,231 @@ const BidItemsStep5 = ({
                                             ))}
                                           </div>
                                         </div>
+                                        
+                                        <div className='my-6 bg-gray-200 h-px'></div>
+                                        <div>
+                                          <h4 className="font-semibold mb-2 text-[18px]">Custom Items List</h4>
+                                          {phase.customLightAndDrumItems?.length > 0 && (
+                                            <div className="mt-6">
+                                              <h3 className="text-base font-semibold mb-4">Custom Items</h3>
+
+                                              {/* Encabezado tipo tabla */}
+                                              <div className="grid grid-cols-12 gap-4 mb-4">
+                                                <div className="col-span-2 font-medium">Item Name</div>
+                                                <div className="col-span-3 font-medium">Quantity</div>
+                                                <div className="col-span-3 font-medium">Cost</div>
+                                                <div className="col-span-2 font-medium">Useful Life</div>
+                                                <div className="col-span-2 font-medium">Daily Price</div>
+                                              </div>
+
+                                              {/* Filas de ítems */}
+                                              <div className="space-y-4">
+                                                {phase.customLightAndDrumItems.map((item) => (
+                                                  <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                                                    {/* Item Name */}
+                                                    <div className="col-span-2">
+                                                      {modeEdit[index]?.customEquipament ? (
+                                                        <Input
+                                                          type="text"
+                                                          value={item.id}
+                                                          onChange={(e) =>
+                                                            dispatch({
+                                                              type: "UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM",
+                                                              payload: {
+                                                                phaseNumber: index,
+                                                                id: item.id,
+                                                                key: "id",
+                                                                value: e.target.value,
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      ) : (
+                                                        item.id || "-"
+                                                      )}
+                                                    </div>
+
+                                                    {/* Quantity */}
+                                                    <div className="col-span-3">
+                                                      {modeEdit[index]?.customEquipament ? (
+                                                        <Input
+                                                          type="number"
+                                                          min={0}
+                                                          value={item.quantity}
+                                                          onChange={(e) =>
+                                                            dispatch({
+                                                              type: "UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM",
+                                                              payload: {
+                                                                phaseNumber: index,
+                                                                id: item.id,
+                                                                key: "quantity",
+                                                                value: parseFloat(e.target.value) || 0,
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      ) : (
+                                                        item.quantity > 0 ? item.quantity : "-"
+                                                      )}
+                                                    </div>
+
+                                                    {/* Cost */}
+                                                    <div className="col-span-3">
+                                                      {modeEdit[index]?.customEquipament ? (
+                                                        <Input
+                                                          type="number"
+                                                          min={0}
+                                                          step={0.01}
+                                                          value={item.cost}
+                                                          onChange={(e) =>
+                                                            dispatch({
+                                                              type: "UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM",
+                                                              payload: {
+                                                                phaseNumber: index,
+                                                                id: item.id,
+                                                                key: "cost",
+                                                                value: parseFloat(e.target.value) || 0,
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      ) : (
+                                                        item.cost > 0 ? item.cost.toFixed(2) : "-"
+                                                      )}
+                                                    </div>
+
+                                                    {/* Useful Life */}
+                                                    <div className="col-span-2">
+                                                      {modeEdit[index]?.customEquipament ? (
+                                                        <Input
+                                                          type="number"
+                                                          min={0}
+                                                          value={item.usefulLife}
+                                                          onChange={(e) =>
+                                                            dispatch({
+                                                              type: "UPDATE_LIGHT_AND_DRUM_CUSTOM_ITEM",
+                                                              payload: {
+                                                                phaseNumber: index,
+                                                                id: item.id,
+                                                                key: "usefulLife",
+                                                                value: parseFloat(e.target.value) || 0,
+                                                              },
+                                                            })
+                                                          }
+                                                        />
+                                                      ) : (
+                                                        item.usefulLife > 0 ? item.usefulLife : "-"
+                                                      )}
+                                                    </div>
+
+                                                    {/* Daily Price */}
+                                                    <div className="col-span-2">
+                                                      {item.cost > 0
+                                                        ? `$${calculateLightDailyRateCosts(mptRental, item.cost).toFixed(2)}`
+                                                        : "-"}
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <Drawer direction="right" open={draweStateEquipmanet} onClose={toggleDrawerAddEquipament}>
+                                          <DrawerOverlay />
+                                          <DrawerContent className="min-w-lg flex flex-col max-w-[600px] w-full">
+                                            {/* Header */}
+                                            <div className='flex flex-col gap-2 relative z-10 bg-background'>
+                                              <DrawerHeader>
+                                                <DrawerTitle>
+                                                  Add Custom Equipment
+                                                </DrawerTitle>
+                                              </DrawerHeader>
+                                              <Separator className='w-full -mt-2' />
+                                            </div>
+                                            {/* Body */}
+                                            <div className="px-4 space-y-6 mt-4">
+                                              <h4 className='font-medium'>Equipment Information</h4>
+                                              <div className="grid grid-cols-2 gap-6">
+                                                <div className="">
+                                                  <Label htmlFor="itemName" className="mb-2 block font-medium text-gray-700">
+                                                    Item Name
+                                                  </Label>
+                                                  <Input
+                                                    id="itemName"
+                                                    value={itemName}
+                                                    onChange={e => setItemName(e.target.value)}
+                                                    placeholder="Enter item name"
+                                                  />
+                                                </div>
+                                                <div className="">
+                                                  <Label htmlFor="quantity" className="mb-2 block font-medium text-gray-700">
+                                                    Quantity
+                                                  </Label>
+                                                  <Input
+                                                    id="quantity"
+                                                    type="number"
+                                                    min={0}
+                                                    value={newCustomItem.quantity || ""}
+                                                    onChange={e =>
+                                                      handleNewItemInputChange("quantity", parseFloat(e.target.value) || 0)
+                                                    }
+                                                    placeholder=""
+                                                  />
+                                                </div>
+                                                <div className="">
+                                                  <Label htmlFor="cost" className="mb-2 block font-medium text-gray-700">
+                                                    Cost
+                                                  </Label>
+                                                  <Input
+                                                    id="cost"
+                                                    type="number"
+                                                    min={0}
+                                                    step={0.01}
+                                                    value={newCustomItem.cost || ""}
+                                                    onChange={e =>
+                                                      handleNewItemInputChange("cost", parseFloat(e.target.value) || 0)
+                                                    }
+                                                    placeholder=""
+                                                  />
+                                                </div>
+                                                <div className="">
+                                                  <Label htmlFor="usefulLife" className="mb-2 block font-medium text-gray-700">
+                                                    Useful Life (days)
+                                                  </Label>
+                                                  <Input
+                                                    id="usefulLife"
+                                                    type="number"
+                                                    min={0}
+                                                    value={newCustomItem.usefulLife || ""}
+                                                    onChange={e =>
+                                                      handleNewItemInputChange("usefulLife", parseFloat(e.target.value) || 0)
+                                                    }
+                                                    placeholder=""
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Footer */}
+                                            <DrawerFooter className="flex justify-end space-x-3 w-full">
+                                              <div className="flex justify-end space-x-3 w-full mx-auto">
+                                                <Button variant="outline" onClick={toggleDrawerAddEquipament}>
+                                                  Cancel
+                                                </Button>
+                                                <Button
+                                                  onClick={() => {
+                                                    handleAddCustomItem(index)
+                                                    toggleDrawerAddEquipament()
+                                                  }}
+                                                  disabled={!itemName || newCustomItem.quantity <= 0 || newCustomItem.cost <= 0}
+                                                >
+                                                  Save Equipament
+                                                </Button>
+                                              </div>
+                                            </DrawerFooter>
+                                          </DrawerContent>
+                                        </Drawer>
                                       </div>
                                     </TableCell>
                                   </TableRow>
