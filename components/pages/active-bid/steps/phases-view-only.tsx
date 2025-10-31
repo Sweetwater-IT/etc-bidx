@@ -100,7 +100,6 @@ const PhasesViewOnly = () => {
                                         !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
                                 ) && <ChevronDown className={`inline h-4 w-4 ml-1 text-blue-700 transition-transform duration-300`} style={{ transform: expandedStructureIndex === index ? 'rotate(180deg)' : 'rotate(0deg)' }} />}
                             </TableCell>
-
                             <TableCell
                                 className="px-2 py-4 text-blue-700 cursor-pointer text-center"
                                 onClick={() => toggleTripExpand(index)}
@@ -129,7 +128,7 @@ const PhasesViewOnly = () => {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign : any, i) => (
+                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign: any, i) => (
                                                 <TableRow key={i}>
                                                     <TableCell className="px-2 py-1">{sign.designation}</TableCell>
                                                     <TableCell className="px-2 py-1">{sign.description}</TableCell>
@@ -164,7 +163,7 @@ const PhasesViewOnly = () => {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign : any, i) => (
+                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign: any, i) => (
                                                 <TableRow key={i}>
                                                     <TableCell className="px-2 py-1">{sign.designation}</TableCell>
                                                     <TableCell className="px-2 py-1">{sign.description}</TableCell>
