@@ -100,16 +100,16 @@ const formatDate = (date?: string) => {
 };
 
 const formatPhone = (phone: string | undefined) => {
-    if (!phone) return "-";
+  if (!phone) return "-";
 
-    const digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
 
-    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+  const firstTen = digits.slice(0, 10).padEnd(10, "0");
 
-    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
-    const extra = digits.length > 10 ? digits.slice(10) : "";
+  const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+  const extra = digits.length > 10 ? digits.slice(10) : "";
 
-    return main + extra;
+  return main + extra;
 };
 
 
@@ -325,7 +325,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
             </View>
 
-            {items.filter((i)=> i.itemNumber).map((item, idx) => {
+            {items.filter((i) => i.itemNumber).map((item, idx) => {
               const ext = calculateExtendedPrice(item);
               return (
                 <View key={idx} style={styles.tableRow}>
@@ -391,12 +391,16 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   {line}
                 </Text>
               ))}
-              <View style={{marginBottom: 6}}/>
-            
+              <View style={{ marginBottom: 6 }} />
+
               {items.map((i, idx) =>
                 i.notes ? (
-                  <View key={idx} style={{marginBottom: 6}}>
-                    <Text>{i.itemNumber + ' - '} <Text style={{ fontWeight: 'bold' }}>{i.description}</Text> {' - ' + i.notes}</Text>
+                  <View key={idx} style={{ marginBottom: 6 }}>
+                    <Text>
+                      {i.itemNumber + ' - '}
+                      <Text style={{ fontWeight: 'bold' }}>{i.description}</Text>
+                      {' - ' + i.notes.replace(/\[|\]/g, '')}
+                    </Text>
                   </View>
                 ) : null
               )}

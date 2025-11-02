@@ -22,11 +22,24 @@ interface ISelectBid {
     onChangeQuote: React.Dispatch<any>;
 }
 
+const normalizeText = (text: string = "") => {
+    const map: Record<string, string> = {
+        А: "A", В: "B", Е: "E", К: "K", М: "M", Н: "H", О: "O", Р: "P", С: "C", Т: "T", У: "Y", Х: "X",
+        а: "a", в: "b", е: "e", к: "k", м: "m", н: "h", о: "o", р: "p", с: "c", т: "t", у: "y", х: "x",
+    };
+    return text
+        .split("")
+        .map((ch) => map[ch] || ch)
+        .join("")
+        .toLowerCase()
+        .normalize("NFKD");
+};
+
 const SelectBid = ({ selectedBid, onChange, quoteData, extraFunctionCall, onChangeQuote }: ISelectBid) => {
     const [bids, setBids] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [open, setOpen] = useState(false)
-    
+
     useEffect(() => {
         if (!selectedBid) return;
 
@@ -139,29 +152,37 @@ const SelectBid = ({ selectedBid, onChange, quoteData, extraFunctionCall, onChan
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full min-w-[var(--radix-popover-trigger-width)] p-0">
-                    <Command style={{ width: '100%' }} className="w-full">
+                    <Command
+                        filter={(value, search) => {
+                            const normalizedValue = normalizeText(value);
+                            const normalizedSearch = normalizeText(search);
+                            return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+                        }}
+                    >
                         <CommandInput placeholder="Search bid..." />
                         <CommandList>
                             <CommandEmpty>No bid found.</CommandEmpty>
                             <CommandGroup>
-                                {bids.map((bid) => (
-                                    <CommandItem
-                                        key={bid.id}
-                                        value={bid.id.toString()}
-                                        onSelect={() => handleSelectBid(bid)}
+                                {bids.map((bid) => {
+                                    const contract = bid.admin_data?.contractNumber || "";
+                                    const contractor = bid.contractor_name || bid.admin_data?.owner || "";
+                                    const date = bid.admin_data?.lettingDate?.split("T")[0] || "";
 
-                                    >
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">
-                                                {bid.admin_data?.contractNumber || 'N/A'}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                                {bid.contractor_name || bid.admin_data?.owner || "Unknown"}{" "}
-                                                – {bid.admin_data?.lettingDate?.split("T")[0] || "No date"}
-                                            </span>
-                                        </div>
-                                    </CommandItem>
-                                ))}
+                                    return (
+                                        <CommandItem
+                                            key={bid.id}
+                                            value={`${contract} ${contractor} ${date}`}
+                                            onSelect={() => handleSelectBid(bid)}
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{contract || "N/A"}</span>
+                                                <span className="text-xs text-gray-500">
+                                                    {contractor || "Unknown"} – {date || "No date"}
+                                                </span>
+                                            </div>
+                                        </CommandItem>
+                                    );
+                                })}
                             </CommandGroup>
                         </CommandList>
                     </Command>

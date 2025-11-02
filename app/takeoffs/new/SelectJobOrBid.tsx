@@ -18,8 +18,6 @@ interface ISelectJobOrBid {
     currentJob: any | null;
 }
 
-
-
 const SelectJobOrBid = ({ currentPhase, jobNumber, needJobNumber = false, currentJob = null }: ISelectJobOrBid) => {
     const { dispatch , mptRental} = useEstimate();
     const [selectedPhases, setSelectedPhases] = useState<any[]>([]);

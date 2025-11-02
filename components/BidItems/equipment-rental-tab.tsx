@@ -36,6 +36,7 @@ import EmptyContainer from './empty-container';
 import { DataTable } from '@/components/data-table';
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 import { Textarea } from '../ui/textarea';
+import { SelectTrigger, Select, SelectContent, SelectValue, SelectItem } from '../ui/select';
 
 interface StaticPriceData {
   usefulLife: number;
@@ -87,13 +88,14 @@ const EquipmentSummaryStep = () => {
       itemNumber: '',
       item_description: '',
       quantity: 0,
-      months: 0,
+      uom: 0,
       rentPrice: 0,
       reRentPrice: 0,
       reRentForCurrentJob: false,
       totalCost: 0,
       usefulLifeYrs: 0,
-      notes: ''
+      notes: '',
+      uom_type: 'Weeks'
     });
     setIsCustom(false);
     setEditingIndex(null);
@@ -202,8 +204,13 @@ const EquipmentSummaryStep = () => {
       className: 'text-left'
     },
     {
-      key: 'months',
-      title: 'Months',
+      key: 'uom',
+      title: 'UOM',
+      className: 'text-left'
+    },
+    {
+      key: 'uom_type',
+      title: 'Type UOM',
       className: 'text-left'
     },
     {
@@ -258,8 +265,6 @@ const EquipmentSummaryStep = () => {
               if (index !== -1) handleEditEquipment(index);
             }}
           />
-
-
         )}
 
       </div>
@@ -360,7 +365,6 @@ const EquipmentSummaryStep = () => {
                 </div>
               )}
 
-
               {isCustom && (
                 <div className='w-full'>
                   <Label className='text-sm font-medium mb-2 block'>
@@ -390,21 +394,38 @@ const EquipmentSummaryStep = () => {
                     className='w-full'
                   />
                 </div>
-                <div className='flex-1'>
-                  <Label className='text-sm font-medium mb-2 block'>
-                    Months
-                  </Label>
-                  <Input
-                    type='number'
-                    value={formData.months || ''
-                    }
-                    onChange={e => handleFormUpdate({ months: parseInt(e.target.value) || 0 }
-                    )
-                    }
-                    min={0}
-                    className='w-full'
-                  />
+                <div className="flex-1">
+                  <Label className="text-sm font-medium mb-2 block">UOM</Label>
+                  <div className="flex flex-row items-center flex-1">
+                    <div className=' w-2/5'>
+                      <Input
+                        type="number"
+                        value={formData.uom || ''}
+                        onChange={(e) =>
+                          handleFormUpdate({ uom: parseInt(e.target.value) || 0 })
+                        }
+                        min={0}
+                        className="flex-1 rounded-tr-none rounded-br-none"
+                      />
+                    </div>
+                    <div className='w-3/5'>
+                      <Select
+                        value={formData.uom_type || 'Months'}
+                        onValueChange={(value) => handleFormUpdate({ uom_type: value })}
+                      >
+                        <SelectTrigger className="rounded-tl-none rounded-bl-none h-full px-2">
+                          <SelectValue placeholder="Months" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Days">Days</SelectItem>
+                          <SelectItem value="Weeks">Weeks</SelectItem>
+                          <SelectItem value="Months">Months</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
+
               </div>
               <div className='flex gap-4 w-full'>
                 <div className='flex-1'>
@@ -509,7 +530,7 @@ const EquipmentSummaryStep = () => {
                 <Label className="text-sm font-medium mb-2 block">Notes</Label>
                 <Textarea
                   value={formData.notes || ""}
-                  onChange={(e) => handleFormUpdate({notes: e.target.value})}
+                  onChange={(e) => handleFormUpdate({ notes: e.target.value })}
                   placeholder="Add any notes related to this sale item..."
                   className="w-full h-24 p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />

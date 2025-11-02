@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader } from "lucide-react";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { createQuoteItem } from "@/app/quotes/create/QuoteFormContent";
 
 
 interface ISelectJob {
@@ -13,6 +15,7 @@ interface ISelectJob {
 }
 
 const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJob) => {
+    const { quoteId, quoteItems, setQuoteItems } = useQuoteForm()
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -65,7 +68,85 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
             setLoading(false);
         }
     };
-    
+
+    const importItems = async (job: any) => {
+        if (!job || !quoteId) return;
+
+        const existingNumbers = quoteItems.map(item => item.itemNumber);
+
+        const rentalItems = (job.equipment_rental || [])
+            .filter((item: any) => !existingNumbers.includes(item.item_number))
+            .map((item: any) => ({
+                itemNumber: item.item_number,
+                description: item.name,
+                uom: 'EA',
+                notes: item.notes || "",
+                quantity: item.quantity,
+                unitPrice: item.revenue / item.quantity,
+                discount: 0,
+                discountType: 'dollar',
+                associatedItems: [],
+                isCustom: false,
+                tax: 0,
+                is_tax_percentage: false,
+                quote_id: quoteId
+            }));
+
+        const saleItems = (job.sale_items || [])
+            .filter((item: any) => !existingNumbers.includes(item.item_number))
+            .map((item: any) => ({
+                itemNumber: item.item_number,
+                description: item.name,
+                uom: 'EA',
+                notes: item.notes || "",
+                quantity: item.quantity,
+                unitPrice: item.quotePrice / item.quantity,
+                discount: 0,
+                discountType: 'dollar',
+                associatedItems: [],
+                isCustom: false,
+                tax: 0,
+                is_tax_percentage: false,
+                quote_id: quoteId,
+            }));
+
+        const phaseItems = (job.mpt_rental?.phases || [])
+            .filter((phase: any) => phase.itemNumber && phase.itemName)
+            .filter((phase: any) => !existingNumbers.includes(phase.itemNumber))
+            .map((phase: any) => {
+                const totalRevenue = job.mpt_rental?._summary?.revenue || 0;
+                return {
+                    itemNumber: phase.itemNumber || "N/A",
+                    description: phase.itemName || "Phase Item",
+                    uom: "ea",
+                    notes: phase.notesMPTItem,
+                    quantity: phase.days || 1,
+                    unitPrice: totalRevenue / (phase.days || 1),
+                    extendedPrice: totalRevenue,
+                    discount: 0,
+                    discountType: "dollar",
+                    associatedItems: [],
+                    isCustom: false,
+                    tax: 0,
+                    is_tax_percentage: false,
+                    quote_id: quoteId,
+                };
+            });
+
+        if (rentalItems.length === 0 && saleItems.length === 0 && phaseItems.length === 0) return;
+
+        const allItems = [...rentalItems, ...saleItems, ...phaseItems];
+
+        const finalList = await Promise.all(
+            allItems.map(async (item) => {
+                const result = await createQuoteItem(item);
+                return result.item;
+            })
+        );
+
+        setQuoteItems((prev) => [...finalList, ...prev]);
+    };
+
     useEffect(() => {
         fetchJobs();
     }, []);
@@ -79,11 +160,16 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
         }
     }, [jobs, quoteData?.job_id]);
 
+
+
     return (
         <Select
             onValueChange={(value) => {
                 const job = jobs.find(j => j.id.toString() === value);
                 if (job) {
+
+                    console.log(job);
+
                     onChange(job);
                     onChangeQuote((prev) => ({
                         ...prev,
@@ -109,6 +195,7 @@ const SelectJob = ({ selectedJob, onChange, quoteData, onChangeQuote }: ISelectJ
                             : 0,
                         job_id: job.id,
                     }));
+                    importItems(job)
                 }
             }}
             value={selectedJob?.id?.toString()}

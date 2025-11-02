@@ -712,6 +712,7 @@ export async function POST(request: NextRequest) {
           custom_light_and_drum_items: phase.customLightAndDrumItems,
           item_number: phase.itemNumber,
           item_name: phase.itemName,
+          notesMPTItem: phase.notesMPTItem,
         })
         .select('id')
         .single();
@@ -803,7 +804,8 @@ export async function POST(request: NextRequest) {
         item_number: item.itemNumber,
         quantity: item.quantity,
         notes: item.notes,
-        months: item.months,
+        uom: item.uom,
+        uom_type: item.uom_type,
         rent_price: item.rentPrice,
         re_rent_price: item.reRentPrice,
         re_rent_for_current_job: item.reRentForCurrentJob,

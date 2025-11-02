@@ -30,16 +30,16 @@ const formatDate = (date?: string) => {
 };
 
 const formatPhone = (phone: string | undefined) => {
-    if (!phone) return "-";
+  if (!phone) return "-";
 
-    const digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
 
-    const firstTen = digits.slice(0, 10).padEnd(10, "0");
+  const firstTen = digits.slice(0, 10).padEnd(10, "0");
 
-    const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
-    const extra = digits.length > 10 ? digits.slice(10) : "";
+  const main = `(${firstTen.slice(0, 3)}) ${firstTen.slice(3, 6)}-${firstTen.slice(6, 10)}`;
+  const extra = digits.length > 10 ? digits.slice(10) : "";
 
-    return main + extra;
+  return main + extra;
 };
 
 export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
@@ -344,7 +344,9 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               i.notes ? (
                 <div key={idx}>
                   <p style={{ whiteSpace: "pre-wrap" }}>
-                    {i.itemNumber + ' - '}<span className='font-bold'>{i.description}</span>{' - ' + i.notes}
+                    {i.itemNumber + ' - '}
+                    <span className='font-bold'>{i.description}</span>
+                    {' - ' + (i.notes ? i.notes.replace(/\[|\]/g, '') : '')}
                   </p>
                   <br />
                 </div>
