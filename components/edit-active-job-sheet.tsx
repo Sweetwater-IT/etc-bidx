@@ -5,11 +5,26 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check, ChevronsUpDown, X } from "lucide-react";
 import { type ActiveJob } from "@/data/active-jobs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import JobNumberPicker from "./SelectAvaiableJobsNumbers";
+import ModalCreateJobServiceItems from "./modal-service-items";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover'
+import { cn } from "@/lib/utils";
 
 interface EditActiveJobSheetProps {
   open: boolean;
@@ -42,6 +57,24 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isValidJobNumber, setIsValidJobNumber] = useState<boolean>(true);
   const [validatingExistJob, setvalidatingExistJob] = useState(false)
+  const [modalAddServiceItems, setModalAddServiceItems] = useState<boolean>(false)
+  const [allMptItems, setallMptItems] = useState<any[]>([])
+  const [openPopover, setOpenPopover] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<any | null>(null)
+
+  const getAllMptItems = async () => {
+    try {
+      const resp = await fetch('/api/mpt/getMptItems')
+      const data = await resp.json()
+
+      if (data.success) {
+        setallMptItems(data.data)
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const [digits, setDigits] = useState({
     laborRate: "000",
@@ -64,6 +97,10 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
 
     return digits.padStart(3, "0");
   }
+
+  useEffect(() => {
+    getAllMptItems()
+  }, [])
 
   useEffect(() => {
     if (job) {
@@ -362,6 +399,123 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
                   </span>
                 </div>
               </div>}
+              <div>
+                <div>
+                  <Label
+                    htmlFor='select-service-items'
+                    className='text-md font-bold mb-4'
+                  >
+                    Service Items
+                  </Label>
+                  <div id='select-service-items'>
+                    <Popover open={openPopover} onOpenChange={setOpenPopover}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between overflow-hidden text-left"
+                        >
+                          <span className="truncate">
+                            {selectedItem ? (
+                              <>
+                                <span className="text-gray-500">{selectedItem.number}</span>
+                                {selectedItem.name}
+                              </>
+                            ) : (
+                              "Select service item..."
+                            )}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search..." />
+                          {openPopover && (
+                            <CommandList onWheel={(e) => e.stopPropagation()}>
+                              <div className="max-h-[200px] overflow-y-auto">
+                                <CommandEmpty>No results found.</CommandEmpty>
+                                <CommandGroup>
+                                  {allMptItems
+                                    .filter((item) => !!item.item_number && !!item.display_name)
+                                    .map((item) => (
+                                      <CommandItem
+                                        key={item.item_number.trim()}
+                                        onSelect={() => {
+                                          setSelectedItem(item)
+                                          setOpenPopover(false)
+                                          setModalAddServiceItems(true)
+                                        }}
+                                        className="flex items-center"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selectedItem?.number === item.item_number ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span>{item.display_name}</span>
+                                          <span className="text-xs text-muted-foreground">{item.item_number}</span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </div>
+                            </CommandList>
+                          )}
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-2">List</div>
+                  {formData?.service_items?.length ? (
+                    <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md divide-y">
+                      {formData?.service_items?.map((item: any, index: number) => (
+                        <li
+                          key={index}
+                          className="px-4 py-2 odd:bg-gray-50 flex justify-between items-start gap-2"
+                        >
+                          <div className="flex flex-col flex-1">
+                            <span className="font-medium text-gray-800">{item.item_number}</span>
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {item.item_name || "No name"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-700">
+                              ${item.unitPrice || "0.00"}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                const updated = [...(formData.service_items || [])];
+                                updated.splice(index, 1);
+                                setFormData((prev: any) => ({
+                                  ...prev,
+                                  service_items: updated,
+                                }));
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-gray-500">No service items added.</p>
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
           <div className="flex justify-end p-6 pt-0 gap-4">
@@ -380,6 +534,20 @@ export function EditActiveJobSheet({ open, onOpenChange, job, onSuccess }: EditA
             </Button>
           </div>
         </div>
+        <ModalCreateJobServiceItems
+          open={modalAddServiceItems}
+          onOpenChange={setModalAddServiceItems}
+          item={selectedItem}
+          handleNextDigits={handleNextDigits}
+          formatDecimal={formatDecimal}
+          savedProduct={(productData: any) => {
+            setFormData((prev: any) => ({
+              ...prev,
+              service_items: [...prev.service_items, productData],
+            }));
+            setSelectedItem(null)
+          }}
+        />
       </SheetContent>
     </Sheet>
   );

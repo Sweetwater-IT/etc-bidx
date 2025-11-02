@@ -219,7 +219,6 @@ const TripAndLaborSummary = ({
     };
   }, [phase, adminData, mptRental]);
 
-
   return (
     <div className='grid grid-cols-3 gap-4 text-sm'>
       {/* Row 1 */}

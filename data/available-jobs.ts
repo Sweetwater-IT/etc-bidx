@@ -15,6 +15,7 @@ export type AvailableJob = {
   stateRoute?: string;
   alreadyBid?: boolean;
   services: Record<AvailableJobServices, boolean>
+  service_items?: Array<any[]>
 };
 
 export type AvailableJobServices = 'MPT' | 'Flagging' | 'Perm Signs' | 'Equipment Rental' | 'Other'

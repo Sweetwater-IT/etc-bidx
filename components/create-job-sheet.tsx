@@ -29,7 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchReferenceData } from '@/lib/api-client'
 import { County } from '@/types/TCounty'
@@ -37,6 +37,8 @@ import { toast } from 'sonner'
 import { useAuth } from "@/contexts/auth-context";
 import { Switch } from './ui/switch'
 import JobNumberPicker from './SelectAvaiableJobsNumbers'
+import { CommandList } from 'cmdk'
+import ModalCreateJobServiceItems from './modal-service-items'
 
 interface CreateJobSheetProps {
   open: boolean
@@ -70,10 +72,15 @@ export function CreateJobSheet({
     workType: '',
     laborRate: '',
     fringeRate: '',
-    shopRate: ''
+    shopRate: '',
+    service_items: []
   })
   const [validatingExistJob, setvalidatingExistJob] = useState(false)
-  // Digits state for rate masking (similar to admin component)
+  const [modalAddServiceItems, setModalAddServiceItems] = useState<boolean>(false)
+  const [allMptItems, setallMptItems] = useState<any[]>([])
+  const [openPopover, setOpenPopover] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<any | null>(null)
+
   const [digits, setDigits] = useState({
     laborRate: '000',
     fringeRate: '000',
@@ -118,6 +125,20 @@ export function CreateJobSheet({
   // Format decimal function (from admin component)
   function formatDecimal(value: string): string {
     return (parseInt(value, 10) / 100).toFixed(2)
+  }
+
+  const getAllMptItems = async () => {
+    try {
+      const resp = await fetch('/api/mpt/getMptItems')
+      const data = await resp.json()
+
+      if (data.success) {
+        setallMptItems(data.data)
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   // Handle next digits function (from admin component)
@@ -170,8 +191,8 @@ export function CreateJobSheet({
         })
       }
     }
-
     fetchData()
+    getAllMptItems()
   }, [])
 
   useEffect(() => {
@@ -826,6 +847,123 @@ export function CreateJobSheet({
               </div>
             </div>
           </div>
+          <div>
+            <div>
+              <Label
+                htmlFor='select-service-items'
+                className='text-md font-bold mb-4'
+              >
+                Service Items
+              </Label>
+              <div id='select-service-items'>
+                <Popover open={openPopover} onOpenChange={setOpenPopover}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between overflow-hidden text-left"
+                    >
+                      <span className="truncate">
+                        {selectedItem ? (
+                          <>
+                            <span className="text-gray-500">{selectedItem.number}</span>
+                            {selectedItem.name}
+                          </>
+                        ) : (
+                          "Select service item..."
+                        )}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search..." />
+                      {openPopover && (
+                        <CommandList onWheel={(e) => e.stopPropagation()}>
+                          <div className="max-h-[200px] overflow-y-auto">
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup>
+                              {allMptItems
+                                .filter((item) => !!item.item_number && !!item.display_name)
+                                .map((item) => (
+                                  <CommandItem
+                                    key={item.item_number.trim()}
+                                    onSelect={() => {
+                                      setSelectedItem(item)
+                                      setOpenPopover(false)
+                                      setModalAddServiceItems(true)
+                                    }}
+                                    className="flex items-center"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedItem?.number === item.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{item.display_name}</span>
+                                      <span className="text-xs text-muted-foreground">{item.item_number}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </div>
+                        </CommandList>
+                      )}
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <div className="text-sm font-medium mb-2">List</div>
+              {formData.service_items.length > 0 ? (
+                <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md divide-y">
+                  {formData.service_items.map((item: any, index: number) => (
+                    <li
+                      key={index}
+                      className="px-4 py-2 odd:bg-gray-50 flex justify-between items-start gap-2"
+                    >
+                      <div className="flex flex-col flex-1">
+                        <span className="font-medium text-gray-800">{item.item_number}</span>
+                        <span className="text-xs text-gray-500 mt-0.5">
+                          {item.item_name || "No name"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-700">
+                          ${item.unitPrice || "0.00"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            const updated = [...formData.service_items];
+                            updated.splice(index, 1);
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              service_items: updated,
+                            }));
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">No service items added.</p>
+              )}
+            </div>
+          </div>
+
 
           <div className='pt-4 flex justify-end space-x-2'>
             <Button
@@ -844,6 +982,20 @@ export function CreateJobSheet({
             </Button>
           </div>
         </div>
+        <ModalCreateJobServiceItems
+          open={modalAddServiceItems}
+          onOpenChange={setModalAddServiceItems}
+          item={selectedItem}
+          handleNextDigits={handleNextDigits}
+          formatDecimal={formatDecimal}
+          savedProduct={(productData: any) => {
+            setFormData((prev: any) => ({
+              ...prev,
+              service_items: [...prev.service_items, productData],
+            }));
+            setSelectedItem(null)
+          }}
+        />
       </SheetContent>
     </Sheet>
   )

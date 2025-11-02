@@ -736,7 +736,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 endDate: job.endDate,
                 createdAt: job.createdAt ? job.createdAt : "",
                 wonBidItems: job.wonBidItems,
-                archived: job.archived // Include archived status
+                archived: job.archived ,
+                service_items: job?.serviceItems
             }));
 
             setActiveJobs(uiJobs);
