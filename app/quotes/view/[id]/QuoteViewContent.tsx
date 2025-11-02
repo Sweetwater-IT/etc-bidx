@@ -20,7 +20,6 @@ import ReactPDF from '@react-pdf/renderer'
 import BidProposalWorksheet from "../../create/BidProposalWorksheet";
 import { Quote } from "@/types/MPTEquipmentCost";
 
-
 export interface ContactInfo {
   id?: number;
   name?: string;
@@ -62,7 +61,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           items: Array.isArray(data.items)
             ? data.items.map((item: any, idx: number) => ({
               id: idx + 1,
-              description: item.description || "N/A",
+              item_name: item.item_name || "N/A",
               quantity: item.quantity || 0,
               unitPrice: item.unitPrice || 0,
               total: (item.quantity || 0) * (item.unitPrice || 0),

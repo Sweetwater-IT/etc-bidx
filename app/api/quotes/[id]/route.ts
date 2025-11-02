@@ -39,7 +39,7 @@ export async function GET(
   // 2️⃣ Items
   const { data: items } = await supabase
     .from("quote_items")
-    .select("id, description, quantity, item_number, unit_price, confirmed, uom, tax, is_tax_percentage, notes, created_at")
+    .select("id, description, quantity, item_number, unit_price, confirmed, item_name, uom, tax, is_tax_percentage, notes, created_at")
     .eq("quote_id", quoteId)
     .order('created_at', { ascending: true });
 
@@ -158,7 +158,8 @@ export async function GET(
       is_tax_percentage: i.is_tax_percentage,
       notes: i.notes,
       item_number: i.item_number,
-      created_at: i.created_at
+      created_at: i.created_at,
+      item_name: i.item_name
     })),
     admin_data: adminData || null,
     files: allFiles,

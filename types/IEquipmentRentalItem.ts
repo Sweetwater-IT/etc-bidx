@@ -2,7 +2,7 @@ export interface EquipmentRentalItem {
   id?: number;
   // phase: number;
   name: string;
-  itemNumber: string;
+  item_number: string;
   item_description: string;
   quantity: number;
   rentPrice: number;

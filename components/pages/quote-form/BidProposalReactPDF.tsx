@@ -318,7 +318,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={styles.tableRowWithBorder}>
               <Text style={[styles.tableHeader, styles.cellRow]}>Row</Text>
               <Text style={[styles.tableHeader, styles.cellItem]}>Item #</Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}>Description</Text>
+              <Text style={[styles.tableHeader, styles.cellDescription]}>Item Name</Text>
               <Text style={[styles.tableHeader, styles.cellUOM]}>UOM</Text>
               <Text style={[styles.tableHeader, styles.cellQuantity]}>Qty</Text>
               <Text style={[styles.tableHeader, styles.cellUnitPrice]}>Unit Price</Text>
@@ -331,7 +331,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.tableCell, styles.cellRow]}>{idx + 1}</Text>
                   <Text style={[styles.tableCell, styles.cellItem]}>{item.itemNumber || idx + 1}</Text>
-                  <Text style={[styles.tableCell, styles.cellDescription]}>{item.description}</Text>
+                  <Text style={[styles.tableCell, styles.cellDescription]}>{item.item_name}</Text>
                   <Text style={[styles.tableCell, styles.cellUOM]}>{item.uom || 'EA'}</Text>
                   <Text style={[styles.tableCell, styles.cellQuantity]}>{item.quantity}</Text>
                   <Text style={[styles.tableCell, styles.cellUnitPrice]}>{formatMoney(item.unitPrice || 0)}</Text>
@@ -398,7 +398,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   <View key={idx} style={{ marginBottom: 6 }}>
                     <Text>
                       {i.itemNumber + ' - '}
-                      <Text style={{ fontWeight: 'bold' }}>{i.description}</Text>
+                      <Text style={{ fontWeight: 'bold' }}>{i.item_name}</Text>
                       {' - ' + i.notes.replace(/\[|\]/g, '')}
                     </Text>
                   </View>

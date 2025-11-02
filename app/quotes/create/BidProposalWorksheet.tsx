@@ -244,7 +244,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <tr className='border-black border-b-[1.5px]'>
                 <th className="w-[80px] px-1 py-1 text-center">Row</th>
                 <th className="w-[80px] px-1 py-1 text-center">Item #</th>
-                <th className="px-2 py-1 text-center">Description</th>
+                <th className="px-2 py-1 text-center">Item Name</th>
                 <th className="w-[80px] px-2 py-1 text-center">UOM</th>
                 <th className="w-[80px] px-2 py-1 text-center">Qty</th>
                 <th className="w-[80px] px-2 py-1 text-right">Unit Price</th>
@@ -265,7 +265,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                         {item.itemNumber || index + 1}
                       </td>
                       <td className="px-1 text-center  py-1 font-bold align-top">
-                        {item.description ?? "-"}
+                        {item.item_name ?? "-"}
                       </td>
                       <td className="px-1 py-1 text-center align-top">
                         {item.uom || 'EA'}
@@ -288,7 +288,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                       >
                         <td className="border border-black px-2 py-1"></td>
                         <td className="border border-black px-2 py-1 pl-4 text-[10px]">
-                          - {assoc.description}
+                          - {assoc.item_name}
                         </td>
                         <td className="border border-black px-2 py-1 text-center text-[10px]">
                           {assoc.quantity}
@@ -345,7 +345,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 <div key={idx}>
                   <p style={{ whiteSpace: "pre-wrap" }}>
                     {i.itemNumber + ' - '}
-                    <span className='font-bold'>{i.description}</span>
+                    <span className='font-bold'>{i.item_name}</span>
                     {' - ' + (i.notes ? i.notes.replace(/\[|\]/g, '') : '')}
                   </p>
                   <br />

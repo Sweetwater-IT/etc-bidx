@@ -62,7 +62,7 @@ export default function QuoteItemSubItems({
                   <div>
                     <Input
                       placeholder="Description"
-                      value={subItem.description}
+                      value={subItem.item_name}
                       onChange={(e) =>
                         handleCompositeItemUpdate(
                           item.id,
@@ -154,7 +154,7 @@ export default function QuoteItemSubItems({
                     {subItem.itemNumber}
                   </div>
                   <div className="truncate text-foreground">
-                    {subItem.description}
+                    {subItem.item_name}
                   </div>
                   <div className="text-foreground">{subItem.uom}</div>
                   <div className="text-foreground">{subItem.quantity}</div>

@@ -50,7 +50,7 @@ export default function QuoteItemRow({
 
   const [newProduct, setNewProduct] = useState({
     itemNumber: "",
-    description: "",
+    item_name: "",
     uom: "",
     quantity: "",
     unitPrice: "",
@@ -124,7 +124,7 @@ export default function QuoteItemRow({
       if (subItem) {
         setNewProduct({
           itemNumber: subItem.itemNumber || "",
-          description: subItem.description || "",
+          item_name: subItem.item_name || "",
           uom: subItem.uom || "",
           quantity: subItem.quantity || 0,
           unitPrice: subItem.unitPrice || "",
@@ -147,13 +147,14 @@ export default function QuoteItemRow({
   }, [openProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
-
+    console.log('recibo', );
+    
     setShowDropdown(false);
 
     handleItemUpdate(item.id, "fullItem", {
       ...item,
       itemNumber: product.item_number,
-      description: product.description,
+      item_name: product.item_name,
       uom: product.uom,
       notes: product.notes
     });
@@ -166,7 +167,7 @@ export default function QuoteItemRow({
   const filteredProducts = products?.filter((p) => {
     const matchesSearch =
       p.item_number.toLowerCase().includes(productInput.toLowerCase()) ||
-      p.description.toLowerCase().includes(productInput.toLowerCase());
+      p.item_name.toLowerCase().includes(productInput.toLowerCase());
 
     const matchesSection = activeSection === 'all' || p.source === activeSection;
 
@@ -199,7 +200,7 @@ export default function QuoteItemRow({
             <SelectTrigger className="w-full h-9 text-base text-foreground bg-transparent">
               <SelectValue placeholder="Search or add a product...">
                 {item.itemNumber
-                  ? `${item.itemNumber} - ${item.description}`
+                  ? `${item.itemNumber} - ${item.item_name}`
                   : "Search or add a product..."}
               </SelectValue>
             </SelectTrigger>
@@ -218,7 +219,7 @@ export default function QuoteItemRow({
                       .filter(p => p.source === 'service_items')
                       .map((p) => (
                         <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
+                          {p.item_number} - {p.item_name}
                         </CommandItem>
                       ))}
                   </CommandGroup>
@@ -227,7 +228,7 @@ export default function QuoteItemRow({
                       .filter(p => p.source === 'rental')
                       .map((p) => (
                         <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
+                          {p.item_number} - {p.item_name}
                         </CommandItem>
                       ))}
                   </CommandGroup>
@@ -237,7 +238,7 @@ export default function QuoteItemRow({
                       .filter(p => p.source === 'sale')
                       .map((p) => (
                         <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
+                          {p.item_number} - {p.item_name}
                         </CommandItem>
                       ))}
                   </CommandGroup>
@@ -256,8 +257,8 @@ export default function QuoteItemRow({
 
         {/* Descrição */}
         <div className="text-foreground w-full text-center text-base">
-          {item.description ? (
-            item.description
+          {item.item_name ? (
+            item.item_name
           ) : (
             <span className="opacity-50">—</span>
           )}
@@ -320,7 +321,7 @@ export default function QuoteItemRow({
         <div className="text-foreground text-base">
           {item.discount !== undefined && item.discount !== null && item.discount !== 0 ? (
             item.discountType === "dollar" ? (
-              "$" + formatDecimal(Number(item.discount)) 
+              "$" + formatDecimal(Number(item.discount))
             ) : (
               `${Number(item.discount).toFixed(2)}%`
             )

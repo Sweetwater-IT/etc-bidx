@@ -39,7 +39,7 @@ const SaleItemsStep = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem_number, setEditingItem_number] = useState<string | null>(null);
   const [formData, setFormData] = useState<SaleItem | null>(null);
-  const [availableItems, setAvailableItems] = useState<{ item_number: string; name: string }[]>([]);
+  const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
 
   const calculateMargin = (quote_price: number, markup_percentage: number) => {
@@ -98,10 +98,9 @@ const SaleItemsStep = () => {
       const res = await fetch("/api/bid-items/sale-items");
       const data = await res.json();
       if (data.items) {
-        // Filter unique items by item_number
         const uniqueSaleItems = data.items.filter(
-          (item: { item_number: string }, index: number, self: { item_number: string }[]) =>
-            index === self.findIndex((t: { item_number: string }) => t.item_number === item.item_number)
+          (item, index, self) =>
+            index === self.findIndex((t) => t.item_number === item.item_number)
         );
         setAvailableItems(uniqueSaleItems);
       }
@@ -191,6 +190,8 @@ const SaleItemsStep = () => {
     grossMargin: `${calculateMargin(item.quote_price, item.markup_percentage).toFixed(2)}%`,
   }));
 
+
+
   return (
     <div>
       <div className="flex items-center justify-between pb-2 border-b mb-6">
@@ -249,7 +250,14 @@ const SaleItemsStep = () => {
                     >
                       <span className="truncate">
                         {formData.item_number
-                          ? `${formData.item_number} - ${formData.name}`
+                          ? (() => {
+                            const selected = availableItems.find(
+                              (i) => i.item_number === formData.item_number
+                            );
+                            return selected
+                              ? `${selected.item_number} - ${selected.name}`
+                              : formData.item_number;
+                          })()
                           : "Select sale item..."}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -267,11 +275,18 @@ const SaleItemsStep = () => {
                                 key={item.item_number}
                                 value={`${item.name} ${item.item_number}`}
                                 onSelect={(value) => {
-                                  const selected = availableItems.find(i => i.item_number.trim() === value.split(" ").pop());                                  
+                                  const selected = availableItems.find(
+                                    i => i.item_number.trim() === value.split(" ").pop()
+                                  );
                                   if (selected && formData) {
-                                    setFormData({ ...formData, item_number: selected.item_number, name: selected.name });
+                                    setFormData({
+                                      ...formData,
+                                      item_number: selected.item_number,
+                                      name: selected.name,
+                                      item_description: selected.item_description || ""
+                                    });
                                   } else if (formData) {
-                                    setFormData({ ...formData, item_number: "", name: "" });
+                                    setFormData({ ...formData, item_number: "", name: "", item_description: "" });
                                   }
                                   setOpen(false);
                                 }}
@@ -304,26 +319,10 @@ const SaleItemsStep = () => {
                     <span className="font-medium text-foreground">Item Number: </span>{formData.item_number}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Description: </span>{formData.item_description || formData.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Vendor: </span>{formData.vendor || "-"}
+                    <span className="font-medium text-foreground">Item Name: </span>{formData.name}
                   </p>
                 </div>
               )}
-
-
-              {/* Name Autocomplete */}
-              <div className="w-full">
-                <Label className="text-sm font-medium mb-2 block">Name</Label>
-                <Input
-                  value={formData.name || ""}
-                  readOnly
-                  className="w-full bg-gray-100"
-                  placeholder="Name will auto-fill"
-                />
-              </div>
-
               {/* Other fields */}
               <div>
                 <Label className="text-sm font-medium mb-2 block">Vendor</Label>

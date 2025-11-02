@@ -684,17 +684,15 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   const handleSaveAndExit = async () => {
-    if (!quoteId) {
-      router.push('/quotes')
-    }
+    if (!quoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
       setIsSaving(true)
       const success = await autosave()
-      if (success) router.push('/quotes')
     } catch (error) {
       toast.error('Could not save draft before exiting: ' + error)
     } finally {
+            router.push('/quotes')
       setIsSaving(false)
     }
   }
@@ -752,7 +750,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
+        item_name: item.name,
         uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
@@ -770,7 +768,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       .filter((item: any) => !existingNumbers.includes(item.item_number))
       .map((item: any) => ({
         itemNumber: item.item_number,
-        description: item.name,
+        item_name: item.name,
         uom: 'EA',
         notes: item.notes || "",
         quantity: item.quantity,
@@ -808,7 +806,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
         return {
           itemNumber: phase.itemNumber,
-          description: phase.itemName,
+          item_name: phase.itemName,
           uom: "EA",
           notes: phase.notesMPTItem,
           quantity: 1,
@@ -855,6 +853,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       setOpenModal(true);
     }
   }, [quoteItems]);
+
+  console.log(quoteItems);
+
 
   return (
     <div className="flex flex-1 flex-col">

@@ -87,7 +87,7 @@ export const createQuoteEmailHtml = (
           <tr style="border-bottom: 1px solid #000">
             <td style="padding: 6px; font-size: 10px; border: 1px solid #000">${item.itemNumber}</td>
             <td style="padding: 6px; font-size: 10px; border: 1px solid #000">
-              ${item.description}
+              ${item.item_name}
               ${item.notes ? `<div style="margin-top: 4px; font-size: 9px">${item.notes}</div>` : ''}
             </td>
             <td style="padding: 6px; font-size: 10px; border: 1px solid #000; text-align: right">
