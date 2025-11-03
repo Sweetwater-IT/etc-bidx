@@ -4,6 +4,7 @@ import { Step } from "@/types/IStep";
 import SignList from "../signs/sign-list";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { getAssociatedSignEquipment } from '@/lib/mptRentalHelperFunctions';
+import { EquipmentType } from '@/types/MPTEquipment';
 
 const step: Step = {
   id: "step-3",
@@ -35,14 +36,14 @@ const MutcdSignsStep3 = ({
     const currentCovers = phase.standardEquipment?.covers?.quantity || 0;
     const currentACLights = phase.standardEquipment?.ACLights?.quantity || 0;
 
-    // Always dispatch if current !== required (enables decrements to 0)
-    const equipmentUpdates = [
-      { type: 'fourFootTypeIII', current: currentTypeIII, required: requiredTypeIII },
-      { type: 'hStand', current: currentHStand, required: requiredHStand },
-      { type: 'post', current: currentPost, required: requiredPost },
-      { type: 'BLights', current: currentBLights, required: requiredBLights },
-      { type: 'covers', current: currentCovers, required: requiredCovers },
-      { type: 'ACLights', current: currentACLights, required: requiredACLights },
+    // FIXED: Always dispatch if current !== required (enables decrements to 0)
+    const equipmentUpdates: Array<{ type: EquipmentType; current: number; required: number }> = [
+      { type: 'fourFootTypeIII' as EquipmentType, current: currentTypeIII, required: requiredTypeIII },
+      { type: 'hStand' as EquipmentType, current: currentHStand, required: requiredHStand },
+      { type: 'post' as EquipmentType, current: currentPost, required: requiredPost },
+      { type: 'BLights' as EquipmentType, current: currentBLights, required: requiredBLights },
+      { type: 'covers' as EquipmentType, current: currentCovers, required: requiredCovers },
+      { type: 'ACLights' as EquipmentType, current: currentACLights, required: requiredACLights },
     ];
 
     equipmentUpdates.forEach(({ type, current, required }) => {
