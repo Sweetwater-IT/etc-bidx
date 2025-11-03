@@ -5,7 +5,7 @@ import { lightAndDrumList, Phase, standardEquipmentList } from '@/types/MPTEquip
 import React, { useState } from 'react'
 import { TripAndLaborSummary } from './trip-and-labor-summary';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export const formatLabel = (key: string): string => {
     return key
@@ -19,14 +19,10 @@ const PhasesViewOnly = () => {
     const { mptRental, adminData } = useEstimate()
     const [expandedPhaseIndex, setExpandedPhaseIndex] = useState<number | null>(null)
     const [expandedTripIndex, setExpandedTripIndex] = useState<number | null>(null);
-    const [expandedMutcdIndex, setExpandedMutcdIndex] = useState<number | null>(null);
     const [expandedStructureIndex, setExpandedStructureIndex] = useState<number | null>(null);
 
     const toggleStructureExpand = (index: number) => {
         setExpandedStructureIndex(prev => (prev === index ? null : index));
-    };
-    const toggleMutcdExpand = (index: number) => {
-        setExpandedMutcdIndex(prev => (prev === index ? null : index));
     };
 
     const toggleTripExpand = (index: number) => {
@@ -35,6 +31,35 @@ const PhasesViewOnly = () => {
 
     const toggleExpand = (index: number) => {
         setExpandedPhaseIndex(expandedPhaseIndex === index ? null : index)
+    }
+
+    const hasStructures = (phase: any) => 
+        phase.signs?.some(
+            (s: any) =>
+                !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
+                !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
+        ) ?? false;
+
+    const structureCount = (phase: any) =>
+        phase.signs?.filter(
+            (s: any) =>
+                !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
+                !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
+        ).length || 0;
+
+    const labelMapping: Record<string, string> = {
+        fourFootTypeIII: "4' Type III",
+        hStand: "H Stand",
+        post: "Post",
+        sandbag: "Sandbags",
+        sixFootWings: "Six Foot Wings",
+        metalStands: "Metal Stands",
+        covers: "Covers",
+        HIVP: "HI Vertical Panels",
+        TypeXIVP: "Type XI Vertical Panels",
+        BLights: "B-Lights",
+        ACLights: "AC Lights",
+        sharps: "Sharps",
     }
 
     return (
@@ -47,196 +72,145 @@ const PhasesViewOnly = () => {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {mptRental.phases.map((phase: any, index: number) => (
-                    <React.Fragment key={index}>
-                        <TableRow className="hover:bg-gray-50">
-                            <TableCell className="px-2 py-4 w-6 text-center cursor-pointer" onClick={() => toggleExpand(index)}>
-                                <div
-                                    className={`transition-transform duration-300`}
-                                    style={{ transform: expandedPhaseIndex === index ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                                >
-                                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                                </div>
-                            </TableCell>
+                {mptRental.phases.map((phase: any, index: number) => {
+                    const signCount = phase.signs?.length || 0;
+                    const structureCnt = structureCount(phase);
+                    const hasStruct = hasStructures(phase);
+                    const days = phase.days || 0;
+                    const personnel = phase.personnel || 0;
+                    const isPhaseExpanded = expandedPhaseIndex === index;
+                    const isStructureExpanded = expandedStructureIndex === index;
+                    const isTripExpanded = expandedTripIndex === index;
 
-                            <TableCell className="px-2 py-4 font-semibold">{phase.name || `Phase ${index + 1}`}</TableCell>
-                            <TableCell className="px-2 py-4">{phase.itemNumber || '-'}</TableCell>
-                            <TableCell className="px-2 py-4">{phase.startDate ? new Date(phase.startDate).toLocaleDateString() : '-'}</TableCell>
-                            <TableCell className="px-2 py-4">{phase.endDate ? new Date(phase.endDate).toLocaleDateString() : '-'}</TableCell>
-
-                            <TableCell
-                                className="px-2 py-4 text-blue-700 cursor-pointer text-center"
-                                onClick={() => toggleMutcdExpand(index)}
-                            >
-                                {phase.signs?.length || 0} <ChevronDown className="inline h-4 w-4 ml-1 text-blue-700 transition-transform duration-300" style={{ transform: expandedMutcdIndex === index ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                            </TableCell>
-                            <TableCell
-                                className={`px-2 py-4 text-blue-700 cursor-pointer text-center ${phase.signs?.some(
-                                    (s) =>
-                                        !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
-                                        !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
-                                )
-                                    ? ''
-                                    : 'text-gray-400 cursor-default'
-                                    }`}
-                                onClick={() =>
-                                    phase.signs?.some(
-                                        (s) =>
-                                            !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
-                                            !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
-                                    )
-                                        ? toggleStructureExpand(index)
-                                        : undefined
-                                }
-                            >
-                                {phase.signs?.filter(
-                                    (s) =>
-                                        !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
-                                        !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
-                                ).length || '-'}{' '}
-                                {phase.signs?.some(
-                                    (s) =>
-                                        !['none', 'loose'].includes(s.displayStructure?.toLowerCase() || '') &&
-                                        !['none', 'loose'].includes(s.associatedStructure?.toLowerCase() || '')
-                                ) && <ChevronDown className={`inline h-4 w-4 ml-1 text-blue-700 transition-transform duration-300`} style={{ transform: expandedStructureIndex === index ? 'rotate(180deg)' : 'rotate(0deg)' }} />}
-                            </TableCell>
-                            <TableCell
-                                className="px-2 py-4 text-blue-700 cursor-pointer text-center"
-                                onClick={() => toggleTripExpand(index)}
-                            >
-                                <div
-                                    className="inline-block mr-1 transition-transform duration-300"
-                                    style={{ transform: expandedTripIndex === index ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                                >
-                                    <ChevronDown className="h-4 w-4 text-blue-700" />
-                                </div>
-                                {phase.days || 0} days, {phase.personnel || 0} personnes
-                            </TableCell>
-
-                        </TableRow>
-
-                        {expandedPhaseIndex === index && (
-                            <TableRow>
-                                <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
-                                    <h4 className="font-semibold mb-2">Signs</h4>
-                                    <Table className="w-full">
-                                        <TableHeader className="bg-gray-100">
-                                            <TableRow>
-                                                {['Designation', 'Description', 'Dimensions', 'Quantity', 'Sheeting', 'Structure', 'B Lights', 'Covers'].map((col) => (
-                                                    <TableHead key={col} className="px-2 py-1">{col}</TableHead>
-                                                ))}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign: any, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell className="px-2 py-1">{sign.designation}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.description}</TableCell>
-                                                    <TableCell className="px-2 py-1">{`${sign.width} x ${sign.height}`}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.quantity}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.sheeting}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.displayStructure || sign.associatedStructure || '-'}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.bLights}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.covers}</TableCell>
-                                                </TableRow>
-                                            )) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={8} className="text-center py-2">No signs</TableCell>
-                                                </TableRow>
+                    return (
+                        <React.Fragment key={index}>
+                            <TableRow className="hover:bg-gray-50">
+                                <TableCell className="px-2 py-4 w-6 text-center">
+                                    {signCount > 0 && (
+                                        <div className="cursor-pointer" onClick={() => toggleExpand(index)}>
+                                            {isPhaseExpanded ? (
+                                                <ChevronDown className="h-4 w-4 text-gray-600" />
+                                            ) : (
+                                                <ChevronRight className="h-4 w-4 text-gray-600" />
                                             )}
-                                        </TableBody>
-                                    </Table>
+                                        </div>
+                                    )}
                                 </TableCell>
-                            </TableRow>
-                        )}
-
-                        {expandedMutcdIndex === index && (
-                            <TableRow>
-                                <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
-                                    <h4 className="font-semibold mb-2">MUTCD Signs Details</h4>
-                                    <Table className="w-full">
-                                        <TableHeader className="bg-gray-100">
-                                            <TableRow>
-                                                {['Designation', 'Description', 'Dimensions', 'Quantity', 'Sheeting', 'Structure', 'B Lights', 'Covers'].map((col) => (
-                                                    <TableHead key={col} className="px-2 py-1">{col}</TableHead>
-                                                ))}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign: any, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell className="px-2 py-1">{sign.designation}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.description}</TableCell>
-                                                    <TableCell className="px-2 py-1">{`${sign.width} x ${sign.height}`}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.quantity}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.sheeting}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.displayStructure || sign.associatedStructure || '-'}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.bLights}</TableCell>
-                                                    <TableCell className="px-2 py-1">{sign.covers}</TableCell>
-                                                </TableRow>
-                                            )) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={8} className="text-center py-2">No MUTCD signs</TableCell>
-                                                </TableRow>
+                                <TableCell className="px-2 py-4 font-semibold">{phase.name || `Phase ${index + 1}`}</TableCell>
+                                <TableCell className="px-2 py-4">{phase.itemNumber || '-'}</TableCell>
+                                <TableCell className="px-2 py-4">{phase.startDate ? new Date(phase.startDate).toLocaleDateString() : '-'}</TableCell>
+                                <TableCell className="px-2 py-4">{phase.endDate ? new Date(phase.endDate).toLocaleDateString() : '-'}</TableCell>
+                                <TableCell className="px-2 py-4 text-center">
+                                    {signCount > 0 ? (
+                                        <div 
+                                            className="text-blue-700 cursor-pointer hover:underline"
+                                            onClick={() => toggleExpand(index)}
+                                        >
+                                            {signCount} {signCount === 1 ? 'sign' : 'signs'}
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">—</span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="px-2 py-4 text-center">
+                                    {hasStruct ? (
+                                        <div 
+                                            className="flex items-center gap-1 justify-center text-blue-700 cursor-pointer hover:underline"
+                                            onClick={() => toggleStructureExpand(index)}
+                                        >
+                                            {isStructureExpanded ? (
+                                                <ChevronDown className="h-4 w-4" />
+                                            ) : (
+                                                <ChevronRight className="h-4 w-4" />
                                             )}
-                                        </TableBody>
-                                    </Table>
+                                            {structureCnt} {structureCnt === 1 ? 'structure' : 'structures'}
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">—</span>
+                                    )}
                                 </TableCell>
-                            </TableRow>
-                        )}
-
-                        {expandedTripIndex === index && (
-                            <TableRow>
-                                <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
-                                    <h4 className="font-semibold mb-2">Trip & Labor Details</h4>
-                                    <TripAndLaborSummary phase={phase} phaseIndex={index} adminData={adminData} mptRental={mptRental} />
-                                </TableCell>
-                            </TableRow>
-                        )}
-
-                        {expandedStructureIndex === index && (
-                            <TableRow>
-                                <TableCell colSpan={8} className="p-4 border-t transition-all duration-300 ease-in-out">
-                                    <h4 className="text-base font-semibold mb-4 pl-6">MPT Equipment</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
-                                        {standardEquipmentList.map((equipmentKey) => {
-                                            const quantity = phase.standardEquipment?.[equipmentKey]?.quantity || 0
-                                            const price = mptRental?.staticEquipmentInfo?.[equipmentKey]?.price || 0
-
-                                            const labelMapping: Record<string, string> = {
-                                                fourFootTypeIII: "4' Type III",
-                                                hStand: "H Stand",
-                                                post: "Post",
-                                                sandbag: "Sandbags",
-                                                sixFootWings: "Six Foot Wings",
-                                                metalStands: "Metal Stands",
-                                                covers: "Covers",
-                                                HIVP: "HI Vertical Panels",
-                                                TypeXIVP: "Type XI Vertical Panels",
-                                                BLights: "B-Lights",
-                                                ACLights: "AC Lights",
-                                                sharps: "Sharps",
-                                            }
-
-                                            const formatLabel = (key: string) =>
-                                                labelMapping[key] ||
-                                                key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())
-
-                                            return (
-                                                <div key={equipmentKey} className="flex flex-col">
-                                                    <label className="text-sm font-semibold">{formatLabel(equipmentKey)}</label>
-                                                    <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-                                                        Qty: {quantity}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
+                                <TableCell className="px-2 py-4 text-center">
+                                    <div 
+                                        className="flex items-center gap-1 justify-center text-blue-700 cursor-pointer hover:underline"
+                                        onClick={() => toggleTripExpand(index)}
+                                    >
+                                        {isTripExpanded ? (
+                                            <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronRight className="h-4 w-4" />
+                                        )}
+                                        {days} days, {personnel} people
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        )}
-                    </React.Fragment>
-                ))}
+                            {isPhaseExpanded && (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
+                                        <h4 className="font-semibold mb-2">Signs</h4>
+                                        <Table className="w-full">
+                                            <TableHeader className="bg-gray-100">
+                                                <TableRow>
+                                                    {['Designation', 'Description', 'Dimensions', 'Quantity', 'Sheeting', 'Structure', 'B Lights', 'Covers'].map((col) => (
+                                                        <TableHead key={col} className="px-2 py-1">{col}</TableHead>
+                                                    ))}
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {phase.signs?.length ? sortSignsBySecondary(phase.signs).map((sign: any, i) => (
+                                                    <TableRow key={i}>
+                                                        <TableCell className="px-2 py-1">{sign.designation}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.description}</TableCell>
+                                                        <TableCell className="px-2 py-1">{`${sign.width} x ${sign.height}`}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.quantity}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.sheeting}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.displayStructure || sign.associatedStructure || '-'}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.bLights}</TableCell>
+                                                        <TableCell className="px-2 py-1">{sign.covers}</TableCell>
+                                                    </TableRow>
+                                                )) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={8} className="text-center py-2">No signs</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {isStructureExpanded && structureCnt > 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="p-4 border-t transition-all duration-300 ease-in-out">
+                                        <h4 className="text-base font-semibold mb-4 pl-6">MPT Equipment</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
+                                            {standardEquipmentList.map((equipmentKey) => {
+                                                const quantity = phase.standardEquipment?.[equipmentKey]?.quantity || 0
+                                                const formatLabel = (key: string) =>
+                                                    labelMapping[key as keyof typeof labelMapping] ||
+                                                    key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())
+                                                return (
+                                                    <div key={equipmentKey} className="flex flex-col">
+                                                        <label className="text-sm font-semibold">{formatLabel(equipmentKey)}</label>
+                                                        <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                                                            Qty: {quantity}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {isTripExpanded && (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
+                                        <h4 className="font-semibold mb-2">Trip & Labor Details</h4>
+                                        <TripAndLaborSummary phase={phase} phaseIndex={index} adminData={adminData} mptRental={mptRental} />
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </React.Fragment>
+                    );
+                })}
             </TableBody>
         </Table>
     )
