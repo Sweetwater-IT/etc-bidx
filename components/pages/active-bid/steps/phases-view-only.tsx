@@ -73,6 +73,8 @@ const PhasesViewOnly = () => {
             </TableHeader>
             <TableBody>
                 {mptRental.phases.map((phase: any, index: number) => {
+                    const phaseName = phase.name || `Phase ${index + 1}`;
+                    const phaseIdentifier = `Phase ${index + 1}${phase.name ? ` - ${phase.name}` : ''}`;
                     const signCount = phase.signs?.length || 0;
                     const structureCnt = structureCount(phase);
                     const hasStruct = hasStructures(phase);
@@ -96,7 +98,7 @@ const PhasesViewOnly = () => {
                                         </div>
                                     )}
                                 </TableCell>
-                                <TableCell className="px-2 py-4 font-semibold">{phase.name || `Phase ${index + 1}`}</TableCell>
+                                <TableCell className="px-2 py-4 font-semibold">{phaseName}</TableCell>
                                 <TableCell className="px-2 py-4">{phase.itemNumber || '-'}</TableCell>
                                 <TableCell className="px-2 py-4">{phase.startDate ? new Date(phase.startDate).toLocaleDateString() : '-'}</TableCell>
                                 <TableCell className="px-2 py-4">{phase.endDate ? new Date(phase.endDate).toLocaleDateString() : '-'}</TableCell>
@@ -139,14 +141,17 @@ const PhasesViewOnly = () => {
                                         ) : (
                                             <ChevronRight className="h-4 w-4" />
                                         )}
-                                        {days} days, {personnel} people
+                                        {days} days, {personnel} personnel
                                     </div>
                                 </TableCell>
                             </TableRow>
                             {isPhaseExpanded && (
                                 <TableRow>
                                     <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
-                                        <h4 className="font-semibold mb-2">Signs</h4>
+                                        <div className="mb-2">
+                                            <h5 className="text-sm font-medium text-gray-600">{phaseIdentifier}</h5>
+                                            <h4 className="font-semibold">Signs</h4>
+                                        </div>
                                         <Table className="w-full">
                                             <TableHeader className="bg-gray-100">
                                                 <TableRow>
@@ -180,7 +185,10 @@ const PhasesViewOnly = () => {
                             {isStructureExpanded && structureCnt > 0 && (
                                 <TableRow>
                                     <TableCell colSpan={8} className="p-4 border-t transition-all duration-300 ease-in-out">
-                                        <h4 className="text-base font-semibold mb-4 pl-6">MPT Equipment</h4>
+                                        <div className="mb-4 pl-6">
+                                            <h5 className="text-sm font-medium text-gray-600 mb-1">{phaseIdentifier}</h5>
+                                            <h4 className="font-semibold">MPT Equipment</h4>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
                                             {standardEquipmentList.map((equipmentKey) => {
                                                 const quantity = phase.standardEquipment?.[equipmentKey]?.quantity || 0
@@ -203,7 +211,10 @@ const PhasesViewOnly = () => {
                             {isTripExpanded && (
                                 <TableRow>
                                     <TableCell colSpan={8} className="p-4 bg-white border-t transition-all duration-300 ease-in-out">
-                                        <h4 className="font-semibold mb-2">Trip & Labor Details</h4>
+                                        <div className="mb-2">
+                                            <h5 className="text-sm font-medium text-gray-600">{phaseIdentifier}</h5>
+                                            <h4 className="font-semibold">Trip & Labor Details</h4>
+                                        </div>
                                         <TripAndLaborSummary phase={phase} phaseIndex={index} adminData={adminData} mptRental={mptRental} />
                                     </TableCell>
                                 </TableRow>
