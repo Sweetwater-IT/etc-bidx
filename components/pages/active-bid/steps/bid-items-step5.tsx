@@ -66,7 +66,6 @@ import SaleItemsStep from './sale-items-step'
 import FlaggingServicesTab from '@/components/BidItems/flagging-tab'
 import ServiceWorkTab from '@/components/BidItems/service-work-tab'
 import PermanentSignsSummaryStep from '@/components/BidItems/permanent-signs-tab'
-import { getAssociatedSignEquipment } from '@/lib/mptRentalHelperFunctions';
 import { formatDecimal } from '@/lib/formatDecimals'
 import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
