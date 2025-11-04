@@ -75,6 +75,7 @@ import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, Command
 import { Textarea } from '@/components/ui/textarea'
 import NotesInputs from './NotesInput'
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
+
 // Default values for payback calculations and truck/fuel data
 const DEFAULT_PAYBACK_PERIOD = 5 // 5 years
 const DEFAULT_MPG_PER_TRUCK = 8
@@ -1242,30 +1243,42 @@ const BidItemsStep5 = ({
   ])
 
 
-  useEffect(() => {
-    const phases = mptRental?.phases;
-    if (!phases) return;
-
-    phases.forEach((phase, phaseIndex) => {
-      const signs = phase.signs;
-      if (!signs || !signs.length) return;
-
-      const currentBLights = phase.standardEquipment.BLights?.quantity;
-      const { BLights: requiredBLights } = getAssociatedSignEquipment(phase);
-
-      if (currentBLights !== requiredBLights && requiredBLights > 0) {
-        dispatch({
-          type: 'ADD_MPT_ITEM_NOT_SIGN',
-          payload: {
-            phaseNumber: phaseIndex,
-            equipmentType: 'BLights',
-            equipmentProperty: 'quantity',
-            value: requiredBLights
-          }
-        });
-      }
-    });
-  }, [mptRental?.phases, dispatch]);
+useEffect(() => {
+  const phases = mptRental?.phases;
+  if (!phases) return;
+  phases.forEach((phase, phaseIndex) => {
+    const signs = phase.signs;
+    if (!signs || !signs.length) return;
+    const currentBLights = phase.standardEquipment.BLights?.quantity;
+    const { BLights: requiredBLights } = getAssociatedSignEquipment(phase);
+    if (currentBLights !== requiredBLights) {  // FIXED: Removed && requiredBLights > 0 to enable decrements to 0
+      dispatch({
+        type: 'ADD_MPT_ITEM_NOT_SIGN',
+        payload: {
+          phaseNumber: phaseIndex,
+          equipmentType: 'BLights',
+          equipmentProperty: 'quantity',
+          value: requiredBLights
+        }
+      });
+    }
+    
+    // Optional: Add covers handling (if not already elsewhere)
+    const currentCovers = phase.standardEquipment?.covers?.quantity || 0;
+    const { covers: requiredCovers } = getAssociatedSignEquipment(phase);
+    if (currentCovers !== requiredCovers) {
+      dispatch({
+        type: 'ADD_MPT_ITEM_NOT_SIGN',
+        payload: {
+          phaseNumber: phaseIndex,
+          equipmentType: 'covers',
+          equipmentProperty: 'quantity',
+          value: requiredCovers
+        }
+      });
+    }
+  });
+}, [mptRental?.phases, dispatch]);
 
 
 
