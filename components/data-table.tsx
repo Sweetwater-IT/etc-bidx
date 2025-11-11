@@ -351,7 +351,7 @@ function formatCellValue(value: any, key: string, row?: any) {
   if (val === "straight_sale") {
     displayValue = "Straight Sale";
   } else if (val === "to_project") {
-    const jobNum = fullRow?.job_number || "";
+    const jobNum = fullRow?.etc_job_number || "";
     displayValue = jobNum ? `Job: ${jobNum}` : "To Project";
   } else if (val === "estimate_bid") {
     const contractNum = fullRow?.estimate_contract_number || "";
