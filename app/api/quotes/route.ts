@@ -78,13 +78,24 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("quotes")
       .select(`
-        *,
+        id,
+        quote_number,
+        status,
+        date_sent,
+        type_quote,                                  
+        customer_name,
+        customer_contact,
+        county,
+        created_at,
+        updated_at,
+        estimate_id,
+        job_id,
+        quote_items ( id ),
+        files ( id ),
         quotes_customers (
           contractors ( id, name )
         ),
-        quote_recipients ( email, point_of_contact ),
-        quote_items ( id ),
-        files ( id )
+        quote_recipients ( email, point_of_contact )
       `)
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
@@ -133,6 +144,7 @@ export async function GET(request: NextRequest) {
         id: row.id,
         quote_number: row.quote_number,
         status: row.status,
+        type: row.type_quote,
         date_sent: row.date_sent,
         estimate_id: row.estimate_id ?? null,
         job_id: row.job_id ?? null,
