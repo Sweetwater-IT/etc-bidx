@@ -343,28 +343,30 @@ function formatCellValue(value: any, key: string) {
 
   // QUOTES: Real bidx type_quote badge — EXACT MATCH
   if (key === "type") {
-    const val = String(value || "").trim();
+  const val = String(value || "").trim();
+  const row = arguments[2]; // Full row data (from cell)
 
-    let displayValue = "Unknown";
-    let variant: "successful" | "warning" | "default" = "default";
+  let displayValue = "Unknown";
 
-    if (val === "straight_sale") {
-      displayValue = "Straight Sale";
-      variant = "successful"; // Green
-    } else if (val === "to_project") {
-      displayValue = "To Project";
-      variant = "default";    // Blue
-    } else if (val === "estimate_bid") {
-      displayValue = "Estimate/Bid";
-      variant = "warning";    // Amber
-    }
-
-    return (
-      <Badge variant={variant} className="font-medium">
-        {displayValue}
-      </Badge>
-    );
+  if (val === "straight_sale") {
+    displayValue = "Straight Sale";
+  } else if (val === "to_project") {
+    const jobNum = row?.job_number || "";
+    displayValue = jobNum ? `Job: ${jobNum}` : "To Project";
+  } else if (val === "estimate_bid") {
+    const contractNum = row?.estimate_contract_number || "";
+    displayValue = contractNum ? `Bid: ${contractNum}` : "Estimate/Bid";
   }
+
+  return (
+    <Badge 
+      variant="outline" 
+      className="font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+    >
+      {displayValue}
+    </Badge>
+  );
+}
   
   return value
 }
