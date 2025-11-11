@@ -341,24 +341,23 @@ function formatCellValue(value: any, key: string) {
     return JSON.stringify(value)
   }
 
-  // ADD THIS BLOCK HERE (just before final return)
+  // QUOTES: Real bidx type_quote badge — EXACT MATCH
   if (key === "type") {
-    const value = String(value || "");
-    const isStraightSale = value === "Straight Sale";
-    const isEstimate = value.startsWith("EST-") || (!isStraightSale && !value.match(/^\d{2}-\d{7}$/));
-    const isJob = value.match(/^\d{2}-\d{7}$/);
+    const val = String(value || "").trim();
 
-    const displayValue = isStraightSale 
-      ? "Straight Sale" 
-      : isEstimate 
-        ? `Bid: ${value}` 
-        : `Job: ${value}`;
+    let displayValue = "Unknown";
+    let variant: "successful" | "warning" | "default" = "default";
 
-    const variant = isStraightSale 
-      ? "successful" 
-      : isEstimate 
-        ? "warning" 
-        : "default";
+    if (val === "straight_sale") {
+      displayValue = "Straight Sale";
+      variant = "successful"; // Green
+    } else if (val === "to_project") {
+      displayValue = "To Project";
+      variant = "default";    // Blue
+    } else if (val === "estimate_bid") {
+      displayValue = "Estimate/Bid";
+      variant = "warning";    // Amber
+    }
 
     return (
       <Badge variant={variant} className="font-medium">
@@ -366,7 +365,7 @@ function formatCellValue(value: any, key: string) {
       </Badge>
     );
   }
-
+  
   return value
 }
 
