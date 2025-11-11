@@ -173,7 +173,7 @@ export interface DataTableProps<TData extends object> {
 
 }
 
-function formatCellValue(value: any, key: string) {
+function formatCellValue(value: any, key: string, row?: any) {  
   if (
     value === undefined ||
     value === null ||
@@ -344,7 +344,7 @@ function formatCellValue(value: any, key: string) {
   // QUOTES: Real bidx type_quote badge — EXACT MATCH
   if (key === "type") {
   const val = String(value || "").trim();
-  const row = arguments[2]; // Full row data (from cell)
+  const row = row || {}; 
 
   let displayValue = "Unknown";
 
@@ -448,7 +448,7 @@ export function DataTable<TData extends object>({
       header: col.title,
       cell: ({ row }: any) => {
         const value = row.getValue(col.key)
-        return formatCellValue(value, col.key)
+        return formatCellValue(value, col.key, row.original)  
       },
       className: col.className,
       enableSorting: col.sortable ?? true
