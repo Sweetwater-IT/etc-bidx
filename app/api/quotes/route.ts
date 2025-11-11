@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         estimate_id,
+        etc_job_number,
         job_id,
         quote_items ( id ),
         files ( id ),
@@ -157,6 +158,7 @@ export async function GET(request: NextRequest) {
         created_at: row.created_at,
         has_attachments: (row.files?.length || 0) > 0,
         estimate_contract_number: adminData?.contract_number ?? null,
+        etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
       };
 
