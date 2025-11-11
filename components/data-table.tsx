@@ -344,17 +344,17 @@ function formatCellValue(value: any, key: string, row?: any) {
   // QUOTES: Real bidx type_quote badge — EXACT MATCH
   if (key === "type") {
   const val = String(value || "").trim();
-  const row = row || {}; 
+  const fullRow = row || {}; 
 
   let displayValue = "Unknown";
 
   if (val === "straight_sale") {
     displayValue = "Straight Sale";
   } else if (val === "to_project") {
-    const jobNum = row?.job_number || "";
+    const jobNum = fullRow?.job_number || "";
     displayValue = jobNum ? `Job: ${jobNum}` : "To Project";
   } else if (val === "estimate_bid") {
-    const contractNum = row?.estimate_contract_number || "";
+    const contractNum = fullRow?.estimate_contract_number || "";
     displayValue = contractNum ? `Bid: ${contractNum}` : "Estimate/Bid";
   }
 
