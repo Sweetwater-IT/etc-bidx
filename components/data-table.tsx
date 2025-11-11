@@ -332,16 +332,39 @@ function formatCellValue(value: any, key: string) {
 
   // Handle objects
   if (typeof value === 'object') {
-    // If it's an array, join the values
     if (Array.isArray(value)) {
       return value.join(', ')
     }
-    // If it's null, return empty string
     if (value === null) {
       return ''
     }
-    // Otherwise, stringify the object
     return JSON.stringify(value)
+  }
+
+  // ADD THIS BLOCK HERE (just before final return)
+  if (key === "type") {
+    const value = String(value || "");
+    const isStraightSale = value === "Straight Sale";
+    const isEstimate = value.startsWith("EST-") || (!isStraightSale && !value.match(/^\d{2}-\d{7}$/));
+    const isJob = value.match(/^\d{2}-\d{7}$/);
+
+    const displayValue = isStraightSale 
+      ? "Straight Sale" 
+      : isEstimate 
+        ? `Bid: ${value}` 
+        : `Job: ${value}`;
+
+    const variant = isStraightSale 
+      ? "successful" 
+      : isEstimate 
+        ? "warning" 
+        : "default";
+
+    return (
+      <Badge variant={variant} className="font-medium">
+        {displayValue}
+      </Badge>
+    );
   }
 
   return value
