@@ -14,7 +14,7 @@ import { toast } from "sonner";
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
   { key: "status", title: "Status" },
-  { key: "date_sent", title: "Date Sent" },
+  { key: "type", title: "Type", sortable: true },
   { key: "customer_name", title: "Customer" },
   { key: "point_of_contact", title: "Contact" },
   { key: "county", title: "County" },
