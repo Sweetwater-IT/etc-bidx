@@ -433,13 +433,12 @@ export function SignOrderDetailsSheet({
                       <Command>
                         <CommandInput 
                           placeholder='Search contractor...' 
-                          value={customerSearch} {/* NEW: For filtering */}
-                          onValueChange={setCustomerSearch} {/* NEW: Live search */}
+                          value={customerSearch} 
+                          onValueChange={setCustomerSearch} 
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'> {/* CHANGED: Taller scroll fix */}
+                        <CommandList className='max-h-96 overflow-y-auto'> 
                           <CommandEmpty>No contractor found.</CommandEmpty>
                           <CommandGroup>
-                            {/* NEW: Clear selection */}
                             {localCustomer && (
                               <CommandItem
                                 onSelect={() => {
