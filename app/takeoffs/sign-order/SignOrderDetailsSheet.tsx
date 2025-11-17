@@ -48,7 +48,7 @@ import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
-import { Building2, User, Mail, Check, ChevronsUpDown, AlertCircle } from 'lucide-react'  
+import { Building2, Mail, Check, ChevronsUpDown, AlertCircle } from 'lucide-react'  
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
