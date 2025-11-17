@@ -433,10 +433,10 @@ export function SignOrderDetailsSheet({
                       <Command>
                         <CommandInput 
                           placeholder='Search contractor...' 
-                          value={customerSearch}  // NEW: For filtering
-                          onValueChange={setCustomerSearch}  // NEW: Live search (add state: const [customerSearch, setCustomerSearch] = useState(''); above)
+                          value={customerSearch} {/* NEW: For filtering */}
+                          onValueChange={setCustomerSearch} {/* NEW: Live search */}
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'>  // CHANGED: Taller scroll fix
+                        <CommandList className='max-h-96 overflow-y-auto'> {/* CHANGED: Taller scroll fix */}
                           <CommandEmpty>No contractor found.</CommandEmpty>
                           <CommandGroup>
                             {/* NEW: Clear selection */}
@@ -444,7 +444,7 @@ export function SignOrderDetailsSheet({
                               <CommandItem
                                 onSelect={() => {
                                   setLocalCustomer(null);
-                                  setCustomerSearch('');  // Clear search
+                                  setCustomerSearch(''); {/* Clear search */}
                                   setOpenCustomer(false);
                                 }}
                                 className='font-medium text-destructive cursor-pointer'
@@ -465,8 +465,8 @@ export function SignOrderDetailsSheet({
                             </CommandItem>
                             {/* List customers - CHANGED: Filtered/sorted */}
                             {customers
-                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase()))  // NEW: Filter
-                              .sort((a, b) => a.displayName.localeCompare(b.displayName))  // NEW: A-Z sort
+                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase())) {/* NEW: Filter */}
+                              .sort((a, b) => a.displayName.localeCompare(b.displayName)) {/* NEW: A-Z sort */}
                               .map(customer => (
                                 <CommandItem
                                   key={customer.id}
@@ -474,7 +474,7 @@ export function SignOrderDetailsSheet({
                                   onSelect={() => {
                                     setLocalCustomer(customer)
                                     setOpenCustomer(false)
-                                    setCustomerSearch('');  // NEW: Clear on select
+                                    setCustomerSearch(''); {/* NEW: Clear on select */}
                                   }}
                                 >
                                   <Check
@@ -523,10 +523,10 @@ export function SignOrderDetailsSheet({
                       <Command>
                         <CommandInput 
                           placeholder='Search contact...' 
-                          value={contactSearch}  // NEW: For filtering
-                          onValueChange={setContactSearch}  // NEW: Live search (add state: const [contactSearch, setContactSearch] = useState(''); above)
+                          value={contactSearch} {/* NEW: For filtering */}
+                          onValueChange={setContactSearch} {/* NEW: Live search */}
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'>  // CHANGED: Taller scroll fix
+                        <CommandList className='max-h-96 overflow-y-auto'> {/* CHANGED: Taller scroll fix */}
                           <CommandEmpty>No contact found.</CommandEmpty>
                           <CommandGroup>
                             {/* NEW: Clear selection */}
@@ -534,7 +534,7 @@ export function SignOrderDetailsSheet({
                               <CommandItem
                                 onSelect={() => {
                                   setLocalContact(null);
-                                  setContactSearch('');  // Clear search
+                                  setContactSearch(''); {/* Clear search */}
                                   setOpenCustomerContact(false);
                                 }}
                                 className='font-medium text-destructive cursor-pointer'
@@ -571,19 +571,19 @@ export function SignOrderDetailsSheet({
                                   phone: localCustomer.phones[idx],
                                   role: localCustomer.roles[idx]
                                 }))
-                                .filter(cc =>  // NEW: Filter
+                                .filter(cc => {/* NEW: Filter */}
                                   cc.name.toLowerCase().includes((contactSearch || '').toLowerCase()) ||
                                   cc.email.toLowerCase().includes((contactSearch || '').toLowerCase())
                                 )
-                                .sort((a, b) => a.name.localeCompare(b.name))  // NEW: A-Z sort
-                                .map((cc, idx) => (  // Remap for display
+                                .sort((a, b) => a.name.localeCompare(b.name)) {/* NEW: A-Z sort */}
+                                .map((cc) => ( {/* Remap for display */}
                                   <CommandItem
                                     key={cc.id}
                                     value={cc.name}
                                     onSelect={() => {
                                       setLocalContact(cc)
                                       setOpenCustomerContact(false)
-                                      setContactSearch('');  // NEW: Clear on select
+                                      setContactSearch(''); {/* NEW: Clear on select */}
                                     }}
                                   >
                                     <Check
