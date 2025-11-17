@@ -451,7 +451,6 @@ export function SignOrderDetailsSheet({
                                 Clear selection
                               </CommandItem>
                             )}
-                            {/* Add new customer button */}
                             <CommandItem
                               onSelect={() => {
                                 setOpenCustomer(false)
@@ -462,10 +461,9 @@ export function SignOrderDetailsSheet({
                             >
                               + Add new customer
                             </CommandItem>
-                            {/* List customers - CHANGED: Filtered/sorted */}
                             {customers
-                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase())) {/* NEW: Filter */}
-                              .sort((a, b) => a.displayName.localeCompare(b.displayName)) {/* NEW: A-Z sort */}
+                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase())) 
+                              .sort((a, b) => a.displayName.localeCompare(b.displayName)) 
                               .map(customer => (
                                 <CommandItem
                                   key={customer.id}
@@ -473,7 +471,7 @@ export function SignOrderDetailsSheet({
                                   onSelect={() => {
                                     setLocalCustomer(customer)
                                     setOpenCustomer(false)
-                                    setCustomerSearch(''); {/* NEW: Clear on select */}
+                                    setCustomerSearch(''); 
                                   }}
                                 >
                                   <Check
@@ -493,7 +491,6 @@ export function SignOrderDetailsSheet({
                     </PopoverContent>
                   </Popover>
                 </div>
-                {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
                   <Label>
                     Contact <span className='text-red-600'>*</span>
@@ -522,18 +519,17 @@ export function SignOrderDetailsSheet({
                       <Command>
                         <CommandInput 
                           placeholder='Search contact...' 
-                          value={contactSearch} {/* NEW: For filtering */}
-                          onValueChange={setContactSearch} {/* NEW: Live search */}
+                          value={contactSearch} 
+                          onValueChange={setContactSearch} 
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'> {/* CHANGED: Taller scroll fix */}
+                        <CommandList className='max-h-96 overflow-y-auto'> 
                           <CommandEmpty>No contact found.</CommandEmpty>
                           <CommandGroup>
-                            {/* NEW: Clear selection */}
                             {localContact && (
                               <CommandItem
                                 onSelect={() => {
                                   setLocalContact(null);
-                                  setContactSearch(''); {/* Clear search */}
+                                  setContactSearch(''); 
                                   setOpenCustomerContact(false);
                                 }}
                                 className='font-medium text-destructive cursor-pointer'
@@ -541,7 +537,6 @@ export function SignOrderDetailsSheet({
                                 Clear selection
                               </CommandItem>
                             )}
-                            {/* Add new contact button always visible */}
                             <CommandItem
                               onSelect={() => {
                                 setOpenCustomerContact(false)
@@ -558,7 +553,6 @@ export function SignOrderDetailsSheet({
                             >
                               + Add new contact
                             </CommandItem>
-                            {/* List contacts if a customer is selected - CHANGED: Filtered/sorted */}
                             {localCustomer &&
                               Array.isArray(localCustomer.contactIds) &&
                               localCustomer.contactIds.length > 0 &&
@@ -570,19 +564,19 @@ export function SignOrderDetailsSheet({
                                   phone: localCustomer.phones[idx],
                                   role: localCustomer.roles[idx]
                                 }))
-                                .filter(cc => {/* NEW: Filter */}
+                                .filter(cc => 
                                   cc.name.toLowerCase().includes((contactSearch || '').toLowerCase()) ||
                                   cc.email.toLowerCase().includes((contactSearch || '').toLowerCase())
                                 )
-                                .sort((a, b) => a.name.localeCompare(b.name)) {/* NEW: A-Z sort */}
-                                .map((cc) => ( {/* Remap for display */}
+                                .sort((a, b) => a.name.localeCompare(b.name)) 
+                                .map((cc) => ( 
                                   <CommandItem
                                     key={cc.id}
                                     value={cc.name}
                                     onSelect={() => {
                                       setLocalContact(cc)
                                       setOpenCustomerContact(false)
-                                      setContactSearch(''); {/* NEW: Clear on select */}
+                                      setContactSearch(''); 
                                     }}
                                   >
                                     <Check
