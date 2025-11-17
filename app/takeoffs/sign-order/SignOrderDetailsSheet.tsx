@@ -22,7 +22,6 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
-import { AlertCircle, Check, ChevronsUpDown } from 'lucide-react'
 import {
   Command,
   CommandEmpty,
