@@ -122,6 +122,10 @@ export function SignOrderDetailsSheet({
   const [openRequestor, setOpenRequestor] = useState(false)
   const [openCustomer, setOpenCustomer] = useState(false)
 
+  // Added states for customer search
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [contactSearch, setContactSearch] = useState('');
+  
   // Add state for CustomerDrawer
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
   const [newCustomerId, setNewCustomerId] = useState<number | null>(null)
@@ -182,6 +186,8 @@ export function SignOrderDetailsSheet({
         setLocalStartDate(adminInfo.startDate)
         setLocalEndDate(adminInfo.endDate)
       }
+    setCustomerSearch('');
+    setContactSearch('');
     }
   }, [open, adminInfo, mode])
 
@@ -296,7 +302,7 @@ export function SignOrderDetailsSheet({
           <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
             {/* Job Information Section */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Informationn</h3>
+              <h3 className='text-lg font-semibold'>Job Information</h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* <div className="space-y-2">
@@ -425,42 +431,65 @@ export function SignOrderDetailsSheet({
                     </PopoverTrigger>
                     <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
                       <Command>
-                        <CommandInput placeholder='Search contractor...' />
-                        <CommandEmpty>No contractor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new customer button */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomer(false)
-                              setCustomerDrawerOpen(true)
-                            }}
-                            value='__add_new__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new customer
-                          </CommandItem>
-                          {/* List customers */}
-                          {customers.map(customer => (
+                        <CommandInput 
+                          placeholder='Search contractor...' 
+                          value={customerSearch}  // NEW: For filtering
+                          onValueChange={setCustomerSearch}  // NEW: Live search (add state: const [customerSearch, setCustomerSearch] = useState(''); above)
+                        />
+                        <CommandList className='max-h-96 overflow-y-auto'>  // CHANGED: Taller scroll fix
+                          <CommandEmpty>No contractor found.</CommandEmpty>
+                          <CommandGroup>
+                            {/* NEW: Clear selection */}
+                            {localCustomer && (
+                              <CommandItem
+                                onSelect={() => {
+                                  setLocalCustomer(null);
+                                  setCustomerSearch('');  // Clear search
+                                  setOpenCustomer(false);
+                                }}
+                                className='font-medium text-destructive cursor-pointer'
+                              >
+                                Clear selection
+                              </CommandItem>
+                            )}
+                            {/* Add new customer button */}
                             <CommandItem
-                              key={customer.id}
-                              value={customer.name}
                               onSelect={() => {
-                                setLocalCustomer(customer)
                                 setOpenCustomer(false)
+                                setCustomerDrawerOpen(true)
                               }}
+                              value='__add_new__'
+                              className='font-medium text-primary cursor-pointer'
                             >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localCustomer?.id === customer.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {customer.displayName}
+                              + Add new customer
                             </CommandItem>
-                          ))}
-                        </CommandGroup>
+                            {/* List customers - CHANGED: Filtered/sorted */}
+                            {customers
+                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase()))  // NEW: Filter
+                              .sort((a, b) => a.displayName.localeCompare(b.displayName))  // NEW: A-Z sort
+                              .map(customer => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.name}
+                                  onSelect={() => {
+                                    setLocalCustomer(customer)
+                                    setOpenCustomer(false)
+                                    setCustomerSearch('');  // NEW: Clear on select
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      localCustomer?.id === customer.id
+                                        ? 'opacity-100'
+                                        : 'opacity-0'
+                                    )}
+                                  />
+                                  {customer.displayName}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
@@ -492,69 +521,94 @@ export function SignOrderDetailsSheet({
                     </PopoverTrigger>
                     <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
                       <Command>
-                        <CommandInput placeholder='Search contact...' />
-                        <CommandEmpty>No contact found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new contact button always visible */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomerContact(false)
-                              if (!localCustomer) {
-                                toast.error(
-                                  'Please select a customer before adding a contact.'
-                                )
-                                return
-                              }
-                              setContactDrawerOpen(true)
-                            }}
-                            value='__add_new_contact__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new contact
-                          </CommandItem>
-                          {/* List contacts if a customer is selected */}
-                          {localCustomer &&
-                            Array.isArray(localCustomer.contactIds) &&
-                            localCustomer.contactIds.length > 0 &&
-                            localCustomer.contactIds.map(
-                              (id: number, idx: number) => (
-                                <CommandItem
-                                  key={id}
-                                  value={localCustomer.names[idx]}
-                                  onSelect={() => {
-                                    setLocalContact({
-                                      id,
-                                      name: localCustomer.names[idx],
-                                      email: localCustomer.emails[idx],
-                                      phone: localCustomer.phones[idx],
-                                      role: localCustomer.roles[idx]
-                                    })
-                                    setOpenCustomerContact(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      localContact?.id === id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {localCustomer.names[idx]}{' '}
-                                  {localCustomer.emails[idx] && (
-                                    <span className='text-xs text-muted-foreground ml-2'>
-                                      {localCustomer.emails[idx]}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              )
+                        <CommandInput 
+                          placeholder='Search contact...' 
+                          value={contactSearch}  // NEW: For filtering
+                          onValueChange={setContactSearch}  // NEW: Live search (add state: const [contactSearch, setContactSearch] = useState(''); above)
+                        />
+                        <CommandList className='max-h-96 overflow-y-auto'>  // CHANGED: Taller scroll fix
+                          <CommandEmpty>No contact found.</CommandEmpty>
+                          <CommandGroup>
+                            {/* NEW: Clear selection */}
+                            {localContact && (
+                              <CommandItem
+                                onSelect={() => {
+                                  setLocalContact(null);
+                                  setContactSearch('');  // Clear search
+                                  setOpenCustomerContact(false);
+                                }}
+                                className='font-medium text-destructive cursor-pointer'
+                              >
+                                Clear selection
+                              </CommandItem>
                             )}
-                        </CommandGroup>
+                            {/* Add new contact button always visible */}
+                            <CommandItem
+                              onSelect={() => {
+                                setOpenCustomerContact(false)
+                                if (!localCustomer) {
+                                  toast.error(
+                                    'Please select a customer before adding a contact.'
+                                  )
+                                  return
+                                }
+                                setContactDrawerOpen(true)
+                              }}
+                              value='__add_new_contact__'
+                              className='font-medium text-primary cursor-pointer'
+                            >
+                              + Add new contact
+                            </CommandItem>
+                            {/* List contacts if a customer is selected - CHANGED: Filtered/sorted */}
+                            {localCustomer &&
+                              Array.isArray(localCustomer.contactIds) &&
+                              localCustomer.contactIds.length > 0 &&
+                              localCustomer.contactIds
+                                .map((id: number, idx: number) => ({
+                                  id,
+                                  name: localCustomer.names[idx],
+                                  email: localCustomer.emails[idx],
+                                  phone: localCustomer.phones[idx],
+                                  role: localCustomer.roles[idx]
+                                }))
+                                .filter(cc =>  // NEW: Filter
+                                  cc.name.toLowerCase().includes((contactSearch || '').toLowerCase()) ||
+                                  cc.email.toLowerCase().includes((contactSearch || '').toLowerCase())
+                                )
+                                .sort((a, b) => a.name.localeCompare(b.name))  // NEW: A-Z sort
+                                .map((cc, idx) => (  // Remap for display
+                                  <CommandItem
+                                    key={cc.id}
+                                    value={cc.name}
+                                    onSelect={() => {
+                                      setLocalContact(cc)
+                                      setOpenCustomerContact(false)
+                                      setContactSearch('');  // NEW: Clear on select
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        localContact?.id === cc.id
+                                          ? 'opacity-100'
+                                          : 'opacity-0'
+                                      )}
+                                    />
+                                    {cc.name}{' '}
+                                    {cc.email && (
+                                      <span className='text-xs text-muted-foreground ml-2'>
+                                        {cc.email}
+                                      </span>
+                                    )}
+                                  </CommandItem>
+                                ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
                 </div>
-
+                
                 {/* Order Date */}
                 <div className='space-y-2 mt-auto'>
                   <Label>Order Date</Label>
