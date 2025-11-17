@@ -410,73 +410,79 @@ export function SignOrderDetailsSheet({
                   <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
                     <PopoverTrigger asChild>
                       <Button
-                        variant='outline'
-                        role='combobox'
+                        variant="outline"
+                        role="combobox"
                         aria-expanded={openCustomer}
-                        className='w-full justify-between h-10 px-3 py-2 text-sm'
+                        className="w-full justify-between h-10 px-3 py-2 text-sm"
                       >
-                        <span className='flex items-center gap-2 truncate'>
-                          <span className="truncate">{localCustomer ? localCustomer.displayName : "Select contractor..."}</span>
+                        <span className="flex items-center gap-2 truncate">
+                          <Building2 className="h-4 w-4 flex-shrink-0 opacity-50" />
+                          <span className="truncate">
+                            {localCustomer ? localCustomer.displayName : "Select contractor..."}
+                          </span>
                         </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 flex-shrink-0 opacity-50' />
+                        <ChevronsUpDown className="ml-2 h-4 w-4 flex-shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[300px] p-0' align="start">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                       <Command>
                         <CommandInput
-                          placeholder='Search contractor...'
-                          className="border-0 focus-visible:ring-0 h-9"
+                          value={customerSearch}
+                          onValueChange={setCustomerSearch}
+                          placeholder="Search customers..."
+                          className="h-9 border-0 focus-visible:ring-0"
                         />
                         <div className="border-b px-2 py-2 sticky top-0 bg-background z-10">
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomer(false)
-                              setCustomerDrawerOpen(true)
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-primary hover:bg-accent"
+                            onClick={() => {
+                              setOpenCustomer(false);
+                              setCustomerDrawerOpen(true);
                             }}
-                            value='__add_new__'
-                            className='font-medium text-primary cursor-pointer w-full justify-start hover:bg-accent'
                           >
                             <span className="mr-2">➕</span>
                             Add new customer
-                          </CommandItem>
+                          </Button>
                         </div>
-                        <CommandList className="max-h-96 overflow-y-auto">
+                        <CommandList className="max-h-[300px] overflow-y-auto">
                           <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-                            No contractor found.
+                            No customers found.
                           </CommandEmpty>
                           <CommandGroup className="p-0">
                             {localCustomer && (
                               <CommandItem
                                 onSelect={() => {
                                   setLocalCustomer(null);
+                                  setCustomerSearch('');
                                   setOpenCustomer(false);
                                 }}
-                                className='font-medium text-destructive cursor-pointer px-2 py-2'
+                                className="font-medium text-destructive cursor-pointer px-2 py-2"
                               >
-                                <Check className={cn("mr-2 h-4 w-4 flex-shrink-0 opacity-0")} />
                                 Clear selection
                               </CommandItem>
                             )}
-                            {customers.map(customer => (
+                            {filteredCustomers.map(c => (
                               <CommandItem
-                                key={customer.id}
-                                value={customer.name}
+                                key={c.id}
+                                value={c.displayName || c.name}
                                 onSelect={() => {
-                                  setLocalCustomer(customer)
-                                  setOpenCustomer(false)
+                                  setLocalCustomer(c);
+                                  setCustomerSearch('');
+                                  setOpenCustomer(false);
                                 }}
                                 className="px-2 py-2 cursor-pointer"
                               >
                                 <Check
                                   className={cn(
-                                    'mr-2 h-4 w-4 flex-shrink-0',
-                                    localCustomer?.id === customer.id
-                                      ? 'opacity-100'
-                                      : 'opacity-0'
+                                    "mr-2 h-4 w-4 flex-shrink-0",
+                                    localCustomer?.id === c.id ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 <div className="flex flex-col flex-1 min-w-0">
-                                  <span className="text-sm font-medium truncate">{customer.displayName}</span>
+                                  <span className="text-sm font-medium truncate">
+                                    {c.displayName || c.name}
+                                  </span>
                                 </div>
                               </CommandItem>
                             ))}
@@ -486,55 +492,57 @@ export function SignOrderDetailsSheet({
                     </PopoverContent>
                   </Popover>
                 </div>
-                {/* Contact dropdown, always shown, next to customer dropdown */}
+                
+                {/* Contact */}
                 <div className='space-y-2'>
                   <Label className="text-sm font-semibold mb-2 text-foreground">
                     Contact <span className='text-red-600'>*</span>
                   </Label>
-                  <Popover
-                    open={openCustomerContact}
-                    onOpenChange={setOpenCustomerContact}
-                  >
+                  <Popover open={openCustomerContact} onOpenChange={setOpenCustomerContact}>
                     <PopoverTrigger asChild>
                       <Button
-                        variant='outline'
-                        role='combobox'
+                        variant="outline"
+                        role="combobox"
                         aria-expanded={openCustomerContact}
-                        className='w-full justify-between h-10 px-3 py-2 text-sm'
+                        className="w-full justify-between h-10 px-3 py-2 text-sm"
                         disabled={!localCustomer}
                       >
-                        <span className='flex items-center gap-2 truncate'>
-                          <span className="truncate">{localContact ? localContact.name : "Select contact..."}</span>
+                        <span className="flex items-center gap-2 truncate">
+                          <User className="h-4 w-4 flex-shrink-0 opacity-50" />
+                          <span className="truncate">
+                            {localContact ? localContact.name : "Select contact..."}
+                          </span>
                         </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 flex-shrink-0 opacity-50' />
+                        <ChevronsUpDown className="ml-2 h-4 w-4 flex-shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[300px] p-0' align="start">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                       <Command>
                         <CommandInput
-                          placeholder='Search contact...'
-                          className="border-0 focus-visible:ring-0 h-9"
+                          value={contactSearch}
+                          onValueChange={setContactSearch}
+                          placeholder="Search contacts..."
+                          className="h-9 border-0 focus-visible:ring-0"
                         />
                         <div className="border-b px-2 py-2 sticky top-0 bg-background z-10">
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomerContact(false)
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-primary hover:bg-accent"
+                            onClick={() => {
+                              setOpenCustomerContact(false);
                               if (!localCustomer) {
-                                toast.error(
-                                  'Please select a customer before adding a contact.'
-                                )
-                                return
+                                toast.error('Please select a customer before adding a contact.');
+                                return;
                               }
-                              setContactDrawerOpen(true)
+                              setContactDrawerOpen(true);
                             }}
-                            value='__add_new_contact__'
-                            className='font-medium text-primary cursor-pointer w-full justify-start hover:bg-accent disabled:opacity-50'
+                            disabled={!localCustomer}
                           >
                             <span className="mr-2">➕</span>
                             Add new contact
-                          </CommandItem>
+                          </Button>
                         </div>
-                        <CommandList className="max-h-96 overflow-y-auto">
+                        <CommandList className="max-h-[300px] overflow-y-auto">
                           <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                             {!localCustomer ? "Select a customer first" : "No contacts found."}
                           </CommandEmpty>
@@ -543,53 +551,42 @@ export function SignOrderDetailsSheet({
                               <CommandItem
                                 onSelect={() => {
                                   setLocalContact(null);
+                                  setContactSearch('');
                                   setOpenCustomerContact(false);
                                 }}
-                                className='font-medium text-destructive cursor-pointer px-2 py-2'
+                                className="font-medium text-destructive cursor-pointer px-2 py-2"
                               >
-                                <Check className={cn("mr-2 h-4 w-4 flex-shrink-0 opacity-0")} />
                                 Clear selection
                               </CommandItem>
                             )}
-                            {localCustomer &&
-                              Array.isArray(localCustomer.contactIds) &&
-                              localCustomer.contactIds.length > 0 &&
-                              localCustomer.contactIds.map(
-                                (id: number, idx: number) => (
-                                  <CommandItem
-                                    key={id}
-                                    value={localCustomer.names[idx]}
-                                    onSelect={() => {
-                                      setLocalContact({
-                                        id,
-                                        name: localCustomer.names[idx],
-                                        email: localCustomer.emails[idx],
-                                        phone: localCustomer.phones[idx],
-                                        role: localCustomer.roles[idx]
-                                      })
-                                      setOpenCustomerContact(false)
-                                    }}
-                                    className="px-2 py-2 cursor-pointer"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mr-2 h-4 w-4 flex-shrink-0',
-                                        localContact?.id === id
-                                          ? 'opacity-100'
-                                          : 'opacity-0'
-                                      )}
-                                    />
-                                    <div className="flex flex-col flex-1 min-w-0">
-                                      <span className="text-sm font-medium truncate">{localCustomer.names[idx]}</span>
-                                      {localCustomer.emails[idx] && (
-                                        <span className="text-xs text-muted-foreground ml-2">
-                                          {localCustomer.emails[idx]}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </CommandItem>
-                                )
-                              )}
+                            {filteredContacts.map(cc => (
+                              <CommandItem
+                                key={cc.id}
+                                value={cc.name}
+                                onSelect={() => {
+                                  setLocalContact(cc);
+                                  setContactSearch('');
+                                  setOpenCustomerContact(false);
+                                }}
+                                className="px-2 py-2 cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 flex-shrink-0",
+                                    localContact?.id === cc.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="text-sm font-medium truncate">{cc.name}</span>
+                                  {cc.email && (
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Mail className="h-3 w-3" />
+                                      <span className="truncate">{cc.email}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
