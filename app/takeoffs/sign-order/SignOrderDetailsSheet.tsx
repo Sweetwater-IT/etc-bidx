@@ -121,10 +121,6 @@ export function SignOrderDetailsSheet({
   // Popover states
   const [openRequestor, setOpenRequestor] = useState(false)
   const [openCustomer, setOpenCustomer] = useState(false)
-
-  // Added states for customer search
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [contactSearch, setContactSearch] = useState('');
   
   // Add state for CustomerDrawer
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
@@ -186,8 +182,6 @@ export function SignOrderDetailsSheet({
         setLocalStartDate(adminInfo.startDate)
         setLocalEndDate(adminInfo.endDate)
       }
-    setCustomerSearch('');
-    setContactSearch('');
     }
   }, [open, adminInfo, mode])
 
@@ -407,10 +401,10 @@ export function SignOrderDetailsSheet({
                     </SelectContent>
                   </Select>
                 </div> */}
-
+                
                 {/* Customer */}
                 <div className='space-y-2'>
-                  <Label>
+                  <Label className="text-sm font-semibold mb-2 text-foreground">
                     Customer <span className='text-red-600'>*</span>
                   </Label>
                   <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
@@ -419,80 +413,82 @@ export function SignOrderDetailsSheet({
                         variant='outline'
                         role='combobox'
                         aria-expanded={openCustomer}
-                        className='w-full justify-between'
+                        className='w-full justify-between h-10 px-3 py-2 text-sm'
                       >
-                        <span className='truncate'>
-                          {localCustomer
-                            ? localCustomer.displayName
-                            : 'Select contractor...'}
+                        <span className='flex items-center gap-2 truncate'>
+                          <span className="truncate">{localCustomer ? localCustomer.displayName : "Select contractor..."}</span>
                         </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                        <ChevronsUpDown className='ml-2 h-4 w-4 flex-shrink-0 opacity-50' />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
+                    <PopoverContent className='w-[300px] p-0' align="start">
                       <Command>
-                        <CommandInput 
-                          placeholder='Search contractor...' 
-                          value={customerSearch} 
-                          onValueChange={setCustomerSearch} 
+                        <CommandInput
+                          placeholder='Search contractor...'
+                          className="border-0 focus-visible:ring-0 h-9"
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'> 
-                          <CommandEmpty>No contractor found.</CommandEmpty>
-                          <CommandGroup>
+                        <div className="border-b px-2 py-2 sticky top-0 bg-background z-10">
+                          <CommandItem
+                            onSelect={() => {
+                              setOpenCustomer(false)
+                              setCustomerDrawerOpen(true)
+                            }}
+                            value='__add_new__'
+                            className='font-medium text-primary cursor-pointer w-full justify-start hover:bg-accent'
+                          >
+                            <span className="mr-2">➕</span>
+                            Add new customer
+                          </CommandItem>
+                        </div>
+                        <CommandList className="max-h-96 overflow-y-auto">
+                          <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                            No contractor found.
+                          </CommandEmpty>
+                          <CommandGroup className="p-0">
                             {localCustomer && (
                               <CommandItem
                                 onSelect={() => {
                                   setLocalCustomer(null);
-                                  setCustomerSearch(''); {/* Clear search */}
                                   setOpenCustomer(false);
                                 }}
-                                className='font-medium text-destructive cursor-pointer'
+                                className='font-medium text-destructive cursor-pointer px-2 py-2'
                               >
+                                <Check className={cn("mr-2 h-4 w-4 flex-shrink-0 opacity-0")} />
                                 Clear selection
                               </CommandItem>
                             )}
-                            <CommandItem
-                              onSelect={() => {
-                                setOpenCustomer(false)
-                                setCustomerDrawerOpen(true)
-                              }}
-                              value='__add_new__'
-                              className='font-medium text-primary cursor-pointer'
-                            >
-                              + Add new customer
-                            </CommandItem>
-                            {customers
-                              .filter(c => c.displayName.toLowerCase().includes((customerSearch || '').toLowerCase())) 
-                              .sort((a, b) => a.displayName.localeCompare(b.displayName)) 
-                              .map(customer => (
-                                <CommandItem
-                                  key={customer.id}
-                                  value={customer.name}
-                                  onSelect={() => {
-                                    setLocalCustomer(customer)
-                                    setOpenCustomer(false)
-                                    setCustomerSearch(''); 
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      localCustomer?.id === customer.id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {customer.displayName}
-                                </CommandItem>
-                              ))}
+                            {customers.map(customer => (
+                              <CommandItem
+                                key={customer.id}
+                                value={customer.name}
+                                onSelect={() => {
+                                  setLocalCustomer(customer)
+                                  setOpenCustomer(false)
+                                }}
+                                className="px-2 py-2 cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4 flex-shrink-0',
+                                    localCustomer?.id === customer.id
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="text-sm font-medium truncate">{customer.displayName}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
                 </div>
+                {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
-                  <Label>
+                  <Label className="text-sm font-semibold mb-2 text-foreground">
                     Contact <span className='text-red-600'>*</span>
                   </Label>
                   <Popover
@@ -504,97 +500,96 @@ export function SignOrderDetailsSheet({
                         variant='outline'
                         role='combobox'
                         aria-expanded={openCustomerContact}
-                        className='w-full justify-between'
+                        className='w-full justify-between h-10 px-3 py-2 text-sm'
                         disabled={!localCustomer}
                       >
-                        <span className='truncate'>
-                          {localContact
-                            ? localContact.name
-                            : 'Select contact...'}
+                        <span className='flex items-center gap-2 truncate'>
+                          <span className="truncate">{localContact ? localContact.name : "Select contact..."}</span>
                         </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                        <ChevronsUpDown className='ml-2 h-4 w-4 flex-shrink-0 opacity-50' />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
+                    <PopoverContent className='w-[300px] p-0' align="start">
                       <Command>
-                        <CommandInput 
-                          placeholder='Search contact...' 
-                          value={contactSearch} 
-                          onValueChange={setContactSearch} 
+                        <CommandInput
+                          placeholder='Search contact...'
+                          className="border-0 focus-visible:ring-0 h-9"
                         />
-                        <CommandList className='max-h-96 overflow-y-auto'> 
-                          <CommandEmpty>No contact found.</CommandEmpty>
-                          <CommandGroup>
+                        <div className="border-b px-2 py-2 sticky top-0 bg-background z-10">
+                          <CommandItem
+                            onSelect={() => {
+                              setOpenCustomerContact(false)
+                              if (!localCustomer) {
+                                toast.error(
+                                  'Please select a customer before adding a contact.'
+                                )
+                                return
+                              }
+                              setContactDrawerOpen(true)
+                            }}
+                            value='__add_new_contact__'
+                            className='font-medium text-primary cursor-pointer w-full justify-start hover:bg-accent disabled:opacity-50'
+                          >
+                            <span className="mr-2">➕</span>
+                            Add new contact
+                          </CommandItem>
+                        </div>
+                        <CommandList className="max-h-96 overflow-y-auto">
+                          <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                            {!localCustomer ? "Select a customer first" : "No contacts found."}
+                          </CommandEmpty>
+                          <CommandGroup className="p-0">
                             {localContact && (
                               <CommandItem
                                 onSelect={() => {
                                   setLocalContact(null);
-                                  setContactSearch(''); 
                                   setOpenCustomerContact(false);
                                 }}
-                                className='font-medium text-destructive cursor-pointer'
+                                className='font-medium text-destructive cursor-pointer px-2 py-2'
                               >
+                                <Check className={cn("mr-2 h-4 w-4 flex-shrink-0 opacity-0")} />
                                 Clear selection
                               </CommandItem>
                             )}
-                            <CommandItem
-                              onSelect={() => {
-                                setOpenCustomerContact(false)
-                                if (!localCustomer) {
-                                  toast.error(
-                                    'Please select a customer before adding a contact.'
-                                  )
-                                  return
-                                }
-                                setContactDrawerOpen(true)
-                              }}
-                              value='__add_new_contact__'
-                              className='font-medium text-primary cursor-pointer'
-                            >
-                              + Add new contact
-                            </CommandItem>
                             {localCustomer &&
                               Array.isArray(localCustomer.contactIds) &&
                               localCustomer.contactIds.length > 0 &&
-                              localCustomer.contactIds
-                                .map((id: number, idx: number) => ({
-                                  id,
-                                  name: localCustomer.names[idx],
-                                  email: localCustomer.emails[idx],
-                                  phone: localCustomer.phones[idx],
-                                  role: localCustomer.roles[idx]
-                                }))
-                                .filter(cc => 
-                                  cc.name.toLowerCase().includes((contactSearch || '').toLowerCase()) ||
-                                  cc.email.toLowerCase().includes((contactSearch || '').toLowerCase())
-                                )
-                                .sort((a, b) => a.name.localeCompare(b.name)) 
-                                .map((cc) => ( 
+                              localCustomer.contactIds.map(
+                                (id: number, idx: number) => (
                                   <CommandItem
-                                    key={cc.id}
-                                    value={cc.name}
+                                    key={id}
+                                    value={localCustomer.names[idx]}
                                     onSelect={() => {
-                                      setLocalContact(cc)
+                                      setLocalContact({
+                                        id,
+                                        name: localCustomer.names[idx],
+                                        email: localCustomer.emails[idx],
+                                        phone: localCustomer.phones[idx],
+                                        role: localCustomer.roles[idx]
+                                      })
                                       setOpenCustomerContact(false)
-                                      setContactSearch(''); 
                                     }}
+                                    className="px-2 py-2 cursor-pointer"
                                   >
                                     <Check
                                       className={cn(
-                                        'mr-2 h-4 w-4',
-                                        localContact?.id === cc.id
+                                        'mr-2 h-4 w-4 flex-shrink-0',
+                                        localContact?.id === id
                                           ? 'opacity-100'
                                           : 'opacity-0'
                                       )}
                                     />
-                                    {cc.name}{' '}
-                                    {cc.email && (
-                                      <span className='text-xs text-muted-foreground ml-2'>
-                                        {cc.email}
-                                      </span>
-                                    )}
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                      <span className="text-sm font-medium truncate">{localCustomer.names[idx]}</span>
+                                      {localCustomer.emails[idx] && (
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          {localCustomer.emails[idx]}
+                                        </span>
+                                      )}
+                                    </div>
                                   </CommandItem>
-                                ))}
+                                )
+                              )}
                           </CommandGroup>
                         </CommandList>
                       </Command>
