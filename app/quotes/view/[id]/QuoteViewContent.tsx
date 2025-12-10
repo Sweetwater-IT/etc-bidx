@@ -65,7 +65,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             unitPrice: Number(item.unit_price || item.unitPrice) || 0,
             total: (Number(item.quantity) || 0) * (Number(item.unit_price || item.unitPrice) || 0),
         
-            // THIS IS THE ONLY CHANGE THAT MATTERS
             tax: item.tax != null ? Number(item.tax) : 0,
             is_tax_percentage: Boolean(item.is_tax_percentage),
         
