@@ -1,65 +1,35 @@
 import { Customer } from '@/types/Customer';
 import { create } from 'zustand';
 
-interface PaginationState {
-    page: number;
-    limit: number;
-    totalCount: number;
-    totalPages: number;
-}
-
 interface CustomersState {
     customers: Customer[];
     isLoading: boolean;
     error: string | null;
-    pagination: PaginationState;
-    getCustomers: (page?: number, limit?: number) => Promise<void>;
-    setPage: (page: number) => void;
+    getCustomers: () => Promise<void>;
 }
 
 export const useCustomers = create<CustomersState>((set, get) => ({
     customers: [],
     isLoading: false,
     error: null,
-    pagination: {
-        page: 1,
-        limit: 600,
-        totalCount: 0,
-        totalPages: 0
-    },
-    setPage: (page: number) => {
-        set(state => ({
-            pagination: {
-                ...state.pagination,
-                page
-            }
-        }));
-        get().getCustomers(page);
-    },
-    getCustomers: async (page?: number, limit?: number) => {
-        const currentPage = page || get().pagination.page;
-        const currentLimit = limit || get().pagination.limit;
-        
+
+    getCustomers: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/contractors?ascending=true&page=${currentPage}&limit=${currentLimit}`)
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Failed to fetch customers`);
-            }
-            
+            const response = await fetch(`/api/contractors?ascending=true&limit=1000`);
+            if (!response.ok) throw new Error('Failed to fetch');
+
             const result = await response.json();
-            
-            const customers: Customer[] = (result.data as any[]).map(customer => ({
+
+            const customers: Customer[] = (result.data || []).map((customer: any) => ({
                 id: customer.id,
                 name: customer.name,
-                displayName: customer.display_name,
-                emails: customer.customer_contacts ? customer.customer_contacts.map(customerContact => customerContact?.email || '') : [],
-                phones: customer.customer_contacts ? customer.customer_contacts.map(customerContact => customerContact?.phone || '') : [],
-                names: customer.customer_contacts ? customer.customer_contacts.map(customerContact => customerContact?.name || '') : [],
-                roles: customer.customer_contacts ? customer.customer_contacts.map(customerContact => customerContact?.role || '') : [],
-                contactIds: customer.customer_contacts ? customer.customer_contacts.map(customerContact => customerContact?.id || 0) : [],
+                displayName: customer.display_name?.trim() || customer.name,
+                emails: customer.customer_contacts?.map((c: any) => c.email || '') || [],
+                phones: customer.customer_contacts?.map((c: any) => c.phone || '') || [],
+                names: customer.customer_contacts?.map((c: any) => c.name || '') || [],
+                roles: customer.customer_contacts?.map((c: any) => c.role || '') || [],
+                contactIds: customer.customer_contacts?.map((c: any) => c.id || 0) || [],
                 address: customer.address || '',
                 url: customer.web || '',
                 created: customer.created || '',
@@ -71,19 +41,13 @@ export const useCustomers = create<CustomersState>((set, get) => ({
                 mainPhone: customer.main_phone || '',
                 paymentTerms: customer.payment_terms || ''
             }));
-            
-            set({ 
-                customers, 
-                isLoading: false,
-                pagination: {
-                    page: result.page,
-                    limit: result.limit,
-                    totalCount: result.count || 0,
-                    totalPages: result.totalPages || 1
-                }
-            });
+
+            set({ customers, isLoading: false });
         } catch (error) {
-            set({ error: (error as Error).message || 'An error occurred', isLoading: false });
+            set({ error: (error as Error).message, isLoading: false });
         }
     }
 }));
+
+// Auto-fetch when the store is first created
+useCustomers.getState().getCustomers();
