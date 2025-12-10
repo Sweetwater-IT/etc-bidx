@@ -60,16 +60,22 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
         setQuote({
           ...data,
           items: Array.isArray(data.items)
-            ? data.items.map((item: any, idx: number) => ({
-              id: idx + 1,
-              description: item.description || "N/A",
-              quantity: item.quantity || 0,
-              unitPrice: item.unitPrice || 0,
-              total: (item.quantity || 0) * (item.unitPrice || 0),
-              tax: item.tax || "0",
-              confirmed: item.confirmed || "NO",
-              itemNumber: item.item_number
-            }))
+            ? data.items.map((item: any) => ({
+                // Keep the real DB id if it exists, otherwise fallback
+                id: item.id || crypto.randomUUID(),
+        
+                description: item.description || "N/A",
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unit_price || item.unitPrice) || 0,
+                total: (Number(item.quantity) || 0) * (Number(item.unit_price || item.unitPrice) || 0),
+        
+                tax: Number(item.tax) || 0,                    
+                is_tax_percentage: Boolean(item.is_tax_percentage),
+        
+                confirmed: item.confirmed ? "YES" : "NO",
+                itemNumber: item.item_number || "",
+                notes: item.notes || "",
+              }))
             : [],
         });
       } catch (err) {
