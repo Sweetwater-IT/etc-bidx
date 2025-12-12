@@ -320,11 +320,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setIsHelpOpen(true);
   };
 
+  // This correctly overrides the placeholder onClick
   const navSecondaryWithHelp = data.navSecondary.map((item) =>
     item.title === "Get Help"
       ? { ...item, onClick: handleHelpClick }
       : item
   );
+
   
   return (
     <>
@@ -349,7 +351,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navAdmin} label={'Project Admin'} />
         <NavMain items={data.navSignShop} label={'Sign Shop'} />
         {/* <NavDocuments items={data.documents} /> */}
-        <NavSecondary items={secondaryNavItems} className="mt-auto" />
+        <NavSecondary items={navSecondaryWithHelp} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
