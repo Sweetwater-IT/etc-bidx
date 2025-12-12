@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react"; 
 import {
   IconCamera,
   IconChartBar,
@@ -37,6 +38,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { GetHelpModal } from "@/components/get-help-modal";
+
 
 interface NavItem {
   title: string;
@@ -235,6 +238,7 @@ export const data = {
       title: "Get Help",
       url: "",
       icon: IconHelp,
+      onClick: () => setIsHelpOpen(true),
     },
     {
       title: "Search",
@@ -310,6 +314,7 @@ export const quickActions = [
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -338,5 +343,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavUser />
       </SidebarFooter>
     </Sidebar>
+    
+    <GetHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
   );
 }
