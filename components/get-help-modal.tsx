@@ -77,7 +77,7 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
         <DialogHeader className="space-y-3 pb-4 border-b">
           <DialogTitle className="text-2xl font-semibold">Get Help</DialogTitle>
           <DialogDescription className="text-base leading-relaxed">
-            Describe your technical issue below and we'll respond as quickly as possible.
+            Describe your technical issue below and we&apos;ll respond as quickly as possible.
           </DialogDescription>
         </DialogHeader>
 
