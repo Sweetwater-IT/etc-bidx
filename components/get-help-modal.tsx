@@ -38,8 +38,8 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (user) {
           setCurrentUser({
-            email: user.email,
-            name: user.user_metadata?.full_name || user.email,
+            email: user.email ?? null,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || user.email ?? null,
           })
         }
       })
