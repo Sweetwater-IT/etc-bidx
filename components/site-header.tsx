@@ -16,6 +16,7 @@ import {
   IconBuilding,
   IconUser,
   IconFileText,
+  IconHelp,
 } from "@tabler/icons-react";
 import {
   DropdownMenu,
@@ -130,6 +131,15 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
               <IconBell className="size-5" />
               <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
             </button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setIsHelpOpen(true)}
+            >
+              <IconHelp className="size-4" />
+              Get Help
+            </Button>
             <button className="rounded-lg p-2 hover:bg-muted">
               <IconPower className="size-5" />
             </button>
