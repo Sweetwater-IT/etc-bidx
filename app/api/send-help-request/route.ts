@@ -10,12 +10,13 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const IT_EMAIL = 'it@establishedtraffic.com'  // Change if needed
-const FROM_EMAIL = 'kenny.mack@sweetwaterit.com'    // Must be verified in Resend dashboard
+const IT_EMAIL = 'it@establishedtraffic.com'
+const FROM_EMAIL = 'kenny.mack@sweetwaterit.com'  // Verified in Resend
 
 export async function POST(request: NextRequest) {
   try {
-    const { subject, message, user_email } = await request.json()
+    const body = await request.json()
+    const { subject, message, user_email, user_name } = body
 
     if (!subject?.trim() || !message?.trim()) {
       return NextResponse.json(
@@ -27,6 +28,12 @@ export async function POST(request: NextRequest) {
     const trimmedSubject = subject.trim()
     const trimmedMessage = message.trim()
     const trimmedEmail = user_email?.trim() || null
+    const trimmedName = user_name?.trim() || null
+
+    // Determine display name for email
+    const fromDisplay = trimmedName
+      ? `${trimmedName} <${trimmedEmail || 'no email'}>`
+      : trimmedEmail || 'Unknown user'
 
     // 1. Save to Supabase
     const { error: dbError } = await supabase
@@ -35,6 +42,7 @@ export async function POST(request: NextRequest) {
         subject: trimmedSubject,
         message: trimmedMessage,
         user_email: trimmedEmail,
+        user_name: trimmedName,  // Optional: store name if you want
       })
 
     if (dbError) {
@@ -50,14 +58,15 @@ export async function POST(request: NextRequest) {
       subject: `Help Request – ${trimmedSubject}`,
       html: `
         <h2>New Help Request</h2>
-        <p><strong>From:</strong> ${trimmedEmail || 'Unknown user'}</p>
+        <p><strong>From:</strong> ${fromDisplay}</p>
         <p><strong>Subject:</strong> ${trimmedSubject}</p>
         <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
         <hr>
         <pre style="background:#f9f9f9; padding:16px; border-radius:8px; font-family:monospace; white-space: pre-wrap;">
 ${trimmedMessage}
         </pre>
-        <p><small>Ticket saved in Supabase help_requests table</small></p>
+        <br>
+        <p><small>Ticket saved in Supabase → help_requests table</small></p>
       `,
     })
 
