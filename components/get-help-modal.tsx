@@ -19,7 +19,6 @@ interface GetHelpModalProps {
 export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const { toast } = useToast()
 
   const [formData, setFormData] = useState({
     subject: "",
