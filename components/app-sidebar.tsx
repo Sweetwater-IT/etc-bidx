@@ -316,6 +316,7 @@ export const quickActions = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   return (
+    <>
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <SidebarMenu>
@@ -345,5 +346,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
     
     <GetHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+  </>  
   );
 }
