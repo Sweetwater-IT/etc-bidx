@@ -39,7 +39,7 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
         if (user) {
           setCurrentUser({
             email: user.email ?? null,
-            name: user.user_metadata?.full_name || user.user_metadata?.name || user.email ?? null,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || (user.email ?? null),
           })
         }
       })
