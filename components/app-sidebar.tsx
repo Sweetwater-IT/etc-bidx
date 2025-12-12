@@ -238,6 +238,7 @@ export const data = {
       title: "Get Help",
       url: "",
       icon: IconHelp,
+      onClick: () => {},
     },
     {
       title: "Search",
@@ -315,15 +316,16 @@ export const quickActions = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  const secondaryNavItems = data.navSecondary.map((item) => {
-      if (item.title === "Get Help") {
-        return {
-          ...item,
-          onClick: () => setIsHelpOpen(true), // Local function is accessible here
-        };
-      }
-      return item;
-  });
+  const handleHelpClick = () => {
+    setIsHelpOpen(true);
+  };
+
+  const navSecondaryWithHelp = data.navSecondary.map((item) =>
+    item.title === "Get Help"
+      ? { ...item, onClick: handleHelpClick }
+      : item
+  );
+  
   return (
     <>
     <Sidebar collapsible="offcanvas" {...props}>
