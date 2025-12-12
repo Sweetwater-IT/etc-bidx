@@ -25,6 +25,19 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
     message: "",
   })
 
+  useEffect(() => {
+    if (open) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setCurrentUser({
+            email: user.email,
+            name: user.user_metadata?.full_name || user.email,
+          })
+        }
+      })
+    }
+  }, [open])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -117,7 +130,7 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
                 <p className="text-muted-foreground">
                   For urgent issues, call IT Support directly at{" "}
                   <a href="tel:+1234567890" className="text-foreground font-medium hover:underline">
-                    (123) 456-7890
+                    (713) 806-8071
                   </a>
                 </p>
               </div>
