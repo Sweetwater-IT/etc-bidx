@@ -6,6 +6,7 @@ import { data, quickActions } from "@/components/app-sidebar";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/toggle-color";
 import { useState } from "react"
+import { GetHelpModal } from "@/components/get-help-modal"
 import {
   IconBell,
   IconPower,
