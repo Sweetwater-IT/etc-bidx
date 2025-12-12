@@ -5,6 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { data, quickActions } from "@/components/app-sidebar";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/toggle-color";
+import { useState } from "react"
 import {
   IconBell,
   IconPower,
@@ -35,6 +36,8 @@ interface SiteHeaderProps {
 export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTop= 16 }: SiteHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
 
   const handleNewItem = (route: string) => {
     router.push(route);
@@ -94,6 +97,7 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
   }
 
   return (
+    <>
     <header className={`flex shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) mb-${marginBottom}`}>
       <div className="flex w-full flex-col gap-2 px-4 lg:gap-4 lg:px-6">
         <div className="flex items-center gap-2">
@@ -138,5 +142,7 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
         )}
       </div>
     </header>
+    <GetHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+    </>
   );
 }
