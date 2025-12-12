@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { IconLoader2, IconCircleCheck, IconAlertCircle } from "@tabler/icons-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface GetHelpModalProps {
   open: boolean
@@ -47,8 +47,7 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
       }
 
       setIsSuccess(true)
-      toast({
-        title: "Message sent successfully!",
+      toast.success("Message sent successfully!", {
         description: "IT will get back to you shortly.",
       })
 
@@ -61,10 +60,8 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
         onOpenChange(false)
       }, 2000)
     } catch (error) {
-      toast({
-        title: "Failed to send message",
+      toast.error("Failed to send message", {
         description: error instanceof Error ? error.message : "Please try again later.",
-        variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
