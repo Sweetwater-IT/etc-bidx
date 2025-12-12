@@ -23,6 +23,11 @@ export function GetHelpModal({ open, onOpenChange }: GetHelpModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  const [currentUser, setCurrentUser] = useState<{ email: string | null; name: string | null }>({
+    email: null,
+    name: null,
+  })
+
   const [formData, setFormData] = useState({
     subject: "",
     message: "",
