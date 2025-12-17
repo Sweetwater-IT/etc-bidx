@@ -925,74 +925,74 @@ export function DataTable<TData extends object>({
     })
   }
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-    enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
-    globalFilterFn: enableSearch ? customGlobalFilterFn : "auto", 
-    state: {
-      globalFilter: enableSearch ? globalFilter : "", 
-      pagination: {
-        pageIndex,
-        pageSize,
+    const table = useReactTable({
+      data,
+      columns,
+      getCoreRowModel: getCoreRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      manualPagination: true,
+      manualSorting: true,
+      enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
+      globalFilterFn: enableSearch ? customGlobalFilterFn : "auto",
+      state: {
+        globalFilter: enableSearch ? globalFilter : "",
+        pagination: {
+          pageIndex,
+          pageSize,
+        },
       },
-    },
-    onGlobalFilterChange: enableSearch ? setGlobalFilter : undefined,
-  }) 
-
-  // Expose the resetRowSelection method via ref
-  React.useImperativeHandle(
-    tableRef,
-    () => ({
-      resetRowSelection: () => {
-        table.toggleAllRowsSelected(false)
+      onGlobalFilterChange: enableSearch ? setGlobalFilter : undefined,
+    })
+  
+    React.useImperativeHandle(
+      tableRef,
+      () => ({
+        resetRowSelection: () => {
+          table.toggleAllRowsSelected(false)
+        },
+      }),
+      [table]
+    )
+  
+    React.useEffect(() => {
+      if (setSelectedRows) {
+        const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+        setSelectedRows(selectedRows)
       }
-    }),
-    [table]
-  )
-
-  React.useEffect(() => {
-    if (setSelectedRows) {
-      const selectedRows = table
-        .getSelectedRowModel()
-        .rows.map(row => row.original)
-      setSelectedRows(selectedRows)
-    }
-  }, [table.getSelectedRowModel().rows, setSelectedRows])
-
-      <div className="px-6 mb-3">
-        {/* Search Bar - Only for tables where enableSearch is true */}
-        {enableSearch && (
-          <div className="mb-6">
-            <div className="relative max-w-md mx-auto">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
-                value={globalFilter ?? ""}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9"
-              />
+    }, [table.getSelectedRowModel().rows, setSelectedRows])
+  
+    return (
+      <div className="space-y-4">
+        {/* === TOP CONTROLS SECTION (with search bar) === */}
+        <div className="px-6 mb-3">
+          {/* Search Bar - Only for Open Bids */}
+          {enableSearch && (
+            <div className="mb-6">
+              <div className="relative max-w-md mx-auto">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
+                  value={globalFilter ?? ""}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Segments Row - Always visible */}
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            {segments && (
-              <Segments
-                segments={segments}
-                value={segmentValue}
-                onChange={onSegmentChange}
-                counts={segmentCounts}
-              />
-            )}
-          </div>
-
+          )}
+  
+          {/* Segments Row */}
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              {segments && (
+                <Segments
+                  segments={segments}
+                  value={segmentValue}
+                  onChange={onSegmentChange}
+                  counts={segmentCounts}
+                />
+              )}
+            </div>
+          
           <div className='flex items-center gap-2'>
             {/* Sort and Filter Controls */}
             {onSortChange && (
