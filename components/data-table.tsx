@@ -900,34 +900,22 @@ export function DataTable<TData extends object>({
   // Search state (only used when enableSearch is true)
   const [globalFilter, setGlobalFilter] = useState("")
 
-  // Custom filter: only search specific columns for Open Bids
   const customGlobalFilterFn = (row: any, columnId: string, filterValue: string) => {
     if (!filterValue) return true
 
     const search = filterValue.toLowerCase().trim()
 
-    // These are the exact keys you want searchable in Open Bids
-    const searchableKeys = [
-      "contractNumber",   // e.g. "12345"
-      "requestor",        // who requested it
-      "status",           // e.g. "Open", "Closed"
-      "owner",            // estimator/owner name
-      "lettingDate",      // date string
-      "dueDate",          // bid due date
-    ]
+    // Use the searchableColumns prop if provided; otherwise, search nothing (safe)
+    const fieldsToSearch = searchableColumns || []
 
-    // If no custom columns specified via prop, use these defaults
-    const columnsToSearch = searchableColumns?.length
-      ? searchableColumns
-      : searchableKeys
+    if (fieldsToSearch.length === 0) return true
 
-    return columnsToSearch.some((key) => {
-      const value = row.original[key]
+    return fieldsToSearch.some((field) => {
+      const value = row.original[field]
       if (value == null) return false
       return String(value).toLowerCase().includes(search)
     })
   }
-
     const table = useReactTable({
       data,
       columns,
