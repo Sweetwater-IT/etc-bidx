@@ -970,14 +970,14 @@ export function DataTable<TData extends object>({
         <div className="px-6 mb-3">
           {/* Search Bar - Only for Open Bids */}
           {enableSearch && (
-            <div className="mb-6">
-              <div className="relative max-w-md mx-auto">
+            <div className="mb-6 px-1"> {/* small padding to match segments */}
+              <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
                   value={globalFilter ?? ""}
                   onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 w-full"
                 />
               </div>
             </div>
