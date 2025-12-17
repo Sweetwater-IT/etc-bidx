@@ -2128,10 +2128,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onArchiveSelected={initiateArchiveJobs}
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}                           
-                                    enableSearch={true}  // ← ADD THIS
+                                    enableSearch={true}  
                                     searchPlaceholder="Search by contract, requestor, status, county, owner, letting, or due date..."
                                     searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}  
-                                    searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
                                     onEdit={handleEdit}
