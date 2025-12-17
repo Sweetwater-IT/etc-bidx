@@ -2127,7 +2127,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onSegmentChange={handleSegmentChange}
                                     onArchiveSelected={initiateArchiveJobs}
                                     onDeleteSelected={initiateDeleteJobs}
-                                    tableRef={availableJobsTableRef}
+                                    tableRef={availableJobsTableRef}                           
+                                    enableSearch={true}  // ← ADD THIS
+                                    searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
                                     onEdit={handleEdit}

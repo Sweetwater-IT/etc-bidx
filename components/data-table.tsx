@@ -5,6 +5,7 @@ import * as React from 'react'
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   useReactTable,
   ColumnDef
 } from '@tanstack/react-table'
@@ -35,7 +36,8 @@ import {
   ChevronsRight,
   ChevronsUpDown,
   Minus,
-  MoreHorizontal
+  MoreHorizontal,
+  Search
 } from 'lucide-react'
 import { IconChevronRight, IconPlus } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +64,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useCallback, useState } from 'react'
 import { Separator } from './ui/separator'
@@ -170,6 +173,9 @@ export interface DataTableProps<TData extends object> {
   onUnarchive?: (item: TData) => void
   onDelete?: (item: TData, index: number) => void;
   onDeleteItem?: (item: TData) => void;
+  enableSearch?: boolean
+  searchPlaceholder?: string
+  searchableColumns?: string[]
 
 }
 
@@ -440,6 +446,9 @@ export function DataTable<TData extends object>({
   onUnarchive,
   onDelete,
   onDeleteItem,
+  enableSearch,
+  searchPlaceholder,
+  searchableColumns, 
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -883,62 +892,110 @@ export function DataTable<TData extends object>({
     onViewJobSummary
   ])
 
+
   // State for filter visibility
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [itemsToDelete, setItemsToDelete] = useState<TData[]>([])
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-    enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
-    state: {
-      pagination: {
-        pageIndex,
-        pageSize
+  // Search state (only used when enableSearch is true)
+  const [globalFilter, setGlobalFilter] = useState("")
+
+  // Custom filter: only search specific columns for Open Bids
+  const customGlobalFilterFn = (row: any, columnId: string, filterValue: string) => {
+    if (!filterValue) return true
+
+    const search = filterValue.toLowerCase().trim()
+
+    // These are the exact keys you want searchable in Open Bids
+    const searchableKeys = [
+      "contractNumber",   // e.g. "12345"
+      "requestor",        // who requested it
+      "status",           // e.g. "Open", "Closed"
+      "owner",            // estimator/owner name
+      "lettingDate",      // date string
+      "dueDate",          // bid due date
+    ]
+
+    // If no custom columns specified via prop, use these defaults
+    const columnsToSearch = searchableColumns?.length
+      ? searchableColumns
+      : searchableKeys
+
+    return columnsToSearch.some((key) => {
+      const value = row.original[key]
+      if (value == null) return false
+      return String(value).toLowerCase().includes(search)
+    })
+  }
+
+    const table = useReactTable({
+      data,
+      columns,
+      getCoreRowModel: getCoreRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      manualPagination: true,
+      manualSorting: true,
+      enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
+      globalFilterFn: enableSearch ? customGlobalFilterFn : "auto",
+      state: {
+        globalFilter: enableSearch ? globalFilter : "",
+        pagination: {
+          pageIndex,
+          pageSize,
+        },
+      },
+      onGlobalFilterChange: enableSearch ? setGlobalFilter : undefined,
+    })
+  
+    React.useImperativeHandle(
+      tableRef,
+      () => ({
+        resetRowSelection: () => {
+          table.toggleAllRowsSelected(false)
+        },
+      }),
+      [table]
+    )
+  
+    React.useEffect(() => {
+      if (setSelectedRows) {
+        const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+        setSelectedRows(selectedRows)
       }
-    }
-  })
-
-  // Expose the resetRowSelection method via ref
-  React.useImperativeHandle(
-    tableRef,
-    () => ({
-      resetRowSelection: () => {
-        table.toggleAllRowsSelected(false)
-      }
-    }),
-    [table]
-  )
-
-  React.useEffect(() => {
-    if (setSelectedRows) {
-      const selectedRows = table
-        .getSelectedRowModel()
-        .rows.map(row => row.original)
-      setSelectedRows(selectedRows)
-    }
-  }, [table.getSelectedRowModel().rows, setSelectedRows])
-
-  return (
-    <div className='space-y-4'>
-      {/* Top Controls Section */}
-      <div className='px-6 mb-3'>
-        {/* Segments Row - Always visible */}
-        <div className='flex justify-between items-center mb-3'>
-          <div>
-            {segments && (
-              <Segments
-                segments={segments}
-                value={segmentValue}
-                onChange={onSegmentChange}
-                counts={segmentCounts}
-              />
-            )}
-          </div>
-
+    }, [table.getSelectedRowModel().rows, setSelectedRows])
+  
+    return (
+      <div className="space-y-4">
+        {/* === TOP CONTROLS SECTION (with search bar) === */}
+        <div className="px-6 mb-3">
+          {/* Search Bar - Only for Open Bids */}
+          {enableSearch && (
+            <div className="mb-6">
+              <div className="relative max-w-md mx-auto">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
+                  value={globalFilter ?? ""}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          )}
+  
+          {/* Segments Row */}
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              {segments && (
+                <Segments
+                  segments={segments}
+                  value={segmentValue}
+                  onChange={onSegmentChange}
+                  counts={segmentCounts}
+                />
+              )}
+            </div>
+          
           <div className='flex items-center gap-2'>
             {/* Sort and Filter Controls */}
             {onSortChange && (
