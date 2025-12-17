@@ -446,6 +446,9 @@ export function DataTable<TData extends object>({
   onUnarchive,
   onDelete,
   onDeleteItem,
+  enableSearch,
+  searchPlaceholder,
+  searchableColumns, 
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
