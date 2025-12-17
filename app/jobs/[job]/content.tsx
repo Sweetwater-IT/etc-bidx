@@ -2129,6 +2129,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}                           
                                     enableSearch={true}  // ← ADD THIS
+                                    searchPlaceholder="Search by contract, requestor, status, county, owner, letting, or due date..."
+                                    searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}  
                                     searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
@@ -2190,6 +2192,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                 <DataTable<ActiveBid>
                                     data={data as ActiveBid[]}
                                     columns={columns}
+                                    enableSearch={true}
+                                    searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
+                                    searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     segmentCounts={activeBidCounts}
