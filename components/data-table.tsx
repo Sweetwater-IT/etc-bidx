@@ -173,7 +173,7 @@ export interface DataTableProps<TData extends object> {
 
 }
 
-function formatCellValue(value: any, key: string) {
+function formatCellValue(value: any, key: string, row?: any) {  
   if (
     value === undefined ||
     value === null ||
@@ -332,18 +332,42 @@ function formatCellValue(value: any, key: string) {
 
   // Handle objects
   if (typeof value === 'object') {
-    // If it's an array, join the values
     if (Array.isArray(value)) {
       return value.join(', ')
     }
-    // If it's null, return empty string
     if (value === null) {
       return ''
     }
-    // Otherwise, stringify the object
     return JSON.stringify(value)
   }
 
+  // QUOTES: Real bidx type_quote badge — EXACT MATCH
+  if (key === "type") {
+  const val = String(value || "").trim();
+  const fullRow = row || {}; 
+
+  let displayValue = "Unknown";
+
+  if (val === "straight_sale") {
+    displayValue = "Straight Sale";
+  } else if (val === "to_project") {
+    const jobNum = fullRow?.etc_job_number || "";
+    displayValue = jobNum ? `Job: ${jobNum}` : "To Project";
+  } else if (val === "estimate_bid") {
+    const contractNum = fullRow?.estimate_contract_number || "";
+    displayValue = contractNum ? `Bid: ${contractNum}` : "Estimate/Bid";
+  }
+
+  return (
+    <Badge 
+      variant="outline" 
+      className="font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+    >
+      {displayValue}
+    </Badge>
+  );
+}
+  
   return value
 }
 
@@ -424,7 +448,7 @@ export function DataTable<TData extends object>({
       header: col.title,
       cell: ({ row }: any) => {
         const value = row.getValue(col.key)
-        return formatCellValue(value, col.key)
+        return formatCellValue(value, col.key, row.original)  
       },
       className: col.className,
       enableSorting: col.sortable ?? true
