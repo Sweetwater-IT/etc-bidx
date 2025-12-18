@@ -10,9 +10,10 @@ interface FetchCustomersParams {
   page?: number;
   pageSize?: number;
   paymentTerms?: string;
+  search?: string;
 }
 
-const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }: FetchCustomersParams) => {
+const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all', search = '' }: FetchCustomersParams) => {
   try {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -24,6 +25,10 @@ const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }:
       
     if (paymentTerms !== 'all') {
       query = query.eq('payment_terms', paymentTerms);
+    }
+
+    if (search.trim()) {
+      query = query.or(`name.ilike.%${search}%,customer_number.ilike.%${search}%`);
     }
     
     const response = await query.range(from, to);
@@ -70,13 +75,13 @@ const fetchCustomers = async ({ page = 1, pageSize = 10, paymentTerms = 'all' }:
 };
 
 export function useCustomersSWR(params: FetchCustomersParams = {}) {
-  const { page = 1, pageSize = 10, paymentTerms = 'all' } = params;
+  const { page = 1, pageSize = 10, paymentTerms = 'all', search = '' } = params;
   
-  const key = ['customers', page, pageSize, paymentTerms];
+  const key = ['customers', page, pageSize, paymentTerms, search];
   
   const { data, error, mutate, isLoading } = useSWR(
     key, 
-    () => fetchCustomers({ page, pageSize, paymentTerms }), 
+    () => fetchCustomers({ page, pageSize, paymentTerms, search }), 
     {
       revalidateOnFocus: false,
       dedupingInterval: 0,
