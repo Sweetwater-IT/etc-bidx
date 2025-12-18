@@ -49,7 +49,7 @@ const CustomersContent = () => {
   const { customers, totalCount, isLoading, error, mutate } = useCustomersSWR({
     page: currentPage + 1,
     pageSize: pageSize,
-    paymentTerms: selectedSegment
+    paymentTerms: selectedSegment === "all" ? undefined : selectedSegment,
     search: searchTerm || undefined,
   });
 
