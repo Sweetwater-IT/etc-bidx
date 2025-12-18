@@ -2261,6 +2261,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     segmentCounts={activeJobCounts}
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
+                                    enableSearch={true}
+                                    searchPlaceholder="Search by job number, bid number, project status, contract number, contractor, location, or county..."
+                                    searchableColumns={["jobNumber", "bidNumber", "projectStatus", "contractNumber", "contractor", "location", "county"]}
+
                                     onArchiveSelected={initiateArchiveActiveJobs}
                                     onDeleteSelected={initiateDeleteActiveJobs}
                                     tableRef={activeJobsTableRef}
