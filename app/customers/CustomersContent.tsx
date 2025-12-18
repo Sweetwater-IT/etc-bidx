@@ -151,6 +151,9 @@ const CustomersContent = () => {
             segments={SEGMENTS}
             segmentValue={selectedSegment}
             stickyLastColumn
+            enableSearch={true}
+            searchPlaceholder="Search by company name or customer number..."
+            searchableColumns={["name", "customerNumber"]}
             data={customers}
             onViewDetails={handleViewCustomer}
             selectedItem={selectedCustomer || undefined}
