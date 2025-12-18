@@ -156,11 +156,6 @@ const CustomersContent = () => {
             enableSearch={true}
             searchPlaceholder="Search by company name or customer number..."
             searchableColumns={["name", "customerNumber"]}
-            globalFilter={searchTerm}
-            onGlobalFilterChange={(value: string) => {
-              setSearchTerm(value);
-              setCurrentPage(0);  // ← this line
-            }}
             data={customers}
             onViewDetails={handleViewCustomer}
             selectedItem={selectedCustomer || undefined}
