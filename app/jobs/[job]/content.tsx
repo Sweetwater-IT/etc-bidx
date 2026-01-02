@@ -2122,7 +2122,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             {isAvailableJobs ? (
                                 <DataTable<AvailableJob>
                                     data={data as AvailableJob[]}
-                                    columns={columns}
+                                    columns={availableJobsColumns}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     segmentCounts={jobCounts}
@@ -2192,7 +2192,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
                                     data={data as ActiveBid[]}
-                                    columns={columns}
+                                    columns={ACTIVE_BIDS_COLUMNS}
                                     enableSearch={true}
                                     searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
                                     searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
@@ -2257,7 +2257,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : (
                                 <DataTable<ActiveJob>
                                     data={data as ActiveJob[]}
-                                    columns={columns}
+                                    columns={DISPLAYED_ACTIVE_JOBS_COLUMNS}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     segmentCounts={activeJobCounts}
