@@ -1,7 +1,8 @@
 import React from 'react'
 
-import { DataTable, type DataTableProps } from '../data-table'
+import { DataTable } from '../data-table'
 import type { ActiveJob } from '@/data/active-jobs'
+import type { DataTableProps } from '../data-table'
 
 const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
   { key: "jobNumber", title: "Job Number", className: 'whitespace-nowrap' },
@@ -18,9 +19,7 @@ const DISPLAYED_ACTIVE_JOBS_COLUMNS = [
   { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
 ] as const
 
-interface JobListTableProps extends Omit<DataTableProps<ActiveJob>, 'columns'> {}
-
-export function JobListTable(props: JobListTableProps) {
+export function JobListTable(props: Omit<DataTableProps<ActiveJob>, 'columns'>) {
   return (
     <DataTable
       columns={DISPLAYED_ACTIVE_JOBS_COLUMNS}

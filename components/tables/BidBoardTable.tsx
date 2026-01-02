@@ -1,12 +1,11 @@
 import React from 'react'
 
-import { DataTable, type DataTableProps } from '../data-table'
+import { DataTable } from '../data-table'
 import { availableJobsColumns } from '@/data/available-jobs'
 import type { AvailableJob } from '@/data/available-jobs'
+import type { DataTableProps } from '../data-table'
 
-interface BidBoardTableProps extends Omit<DataTableProps<AvailableJob>, 'columns'> {}
-
-export function BidBoardTable(props: BidBoardTableProps) {
+export function BidBoardTable(props: Omit<DataTableProps<AvailableJob>, 'columns'>) {
   return (
     <DataTable
       columns={availableJobsColumns}
