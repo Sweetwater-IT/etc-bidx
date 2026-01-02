@@ -10,6 +10,9 @@ import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -43,11 +46,13 @@ export default function QuotesPage() {
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const { startLoading, stopLoading, isLoading } = useLoading();
 
 
-  const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
+  const fetchQuotes = async (status = "all", page = 1, limit = 25, search = "") => {
     startLoading();
 
     try {
@@ -60,6 +65,9 @@ export default function QuotesPage() {
       params.append("orderBy", "created_at");
       params.append("ascending", "false");
       params.append("detailed", "false");
+      if (search) {
+        params.append("search", search);
+      }
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
