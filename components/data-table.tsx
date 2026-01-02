@@ -9,6 +9,7 @@ import {
   useReactTable,
   ColumnDef
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { toast } from 'sonner'
 import {
   Table,
@@ -66,9 +67,11 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useMemo, useRef } from 'react'
 import { Separator } from './ui/separator'
 import { formatDate } from '@/lib/formatUTCDate'
+import { useDebounce } from '@/hooks/useDebounce'
+import { formatCellValue } from '@/lib/table-utils'
 
 export type LegacyColumn = {
   key: string
@@ -82,38 +85,7 @@ type ExtendedColumn<TData> = ColumnDef<TData, any> & {
   className?: string
 }
 
-const handleStatusVariant = (status: string) => {
-  // Normalize: lowercase, replace spaces and underscores with dashes
-  const normalized = status.toLowerCase().replace(/\s|_/g, '-')
-  if (normalized === 'submitted') return 'successful'
-  switch (normalized) {
-    case 'in-progress':
-    case 'in-process':
-      return 'warning'
-    case 'not-started':
-      return 'secondary'
-    case 'complete':
-      return 'successful'
-    case 'on-hold':
-      return 'destructive'
-    case 'open':
-      return 'default'
-    case 'pending':
-      return 'warning'
-    case 'urgent':
-    case 'no-bid':
-    case 'lost':
-      return 'destructive'
-    case 'bid':
-    case 'won':
-    case 'won-pending':
-      return 'successful'
-    case 'unset':
-    case 'draft':
-    default:
-      return 'secondary'
-  }
-}
+
 
 export interface DataTableProps<TData extends object> {
   columns: LegacyColumn[] | readonly LegacyColumn[]
@@ -179,203 +151,7 @@ export interface DataTableProps<TData extends object> {
 
 }
 
-function formatCellValue(value: any, key: string, row?: any) {  
-  if (
-    value === undefined ||
-    value === null ||
-    (typeof value === 'string' && value.toLowerCase() === 'unknown')
-  ) {
-    return '-'
-  }
 
-  // Handle special formatting for contractNumber and county fields
-  if (
-    (key === 'contractNumber' || key === 'county') &&
-    typeof value === 'object' &&
-    value !== null
-  ) {
-    if (value.main) {
-      return (
-        <div className='flex flex-col'>
-          <span className={key === 'contractNumber' ? 'uppercase' : ''}>
-            {value.main}
-          </span>
-          {value.secondary && (
-            <span className='text-xs text-red-500'>{value.secondary}</span>
-          )}
-        </div>
-      )
-    }
-  }
-
-  // Format currency for total column and mptValue
-  if (key === 'total' || key === 'mptValue') {
-    // Handle if value is already formatted with $ (string)
-    if (typeof value === 'string' && value.startsWith('$')) {
-      return value
-    }
-
-    // Convert to number if it's a string without $ sign
-    const numValue = typeof value === 'string' ? parseFloat(value) : value
-
-    // Format as currency if it's a valid number
-    if (!isNaN(numValue)) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(numValue)
-    }
-    return value
-  }
-
-  if (key === 'dbe' || key === 'dbePercentage') {
-    if (typeof value === 'string' && value.endsWith('%')) {
-      return value
-    }
-
-    const numValue = typeof value === 'string' ? parseFloat(value) : value
-
-    if (!isNaN(numValue)) {
-      return `${numValue % 1 === 0 ? numValue.toFixed(0) : numValue}%`
-    }
-    return value
-  }
-
-  // Handle status badges
-  if (
-    key === 'status' ||
-    key === 'projectStatus' ||
-    key === 'billingStatus' ||
-    key === 'shop_status' ||
-    key === 'order_status'
-  ) {
-    const variant = handleStatusVariant(value)
-
-    return (
-      <Badge
-        variant={variant}
-        className={`font-medium ${variant === 'warning' && 'text-black'}`}
-      >
-        {key === 'projectStatus' || key === 'billingStatus'
-          ? value.replace('_', ' ')
-          : key === 'shop_status'
-            ? value === 'not-started'
-              ? 'Not Started'
-              : value === 'in-progress'
-                ? 'In-Process'
-                : value === 'in-process'
-                  ? 'In-Process'
-                  : value === 'complete'
-                    ? 'Complete'
-                    : value === 'on-hold'
-                      ? 'On Hold'
-                      : value === 'on-order'
-                        ? 'On Order'
-                        : value
-            : key === 'order_status'
-              ? value === 'submitted' || value === 'SUBMITTED'
-                ? 'Submitted'
-                : value === 'draft' || value === 'DRAFT'
-                  ? 'Draft'
-                  : value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-              : value}
-      </Badge>
-    )
-  }
-
-  if (key === 'contractor' || key === 'subcontractor') {
-    if (!value) return ''
-    return value === '-' ? (
-      '-'
-    ) : (
-      <Badge
-        variant='outline'
-        className='font-medium bg-background hover:bg-background'
-      >
-        {value}
-      </Badge>
-    )
-  }
-
-  if (value instanceof Date) {
-    return formatDate(value)
-  }
-  if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-    if (typeof value !== 'string') return value
-
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ]
-
-    try {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        const [year, month, day] = value.split('-').map(Number)
-        const timestamp = (key === 'created_at' || key === 'createdAt') ? ', 12:00 AM' : ''
-        return `${monthNames[month - 1]} ${day}, ${year}${timestamp}`
-      }
-
-      const date = new Date(value)
-      const monthName = monthNames[date.getMonth()]
-      const dayNum = date.getDate()
-      const yearNum = date.getFullYear()
-      const hours = date.getHours()
-      const minutes = date.getMinutes()
-      const amOrPm = hours >= 12 ? 'PM' : 'AM'
-      const hoursFormatted = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-      const minutesFormatted = minutes.toString().padStart(2, '0')
-      const timestamp = `, ${hoursFormatted}:${minutesFormatted} ${amOrPm}`
-
-      if (key === 'created_at' || key === 'createdAt') {
-        return `${monthName} ${dayNum}, ${yearNum}${timestamp}`
-      }
-
-      return `${monthName} ${dayNum}, ${yearNum}`
-    } catch (e) {
-      return value
-    }
-  }
-
-  // Handle objects
-  if (typeof value === 'object') {
-    if (Array.isArray(value)) {
-      return value.join(', ')
-    }
-    if (value === null) {
-      return ''
-    }
-    return JSON.stringify(value)
-  }
-
-  // QUOTES: Real bidx type_quote badge — EXACT MATCH
-  if (key === "type") {
-  const val = String(value || "").trim();
-  const fullRow = row || {}; 
-
-  let displayValue = "Unknown";
-
-  if (val === "straight_sale") {
-    displayValue = "Straight Sale";
-  } else if (val === "to_project") {
-    const jobNum = fullRow?.etc_job_number || "";
-    displayValue = jobNum ? `Job: ${jobNum}` : "To Project";
-  } else if (val === "estimate_bid") {
-    const contractNum = fullRow?.estimate_contract_number || "";
-    displayValue = contractNum ? `Bid: ${contractNum}` : "Estimate/Bid";
-  }
-
-  return (
-    <Badge 
-      variant="outline" 
-      className="font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
-    >
-      {displayValue}
-    </Badge>
-  );
-}
-  
-  return value
-}
 
 function isRowSelected<T extends object>(
   row: T,
@@ -899,6 +675,11 @@ export function DataTable<TData extends object>({
 
   // Search state (only used when enableSearch is true)
   const [globalFilter, setGlobalFilter] = useState("")
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300)
+
+  // Virtualization and hover state
+  const parentRef = useRef<HTMLDivElement>(null)
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
 
   const customGlobalFilterFn = (row: any, columnId: string, filterValue: string) => {
     if (!filterValue) return true
@@ -926,7 +707,7 @@ export function DataTable<TData extends object>({
       enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
       globalFilterFn: enableSearch ? customGlobalFilterFn : "auto",
       state: {
-        globalFilter: enableSearch ? globalFilter : "",
+        globalFilter: enableSearch ? debouncedGlobalFilter : "",
         pagination: {
           pageIndex,
           pageSize,
@@ -951,6 +732,13 @@ export function DataTable<TData extends object>({
         setSelectedRows(selectedRows)
       }
     }, [table.getSelectedRowModel().rows, setSelectedRows])
+
+    const virtualizer = useVirtualizer({
+      count: table.getRowModel().rows.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: () => 48, // Estimate row height
+      overscan: 10, // Render extra rows for smooth scrolling
+    })
   
     return (
       <div className="space-y-4">
@@ -1099,7 +887,7 @@ export function DataTable<TData extends object>({
 
       <div className='px-6'>
         <div className='rounded-md border'>
-          <div className='relative overflow-x-auto'>
+          <div ref={parentRef} className='relative overflow-auto h-[600px]'>
             <Table>
               <TableHeader className='bg-muted'>
                 {table.getHeaderGroups().map(headerGroup => (
@@ -1194,50 +982,74 @@ export function DataTable<TData extends object>({
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map(row => (
-                    <TableRow
-                      key={row.id}
-                      data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
-                      className={cn(
-                        'cursor-pointer',
-                        isRowSelected(row.original, selectedItem) &&
-                        'bg-muted/50'
-                      )}
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.dataset.slot === 'checkbox') return;
-                        const checkbox = target.closest('[data-slot="checkbox"]');
-                        if (checkbox) return;
-                        if (onViewDetails) {
-                          console.log('Row clicked, calling onViewDetails:', row.original);
-                          onViewDetails(row.original as TData);
-                        }
-                      }}
-                    >
-                      {row.getVisibleCells().map(cell => {
-                        const isActions = cell.column.id === 'actions'
-                        return (
-                          <TableCell
-                            key={cell.id}
-                            className={cn(
-                              (cell.column.columnDef as any).className,
-                              isActions && stickyLastColumn
-                                ? 'sticky right-0 bg-white dark:bg-background'
-                                : ''
-                            )}
-                          >
-                            {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground" />}{
-                              flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = table.getRowModel().rows[virtualRow.index]
+                    return (
+                      <TableRow
+                        key={row.id}
+                        data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
+                        className={cn(
+                          'cursor-pointer absolute w-full',
+                          isRowSelected(row.original, selectedItem) &&
+                          'bg-muted/50'
+                        )}
+                        style={{
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        onMouseEnter={() => setHoveredRowId(row.id)}
+                        onMouseLeave={() => setHoveredRowId(null)}
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target.dataset.slot === 'checkbox') return;
+                          const checkbox = target.closest('[data-slot="checkbox"]');
+                          if (checkbox) return;
+                          if (onViewDetails) {
+                            console.log('Row clicked, calling onViewDetails:', row.original);
+                            onViewDetails(row.original as TData);
+                          }
+                        }}
+                      >
+                        {row.getVisibleCells().map(cell => {
+                          const isActions = cell.column.id === 'actions'
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              className={cn(
+                                (cell.column.columnDef as any).className,
+                                isActions && stickyLastColumn
+                                  ? 'sticky right-0 bg-white dark:bg-background'
+                                  : ''
                               )}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  ))
-                ) : (
+                            >
+                              {isActions ? (
+                                hoveredRowId === row.id ? (
+                                  flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )
+                                ) : null
+                              ) : (
+                                <>
+                                  {Object.hasOwn(cell.row.original, 'primarySignId') && (cell.column.id === 'designation') && <IconChevronRight className="inline h-5 pb-1 text-muted-foreground" />}
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )}
+                                </>
+                              )}
+                            </TableCell>
+                          )
+                        })}
+                      </TableRow>
+                    )
+                  })}
+                </div>
+                {table.getRowModel().rows?.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
