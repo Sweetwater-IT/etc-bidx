@@ -173,7 +173,9 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-
+                enableSearch={true}
+                searchPlaceholder="Search by quote number or customer..."
+                searchableColumns={["quote_number", "customer_name"]}
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>
