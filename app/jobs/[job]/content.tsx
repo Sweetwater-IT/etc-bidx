@@ -12,6 +12,8 @@ import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
 import { type ActiveJob } from "../../../data/active-jobs";
 import { notFound, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Search } from "lucide-react";
 import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
 import { OpenBidSheet } from "../../../components/open-bid-sheet";
@@ -95,6 +97,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
+
+    // Search state for available jobs
+    const [searchTerm, setSearchTerm] = useState("");
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
     const [allActiveBidRowsSelected, setAllActiveBidRowsSelected] = useState<boolean>(false);
     const [selectedActiveBids, setSelectedActiveBids] = useState<ActiveBid[]>([]);

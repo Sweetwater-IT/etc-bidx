@@ -139,7 +139,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Handle status and archived filtering
+    // Handle search parameter
+    const search = searchParams.get('search');
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      const searchConditions = [
+        `contract_number.ilike.${term}`,
+        `requestor.ilike.${term}`,
+        `owner.ilike.${term}`,
+        `status.ilike.${term}`,
+        `location.ilike.${term}`,
+        `platform.ilike.${term}`,
+        `county.ilike.${term}`
+      ].join(',');
+      dataQuery = dataQuery.or(searchConditions);
+      countQuery
     if (archived) {
       dataQuery = dataQuery.eq('archived', true);
       countQuery = countQuery.eq('archived', true);
@@ -359,4 +373,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
