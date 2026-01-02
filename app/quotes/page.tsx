@@ -166,7 +166,9 @@ export default function QuotesPage() {
                 />
               </div>
 
-              <DataTable<QuoteGridView>
+              <div className="px-6 mb-6">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 h
                 data={quotes}
                 columns={QUOTES_COLUMNS}
                 segments={SEGMENTS}
@@ -181,9 +183,6 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-                enableSearch={true}
-                searchPlaceholder="Search by quote number or customer..."
-                searchableColumns={["quote_number", "customer_name"]}
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>
