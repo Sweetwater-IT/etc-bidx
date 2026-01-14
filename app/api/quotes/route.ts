@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get("counts") === "true";
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
+    const userCreated = searchParams.get("user_created");
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
@@ -104,7 +105,11 @@ export async function GET(request: NextRequest) {
     if (status && status !== "all") {
       query = query.eq("status", status);
     }
-
+    
+    if (userCreated) {
+      query = query.eq("user_created", userCreated);
+    }
+    
     const { data: rawData, error } = await query;
 
     if (error || !rawData) {
