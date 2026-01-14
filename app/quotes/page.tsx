@@ -1,5 +1,4 @@
 "use client";
-
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -11,6 +10,12 @@ import { QuoteGridView } from "@/types/QuoteGridView";
 import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
 
+// Define the type for creators (matches what DataTable expects)
+type Creator = {
+  id: string;
+  display: string;
+};
+
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
   { key: "status", title: "Status" },
@@ -21,39 +26,27 @@ const QUOTES_COLUMNS = [
   { key: "created_at", title: "Created" },
 ];
 
-const SEGMENTS = [
-  { label: "All", value: "all" },
-  { label: "Not Sent", value: "Not Sent" },
-  { label: "Sent", value: "Sent" },
-  { label: "Accepted", value: "Accepted" },
-];
-
 export default function QuotesPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
-  const [activeSegment, setActiveSegment] = useState("all");
-  const [quoteCounts, setQuoteCounts] = useState({
-    all: 0,
-    not_sent: 0,
-    sent: 0,
-    accepted: 0,
-  });
-
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
+  // New state for creator filter
+  const [selectedCreatorId, setSelectedCreatorId] = useState<string | null>(null);
+  const [creators, setCreators] = useState<Creator[]>([]);
+
   const { startLoading, stopLoading, isLoading } = useLoading();
 
-
-  const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
+  // Fetch quotes (now includes creator filter)
+  const fetchQuotes = async (page = 1, limit = 25) => {
     startLoading();
-
     try {
       const params = new URLSearchParams();
-      if (status !== "all") {
-        params.append("status", status);
+      if (selectedCreatorId) {
+        params.append("user_created", selectedCreatorId);
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
@@ -78,13 +71,23 @@ export default function QuotesPage() {
     }
   };
 
-  const fetchQuoteCounts = async () => {
+  // Fetch list of creators for the dropdown
+  const fetchCreators = async () => {
     try {
-      const response = await fetch("/api/quotes?counts=true");
-      const data = await response.json();
-      setQuoteCounts(data);
-    } catch (error) {
-      console.error("Error fetching quote counts:", error);
+      const res = await fetch("/api/users/creators"); // ← Adjust this endpoint to your real API
+      const data = await res.json();
+      if (data.success || Array.isArray(data)) {
+        const creatorList = (data.users || data).map((u: any) => ({
+          id: u.user_id || u.id,
+          display: u.name 
+            ? `${u.name} (${u.email || "no email"})` 
+            : u.email || "Unknown User",
+        }));
+        setCreators(creatorList);
+      }
+    } catch (err) {
+      console.error("Failed to load creators:", err);
+      toast.error("Could not load quote creators");
     }
   };
 
@@ -94,11 +97,9 @@ export default function QuotesPage() {
         method: "DELETE",
       });
       const data = await res.json();
-
       if (res.ok && data.success) {
         toast.success(`Quote ${quote.quote_number} deleted`);
-        fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-        fetchQuoteCounts();
+        fetchQuotes(pageIndex + 1, pageSize);
       } else {
         toast.error(data.message || "Failed to delete quote");
       }
@@ -108,27 +109,28 @@ export default function QuotesPage() {
     }
   };
 
-  const handleSegmentChange = (value: string) => {
-    setActiveSegment(value);
-    setPageIndex(0);
-    fetchQuotes(value, 1, pageSize);
-  };
-
   const handlePageChange = (newPage: number) => {
     setPageIndex(newPage);
-    fetchQuotes(activeSegment, newPage + 1, pageSize);
+    fetchQuotes(newPage + 1, pageSize);
   };
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPageIndex(0);
-    fetchQuotes(activeSegment, 1, newSize);
+    fetchQuotes(1, newSize);
   };
 
+  // When creator changes → reset page and refetch
   useEffect(() => {
-    fetchQuoteCounts();
-    fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-  }, [activeSegment, pageIndex, pageSize]);
+    setPageIndex(0);
+    fetchQuotes(1, pageSize);
+  }, [selectedCreatorId, pageSize]);
+
+  // Initial load
+  useEffect(() => {
+    fetchCreators();
+    fetchQuotes(pageIndex + 1, pageSize);
+  }, []);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
@@ -161,10 +163,11 @@ export default function QuotesPage() {
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={QUOTES_COLUMNS}
-                segments={SEGMENTS}
-                segmentValue={activeSegment}
-                segmentCounts={quoteCounts}
-                onSegmentChange={handleSegmentChange}
+                // NEW props for creator dropdown
+                users={creators}
+                selectedUserId={selectedCreatorId}
+                onUserSelect={setSelectedCreatorId}
+                // Removed all segments props
                 onViewDetails={handleRowClick}
                 stickyLastColumn
                 pageCount={pageCount}
@@ -173,7 +176,6 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>
