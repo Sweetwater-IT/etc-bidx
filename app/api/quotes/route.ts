@@ -17,14 +17,23 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get("counts") === "true";
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
+    const search = searchParams.get("search") || "";
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
     // 📊 Counts
     if (counts) {
-      const { data: allQuotes, error: countError } = await supabase
+      let countQuery = supabase
         .from("quotes")
         .select("id, status");
+
+      if (search) {
+        countQuery = countQuery.or(
+          `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+        );
+      }
+
+      const { data: allQuotes, error: countError } = await countQuery;
 
       if (countError || !allQuotes) {
         return NextResponse.json(
@@ -106,6 +115,12 @@ export async function GET(request: NextRequest) {
       query = query.eq("status", status);
     }
 
+    if (search) {
+      query = query.or(
+        `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+      );
+    }
+
     const { data: rawData, error } = await query;
 
     if (error || !rawData) {
@@ -178,9 +193,21 @@ export async function GET(request: NextRequest) {
       transformedData.push(transformedRow);
     }
 
-    const { count } = await supabase
+    let countQuery = supabase
       .from("quotes")
       .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
+    }
+
+    if (search) {
+      countQuery = countQuery.or(
+        `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+      );
+    }
+
+    const { count } = await countQuery;
 
     return NextResponse.json({
       success: true,
