@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
         county,
         created_at,
         updated_at,
+        user_created,
         estimate_id,
         etc_job_number,
         job_id,
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%`);
+      query = query.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%`);
     }
 
     const { data: rawData, error } = await query;
@@ -167,6 +168,17 @@ export async function GET(request: NextRequest) {
         job_number: row.job_id ?? null,
       };
 
+      if (row.user_created) {
+        const { data: user } = await supabase
+          .from('users')
+          .select('name')
+          .eq('email', row.user_created)
+          .maybeSingle();
+        transformedRow.created_by_name = user?.name || row.user_created || 'Unknown';
+      } else {
+        transformedRow.created_by_name = 'Unknown';
+      }
+
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
       transformedData.push(transformedRow);
     }
@@ -181,7 +193,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      countQuery = countQuery.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%`);
+      countQuery = countQuery.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%`);
     }
 
     const { count } = await countQuery;
