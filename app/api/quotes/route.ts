@@ -88,6 +88,8 @@ export async function GET(request: NextRequest) {
         customer_contact,
         county,
         created_at,
+        user_created,                          
+        users!user_created (name, email),
         updated_at,
         estimate_id,
         etc_job_number,
@@ -166,6 +168,11 @@ export async function GET(request: NextRequest) {
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
       };
+
+      const creator = row.users?.[0];
+      transformedRow.created_by = creator 
+      ? (creator.name || creator.email || 'Unknown')
+      : 'Unknown';
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
       transformedData.push(transformedRow);
