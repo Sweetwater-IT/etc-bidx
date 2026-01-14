@@ -69,6 +69,7 @@ import { cn } from '@/lib/utils'
 import { useCallback, useState } from 'react'
 import { Separator } from './ui/separator'
 import { formatDate } from '@/lib/formatUTCDate'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export type LegacyColumn = {
   key: string
@@ -176,6 +177,7 @@ export interface DataTableProps<TData extends object> {
   enableSearch?: boolean
   searchPlaceholder?: string
   searchableColumns?: string[]
+  isLoading?: boolean
 
 }
 
@@ -449,6 +451,7 @@ export function DataTable<TData extends object>({
   enableSearch,
   searchPlaceholder,
   searchableColumns, 
+  isLoading = false
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -952,6 +955,156 @@ export function DataTable<TData extends object>({
       }
     }, [table.getSelectedRowModel().rows, setSelectedRows])
   
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          {/* Top controls remain visible during loading */}
+          <div className="px-6 mb-3">
+            {enableSearch && (
+              <div className="mb-6 px-1">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
+                    value={globalFilter ?? ""}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="pl-9 w-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                {segments && (
+                  <Segments
+                    segments={segments}
+                    value={segmentValue}
+                    onChange={onSegmentChange}
+                    counts={segmentCounts}
+                  />
+                )}
+              </div>
+            
+              <div className='flex items-center gap-2'>
+                {onSortChange && (
+                  <TableControls
+                    onFilterChange={onFilterChange}
+                    onReset={onReset}
+                    activeFilters={activeFilters}
+                    showFilters={!!showFilters}
+                    setShowFilters={setShowFilters}
+                  />
+                )}
+
+                {!hideDropdown && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='h-9 gap-1'
+                        role='combobox'
+                      >
+                        <MoreHorizontal className='h-4 w-4' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end'>
+                      <DropdownMenuItem onClick={() => alert('Export to CSV')}>
+                        Export to CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => alert('Print')}>
+                        Print
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {addButtonLabel && (
+                  <Button onClick={onAddClick} size='sm' className='h-9 gap-1'>
+                    <IconPlus className='h-4 w-4' />
+                    {addButtonLabel}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {onFilterChange && (
+            <FilterDropdowns
+              showFilters={!!showFilters}
+              filterOptions={filterOptions || []}
+              onFilterChange={onFilterChange}
+              activeFilters={activeFilters}
+            />
+          )}
+
+          <div className='px-6'>
+            <div className='rounded-md border'>
+              <div className='relative overflow-x-auto'>
+                <Table>
+                  <TableHeader className='bg-muted'>
+                    <TableRow>
+                      {legacyColumns.map((col, index) => (
+                        <TableHead key={col.key} className={cn(col.className, 'text-sm !font-medium')}>
+                          <Skeleton className="h-4 w-[100px] mb-2" />
+                        </TableHead>
+                      ))}
+                      {(onViewDetails || onEdit || onArchive || onMarkAsBidJob || onUpdateStatus || onUnarchive) && (
+                        <TableHead className="text-center text-sm !font-medium">
+                          <Skeleton className="h-4 w-16 mb-2 mx-auto" />
+                        </TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {legacyColumns.map((col) => (
+                          <TableCell key={col.key} className={col.className}>
+                            <Skeleton className="h-8 w-full" />
+                          </TableCell>
+                        ))}
+                        {(onViewDetails || onEdit || onArchive || onMarkAsBidJob || onUpdateStatus || onUnarchive) && (
+                          <TableCell className="flex justify-center">
+                            <Skeleton className="h-8 w-8" />
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination skeleton */}
+          {pageCount && pageCount > 1 && (
+            <div className='px-6'>
+              <div className='flex items-center justify-between'>
+                <div className='text-sm text-muted-foreground'>
+                  <Skeleton className="h-4 w-48" />
+                </div>
+                <div className='flex items-center space-x-6 lg:space-x-8'>
+                  <div className='flex items-center space-x-2'>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-[70px]" />
+                  </div>
+                  <div className='flex items-center space-x-2'>
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-4">
         {/* === TOP CONTROLS SECTION (with search bar) === */}
