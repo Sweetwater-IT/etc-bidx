@@ -8,8 +8,10 @@ import { CardActions } from "@/components/card-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
-import { useLoading } from "@/hooks/use-loading";
+import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -40,21 +42,27 @@ export default function QuotesPage() {
     accepted: 0,
   });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  const { startLoading, stopLoading, isLoading } = useLoading();
+  const [isTableLoading, setIsTableLoading] = useState(false);
 
 
-  const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
-    startLoading();
+  const fetchQuotes = async (status = "all", page = 1, limit = 25, search = "") => {
+    setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
       if (status !== "all") {
         params.append("status", status);
+      }
+      if (search) {
+        params.append("search", search);
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
@@ -75,7 +83,7 @@ export default function QuotesPage() {
     } catch (error) {
       console.error("Error fetching quotes:", error);
     } finally {
-      stopLoading();
+      setIsTableLoading(false);
     }
   };
 
@@ -90,6 +98,7 @@ export default function QuotesPage() {
   };
 
   const handleDeleteQuote = async (quote: QuoteGridView) => {
+    setIsTableLoading(true);
     try {
       const res = await fetch(`/api/quotes/delete/${quote.id}`, {
         method: "DELETE",
@@ -98,7 +107,7 @@ export default function QuotesPage() {
 
       if (res.ok && data.success) {
         toast.success(`Quote ${quote.quote_number} deleted`);
-        fetchQuotes(activeSegment, pageIndex + 1, pageSize);
+        fetchQuotes(activeSegment, pageIndex + 1, pageSize, debouncedSearch);
         fetchQuoteCounts();
       } else {
         toast.error(data.message || "Failed to delete quote");
@@ -106,30 +115,36 @@ export default function QuotesPage() {
     } catch (err) {
       console.error("Error deleting quote:", err);
       toast.error("Unexpected error deleting quote");
+    } finally {
+      setIsTableLoading(false);
     }
   };
 
   const handleSegmentChange = (value: string) => {
     setActiveSegment(value);
     setPageIndex(0);
-    fetchQuotes(value, 1, pageSize);
+    fetchQuotes(value, 1, pageSize, debouncedSearch);
   };
 
   const handlePageChange = (newPage: number) => {
     setPageIndex(newPage);
-    fetchQuotes(activeSegment, newPage + 1, pageSize);
+    fetchQuotes(activeSegment, newPage + 1, pageSize, debouncedSearch);
   };
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPageIndex(0);
-    fetchQuotes(activeSegment, 1, newSize);
+    fetchQuotes(activeSegment, 1, newSize, debouncedSearch);
   };
 
   useEffect(() => {
     fetchQuoteCounts();
-    fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-  }, [activeSegment, pageIndex, pageSize]);
+    fetchQuotes(activeSegment, pageIndex + 1, pageSize, debouncedSearch);
+  }, [activeSegment, pageIndex, pageSize, debouncedSearch]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [debouncedSearch]);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
@@ -159,6 +174,18 @@ export default function QuotesPage() {
                 />
               </div>
 
+              <div className="px-6 mb-4">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search quotes by number, customer, contact, or county..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full"
+                  />
+                </div>
+              </div>
+
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={QUOTES_COLUMNS}
@@ -177,6 +204,7 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
+                isLoading={isTableLoading}
 
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
