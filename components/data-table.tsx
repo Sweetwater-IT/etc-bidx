@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 'use client'
 
 import * as React from 'react'
@@ -43,6 +42,14 @@ import { IconChevronRight, IconPlus } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -57,6 +64,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -75,6 +87,11 @@ export type LegacyColumn = {
   title: string
   className?: string
   sortable?: boolean
+}
+
+export type TableUser = {
+  id: string
+  display: string     
 }
 
 // Extended column type to include additional properties used in the table
@@ -124,6 +141,9 @@ export interface DataTableProps<TData extends object> {
   }[]
   segmentValue?: string
   segmentCounts?: Record<string, number>
+  users?: TableUser[]
+  selectedUserId?: string | null
+  onUserSelect?: (userId: string | null) => void
   addButtonLabel?: string
   onAddClick?: () => void
   onSegmentChange?: (value: string) => void
@@ -449,6 +469,9 @@ export function DataTable<TData extends object>({
   enableSearch,
   searchPlaceholder,
   searchableColumns, 
+  users,                
+  selectedUserId,      
+  onUserSelect,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -897,6 +920,8 @@ export function DataTable<TData extends object>({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [itemsToDelete, setItemsToDelete] = useState<TData[]>([])
 
+  const [openUserPopover, setOpenUserPopover] = useState(false)
+
   // Search state (only used when enableSearch is true)
   const [globalFilter, setGlobalFilter] = useState("")
 
@@ -971,18 +996,70 @@ export function DataTable<TData extends object>({
             </div>
           )}
   
-          {/* Segments Row */}
-          <div className="flex justify-between items-center mb-3">
-            <div>
-              {segments && (
-                <Segments
-                  segments={segments}
-                  value={segmentValue}
-                  onChange={onSegmentChange}
-                  counts={segmentCounts}
-                />
-              )}
-            </div>
+          {/* Filter controls row */}
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-6">
+            {/* Classic segments (still works for other tables) */}
+            {segments && (
+              <Segments
+                segments={segments}
+                value={segmentValue}
+                onChange={onSegmentChange}
+                counts={segmentCounts}
+              />
+            )}
+        
+            {/* Creator dropdown (only shown when users are passed) */}
+            {users && users.length > 0 && (
+              <Popover open={openUserPopover} onOpenChange={setOpenUserPopover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openUserPopover}
+                    className="w-[260px] justify-between"
+                  >
+                    {selectedUserId
+                      ? users.find(u => u.id === selectedUserId)?.display ?? 'Unknown'
+                      : 'All creators'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[260px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search creator..." />
+                    <CommandList>
+                      <CommandEmpty>No creators found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          onSelect={() => {
+                            onUserSelect?.(null)
+                            setOpenUserPopover(false)
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", !selectedUserId && "opacity-100")} />
+                          All creators
+                        </CommandItem>
+                        {users.map((user) => (
+                          <CommandItem
+                            key={user.id}
+                            value={user.id}
+                            onSelect={(val) => {
+                              onUserSelect?.(val === selectedUserId ? null : val)
+                              setOpenUserPopover(false)
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id && "opacity-100")} />
+                            {user.display}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
           
           <div className='flex items-center gap-2'>
             {/* Sort and Filter Controls */}
