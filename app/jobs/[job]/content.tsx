@@ -4,6 +4,9 @@ import { AppSidebar } from "../../../components/app-sidebar";
 import { SectionCards } from "../../../components/section-cards";
 import { Button } from "../../../components/ui/button";
 import { DataTable } from "../../../components/data-table";
+import { BidBoardTable } from "@/components/tables/BidBoardTable";
+import { BidListTable } from "@/components/tables/BidListTable";
+import { JobListTable } from "@/components/tables/JobListTable";
 import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
 import { SiteHeader } from "../../../components/site-header";
 import { availableJobsColumns, AvailableJobServices } from "../../../data/available-jobs";
@@ -1039,8 +1042,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         { key: 'createdAt', title: 'Created At', className: 'whitespace-nowrap' }
     ];
 
-    const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
-
+    
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         // Pass the job ID and source as query parameters
         // The API will fetch the complete job data using this ID
@@ -2120,7 +2122,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             {isAvailableJobs ? (
                                 <DataTable<AvailableJob>
                                     data={data as AvailableJob[]}
-                                    columns={columns}
+                                    columns={availableJobsColumns}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     segmentCounts={jobCounts}
@@ -2129,8 +2131,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}                           
                                     enableSearch={true}  
-                                    searchPlaceholder="Search by contract, requestor, status, county, owner, letting, or due date..."
-                                    searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}  
+                                    searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
+                                    searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
                                     onViewDetails={handleViewDetails}
                                     onRowClick={handleViewDetails}
                                     onEdit={handleEdit}
@@ -2190,7 +2192,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
                                     data={data as ActiveBid[]}
-                                    columns={columns}
+                                    columns={ACTIVE_BIDS_COLUMNS}
                                     enableSearch={true}
                                     searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
                                     searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
@@ -2255,7 +2257,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : (
                                 <DataTable<ActiveJob>
                                     data={data as ActiveJob[]}
-                                    columns={columns}
+                                    columns={DISPLAYED_ACTIVE_JOBS_COLUMNS}
                                     segments={segments}
                                     segmentValue={activeSegment}
                                     segmentCounts={activeJobCounts}
