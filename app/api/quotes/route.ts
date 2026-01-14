@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
+    const search = searchParams.get("search") || "";
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -105,6 +106,10 @@ export async function GET(request: NextRequest) {
       query = query.eq("status", status);
     }
 
+    if (search) {
+      query = query.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%`);
+    }
+
     const { data: rawData, error } = await query;
 
     if (error || !rawData) {
@@ -166,9 +171,20 @@ export async function GET(request: NextRequest) {
       transformedData.push(transformedRow);
     }
 
-    const { count } = await supabase
+    // Filtered count query
+    let countQuery = supabase
       .from("quotes")
       .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
+    }
+
+    if (search) {
+      countQuery = countQuery.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%`);
+    }
+
+    const { count } = await countQuery;
 
     return NextResponse.json({
       success: true,
