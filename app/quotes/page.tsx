@@ -23,6 +23,7 @@ const QUOTES_COLUMNS = [
   { key: "customer_name", title: "Customer" },
   { key: "point_of_contact", title: "Contact" },
   { key: "county", title: "County" },
+  { key: "created_by", title: "Created By" }
   { key: "created_at", title: "Created" },
 ];
 
