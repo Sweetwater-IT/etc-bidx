@@ -5,10 +5,12 @@ import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { CardActions } from "@/components/card-actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { useLoading } from "@/hooks/use-loading";
+import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 
 const QUOTES_COLUMNS = [

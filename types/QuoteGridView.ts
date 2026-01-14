@@ -15,4 +15,5 @@ export interface QuoteGridView {
   job_number?: string;
   estimate_id?: number | null;              
   job_id?: number | null;
+  creator_name: string;
 }
