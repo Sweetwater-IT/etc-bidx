@@ -167,7 +167,7 @@ export default function QuotesPage() {
                 segmentCounts={quoteCounts}
                 onSegmentChange={handleSegmentChange}
                 enableSearch={true}
-                searchPlaceholder="Search by quote number, customer, status, county, or creator..."
+                searchPlaceholder="Search by quote creator..."
                 searchableColumns={["quote_number", "customer_name", "status", "county", "created_by_name"]} 
                 onViewDetails={handleRowClick}
                 stickyLastColumn
