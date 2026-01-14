@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get("counts") === "true";
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
-    const search = searchParams.get("search") || "";
+
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
