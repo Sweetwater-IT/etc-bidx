@@ -20,7 +20,7 @@ const QUOTES_COLUMNS = [
   { key: "customer_name", title: "Customer" },
   { key: "point_of_contact", title: "Contact" },
   { key: "county", title: "County" },
-  { key: "created_by_name", title: "Created By" }, // Added from dev-branch
+  { key: "created_by_name", title: "Created By" },
   { key: "created_at", title: "Created" },
 ];
 
@@ -174,7 +174,7 @@ export default function QuotesPage() {
                 />
               </div>
 
-              <div className="px-6 mb-4">
+              <div className="px-6 mb-2">
                 <div className="relative max-w-md">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -186,7 +186,7 @@ export default function QuotesPage() {
                 </div>
               </div>
 
-              <DataTable<QuoteGridView>
+              <DataTable<QuoteGridView key={`table-${debouncedSearch}-${activeSegment}-${pageIndex}`}
                 data={quotes}
                 columns={QUOTES_COLUMNS}
                 segments={SEGMENTS}
