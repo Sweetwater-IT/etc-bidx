@@ -18,6 +18,7 @@ const QUOTES_COLUMNS = [
   { key: "customer_name", title: "Customer" },
   { key: "point_of_contact", title: "Contact" },
   { key: "county", title: "County" },
+  { key: "created_by_name", title: "Created By" },
   { key: "created_at", title: "Created" },
 ];
 
@@ -165,6 +166,9 @@ export default function QuotesPage() {
                 segmentValue={activeSegment}
                 segmentCounts={quoteCounts}
                 onSegmentChange={handleSegmentChange}
+                enableSearch={true}
+                searchPlaceholder="Search by quote number, customer, status, county, or creator..."
+                searchableColumns={["quote_number", "customer_name", "status", "county", "created_by_name"]} 
                 onViewDetails={handleRowClick}
                 stickyLastColumn
                 pageCount={pageCount}
