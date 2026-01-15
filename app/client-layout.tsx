@@ -43,13 +43,14 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     >
       <ClientRootProvider>
         <SidebarProvider
+          key={pathname} // Prevent re-mount on route change
           style={{
             "--sidebar-width": "calc(var(--spacing) * 68)",
             "--header-height": "calc(var(--spacing) * 12)",
           } as React.CSSProperties}
         >
           <AppSidebar variant="inset" />
-          <SidebarInset>
+          <SidebarInset className="transition-opacity duration-200 ease-in-out">
             <SiteHeader />
             <main className="flex-1">
               {children}

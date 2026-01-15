@@ -1,7 +1,14 @@
 "use client";
 
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function JobsPage() {
-  redirect("/jobs/bid-board");
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/jobs/bid-board", { scroll: false });
+  }, [router]);
+
+  return null; // Minimal render to avoid flash
 }
