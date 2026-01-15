@@ -1,11 +1,8 @@
 "use client";
 
-import { AppSidebar } from "../../../components/app-sidebar";
 import { SectionCards } from "../../../components/section-cards";
 import { Button } from "../../../components/ui/button";
 import { DataTable } from "../../../components/data-table";
-import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
-import { SiteHeader } from "../../../components/site-header";
 import { type ActiveJob } from "../../../data/active-jobs";
 import { FilterOption } from "../../../components/table-controls";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -700,18 +697,7 @@ export default function JobListPage() {
     ];
 
     return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col">
                     <div className="@container/main flex flex-1 flex-col gap-2">
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                             <div className="flex flex-col gap-2">
@@ -851,7 +837,6 @@ export default function JobListPage() {
                         </div>
                     </div>
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
-    );
+            </div>
+        );
 }

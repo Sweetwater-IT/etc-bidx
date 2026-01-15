@@ -1,10 +1,7 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar"
 import { CardActions } from "@/components/card-actions"
 import { DataTable } from "@/components/data-table";
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useLoading } from "@/hooks/use-loading";
 import { useCallback, useState, useRef, useEffect } from "react"
 import { toast } from "sonner";
@@ -266,7 +263,7 @@ export function PortalPageContent({ page: Page }) {
             stopLoading();
         }
 
-    }, [])
+    }, [branchesPageSize, branchesPageIndex])
 
     const loadCounties = useCallback(async () => {
         try {
@@ -315,12 +312,11 @@ export function PortalPageContent({ page: Page }) {
             startLoading();
 
             const options: any = {
-                limit: branchesPageSize,
-                page: branchesPageIndex + 1
+                limit: flagRatesPageSize,
+                page: flagRatesPageIndex + 1
             };
 
             const params = new URLSearchParams();
-            params.append("pagination", "true");
             params.append("page", options.page);
             params.append("limit", options.limit);
 
@@ -332,7 +328,7 @@ export function PortalPageContent({ page: Page }) {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to fetch branches");
+                throw new Error("Failed to fetch flagging rates");
             }
 
             const result = await response.json();
@@ -343,14 +339,14 @@ export function PortalPageContent({ page: Page }) {
             setFlagRatesTotalCount(pagination.totalCount);
 
         } catch (error) {
-            console.error("Error loading branches: ", error);
-            toast.error("Failed to load branches, please try again!");
+            console.error("Error loading flagging rates: ", error);
+            toast.error("Failed to load flagging rates, please try again!");
             
         } finally {
             stopLoading();
         }
 
-    }, [])
+    }, [flagRatesPageSize, flagRatesPageIndex])
 
     useEffect(() => {
         if (isBranches) {
@@ -360,7 +356,7 @@ export function PortalPageContent({ page: Page }) {
         } else if (isFlaggingRates) {
             loadFlagRates()
         }
-    }, [loadBranches, loadCounties, isBranches, isCounties, isFlaggingRates, loadFlagRates]);
+    }, [loadBranches, loadCounties, loadFlagRates, isBranches, isCounties, isFlaggingRates]);
 
     const createButtonLabel: string =
         isBranches ? "Create Branch" :
@@ -374,196 +370,181 @@ export function PortalPageContent({ page: Page }) {
     const { startLoading, stopLoading } = useLoading();
 
     return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col">
-                    <div className="@container/main flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <CardActions
-                                                createButtonLabel={createButtonLabel}
-                                                hideCalendar
-                                                goUpActions
-                                                onCreateClick={
-                                                    handleCreateClick
-                                                }
-                                            />
-                                    </div>
-                                </div>
+        <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <CardActions
+                                        createButtonLabel={createButtonLabel}
+                                        hideCalendar
+                                        goUpActions
+                                        onCreateClick={
+                                            handleCreateClick
+                                        }
+                                    />
                             </div>
-
-                            { isBranches && (
-                                <>
-                                <DataTable<Branch>
-                                    data={data as Branch[]}
-                                    columns={BRANCHES_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveBranch}
-                                    tableRef={branchesTableRef}
-                                    selectedItem={
-                                       selectedBranch
-                                            ? selectedBranch
-                                            : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as Branch);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchieveClick(item)
-                                    }}
-                                    pageCount={branchesPageCount}
-                                    pageIndex={branchesPageIndex}
-                                    pageSize={branchesPageSize}
-                                    onPageChange={setBranchesPageIndex}
-                                    onPageSizeChange={setBranchesPageSize}
-                                    totalCount={branchesTotalCount}
-                                />
-
-                                <CreateBranchSheet
-                                    open={showCreateBranchDialog}
-                                    onOpenChange={setShowCreateBranchDialog}
-                                    onSuccess={loadBranches}
-                                />
-                                </>
-                            ) }
-
-                            { isCounties && (
-                                <>
-                                <DataTable<County>
-                                    data={data as County[]}
-                                    columns={COUNTIES_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveCounty}
-                                    tableRef={countiesTableRef}
-                                    selectedItem={
-                                        selectedCounty ? selectedCounty : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as County);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchieveClick(item);
-                                    }}
-                                    pageCount={countiesPageCount}
-                                    pageIndex={countiesPageIndex}
-                                    pageSize={countiesPageSize}
-                                    onPageChange={setCountiesPageIndex}
-                                    onPageSizeChange={setCountiesPageSize}
-                                    totalCount={countiesTotalCount}
-                                />
-                                <CreateCountySheet
-                                    open={showCreateCountyDialog}
-                                    onOpenChange={setShowCreateCountyDialog}
-                                    onSuccess={loadCounties}
-                                />
-                                </>
-                            ) }
-
-                            { isFlaggingRates && (
-                                <>
-                                <DataTable<FlagRate>
-                                    data={flagRates as FlagRate[]}
-                                    columns={FLAGGING_COLUMNS}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveFlagRate}
-                                    tableRef={flagRatesTableRef}
-                                    selectedItem={
-                                        selectedFlagRate ? selectedFlagRate : undefined
-                                    }
-                                    onEdit={(item) => {
-                                        handleEditClick(item as FlagRate);
-                                    }}
-                                    onArchive={(item) => {
-                                        handleArchiveFlagRates(item);
-                                    }}
-                                    pageCount={flagRatesPageCount}
-                                    pageIndex={flagRatesPageIndex}
-                                    pageSize={flagRatesPageSize}
-                                    onPageChange={setFlagRatesPageIndex}
-                                    onPageSizeChange={setFlagRatesPageSize}
-                                    totalCount={flagRatesTotalCount}
-                                />
-                                <CreateFlagRateSheet
-                                    open={showCreateFlagRateDialog}
-                                    onOpenChange={setShowCreateFlagRateDialog}
-                                    onSuccess={() => {
-                                        loadFlagRates()
-                                    }}
-                                />
-                                
-                                {selectedFlagRate && (
-                                    <EditFlagRateSheet
-                                    open={showEditFlagRateDialog}
-                                    onOpenChange={setShowEditFlagRateDialog}
-                                    onSuccess={() => {
-                                        loadFlagRates()
-                                    }}
-                                    rate={selectedFlagRate}
-                                />
-                                )}
-                                </>
-
-                            ) }
-
-
-                            { selectedBranch && (
-                                <>
-                                <EditBranchSheet
-                                    open={showEditBranchDialog}
-                                    onOpenChange={setShowEditBranchDialog}
-                                    onSuccess={loadBranches}
-                                    branch={selectedBranch}
-                                />
-                                <ConfirmArchiveDialog
-                                    isOpen={openConfirmArchiveDialog}
-                                    onClose={() =>  setShowConfirmArchiveDialog(false)}
-                                    onConfirm={() => {
-                                        handleArchiveBranches(selectedBranch)
-                                    }}
-                                    itemCount={selectedBranchesToArchive.length}
-                                    itemType="branch"
-                                />
-                                </>
-                            ) }
-
-                            { selectedCounty && (
-                                <>
-                                <EditCountySheet
-                                    open={showEditCountyDialog}
-                                    onOpenChange={setShowEditCountyDialog}
-                                    county={selectedCounty ? selectedCounty : null}
-                                    onSuccess={loadCounties}
-                                />
-                                <ConfirmArchiveDialog
-                                    isOpen={openConfirmArchiveCountyDialog}
-                                    onClose={() =>  setShowConfirmArchiveCountyDialog(false)}
-                                    onConfirm={() => {
-                                        handleArchiveCounties(selectedCounty)
-                                    }}
-                                    itemCount={selectedCountiesToArchive.length}
-                                    itemType="county"
-                                />
-                                </>
-                            ) }
-
-                            
                         </div>
                     </div>
+
+                    { isBranches && (
+                        <>
+                        <DataTable<Branch>
+                            data={data as Branch[]}
+                            columns={BRANCHES_COLUMNS}
+                            stickyLastColumn
+                            onArchiveSelected={initiateArchiveBranch}
+                            tableRef={branchesTableRef}
+                            selectedItem={
+                               selectedBranch
+                                    ? selectedBranch
+                                    : undefined
+                            }
+                            onEdit={(item) => {
+                                handleEditClick(item as Branch);
+                            }}
+                            onArchive={(item) => {
+                                handleArchieveClick(item)
+                            }}
+                            pageCount={branchesPageCount}
+                            pageIndex={branchesPageIndex}
+                            pageSize={branchesPageSize}
+                            onPageChange={setBranchesPageIndex}
+                            onPageSizeChange={setBranchesPageSize}
+                            totalCount={branchesTotalCount}
+                        />
+
+                        <CreateBranchSheet
+                            open={showCreateBranchDialog}
+                            onOpenChange={setShowCreateBranchDialog}
+                            onSuccess={loadBranches}
+                        />
+                        </>
+                    ) }
+
+                    { isCounties && (
+                        <>
+                        <DataTable<County>
+                            data={data as County[]}
+                            columns={COUNTIES_COLUMNS}
+                            stickyLastColumn
+                            onArchiveSelected={initiateArchiveCounty}
+                            tableRef={countiesTableRef}
+                            selectedItem={
+                                selectedCounty ? selectedCounty : undefined
+                            }
+                            onEdit={(item) => {
+                                handleEditClick(item as County);
+                            }}
+                            onArchive={(item) => {
+                                handleArchieveClick(item);
+                            }}
+                            pageCount={countiesPageCount}
+                            pageIndex={countiesPageIndex}
+                            pageSize={countiesPageSize}
+                            onPageChange={setCountiesPageIndex}
+                            onPageSizeChange={setCountiesPageSize}
+                            totalCount={countiesTotalCount}
+                        />
+                        <CreateCountySheet
+                            open={showCreateCountyDialog}
+                            onOpenChange={setShowCreateCountyDialog}
+                            onSuccess={loadCounties}
+                        />
+                        </>
+                    ) }
+
+                    { isFlaggingRates && (
+                        <>
+                        <DataTable<FlagRate>
+                            data={flagRates as FlagRate[]}
+                            columns={FLAGGING_COLUMNS}
+                            stickyLastColumn
+                            onArchiveSelected={initiateArchiveFlagRate}
+                            tableRef={flagRatesTableRef}
+                            selectedItem={
+                                selectedFlagRate ? selectedFlagRate : undefined
+                            }
+                            onEdit={(item) => {
+                                handleEditClick(item as FlagRate);
+                            }}
+                            onArchive={(item) => {
+                                handleArchiveFlagRates(item);
+                            }}
+                            pageCount={flagRatesPageCount}
+                            pageIndex={flagRatesPageIndex}
+                            pageSize={flagRatesPageSize}
+                            onPageChange={setFlagRatesPageIndex}
+                            onPageSizeChange={setFlagRatesPageSize}
+                            totalCount={flagRatesTotalCount}
+                        />
+                        <CreateFlagRateSheet
+                            open={showCreateFlagRateDialog}
+                            onOpenChange={setShowCreateFlagRateDialog}
+                            onSuccess={() => {
+                                loadFlagRates()
+                            }}
+                        />
+                        
+                        {selectedFlagRate && (
+                            <EditFlagRateSheet
+                            open={showEditFlagRateDialog}
+                            onOpenChange={setShowEditFlagRateDialog}
+                            onSuccess={() => {
+                                loadFlagRates()
+                            }}
+                            rate={selectedFlagRate}
+                        />
+                        )}
+                        </>
+                    ) }
+
+
+                    { selectedBranch && (
+                        <>
+                        <EditBranchSheet
+                            open={showEditBranchDialog}
+                            onOpenChange={setShowEditBranchDialog}
+                            onSuccess={loadBranches}
+                            branch={selectedBranch}
+                        />
+                        <ConfirmArchiveDialog
+                            isOpen={openConfirmArchiveDialog}
+                            onClose={() =>  setShowConfirmArchiveDialog(false)}
+                            onConfirm={() => {
+                                handleArchiveBranches(selectedBranch)
+                            }}
+                            itemCount={selectedBranchesToArchive.length}
+                            itemType="branch"
+                        />
+                        </>
+                    ) }
+
+                    { selectedCounty && (
+                        <>
+                        <EditCountySheet
+                            open={showEditCountyDialog}
+                            onOpenChange={setShowEditCountyDialog}
+                            county={selectedCounty ? selectedCounty : null}
+                            onSuccess={loadCounties}
+                        />
+                        <ConfirmArchiveDialog
+                            isOpen={openConfirmArchiveCountyDialog}
+                            onClose={() =>  setShowConfirmArchiveCountyDialog(false)}
+                            onConfirm={() => {
+                                handleArchiveCounties(selectedCounty)
+                            }}
+                            itemCount={selectedCountiesToArchive.length}
+                            itemType="county"
+                        />
+                        </>
+                    ) }
+
+                    
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+            </div>
+        </div>
     );
 
 }
-

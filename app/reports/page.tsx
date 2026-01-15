@@ -1,9 +1,6 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
 import { CardActions } from "@/components/card-actions";
 import { GenerateReportSheet } from "@/components/generate-report-sheet";
 import { useState } from "react";
@@ -29,46 +26,33 @@ export default function ReportsPage() {
   const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="flex items-center justify-between px-0 -mb-3">
-                <CardActions
-                  createButtonLabel="Generate Report"
-                  onCreateClick={() => setIsGenerateReportOpen(true)}
-                  hideCalendar
-                  goUpActions
-                />
-              </div>
-
-              {/* <SectionCards data={REPORTS_CARDS} /> */}
-
-              <DataTable<[]>
-                data={[]}
-                columns={COLUMNS}
-                segments={SEGMENTS}
-                stickyLastColumn
-              />
-            </div>
+    <div className="flex flex-1 flex-col">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="flex items-center justify-between px-0 -mb-3">
+            <CardActions
+              createButtonLabel="Generate Report"
+              onCreateClick={() => setIsGenerateReportOpen(true)}
+              hideCalendar
+              goUpActions
+            />
           </div>
+
+          {/* <SectionCards data={REPORTS_CARDS} /> */}
+
+          <DataTable<[]>
+            data={[]}
+            columns={COLUMNS}
+            segments={SEGMENTS}
+            stickyLastColumn
+          />
         </div>
-      </SidebarInset>
+      </div>
 
       <GenerateReportSheet 
         open={isGenerateReportOpen}
         onOpenChange={setIsGenerateReportOpen}
       />
-    </SidebarProvider>
+    </div>
   );
-} 
+}

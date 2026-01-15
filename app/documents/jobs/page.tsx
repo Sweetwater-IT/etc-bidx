@@ -1,9 +1,6 @@
 "use client";
 
-import { AppSidebar } from "../../../components/app-sidebar";
 import { DataTable } from "../../../components/data-table";
-import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
-import { SiteHeader } from "../../../components/site-header";
 import { SectionCards } from "../../../components/section-cards";
 import { CardActions } from "../../../components/card-actions";
 import { useState } from "react";
@@ -61,42 +58,29 @@ export default function JobListPage() {
   const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <CardActions
-                createButtonLabel="Create Job"
-                onCreateClick={() => setCreateJobSheetOpen(true)}
-              />
+    <div className="flex flex-1 flex-col">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <CardActions
+            createButtonLabel="Create Job"
+            onCreateClick={() => setCreateJobSheetOpen(true)}
+          />
 
-              <SectionCards data={JOB_LIST_CARDS} />
+          <SectionCards data={JOB_LIST_CARDS} />
 
-              <DataTable<[]>
-                data={[]}
-                columns={COLUMNS}
-                segments={JOB_LIST_SEGMENTS}
-                stickyLastColumn
-              />
+          <DataTable<[]>
+            data={[]}
+            columns={COLUMNS}
+            segments={JOB_LIST_SEGMENTS}
+            stickyLastColumn
+          />
 
-              <CreateJobSheet 
-                open={createJobSheetOpen}
-                onOpenChange={setCreateJobSheetOpen}
-              />
-            </div>
-          </div>
+          <CreateJobSheet 
+            open={createJobSheetOpen}
+            onOpenChange={setCreateJobSheetOpen}
+          />
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
-} 
+}
