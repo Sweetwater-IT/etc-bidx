@@ -6,7 +6,7 @@ import { DataTable } from "../../../components/data-table";
 import { availableJobsColumns } from "../../../data/available-jobs";
 import { FilterOption } from "../../../components/table-controls";
 import { useRouter } from "next/navigation";
-import { useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
 import { OpenBidSheet } from "../../../components/open-bid-sheet";
