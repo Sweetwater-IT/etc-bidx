@@ -150,18 +150,21 @@ export default function BidBoardPage() {
   const onDeleteItems = async (element: AvailableJob) => {
     const elementId = element.id;
     if (!elementId) return;
-
+  
     try {
       const response = await fetch(`/api/bids/deleteForever?id=${elementId}`, { method: 'DELETE' });
       const result = await response.json();
-
+  
       if (result.success) {
-        setAvailableJobs((prev) => prev.filter((aj) => aj.id !== element.id));
-        toast.success(result.message);
+        toast.success(result.message || "Item deleted successfully");
+        await loadAvailableJobs(); // Refresh the table
+        fetchAvailableJobCounts().then((stats) => setCardData(stats || [])); // Optional: refresh cards
+      } else {
+        toast.error(result.message || "Failed to delete item");
       }
-      console.log('Eliminación completada');
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      console.error("Error deleting item:", error);
+      toast.error("Unexpected error during deletion");
     }
   };
 
