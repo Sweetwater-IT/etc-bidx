@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
         updated_at,
         user_created,
         created_by_name,
+        user_created_name,
         estimate_id,
         etc_job_number,
         job_id,
@@ -111,11 +112,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipients.point_of_contact", "county", "created_by_name", "type_quote"];
-      for (const word of words) {
-        const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
-        baseQuery = baseQuery.or(orConditions);
-      }
+      const fields = [
+        "quote_number",
+        "customer_name",
+        "customer_contact",
+        "quotes_customers.contractors.name",
+        "quote_recipients.point_of_contact",
+        "county",
+        "created_by_name",
+        "user_created_name",
+        "type_quote"
+      ];
+      const wordConditions = words.map(word => {
+        const fieldLikes = fields.map(field => `${field}.ilike.%${word}%`);
+        return `or(${fieldLikes.join(',')})`;
+      });
+      const fullSearch = `and(${wordConditions.join(',')})`;
+      console.log("Search filter:", fullSearch);
+      baseQuery = baseQuery.or(fullSearch);
     }
 
     // Count query with same filters
@@ -132,11 +146,23 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipients.point_of_contact", "county", "created_by_name", "type_quote"];
-      for (const word of words) {
-        const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
-        countQuery = countQuery.or(orConditions);
-      }
+      const fields = [
+        "quote_number",
+        "customer_name",
+        "customer_contact",
+        "quotes_customers.contractors.name",
+        "quote_recipients.point_of_contact",
+        "county",
+        "created_by_name",
+        "user_created_name",
+        "type_quote"
+      ];
+      const wordConditions = words.map(word => {
+        const fieldLikes = fields.map(field => `${field}.ilike.%${word}%`);
+        return `or(${fieldLikes.join(',')})`;
+      });
+      const fullSearch = `and(${wordConditions.join(',')})`;
+      countQuery = countQuery.or(fullSearch);
     }
 
     const { count: totalCountRaw, error: countError } = await countQuery;
@@ -205,7 +231,7 @@ export async function GET(request: NextRequest) {
         estimate_contract_number: adminData?.contract_number ?? null,
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
-        created_by_name: row.created_by_name || 'Unknown',
+        created_by_name: row.user_created_name || row.created_by_name || 'Unknown',
       };
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
@@ -333,7 +359,7 @@ export async function POST(request: NextRequest) {
         estimate_id,
         job_id,
         user_created: userEmail,
-        created_by_name: createdByName,
+        user_created_name: createdByName,
         ...cleanRest
       }])
       .select("id, quote_number, estimate_id, job_id")
