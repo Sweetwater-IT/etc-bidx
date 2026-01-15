@@ -112,24 +112,44 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = [
+      const mainFields = [
         "quote_number",
         "customer_name",
         "customer_contact",
-        "quotes_customers.contractors.name",
-        "quote_recipients.point_of_contact",
         "county",
         "created_by_name",
         "user_created_name",
         "type_quote"
       ];
-      const wordConditions = words.map(word => {
-        const fieldLikes = fields.map(field => `${field}.ilike.%${word}%`);
-        return `or(${fieldLikes.join(',')})`;
-      });
-      const fullSearch = `and(${wordConditions.join(',')})`;
-      console.log("Search filter:", fullSearch);
-      baseQuery = baseQuery.or(fullSearch);
+
+      const nestedFields = [
+        "quotes_customers.contractors.name",
+        "quote_recipients.point_of_contact"
+      ];
+
+      // Main table multi-word search
+      let mainSearch = null;
+      if (mainFields.length > 0 && words.length > 0) {
+        const wordConditions = words.map(word => {
+          const fieldLikes = mainFields.map(field => `${field}.ilike.%${word}%`);
+          return `or(${fieldLikes.join(',')})`;
+        });
+        mainSearch = `and(${wordConditions.join(',')})`;
+        if (mainSearch) {
+          baseQuery = baseQuery.or(mainSearch);
+        }
+      }
+
+      // Nested relations: simple per-word OR (chained → approximates AND)
+      for (const word of words) {
+        const nestedLikes = nestedFields.map(field => `${field}.ilike.%${word}%`);
+        if (nestedLikes.length > 0) {
+          baseQuery = baseQuery.or(nestedLikes.join(','), { referencedTable: 'quotes' });
+        }
+      }
+
+      console.log("Main search:", mainSearch || "none");
+      console.log("Applied nested words:", words.length);
     }
 
     // Count query with same filters
@@ -146,23 +166,44 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = [
+      const mainFields = [
         "quote_number",
         "customer_name",
         "customer_contact",
-        "quotes_customers.contractors.name",
-        "quote_recipients.point_of_contact",
         "county",
         "created_by_name",
         "user_created_name",
         "type_quote"
       ];
-      const wordConditions = words.map(word => {
-        const fieldLikes = fields.map(field => `${field}.ilike.%${word}%`);
-        return `or(${fieldLikes.join(',')})`;
-      });
-      const fullSearch = `and(${wordConditions.join(',')})`;
-      countQuery = countQuery.or(fullSearch);
+
+      const nestedFields = [
+        "quotes_customers.contractors.name",
+        "quote_recipients.point_of_contact"
+      ];
+
+      // Main table multi-word search
+      let mainSearch = null;
+      if (mainFields.length > 0 && words.length > 0) {
+        const wordConditions = words.map(word => {
+          const fieldLikes = mainFields.map(field => `${field}.ilike.%${word}%`);
+          return `or(${fieldLikes.join(',')})`;
+        });
+        mainSearch = `and(${wordConditions.join(',')})`;
+        if (mainSearch) {
+          countQuery = countQuery.or(mainSearch);
+        }
+      }
+
+      // Nested relations: simple per-word OR (chained → approximates AND)
+      for (const word of words) {
+        const nestedLikes = nestedFields.map(field => `${field}.ilike.%${word}%`);
+        if (nestedLikes.length > 0) {
+          countQuery = countQuery.or(nestedLikes.join(','), { referencedTable: 'quotes' });
+        }
+      }
+
+      console.log("Main search:", mainSearch || "none");
+      console.log("Applied nested words:", words.length);
     }
 
     const { count: totalCountRaw, error: countError } = await countQuery;
