@@ -122,11 +122,6 @@ export async function GET(request: NextRequest) {
         "type_quote"
       ];
 
-      const nestedFields = [
-        "quotes_customers.contractors.name",
-        "quote_recipients.point_of_contact"
-      ];
-
       // Main table multi-word search
       let mainSearch: string | null = null;
       if (mainFields.length > 0 && words.length > 0) {
@@ -140,16 +135,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Nested relations: simple per-word OR (chained → approximates AND)
-      for (const word of words) {
-        const nestedLikes = nestedFields.map(field => `${field}.ilike.%${word}%`);
-        if (nestedLikes.length > 0) {
-          baseQuery = baseQuery.or(nestedLikes.join(','), { referencedTable: 'quotes' });
-        }
-      }
-
       console.log("Main search:", mainSearch || "none");
-      console.log("Applied nested words:", words.length);
     }
 
     // Count query with same filters
@@ -176,11 +162,6 @@ export async function GET(request: NextRequest) {
         "type_quote"
       ];
 
-      const nestedFields = [
-        "quotes_customers.contractors.name",
-        "quote_recipients.point_of_contact"
-      ];
-
       // Main table multi-word search
       let mainSearch: string | null = null;
       if (mainFields.length > 0 && words.length > 0) {
@@ -194,16 +175,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Nested relations: simple per-word OR (chained → approximates AND)
-      for (const word of words) {
-        const nestedLikes = nestedFields.map(field => `${field}.ilike.%${word}%`);
-        if (nestedLikes.length > 0) {
-          countQuery = countQuery.or(nestedLikes.join(','), { referencedTable: 'quotes' });
-        }
-      }
-
       console.log("Main search:", mainSearch || "none");
-      console.log("Applied nested words:", words.length);
     }
 
     const { count: totalCountRaw, error: countError } = await countQuery;
