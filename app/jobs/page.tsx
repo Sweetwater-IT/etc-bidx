@@ -3,5 +3,5 @@
 import { redirect } from "next/navigation";
 
 export default function JobsPage() {
-  redirect("/jobs/available");
-} 
+  redirect("/jobs/bid-board");
+}
