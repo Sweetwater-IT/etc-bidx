@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       ];
 
       // Main table multi-word search
-      let mainSearch = null;
+      let mainSearch: string | null = null;
       if (mainFields.length > 0 && words.length > 0) {
         const wordConditions = words.map(word => {
           const fieldLikes = mainFields.map(field => `${field}.ilike.%${word}%`);
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
       ];
 
       // Main table multi-word search
-      let mainSearch = null;
+      let mainSearch: string | null = null;
       if (mainFields.length > 0 && words.length > 0) {
         const wordConditions = words.map(word => {
           const fieldLikes = mainFields.map(field => `${field}.ilike.%${word}%`);
