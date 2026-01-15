@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { ThemeProvider } from "next-themes";
 import { GlobalLoading } from "@/components/global-loading";
 import { Toaster } from "@/components/ui/sonner";
@@ -14,6 +15,25 @@ interface ClientLayoutProps {
 }
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
+  const pathname = usePathname();
+
+  if (pathname === '/password-entry') {
+    return (
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <ClientRootProvider>
+          <GlobalLoading />
+          <Toaster />
+          {children}
+        </ClientRootProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider
       attribute="class"

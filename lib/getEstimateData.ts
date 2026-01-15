@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+let supabase;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
 
 // Types for the query response structure
 export interface BidMetrics {
@@ -103,6 +105,58 @@ export interface EstimateQueryResult {
 }
 
 export async function getEstimateData(startDate?: string, endDate?: string): Promise<EstimateQueryResult | null> {
+    if (!supabase) {
+        // Mock data for testing without Supabase
+        return {
+            bid_metrics: {
+                total_bids: 42,
+                win_loss_ratio: 65.5,
+                total_revenue: 1250000,
+                mpt_gross_margin: 28.3,
+                total_won_jobs: 27
+            },
+            branch_win_loss: [
+                { branch_name: 'Hatfield', won_count: 10, lost_count: 5, pending_count: 2, total_count: 17, win_ratio: 58.8 },
+                { branch_name: 'Turbotville', won_count: 8, lost_count: 6, pending_count: 3, total_count: 17, win_ratio: 47.1 },
+                { branch_name: 'Bedford', won_count: 9, lost_count: 4, pending_count: 1, total_count: 14, win_ratio: 64.3 }
+            ],
+            branch_job_types: [
+                { branch_name: 'Hatfield', public_jobs: 12, private_jobs: 5, public_ratio: 70.6 },
+                { branch_name: 'Turbotville', public_jobs: 8, private_jobs: 9, public_ratio: 47.1 },
+                { branch_name: 'Bedford', public_jobs: 10, private_jobs: 4, public_ratio: 71.4 }
+            ],
+            branch_revenue_by_bid_item: [
+                { branch_name: 'Hatfield', mpt_revenue: 450000, sale_items_revenue: 150000, equipment_rental_revenue: 80000, permanent_signs_revenue: 120000 },
+                { branch_name: 'Turbotville', mpt_revenue: 380000, sale_items_revenue: 200000, equipment_rental_revenue: 60000, permanent_signs_revenue: 90000 },
+                { branch_name: 'Bedford', mpt_revenue: 420000, sale_items_revenue: 100000, equipment_rental_revenue: 70000, permanent_signs_revenue: 110000 }
+            ],
+            project_starts: [
+                { month: new Date(2023, 0, 1), project_count: 5 },
+                { month: new Date(2023, 1, 1), project_count: 7 },
+                { month: new Date(2023, 2, 1), project_count: 4 }
+            ],
+            monthly_hours: [
+                { month: new Date(2023, 0, 1), mpt_hours: 1200, permanent_sign_hours: 300 },
+                { month: new Date(2023, 1, 1), mpt_hours: 1500, permanent_sign_hours: 250 },
+                { month: new Date(2023, 2, 1), mpt_hours: 1100, permanent_sign_hours: 350 }
+            ],
+            owner_revenue: [
+                { customer: 'PennDOT', revenue: 500000, total_bids: 15, won_bids: 10 },
+                { customer: 'Private Client A', revenue: 300000, total_bids: 8, won_bids: 5 },
+                { customer: 'Private Client B', revenue: 250000, total_bids: 6, won_bids: 4 }
+            ],
+            branch_gross_profit_metrics: [
+                { branch_name: 'Hatfield', total_gross_profit: 350000, mpt_gross_profit: 120000, equipment_rental_gross_profit: 20000, sale_items_gross_profit: 30000, permanent_signs_gross_profit: 40000 },
+                { branch_name: 'Turbotville', total_gross_profit: 280000, mpt_gross_profit: 100000, equipment_rental_gross_profit: 15000, sale_items_gross_profit: 40000, permanent_signs_gross_profit: 30000 },
+                { branch_name: 'Bedford', total_gross_profit: 320000, mpt_gross_profit: 110000, equipment_rental_gross_profit: 18000, sale_items_gross_profit: 20000, permanent_signs_gross_profit: 35000 }
+            ],
+            mpt_bids: [
+                { bid_value: 50000, gross_profit_margin: 25.5, contract_number: 'CN-123', contractor: 'PennDOT', start_date: '2023-01-15', status: 'won' },
+                { bid_value: 45000, gross_profit_margin: 30.2, contract_number: 'CN-124', contractor: 'Private A', start_date: '2023-02-10', status: 'won' }
+            ]
+        };
+    }
+
     try {
         // 1. First, let's get the basic bid metrics
         const bidMetrics = await getBidMetrics(startDate, endDate);
