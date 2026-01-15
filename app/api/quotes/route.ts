@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name", "type_quote"];
+      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipients.point_of_contact", "county", "created_by_name", "type_quote"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         baseQuery = baseQuery.or(orConditions);
@@ -121,14 +121,18 @@ export async function GET(request: NextRequest) {
     // Count query with same filters
     let countQuery = supabase
       .from("quotes")
-      .select("id", { count: "exact", head: true });
+      .select(`
+        id,
+        quotes_customers ( contractors ( id, name ) ),
+        quote_recipients ( email, point_of_contact )
+      `, { count: "exact", head: true });
 
     if (status && status !== "all") {
       countQuery = countQuery.eq("status", status);
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name", "type_quote"];
+      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipient.point_of_contact", "county", "created_by_name", "type_quote"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         countQuery = countQuery.or(orConditions);
@@ -180,7 +184,7 @@ export async function GET(request: NextRequest) {
 
       const contractor = row.quotes_customers?.[0]?.contractors;
       const customerName =
-        contractor && "name" in contractor ? contractor.name : "Unknown Customer";
+        contractor && "name" in contractor ? contractor.name : row.customer_name || "Unknown Customer";
 
       const transformedRow: any = {
         id: row.id,
@@ -190,8 +194,8 @@ export async function GET(request: NextRequest) {
         date_sent: row.date_sent,
         estimate_id: row.estimate_id ?? null,
         job_id: row.job_id ?? null,
-        customer_name: row.customer_name,
-        point_of_contact: row.customer_contact,
+        customer_name: customerName,
+        point_of_contact: row.quote_recipients?.[0]?.point_of_contact || row.customer_contact || "",
         point_of_contact_email: row.quote_recipients?.[0]?.email || "",
         total_items: row.quote_items?.length || 0,
         county: row.county,
