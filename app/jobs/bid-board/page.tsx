@@ -244,7 +244,21 @@ export default function BidBoardPage() {
             allRowsSelected={allAvailableJobRowsSelected}
             onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
             selectedItem={openBidSheetOpen && selectedJob ? selectedJob : undefined}
-            onUpdateStatus={handleUpdateStatus}
+            onUpdateStatus={(item, status) => {
+              const statusMap = {
+                bid: "Bid",
+                "no-bid": "No Bid",
+                unset: "Unset",
+                Bid: "Bid",
+                "No Bid": "No Bid",
+                Unset: "Unset",
+              } as const;
+            
+              const mapped = statusMap[status as keyof typeof statusMap];
+              if (mapped) {
+                handleUpdateStatus(item, mapped);
+              }
+            }}
             stickyLastColumn
             pageCount={availableJobsPageCount}
             pageIndex={availableJobsPageIndex}
