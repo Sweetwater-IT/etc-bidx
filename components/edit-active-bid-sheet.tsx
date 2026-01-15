@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HashIcon, CalendarIcon, UserIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon } from "lucide-react";
 import { type ActiveBid } from "@/data/active-bids";
-import { type JobPageData } from "@/app/jobs/[job]/content";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -17,10 +16,9 @@ interface EditActiveBidSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bid?: ActiveBid;
-  onSuccess?: (item: JobPageData) => void;
 }
 
-export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditActiveBidSheetProps) {
+export function EditActiveBidSheet({ open, onOpenChange, bid }: EditActiveBidSheetProps) {
   const [formData, setFormData] = useState<Partial<ActiveBid>>({});
   const [lettingDate, setLettingDate] = useState<Date | undefined>(undefined);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -87,9 +85,6 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
     e.preventDefault();
     try {
       // TODO: Implement the API call to update the bid
-      if (onSuccess) {
-        onSuccess(formData as JobPageData);
-      }
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating bid:', error);
@@ -389,4 +384,4 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
       </SheetContent>
     </Sheet>
   );
-} 
+}
