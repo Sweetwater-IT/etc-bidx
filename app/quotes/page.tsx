@@ -1,3 +1,5 @@
+'use client';
+
 import { DataTable } from "@/components/data-table";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -169,7 +171,7 @@ export default function QuotesPage() {
             </div>
           </div>
 
-          <DataTable<QuoteGridView key={`table-${debouncedSearch}-${activeSegment}-${pageIndex}`}
+          <DataTable<QuoteGridView> key={`table-${debouncedSearch}-${activeSegment}-${pageIndex}`}
             data={quotes}
             columns={QUOTES_COLUMNS}
             segments={SEGMENTS}
