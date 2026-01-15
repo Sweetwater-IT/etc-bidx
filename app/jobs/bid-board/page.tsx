@@ -16,6 +16,7 @@ import { useAvailableJobs } from "@/hooks/useAvailableJobs";
 import { AvailableJob } from "../../../data/available-jobs";
 import { DateRange } from "react-day-picker";
 import { useCustomers } from "@/hooks/use-customers";
+import { toast } from "sonner";
 
 // Fallback for SectionCards
 function SectionCardsFallback() {
