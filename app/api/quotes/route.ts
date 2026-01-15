@@ -21,6 +21,9 @@ export async function GET(request: NextRequest) {
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
+    const words = search ? search.trim().split(/\s+/).filter(w => w.length > 0) : [];
+    const hasSearch = words.length > 0;
+
     // 📊 Counts
     if (counts) {
       const { data: allQuotes, error: countError } = await supabase
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
     // 📑 Pagination
     const offset = (page - 1) * limit;
 
-    let query = supabase
+    let baseQuery = supabase
       .from("quotes")
       .select(`
         id,
@@ -100,22 +103,36 @@ export async function GET(request: NextRequest) {
         ),
         quote_recipients ( email, point_of_contact )
       `)
-      .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1);
+      .order(orderBy, { ascending });
 
     if (status && status !== "all") {
-      query = query.eq("status", status);
+      baseQuery = baseQuery.eq("status", status);
     }
 
-    if (search) {
-      query = query.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%`);
+    if (hasSearch) {
+      const fields = ["quote_number", "customer_name", "customer_contact", "county"];
+      for (const word of words) {
+        const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
+        baseQuery = baseQuery.or(orConditions);
+      }
     }
 
-    const { data: rawData, error } = await query;
+    let rawData;
+    let fetchError;
+    if (hasSearch) {
+      const res = await baseQuery;
+      rawData = res.data;
+      fetchError = res.error;
+    } else {
+      const dataQuery = baseQuery.range(offset, offset + limit - 1);
+      const res = await dataQuery;
+      rawData = res.data;
+      fetchError = res.error;
+    }
 
-    if (error || !rawData) {
+    if (fetchError || !rawData) {
       return NextResponse.json(
-        { success: false, message: "Failed to fetch quotes", error: error?.message },
+        { success: false, message: "Failed to fetch quotes", error: fetchError?.message },
         { status: 500 }
       );
     }
@@ -174,14 +191,39 @@ export async function GET(request: NextRequest) {
           .select('name')
           .eq('email', row.user_created)
           .maybeSingle();
-        transformedRow.created_by_name = user?.name || row.user_created || 'Unknown';
-      } else {
-        transformedRow.created_by_name = 'Unknown';
-      }
-
-      console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
-      transformedData.push(transformedRow);
+      transformedRow.created_by_name = user?.name || row.user_created || 'Unknown';
+    } else {
+      transformedRow.created_by_name = 'Unknown';
     }
+
+    console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
+    transformedData.push(transformedRow);
+  }
+
+  let filteredData = transformedData;
+  if (hasSearch) {
+    filteredData = transformedData.filter((row) => {
+      const searchableFields = {
+        quote_number: (row.quote_number || '').toLowerCase(),
+        customer_name: (row.customer_name || '').toLowerCase(),
+        point_of_contact: (row.point_of_contact || '').toLowerCase(),
+        county: (row.county || '').toLowerCase(),
+        created_by_name: (row.created_by_name || '').toLowerCase(),
+      };
+      return words.every((word) => {
+        const lowerWord = word.toLowerCase();
+        return Object.values(searchableFields).some((field) => field.includes(lowerWord));
+      });
+    });
+  }
+
+  let totalCount;
+  let pageData;
+  if (hasSearch) {
+    pageData = filteredData.slice(offset, offset + limit);
+    totalCount = filteredData.length;
+  } else {
+    pageData = transformedData;
 
     // Filtered count query
     let countQuery = supabase
@@ -192,22 +234,22 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq("status", status);
     }
 
-    if (search) {
-      countQuery = countQuery.or(`quote_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%`);
-    }
-
     const { count } = await countQuery;
+    totalCount = count || 0;
+  }
 
-    return NextResponse.json({
-      success: true,
-      data: transformedData,
-      pagination: {
-        page,
-        pageSize: limit,
-        pageCount: Math.ceil((count || 0) / limit),
-        totalCount: count || 0,
-      },
-    });
+  const pageCount = Math.ceil(totalCount / limit);
+
+  return NextResponse.json({
+    success: true,
+    data: pageData,
+    pagination: {
+      page,
+      pageSize: limit,
+      pageCount,
+      totalCount,
+    },
+  });
   } catch (error) {
     console.error("Unexpected error:", error);
     return NextResponse.json(
