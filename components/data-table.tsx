@@ -1106,9 +1106,9 @@ export function DataTable<TData extends object>({
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 w-full flex-1 min-w-0">
         {/* === TOP CONTROLS SECTION (with search bar) === */}
-        <div className="px-6 mb-3">
+        <div className="px-4 md:px-6 mb-3 w-full">
           {/* Search Bar - Only for Open Bids */}
           {enableSearch && (
             <div className="mb-6 px-1"> {/* small padding to match segments */}
