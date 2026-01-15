@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         user_created,
+        created_by_name,
         estimate_id,
         etc_job_number,
         job_id,
@@ -110,25 +111,42 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "customer_name", "customer_contact", "county"];
+      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         baseQuery = baseQuery.or(orConditions);
       }
     }
 
-    let rawData;
-    let fetchError;
-    if (hasSearch) {
-      const res = await baseQuery;
-      rawData = res.data;
-      fetchError = res.error;
-    } else {
-      const dataQuery = baseQuery.range(offset, offset + limit - 1);
-      const res = await dataQuery;
-      rawData = res.data;
-      fetchError = res.error;
+    // Count query with same filters
+    let countQuery = supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
     }
+
+    if (hasSearch) {
+      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name"];
+      for (const word of words) {
+        const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
+        countQuery = countQuery.or(orConditions);
+      }
+    }
+
+    const { count: totalCountRaw, error: countError } = await countQuery;
+    if (countError) {
+      return NextResponse.json(
+        { success: false, message: "Failed to fetch quote count", error: countError.message },
+        { status: 500 }
+      );
+    }
+    const totalCount = totalCountRaw || 0;
+
+    // Paginated data query
+    const dataQuery = baseQuery.range(offset, offset + limit - 1);
+    const { data: rawData, error: fetchError } = await dataQuery;
 
     if (fetchError || !rawData) {
       return NextResponse.json(
@@ -183,60 +201,14 @@ export async function GET(request: NextRequest) {
         estimate_contract_number: adminData?.contract_number ?? null,
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
+        created_by_name: row.created_by_name || 'Unknown',
       };
 
-      if (row.user_created) {
-        const { data: user } = await supabase
-          .from('users')
-          .select('name')
-          .eq('email', row.user_created)
-          .maybeSingle();
-      transformedRow.created_by_name = user?.name || row.user_created || 'Unknown';
-    } else {
-      transformedRow.created_by_name = 'Unknown';
-    }
-
-    console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
-    transformedData.push(transformedRow);
+      console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
+      transformedData.push(transformedRow);
   }
 
-  let filteredData = transformedData;
-  if (hasSearch) {
-    filteredData = transformedData.filter((row) => {
-      const searchableFields = {
-        quote_number: (row.quote_number || '').toLowerCase(),
-        customer_name: (row.customer_name || '').toLowerCase(),
-        point_of_contact: (row.point_of_contact || '').toLowerCase(),
-        county: (row.county || '').toLowerCase(),
-        created_by_name: (row.created_by_name || '').toLowerCase(),
-      };
-      return words.every((word) => {
-        const lowerWord = word.toLowerCase();
-        return Object.values(searchableFields).some((field) => field.includes(lowerWord));
-      });
-    });
-  }
-
-  let totalCount;
-  let pageData;
-  if (hasSearch) {
-    pageData = filteredData.slice(offset, offset + limit);
-    totalCount = filteredData.length;
-  } else {
-    pageData = transformedData;
-
-    // Filtered count query
-    let countQuery = supabase
-      .from("quotes")
-      .select("id", { count: "exact", head: true });
-
-    if (status && status !== "all") {
-      countQuery = countQuery.eq("status", status);
-    }
-
-    const { count } = await countQuery;
-    totalCount = count || 0;
-  }
+  let pageData = transformedData;
 
   const pageCount = Math.ceil(totalCount / limit);
 
@@ -330,6 +302,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let createdByName = 'Unknown';
+    if (userEmail) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('name')
+        .eq('email', userEmail)
+        .maybeSingle();
+      createdByName = user?.name || 'Unknown';
+    }
+
     const cleanRest = {
       ...rest,
       bid_date: bid_date || null,
@@ -347,6 +329,7 @@ export async function POST(request: NextRequest) {
         estimate_id,
         job_id,
         user_created: userEmail,
+        created_by_name: createdByName,
         ...cleanRest
       }])
       .select("id, quote_number, estimate_id, job_id")
