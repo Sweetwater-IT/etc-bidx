@@ -1,11 +1,8 @@
 "use client";
 
-import { AppSidebar } from "../../../components/app-sidebar";
 import { SectionCards } from "../../../components/section-cards";
 import { Button } from "../../../components/ui/button";
 import { DataTable } from "../../../components/data-table";
-import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
-import { SiteHeader } from "../../../components/site-header";
 import { availableJobsColumns, AvailableJobServices } from "../../../data/available-jobs";
 import { FilterOption } from "../../../components/table-controls";
 import { notFound, useRouter } from "next/navigation";
@@ -892,157 +889,142 @@ export default function BidBoardPage() {
     const columns = availableJobsColumns;
 
     return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col">
-                    <div className="@container/main flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <CardActions
-                                            createButtonLabel={createButtonLabel}
-                                            onCreateClick={handleCreateClick}
-                                            onImportSuccess={loadAvailableJobs}
-                                            date={dateRange}
-                                            setDate={setDateRange}
-                                            importType={'available-jobs'}
-                                            onExport={handleExportAvailableJobs}
-                                            showFilterButton={false}
-                                            showFilters={showFilters}
-                                            setShowFilters={setShowFilters}
-                                            hideImport={false}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <SectionCards data={cardData} />
-
-                            <DataTable<AvailableJob>
-                                data={data}
-                                columns={columns}
-                                segments={segments}
-                                segmentValue={activeSegment}
-                                segmentCounts={jobCounts}
-                                onSegmentChange={handleSegmentChange}
-                                onArchiveSelected={initiateArchiveJobs}
-                                onDeleteSelected={initiateDeleteJobs}
-                                tableRef={availableJobsTableRef}                           
-                                enableSearch={true}  
-                                searchPlaceholder="Search by contract, requestor, status, county, owner, letting, or due date..."
-                                searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}  
-                                onViewDetails={handleViewDetails}
-                                onRowClick={handleViewDetails}
-                                onEdit={handleEdit}
-                                onArchive={initiateArchiveJobs}
-                                onMarkAsBidJob={handleMarkAsBidJob}
-                                handleMultiDelete={handleDeleteArchivedJobs}
-                                setSelectedRows={setSelectedAvailableJobs}
-                                allRowsSelected={allAvailableJobRowsSelected}
-                                onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
-                                selectedItem={openBidSheetOpen && selectedJob ? selectedJob : undefined}
-                                onUpdateStatus={(item, status: string) => {
-                                    // Map segment values to proper status values if needed
-                                    let statusValue: 'Bid' | 'No Bid' | 'Unset';
-
-                                    if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
-                                        statusValue = status as 'Bid' | 'No Bid' | 'Unset';
-                                    } else if (status === 'bid') {
-                                        statusValue = 'Bid';
-                                    } else if (status === 'no-bid') {
-                                        statusValue = 'No Bid';
-                                    } else if (status === 'unset') {
-                                        statusValue = 'Unset';
-                                    } else {
-                                        console.error('Invalid status value:', status);
-                                        return;
-                                    }
-
-                                    handleUpdateStatus(item, statusValue);
-                                }}
-                                stickyLastColumn
-                                // Pagination props
-                                pageCount={availableJobsPageCount}
-                                pageIndex={availableJobsPageIndex}
-                                pageSize={availableJobsPageSize}
-                                onPageChange={setAvailableJobsPageIndex}
-                                onPageSizeChange={setAvailableJobsPageSize}
-                                totalCount={availableJobsTotalCount}
-                                // Sorting props
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                                onSortChange={handleSortChange}
-                                // Filtering props
-                                filterOptions={filterOptions}
-                                branchOptions={branchOptions}
-                                ownerOptions={ownerOptions}
-                                countyOptions={countyOptions}
-                                estimatorOptions={estimatorOptions}
-                                activeFilters={activeFilters}
-                                onFilterChange={handleFilterChange}
-                                onReset={handleResetControls}
+        <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <CardActions
+                                createButtonLabel={createButtonLabel}
+                                onCreateClick={handleCreateClick}
+                                onImportSuccess={loadAvailableJobs}
+                                date={dateRange}
+                                setDate={setDateRange}
+                                importType={'available-jobs'}
+                                onExport={handleExportAvailableJobs}
+                                showFilterButton={false}
                                 showFilters={showFilters}
                                 setShowFilters={setShowFilters}
-                                hideDropdown={true}
-                                onUnarchive={handleUnarchiveAvailableJob}
-                                onDeleteItem={onDeleteItems}
-                            />
-
-                            {isCreatingAvailableJob ? (
-                                <OpenBidSheet
-                                    open={isCreatingAvailableJob}
-                                    onOpenChange={setIsCreatingAvailableJob}
-                                    onSuccess={() => {
-                                        loadAvailableJobs();
-                                        fetchAvailableJobCounts();
-                                    }}
-                                    job={undefined}
-                                />
-                            ) : isEditingAvailableJob ? <OpenBidSheet
-                                open={isEditingAvailableJob}
-                                onOpenChange={setIsEditingAvailableJob}
-                                onSuccess={() => {
-                                    loadAvailableJobs();
-                                    fetchAvailableJobCounts();
-                                }}
-                                job={selectedJob || undefined}
-                            /> : <JobDetailsSheet
-                                open={openBidSheetOpen}
-                                onOpenChange={setOpenBidSheetOpen}
-                                job={selectedJob || undefined}
-                                onEdit={handleEdit}
-                                onNavigate={handleJobNavigation}
-                            />}
-
-                            <ConfirmArchiveDialog
-                                isOpen={showArchiveJobsDialog}
-                                onClose={() => setShowArchiveJobsDialog(false)}
-                                onConfirm={handleArchiveAvailableJobs}
-                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
-                                itemType="job"
-                            />
-
-                            <ConfirmDeleteDialog
-                                isOpen={showDeleteJobsDialog}
-                                onClose={() => setShowDeleteJobsDialog(false)}
-                                onConfirm={handleDeleteArchivedJobs}
-                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
-                                itemType="job"
+                                hideImport={false}
                             />
                         </div>
                     </div>
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+
+                <SectionCards data={cardData} />
+
+                <DataTable<AvailableJob>
+                    data={data}
+                    columns={columns}
+                    segments={segments}
+                    segmentValue={activeSegment}
+                    segmentCounts={jobCounts}
+                    onSegmentChange={handleSegmentChange}
+                    onArchiveSelected={initiateArchiveJobs}
+                    onDeleteSelected={initiateDeleteJobs}
+                    tableRef={availableJobsTableRef}                           
+                    enableSearch={true}  
+                    searchPlaceholder="Search by contract, requestor, status, county, owner, letting, or due date..."
+                    searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}  
+                    onViewDetails={handleViewDetails}
+                    onRowClick={handleViewDetails}
+                    onEdit={handleEdit}
+                    onArchive={initiateArchiveJobs}
+                    onMarkAsBidJob={handleMarkAsBidJob}
+                    handleMultiDelete={handleDeleteArchivedJobs}
+                    setSelectedRows={setSelectedAvailableJobs}
+                    allRowsSelected={allAvailableJobRowsSelected}
+                    onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
+                    selectedItem={openBidSheetOpen && selectedJob ? selectedJob : undefined}
+                    onUpdateStatus={(item, status: string) => {
+                        // Map segment values to proper status values if needed
+                        let statusValue: 'Bid' | 'No Bid' | 'Unset';
+
+                        if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
+                            statusValue = status as 'Bid' | 'No Bid' | 'Unset';
+                        } else if (status === 'bid') {
+                            statusValue = 'Bid';
+                        } else if (status === 'no-bid') {
+                            statusValue = 'No Bid';
+                        } else if (status === 'unset') {
+                            statusValue = 'Unset';
+                        } else {
+                            console.error('Invalid status value:', status);
+                            return;
+                        }
+
+                        handleUpdateStatus(item, statusValue);
+                    }}
+                    stickyLastColumn
+                    // Pagination props
+                    pageCount={availableJobsPageCount}
+                    pageIndex={availableJobsPageIndex}
+                    pageSize={availableJobsPageSize}
+                    onPageChange={setAvailableJobsPageIndex}
+                    onPageSizeChange={setAvailableJobsPageSize}
+                    totalCount={availableJobsTotalCount}
+                    // Sorting props
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSortChange={handleSortChange}
+                    // Filtering props
+                    filterOptions={filterOptions}
+                    branchOptions={branchOptions}
+                    ownerOptions={ownerOptions}
+                    countyOptions={countyOptions}
+                    estimatorOptions={estimatorOptions}
+                    activeFilters={activeFilters}
+                    onFilterChange={handleFilterChange}
+                    onReset={handleResetControls}
+                    showFilters={showFilters}
+                    setShowFilters={setShowFilters}
+                    hideDropdown={true}
+                    onUnarchive={handleUnarchiveAvailableJob}
+                    onDeleteItem={onDeleteItems}
+                />
+
+                {isCreatingAvailableJob ? (
+                    <OpenBidSheet
+                        open={isCreatingAvailableJob}
+                        onOpenChange={setIsCreatingAvailableJob}
+                        onSuccess={() => {
+                            loadAvailableJobs();
+                            fetchAvailableJobCounts();
+                        }}
+                        job={undefined}
+                    />
+                ) : isEditingAvailableJob ? <OpenBidSheet
+                    open={isEditingAvailableJob}
+                    onOpenChange={setIsEditingAvailableJob}
+                    onSuccess={() => {
+                        loadAvailableJobs();
+                        fetchAvailableJobCounts();
+                    }}
+                    job={selectedJob || undefined}
+                /> : <JobDetailsSheet
+                    open={openBidSheetOpen}
+                    onOpenChange={setOpenBidSheetOpen}
+                    job={selectedJob || undefined}
+                    onEdit={handleEdit}
+                    onNavigate={handleJobNavigation}
+                />}
+
+                <ConfirmArchiveDialog
+                    isOpen={showArchiveJobsDialog}
+                    onClose={() => setShowArchiveJobsDialog(false)}
+                    onConfirm={handleArchiveAvailableJobs}
+                    itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
+                    itemType="job"
+                />
+
+                <ConfirmDeleteDialog
+                    isOpen={showDeleteJobsDialog}
+                    onClose={() => setShowDeleteJobsDialog(false)}
+                    onConfirm={handleDeleteArchivedJobs}
+                    itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
+                    itemType="job"
+                />
+            </div>
+        </div>
     );
 }

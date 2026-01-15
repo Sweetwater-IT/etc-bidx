@@ -1,10 +1,7 @@
 "use client";
 
-import { AppSidebar } from "../../../components/app-sidebar";
 import { SectionCards } from "../../../components/section-cards";
 import { DataTable } from "../../../components/data-table";
-import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
-import { SiteHeader } from "../../../components/site-header";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
 import { FilterOption } from "../../../components/table-controls";
 import { useRouter } from "next/navigation";
@@ -712,148 +709,133 @@ export default function BidListPage() {
     const columns = ACTIVE_BIDS_COLUMNS;
 
     return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col">
-                    <div className="@container/main flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center justify-between">
-                                    <CardActions
-                                        createButtonLabel={createButtonLabel}
-                                        onCreateClick={handleCreateClick}
-                                        date={undefined}
-                                        setDate={undefined}
-                                        importType={'active-bids'}
-                                        onExport={handleExportActiveBids}
-                                        showFilterButton={false}
-                                        showFilters={showFilters}
-                                        setShowFilters={setShowFilters}
-                                        hideImport={true}
-                                    />
-                                </div>
-                            </div>
-
-                            <SectionCards data={cardData} />
-
-                            <DataTable<ActiveBid>
-                                data={data}
-                                columns={columns}
-                                enableSearch={true}
-                                searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
-                                searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
-                                segments={segments}
-                                segmentValue={activeSegment}
-                                segmentCounts={activeBidCounts}
-                                onSegmentChange={handleSegmentChange}
-                                selectedItem={activeBidDetailsSheetOpen && selectedActiveBid ? selectedActiveBid : undefined}
-                                stickyLastColumn
-                                onArchiveSelected={initiateArchiveBids}
-                                onDeleteSelected={initiateDeleteBids}
-                                tableRef={activeBidsTableRef}
-                                setSelectedRows={setSelectedActiveBids}
-                                allRowsSelected={allActiveBidRowsSelected}
-                                onAllRowsSelectedChange={setAllActiveBidRowsSelected}
-                                handleMultiDelete={handleDeleteArchivedBids}
-                                onViewDetails={handleActiveBidViewDetails}
-                                onRowClick={handleActiveBidViewDetails}
-                                onEdit={(item) => {
-                                    const params = new URLSearchParams;
-                                    params.append('bidId', item.id.toString());
-                                    params.append('tuckSidebar', 'true');
-                                    params.append('fullscreen', 'true');
-                                    params.append('defaultEditable', 'false');
-                                    router.push(`/active-bid/view?${params.toString()}`)
-                                }}
-                                onUpdateStatus={(item, status) => {
-                                    if ('lettingDate' in item) {
-                                        const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
-                                        handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
-                                    }
-                                }}
-                                // Pagination props
-                                viewBidSummaryOpen={viewBidSummaryOpen}
-                                onViewBidSummary={handleViewBidSummary}
-                                pageCount={activeBidsPageCount}
-                                pageIndex={activeBidsPageIndex}
-                                pageSize={activeBidsPageSize}
-                                onPageChange={setActiveBidsPageIndex}
-                                onPageSizeChange={setActiveBidsPageSize}
-                                totalCount={activeBidsTotalCount}
-                                // Sorting props
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                                onSortChange={handleSortChange}
-                                // Filtering props
-                                filterOptions={filterOptions}
-                                branchOptions={branchOptions}
-                                ownerOptions={ownerOptions}
-                                countyOptions={countyOptions}
-                                estimatorOptions={estimatorOptions}
-                                activeFilters={activeFilters}
-                                onFilterChange={handleFilterChange}
-                                onReset={handleResetControls}
-                                showFilters={showFilters}
-                                setShowFilters={setShowFilters}
-                                hideDropdown={true}
-                                onUnarchive={handleUnarchiveActiveBid}
-                                onDeleteItem={onDeleteItems}
-                            />
-
-                            {selectedActiveBid && (
-                                <>
-                                    <ActiveBidDetailsSheet
-                                        adminData={selectedActiveBid.adminData}
-                                        open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
-                                        onOpenChange={setActiveBidDetailsSheetOpen}
-                                        bid={selectedActiveBid}
-                                        onEdit={(item) => {
-                                            const params = new URLSearchParams;
-                                            params.append('bidId', item.id.toString());
-                                            params.append('tuckSidebar', 'true');
-                                            params.append('fullscreen', 'true');
-                                            params.append('defaultEditable', 'false');
-                                            router.push(`/active-bid/view?${params.toString()}`)
-                                        }}
-                                        onNavigate={handleActiveBidNavigation}
-                                        onRefresh={loadActiveBids}
-                                        onViewBidSummary={handleViewBidSummary}
-                                        onUpdateStatus={handleUpdateActiveBidStatus}
-                                    />
-
-                                    <EstimateProvider>
-                                        <BidSummaryDrawer defaultBid={allActiveBidsDetailed.find(abd => abd.id === selectedActiveBid.id)} open={viewBidSummaryOpen} onOpenChange={setViewBidSummaryOpen} />
-                                    </EstimateProvider>
-                                </>
-                            )}
-
-                            <ConfirmArchiveDialog
-                                isOpen={showArchiveBidsDialog}
-                                onClose={() => setShowArchiveBidsDialog(false)}
-                                onConfirm={handleArchiveActiveBids}
-                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
-                                itemType="bid"
-                            />
-                            <ConfirmDeleteDialog
-                                isOpen={showDeleteBidsDialog}
-                                onClose={() => setShowDeleteBidsDialog(false)}
-                                onConfirm={handleDeleteArchivedBids}
-                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
-                                itemType="bid"
-                            />
-                        </div>
+        <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <CardActions
+                            createButtonLabel={createButtonLabel}
+                            onCreateClick={handleCreateClick}
+                            date={undefined}
+                            setDate={undefined}
+                            importType={'active-bids'}
+                            onExport={handleExportActiveBids}
+                            showFilterButton={false}
+                            showFilters={showFilters}
+                            setShowFilters={setShowFilters}
+                            hideImport={true}
+                        />
                     </div>
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+
+                <SectionCards data={cardData} />
+
+                <DataTable<ActiveBid>
+                    data={data}
+                    columns={columns}
+                    enableSearch={true}
+                    searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
+                    searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
+                    segments={segments}
+                    segmentValue={activeSegment}
+                    segmentCounts={activeBidCounts}
+                    onSegmentChange={handleSegmentChange}
+                    selectedItem={activeBidDetailsSheetOpen && selectedActiveBid ? selectedActiveBid : undefined}
+                    stickyLastColumn
+                    onArchiveSelected={initiateArchiveBids}
+                    onDeleteSelected={initiateDeleteBids}
+                    tableRef={activeBidsTableRef}
+                    setSelectedRows={setSelectedActiveBids}
+                    allRowsSelected={allActiveBidRowsSelected}
+                    onAllRowsSelectedChange={setAllActiveBidRowsSelected}
+                    handleMultiDelete={handleDeleteArchivedBids}
+                    onViewDetails={handleActiveBidViewDetails}
+                    onRowClick={handleActiveBidViewDetails}
+                    onEdit={(item) => {
+                        const params = new URLSearchParams;
+                        params.append('bidId', item.id.toString());
+                        params.append('tuckSidebar', 'true');
+                        params.append('fullscreen', 'true');
+                        params.append('defaultEditable', 'false');
+                        router.push(`/active-bid/view?${params.toString()}`)
+                    }}
+                    onUpdateStatus={(item, status) => {
+                        if ('lettingDate' in item) {
+                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
+                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                        }
+                    }}
+                    // Pagination props
+                    viewBidSummaryOpen={viewBidSummaryOpen}
+                    onViewBidSummary={handleViewBidSummary}
+                    pageCount={activeBidsPageCount}
+                    pageIndex={activeBidsPageIndex}
+                    pageSize={activeBidsPageSize}
+                    onPageChange={setActiveBidsPageIndex}
+                    onPageSizeChange={setActiveBidsPageSize}
+                    totalCount={activeBidsTotalCount}
+                    // Sorting props
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSortChange={handleSortChange}
+                    // Filtering props
+                    filterOptions={filterOptions}
+                    branchOptions={branchOptions}
+                    ownerOptions={ownerOptions}
+                    countyOptions={countyOptions}
+                    estimatorOptions={estimatorOptions}
+                    activeFilters={activeFilters}
+                    onFilterChange={handleFilterChange}
+                    onReset={handleResetControls}
+                    showFilters={showFilters}
+                    setShowFilters={setShowFilters}
+                    hideDropdown={true}
+                    onUnarchive={handleUnarchiveActiveBid}
+                    onDeleteItem={onDeleteItems}
+                />
+
+                {selectedActiveBid && (
+                    <>
+                        <ActiveBidDetailsSheet
+                            adminData={selectedActiveBid.adminData}
+                            open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
+                            onOpenChange={setActiveBidDetailsSheetOpen}
+                            bid={selectedActiveBid}
+                            onEdit={(item) => {
+                                const params = new URLSearchParams;
+                                params.append('bidId', item.id.toString());
+                                params.append('tuckSidebar', 'true');
+                                params.append('fullscreen', 'true');
+                                params.append('defaultEditable', 'false');
+                                router.push(`/active-bid/view?${params.toString()}`)
+                            }}
+                            onNavigate={handleActiveBidNavigation}
+                            onRefresh={loadActiveBids}
+                            onViewBidSummary={handleViewBidSummary}
+                            onUpdateStatus={handleUpdateActiveBidStatus}
+                        />
+
+                        <EstimateProvider>
+                            <BidSummaryDrawer defaultBid={allActiveBidsDetailed.find(abd => abd.id === selectedActiveBid.id)} open={viewBidSummaryOpen} onOpenChange={setViewBidSummaryOpen} />
+                        </EstimateProvider>
+                    </>
+                )}
+
+                <ConfirmArchiveDialog
+                    isOpen={showArchiveBidsDialog}
+                    onClose={() => setShowArchiveBidsDialog(false)}
+                    onConfirm={handleArchiveActiveBids}
+                    itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
+                    itemType="bid"
+                />
+                <ConfirmDeleteDialog
+                    isOpen={showDeleteBidsDialog}
+                    onClose={() => setShowDeleteBidsDialog(false)}
+                    onConfirm={handleDeleteArchivedBids}
+                    itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
+                    itemType="bid"
+                />
+            </div>
+        </div>
     );
 }
