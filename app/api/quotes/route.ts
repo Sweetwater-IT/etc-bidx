@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name"];
+      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name", "type_quote"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         baseQuery = baseQuery.or(orConditions);
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name"];
+      const fields = ["quote_number", "customer_name", "customer_contact", "county", "created_by_name", "type_quote"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         countQuery = countQuery.or(orConditions);
