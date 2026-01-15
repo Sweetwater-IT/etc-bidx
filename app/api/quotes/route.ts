@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
       transformedData.push(transformedRow);
   }
 
-  let pageData = transformedData;
+  const pageData = transformedData;
 
   const pageCount = Math.ceil(totalCount / limit);
 
