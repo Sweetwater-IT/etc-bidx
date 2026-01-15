@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (hasSearch) {
-      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipient.point_of_contact", "county", "created_by_name", "type_quote"];
+      const fields = ["quote_number", "quotes_customers.contractors.name", "quote_recipients.point_of_contact", "county", "created_by_name", "type_quote"];
       for (const word of words) {
         const orConditions = fields.map(field => `${field}.ilike.%${word}%`).join(",");
         countQuery = countQuery.or(orConditions);
