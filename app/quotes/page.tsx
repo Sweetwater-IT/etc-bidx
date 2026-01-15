@@ -1,10 +1,4 @@
-"use client";
-
-import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { CardActions } from "@/components/card-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
@@ -12,6 +6,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CardActions } from "@/components/card-actions";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -51,7 +46,6 @@ export default function QuotesPage() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isTableLoading, setIsTableLoading] = useState(false);
-
 
   const fetchQuotes = async (status = "all", page = 1, limit = 25, search = "") => {
     setIsTableLoading(true);
@@ -151,64 +145,51 @@ export default function QuotesPage() {
   };
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="flex items-center justify-between px-0 -mb-3">
-                <CardActions
-                  createButtonLabel="Create Quote"
-                  onCreateClick={() => router.push("/quotes/create")}
-                  hideCalendar
-                  goUpActions
-                />
-              </div>
+    <div className="flex flex-1 flex-col">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="flex items-center justify-between px-0 -mb-3">
+            <CardActions
+              createButtonLabel="Create Quote"
+              onCreateClick={() => router.push("/quotes/create")}
+              hideCalendar
+              goUpActions
+            />
+          </div>
 
-              <div className="px-6 mb-2">
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search quotes by number, customer, contact, county, or creator..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-full"
-                  />
-                </div>
-              </div>
-
-              <DataTable<QuoteGridView key={`table-${debouncedSearch}-${activeSegment}-${pageIndex}`}
-                data={quotes}
-                columns={QUOTES_COLUMNS}
-                segments={SEGMENTS}
-                segmentValue={activeSegment}
-                segmentCounts={quoteCounts}
-                onSegmentChange={handleSegmentChange}
-                onViewDetails={handleRowClick}
-                stickyLastColumn
-                pageCount={pageCount}
-                pageIndex={pageIndex}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-                totalCount={totalCount}
-                isLoading={isTableLoading}
-
-                onDelete={(quote) => handleDeleteQuote(quote)}
+          <div className="px-6 mb-2">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search quotes by number, customer, contact, county, or creator..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 w-full"
               />
             </div>
           </div>
+
+          <DataTable<QuoteGridView key={`table-${debouncedSearch}-${activeSegment}-${pageIndex}`}
+            data={quotes}
+            columns={QUOTES_COLUMNS}
+            segments={SEGMENTS}
+            segmentValue={activeSegment}
+            segmentCounts={quoteCounts}
+            onSegmentChange={handleSegmentChange}
+            onViewDetails={handleRowClick}
+            stickyLastColumn
+            pageCount={pageCount}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            totalCount={totalCount}
+            isLoading={isTableLoading}
+
+            onDelete={(quote) => handleDeleteQuote(quote)}
+          />
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }
