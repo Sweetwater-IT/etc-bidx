@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         quote_number,
         status,
         date_sent,
-        type_quote,                                  
+        type_quote,
         customer_name,
         customer_contact,
         county,
@@ -108,6 +108,7 @@ export async function GET(request: NextRequest) {
         estimate_id,
         etc_job_number,
         job_id,
+        user_created,
         quote_items ( id ),
         files ( id ),
         quotes_customers (
@@ -139,6 +140,20 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("🪵 [GET /quotes] Raw data:", JSON.stringify(rawData, null, 2));
+
+    // Fetch all users for creator name mapping
+    const { data: allUsers, error: usersError } = await supabase
+      .from("users")
+      .select("email, name");
+
+    if (usersError) {
+      return NextResponse.json(
+        { success: false, message: "Failed to fetch users", error: usersError },
+        { status: 500 }
+      );
+    }
+
+    const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
 
     const transformedData: any[] = [];
 
@@ -184,6 +199,7 @@ export async function GET(request: NextRequest) {
         estimate_contract_number: adminData?.contract_number ?? null,
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
+        created_by_name: emailToName[row.user_created] || '-',
       };
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
