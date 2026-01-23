@@ -29,6 +29,7 @@ const SEGMENTS = [
   { label: "Larry", value: "Larry" },
   { label: "John", value: "John" },
   { label: "Garret", value: "Garret" },
+  { label: "Eric", value: "Eric" },
 ];
 
 export default function QuotesPage() {
@@ -43,6 +44,7 @@ export default function QuotesPage() {
     Larry: 0,
     John: 0,
     Garret: 0,
+    Eric: 0,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
