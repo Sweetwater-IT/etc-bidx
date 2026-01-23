@@ -54,7 +54,16 @@ export async function GET(request: NextRequest) {
       const countData: any = { all: allQuotes.length };
       const userNames = ['Napoleon', 'Eric', 'Rad', 'Ken', 'Turner', 'Redden', 'John'];
       for (const user of userNames) {
-        countData[user] = allQuotes.filter(q => emailToName[q.user_created]?.toLowerCase().includes(user.toLowerCase())).length;
+        const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${user}%`).maybeSingle();
+        if (creator) {
+          const { count } = await supabase
+            .from("quotes")
+            .select("id", { count: "exact", head: true })
+            .eq('user_created', creator.email);
+          countData[user] = count || 0;
+        } else {
+          countData[user] = 0;
+        }
       }
 
       return NextResponse.json({ success: true, data: countData });
