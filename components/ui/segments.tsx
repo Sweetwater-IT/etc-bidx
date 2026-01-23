@@ -36,7 +36,7 @@ export function Segments({ segments, onChange, value, counts }: SegmentsProps) {
           className={`rounded-md ${activeSegment === segment.value ? "bg-black text-white" : "bg-white text-black"}`}
           onClick={() => handleSegmentChange(segment.value)}
         >
-          {segment.label}
+          {segment.label} ({counts?.[segment.value] || 0})
         </Button>
       ))}
     </div>
