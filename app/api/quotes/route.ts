@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
+    const created_by = searchParams.get("created_by");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -22,9 +23,25 @@ export async function GET(request: NextRequest) {
 
     // 📊 Counts
     if (counts) {
-      const { data: allQuotes, error: countError } = await supabase
+      // Fetch all users for mapping
+      const { data: allUsers, error: usersError } = await supabase
+        .from("users")
+        .select("email, name");
+
+      if (usersError) {
+        return NextResponse.json(
+          { success: false, message: "Failed to fetch users", error: usersError },
+          { status: 500 }
+        );
+      }
+
+      const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
+
+      const countQuery = supabase
         .from("quotes")
-        .select("id, status");
+        .select("id, status, user_created");
+
+      const { data: allQuotes, error: countError } = await countQuery;
 
       if (countError || !allQuotes) {
         return NextResponse.json(
@@ -33,12 +50,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const countData = {
-        all: allQuotes.length,
-        not_sent: allQuotes.filter((q) => q.status === "Not Sent").length,
-        sent: allQuotes.filter((q) => q.status === "Sent").length,
-        accepted: allQuotes.filter((q) => q.status === "Accepted").length,
-      };
+      // Compute counts
+      const countData: any = { all: allQuotes.length };
+      const userNames = ['Napoleon', 'Sidney', 'Jim', 'Larry', 'John', 'Garret'];
+      for (const user of userNames) {
+        countData[user] = allQuotes.filter(q => emailToName[q.user_created]?.toLowerCase().includes(user.toLowerCase())).length;
+      }
 
       return NextResponse.json({ success: true, data: countData });
     }
@@ -105,6 +122,13 @@ export async function GET(request: NextRequest) {
       query = query.eq("status", status);
     }
 
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
+      if (creator) {
+        query = query.eq('user_created', creator.email);
+      }
+    }
+
     const { data: rawData, error } = await query;
 
     if (error || !rawData) {
@@ -166,9 +190,22 @@ export async function GET(request: NextRequest) {
       transformedData.push(transformedRow);
     }
 
-    const { count } = await supabase
+    let countQuery = supabase
       .from("quotes")
       .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
+      if (creator) {
+        countQuery = countQuery.eq('user_created', creator.email);
+      }
+    }
+
+    const { count } = await countQuery;
 
     return NextResponse.json({
       success: true,
