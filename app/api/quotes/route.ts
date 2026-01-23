@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       const countData: any = { all: allQuotes.length };
       const userNames = ['Napoleon', 'Sidney', 'Jim', 'Larry', 'John', 'Garret'];
       for (const user of userNames) {
-        countData[user] = allQuotes.filter(q => emailToName[q.user_created] === user).length;
+        countData[user] = allQuotes.filter(q => emailToName[q.user_created]?.toLowerCase().includes(user.toLowerCase())).length;
       }
 
       return NextResponse.json({ success: true, data: countData });
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      const { data: creator } = await supabase.from('users').select('email').eq('name', created_by).maybeSingle();
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
       if (creator) {
         query = query.eq('user_created', creator.email);
       }
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      const { data: creator } = await supabase.from('users').select('email').eq('name', created_by).maybeSingle();
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
       if (creator) {
         countQuery = countQuery.eq('user_created', creator.email);
       }
