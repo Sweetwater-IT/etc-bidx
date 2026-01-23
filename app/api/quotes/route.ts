@@ -1,16 +1,16 @@
-// app/api/quotes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 // --------------------
 // GET → listado con filtros, paginación, counts y nextNumber
-// -------------------- 
+// --------------------
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
     const created_by = searchParams.get("created_by");
+    const search = searchParams.get("search") || "";
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get("counts") === "true";
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
-    const search = searchParams.get("search") || "";
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
@@ -106,7 +105,7 @@ export async function GET(request: NextRequest) {
         quote_number,
         status,
         date_sent,
-        type_quote,                                  
+        type_quote,
         customer_name,
         customer_contact,
         county,

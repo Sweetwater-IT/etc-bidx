@@ -8,7 +8,6 @@ import { CardActions } from "@/components/card-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
-import { useLoading } from "@/hooks/use-loading";
 import { toast } from "sonner";
 
 const QUOTES_COLUMNS = [
@@ -51,11 +50,10 @@ export default function QuotesPage() {
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  const { startLoading, stopLoading, isLoading } = useLoading();
-
+  const [isTableLoading, setIsTableLoading] = useState(false);
 
   const fetchQuotes = async (filter = "all", page = 1, limit = 25) => {
-    startLoading();
+    setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
@@ -81,7 +79,7 @@ export default function QuotesPage() {
     } catch (error) {
       console.error("Error fetching quotes:", error);
     } finally {
-      stopLoading();
+      setIsTableLoading(false);
     }
   };
 
@@ -96,6 +94,7 @@ export default function QuotesPage() {
   };
 
   const handleDeleteQuote = async (quote: QuoteGridView) => {
+    setIsTableLoading(true);
     try {
       const res = await fetch(`/api/quotes/delete/${quote.id}`, {
         method: "DELETE",
@@ -112,6 +111,8 @@ export default function QuotesPage() {
     } catch (err) {
       console.error("Error deleting quote:", err);
       toast.error("Unexpected error deleting quote");
+    } finally {
+      setIsTableLoading(false);
     }
   };
 
@@ -180,6 +181,7 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
+                isLoading={isTableLoading}
 
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
