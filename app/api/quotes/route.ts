@@ -1,15 +1,16 @@
-// app/api/quotes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 // --------------------
 // GET → listado con filtros, paginación, counts y nextNumber
-// -------------------- 
+// --------------------
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
+    const created_by = searchParams.get("created_by");
+    const search = searchParams.get("search") || "";
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -22,9 +23,31 @@ export async function GET(request: NextRequest) {
 
     // 📊 Counts
     if (counts) {
-      const { data: allQuotes, error: countError } = await supabase
+      // Fetch all users for mapping
+      const { data: allUsers, error: usersError } = await supabase
+        .from("users")
+        .select("email, name");
+
+      if (usersError) {
+        return NextResponse.json(
+          { success: false, message: "Failed to fetch users", error: usersError },
+          { status: 500 }
+        );
+      }
+
+      const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
+
+      let countQuery = supabase
         .from("quotes")
-        .select("id, status");
+        .select("id, status, user_created");
+
+      if (search) {
+        countQuery = countQuery.or(
+          `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+        );
+      }
+
+      const { data: allQuotes, error: countError } = await countQuery;
 
       if (countError || !allQuotes) {
         return NextResponse.json(
@@ -33,12 +56,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const countData = {
-        all: allQuotes.length,
-        not_sent: allQuotes.filter((q) => q.status === "Not Sent").length,
-        sent: allQuotes.filter((q) => q.status === "Sent").length,
-        accepted: allQuotes.filter((q) => q.status === "Accepted").length,
-      };
+      // Compute counts
+      const countData: any = { all: allQuotes.length };
+      const userNames = ['Napoleon', 'Sidney', 'Jim', 'Larry', 'John', 'Garret'];
+      for (const user of userNames) {
+        countData[user] = allQuotes.filter(q => emailToName[q.user_created]?.toLowerCase().includes(user.toLowerCase())).length;
+      }
 
       return NextResponse.json({ success: true, data: countData });
     }
@@ -82,12 +105,13 @@ export async function GET(request: NextRequest) {
         quote_number,
         status,
         date_sent,
-        type_quote,                                  
+        type_quote,
         customer_name,
         customer_contact,
         county,
         created_at,
         updated_at,
+        user_created,
         estimate_id,
         etc_job_number,
         job_id,
@@ -103,6 +127,19 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== "all") {
       query = query.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
+      if (creator) {
+        query = query.eq('user_created', creator.email);
+      }
+    }
+
+    if (search) {
+      query = query.or(
+        `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+      );
     }
 
     const { data: rawData, error } = await query;
@@ -162,13 +199,43 @@ export async function GET(request: NextRequest) {
         job_number: row.job_id ?? null,
       };
 
+      if (row.user_created) {
+        const { data: user } = await supabase
+          .from('users')
+          .select('name')
+          .eq('email', row.user_created)
+          .maybeSingle();
+        transformedRow.created_by_name = user?.name || row.user_created || 'Unknown';
+      } else {
+        transformedRow.created_by_name = 'Unknown';
+      }
+
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
       transformedData.push(transformedRow);
     }
 
-    const { count } = await supabase
+    let countQuery = supabase
       .from("quotes")
       .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
+      if (creator) {
+        countQuery = countQuery.eq('user_created', creator.email);
+      }
+    }
+
+    if (search) {
+      countQuery = countQuery.or(
+        `quote_number.ilike.%${search}%,status.ilike.%${search}%,type_quote.ilike.%${search}%,customer_name.ilike.%${search}%,customer_contact.ilike.%${search}%,county.ilike.%${search}%,user_created.ilike.%${search}%,created_at.ilike.%${search}%`
+      );
+    }
+
+    const { count } = await countQuery;
 
     return NextResponse.json({
       success: true,
