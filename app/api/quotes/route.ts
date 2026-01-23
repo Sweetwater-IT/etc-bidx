@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
       // Compute counts
       const countData: any = { all: allQuotes.length };
-      const userNames = ['Napoleon', 'Sidney', 'Jim', 'Larry', 'John', 'Garret'];
+      const userNames = ['Napoleon', 'Eric', 'Rad', 'Ken', 'Turner', 'Redden', 'John'];
       for (const user of userNames) {
         countData[user] = allQuotes.filter(q => emailToName[q.user_created]?.toLowerCase().includes(user.toLowerCase())).length;
       }
