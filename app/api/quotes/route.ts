@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
       const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
 
-      let countQuery = supabase
+      const countQuery = supabase
         .from("quotes")
         .select("id, status, user_created");
 
@@ -190,9 +190,22 @@ export async function GET(request: NextRequest) {
       transformedData.push(transformedRow);
     }
 
-    const { count } = await supabase
+    let countQuery = supabase
       .from("quotes")
       .select("id", { count: "exact", head: true });
+
+    if (status && status !== "all") {
+      countQuery = countQuery.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
+      if (creator) {
+        countQuery = countQuery.eq('user_created', creator.email);
+      }
+    }
+
+    const { count } = await countQuery;
 
     return NextResponse.json({
       success: true,
