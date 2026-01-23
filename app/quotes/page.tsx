@@ -24,12 +24,12 @@ const QUOTES_COLUMNS = [
 const SEGMENTS = [
   { label: "All", value: "all" },
   { label: "Napoleon", value: "Napoleon" },
-  { label: "Sidney", value: "Sidney" },
-  { label: "Jim", value: "Jim" },
-  { label: "Larry", value: "Larry" },
-  { label: "John", value: "John" },
-  { label: "Garret", value: "Garret" },
   { label: "Eric", value: "Eric" },
+  { label: "Rad", value: "Rad" },
+  { label: "Ken", value: "Ken" },
+  { label: "Turner", value: "Turner" },
+  { label: "Redden", value: "Redden" },
+  { label: "John", value: "John" },
 ];
 
 export default function QuotesPage() {
@@ -39,12 +39,12 @@ export default function QuotesPage() {
   const [quoteCounts, setQuoteCounts] = useState({
     all: 0,
     Napoleon: 0,
-    Sidney: 0,
-    Jim: 0,
-    Larry: 0,
-    John: 0,
-    Garret: 0,
     Eric: 0,
+    Rad: 0,
+    Ken: 0,
+    Turner: 0,
+    Redden: 0,
+    John: 0,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
