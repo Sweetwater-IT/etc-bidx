@@ -24,20 +24,26 @@ const QUOTES_COLUMNS = [
 
 const SEGMENTS = [
   { label: "All", value: "all" },
-  { label: "Not Sent", value: "Not Sent" },
-  { label: "Sent", value: "Sent" },
-  { label: "Accepted", value: "Accepted" },
+  { label: "Napoleon", value: "Napoleon" },
+  { label: "Sidney", value: "Sidney" },
+  { label: "Jim", value: "Jim" },
+  { label: "Larry", value: "Larry" },
+  { label: "John", value: "John" },
+  { label: "Garret", value: "Garret" },
 ];
 
 export default function QuotesPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
-  const [activeSegment, setActiveSegment] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [quoteCounts, setQuoteCounts] = useState({
     all: 0,
-    not_sent: 0,
-    sent: 0,
-    accepted: 0,
+    Napoleon: 0,
+    Sidney: 0,
+    Jim: 0,
+    Larry: 0,
+    John: 0,
+    Garret: 0,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
@@ -48,13 +54,13 @@ export default function QuotesPage() {
   const { startLoading, stopLoading, isLoading } = useLoading();
 
 
-  const fetchQuotes = async (status = "all", page = 1, limit = 25) => {
+  const fetchQuotes = async (filter = "all", page = 1, limit = 25) => {
     startLoading();
 
     try {
       const params = new URLSearchParams();
-      if (status !== "all") {
-        params.append("status", status);
+      if (filter !== "all") {
+        params.append("created_by", filter);
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
@@ -98,7 +104,7 @@ export default function QuotesPage() {
 
       if (res.ok && data.success) {
         toast.success(`Quote ${quote.quote_number} deleted`);
-        fetchQuotes(activeSegment, pageIndex + 1, pageSize);
+        fetchQuotes(activeFilter, pageIndex + 1, pageSize);
         fetchQuoteCounts();
       } else {
         toast.error(data.message || "Failed to delete quote");
@@ -109,27 +115,27 @@ export default function QuotesPage() {
     }
   };
 
-  const handleSegmentChange = (value: string) => {
-    setActiveSegment(value);
+  const handleFilterChange = (value: string) => {
+    setActiveFilter(value);
     setPageIndex(0);
     fetchQuotes(value, 1, pageSize);
   };
 
   const handlePageChange = (newPage: number) => {
     setPageIndex(newPage);
-    fetchQuotes(activeSegment, newPage + 1, pageSize);
+    fetchQuotes(activeFilter, newPage + 1, pageSize);
   };
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPageIndex(0);
-    fetchQuotes(activeSegment, 1, newSize);
+    fetchQuotes(activeFilter, 1, newSize);
   };
 
   useEffect(() => {
     fetchQuoteCounts();
-    fetchQuotes(activeSegment, pageIndex + 1, pageSize);
-  }, [activeSegment, pageIndex, pageSize]);
+    fetchQuotes(activeFilter, pageIndex + 1, pageSize);
+  }, [activeFilter, pageIndex, pageSize]);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
@@ -163,12 +169,9 @@ export default function QuotesPage() {
                 data={quotes}
                 columns={QUOTES_COLUMNS}
                 segments={SEGMENTS}
-                segmentValue={activeSegment}
+                segmentValue={activeFilter}
                 segmentCounts={quoteCounts}
-                onSegmentChange={handleSegmentChange}
-                enableSearch={true}
-                searchPlaceholder="Search by quote creator..."
-                searchableColumns={["quote_number", "customer_name", "status", "county", "created_by_name"]} 
+                onSegmentChange={handleFilterChange}
                 onViewDetails={handleRowClick}
                 stickyLastColumn
                 pageCount={pageCount}

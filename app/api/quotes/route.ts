@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
+    const created_by = searchParams.get("created_by");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -23,9 +24,23 @@ export async function GET(request: NextRequest) {
 
     // 📊 Counts
     if (counts) {
+      // Fetch all users for mapping
+      const { data: allUsers, error: usersError } = await supabase
+        .from("users")
+        .select("email, name");
+
+      if (usersError) {
+        return NextResponse.json(
+          { success: false, message: "Failed to fetch users", error: usersError },
+          { status: 500 }
+        );
+      }
+
+      const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
+
       let countQuery = supabase
         .from("quotes")
-        .select("id, status");
+        .select("id, status, user_created");
 
       if (search) {
         countQuery = countQuery.or(
@@ -42,12 +57,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const countData = {
-        all: allQuotes.length,
-        not_sent: allQuotes.filter((q) => q.status === "Not Sent").length,
-        sent: allQuotes.filter((q) => q.status === "Sent").length,
-        accepted: allQuotes.filter((q) => q.status === "Accepted").length,
-      };
+      // Compute counts
+      const countData: any = { all: allQuotes.length };
+      const userNames = ['Napoleon', 'Sidney', 'Jim', 'Larry', 'John', 'Garret'];
+      for (const user of userNames) {
+        countData[user] = allQuotes.filter(q => emailToName[q.user_created] === user).length;
+      }
 
       return NextResponse.json({ success: true, data: countData });
     }
@@ -113,6 +128,13 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== "all") {
       query = query.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').eq('name', created_by).maybeSingle();
+      if (creator) {
+        query = query.eq('user_created', creator.email);
+      }
     }
 
     if (search) {
@@ -199,6 +221,13 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== "all") {
       countQuery = countQuery.eq("status", status);
+    }
+
+    if (created_by) {
+      const { data: creator } = await supabase.from('users').select('email').eq('name', created_by).maybeSingle();
+      if (creator) {
+        countQuery = countQuery.eq('user_created', creator.email);
+      }
     }
 
     if (search) {
