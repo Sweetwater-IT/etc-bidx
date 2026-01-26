@@ -213,6 +213,21 @@ export default function QuoteItemRow({
                   autoFocus
                 />
                 <CommandList>
+                  <CommandItem
+                    key="custom"
+                    value="custom"
+                    onSelect={() => {
+                      setOpenProductSheet(true);
+                      setEditingItemId(item.id);
+                      setEditingSubItemId(null);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <div className="flex items-center w-full">
+                      <span className="font-medium italic">+ Custom</span>
+                    </div>
+                  </CommandItem>
+
                   <CommandGroup heading="Service Items">
                     {filteredProducts
                       .filter(p => p.source === 'service_items')
