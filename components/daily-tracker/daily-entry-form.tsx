@@ -410,6 +410,7 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
             {localDateStringToDate(date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
+      </div>
 
         {/* Summary Metrics - Matching Daily Modal Style */}
         <div className="grid grid-cols-2 gap-6 py-2">
