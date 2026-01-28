@@ -146,6 +146,7 @@ export function SignOrderDetailsSheet({
         // Reset form for new job creation
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(null)
+        setLocalContact(null) // Reset contact for new orders
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -158,6 +159,7 @@ export function SignOrderDetailsSheet({
         // Edit mode - populate with existing data
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(adminInfo.customer)
+        setLocalContact(adminInfo.contact) // Initialize contact from adminInfo
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -247,6 +249,7 @@ export function SignOrderDetailsSheet({
       localContractNumber !== '' &&
       !!localRequestor &&
       !!localCustomer &&
+      !!localContact && // Contact is required when customer is selected
       !!localNeedDate &&
       localOrderType.length > 0
     )
