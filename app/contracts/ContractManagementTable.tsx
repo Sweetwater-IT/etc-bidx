@@ -262,12 +262,9 @@ const ContractManagementTable = () => {
       data={contracts}
       columns={COLUMNS}
       segments={[
-        { label: `All (${segmentCounts.all})`, value: 'all' },
-        { label: `Won (${segmentCounts.won})`, value: 'won' },
-        {
-          label: `Won - Pending (${segmentCounts['won-pending']})`,
-          value: 'won-pending'
-        }
+        { label: 'All', value: 'all' },
+        { label: 'Won', value: 'won' },
+        { label: 'Won - Pending', value: 'won-pending' }
       ]}
       segmentValue={currentSegment}
       onSegmentChange={handleSegmentChange}
