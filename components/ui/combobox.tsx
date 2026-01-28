@@ -26,7 +26,7 @@ export interface ComboboxItem {
 
 interface ComboboxProps {
   items: ComboboxItem[]
-  defaultValue?: ComboboxItem
+  defaultValue?: ComboboxItem | null
   children: React.ReactNode
 }
 

@@ -352,7 +352,7 @@ export function SignOrderDetailsSheet({
                         value: localCustomer.id.toString(),
                         label: localCustomer.displayName,
                         name: localCustomer.name
-                      } : undefined}
+                      } : null}
                     >
                       <ComboboxTrigger render={({ open }) => (
                         <Button variant="outline" className="w-full justify-between font-normal">
@@ -438,7 +438,7 @@ export function SignOrderDetailsSheet({
                         email: localContact.email || '',
                         phone: localContact.phone || '',
                         role: localContact.role || ''
-                      } : undefined}
+                      } : null}
                     >
                       <ComboboxTrigger render={({ open }) => (
                         <Button variant="outline" className="w-full justify-between font-normal">
