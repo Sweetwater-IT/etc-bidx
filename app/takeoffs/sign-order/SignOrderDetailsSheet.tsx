@@ -325,103 +325,33 @@ export function SignOrderDetailsSheet({
                 <Field name="customer" required>
                   <FieldLabel>Customer</FieldLabel>
                   <FieldControl>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <AutoComplete
-                          options={customers.map(customer => ({
-                            value: customer.id.toString(),
-                            label: customer.displayName,
-                            name: customer.name
-                          }))}
-                          value={localCustomer ? {
-                            value: localCustomer.id.toString(),
-                            label: localCustomer.displayName,
-                            name: localCustomer.name
-                          } : undefined}
-                          onValueChange={(value) => {
-                            const customer = customers.find(c => c.id.toString() === value)
-                            setLocalCustomer(customer || null)
-                          }}
-                          placeholder="Search customers..."
-                          emptyMessage="No customers found"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCustomerDrawerOpen(true)}
-                        className="px-3"
-                      >
-                        +
-                      </Button>
-                    </div>
+                    <AutoComplete
+                      options={[
+                        { value: '__create_customer__', label: '+ Add new customer' },
+                        ...customers.map(customer => ({
+                          value: customer.id.toString(),
+                          label: customer.displayName,
+                          name: customer.name
+                        }))
+                      ]}
+                      value={localCustomer ? {
+                        value: localCustomer.id.toString(),
+                        label: localCustomer.displayName,
+                        name: localCustomer.name
+                      } : undefined}
+                      onValueChange={(value) => {
+                        if (value === '__create_customer__') {
+                          setCustomerDrawerOpen(true)
+                          return
+                        }
+                        const customer = customers.find(c => c.id.toString() === value)
+                        setLocalCustomer(customer || null)
+                      }}
+                      placeholder="Search customers..."
+                      emptyMessage="No customers found"
+                    />
                   </FieldControl>
                   <FieldDescription>The contractor for this project</FieldDescription>
-                </Field>
-
-                <Field name="contact" required>
-                  <FieldLabel>Contact</FieldLabel>
-                  <FieldControl>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <AutoComplete
-                          options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
-                            ? localCustomer.contactIds.map((id: number, idx: number) => ({
-                                value: id.toString(),
-                                label: localCustomer.names[idx],
-                                email: localCustomer.emails[idx] || '',
-                                phone: localCustomer.phones[idx] || '',
-                                role: localCustomer.roles[idx] || ''
-                              }))
-                            : []
-                          }
-                          value={localContact ? {
-                            value: localContact.id.toString(),
-                            label: localContact.name,
-                            email: localContact.email || '',
-                            phone: localContact.phone || '',
-                            role: localContact.role || ''
-                          } : undefined}
-                          onValueChange={(value) => {
-                            if (!localCustomer) return
-                            const contactId = parseInt(value)
-                            const contactIndex = localCustomer.contactIds?.indexOf(contactId)
-                            if (contactIndex !== undefined && contactIndex >= 0) {
-                              const contact = {
-                                id: contactId,
-                                name: localCustomer.names[contactIndex],
-                                email: localCustomer.emails[contactIndex],
-                                phone: localCustomer.phones[contactIndex],
-                                role: localCustomer.roles[contactIndex]
-                              }
-                              setLocalContact(contact)
-                            }
-                          }}
-                          placeholder="Search contacts..."
-                          emptyMessage="No contacts found"
-                          disabled={!localCustomer}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (!localCustomer) {
-                            toast.error('Please select a customer before adding a contact.')
-                            return
-                          }
-                          setContactDrawerOpen(true)
-                        }}
-                        disabled={!localCustomer}
-                        className="px-3"
-                      >
-                        +
-                      </Button>
-                    </div>
-                  </FieldControl>
-                  <FieldDescription>Primary contact for this project</FieldDescription>
                 </Field>
 
                 <Field name="orderDate">
@@ -447,6 +377,58 @@ export function SignOrderDetailsSheet({
                   </FieldControl>
                   <FieldDescription>When the signs are needed</FieldDescription>
                 </Field>
+
+                {localCustomer && (
+                  <Field name="contact" required>
+                    <FieldLabel>Contact</FieldLabel>
+                    <FieldControl>
+                      <AutoComplete
+                        options={[
+                          { value: '__create_contact__', label: '+ Add new contact' },
+                          ...(localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
+                            ? localCustomer.contactIds.map((id: number, idx: number) => ({
+                                value: id.toString(),
+                                label: localCustomer.names[idx],
+                                email: localCustomer.emails[idx] || '',
+                                phone: localCustomer.phones[idx] || '',
+                                role: localCustomer.roles[idx] || ''
+                              }))
+                            : []
+                          )
+                        ]}
+                        value={localContact ? {
+                          value: localContact.id.toString(),
+                          label: localContact.name,
+                          email: localContact.email || '',
+                          phone: localContact.phone || '',
+                          role: localContact.role || ''
+                        } : undefined}
+                        onValueChange={(value) => {
+                          if (value === '__create_contact__') {
+                            setContactDrawerOpen(true)
+                            return
+                          }
+                          if (!localCustomer) return
+                          const contactId = parseInt(value)
+                          const contactIndex = localCustomer.contactIds?.indexOf(contactId)
+                          if (contactIndex !== undefined && contactIndex >= 0) {
+                            const contact = {
+                              id: contactId,
+                              name: localCustomer.names[contactIndex],
+                              email: localCustomer.emails[contactIndex],
+                              phone: localCustomer.phones[contactIndex],
+                              role: localCustomer.roles[contactIndex]
+                            }
+                            setLocalContact(contact)
+                          }
+                        }}
+                        placeholder="Search contacts..."
+                        emptyMessage="No contacts found"
+                      />
+                    </FieldControl>
+                    <FieldDescription>Primary contact for this project</FieldDescription>
+                  </Field>
+                )}
               </FormGrid>
 
               <Field name="orderType" required>
