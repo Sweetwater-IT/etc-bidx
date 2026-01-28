@@ -138,7 +138,7 @@ export function ImprovedCombobox({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="z-[9999] w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
           <Command>
             <CommandInput
               placeholder={searchPlaceholder}

@@ -1,10 +1,14 @@
 'use client'
 
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle
+} from '@/components/ui/sheet'
+import {
   Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle
+  DrawerContent
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -280,16 +284,16 @@ export function SignOrderDetailsSheet({
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className='w-[500px] sm:max-w-[600px] p-0'>
-          <div className='flex flex-col gap-2 relative z-10 bg-background'>
-            <DrawerHeader className='p-6 pb-4'>
-              <DrawerTitle>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className='w-[500px] sm:max-w-[600px] p-0'>
+          <div className='flex flex-col gap-2 bg-background'>
+            <SheetHeader className='p-6 pb-4'>
+              <SheetTitle>
                 {isCreateMode
                   ? 'Create New Sign Order'
                   : 'Edit Sign Order Details'}
-              </DrawerTitle>
-            </DrawerHeader>
+              </SheetTitle>
+            </SheetHeader>
             <Separator className='w-full -mt-2' />
           </div>
 
@@ -588,8 +592,8 @@ export function SignOrderDetailsSheet({
               </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
       {/* CustomerDrawer for creating new customer */}
       <CustomerDrawer
         open={customerDrawerOpen}
