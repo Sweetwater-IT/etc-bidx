@@ -340,12 +340,17 @@ export function SignOrderDetailsSheet({
                         name: localCustomer.name
                       } : undefined}
                       onValueChange={(value) => {
-                        if (value === '__create_customer__') {
+                        if (value === '+ Add new customer') {
                           setCustomerDrawerOpen(true)
                           return
                         }
                         const customer = customers.find(c => c.id.toString() === value)
-                        setLocalCustomer(customer || null)
+                        if (customer) {
+                          setLocalCustomer(customer)
+                        } else if (value && value !== '+ Add new customer') {
+                          // If value doesn't match any customer but isn't empty or the create option, keep current selection
+                          // This prevents accidental deselection
+                        }
                       }}
                       placeholder="Search customers..."
                       emptyMessage="No customers found"
@@ -377,8 +382,10 @@ export function SignOrderDetailsSheet({
                   </FieldControl>
                   <FieldDescription>When the signs are needed</FieldDescription>
                 </Field>
+              </FormGrid>
 
-                {localCustomer && (
+              {localCustomer && (
+                <FormGrid columns={2}>
                   <Field name="contact" required>
                     <FieldLabel>Contact</FieldLabel>
                     <FieldControl>
@@ -404,7 +411,7 @@ export function SignOrderDetailsSheet({
                           role: localContact.role || ''
                         } : undefined}
                         onValueChange={(value) => {
-                          if (value === '__create_contact__') {
+                          if (value === '+ Add new contact') {
                             setContactDrawerOpen(true)
                             return
                           }
@@ -420,6 +427,9 @@ export function SignOrderDetailsSheet({
                               role: localCustomer.roles[contactIndex]
                             }
                             setLocalContact(contact)
+                          } else if (value && value !== '+ Add new contact') {
+                            // If value doesn't match any contact but isn't empty or the create option, keep current selection
+                            // This prevents accidental deselection
                           }
                         }}
                         placeholder="Search contacts..."
@@ -428,8 +438,8 @@ export function SignOrderDetailsSheet({
                     </FieldControl>
                     <FieldDescription>Primary contact for this project</FieldDescription>
                   </Field>
-                )}
-              </FormGrid>
+                </FormGrid>
+              )}
 
               <Field name="orderType" required>
                 <FieldLabel>Order Type</FieldLabel>
