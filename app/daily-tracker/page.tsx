@@ -29,6 +29,9 @@ import { DateRangePicker } from "@/components/daily-tracker/date-range-picker"
 import { CsvImport } from "@/components/daily-tracker/csv-import"
 import { DailyEntryForm } from "@/components/daily-tracker/daily-entry-form" // Import DailyEntryForm
 import { useProductivityData } from "@/hooks/daily-tracker/use-productivity-data"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { SiteHeader } from "@/components/site-header"
 import { ChevronDown, Plus, Upload, MoreHorizontal, CalendarPlus } from "lucide-react"
 import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
 
@@ -217,154 +220,163 @@ export default function DailyTrackerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <CsvImport open={showCsvImport} onOpenChange={setShowCsvImport} onImport={handleImportCsv} />
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6">
+          <CsvImport open={showCsvImport} onOpenChange={setShowCsvImport} onImport={handleImportCsv} />
 
-      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onKeyDown={handleKeyDown}>
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle>Daily Production Breakdown</DialogTitle>
-                <DialogDescription>
-                  {selectedDate &&
-                    localDateStringToDate(selectedDate).toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                </DialogDescription>
-              </div>
-              <div className="flex gap-2 mr-12">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateDay("prev")}
-                  disabled={currentDayIndex <= 0}
-                  className="h-8 w-8"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                  </svg>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateDay("next")}
-                  disabled={currentDayIndex >= dailySummary.length - 1}
-                  className="h-8 w-8"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-6 mb-3 py-2">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Sale Signs</p>
-              <p className="text-3xl font-semibold tabular-nums">{selectedDayMetrics.saleTotal.toLocaleString()}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total MPT Signs</p>
-              <p className="text-3xl font-semibold tabular-nums">{selectedDayMetrics.mptTotal.toLocaleString()}</p>
-            </div>
-          </div>
-
-          <div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="text-left py-2 px-3 font-medium">Employee</th>
-                  <th className="text-left py-2 px-3 font-medium">Dimensions</th>
-                  <th className="text-center py-2 px-3 font-medium">Type</th>
-                  <th className="text-right py-2 px-3 font-medium">Quantity</th>
-                  <th className="text-right py-2 px-3 font-medium">Sq Ft</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedDayEntries.map((entry, idx) => (
-                  <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
-                    <td className="py-2 px-3 capitalize">{entry.employee}</td>
-                    <td className="py-2 px-3">
-                      {entry.dimension_l}" × {entry.dimension_w}"
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          entry.type === "mpt"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                            : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        }`}
+          <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onKeyDown={handleKeyDown}>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle>Daily Production Breakdown</DialogTitle>
+                    <DialogDescription>
+                      {selectedDate &&
+                        localDateStringToDate(selectedDate).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                    </DialogDescription>
+                  </div>
+                  <div className="flex gap-2 mr-12">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigateDay("prev")}
+                      disabled={currentDayIndex <= 0}
+                      className="h-8 w-8"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
-                        {entry.type.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-right tabular-nums">{entry.quantity.toLocaleString()}</td>
-                    <td className="py-2 px-3 text-right tabular-nums">
-                      {entry.total_sqft.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                      </svg>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigateDay("next")}
+                      disabled={currentDayIndex >= dailySummary.length - 1}
+                      className="h-8 w-8"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
+              </DialogHeader>
 
-      <header className="bg-background">
-        <div className="container mx-auto px-4 py-8">
+              <div className="grid grid-cols-2 gap-6 mb-3 py-2">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Sale Signs</p>
+                  <p className="text-3xl font-semibold tabular-nums">{selectedDayMetrics.saleTotal.toLocaleString()}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total MPT Signs</p>
+                  <p className="text-3xl font-semibold tabular-nums">{selectedDayMetrics.mptTotal.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left py-2 px-3 font-medium">Employee</th>
+                      <th className="text-left py-2 px-3 font-medium">Dimensions</th>
+                      <th className="text-center py-2 px-3 font-medium">Type</th>
+                      <th className="text-right py-2 px-3 font-medium">Quantity</th>
+                      <th className="text-right py-2 px-3 font-medium">Sq Ft</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDayEntries.map((entry, idx) => (
+                      <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
+                        <td className="py-2 px-3 capitalize">{entry.employee}</td>
+                        <td className="py-2 px-3">
+                          {entry.dimension_l}" &times; {entry.dimension_w}"
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              entry.type === "mpt"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            }`}
+                          >
+                            {entry.type.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right tabular-nums">{entry.quantity.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right tabular-nums">
+                          {entry.total_sqft.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <div className="flex items-center justify-between mb-6">
             <h1 className="font-semibold text-3xl tracking-tight">Daily Tracker Productivity Dashboard</h1>
-              <div className="flex gap-2">
-                <Button onClick={() => router.push("/daily-tracker/daily-entry")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      Import
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setShowEntryForm(!showEntryForm)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Entry
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowCsvImport(true)}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload File
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <div className="flex gap-2">
+              <Button onClick={() => router.push("/daily-tracker/daily-entry")}>
+                <Plus className="mr-2 h-4 w-4" />
+                New
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    Import
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowEntryForm(!showEntryForm)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Entry
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowCsvImport(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload File
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -399,11 +411,11 @@ export default function DailyTrackerDashboard() {
                     </svg>
                   </Button>
                 </div>
-                  {lastEntryDate && (
-                    <p className="text-muted-foreground text-sm">
-                      Last updated {localDateStringToDate(lastEntryDate).toLocaleDateString()}
-                    </p>
-                  )}
+                {lastEntryDate && (
+                  <p className="text-muted-foreground text-sm">
+                    Last updated {localDateStringToDate(lastEntryDate).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <MetricsDisplay data={filteredData} dateRange={dateRange} />
             </TabsContent>
@@ -476,13 +488,13 @@ export default function DailyTrackerDashboard() {
                             className="border-b hover:bg-muted/50 cursor-pointer"
                             onClick={() => setSelectedDate(day.date)}
                           >
-                      <td className="px-6 py-3 text-sm">
-                        {localDateStringToDate(day.date).toLocaleDateString("en-US", {
-                          month: "numeric",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </td>
+                            <td className="px-6 py-3 text-sm">
+                              {localDateStringToDate(day.date).toLocaleDateString("en-US", {
+                                month: "numeric",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </td>
                             <td className="px-6 py-3 text-sm text-right tabular-nums">
                               {day.totalSigns.toLocaleString()}
                             </td>
@@ -541,26 +553,26 @@ export default function DailyTrackerDashboard() {
               )}
             </TabsContent>
           </Tabs>
-        </div>
-      </header>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete entries for this day?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {dateToDelete && `Are you sure you want to delete all entries from ${localDateStringToDate(dateToDelete).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}? This action cannot be undone.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete entries for this day?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {dateToDelete && `Are you sure you want to delete all entries from ${localDateStringToDate(dateToDelete).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}? This action cannot be undone.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
