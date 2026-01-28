@@ -411,9 +411,9 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
           </p>
         </div>
       </div>
-
-        {/* Summary Metrics - Matching Daily Modal Style */}
+  
         <div className="grid grid-cols-2 gap-6 py-2">
+          {/* Summary Metrics - Matching Daily Modal Style */}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Sale Signs</p>
             <p className="text-3xl font-semibold tabular-nums">{totals.totalSale.toLocaleString()}</p>
