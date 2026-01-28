@@ -445,7 +445,7 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
                   <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="py-2 px-3 capitalize">{entry.employee}</td>
                     <td className="py-2 px-3">
-                      {`${entry.dimension.replace(" x ", '" × "')}"`}
+                      {entry.dimension.replace(' x ', ' " × " ')}
                     </td>
                     <td className="py-2 px-3 text-center">
                       <span
