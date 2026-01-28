@@ -324,7 +324,7 @@ export default function DailyTrackerDashboard() {
                       <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
                         <td className="py-2 px-3 capitalize">{entry.employee}</td>
                         <td className="py-2 px-3">
-                          {entry.dimension_l}" &times; {entry.dimension_w}"
+                          {entry.dimension_l}" × {entry.dimension_w}"
                         </td>
                         <td className="py-2 px-3 text-center">
                           <span
