@@ -8,8 +8,8 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from 'sonner'
-import { createDailyTrackerEntry } from '@/hooks/use-daily-tracker-swr'
-import { DailyTrackerEntry } from '@/types/DailyTrackerEntry'
+//import { createDailyTrackerEntry } from '@/hooks/use-daily-tracker-swr'
+//import { DailyTrackerEntry } from '@/types/DailyTrackerEntry'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface AddItemModalProps {
