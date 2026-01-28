@@ -77,6 +77,11 @@ const Combobox = ({ items, defaultValue, children }: ComboboxProps) => {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState<ComboboxItem | null>(defaultValue || null)
 
+  // Update internal value when defaultValue changes
+  React.useEffect(() => {
+    setValue(defaultValue || null)
+  }, [defaultValue])
+
   return (
     <ComboboxContext.Provider value={{ open, setOpen, value, setValue, items }}>
       {children}
