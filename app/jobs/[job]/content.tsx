@@ -1743,29 +1743,29 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const segments = isAvailableJobs
         ? [
-            { label: `All (${jobCounts.all ?? 0})`, value: "all" },
-            { label: `Unset (${jobCounts.unset || 0})`, value: "unset" },
-            { label: `No Bid (${jobCounts['no-bid'] || 0})`, value: "no-bid" },
-            { label: `Bid (${jobCounts.bid || 0})`, value: "bid" },
-            { label: `Archived (${jobCounts.archived || 0})`, value: "archived" },
+            { label: "All", value: "all" },
+            { label: "Unset", value: "unset" },
+            { label: "No Bid", value: "no-bid" },
+            { label: "Bid", value: "bid" },
+            { label: "Archived", value: "archived" },
         ]
         : isActiveBids
             ? [
-                { label: `All (${activeBidCounts.all || 0})`, value: "all" },
-                { label: `Won (${activeBidCounts.won || 0})`, value: "won" },
-                { label: `Pending (${activeBidCounts.pending || 0})`, value: "pending" },
-                { label: `Lost (${activeBidCounts.lost || 0})`, value: "lost" },
-                { label: `Draft (${activeBidCounts.draft || 0})`, value: "draft" },
-                { label: `Won - Pending (${activeBidCounts['won-pending'] || 0})`, value: "won-pending" },
-                { label: `Archived (${activeBidCounts.archived || 0})`, value: "archived" }
+                { label: "All", value: "all" },
+                { label: "Won", value: "won" },
+                { label: "Pending", value: "pending" },
+                { label: "Lost", value: "lost" },
+                { label: "Draft", value: "draft" },
+                { label: "Won - Pending", value: "won-pending" },
+                { label: "Archived", value: "archived" }
             ]
             : [
-                { label: `All (${filteredBranchCounts.all ?? 0})`, value: "all" },
+                { label: "All", value: "all" },
                 ...branchOptions.map(opt => ({
-                    label: `${opt.label} (${filteredBranchCounts[opt.value] ?? 0})`,
+                    label: opt.label,
                     value: opt.value
                 })),
-                { label: `Archived (${activeJobCounts.archived ?? 0})`, value: "archived" }
+                { label: "Archived", value: "archived" }
             ];
 
     const handleCreateClick = () => {
@@ -2258,7 +2258,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
-                                    segmentCounts={activeJobCounts}
+                                    segmentCounts={{ ...filteredBranchCounts, archived: activeJobCounts.archived }}
                                     onSegmentChange={handleSegmentChange}
                                     stickyLastColumn
                                     enableSearch={true}

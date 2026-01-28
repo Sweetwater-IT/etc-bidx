@@ -471,11 +471,7 @@ export default function SignOrderPage() {
     router.push(`/takeoffs/sign-order/${row.id}`);
   }, [router]);
 
-  // Update segments with counts
-  const segmentsWithCounts = SEGMENTS.map(segment => ({
-    ...segment,
-    label: `${segment.label.split(' (')[0]} (${segmentCounts[segment.value as keyof typeof segmentCounts] || 0})`
-  }));
+  // Segments are static, counts handled by DataTable
 
   const handleUnarchiveSignOrder = useCallback(async (item: SignOrderView) => {
     try {
@@ -553,7 +549,7 @@ export default function SignOrderPage() {
               <DataTable<SignOrderView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
-                segments={segmentsWithCounts}
+                segments={SEGMENTS}
                 segmentValue={activeSegment}
                 segmentCounts={segmentCounts}
                 onSegmentChange={handleSegmentChange}
