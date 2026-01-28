@@ -12,37 +12,18 @@ import {
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover'
-import { AlertCircle, Check, ChevronsUpDown } from 'lucide-react'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command'
-import { cn } from '@/lib/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { IconBulb } from '@tabler/icons-react'
+import { AlertCircle } from 'lucide-react'
 import { ImprovedCombobox } from '@/components/ui/improved-combobox'
+import { DatePicker } from '@/components/ui/date-picker'
+import {
+  Field,
+  FieldLabel,
+  FieldControl,
+  FieldDescription,
+  FieldError
+} from '@/components/ui/field'
+import { FormSection, FormGrid } from '@/components/ui/form-section'
 import { useState, useEffect, useRef } from 'react'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
@@ -298,269 +279,226 @@ export function SignOrderDetailsSheet({
           </div>
 
           <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
-            {/* Job Information Section */}
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Information</h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {/* <div className="space-y-2">
-                  <Label>Job Number</Label>
-                  <Input
-                    type="text"
-                    value={localJobNumber}
-                    onChange={(e) => setLocalJobNumber(e.target.value)}
-                    placeholder="Job number"
-                    disabled={mode === 'create'}
-                  />
-                </div> */}
-
-                <div className='space-y-2'>
-                  <Label>
-                    Contract Number <span className='text-red-600'>*</span>
-                  </Label>
-                  <Input
-                    type='text'
-                    value={localContractNumber}
-                    onChange={e =>
-                      setLocalContractNumber(e.target.value.toUpperCase())
-                    }
-                    placeholder='Contract number'
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Order Details Section */}
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Order Details</h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {/* Requestor */}
-                <div className='space-y-2'>
-                  <Label>
-                    Requestor<span className='text-red-600'>*</span>
-                  </Label>
-                  <ImprovedCombobox
-                    options={allUsers.map(user => ({
-                      id: user.id!,
-                      label: user.name,
-                      value: user
-                    }))}
-                    value={localRequestor ? {
-                      id: localRequestor.id!,
-                      label: localRequestor.name,
-                      value: localRequestor
-                    } : null}
-                    onChange={(option) => setLocalRequestor(option?.value || null)}
-                    placeholder="Select requestor..."
-                    searchPlaceholder="Search requestors..."
-                  />
-                </div>
-
-                {/* Branch */}
-                {/* <div className="space-y-2">
-                  <Label>Branch {isCreateMode && <span className="text-red-500">*</span>}</Label>
-                  <Select 
-                    value={localSelectedBranch} 
-                    onValueChange={setLocalSelectedBranch}
-                    disabled={!isCreateMode && !!localRequestor?.branches}
-                  >
-                    <SelectTrigger className={!isCreateMode && localRequestor?.branches ? "bg-muted" : ""}>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BRANCHES.map(branch => (
-                        <SelectItem key={branch.value} value={branch.value}>
-                          {branch.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-
-                {/* Customer */}
-                <div className='space-y-2'>
-                  <Label>
-                    Customer <span className='text-red-600'>*</span>
-                  </Label>
-                  <ImprovedCombobox
-                    options={customers.map(customer => ({
-                      id: customer.id,
-                      label: customer.displayName,
-                      value: customer,
-                      subtitle: customer.name
-                    }))}
-                    value={localCustomer ? {
-                      id: localCustomer.id,
-                      label: localCustomer.displayName,
-                      value: localCustomer,
-                      subtitle: localCustomer.name
-                    } : null}
-                    onChange={(option) => setLocalCustomer(option?.value || null)}
-                    placeholder="Select contractor..."
-                    searchPlaceholder="Search contractors..."
-                    onCreateNew={() => setCustomerDrawerOpen(true)}
-                    createNewText="+ Add new customer"
-                  />
-                </div>
-                {/* Contact dropdown, always shown, next to customer dropdown */}
-                <div className='space-y-2'>
-                  <Label>
-                    Contact <span className='text-red-600'>*</span>
-                  </Label>
-                  <ImprovedCombobox
-                    options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
-                      ? localCustomer.contactIds.map((id: number, idx: number) => ({
-                          id,
-                          label: localCustomer.names[idx],
-                          value: {
-                            id,
-                            name: localCustomer.names[idx],
-                            email: localCustomer.emails[idx],
-                            phone: localCustomer.phones[idx],
-                            role: localCustomer.roles[idx]
-                          },
-                          subtitle: localCustomer.emails[idx] || undefined
-                        }))
-                      : []
-                    }
-                    value={localContact ? {
-                      id: localContact.id,
-                      label: localContact.name,
-                      value: localContact,
-                      subtitle: localContact.email || undefined
-                    } : null}
-                    onChange={(option) => setLocalContact(option?.value || null)}
-                    placeholder="Select contact..."
-                    searchPlaceholder="Search contacts..."
-                    disabled={!localCustomer}
-                    onCreateNew={() => {
-                      if (!localCustomer) {
-                        toast.error('Please select a customer before adding a contact.')
-                        return
-                      }
-                      setContactDrawerOpen(true)
-                    }}
-                    createNewText="+ Add new contact"
-                  />
-                </div>
-
-                {/* Order Date */}
-                <div className='space-y-2 mt-auto'>
-                  <Label>Order Date</Label>
-                  <Input
-                    type='date'
-                    placeholder='Select a date'
-                    value={localOrderDate.toISOString().split('T')[0]}
-                    onChange={e => setLocalOrderDate(new Date(e.target.value))}
-                  />
-                </div>
-
-                {/* Need Date */}
-                <div className='space-y-2'>
-                  {/* <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex gap-x-2"> */}
-                  <Label>
-                    Need Date <span className='text-red-600'>*</span>
-                  </Label>
-                  {/* <IconBulb className="h-5" color="gray" />
-                      </div> */}
-                  {/* </TooltipTrigger>
-                  <TooltipContent>
-                    <div>Sale = date requested by customer</div>
-                    <div>Rental = 1 week before job start</div>
-                  </TooltipContent>
-                </Tooltip> */}
-                  <Input
-                    type='date'
-                    value={
-                      localNeedDate
-                        ? localNeedDate.toISOString().split('T')[0]
-                        : ''
-                    }
-                    onChange={e => setLocalNeedDate(new Date(e.target.value))}
-                    placeholder='Select a date'
-                  />
-                </div>
-              </div>
-
-              {/* Order Type */}
-              <div className='space-y-2'>
-                <Label>
-                  Order Type <span className='text-red-600'>*</span>
-                </Label>
-                <div className='flex flex-wrap gap-4 pt-2'>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='sale-checkbox-sheet'
-                      checked={localOrderType.includes('sale')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange('sale', checked as boolean)
-                      }
-                    />
-                    <Label htmlFor='sale-checkbox-sheet'>Sale</Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='rental-checkbox-sheet'
-                      checked={localOrderType.includes('rental')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange('rental', checked as boolean)
-                      }
-                    />
-                    <Label htmlFor='rental-checkbox-sheet'>Rental</Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='perm-signs-checkbox-sheet'
-                      checked={localOrderType.includes('permanent signs')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange(
-                          'permanent signs',
-                          checked as boolean
-                        )
-                      }
-                    />
-                    <Label htmlFor='perm-signs-checkbox-sheet'>
-                      Permanent Signs
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rental Dates - Only show if rental is selected */}
-              {localOrderType.includes('rental') && (
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Start Date</Label>
+            <FormSection title="Job Information">
+              <FormGrid columns={2}>
+                <Field name="contractNumber" required>
+                  <FieldLabel>Contract Number</FieldLabel>
+                  <FieldControl>
                     <Input
-                      type='date'
-                      value={
-                        localStartDate
-                          ? localStartDate.toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0]
-                      }
+                      value={localContractNumber}
                       onChange={e =>
-                        setLocalStartDate(new Date(e.target.value))
+                        setLocalContractNumber(e.target.value.toUpperCase())
                       }
+                      placeholder='Enter contract number'
                     />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>End Date</Label>
-                    <Input
-                      type='date'
-                      value={
-                        localEndDate
-                          ? localEndDate.toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0]
+                  </FieldControl>
+                  <FieldDescription>Unique identifier for this contract</FieldDescription>
+                </Field>
+              </FormGrid>
+            </FormSection>
+
+            <FormSection title="Order Details">
+              <FormGrid columns={2}>
+                <Field name="requestor" required>
+                  <FieldLabel>Requestor</FieldLabel>
+                  <FieldControl>
+                    <ImprovedCombobox
+                      options={allUsers.map(user => ({
+                        id: user.id!,
+                        label: user.name,
+                        value: user
+                      }))}
+                      value={localRequestor ? {
+                        id: localRequestor.id!,
+                        label: localRequestor.name,
+                        value: localRequestor
+                      } : null}
+                      onChange={(option) => setLocalRequestor(option?.value || null)}
+                      placeholder="Select requestor..."
+                      searchPlaceholder="Search requestors..."
+                    />
+                  </FieldControl>
+                  <FieldDescription>Select the person requesting this sign order</FieldDescription>
+                </Field>
+
+                <Field name="customer" required>
+                  <FieldLabel>Customer</FieldLabel>
+                  <FieldControl>
+                    <ImprovedCombobox
+                      options={customers.map(customer => ({
+                        id: customer.id,
+                        label: customer.displayName,
+                        value: customer,
+                        subtitle: customer.name
+                      }))}
+                      value={localCustomer ? {
+                        id: localCustomer.id,
+                        label: localCustomer.displayName,
+                        value: localCustomer,
+                        subtitle: localCustomer.name
+                      } : null}
+                      onChange={(option) => setLocalCustomer(option?.value || null)}
+                      placeholder="Select contractor..."
+                      searchPlaceholder="Search contractors..."
+                      onCreateNew={() => setCustomerDrawerOpen(true)}
+                      createNewText="+ Add new customer"
+                    />
+                  </FieldControl>
+                  <FieldDescription>The contractor for this project</FieldDescription>
+                </Field>
+
+                <Field name="contact" required>
+                  <FieldLabel>Contact</FieldLabel>
+                  <FieldControl>
+                    <ImprovedCombobox
+                      options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
+                        ? localCustomer.contactIds.map((id: number, idx: number) => ({
+                            id,
+                            label: localCustomer.names[idx],
+                            value: {
+                              id,
+                              name: localCustomer.names[idx],
+                              email: localCustomer.emails[idx],
+                              phone: localCustomer.phones[idx],
+                              role: localCustomer.roles[idx]
+                            },
+                            subtitle: localCustomer.emails[idx] || undefined
+                          }))
+                        : []
                       }
-                      onChange={e => setLocalEndDate(new Date(e.target.value))}
+                      value={localContact ? {
+                        id: localContact.id,
+                        label: localContact.name,
+                        value: localContact,
+                        subtitle: localContact.email || undefined
+                      } : null}
+                      onChange={(option) => setLocalContact(option?.value || null)}
+                      placeholder="Select contact..."
+                      searchPlaceholder="Search contacts..."
+                      disabled={!localCustomer}
+                      onCreateNew={() => {
+                        if (!localCustomer) {
+                          toast.error('Please select a customer before adding a contact.')
+                          return
+                        }
+                        setContactDrawerOpen(true)
+                      }}
+                      createNewText="+ Add new contact"
                     />
+                  </FieldControl>
+                  <FieldDescription>Primary contact for this project</FieldDescription>
+                </Field>
+
+                <Field name="orderDate">
+                  <FieldLabel>Order Date</FieldLabel>
+                  <FieldControl>
+                    <DatePicker
+                      date={localOrderDate}
+                      onDateChange={(date) => setLocalOrderDate(date || new Date())}
+                      placeholder="Select order date"
+                    />
+                  </FieldControl>
+                  <FieldDescription>When the order was placed</FieldDescription>
+                </Field>
+
+                <Field name="needDate" required>
+                  <FieldLabel>Need Date</FieldLabel>
+                  <FieldControl>
+                    <DatePicker
+                      date={localNeedDate}
+                      onDateChange={(date) => setLocalNeedDate(date || new Date())}
+                      placeholder="Select need date"
+                    />
+                  </FieldControl>
+                  <FieldDescription>When the signs are needed</FieldDescription>
+                </Field>
+              </FormGrid>
+
+              <Field name="orderType" required>
+                <FieldLabel>Order Type</FieldLabel>
+                <FieldControl>
+                  <div className='flex flex-wrap gap-4 pt-2'>
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='sale-checkbox-sheet'
+                        checked={localOrderType.includes('sale')}
+                        onCheckedChange={checked =>
+                          handleOrderTypeChange('sale', checked as boolean)
+                        }
+                      />
+                      <label
+                        htmlFor='sale-checkbox-sheet'
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Sale
+                      </label>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='rental-checkbox-sheet'
+                        checked={localOrderType.includes('rental')}
+                        onCheckedChange={checked =>
+                          handleOrderTypeChange('rental', checked as boolean)
+                        }
+                      />
+                      <label
+                        htmlFor='rental-checkbox-sheet'
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Rental
+                      </label>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='perm-signs-checkbox-sheet'
+                        checked={localOrderType.includes('permanent signs')}
+                        onCheckedChange={checked =>
+                          handleOrderTypeChange(
+                            'permanent signs',
+                            checked as boolean
+                          )
+                        }
+                      />
+                      <label
+                        htmlFor='perm-signs-checkbox-sheet'
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Permanent Signs
+                      </label>
+                    </div>
                   </div>
-                </div>
+                </FieldControl>
+                <FieldDescription>Select the type(s) of work needed</FieldDescription>
+              </Field>
+
+              {localOrderType.includes('rental') && (
+                <FormGrid columns={2}>
+                  <Field name="startDate">
+                    <FieldLabel>Start Date</FieldLabel>
+                    <FieldControl>
+                      <DatePicker
+                        date={localStartDate}
+                        onDateChange={(date) => setLocalStartDate(date || new Date())}
+                        placeholder="Select start date"
+                      />
+                    </FieldControl>
+                    <FieldDescription>When the rental period begins</FieldDescription>
+                  </Field>
+
+                  <Field name="endDate">
+                    <FieldLabel>End Date</FieldLabel>
+                    <FieldControl>
+                      <DatePicker
+                        date={localEndDate}
+                        onDateChange={(date) => setLocalEndDate(date || new Date())}
+                        placeholder="Select end date"
+                      />
+                    </FieldControl>
+                    <FieldDescription>When the rental period ends</FieldDescription>
+                  </Field>
+                </FormGrid>
               )}
-            </div>
+            </FormSection>
           </div>
 
           <Separator />
