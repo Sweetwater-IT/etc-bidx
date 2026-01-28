@@ -403,83 +403,98 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
     }
     
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">Review Daily Production Report</h2>
-          <p className="text-muted-foreground mt-1">
-            {localDateStringToDate(date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-          </p>
-        </div>
-      </div>
-  
-        <div className="grid grid-cols-2 gap-6 py-2">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Review Daily Production Report</h2>
+            <p className="text-muted-foreground mt-1">
+              {localDateStringToDate(date).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+          </div>
+    
           {/* Summary Metrics - Matching Daily Modal Style */}
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Sale Signs</p>
-            <p className="text-3xl font-semibold tabular-nums">{totals.totalSale.toLocaleString()}</p>
+          <div className="grid grid-cols-2 gap-6 py-2">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Sale Signs</p>
+              <p className="text-3xl font-semibold tabular-nums">{totals.totalSale.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total MPT Signs</p>
+              <p className="text-3xl font-semibold tabular-nums">{totals.totalMpt.toLocaleString()}</p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total MPT Signs</p>
-            <p className="text-3xl font-semibold tabular-nums">{totals.totalMpt.toLocaleString()}</p>
-          </div>
-        </div>
-
-        {/* Entry Table - Matching Daily Modal Style */}
-        <div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="text-left py-2 px-3 font-medium">Employee</th>
-                <th className="text-left py-2 px-3 font-medium">Dimensions</th>
-                <th className="text-center py-2 px-3 font-medium">Type</th>
-                <th className="text-right py-2 px-3 font-medium">Quantity</th>
-                <th className="text-right py-2 px-3 font-medium">Sq Ft</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allEntries.map((entry, idx) => (
-                <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
-                  <td className="py-2 px-3 capitalize">{entry.employee}</td>
-                  <td className="py-2 px-3">{entry.dimension.replace(" x ", "" × ")}"</td>
-                  <td className="py-2 px-3 text-center">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        entry.type === "mpt"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                          : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                      }`}
-                    >
-                      {entry.type.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 text-right tabular-nums">{entry.quantity.toLocaleString()}</td>
-                  <td className="py-2 px-3 text-right tabular-nums">
-                    {entry.sqft.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
+    
+          {/* Entry Table - Matching Daily Modal Style */}
+          <div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="text-left py-2 px-3 font-medium">Employee</th>
+                  <th className="text-left py-2 px-3 font-medium">Dimensions</th>
+                  <th className="text-center py-2 px-3 font-medium">Type</th>
+                  <th className="text-right py-2 px-3 font-medium">Quantity</th>
+                  <th className="text-right py-2 px-3 font-medium">Sq Ft</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {allEntries.map((entry, idx) => (
+                  <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
+                    <td className="py-2 px-3 capitalize">{entry.employee}</td>
+                    <td className="py-2 px-3">
+                      {`${entry.dimension.replace(" x ", '" × "')}"`}
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          entry.type === "mpt"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                            : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                        }`}
+                      >
+                        {entry.type.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-right tabular-nums">{entry.quantity.toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right tabular-nums">
+                      {entry.sqft.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+    
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBackToEdit}
+              disabled={isSubmitting}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Go Back & Edit
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Report"}
+              <Check className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end pt-4 border-t">
-          <Button type="button" variant="outline" onClick={goBackToEdit} disabled={isSubmitting}>
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Go Back & Edit
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-            {isSubmitting ? "Submitting..." : "Submit Report"}
-            <Check className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
+      );
+    }
+  
   if (isLoadingDimensions) {
     return (
       <div className="flex items-center justify-center py-16">
