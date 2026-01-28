@@ -104,7 +104,13 @@ const ComboboxTrigger = ({ render, children }: ComboboxTriggerProps) => {
 }
 
 const ComboboxContent = ({ children }: ComboboxContentProps) => {
-  return <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">{children}</PopoverContent>
+  return (
+    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+      <Command>
+        {children}
+      </Command>
+    </PopoverContent>
+  )
 }
 
 const ComboboxInput = ({ placeholder, showTrigger = true, showClear = false }: ComboboxInputProps) => {
@@ -142,11 +148,7 @@ const ComboboxInput = ({ placeholder, showTrigger = true, showClear = false }: C
     )
   }
 
-  return (
-    <Command>
-      <CommandInput placeholder={placeholder || "Search..."} />
-    </Command>
-  )
+  return <CommandInput placeholder={placeholder || "Search..."} />
 }
 
 const ComboboxEmpty = ({ children }: ComboboxEmptyProps) => {
