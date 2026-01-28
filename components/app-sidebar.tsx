@@ -115,10 +115,10 @@ export const data = {
       title: "Sign Shop Orders",
       url: "/takeoffs/sign-shop-orders",
     },
-    // {
-    //   title: "Daily Tracker",
-    //   url: "/daily-tracker",
-    // },
+    {
+      title: "Daily Tracker",
+      url: "/daily-tracker",
+    },
     // {
     //   title: "Takeoffs",
     //   url: "#",
