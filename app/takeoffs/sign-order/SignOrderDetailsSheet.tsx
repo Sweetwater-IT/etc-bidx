@@ -1,11 +1,11 @@
 'use client'
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle
-} from '@/components/ui/sheet'
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle
+} from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,7 +49,6 @@ import { CustomerDrawer } from '@/components/customer-drawer'
 import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
-import { Drawer, DrawerContent } from '@/components/ui/drawer'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -281,23 +280,23 @@ export function SignOrderDetailsSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className='w-[500px] sm:max-w-[600px] p-0'>
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
-            <SheetHeader className='p-6 pb-4'>
-              <SheetTitle>
+            <DrawerHeader className='p-6 pb-4'>
+              <DrawerTitle>
                 {isCreateMode
                   ? 'Create New Sign Order'
                   : 'Edit Sign Order Details'}
-              </SheetTitle>
-            </SheetHeader>
+              </DrawerTitle>
+            </DrawerHeader>
             <Separator className='w-full -mt-2' />
           </div>
 
           <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
             {/* Job Information Section */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Informationn</h3>
+              <h3 className='text-lg font-semibold'>Job Information</h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* <div className="space-y-2">
@@ -589,8 +588,8 @@ export function SignOrderDetailsSheet({
               </div>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
       {/* CustomerDrawer for creating new customer */}
       <CustomerDrawer
         open={customerDrawerOpen}
