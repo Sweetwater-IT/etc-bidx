@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { AlertCircle } from 'lucide-react'
-import { ImprovedCombobox } from '@/components/ui/improved-combobox'
+import { AutoComplete } from '@/components/ui/autocomplete'
 import { DatePicker } from '@/components/ui/date-picker'
 import {
   Field,
@@ -302,20 +302,21 @@ export function SignOrderDetailsSheet({
                 <Field name="requestor" required>
                   <FieldLabel>Requestor</FieldLabel>
                   <FieldControl>
-                    <ImprovedCombobox
+                    <AutoComplete
                       options={allUsers.map(user => ({
-                        id: user.id!,
-                        label: user.name,
-                        value: user
+                        value: user.id?.toString() || '',
+                        label: user.name
                       }))}
                       value={localRequestor ? {
-                        id: localRequestor.id!,
-                        label: localRequestor.name,
-                        value: localRequestor
-                      } : null}
-                      onChange={(option) => setLocalRequestor(option?.value || null)}
-                      placeholder="Select requestor..."
-                      searchPlaceholder="Search requestors..."
+                        value: localRequestor.id?.toString() || '',
+                        label: localRequestor.name
+                      } : undefined}
+                      onValueChange={(value) => {
+                        const user = allUsers.find(u => u.id?.toString() === value)
+                        setLocalRequestor(user || null)
+                      }}
+                      placeholder="Search requestors..."
+                      emptyMessage="No requestors found"
                     />
                   </FieldControl>
                   <FieldDescription>Select the person requesting this sign order</FieldDescription>
@@ -324,25 +325,37 @@ export function SignOrderDetailsSheet({
                 <Field name="customer" required>
                   <FieldLabel>Customer</FieldLabel>
                   <FieldControl>
-                    <ImprovedCombobox
-                      options={customers.map(customer => ({
-                        id: customer.id,
-                        label: customer.displayName,
-                        value: customer,
-                        subtitle: customer.name
-                      }))}
-                      value={localCustomer ? {
-                        id: localCustomer.id,
-                        label: localCustomer.displayName,
-                        value: localCustomer,
-                        subtitle: localCustomer.name
-                      } : null}
-                      onChange={(option) => setLocalCustomer(option?.value || null)}
-                      placeholder="Select contractor..."
-                      searchPlaceholder="Search contractors..."
-                      onCreateNew={() => setCustomerDrawerOpen(true)}
-                      createNewText="+ Add new customer"
-                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <AutoComplete
+                          options={customers.map(customer => ({
+                            value: customer.id.toString(),
+                            label: customer.displayName,
+                            name: customer.name
+                          }))}
+                          value={localCustomer ? {
+                            value: localCustomer.id.toString(),
+                            label: localCustomer.displayName,
+                            name: localCustomer.name
+                          } : undefined}
+                          onValueChange={(value) => {
+                            const customer = customers.find(c => c.id.toString() === value)
+                            setLocalCustomer(customer || null)
+                          }}
+                          placeholder="Search customers..."
+                          emptyMessage="No customers found"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCustomerDrawerOpen(true)}
+                        className="px-3"
+                      >
+                        +
+                      </Button>
+                    </div>
                   </FieldControl>
                   <FieldDescription>The contractor for this project</FieldDescription>
                 </Field>
@@ -350,41 +363,63 @@ export function SignOrderDetailsSheet({
                 <Field name="contact" required>
                   <FieldLabel>Contact</FieldLabel>
                   <FieldControl>
-                    <ImprovedCombobox
-                      options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
-                        ? localCustomer.contactIds.map((id: number, idx: number) => ({
-                            id,
-                            label: localCustomer.names[idx],
-                            value: {
-                              id,
-                              name: localCustomer.names[idx],
-                              email: localCustomer.emails[idx],
-                              phone: localCustomer.phones[idx],
-                              role: localCustomer.roles[idx]
-                            },
-                            subtitle: localCustomer.emails[idx] || undefined
-                          }))
-                        : []
-                      }
-                      value={localContact ? {
-                        id: localContact.id,
-                        label: localContact.name,
-                        value: localContact,
-                        subtitle: localContact.email || undefined
-                      } : null}
-                      onChange={(option) => setLocalContact(option?.value || null)}
-                      placeholder="Select contact..."
-                      searchPlaceholder="Search contacts..."
-                      disabled={!localCustomer}
-                      onCreateNew={() => {
-                        if (!localCustomer) {
-                          toast.error('Please select a customer before adding a contact.')
-                          return
-                        }
-                        setContactDrawerOpen(true)
-                      }}
-                      createNewText="+ Add new contact"
-                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <AutoComplete
+                          options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
+                            ? localCustomer.contactIds.map((id: number, idx: number) => ({
+                                value: id.toString(),
+                                label: localCustomer.names[idx],
+                                email: localCustomer.emails[idx] || '',
+                                phone: localCustomer.phones[idx] || '',
+                                role: localCustomer.roles[idx] || ''
+                              }))
+                            : []
+                          }
+                          value={localContact ? {
+                            value: localContact.id.toString(),
+                            label: localContact.name,
+                            email: localContact.email || '',
+                            phone: localContact.phone || '',
+                            role: localContact.role || ''
+                          } : undefined}
+                          onValueChange={(value) => {
+                            if (!localCustomer) return
+                            const contactId = parseInt(value)
+                            const contactIndex = localCustomer.contactIds?.indexOf(contactId)
+                            if (contactIndex !== undefined && contactIndex >= 0) {
+                              const contact = {
+                                id: contactId,
+                                name: localCustomer.names[contactIndex],
+                                email: localCustomer.emails[contactIndex],
+                                phone: localCustomer.phones[contactIndex],
+                                role: localCustomer.roles[contactIndex]
+                              }
+                              setLocalContact(contact)
+                            }
+                          }}
+                          placeholder="Search contacts..."
+                          emptyMessage="No contacts found"
+                          disabled={!localCustomer}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (!localCustomer) {
+                            toast.error('Please select a customer before adding a contact.')
+                            return
+                          }
+                          setContactDrawerOpen(true)
+                        }}
+                        disabled={!localCustomer}
+                        className="px-3"
+                      >
+                        +
+                      </Button>
+                    </div>
                   </FieldControl>
                   <FieldDescription>Primary contact for this project</FieldDescription>
                 </Field>
