@@ -231,7 +231,7 @@ export default function DailyTrackerDashboard() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6">
+        <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6 px-4 md:px-6 lg:px-8">
           <CsvImport open={showCsvImport} onOpenChange={setShowCsvImport} onImport={handleImportCsv} />
 
           <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
