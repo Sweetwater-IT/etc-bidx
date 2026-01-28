@@ -310,7 +310,7 @@ export default function DailyTrackerDashboard() {
                   <tr key={idx} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="py-2 px-3 capitalize">{entry.employee}</td>
                     <td className="py-2 px-3">
-                      {entry.dimension_l}" × {entry.dimension_w}"
+                      {`${entry.dimension_l}" × "${entry.dimension_w}"`}
                     </td>
                     <td className="py-2 px-3 text-center">
                       <span
@@ -413,7 +413,7 @@ export default function DailyTrackerDashboard() {
                 <Card className="mb-8 border-2">
                   <CardHeader>
                     <CardTitle>Daily Production Entry</CardTitle>
-                    <CardDescription>Enter today's sign production data</CardDescription>
+                    <CardDescription>{"Enter today's sign production data"}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <DataEntryForm onSubmit={handleAddEntry} onCancel={() => setShowEntryForm(false)} />
