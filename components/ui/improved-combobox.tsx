@@ -17,8 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import Fuse from "fuse.js"
-import type { IFuseOptions } from "fuse.js"
+import Fuse, { IFuseOptions } from "fuse.js"
 import { useDebounce } from "use-debounce"
 
 interface Option {
@@ -41,7 +40,7 @@ interface ImprovedComboboxProps {
   recentItems?: Option[]
   onCreateNew?: () => void
   createNewText?: string
-  fuseOptions?: Fuse.IFuseOptions<Option>
+  fuseOptions?: IFuseOptions<Option>
 }
 
 export function ImprovedCombobox({
@@ -190,7 +189,7 @@ export function ImprovedCombobox({
                       <CommandEmpty>
                         <div className="py-6 text-center">
                           <p className="text-sm text-muted-foreground mb-2">
-                            No items match '{debouncedQuery}'
+                            {debouncedQuery ? `No items match "${debouncedQuery}"` : "No items found"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Try a different search term
