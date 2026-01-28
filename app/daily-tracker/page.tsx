@@ -425,7 +425,6 @@ export default function DailyTrackerDashboard() {
                 <Card className="mb-8 border-2">
                   <CardHeader>
                     <CardDescription>{"Enter today's sign production data"}</CardDescription>
-                    <CardDescription>Enter today's sign production data</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <DataEntryForm onSubmit={handleAddEntry} onCancel={() => setShowEntryForm(false)} />
