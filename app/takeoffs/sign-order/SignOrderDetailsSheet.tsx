@@ -38,6 +38,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { IconBulb } from '@tabler/icons-react'
+import { ImprovedCombobox } from '@/components/ui/improved-combobox'
 import { useState, useEffect, useRef } from 'react'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
@@ -336,49 +337,21 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Requestor<span className='text-red-600'>*</span>
                   </Label>
-                  <Popover open={openRequestor} onOpenChange={setOpenRequestor}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openRequestor}
-                        className='w-full justify-between'
-                      >
-                        {localRequestor
-                          ? localRequestor.name
-                          : 'Select requestor...'}
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='z-[9999] w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search requestor...' />
-                        <CommandEmpty>No requestor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {allUsers.map(user => (
-                            <CommandItem
-                              key={user.id}
-                              value={user.name}
-                              onSelect={() => {
-                                setLocalRequestor(user)
-                                setOpenRequestor(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localRequestor?.id === user.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {user.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <ImprovedCombobox
+                    options={allUsers.map(user => ({
+                      id: user.id!,
+                      label: user.name,
+                      value: user
+                    }))}
+                    value={localRequestor ? {
+                      id: localRequestor.id!,
+                      label: localRequestor.name,
+                      value: localRequestor
+                    } : null}
+                    onChange={(option) => setLocalRequestor(option?.value || null)}
+                    placeholder="Select requestor..."
+                    searchPlaceholder="Search requestors..."
+                  />
                 </div>
 
                 {/* Branch */}
@@ -407,152 +380,66 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Customer <span className='text-red-600'>*</span>
                   </Label>
-                  <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openCustomer}
-                        className='w-full justify-between'
-                      >
-                        <span className='truncate'>
-                          {localCustomer
-                            ? localCustomer.displayName
-                            : 'Select contractor...'}
-                        </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='z-[9999] w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search contractor...' />
-                        <CommandEmpty>No contractor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new customer button */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomer(false)
-                              setCustomerDrawerOpen(true)
-                            }}
-                            value='__add_new__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new customer
-                          </CommandItem>
-                          {/* List customers */}
-                          {customers.map(customer => (
-                            <CommandItem
-                              key={customer.id}
-                              value={customer.name}
-                              onSelect={() => {
-                                setLocalCustomer(customer)
-                                setOpenCustomer(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localCustomer?.id === customer.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {customer.displayName}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <ImprovedCombobox
+                    options={customers.map(customer => ({
+                      id: customer.id,
+                      label: customer.displayName,
+                      value: customer,
+                      subtitle: customer.name
+                    }))}
+                    value={localCustomer ? {
+                      id: localCustomer.id,
+                      label: localCustomer.displayName,
+                      value: localCustomer,
+                      subtitle: localCustomer.name
+                    } : null}
+                    onChange={(option) => setLocalCustomer(option?.value || null)}
+                    placeholder="Select contractor..."
+                    searchPlaceholder="Search contractors..."
+                    onCreateNew={() => setCustomerDrawerOpen(true)}
+                    createNewText="+ Add new customer"
+                  />
                 </div>
                 {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
                   <Label>
                     Contact <span className='text-red-600'>*</span>
                   </Label>
-                  <Popover
-                    open={openCustomerContact}
-                    onOpenChange={setOpenCustomerContact}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openCustomerContact}
-                        className='w-full justify-between'
-                        disabled={!localCustomer}
-                      >
-                        <span className='truncate'>
-                          {localContact
-                            ? localContact.name
-                            : 'Select contact...'}
-                        </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='z-[9999] w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search contact...' />
-                        <CommandEmpty>No contact found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new contact button always visible */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomerContact(false)
-                              if (!localCustomer) {
-                                toast.error(
-                                  'Please select a customer before adding a contact.'
-                                )
-                                return
-                              }
-                              setContactDrawerOpen(true)
-                            }}
-                            value='__add_new_contact__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new contact
-                          </CommandItem>
-                          {/* List contacts if a customer is selected */}
-                          {localCustomer &&
-                            Array.isArray(localCustomer.contactIds) &&
-                            localCustomer.contactIds.length > 0 &&
-                            localCustomer.contactIds.map(
-                              (id: number, idx: number) => (
-                                <CommandItem
-                                  key={id}
-                                  value={localCustomer.names[idx]}
-                                  onSelect={() => {
-                                    setLocalContact({
-                                      id,
-                                      name: localCustomer.names[idx],
-                                      email: localCustomer.emails[idx],
-                                      phone: localCustomer.phones[idx],
-                                      role: localCustomer.roles[idx]
-                                    })
-                                    setOpenCustomerContact(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      localContact?.id === id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {localCustomer.names[idx]}{' '}
-                                  {localCustomer.emails[idx] && (
-                                    <span className='text-xs text-muted-foreground ml-2'>
-                                      {localCustomer.emails[idx]}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              )
-                            )}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <ImprovedCombobox
+                    options={localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
+                      ? localCustomer.contactIds.map((id: number, idx: number) => ({
+                          id,
+                          label: localCustomer.names[idx],
+                          value: {
+                            id,
+                            name: localCustomer.names[idx],
+                            email: localCustomer.emails[idx],
+                            phone: localCustomer.phones[idx],
+                            role: localCustomer.roles[idx]
+                          },
+                          subtitle: localCustomer.emails[idx] || undefined
+                        }))
+                      : []
+                    }
+                    value={localContact ? {
+                      id: localContact.id,
+                      label: localContact.name,
+                      value: localContact,
+                      subtitle: localContact.email || undefined
+                    } : null}
+                    onChange={(option) => setLocalContact(option?.value || null)}
+                    placeholder="Select contact..."
+                    searchPlaceholder="Search contacts..."
+                    disabled={!localCustomer}
+                    onCreateNew={() => {
+                      if (!localCustomer) {
+                        toast.error('Please select a customer before adding a contact.')
+                        return
+                      }
+                      setContactDrawerOpen(true)
+                    }}
+                    createNewText="+ Add new contact"
+                  />
                 </div>
 
                 {/* Order Date */}
