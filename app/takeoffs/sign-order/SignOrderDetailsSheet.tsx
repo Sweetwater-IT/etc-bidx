@@ -326,46 +326,6 @@ export function SignOrderDetailsSheet({
                   <FieldDescription>Select the person requesting this sign order</FieldDescription>
                 </Field>
 
-                <Field name="customer" required>
-                  <FieldLabel>Customer</FieldLabel>
-                  <FieldControl>
-                    <AutoComplete
-                      options={[
-                        { value: '__create_customer__', label: '+ Add new customer' },
-                        ...customers.map(customer => ({
-                          value: customer.id.toString(),
-                          label: customer.displayName,
-                          name: customer.name
-                        }))
-                      ]}
-                      value={localCustomer ? {
-                        value: localCustomer.id.toString(),
-                        label: localCustomer.displayName,
-                        name: localCustomer.name
-                      } : undefined}
-                      onValueChange={(value) => {
-                        if (value === '__create_customer__') {
-                          setCustomerDrawerOpen(true)
-                          return
-                        }
-                        if (!customers || customers.length === 0) {
-                          toast.error('Customers not loaded yet. Please try again.')
-                          return
-                        }
-                        const customer = customers.find(c => c.id.toString() === value)
-                        if (customer) {
-                          setLocalCustomer(customer)
-                        } else {
-                          toast.error('Customer not found. Please try again.')
-                        }
-                      }}
-                      placeholder="Search customers..."
-                      emptyMessage="No customers found"
-                    />
-                  </FieldControl>
-                  <FieldDescription>The contractor for this project</FieldDescription>
-                </Field>
-
                 <Field name="orderDate">
                   <FieldLabel>Order Date</FieldLabel>
                   <FieldControl>
@@ -392,6 +352,52 @@ export function SignOrderDetailsSheet({
               </FormGrid>
 
               <FormGrid columns={2}>
+                <Field name="customer" required>
+                  <FieldLabel>Customer</FieldLabel>
+                  <FieldControl>
+                    <AutoComplete
+                      options={[
+                        { value: '__create_customer__', label: '+ Add new customer' },
+                        ...customers.map(customer => ({
+                          value: customer.id.toString(),
+                          label: customer.displayName,
+                          name: customer.name
+                        }))
+                      ]}
+                      value={localCustomer ? {
+                        value: localCustomer.id.toString(),
+                        label: localCustomer.displayName,
+                        name: localCustomer.name
+                      } : undefined}
+                      onValueChange={(value) => {
+                        if (!value) {
+                          // Allow deselection
+                          setLocalCustomer(null)
+                          setLocalContact(null) // Clear contact when customer is cleared
+                          return
+                        }
+                        if (value === '__create_customer__') {
+                          setCustomerDrawerOpen(true)
+                          return
+                        }
+                        if (!customers || customers.length === 0) {
+                          toast.error('Customers not loaded yet. Please try again.')
+                          return
+                        }
+                        const customer = customers.find(c => c.id.toString() === value)
+                        if (customer) {
+                          setLocalCustomer(customer)
+                        } else {
+                          toast.error('Customer not found. Please try again.')
+                        }
+                      }}
+                      placeholder="Search customers..."
+                      emptyMessage="No customers found"
+                    />
+                  </FieldControl>
+                  <FieldDescription>The contractor for this project</FieldDescription>
+                </Field>
+
                 <Field name="contact" required>
                   <FieldLabel>Contact</FieldLabel>
                   <FieldControl>
@@ -417,6 +423,11 @@ export function SignOrderDetailsSheet({
                         role: localContact.role || ''
                       } : undefined}
                       onValueChange={(value) => {
+                        if (!value) {
+                          // Allow deselection
+                          setLocalContact(null)
+                          return
+                        }
                         if (value === '__create_contact__') {
                           setContactDrawerOpen(true)
                           return
