@@ -302,7 +302,7 @@ export function SignOrderDetailsSheet({
             </FormSection>
 
             <FormSection title="Order Details">
-              <FormGrid columns={2}>
+              <FormGrid columns={1}>
                 <Field name="requestor" required>
                   <FieldLabel>Requestor</FieldLabel>
                   <FieldControl>
@@ -324,30 +324,6 @@ export function SignOrderDetailsSheet({
                     />
                   </FieldControl>
                   <FieldDescription>Select the person requesting this sign order</FieldDescription>
-                </Field>
-
-                <Field name="orderDate">
-                  <FieldLabel>Order Date</FieldLabel>
-                  <FieldControl>
-                    <DatePicker
-                      date={localOrderDate}
-                      onDateChange={(date) => setLocalOrderDate(date || new Date())}
-                      placeholder="Select order date"
-                    />
-                  </FieldControl>
-                  <FieldDescription>When the order was placed</FieldDescription>
-                </Field>
-
-                <Field name="needDate" required>
-                  <FieldLabel>Need Date</FieldLabel>
-                  <FieldControl>
-                    <DatePicker
-                      date={localNeedDate}
-                      onDateChange={(date) => setLocalNeedDate(date || new Date())}
-                      placeholder="Select need date"
-                    />
-                  </FieldControl>
-                  <FieldDescription>When the signs are needed</FieldDescription>
                 </Field>
               </FormGrid>
 
@@ -387,7 +363,10 @@ export function SignOrderDetailsSheet({
                         const customer = customers.find(c => c.id.toString() === value)
                         if (customer) {
                           setLocalCustomer(customer)
+                          // Clear contact when customer changes
+                          setLocalContact(null)
                         } else {
+                          console.error('Customer not found:', value, 'Available customers:', customers.map(c => ({ id: c.id, name: c.name })))
                           toast.error('Customer not found. Please try again.')
                         }
                       }}
@@ -445,8 +424,8 @@ export function SignOrderDetailsSheet({
                           }
                           setLocalContact(contact)
                         } else if (value && value !== '__create_contact__') {
-                          // If value doesn't match any contact but isn't empty or the create option, keep current selection
-                          // This prevents accidental deselection
+                          console.error('Contact not found:', value, 'Available contacts:', localCustomer.contactIds)
+                          toast.error('Contact not found. Please try again.')
                         }
                       }}
                       placeholder="Search contacts..."
@@ -454,6 +433,32 @@ export function SignOrderDetailsSheet({
                     />
                   </FieldControl>
                   <FieldDescription>Primary contact for this project</FieldDescription>
+                </Field>
+              </FormGrid>
+
+              <FormGrid columns={2}>
+                <Field name="orderDate">
+                  <FieldLabel>Order Date</FieldLabel>
+                  <FieldControl>
+                    <DatePicker
+                      date={localOrderDate}
+                      onDateChange={(date) => setLocalOrderDate(date || new Date())}
+                      placeholder="Select order date"
+                    />
+                  </FieldControl>
+                  <FieldDescription>When the order was placed</FieldDescription>
+                </Field>
+
+                <Field name="needDate" required>
+                  <FieldLabel>Need Date</FieldLabel>
+                  <FieldControl>
+                    <DatePicker
+                      date={localNeedDate}
+                      onDateChange={(date) => setLocalNeedDate(date || new Date())}
+                      placeholder="Select need date"
+                    />
+                  </FieldControl>
+                  <FieldDescription>When the signs are needed</FieldDescription>
                 </Field>
               </FormGrid>
 
