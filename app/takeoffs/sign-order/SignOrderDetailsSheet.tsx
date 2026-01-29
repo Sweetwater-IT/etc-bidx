@@ -15,16 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { AlertCircle, ChevronsUpDown } from 'lucide-react'
 import { AutoComplete } from '@/components/ui/autocomplete'
-import {
-  Combobox,
-  ComboboxTrigger,
-  ComboboxContent,
-  ComboboxInput,
-  ComboboxEmpty,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from '@/components/ui/combobox'
+
 import { DatePicker } from '@/components/ui/date-picker'
 import {
   Field,
@@ -119,7 +110,6 @@ export function SignOrderDetailsSheet({
 
   // Add state for CustomerDrawer
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
-  const [pendingCustomerSelection, setPendingCustomerSelection] = useState<ComboboxItem | null>(null)
   const [newCustomerId, setNewCustomerId] = useState<number | null>(null)
   const { getCustomers } = useCustomers()
 
@@ -339,8 +329,8 @@ export function SignOrderDetailsSheet({
                 <Field name="customer" required>
                   <FieldLabel>Customer</FieldLabel>
                   <FieldControl>
-                    <Combobox
-                      items={[
+                    <AutoComplete
+                      options={[
                         { value: '__create_customer__', label: '+ Add new customer' },
                         ...customers.map(customer => ({
                           value: customer.id.toString(),
@@ -348,49 +338,30 @@ export function SignOrderDetailsSheet({
                           name: customer.name
                         }))
                       ]}
-                      defaultValue={localCustomer ? {
+                      value={localCustomer ? {
                         value: localCustomer.id.toString(),
                         label: localCustomer.displayName,
                         name: localCustomer.name
-                      } : null}
-                    >
-                      <ComboboxTrigger render={({ open }) => (
-                        <Button variant="outline" className="w-full justify-between font-normal">
-                          <ComboboxValue />
-                          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      )} />
-                      <ComboboxContent>
-                        <ComboboxInput showTrigger={false} placeholder="Search customers..." />
-                        <ComboboxEmpty>No customers found.</ComboboxEmpty>
-                        <ComboboxList>
-                          {(item) => (
-                            <ComboboxItem
-                              key={item.value}
-                              value={item}
-                              onSelect={(selectedItem) => {
-                                if (selectedItem.value === '__create_customer__') {
-                                  setCustomerDrawerOpen(true)
-                                  return
-                                }
-                                if (!customers || customers.length === 0) {
-                                  toast.error('Customers not loaded yet. Please try again.')
-                                  return
-                                }
-                                const customer = customers.find(c => c.id.toString() === selectedItem.value)
-                                if (customer) {
-                                  setLocalCustomer(customer)
-                                } else {
-                                  toast.error('Customer not found. Please try again.')
-                                }
-                              }}
-                            >
-                              {item.label}
-                            </ComboboxItem>
-                          )}
-                        </ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
+                      } : undefined}
+                      onValueChange={(value) => {
+                        if (value === '__create_customer__') {
+                          setCustomerDrawerOpen(true)
+                          return
+                        }
+                        if (!customers || customers.length === 0) {
+                          toast.error('Customers not loaded yet. Please try again.')
+                          return
+                        }
+                        const customer = customers.find(c => c.id.toString() === value)
+                        if (customer) {
+                          setLocalCustomer(customer)
+                        } else {
+                          toast.error('Customer not found. Please try again.')
+                        }
+                      }}
+                      placeholder="Search customers..."
+                      emptyMessage="No customers found"
+                    />
                   </FieldControl>
                   <FieldDescription>The contractor for this project</FieldDescription>
                 </Field>
@@ -424,8 +395,8 @@ export function SignOrderDetailsSheet({
                 <Field name="contact" required>
                   <FieldLabel>Contact</FieldLabel>
                   <FieldControl>
-                    <Combobox
-                      items={[
+                    <AutoComplete
+                      options={[
                         { value: '__create_contact__', label: '+ Add new contact' },
                         ...(localCustomer && Array.isArray(localCustomer.contactIds) && localCustomer.contactIds.length > 0
                           ? localCustomer.contactIds.map((id: number, idx: number) => ({
@@ -438,54 +409,38 @@ export function SignOrderDetailsSheet({
                           : []
                         )
                       ]}
-                      defaultValue={localContact ? {
+                      value={localContact ? {
                         value: localContact.id.toString(),
                         label: localContact.name,
                         email: localContact.email || '',
                         phone: localContact.phone || '',
                         role: localContact.role || ''
-                      } : null}
-                    >
-                      <ComboboxTrigger render={({ open }) => (
-                        <Button variant="outline" className="w-full justify-between font-normal">
-                          <ComboboxValue />
-                          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      )} />
-                      <ComboboxContent>
-                        <ComboboxInput showTrigger={false} placeholder="Search contacts..." />
-                        <ComboboxEmpty>No contacts found.</ComboboxEmpty>
-                        <ComboboxList>
-                          {(item) => (
-                            <ComboboxItem
-                              key={item.value}
-                              value={item}
-                              onSelect={(selectedItem) => {
-                                if (selectedItem.value === '__create_contact__') {
-                                  setContactDrawerOpen(true)
-                                } else {
-                                  if (!localCustomer) return
-                                  const contactId = parseInt(selectedItem.value)
-                                  const contactIndex = localCustomer.contactIds?.indexOf(contactId)
-                                  if (contactIndex !== undefined && contactIndex >= 0) {
-                                    const contact = {
-                                      id: contactId,
-                                      name: localCustomer.names[contactIndex],
-                                      email: localCustomer.emails[contactIndex],
-                                      phone: localCustomer.phones[contactIndex],
-                                      role: localCustomer.roles[contactIndex]
-                                    }
-                                    setLocalContact(contact)
-                                  }
-                                }
-                              }}
-                            >
-                              {item.label}
-                            </ComboboxItem>
-                          )}
-                        </ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
+                      } : undefined}
+                      onValueChange={(value) => {
+                        if (value === '__create_contact__') {
+                          setContactDrawerOpen(true)
+                          return
+                        }
+                        if (!localCustomer) return
+                        const contactId = parseInt(value)
+                        const contactIndex = localCustomer.contactIds?.indexOf(contactId)
+                        if (contactIndex !== undefined && contactIndex >= 0) {
+                          const contact = {
+                            id: contactId,
+                            name: localCustomer.names[contactIndex],
+                            email: localCustomer.emails[contactIndex],
+                            phone: localCustomer.phones[contactIndex],
+                            role: localCustomer.roles[contactIndex]
+                          }
+                          setLocalContact(contact)
+                        } else if (value && value !== '__create_contact__') {
+                          // If value doesn't match any contact but isn't empty or the create option, keep current selection
+                          // This prevents accidental deselection
+                        }
+                      }}
+                      placeholder="Search contacts..."
+                      emptyMessage="No contacts found"
+                    />
                   </FieldControl>
                   <FieldDescription>Primary contact for this project</FieldDescription>
                 </Field>
