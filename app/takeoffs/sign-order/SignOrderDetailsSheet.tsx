@@ -371,11 +371,17 @@ export function SignOrderDetailsSheet({
                               onSelect={(selectedItem) => {
                                 if (selectedItem.value === '__create_customer__') {
                                   setCustomerDrawerOpen(true)
+                                  return
+                                }
+                                if (!customers || customers.length === 0) {
+                                  toast.error('Customers not loaded yet. Please try again.')
+                                  return
+                                }
+                                const customer = customers.find(c => c.id.toString() === selectedItem.value)
+                                if (customer) {
+                                  setLocalCustomer(customer)
                                 } else {
-                                  const customer = customers.find(c => c.id.toString() === selectedItem.value)
-                                  if (customer) {
-                                    setLocalCustomer(customer)
-                                  }
+                                  toast.error('Customer not found. Please try again.')
                                 }
                               }}
                             >
