@@ -54,7 +54,7 @@ const Combobox = React.forwardRef<
   const selectedItem = items.find((item) => item.value === value)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false} >
       <PopoverTrigger asChild>
         <Button
           ref={ref}
