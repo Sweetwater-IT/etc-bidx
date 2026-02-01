@@ -44,8 +44,8 @@ export function ChooseCustomerComponent({
       items.unshift({
         value: "__add_new__",
         label: "+ Add new customer",
-        customer: null,
-      })
+        isAddNew: true, // Use a different property to identify this option
+      } as ComboboxItem)
     }
 
     return items
