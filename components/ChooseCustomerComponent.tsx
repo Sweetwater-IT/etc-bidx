@@ -33,22 +33,22 @@ export function ChooseCustomerComponent({
 
   // Convert customers to combobox items
   const customerItems: ComboboxItem[] = React.useMemo(() => {
-    const items = customers.map(customer => ({
+    // Create customer items
+    const customerItems = customers.map(customer => ({
       value: customer.id.toString(),
       label: customer.displayName,
       customer: customer, // Store the full customer object
     }))
 
-    // Add "Add new customer" option if enabled
-    if (showAddNew) {
-      items.unshift({
-        value: "__add_new__",
-        label: "+ Add new customer",
-        isAddNew: true, // Use a different property to identify this option
-      } as ComboboxItem)
-    }
+    // Create "Add new customer" item if enabled
+    const addNewItem = showAddNew ? [{
+      value: "__add_new__",
+      label: "+ Add new customer",
+      isAddNew: true, // Use a different property to identify this option
+    }] : []
 
-    return items
+    // Combine arrays - add new option first, then customers
+    return [...addNewItem, ...customerItems]
   }, [customers, showAddNew])
 
   const handleValueChange = (selectedValue: string) => {
