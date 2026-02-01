@@ -5,12 +5,64 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { ACTIVE_JOBS_COLUMNS } from '../../data/active-jobs';
 import { DataTable } from '../mocks/components/DataTable';
-import {
-  mockActiveJobs,
-  mockSegments,
-  mockSegmentCounts,
-  mockPaginationProps
-} from '../mocks/data/activeJobsMockData';
+// import {
+//   mockActiveJobs,
+//   mockSegments,
+//   mockSegmentCounts,
+//   mockPaginationProps
+// } from '../mocks/data/activeJobsMockData';
+
+// Inline mock data since the original file was removed
+const mockActiveJobs = [
+  {
+    id: 1,
+    jobNumber: 'W-PD-2025001',
+    branch: 'West',
+    contractNumber: 'C123456',
+    contractor: 'ABC Construction',
+    county: 'Philadelphia',
+    status: 'active'
+  },
+  {
+    id: 2,
+    jobNumber: 'T-PD-2025002',
+    branch: 'Turbotville',
+    contractNumber: 'C123457',
+    contractor: 'XYZ Builders',
+    county: 'Dauphin',
+    status: 'active'
+  },
+  {
+    id: 3,
+    jobNumber: 'H-PD-2025003',
+    branch: 'Hatfield',
+    contractNumber: 'C123458',
+    contractor: 'DEF Contractors',
+    county: 'Lehigh',
+    status: 'active'
+  }
+];
+
+const mockSegments = [
+  { label: 'All', value: 'all' },
+  { label: 'West', value: 'west' },
+  { label: 'Turbotville', value: 'turbotville' },
+  { label: 'Hatfield', value: 'hatfield' }
+];
+
+const mockSegmentCounts = {
+  all: 3,
+  west: 1,
+  turbotville: 1,
+  hatfield: 1
+};
+
+const mockPaginationProps = {
+  pageCount: 1,
+  pageIndex: 0,
+  pageSize: 10,
+  totalCount: 3
+};
 
 global.fetch = jest.fn();
 jest.mock('sonner', () => ({
