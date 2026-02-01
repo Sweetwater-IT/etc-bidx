@@ -72,7 +72,12 @@ const Combobox = React.forwardRef<
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <Command>
+        <Command
+          onValueChange={(selectedValue) => {
+            onValueChange?.(selectedValue)
+            setOpen(false)
+          }}
+        >
           <CommandInput placeholder={searchPlaceholder} />
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           <CommandList>
