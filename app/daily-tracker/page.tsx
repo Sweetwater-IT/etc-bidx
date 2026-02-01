@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createBrowserClient } from "@supabase/ssr"
+import { supabaseSignAnalytics } from "@/lib/supabase-sign-analytics"
 import { dateToLocalDateString } from "@/utils/daily-tracker/date-utils" // Import dateToLocalDateString
 import { localDateStringToDate } from "@/utils/daily-tracker/date-utils" // Declare localDateStringToDate
 
@@ -144,14 +145,9 @@ export default function DailyTrackerDashboard() {
 
   const confirmDelete = async () => {
     if (!dateToDelete) return
-
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
+    
     try {
-      const { error } = await supabase
+      const { error } = await supabaseSignAnalytics
         .from("sign_production")
         .delete()
         .eq("date", dateToDelete)
