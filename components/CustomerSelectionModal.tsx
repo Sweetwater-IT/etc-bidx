@@ -60,7 +60,7 @@ export function CustomerSelectionModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="border-b pb-4">
           <DialogTitle>Select Customer</DialogTitle>
         </DialogHeader>
 
@@ -102,53 +102,54 @@ export function CustomerSelectionModal({
           )}
         </div>
 
-        {/* Customer List */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="space-y-2 py-2">
-            {filteredCustomers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? "No customers found matching your search." : "No customers available."}
-              </div>
-            ) : (
-              filteredCustomers.map((customer) => (
+        {/* Customer List - Table Style */}
+        <div className="flex-1 min-h-0 overflow-y-auto border rounded-md">
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchQuery ? "No customers found matching your search." : "No customers available."}
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredCustomers.map((customer, index) => (
                 <div
                   key={customer.id}
                   onClick={() => handleSelectCustomer(customer)}
                   className={cn(
-                    "p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50",
-                    selectedCustomer?.id === customer.id && "bg-primary/5 border-primary"
+                    "px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50 flex items-center justify-between",
+                    index % 2 === 0 ? "bg-background" : "bg-muted/20",
+                    selectedCustomer?.id === customer.id && "bg-primary/5"
                   )}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-sm truncate">
-                          {customer.displayName || customer.name}
-                        </h3>
-                        {selectedCustomer?.id === customer.id && (
-                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        )}
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">
+                        {customer.displayName || customer.name}
+                      </span>
+                      {selectedCustomer?.id === customer.id && (
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex gap-4 mt-1">
                       {customer.emails && customer.emails.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                        <span className="text-xs text-muted-foreground truncate">
                           {customer.emails[0]}
-                        </p>
+                        </span>
                       )}
                       {customer.mainPhone && (
-                        <p className="text-xs text-muted-foreground truncate">
+                        <span className="text-xs text-muted-foreground">
                           {customer.mainPhone}
-                        </p>
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4 border-t mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
