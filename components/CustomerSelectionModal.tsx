@@ -55,7 +55,7 @@ export function CustomerSelectionModal({
     setSearchQuery("")
   }
 
-  const formatLastOrdered = (dateString: string | null) => {
+  const formatLastOrdered = (dateString: string | null | undefined) => {
     if (!dateString) return "-"
     try {
       const date = new Date(dateString)
