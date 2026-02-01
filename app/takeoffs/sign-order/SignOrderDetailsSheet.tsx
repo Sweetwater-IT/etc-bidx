@@ -49,8 +49,6 @@ import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
-import { ChooseRequestor } from '@/components/ChooseRequestor'
-import { ChooseCustomer } from '@/components/ChooseCustomer'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -120,8 +118,9 @@ export function SignOrderDetailsSheet({
   const [localStartDate, setLocalStartDate] = useState(adminInfo.startDate)
   const [localEndDate, setLocalEndDate] = useState(adminInfo.endDate)
 
-  // Popover states (only for contact dropdown)
-  const [openCustomerContact, setOpenCustomerContact] = useState(false)
+  // Popover states
+  const [openRequestor, setOpenRequestor] = useState(false)
+  const [openCustomer, setOpenCustomer] = useState(false)
 
   // Add state for CustomerDrawer
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
@@ -133,6 +132,9 @@ export function SignOrderDetailsSheet({
 
   // Add state for selected contact
   const [localContact, setLocalContact] = useState<any | null>(null)
+
+  // Add state for contact popover open/close
+  const [openCustomerContact, setOpenCustomerContact] = useState(false)
 
   // Add state for contact creation drawer
   const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
@@ -334,11 +336,49 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Requestor<span className='text-red-600'>*</span>
                   </Label>
-                  <ChooseRequestor
-                    users={allUsers}
-                    value={localRequestor}
-                    onChange={setLocalRequestor}
-                  />
+                  <Popover open={openRequestor} onOpenChange={setOpenRequestor}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        role='combobox'
+                        aria-expanded={openRequestor}
+                        className='w-full justify-between'
+                      >
+                        {localRequestor
+                          ? localRequestor.name
+                          : 'Select requestor...'}
+                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
+                      <Command>
+                        <CommandInput placeholder='Search requestor...' />
+                        <CommandEmpty>No requestor found.</CommandEmpty>
+                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
+                          {allUsers.map(user => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.name}
+                              onSelect={() => {
+                                setLocalRequestor(user)
+                                setOpenRequestor(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  localRequestor?.id === user.id
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
+                                )}
+                              />
+                              {user.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Branch */}
@@ -367,12 +407,63 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Customer <span className='text-red-600'>*</span>
                   </Label>
-                  <ChooseCustomer
-                    customers={customers}
-                    value={localCustomer}
-                    onChange={setLocalCustomer}
-                    onAddNew={() => setCustomerDrawerOpen(true)}
-                  />
+                  <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        role='combobox'
+                        aria-expanded={openCustomer}
+                        className='w-full justify-between'
+                      >
+                        <span className='truncate'>
+                          {localCustomer
+                            ? localCustomer.displayName
+                            : 'Select contractor...'}
+                        </span>
+                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
+                      <Command>
+                        <CommandInput placeholder='Search contractor...' />
+                        <CommandEmpty>No contractor found.</CommandEmpty>
+                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
+                          {/* Add new customer button */}
+                          <CommandItem
+                            onSelect={() => {
+                              setOpenCustomer(false)
+                              setCustomerDrawerOpen(true)
+                            }}
+                            value='__add_new__'
+                            className='font-medium text-primary cursor-pointer'
+                          >
+                            + Add new customer
+                          </CommandItem>
+                          {/* List customers */}
+                          {customers.map(customer => (
+                            <CommandItem
+                              key={customer.id}
+                              value={customer.name}
+                              onSelect={() => {
+                                setLocalCustomer(customer)
+                                setOpenCustomer(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  localCustomer?.id === customer.id
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
+                                )}
+                              />
+                              {customer.displayName}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
