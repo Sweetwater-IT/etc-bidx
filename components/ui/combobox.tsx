@@ -80,11 +80,7 @@ const Combobox = React.forwardRef<
               {items.map((item) => (
                 <CommandItem
                   key={item.value}
-                  value={item.label}
-                  onSelect={() => {
-                    onValueChange?.(item.value === value ? "" : item.value)
-                    setOpen(false)
-                  }}
+                  value={item.value}
                 >
                   <Check
                     className={cn(
