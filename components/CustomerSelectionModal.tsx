@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import { Search, Plus, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -71,42 +72,46 @@ export function CustomerSelectionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="border-b pb-4">
-          <DialogTitle>Select Customer</DialogTitle>
-        </DialogHeader>
-
-        {/* Add New Customer Button */}
-        <div className="flex justify-start">
-          {onAddNewCustomer && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false)
-                onAddNewCustomer()
-              }}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add New Customer
-            </Button>
-          )}
+      <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+        <div className="flex flex-col gap-2 relative z-10 bg-background">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Select Customer</DialogTitle>
+          </DialogHeader>
+          <Separator className="w-full -mt-2" />
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search customers by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            autoFocus
-          />
-        </div>
+        <div className="mt-4 space-y-6 px-6 h-full overflow-y-auto">
+          {/* Add New Customer Button */}
+          <div className="flex justify-start">
+            {onAddNewCustomer && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false)
+                  onAddNewCustomer()
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Customer
+              </Button>
+            )}
+          </div>
 
-        {/* Customer Table */}
-        <div className="flex-1 min-h-0 overflow-y-auto border rounded-md">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search customers by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              autoFocus
+            />
+          </div>
+
+          {/* Customer Table */}
+          <div className="flex-1 min-h-0 overflow-y-auto border rounded-md">
           <table className="w-full">
             <thead className="bg-muted/50 border-b">
               <tr>
@@ -144,9 +149,11 @@ export function CustomerSelectionModal({
                             )}
                           </div>
                           <div className="flex gap-4 mt-1">
-                            {customer.emails && customer.emails.length > 0 && (
+                            {(customer.address || customer.city || customer.state || customer.zip) && (
                               <span className="text-xs text-muted-foreground truncate">
-                                {customer.emails[0]}
+                                {[customer.address, customer.city, customer.state, customer.zip]
+                                  .filter(Boolean)
+                                  .join(", ")}
                               </span>
                             )}
                             {customer.mainPhone && (
@@ -168,10 +175,11 @@ export function CustomerSelectionModal({
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t mt-4">
+        <Separator />
+        <div className="flex justify-between items-center p-4 px-6">
           <div>
             {selectedCustomer && (
               <Button
