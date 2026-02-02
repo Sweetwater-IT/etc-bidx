@@ -80,7 +80,8 @@ export function CustomerSelectionModal({
           <Separator className="w-full -mt-2" />
         </div>
 
-        <div className="mt-4 space-y-6 px-6 h-full overflow-y-auto">
+        {/* Fixed Controls Section */}
+        <div className="px-6 py-4 space-y-4 bg-background border-b">
           {/* Add New Customer Button */}
           <div className="flex justify-start">
             {onAddNewCustomer && (
@@ -109,9 +110,10 @@ export function CustomerSelectionModal({
               autoFocus
             />
           </div>
+        </div>
 
-          {/* Customer Table */}
-          <div className="flex-1 min-h-0 overflow-y-auto border rounded-md">
+        {/* Scrollable Customer Table */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
           <table className="w-full">
             <thead className="bg-muted/50 border-b">
               <tr>
@@ -175,7 +177,6 @@ export function CustomerSelectionModal({
               )}
             </tbody>
           </table>
-          </div>
         </div>
 
         <Separator />
