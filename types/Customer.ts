@@ -17,4 +17,5 @@ export interface Customer {
     customerNumber: number
     mainPhone: string
     paymentTerms: string
+    lastOrdered?: string | null
 }

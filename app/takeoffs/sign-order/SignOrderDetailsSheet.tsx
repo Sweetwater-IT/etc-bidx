@@ -49,6 +49,7 @@ import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -121,6 +122,9 @@ export function SignOrderDetailsSheet({
   // Popover states
   const [openRequestor, setOpenRequestor] = useState(false)
   const [openCustomer, setOpenCustomer] = useState(false)
+
+  // Customer modal state
+  const [customerModalOpen, setCustomerModalOpen] = useState(false)
 
   // Add state for CustomerDrawer
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
@@ -296,7 +300,7 @@ export function SignOrderDetailsSheet({
           <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
             {/* Job Information Section */}
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Informationn</h3>
+              <h3 className='text-lg font-semibold'>Job Information</h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* <div className="space-y-2">
@@ -407,63 +411,17 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Customer <span className='text-red-600'>*</span>
                   </Label>
-                  <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openCustomer}
-                        className='w-full justify-between'
-                      >
-                        <span className='truncate'>
-                          {localCustomer
-                            ? localCustomer.displayName
-                            : 'Select contractor...'}
-                        </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search contractor...' />
-                        <CommandEmpty>No contractor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new customer button */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomer(false)
-                              setCustomerDrawerOpen(true)
-                            }}
-                            value='__add_new__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new customer
-                          </CommandItem>
-                          {/* List customers */}
-                          {customers.map(customer => (
-                            <CommandItem
-                              key={customer.id}
-                              value={customer.name}
-                              onSelect={() => {
-                                setLocalCustomer(customer)
-                                setOpenCustomer(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localCustomer?.id === customer.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {customer.displayName}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Button
+                    variant='outline'
+                    onClick={() => setCustomerModalOpen(true)}
+                    className='w-full justify-start text-left font-normal'
+                  >
+                    <span className='truncate'>
+                      {localCustomer
+                        ? localCustomer.displayName
+                        : 'Select customer...'}
+                    </span>
+                  </Button>
                 </div>
                 {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
@@ -760,6 +718,18 @@ export function SignOrderDetailsSheet({
           </Drawer>
         </CustomerProvider>
       )}
+      {/* Customer Selection Modal */}
+      <CustomerSelectionModal
+        open={customerModalOpen}
+        onOpenChange={setCustomerModalOpen}
+        customers={customers}
+        selectedCustomer={localCustomer}
+        onSelectCustomer={setLocalCustomer}
+        onAddNewCustomer={() => {
+          setCustomerModalOpen(false)
+          setCustomerDrawerOpen(true)
+        }}
+      />
     </>
   )
 }

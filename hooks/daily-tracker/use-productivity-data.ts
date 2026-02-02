@@ -2,15 +2,11 @@
 
 import { useState, useEffect } from "react"
 import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
-import { createBrowserClient } from "@supabase/ssr"
+import { supabaseSignAnalytics } from "@/lib/supabase-sign-analytics"
 
 export function useProductivityData() {
   const [data, setData] = useState<ProductivityEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -22,7 +18,7 @@ export function useProductivityData() {
     let hasMore = true
 
     while (hasMore) {
-      const { data: entries, error } = await supabase
+      const { data: entries, error } = await supabaseSignAnalytics
         .from("sign_production")
         .select("*")
         .order("date", { ascending: false })
@@ -73,7 +69,7 @@ export function useProductivityData() {
       date: dateWithTimezone
     }
 
-    const { error } = await supabase.from("sign_production").insert([entryToInsert])
+    const { error } = await supabaseSignAnalytics.from("sign_production").insert([entryToInsert])
 
     if (error) {
       console.error("[v0] Error adding entry:", error)
@@ -85,8 +81,7 @@ export function useProductivityData() {
   }
 
   const importCsv = async (entries: ProductivityEntry[]) => {
-    const { error } = await supabase.from("sign_production").insert(entries)
-
+    const { error } = await supabaseSignAnalytics.from("sign_production").insert(entries)
     if (error) {
       console.error("Error importing CSV:", error)
       throw error

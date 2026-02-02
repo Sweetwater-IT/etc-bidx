@@ -16,12 +16,21 @@ export const useCustomers = create<CustomersState>((set, get) => ({
     getCustomers: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/contractors?ascending=true&limit=1000`);
-            if (!response.ok) throw new Error('Failed to fetch');
+            // Fetch customers and last ordered data in parallel
+            const [customersResponse, lastOrderedResponse] = await Promise.all([
+                fetch(`/api/contractors?ascending=true&limit=1000`),
+                fetch(`/api/customers/last-ordered`)
+            ]);
 
-            const result = await response.json();
+            if (!customersResponse.ok) throw new Error('Failed to fetch customers');
+            if (!lastOrderedResponse.ok) throw new Error('Failed to fetch last ordered data');
 
-            const customers: Customer[] = (result.data || []).map((customer: any) => ({
+            const customersResult = await customersResponse.json();
+            const lastOrderedResult = await lastOrderedResponse.json();
+
+            const lastOrderedMap: Record<number, string> = lastOrderedResult.data || {};
+
+            const customers: Customer[] = (customersResult.data || []).map((customer: any) => ({
                 id: customer.id,
                 name: customer.name,
                 displayName: customer.display_name?.trim() || customer.name,
@@ -39,7 +48,8 @@ export const useCustomers = create<CustomersState>((set, get) => ({
                 zip: customer.zip || '',
                 customerNumber: customer.customer_number || 0,
                 mainPhone: customer.main_phone || '',
-                paymentTerms: customer.payment_terms || ''
+                paymentTerms: customer.payment_terms || '',
+                lastOrdered: lastOrderedMap[customer.id] || null
             }));
 
             set({ customers, isLoading: false });

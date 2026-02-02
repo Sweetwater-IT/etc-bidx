@@ -12,17 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useToast } from "@/hooks/daily-tracker/use-toast"
+import { toast } from "sonner"
 import { DataEntryForm } from "@/components/daily-tracker/data-entry-form"
 import { MetricsDisplay } from "@/components/daily-tracker/metrics-display"
 import { DateRangePicker } from "@/components/daily-tracker/date-range-picker"
@@ -38,7 +28,6 @@ import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
 export default function DailyTrackerDashboard() {
   const router = useRouter()
   const { data, addEntry, importCsv, getLastEntryDate, isLoading, refetch } = useProductivityData()
-  const { toast } = useToast()
   const [showEntryForm, setShowEntryForm] = useState(false)
   const [showCsvImport, setShowCsvImport] = useState(false)
   const [showDailyEntry, setShowDailyEntry] = useState(false) // Declare showDailyEntry
@@ -158,29 +147,18 @@ export default function DailyTrackerDashboard() {
 
       if (error) {
         console.error("[v0] Error deleting entries:", error)
-        toast({
-          title: "Error",
-          description: "Failed to delete entries. Please try again.",
-          variant: "destructive",
-        })
+        toast.error("Failed to delete entries. Please try again.")
         return
       }
 
       // Refetch data
       refetch()
-      toast({
-        title: "Success",
-        description: "Entries deleted successfully",
-      })
+      toast.success("Entries deleted successfully")
       setDeleteDialogOpen(false)
       setDateToDelete(null)
     } catch (error) {
       console.error("[v0] Error in confirmDelete:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete entries. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to delete entries. Please try again.")
     }
   }
 
@@ -554,22 +532,24 @@ export default function DailyTrackerDashboard() {
           </Tabs>
 
           {/* Delete Confirmation Dialog */}
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete entries for this day?</AlertDialogTitle>
-                <AlertDialogDescription>
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete entries for this day?</DialogTitle>
+                <DialogDescription>
                   {dateToDelete && `Are you sure you want to delete all entries from ${localDateStringToDate(dateToDelete).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}? This action cannot be undone.`}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/90">
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/90">
                   Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </SidebarInset>
     </SidebarProvider>

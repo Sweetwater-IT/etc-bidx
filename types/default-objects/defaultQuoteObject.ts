@@ -69,7 +69,7 @@ export const defaultCustomer: Customer = {
   zip: "",
   customerNumber: 0,
   mainPhone: "",
-  paymentTerms: "",
+  paymentTerms: ""
 };
 
 

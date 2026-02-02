@@ -162,7 +162,7 @@ export function ActiveBidDetailsSheet({
         zip: customer.zip || "",
         customerNumber: customer.customer_number || 0,
         mainPhone: customer.main_phone || "",
-        paymentTerms: customer.payment_terms || "",
+        paymentTerms: customer.payment_terms || ""
       }));
 
       setCustomers(formattedCustomers);
