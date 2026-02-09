@@ -73,6 +73,7 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                         {renderField("customer_phone", "Customer Phone", "text", true)}
                         {renderField("customer_address", "Customer Address", "text", true)}
                         {renderField("purchase_order", "Purchase Order #")}
+                        {renderField("customer_job_number", "Customer Job Number")}
                     </div>
                 </SectionBox>
 
@@ -80,6 +81,7 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                     data={data}
                     setData={setData}
                     editAll={editAll}
+                    showldJobNumber={true}
                     onSaveData={(updatedData) => {
                         setData({
                             ...data,
@@ -87,6 +89,7 @@ const RenderSaleQuoteFields = ({ data, setData, editAll = false }: IRenderSaleQu
                             etc_poc_email: updatedData.etc_poc_email,
                             etc_poc_phone_number: updatedData.etc_poc_phone_number,
                             etc_branch: updatedData.etc_branch,
+                            etc_job_number: updatedData.etc_job_number,
                         });
                     }}
                 />

@@ -168,11 +168,13 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p><span className="font-semibold">Customer:</span> {joinWithSlash(data.customer_name, data.customer_address)}</p>
               <p><span className="font-semibold">Customer Contact:</span> {joinWithSlash(data.customer_contact, data.customer_email, data.customer_phone)}</p>
               <p><span className="font-semibold">Purchase Order #:</span> {data.purchase_order || ''}</p>
+              <p><span className="font-semibold">Customer Job #:</span> {data.customer_job_number || ''}</p>
             </div>
             <div className="p-1">
               <p className='font-extrabold mb-2'>ETC Information</p>
               <p><span className="font-semibold">Point of Contact:</span> {joinWithSlash(data.etc_point_of_contact, data.etc_poc_email, data.etc_poc_phone_number)}</p>
               <p><span className="font-semibold">Branch:</span> {data.etc_branch || ''}</p>
+              <p><span className="font-semibold">ETC Job Number:</span> {data.etc_job_number || ''}</p>
             </div>
           </section>
         );
