@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import PageHeaderWithSaving from '@/components/PageContainer/PageHeaderWithSaving'
 import { pdf } from '@react-pdf/renderer'
 import BuildTakeoffPDF from './BuildTakeoffPDF'
+import BuildTakeoffPreview from './BuildTakeoffPreview'
 import { useRouter } from 'next/navigation'
 import { useCustomers } from '@/hooks/use-customers'
 
@@ -164,9 +165,9 @@ export default function BuildTakeoffContent() {
         }
       />
 
-      <div className="flex gap-6 p-6 max-w-full">
-        {/* Main Form Column */}
-        <div className="flex-1 space-y-6">
+      <div className="flex gap-4 p-6 pt-0 pr-0 max-w-full h-[calc(100vh-80px)] overflow-hidden">
+        {/* Form Column (Left) */}
+        <div className="flex w-1/2 flex-col overflow-y-auto px-2">
           {/* Header Section */}
           <Card>
             <CardHeader>
@@ -373,6 +374,19 @@ export default function BuildTakeoffContent() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Preview Column (Right) */}
+        <div className="w-1/2 overflow-y-auto">
+          <div className="bg-[#F4F5F7] p-6 rounded-lg sticky">
+            <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
+            <div className="min-h-[1000px] overflow-y-auto bg-white p-4 mt-4 border rounded-md">
+              <BuildTakeoffPreview
+                header={header}
+                items={items}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
