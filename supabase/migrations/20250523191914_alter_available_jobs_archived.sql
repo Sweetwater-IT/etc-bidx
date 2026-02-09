@@ -1,0 +1,1 @@
+ALTER TABLE archived_available_jobs ADD COLUMN state_route text;
