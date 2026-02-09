@@ -368,7 +368,7 @@ export default function BuildTakeoffContent() {
               </Table>
               {items.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  No items added yet. Click "Add Item" to get started.
+                  No items added yet. Click Add Item to get started.
                 </div>
               )}
             </CardContent>
