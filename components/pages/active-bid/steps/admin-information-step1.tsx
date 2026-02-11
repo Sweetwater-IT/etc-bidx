@@ -48,6 +48,7 @@ const step: Step = {
     { name: "endDate", label: "End Date*", type: "date", placeholder: "Select date" },
     { name: "srRoute", label: "SR Route*", type: "text", placeholder: "SR Route" },
     { name: "dbePercentage", label: "DBE %*", type: "text", placeholder: "DBE %" },
+    { name: "etcRep", label: "ETC Rep", type: "select", placeholder: "Choose ETC Rep", options: ['Rad', 'Ken', 'Turner', 'Redden', 'Nelson'] },
     { name: "workType", label: "Work Type", type: "select", placeholder: "Choose", options: ['RATED', 'NON-RATED'] },
     { name: "oneWayTravelTime", label: "One Way Travel Time*", type: "number" },
     { name: "oneWayMileage", label: "One Way Mileage*", type: "number", placeholder: "One Way Mileage" },
@@ -155,6 +156,7 @@ const AdminInformationStep1 = () => {
     county: false,
     estimator: false,
     owner: false,
+    etcRep: false,
   });
 
   // Function to check if all rates are acknowledged and have values
@@ -445,6 +447,14 @@ const AdminInformationStep1 = () => {
     setOpenStates(prev => ({ ...prev, owner: false }));
   };
 
+  const handleEtcRepChange = (etcRepName: string) => {
+    dispatch({
+      type: 'UPDATE_ADMIN_DATA',
+      payload: { key: 'etcRep', value: etcRepName }
+    });
+    setOpenStates(prev => ({ ...prev, etcRep: false }));
+  };
+
   const handleRateChange = (field: string, value: string) => {
     const numValue = Number(value);
     if (field === "laborRate") {
@@ -660,6 +670,43 @@ const AdminInformationStep1 = () => {
                                   )}
                                 />
                                 {owner.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : field.name === "etcRep" ? (
+                    <Popover open={openStates.etcRep} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, etcRep: open }))}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openStates.etcRep}
+                          className="w-full justify-between"
+                        >
+                          {adminData.etcRep || "Select ETC rep..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search ETC rep..." />
+                          <CommandEmpty>No ETC rep found.</CommandEmpty>
+                          <CommandGroup>
+                            {field.options?.map((option) => (
+                              <CommandItem
+                                key={option}
+                                value={option}
+                                onSelect={() => handleEtcRepChange(option)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    adminData.etcRep === option ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {option}
                               </CommandItem>
                             ))}
                           </CommandGroup>

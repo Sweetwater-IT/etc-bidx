@@ -14,9 +14,9 @@ export type AdminData = {
     srRoute: string,
     location: string,
     jobNumber?: string;
-        
-    branch?: string;         
-    paymentTerms?: string;  
+
+    branch?: string;
+    paymentTerms?: string;
     dbe: string,
     job_id?: number | null;
     startDate: Date | null,
@@ -30,7 +30,8 @@ export type AdminData = {
     fuelCostPerGallon?: number;
     emergencyJob: boolean;
     rated: 'RATED' | 'NON-RATED';
-    emergencyFields: EmergencyFields
+    emergencyFields: EmergencyFields;
+    etcRep: string;
 }
 
 export type EmergencyFields = {
