@@ -613,7 +613,8 @@ export async function POST(request: NextRequest) {
         fuel_cost_per_gallon: adminData.fuelCostPerGallon,
         emergency_job: adminData.emergencyJob,
         rated: adminData.rated,
-        emergency_fields: adminData.emergencyFields
+        emergency_fields: adminData.emergencyFields,
+        etc_rep: adminData.etcRep
       }, {
         onConflict: 'bid_estimate_id' // Specify unique constraint
       });

@@ -36,6 +36,7 @@ function mapAdminDataEntryToAdminData(entry: AdminDataEntry | null): AdminData {
         emergencyJob: entry.emergency_job || false,
         rated: entry.rated || "RATED",
         emergencyFields: entry.emergency_fields || {},
+        etcRep: entry.etc_rep || "",
         job_id: entry.job_id,
     };
 }

@@ -90,6 +90,15 @@ const AdminInfoViewOnly = () => {
 
             <div className="flex flex-col">
                 <label className="text-sm font-semibold">
+                    ETC Rep
+                </label>
+                <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
+                    {adminData.etcRep || "-"}
+                </div>
+            </div>
+
+            <div className="flex flex-col">
+                <label className="text-sm font-semibold">
                     Owner
                 </label>
                 <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
