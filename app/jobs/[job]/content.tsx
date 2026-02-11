@@ -629,6 +629,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     },
                 branch: e.admin_data?.county?.branch ?? '',
                 estimator: e.admin_data.estimator || 'Unknown',
+                etcRep: e.admin_data.etcRep || 'Unknown',
                 status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
                 division: e.admin_data.division,
                 lettingDate: e.admin_data.lettingDate ? e.admin_data.lettingDate : "",
