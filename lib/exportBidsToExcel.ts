@@ -131,7 +131,7 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
     // Create columns including custom and other rental items
     const columns: Partial<ExcelJS.Column>[] = [
         { header: 'Status', key: 'status', width: 15 },
-        { header: 'Letting Date', key: 'bidDate', width: 12 },
+        { header: 'Letting Date', key: 'bidDate', width: 12, style: { numFmt: 'mm/dd/yyyy' } },
         { header: 'Contract Number', key: 'contractNumber', width: 25 },
         { header: 'Contractor', key: 'contractor', width: 20 },
         { header: 'Subcontractor', key: 'subcontractor', width: 20 },
@@ -140,8 +140,8 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
         { header: 'Branch', key: 'branch', width: 15 },
         { header: 'Division', key: 'division', width: 15 },
         { header: 'Estimator', key: 'estimator', width: 15 },
-        { header: 'Start Date', key: 'start_date', width: 12 },
-        { header: 'End Date', key: 'end_date', width: 12 },
+        { header: 'Start Date', key: 'start_date', width: 12, style: { numFmt: 'mm/dd/yyyy' } },
+        { header: 'End Date', key: 'end_date', width: 12, style: { numFmt: 'mm/dd/yyyy' } },
         { header: 'Project Days', key: 'project_days', width: 12 },
         { header: 'Base Rate', key: 'base_rate', width: 12 },
         { header: 'Fringe Rate', key: 'fringe_rate', width: 12 },
@@ -270,7 +270,7 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
 
         const rowData = {
             status: dataRow.status,
-            bidDate: formatDateForExcel(mappedAdminData.lettingDate),
+            bidDate: mappedAdminData.lettingDate && !isNaN(mappedAdminData.lettingDate.getTime()) ? mappedAdminData.lettingDate : null,
             contractNumber: mappedAdminData.contractNumber,
             contractor: dataRow.contractor_name || '-',
             subcontractor: dataRow.subcontractor_name || '-',
@@ -279,8 +279,8 @@ export const exportBidsToExcel = async (data: EstimateData[]) => {
             branch: mappedAdminData.county.branch,
             division: mappedAdminData.division,
             estimator: mappedAdminData.estimator ?? '-',
-            start_date: formatDateForExcel(mappedAdminData.startDate),
-            end_date: formatDateForExcel(mappedAdminData.endDate),
+            start_date: mappedAdminData.startDate && !isNaN(mappedAdminData.startDate.getTime()) ? mappedAdminData.startDate : null,
+            end_date: mappedAdminData.endDate && !isNaN(mappedAdminData.endDate.getTime()) ? mappedAdminData.endDate : null,
             project_days: dataRow.total_days ?? 0,
             base_rate: mappedAdminData.county.laborRate,
             fringe_rate: mappedAdminData.county.fringeRate,
