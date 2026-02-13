@@ -261,6 +261,7 @@ export async function GET(request: NextRequest) {
         id, status, total_revenue, total_cost, total_gross_profit, created_at, archived, deleted,
         admin_data->>contractNumber as contract_number,
         admin_data->>estimator as estimator,
+        admin_data->>etcRep as etc_rep,
         admin_data->>division as division,
         admin_data->>owner as owner,
         admin_data->county->>name as county,
@@ -426,6 +427,7 @@ export async function GET(request: NextRequest) {
           archived: bid.archived, // FIXED: Include archived field
           contract_number: (actualStatus === 'draft' && !bid.admin_data?.contractNumber?.endsWith('-DRAFT')) ? bid.contract_number + '-DRAFT' : bid.contract_number,
           estimator: bid.estimator,
+          etc_rep: bid.etc_rep,
           division: bid.division,
           owner: bid.owner,
           county: bid.county,
