@@ -86,18 +86,22 @@ const CustomersContent = () => {
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
+      console.log('Fetching customer counts...');
       const response = await fetch('/api/customers?counts=true');
       const data = await response.json();
+      console.log('Customer counts response:', data);
 
       if (data.success) {
-        setSegmentCounts({
+        const newCounts = {
           all: data.counts.all || 0,
           '1%10': data.counts['1%10'] || 0,
           COD: data.counts.COD || 0,
           CC: data.counts.CC || 0,
           NET15: data.counts.NET15 || 0,
           NET30: data.counts.NET30 || 0
-        });
+        };
+        console.log('Setting segment counts:', newCounts);
+        setSegmentCounts(newCounts);
       } else {
         console.error("Error fetching segment counts:", data.error);
       }

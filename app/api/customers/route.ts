@@ -9,15 +9,21 @@ export async function GET(
 
   if (counts === 'true') {
     try {
+      console.log('API: Fetching customer counts...');
+
       // Get counts for each payment term
       const { data: allCount, error: allError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true });
 
+      console.log('API: All count query result:', { allCount, allError });
+
       const { data: onePercentTenCount, error: onePercentTenError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', '1%10 NET 30');
+
+      console.log('API: 1%10 count query result:', { onePercentTenCount, onePercentTenError });
 
       const { data: codCount, error: codError } = await supabase
         .from('contractors')
@@ -40,10 +46,11 @@ export async function GET(
         .eq('payment_terms', 'NET30');
 
       if (allError || onePercentTenError || codError || ccError || net15Error || net30Error) {
+        console.error('API: Count query errors:', { allError, onePercentTenError, codError, ccError, net15Error, net30Error });
         throw new Error('Error fetching counts');
       }
 
-      return NextResponse.json({
+      const countsResult = {
         success: true,
         counts: {
           all: allCount || 0,
@@ -53,7 +60,10 @@ export async function GET(
           NET15: net15Count || 0,
           NET30: net30Count || 0
         }
-      });
+      };
+
+      console.log('API: Returning counts:', countsResult);
+      return NextResponse.json(countsResult);
     } catch (error: any) {
       console.error('Error fetching customer counts:', error);
       return NextResponse.json(
