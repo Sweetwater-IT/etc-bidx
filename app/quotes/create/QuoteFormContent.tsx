@@ -685,16 +685,24 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }
 
   const handleSaveAndExit = async () => {
-    if (!quoteId) {
-      router.push('/quotes')
-    }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     try {
       setIsSaving(true)
-      const success = await autosave()
-      if (success) router.push('/quotes')
+      // If we have a quoteId, autosave. Otherwise, create a draft first.
+      if (quoteId) {
+        const success = await autosave()
+        if (success) router.push('/quotes')
+      } else {
+        // Create draft if we don't have an ID yet
+        const data = await handleCreateDraft()
+        if (data?.success) {
+          router.push('/quotes')
+        }
+      }
     } catch (error) {
       toast.error('Could not save draft before exiting: ' + error)
+      // Still navigate away even if save fails
+      router.push('/quotes')
     } finally {
       setIsSaving(false)
     }
