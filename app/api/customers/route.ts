@@ -1,6 +1,76 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(
+  request: NextRequest
+) {
+  const { searchParams } = new URL(request.url);
+  const counts = searchParams.get('counts');
+
+  if (counts === 'true') {
+    try {
+      // Get counts for each payment term
+      const { data: allCount, error: allError } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true });
+
+      const { data: onePercentTenCount, error: onePercentTenError } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_terms', '1%10 NET 30');
+
+      const { data: codCount, error: codError } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_terms', 'COD');
+
+      const { data: ccCount, error: ccError } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_terms', 'CC');
+
+      const { data: net15Count, error: net15Error } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_terms', 'NET15');
+
+      const { data: net30Count, error: net30Error } = await supabase
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('payment_terms', 'NET30');
+
+      if (allError || onePercentTenError || codError || ccError || net15Error || net30Error) {
+        throw new Error('Error fetching counts');
+      }
+
+      return NextResponse.json({
+        success: true,
+        counts: {
+          all: allCount || 0,
+          '1%10': onePercentTenCount || 0,
+          COD: codCount || 0,
+          CC: ccCount || 0,
+          NET15: net15Count || 0,
+          NET30: net30Count || 0
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching customer counts:', error);
+      return NextResponse.json(
+        { error: error.message || 'Internal server error' },
+        { status: 500 }
+      );
+    }
+  }
+
+  // If not requesting counts, return regular customer list
+  // (This would be the existing GET logic, but for now we'll just return an error)
+  return NextResponse.json(
+    { error: 'Not implemented' },
+    { status: 501 }
+  );
+}
+
 export async function POST(
   request: NextRequest
 ) {
