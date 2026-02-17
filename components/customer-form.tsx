@@ -30,7 +30,10 @@ type FormData = {
   zip: string
 
   // Bill To Address
-  bill_to_address: string
+  bill_to_street_address: string
+  bill_to_city: string
+  bill_to_state: string
+  bill_to_zip_code: string
   billToSameAsMain: boolean
 
   // Person Ordering
@@ -140,8 +143,38 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
   const customerName = watch("name");
 
   const onSubmit = async (data: FormData) => {
+    // Custom validation
+    const errors: string[] = [];
+
+    // Main address validation - at least one field required
+    const hasMainAddress = data.address.trim() || data.city.trim() || data.state.trim() || data.zip.trim();
+    if (!hasMainAddress) {
+      errors.push("Main address is required (at least one field must be filled)");
+    }
+
+    // Bill-to address validation - either checkbox checked OR bill-to fields filled
+    const hasBillToAddress = data.billToSameAsMain ||
+      (data.bill_to_street_address.trim() || data.bill_to_city.trim() || data.bill_to_state.trim() || data.bill_to_zip_code.trim());
+    if (!hasBillToAddress) {
+      errors.push("Bill-to address is required (check 'same as main address' or fill in bill-to fields)");
+    }
+
+    // Contact validation - person ordering OR primary contact OR same as checkbox required
+    const hasPersonOrdering = data.personOrderingName.trim();
+    const hasPrimaryContact = data.primaryContactName.trim() || data.primaryContactPhone.trim() || data.primaryContactEmail.trim();
+    const hasSameAsCheckbox = data.primaryContactSameAsPersonOrdering;
+
+    if (!hasPersonOrdering && !hasPrimaryContact && !hasSameAsCheckbox) {
+      errors.push("Contact information is required (person ordering, primary contact, or 'same as person ordering' checkbox)");
+    }
+
+    if (errors.length > 0) {
+      toast.error(errors.join(". "));
+      return;
+    }
+
     setIsSubmitting(true)
-    
+
     try {
       await createCustomer(data)
       toast.success('Customer created successfully!')
@@ -304,23 +337,78 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
                 <Checkbox
                   id="billToSameAsMain"
                   checked={billToSameAsMain}
-                  onCheckedChange={(checked) => setValue('billToSameAsMain', checked as boolean)}
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked as boolean;
+                    setValue('billToSameAsMain', isChecked);
+                    if (isChecked) {
+                      // Copy main address to bill-to address
+                      const mainAddress = watch('address');
+                      const mainCity = watch('city');
+                      const mainState = watch('state');
+                      const mainZip = watch('zip');
+                      setValue('bill_to_street_address', mainAddress);
+                      setValue('bill_to_city', mainCity);
+                      setValue('bill_to_state', mainState);
+                      setValue('bill_to_zip_code', mainZip);
+                    }
+                  }}
                 />
                 <Label htmlFor="billToSameAsMain" className="text-sm font-normal">
                   Same as main address
                 </Label>
               </div>
 
-              {!billToSameAsMain && (
-                <div className="space-y-2">
-                  <Label htmlFor="bill_to_address">Bill To Address</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="bill_to_street_address">Street Address</Label>
                   <Input
-                    id="bill_to_address"
-                    placeholder="Enter bill to address"
-                    {...register("bill_to_address")}
+                    id="bill_to_street_address"
+                    placeholder="Bill to street address"
+                    {...register("bill_to_street_address")}
+                    disabled={billToSameAsMain}
                   />
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_city">City</Label>
+                  <Input
+                    id="bill_to_city"
+                    placeholder="Bill to city"
+                    {...register("bill_to_city")}
+                    disabled={billToSameAsMain}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_state">State</Label>
+                  <Select
+                    value={watch('bill_to_state')}
+                    onValueChange={(value) => setValue('bill_to_state', value)}
+                    disabled={billToSameAsMain}
+                  >
+                    <SelectTrigger id="bill_to_state">
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_zip_code">ZIP Code</Label>
+                  <Input
+                    id="bill_to_zip_code"
+                    placeholder="Bill to ZIP"
+                    {...register("bill_to_zip_code")}
+                    disabled={billToSameAsMain}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

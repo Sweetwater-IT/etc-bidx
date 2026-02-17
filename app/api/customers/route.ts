@@ -17,9 +17,6 @@ export async function POST(
 
     const newId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
 
-    // Determine bill_to_address value
-    const billToAddress = body.billToSameAsMain ? body.address : body.bill_to_address;
-
     const { data, error } = await supabase
       .from('contractors')
       .insert([{
@@ -33,7 +30,10 @@ export async function POST(
         city: body.city,
         state: body.state,
         zip: body.zip,
-        bill_to_address: billToAddress,
+        bill_to_street_address: body.billToSameAsMain ? body.address : body.bill_to_street_address,
+        bill_to_city: body.billToSameAsMain ? body.city : body.bill_to_city,
+        bill_to_state: body.billToSameAsMain ? body.state : body.bill_to_state,
+        bill_to_zip_code: body.billToSameAsMain ? body.zip : body.bill_to_zip_code,
         payment_terms: body.payment_terms,
         would_like_to_apply_for_credit: body.would_like_to_apply_for_credit || false,
         created: new Date().toISOString(),
