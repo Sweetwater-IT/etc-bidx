@@ -17,6 +17,28 @@ export async function POST(
 
     const newId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
 
+    console.log('About to insert contractor with data:', {
+      id: newId,
+      name: body.name,
+      display_name: body.display_name,
+      customer_number: body.customer_number,
+      web: body.url,
+      main_phone: body.main_phone,
+      address: body.address,
+      city: body.city,
+      state: body.state,
+      zip: body.zip,
+      bill_to_street: body.billToSameAsMain ? body.address : body.bill_to_street_address,
+      bill_to_city: body.billToSameAsMain ? body.city : body.bill_to_city,
+      bill_to_state: body.billToSameAsMain ? body.state : body.bill_to_state,
+      bill_to_zip: body.billToSameAsMain ? body.zip : body.bill_to_zip_code,
+      payment_terms: body.payment_terms,
+      would_like_to_apply_for_credit: body.would_like_to_apply_for_credit || false,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      active: true
+    });
+
     const { data, error } = await supabase
       .from('contractors')
       .insert([{
@@ -43,7 +65,11 @@ export async function POST(
       .select()
       .single();
 
+    console.log('Insert result:', { data, error });
+
     if (error) throw error;
+
+    console.log('Contractor inserted successfully, ID:', data?.id);
 
     // Create contacts if provided
     const contactsToCreate: Array<{
