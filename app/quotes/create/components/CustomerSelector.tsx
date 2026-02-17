@@ -221,7 +221,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                                     }}
                                                 >
                                                     <Check className={cn("mr-2 h-4 w-4", selectedContact?.id === cc.id ? "opacity-100" : "opacity-0")} />
-                                                    {cc.name} - {cc.role} ({cc.email})
+                                                    {cc.name} - {cc.role}
                                                 </CommandItem>
                                             ))
                                         ) : (
