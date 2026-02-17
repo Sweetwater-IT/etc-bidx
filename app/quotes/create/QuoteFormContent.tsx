@@ -22,6 +22,7 @@ import RenderSaleQuoteFields from './components/RenderSaleQuoteFields';
 import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
 import { Check, Edit2, Loader, Loader2, X } from 'lucide-react';
+import { restorePointerEvents } from '@/lib/pointer-events-fix';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
@@ -691,17 +692,22 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       // If we have a quoteId, autosave. Otherwise, create a draft first.
       if (quoteId) {
         const success = await autosave()
-        if (success) router.push('/quotes')
+        if (success) {
+          restorePointerEvents()
+          router.push('/quotes')
+        }
       } else {
         // Create draft if we don't have an ID yet
         const data = await handleCreateDraft()
         if (data?.success) {
+          restorePointerEvents()
           router.push('/quotes')
         }
       }
     } catch (error) {
       toast.error('Could not save draft before exiting: ' + error)
       // Still navigate away even if save fails
+      restorePointerEvents()
       router.push('/quotes')
     } finally {
       setIsSaving(false)
