@@ -11,6 +11,15 @@ export async function GET(
     try {
       console.log('API: Fetching customer counts...');
 
+      // First, let's see what customers exist and their payment_terms
+      const { data: allCustomers, error: allCustomersError } = await supabase
+        .from('contractors')
+        .select('id, name, payment_terms')
+        .limit(10);
+
+      console.log('API: Sample customers in database:', allCustomers);
+      console.log('API: All customers error:', allCustomersError);
+
       // Get counts for each payment term
       const { data: allCount, error: allError } = await supabase
         .from('contractors')
