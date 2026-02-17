@@ -120,8 +120,18 @@ export async function POST(
 
   } catch (error: any) {
     console.error('Error creating customer:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      {
+        error: error.message || 'Internal server error',
+        details: error.details || null,
+        hint: error.hint || null
+      },
       { status: 500 }
     );
   }

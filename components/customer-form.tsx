@@ -115,7 +115,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     { value: 'OR', label: 'Oregon' },
     { value: 'PA', label: 'Pennsylvania' },
     { value: 'RI', label: 'Rhode Island' },
-    { value: 'SC', 'label': 'South Carolina' },
+    { value: 'SC', label: 'South Carolina' },
     { value: 'SD', label: 'South Dakota' },
     { value: 'TN', label: 'Tennessee' },
     { value: 'TX', label: 'Texas' },
@@ -175,12 +175,16 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
 
     setIsSubmitting(true)
 
+    console.log('Submitting customer data:', data)
+
     try {
-      await createCustomer(data)
+      const result = await createCustomer(data)
+      console.log('Customer creation result:', result)
       toast.success('Customer created successfully!')
       reset()
       onSuccess()
     } catch (error: any) {
+      console.error('Customer creation error:', error)
       toast.error(`Error creating customer: ${error.message}`)
     } finally {
       setIsSubmitting(false)
