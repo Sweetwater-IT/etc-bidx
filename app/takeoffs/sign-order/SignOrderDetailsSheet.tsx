@@ -695,23 +695,29 @@ export function SignOrderDetailsSheet({
             onSuccess={async (newContactId?: number) => {
               setContactDialogOpen(false)
               if (localCustomer?.id) {
-                const updatedCustomer = await fetchCustomerById(
-                  localCustomer.id
-                )
-                if (updatedCustomer) {
-                  setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
-                  if (typeof newContactId === 'number') {
-                    lastCreatedContactId.current = newContactId
-                    // Auto-select the newly created contact
-                    const newContact = {
-                      id: newContactId,
-                      name: updatedCustomer.names?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                      email: updatedCustomer.emails?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                      phone: updatedCustomer.phones?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                      role: updatedCustomer.roles?.[updatedCustomer.contactIds?.indexOf(newContactId)] || ''
+                try {
+                  const updatedCustomer = await fetchCustomerById(
+                    localCustomer.id
+                  )
+                  if (updatedCustomer) {
+                    setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
+                    if (typeof newContactId === 'number') {
+                      lastCreatedContactId.current = newContactId
+                      // Auto-select the newly created contact
+                      const newContact = {
+                        id: newContactId,
+                        name: updatedCustomer.names?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                        email: updatedCustomer.emails?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                        phone: updatedCustomer.phones?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                        role: updatedCustomer.roles?.[updatedCustomer.contactIds?.indexOf(newContactId)] || ''
+                      }
+                      setLocalContact(newContact)
                     }
-                    setLocalContact(newContact)
                   }
+                  // If API fails, keep existing customer data
+                } catch (error) {
+                  console.error('Failed to refresh customer data after contact creation:', error)
+                  // Keep existing customer data - don't clear it
                 }
               }
             }}
