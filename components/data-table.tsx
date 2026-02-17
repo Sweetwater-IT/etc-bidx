@@ -1038,6 +1038,8 @@ export function DataTable<TData extends object>({
             activeFilters={activeFilters}
           />
         )}
+
+
         {table.getSelectedRowModel().rows.length >= 1 && (
           <div className='flex justify-end mt-3'>
             {segmentValue === 'archived' ? (

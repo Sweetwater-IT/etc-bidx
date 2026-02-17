@@ -45,6 +45,8 @@ const CustomersContent = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRows, setSelectedRows] = useState<Customer[]>([]);
+  const [allRowsSelected, setAllRowsSelected] = useState(false);
 
   // Segment counts state
   const [segmentCounts, setSegmentCounts] = useState({
@@ -210,6 +212,10 @@ const CustomersContent = () => {
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
             totalCount={totalCount}
+            onDeleteSelected={handleDeleteSelected}
+            setSelectedRows={setSelectedRows}
+            onAllRowsSelectedChange={setAllRowsSelected}
+            allRowsSelected={allRowsSelected}
           />
         </div>
       )}
