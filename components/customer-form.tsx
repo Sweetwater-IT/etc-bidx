@@ -202,7 +202,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
             <h3 className="text-lg font-semibold border-b pb-2">Company Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Company Legal Name *</Label>
+                <Label htmlFor="name">Company Legal Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   placeholder="Enter company legal name"
@@ -223,7 +223,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customer_number">Customer Number</Label>
+                <Label htmlFor="customer_number">Customer Number <span className="text-red-500">*</span></Label>
                 <Input
                   id="customer_number"
                   placeholder="Foundation Customer #"
@@ -260,7 +260,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="payment_terms">Payment Terms</Label>
+                <Label htmlFor="payment_terms">Payment Terms <span className="text-red-500">*</span></Label>
                 <Select
                   onValueChange={handleSelectChange}
                   defaultValue=""
@@ -282,7 +282,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
 
           {/* Main Address */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold border-b pb-2">Main Address</h3>
+            <h3 className="text-lg font-semibold border-b pb-2">Main Address <span className="text-red-500">*</span></h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Address</Label>
@@ -331,7 +331,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
 
           {/* Bill To Address */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold border-b pb-2">Bill To Address</h3>
+            <h3 className="text-lg font-semibold border-b pb-2">Bill To Address <span className="text-red-500">*</span></h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
