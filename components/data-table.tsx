@@ -69,6 +69,7 @@ import { cn } from '@/lib/utils'
 import { useCallback, useState } from 'react'
 import { Separator } from './ui/separator'
 import { formatDate } from '@/lib/formatUTCDate'
+import { Loader2 } from 'lucide-react'
 
 export type LegacyColumn = {
   key: string
@@ -176,6 +177,7 @@ export interface DataTableProps<TData extends object> {
   enableSearch?: boolean
   searchPlaceholder?: string
   searchableColumns?: string[]
+  isLoading?: boolean
 
 }
 
@@ -448,7 +450,8 @@ export function DataTable<TData extends object>({
   onDeleteItem,
   enableSearch,
   searchPlaceholder,
-  searchableColumns, 
+  searchableColumns,
+  isLoading,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -1196,7 +1199,19 @@ export function DataTable<TData extends object>({
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className='h-24 text-center'
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Loading...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map(row => (
                     <TableRow
                       key={row.id}

@@ -183,7 +183,7 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-
+                isLoading={isTableLoading}
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>
