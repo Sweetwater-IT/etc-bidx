@@ -45,6 +45,18 @@ const CustomersContent = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRows, setSelectedRows] = useState<Customer[]>([]);
+  const [allRowsSelected, setAllRowsSelected] = useState(false);
+
+  // Segment counts state
+  const [segmentCounts, setSegmentCounts] = useState({
+    all: 0,
+    '1%10': 0,
+    COD: 0,
+    CC: 0,
+    NET15: 0,
+    NET30: 0
+  });
 
   const { customers, totalCount, isLoading, error, mutate } = useCustomersSWR({
     page: currentPage + 1,
@@ -73,9 +85,37 @@ const CustomersContent = () => {
     setDrawerOpen(true);
   }, []);
 
+  // Fetch counts for each segment
+  const fetchCounts = useCallback(async () => {
+    try {
+      console.log('Fetching customer counts...');
+      const response = await fetch('/api/customers?counts=true');
+      const data = await response.json();
+      console.log('Customer counts response:', data);
+
+      if (data.success) {
+        const newCounts = {
+          all: data.counts.all || 0,
+          '1%10': data.counts['1%10'] || 0,
+          COD: data.counts.COD || 0,
+          CC: data.counts.CC || 0,
+          NET15: data.counts.NET15 || 0,
+          NET30: data.counts.NET30 || 0
+        };
+        console.log('Setting segment counts:', newCounts);
+        setSegmentCounts(newCounts);
+      } else {
+        console.error("Error fetching segment counts:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching counts:", error);
+    }
+  }, []);
+
   const handleDrawerSuccess = useCallback(() => {
     mutate();
-  }, [mutate]);
+    fetchCounts(); // Refresh counts when customer is created/updated
+  }, [mutate, fetchCounts]);
 
 
   const handleSegmentChange = useCallback((value: string) => {
@@ -132,6 +172,11 @@ const CustomersContent = () => {
     }
   }, [drawerOpen, handleKeyDown]);
 
+  // Load counts when component mounts
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
   // Calculate total pages for DataTable based on current page size
   const pageCount = Math.ceil(totalCount / pageSize);
 
@@ -152,6 +197,7 @@ const CustomersContent = () => {
             columns={COLUMNS}
             segments={SEGMENTS}
             segmentValue={selectedSegment}
+            segmentCounts={segmentCounts}
             stickyLastColumn
             enableSearch={true}
             searchPlaceholder="Search by company name or customer number..."
@@ -166,6 +212,10 @@ const CustomersContent = () => {
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
             totalCount={totalCount}
+            onDeleteSelected={handleDeleteSelected}
+            setSelectedRows={setSelectedRows}
+            onAllRowsSelectedChange={setAllRowsSelected}
+            allRowsSelected={allRowsSelected}
           />
         </div>
       )}
