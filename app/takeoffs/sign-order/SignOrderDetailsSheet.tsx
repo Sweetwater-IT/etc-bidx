@@ -692,33 +692,31 @@ export function SignOrderDetailsSheet({
             customerId={localCustomer.id}
             isOpen={contactDialogOpen}
             onClose={() => setContactDialogOpen(false)}
-            onSuccess={async (newContactId?: number) => {
+            onSuccess={async (newContactId?: number, newContactData?: any) => {
               setContactDialogOpen(false)
-              if (localCustomer?.id) {
-                try {
-                  const updatedCustomer = await fetchCustomerById(
-                    localCustomer.id
-                  )
-                  if (updatedCustomer) {
-                    setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
-                    if (typeof newContactId === 'number') {
-                      lastCreatedContactId.current = newContactId
-                      // Auto-select the newly created contact
-                      const newContact = {
-                        id: newContactId,
-                        name: updatedCustomer.names?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                        email: updatedCustomer.emails?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                        phone: updatedCustomer.phones?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
-                        role: updatedCustomer.roles?.[updatedCustomer.contactIds?.indexOf(newContactId)] || ''
-                      }
-                      setLocalContact(newContact)
-                    }
-                  }
-                  // If API fails, keep existing customer data
-                } catch (error) {
-                  console.error('Failed to refresh customer data after contact creation:', error)
-                  // Keep existing customer data - don't clear it
+              if (localCustomer?.id && typeof newContactId === 'number' && newContactData) {
+                // Locally update the customer data with the new contact
+                const updatedCustomer: Customer = {
+                  ...localCustomer,
+                  contactIds: [...(localCustomer.contactIds || []), newContactId],
+                  names: [...(localCustomer.names || []), newContactData.name || ''],
+                  emails: [...(localCustomer.emails || []), newContactData.email || ''],
+                  phones: [...(localCustomer.phones || []), newContactData.phone || ''],
+                  roles: [...(localCustomer.roles || []), newContactData.role || '']
                 }
+
+                // Update the customer state with the locally modified data
+                setLocalCustomer(updatedCustomer)
+
+                // Auto-select the newly created contact
+                const newContact = {
+                  id: newContactId,
+                  name: newContactData.name || '',
+                  email: newContactData.email || '',
+                  phone: newContactData.phone || '',
+                  role: newContactData.role || ''
+                }
+                setLocalContact(newContact)
               }
             }}
             customer={localCustomer}
