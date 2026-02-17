@@ -48,7 +48,6 @@ import { CustomerDrawer } from '@/components/customer-drawer'
 import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
-import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
 
 const BRANCHES = [
@@ -140,8 +139,8 @@ export function SignOrderDetailsSheet({
   // Add state for contact popover open/close
   const [openCustomerContact, setOpenCustomerContact] = useState(false)
 
-  // Add state for contact creation drawer
-  const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
+  // Add state for contact creation dialog
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const lastCreatedContactId = useRef<number | null>(null)
 
   // Add this smarter effect instead:
@@ -463,7 +462,7 @@ export function SignOrderDetailsSheet({
                                 )
                                 return
                               }
-                              setContactDrawerOpen(true)
+                              setContactDialogOpen(true)
                             }}
                             value='__add_new_contact__'
                             className='font-medium text-primary cursor-pointer'
@@ -685,37 +684,38 @@ export function SignOrderDetailsSheet({
           }
         }}
       />
-      {/* Contact creation drawer: only render if localCustomer is defined */}
+      {/* Contact creation dialog: only render if localCustomer is defined */}
       {localCustomer && (
         <CustomerProvider initialCustomer={localCustomer}>
-          <Drawer
-            open={contactDrawerOpen}
-            onOpenChange={setContactDrawerOpen}
-            direction='right'
-          >
-            <DrawerContent>
-              <CustomerContactForm
-                customerId={localCustomer.id}
-                isOpen={contactDrawerOpen}
-                onClose={() => setContactDrawerOpen(false)}
-                onSuccess={async (newContactId?: number) => {
-                  setContactDrawerOpen(false)
-                  if (localCustomer?.id) {
-                    const updatedCustomer = await fetchCustomerById(
-                      localCustomer.id
-                    )
-                    if (updatedCustomer) {
-                      setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
-                      if (typeof newContactId === 'number') {
-                        lastCreatedContactId.current = newContactId
-                      }
+          <CustomerContactForm
+            customerId={localCustomer.id}
+            isOpen={contactDialogOpen}
+            onClose={() => setContactDialogOpen(false)}
+            onSuccess={async (newContactId?: number) => {
+              setContactDialogOpen(false)
+              if (localCustomer?.id) {
+                const updatedCustomer = await fetchCustomerById(
+                  localCustomer.id
+                )
+                if (updatedCustomer) {
+                  setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
+                  if (typeof newContactId === 'number') {
+                    lastCreatedContactId.current = newContactId
+                    // Auto-select the newly created contact
+                    const newContact = {
+                      id: newContactId,
+                      name: updatedCustomer.names?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                      email: updatedCustomer.emails?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                      phone: updatedCustomer.phones?.[updatedCustomer.contactIds?.indexOf(newContactId)] || '',
+                      role: updatedCustomer.roles?.[updatedCustomer.contactIds?.indexOf(newContactId)] || ''
                     }
+                    setLocalContact(newContact)
                   }
-                }}
-                customer={localCustomer}
-              />
-            </DrawerContent>
-          </Drawer>
+                }
+              }
+            }}
+            customer={localCustomer}
+          />
         </CustomerProvider>
       )}
       {/* Customer Selection Modal */}
