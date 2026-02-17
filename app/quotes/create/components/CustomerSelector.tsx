@@ -196,7 +196,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                             <Button variant="outline" className="justify-between" disabled={!selectedCustomer || loading}>
                                 {loading
                                     ? "Loading..."
-                                    : selectedContact?.name || "Select Contact"}
+                                    : selectedContact?.name || (selectedCustomer ? "Please select contact" : "Select Contact")}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                         </PopoverTrigger>
@@ -221,7 +221,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                                     }}
                                                 >
                                                     <Check className={cn("mr-2 h-4 w-4", selectedContact?.id === cc.id ? "opacity-100" : "opacity-0")} />
-                                                    {cc.name} ({cc.email})
+                                                    {cc.name} - {cc.role} ({cc.email})
                                                 </CommandItem>
                                             ))
                                         ) : (
