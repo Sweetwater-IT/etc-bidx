@@ -1038,20 +1038,7 @@ export function DataTable<TData extends object>({
             activeFilters={activeFilters}
           />
         )}
-        {/* Show "select all rows in the table" link when header checkbox is selected */}
-        {table.getIsAllPageRowsSelected() && !allRowsSelected && (
-          <div className='px-6 mb-2'>
-            <button
-              onClick={() => {
-                table.toggleAllRowsSelected(true);
-                onAllRowsSelectedChange?.(true);
-              }}
-              className='text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer'
-            >
-              select all rows in the table
-            </button>
-          </div>
-        )}
+
 
         {table.getSelectedRowModel().rows.length >= 1 && (
           <div className='flex justify-end mt-3'>
