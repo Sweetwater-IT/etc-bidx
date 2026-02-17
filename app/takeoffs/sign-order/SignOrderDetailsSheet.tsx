@@ -274,9 +274,10 @@ export function SignOrderDetailsSheet({
 
   // Add this helper function inside the component
   async function fetchCustomerById(id: number) {
-    const res = await fetch(`/api/customers/${id}`)
+    const res = await fetch(`/api/contractors/${id}`)
     if (res.ok) {
-      return await res.json()
+      const data = await res.json()
+      return data.customer // The contractors API returns { customer, ok: true }
     }
     return null
   }
