@@ -21,35 +21,35 @@ export async function GET(
       console.log('API: All customers error:', allCustomersError);
 
       // Get counts for each payment term
-      const { data: allCount, error: allError } = await supabase
+      const { count: allCount, error: allError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true });
 
       console.log('API: All count query result:', { allCount, allError });
 
-      const { data: onePercentTenCount, error: onePercentTenError } = await supabase
+      const { count: onePercentTenCount, error: onePercentTenError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', '1%10 NET 30');
 
       console.log('API: 1%10 count query result:', { onePercentTenCount, onePercentTenError });
 
-      const { data: codCount, error: codError } = await supabase
+      const { count: codCount, error: codError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', 'COD');
 
-      const { data: ccCount, error: ccError } = await supabase
+      const { count: ccCount, error: ccError } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', 'CC');
 
-      const { data: net15Count, error: net15Error } = await supabase
+      const { count: net15Count, error: net15Error } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', 'NET15');
 
-      const { data: net30Count, error: net30Error } = await supabase
+      const { count: net30Count, error: net30Error } = await supabase
         .from('contractors')
         .select('id', { count: 'exact', head: true })
         .eq('payment_terms', 'NET30');
