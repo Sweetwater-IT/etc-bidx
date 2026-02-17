@@ -6,6 +6,7 @@ interface CustomerContact {
     email: string;
     phone?: string;
     address?: string;
+    role?: string;
 }
 
 interface Customer {
@@ -51,7 +52,7 @@ export const useCustomerSelection = () => {
     const selectCustomer = (id: string) => {
         const customer = customers.find(c => c.id.toString() === id) || null;
         setSelectedCustomer(customer);
-        setSelectedContact(customer?.customer_contacts?.[0] || null);
+        setSelectedContact(null); // Don't auto-select first contact
     };
 
     const selectContact = (id: string) => {
