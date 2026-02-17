@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createCustomer } from "@/hooks/use-customers-swr"
 
 interface CustomerFormProps {
@@ -15,16 +16,41 @@ interface CustomerFormProps {
 }
 
 type FormData = {
+  // Company Info
   name: string
   display_name: string
   customer_number: string
   url: string
   main_phone: string
+
+  // Main Address
   address: string
   city: string
   state: string
   zip: string
+
+  // Bill To Address
+  bill_to_address: string
+  billToSameAsMain: boolean
+
+  // Person Ordering
+  personOrderingName: string
+  personOrderingTitle: string
+
+  // Primary Contact
+  primaryContactName: string
+  primaryContactPhone: string
+  primaryContactEmail: string
+  primaryContactSameAsPersonOrdering: boolean
+
+  // Project Manager
+  projectManagerName: string
+  projectManagerPhone: string
+  projectManagerEmail: string
+
+  // Other
   payment_terms: string
+  would_like_to_apply_for_credit: boolean
 }
 
 export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
@@ -128,159 +154,318 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     }
   }
   
+  // Watch form values for conditional logic
+  const billToSameAsMain = watch("billToSameAsMain");
+  const primaryContactSameAsPersonOrdering = watch("primaryContactSameAsPersonOrdering");
+  const personOrderingName = watch("personOrderingName");
+  const personOrderingTitle = watch("personOrderingTitle");
+
   return (
     <form className="flex flex-col h-full" onSubmit={handleSubmit(onSubmit)}>
       <div className="flex-1 overflow-y-auto p-1 -m-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input 
-            id="name" 
-            placeholder="Full customer name"
-            {...register("name", { required: "Customer name is required" })}
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500">{errors.name.message}</p>
-          )}
-        </div>
-        
-        {/* Display Name */}
-        <div className="space-y-2">
-          <Label htmlFor="display_name">Display Name</Label>
-          <Input 
-            id="display_name" 
-            placeholder="Display name"
-            {...register("display_name")}
-          />
-        </div>
-        
-        {/* Customer Number */}
-        <div className="space-y-2">
-          <Label htmlFor="customer_number">Customer Number</Label>
-          <Input 
-            id="customer_number" 
-            placeholder="Foundation Customer #"
-            {...register("customer_number")}
-          />
-        </div>
-        
-        {/* Website URL */}
-        <div className="space-y-2">
-          <Label htmlFor="url">Website URL</Label>
-          <Input 
-            id="url" 
-            placeholder="www.example.com" 
-            type="text"
-            {...register("url", {
-              pattern: {
-                value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
-                message: "Please enter a valid URL (e.g., www.example.com)"
-              }
-            })}
-          />
-          {errors.url && (
-            <p className="text-sm text-red-500">{errors.url.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Accepts URLs starting with http://, https://, or www.
-          </p>
-        </div>
-        
-        {/* Main Phone */}
-        <div className="space-y-2">
-          <Label htmlFor="main_phone">Main Phone</Label>
-          <Input 
-            id="main_phone" 
-            placeholder="Phone Number" 
-            type="tel"
-            {...register("main_phone")}
-          />
-        </div>
-        
-        {/* Address */}
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input 
-            id="address" 
-            placeholder="Address"
-            {...register("address")}
-          />
-        </div>
-        
-        {/* City */}
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city" 
-            placeholder="City"
-            {...register("city")}
-          />
-        </div>
-        
-        {/* State */}
-        <div className="space-y-2">
-          <Label htmlFor="state">State</Label>
-          <Select onValueChange={(value) => setValue('state', value)}>
-            <SelectTrigger id="state">
-              <SelectValue placeholder="Select a state" />
-            </SelectTrigger>
-            <SelectContent>
-              {states.map((state) => (
-                <SelectItem key={state.value} value={state.value}>
-                  {state.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {/* ZIP Code */}
-        <div className="space-y-2">
-          <Label htmlFor="zip">ZIP Code</Label>
-          <Input 
-            id="zip" 
-            placeholder="ZIP"
-            {...register("zip")}
-          />
-        </div>
-        
-        {/* Payment Terms */}
-        <div className="space-y-2">
-          <Label htmlFor="payment_terms">Payment Terms</Label>
-          <Select 
-            onValueChange={handleSelectChange}
-            defaultValue=""
-          >
-            <SelectTrigger id="payment_terms" className="w-full">
-              <SelectValue placeholder="Payment Terms" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1%10 NET 30">1%10 NET 30</SelectItem>
-              <SelectItem value="COD">COD</SelectItem>
-              <SelectItem value="CC">CC</SelectItem>
-              <SelectItem value="NET15">NET15</SelectItem>
-              <SelectItem value="NET30">NET30</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="space-y-8">
+          {/* Company Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Company Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Company Legal Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="Enter company legal name"
+                  {...register("name", { required: "Company legal name is required" })}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="display_name">Display Name</Label>
+                <Input
+                  id="display_name"
+                  placeholder="Display name"
+                  {...register("display_name")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customer_number">Customer Number</Label>
+                <Input
+                  id="customer_number"
+                  placeholder="Foundation Customer #"
+                  {...register("customer_number")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="url">Website URL</Label>
+                <Input
+                  id="url"
+                  placeholder="www.example.com"
+                  type="text"
+                  {...register("url", {
+                    pattern: {
+                      value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                      message: "Please enter a valid URL (e.g., www.example.com)"
+                    }
+                  })}
+                />
+                {errors.url && (
+                  <p className="text-sm text-red-500">{errors.url.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="main_phone">Main Phone</Label>
+                <Input
+                  id="main_phone"
+                  placeholder="Phone Number"
+                  type="tel"
+                  {...register("main_phone")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_terms">Payment Terms</Label>
+                <Select
+                  onValueChange={handleSelectChange}
+                  defaultValue=""
+                >
+                  <SelectTrigger id="payment_terms" className="w-full">
+                    <SelectValue placeholder="Payment Terms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1%10 NET 30">1%10 NET 30</SelectItem>
+                    <SelectItem value="COD">COD</SelectItem>
+                    <SelectItem value="CC">CC</SelectItem>
+                    <SelectItem value="NET15">NET15</SelectItem>
+                    <SelectItem value="NET30">NET30</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Address */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Main Address</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="Street address"
+                  {...register("address")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="City"
+                  {...register("city")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select onValueChange={(value) => setValue('state', value)}>
+                  <SelectTrigger id="state">
+                    <SelectValue placeholder="Select a state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((state) => (
+                      <SelectItem key={state.value} value={state.value}>
+                        {state.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zip">ZIP Code</Label>
+                <Input
+                  id="zip"
+                  placeholder="ZIP"
+                  {...register("zip")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bill To Address */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Bill To Address</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="billToSameAsMain"
+                  checked={billToSameAsMain}
+                  onCheckedChange={(checked) => setValue('billToSameAsMain', checked as boolean)}
+                />
+                <Label htmlFor="billToSameAsMain" className="text-sm font-normal">
+                  Same as main address
+                </Label>
+              </div>
+
+              {!billToSameAsMain && (
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_address">Bill To Address</Label>
+                  <Input
+                    id="bill_to_address"
+                    placeholder="Enter bill to address"
+                    {...register("bill_to_address")}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Person Ordering */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Person Ordering</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="personOrderingName">Name</Label>
+                <Input
+                  id="personOrderingName"
+                  placeholder="Person ordering name"
+                  {...register("personOrderingName")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="personOrderingTitle">Title</Label>
+                <Input
+                  id="personOrderingTitle"
+                  placeholder="Job title"
+                  {...register("personOrderingTitle")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Contact */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Primary Contact</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="primaryContactSameAsPersonOrdering"
+                  checked={primaryContactSameAsPersonOrdering}
+                  onCheckedChange={(checked) => {
+                    setValue('primaryContactSameAsPersonOrdering', checked as boolean);
+                    if (checked) {
+                      setValue('primaryContactName', personOrderingName || '');
+                    }
+                  }}
+                />
+                <Label htmlFor="primaryContactSameAsPersonOrdering" className="text-sm font-normal">
+                  Same as person ordering
+                </Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactName">Name</Label>
+                  <Input
+                    id="primaryContactName"
+                    placeholder="Contact name"
+                    {...register("primaryContactName")}
+                    disabled={primaryContactSameAsPersonOrdering}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactPhone">Phone</Label>
+                  <Input
+                    id="primaryContactPhone"
+                    placeholder="Phone number"
+                    type="tel"
+                    {...register("primaryContactPhone")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactEmail">Email</Label>
+                  <Input
+                    id="primaryContactEmail"
+                    placeholder="Email address"
+                    type="email"
+                    {...register("primaryContactEmail")}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Manager */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Project Manager</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerName">Name</Label>
+                <Input
+                  id="projectManagerName"
+                  placeholder="Project manager name"
+                  {...register("projectManagerName")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerPhone">Phone</Label>
+                <Input
+                  id="projectManagerPhone"
+                  placeholder="Phone number"
+                  type="tel"
+                  {...register("projectManagerPhone")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerEmail">Email</Label>
+                <Input
+                  id="projectManagerEmail"
+                  placeholder="Email address"
+                  type="email"
+                  {...register("projectManagerEmail")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Credit Application */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="would_like_to_apply_for_credit"
+                {...register("would_like_to_apply_for_credit")}
+              />
+              <Label htmlFor="would_like_to_apply_for_credit" className="text-sm font-normal">
+                Would you like to apply for credit?
+              </Label>
+            </div>
+          </div>
         </div>
       </div>
-      
+
       {/* Action Buttons */}
       <div className="mt-auto pt-6 border-t">
         <div className="flex justify-between gap-4">
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             variant="outline"
             className="flex-1"
             onClick={onCancel}
-            disabled={isSubmitting} 
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className={`flex-1 transition-colors ${
               customerName ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
             }`}

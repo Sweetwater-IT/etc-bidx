@@ -17,6 +17,9 @@ export async function POST(
 
     const newId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
 
+    // Determine bill_to_address value
+    const billToAddress = body.billToSameAsMain ? body.address : body.bill_to_address;
+
     const { data, error } = await supabase
       .from('contractors')
       .insert([{
@@ -30,7 +33,9 @@ export async function POST(
         city: body.city,
         state: body.state,
         zip: body.zip,
+        bill_to_address: billToAddress,
         payment_terms: body.payment_terms,
+        would_like_to_apply_for_credit: body.would_like_to_apply_for_credit || false,
         created: new Date().toISOString(),
         updated: new Date().toISOString(),
         active: true
@@ -39,6 +44,73 @@ export async function POST(
       .single();
 
     if (error) throw error;
+
+    // Create contacts if provided
+    const contactsToCreate: Array<{
+      contractor_id: number;
+      name: string;
+      role: string;
+      email?: string;
+      phone?: string;
+    }> = [];
+
+    // Person Ordering contact
+    if (body.personOrderingName?.trim()) {
+      contactsToCreate.push({
+        contractor_id: newId,
+        name: body.personOrderingName,
+        role: body.personOrderingTitle || 'PERSON ORDERING',
+        email: undefined,
+        phone: undefined
+      });
+    }
+
+    // Primary Contact
+    if (body.primaryContactName?.trim()) {
+      contactsToCreate.push({
+        contractor_id: newId,
+        name: body.primaryContactName,
+        role: 'PRIMARY CONTACT',
+        email: body.primaryContactEmail || undefined,
+        phone: body.primaryContactPhone || undefined
+      });
+    }
+
+    // Project Manager contact
+    if (body.projectManagerName?.trim()) {
+      contactsToCreate.push({
+        contractor_id: newId,
+        name: body.projectManagerName,
+        role: 'PROJECT MANAGER',
+        email: body.projectManagerEmail || undefined,
+        phone: body.projectManagerPhone || undefined
+      });
+    }
+
+    // Create contacts in sequence
+    for (const contactData of contactsToCreate) {
+      try {
+        const { error: contactError } = await supabase
+          .from('customer_contacts')
+          .insert([{
+            contractor_id: contactData.contractor_id,
+            name: contactData.name,
+            role: contactData.role,
+            email: contactData.email,
+            phone: contactData.phone,
+            created: new Date().toISOString(),
+            updated: new Date().toISOString()
+          }]);
+
+        if (contactError) {
+          console.error('Error creating contact:', contactError);
+          // Continue with other contacts even if one fails
+        }
+      } catch (contactError) {
+        console.error('Error creating contact:', contactError);
+        // Continue with other contacts even if one fails
+      }
+    }
 
     return NextResponse.json({
       message: 'Customer created successfully',
