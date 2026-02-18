@@ -31,11 +31,14 @@ export async function GET() {
       // Create one entry per dimension
       dimensions.forEach(dimension => {
         finalData.push({
+          designation: sign.designation,
+          description: sign.description,
+          sheeting: sign.sheeting,
+          image_url: sign.image_url,
           sign_designations: {
             designation: sign.designation,
             description: sign.description,
-            sheeting: sign.sheeting,
-            image_url: sign.image_url
+            sheeting: sign.sheeting
           },
           sign_dimensions: dimension
         });
@@ -44,11 +47,14 @@ export async function GET() {
       // If no valid dimensions, create one entry with default dimensions
       if (dimensions.length === 0) {
         finalData.push({
+          designation: sign.designation,
+          description: sign.description,
+          sheeting: sign.sheeting,
+          image_url: sign.image_url,
           sign_designations: {
             designation: sign.designation,
             description: sign.description,
-            sheeting: sign.sheeting,
-            image_url: sign.image_url
+            sheeting: sign.sheeting
           },
           sign_dimensions: { width: 0, height: 0 }
         });
