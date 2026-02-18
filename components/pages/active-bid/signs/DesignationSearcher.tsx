@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { fetchSignDesignations } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { PrimarySign, SecondarySign, SheetingType } from '@/types/MPTEquipment';
-import { Command } from 'cmdk';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Check, Search, Plus } from 'lucide-react';
+import React, { Dispatch, SetStateAction, useEffect, useState, useMemo } from 'react';
 import { processSignData } from './process-sign-data';
 
 interface SignDesignation {
@@ -30,7 +30,7 @@ interface Props {
 const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }: Props) => {
   const [open, setOpen] = useState(false);
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
-  const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const loadSignData = async () => {
@@ -39,190 +39,196 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
         if (data && Array.isArray(data) && data.length > 0) {
           const processedData = await processSignData(data);
           setDesignationData(processedData);
-          setFilteredDesignations(processedData);
         } else {
           console.warn("No sign data returned from API or invalid format");
           setDesignationData([]);
-          setFilteredDesignations([]);
         }
       } catch (error) {
         console.error("Error fetching sign data:", error);
         setDesignationData([]);
-        setFilteredDesignations([]);
       }
     };
 
     loadSignData();
   }, []);
 
-  const filterDesignations = (searchTerm: string) => {
-    if (!Array.isArray(designationData)) {
-      setFilteredDesignations([]);
-      return;
-    }
+  const filteredDesignations = useMemo(() => {
+    if (!searchQuery.trim()) return designationData;
 
-    if (!searchTerm || searchTerm.length < 2) {
-      setFilteredDesignations(designationData);
-      return;
-    }
+    const query = searchQuery.toLowerCase();
+    return designationData.filter(item =>
+      item.designation.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query)
+    );
+  }, [designationData, searchQuery]);
 
-    try {
-      const filtered = designationData.filter(
-        (item) =>
-          item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredDesignations(filtered);
-    } catch (error) {
-      console.error("Error filtering designations:", error);
-      setFilteredDesignations([]);
-    }
-  };
-
-  const handleDesignationSelect = (designationValue: string) => {
-    const selectedDesignation = designationData.find((d) => d.designation === designationValue);
-
-    if (!selectedDesignation) {
-      console.error("Selected designation not found");
-      return;
-    }
-
+  const handleSelectSign = (designation: string, width: number, height: number, sheeting: SheetingType, description: string) => {
     const updatedSign = {
       ...localSign,
-      designation: designationValue,
-      width: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].width : 0,
-      height: selectedDesignation.dimensions.length === 1 ? selectedDesignation.dimensions[0].height : 0,
-      sheeting: selectedDesignation.sheeting,
-      description: selectedDesignation.description,
+      designation,
+      width,
+      height,
+      sheeting,
+      description,
     };
 
     setLocalSign(updatedSign);
-
     if (onDesignationSelected) {
       onDesignationSelected(updatedSign);
     }
+    setOpen(false);
+    setSearchQuery("");
+  };
+
+  const handleCustomDesignation = () => {
+    const updatedSign = {
+      ...localSign,
+      designation: "",
+      width: 0,
+      height: 0,
+      sheeting: localSign.sheeting,
+      description: "",
+      isCustom: true,
+    };
+    setLocalSign(updatedSign);
+    if (onDesignationSelected) {
+      onDesignationSelected(updatedSign);
+    }
+    setOpen(false);
+    setSearchQuery("");
+  };
+
+  const isSelected = (designation: string, width: number, height: number) => {
+    return localSign.designation === designation &&
+           localSign.width === width &&
+           localSign.height === height;
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full sm:w-[300px] justify-between">
-          <span className="truncate">{localSign.designation || "Select designation..."}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search designation..." onValueChange={filterDesignations} />
-          <CommandEmpty>No designation found.</CommandEmpty>
-          <CommandList>
-            <CommandGroup>
-              <CommandItem
-                key="custom"
-                value="custom"
-                onSelect={() => {
-                  const updatedSign = {
-                    ...localSign,
-                    designation: "",
-                    width: 0,
-                    height: 0,
-                    sheeting: localSign.sheeting,
-                    description: "",
-                    isCustom: true,
-                  };
-                  setLocalSign(updatedSign);
-                  if (onDesignationSelected) {
-                    onDesignationSelected(updatedSign);
-                  }
-                  setOpen(false);
-                }}
+    <>
+      <Button
+        variant="outline"
+        onClick={() => setOpen(true)}
+        className="w-full sm:w-[300px] justify-start text-left font-normal"
+      >
+        <span className="truncate">
+          {localSign.designation
+            ? `${localSign.designation}${localSign.width && localSign.height ? ` (${localSign.width} x ${localSign.height})` : ''}`
+            : "Select designation..."
+          }
+        </span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>Select Sign Designation</DialogTitle>
+            </DialogHeader>
+            <Separator className="w-full -mt-2" />
+          </div>
+
+          {/* Fixed Controls Section */}
+          <div className="px-6 py-4 space-y-4 bg-background border-b">
+            {/* Add Custom Designation Button */}
+            <div className="flex justify-start">
+              <Button
+                variant="outline"
+                onClick={handleCustomDesignation}
+                className="flex items-center gap-2"
               >
-                <div className="flex items-center w-full">
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      localSign.designation === "Custom designation" ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="font-medium italic">+ Custom designation</span>
-                </div>
-              </CommandItem>
+                <Plus className="h-4 w-4" />
+                Add Custom Designation
+              </Button>
+            </div>
 
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search designations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                autoFocus
+              />
+            </div>
+          </div>
 
-              {filteredDesignations.map((item) => (
-                <div key={item.designation}>
-                  <CommandItem
-                    value={item.designation}
-                    onSelect={() => {
-                      if (item.dimensions.length === 1) {
-                        handleDesignationSelect(item.designation);
-                        setOpen(false);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center w-full">
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          localSign.designation === item.designation ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{item.designation}</span>
-                        {item.description && (
-                          <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                            {item.description}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CommandItem>
-
-                  {item.dimensions.length > 1 && (
-                    <div className="ml-0">
-                      {item.dimensions.map((dim, idx) => (
-                        <CommandItem
-                          key={`${item.designation}-${idx}`}
-                          value={`${item.designation}-${dim.width}x${dim.height}`}
-                          onSelect={() => {
-                            const updatedSign = {
-                              ...localSign,
-                              designation: item.designation,
-                              width: dim.width,
-                              height: dim.height,
-                              sheeting: item.sheeting,
-                              description: item.description,
-                            };
-                            setLocalSign(updatedSign);
-                            onDesignationSelected?.(updatedSign);
-                            setOpen(false);
-                          }}
+          {/* Scrollable Sign Table */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <table className="w-full">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-sm">Designation</th>
+                  <th className="text-left px-4 py-3 font-medium text-sm">Description</th>
+                  <th className="text-left px-4 py-3 font-medium text-sm">Dimensions</th>
+                  <th className="text-left px-4 py-3 font-medium text-sm">Sheeting</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDesignations.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No designations found matching your search." : "No designations available."}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDesignations.map((item, index) => (
+                    <React.Fragment key={item.designation}>
+                      {item.dimensions.map((dim, dimIndex) => (
+                        <tr
+                          key={`${item.designation}-${dim.width}x${dim.height}`}
+                          onClick={() => handleSelectSign(item.designation, dim.width, dim.height, item.sheeting, item.description)}
+                          className={cn(
+                            "cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0",
+                            index % 2 === 0 ? "bg-background" : "bg-muted/20",
+                            isSelected(item.designation, dim.width, dim.height) && "bg-primary/5"
+                          )}
                         >
-                          <div className="flex items-center w-full pl-2">
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                localSign.designation === item.designation &&
-                                  localSign.width === dim.width &&
-                                  localSign.height === dim.height
-                                  ? "opacity-100"
-                                  : "opacity-0"
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {item.designation}
+                              </span>
+                              {isSelected(item.designation, dim.width, dim.height) && (
+                                <Check className="h-4 w-4 text-primary flex-shrink-0" />
                               )}
-                            />
-                            <span className="text-sm">{dim.width} x {dim.height}</span>
-                          </div>
-                        </CommandItem>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                              {item.description || '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm">
+                              {dim.width} x {dim.height}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm">
+                              {item.sheeting}
+                            </span>
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          <Separator />
+          <div className="flex justify-end items-center p-4 px-6">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
