@@ -56,6 +56,7 @@ export interface SignDesignation {
   description: string;
   sheeting: SheetingType;
   dimensions: SignDimension[];
+  image_url?: string;
 }
 
 export interface SignDimension {
