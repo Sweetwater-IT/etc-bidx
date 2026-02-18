@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from('signs_all')
-      .select('*')
+      .select('id, designation, description, category, sizes, sheeting, kits, created_at, image_url, image_uploaded_at')
       .order('designation');
 
     if (error) {
@@ -34,7 +34,8 @@ export async function GET() {
           sign_designations: {
             designation: sign.designation,
             description: sign.description,
-            sheeting: sign.sheeting
+            sheeting: sign.sheeting,
+            image_url: sign.image_url
           },
           sign_dimensions: dimension
         });
@@ -46,7 +47,8 @@ export async function GET() {
           sign_designations: {
             designation: sign.designation,
             description: sign.description,
-            sheeting: sign.sheeting
+            sheeting: sign.sheeting,
+            image_url: sign.image_url
           },
           sign_dimensions: { width: 0, height: 0 }
         });

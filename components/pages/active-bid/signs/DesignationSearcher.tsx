@@ -14,6 +14,7 @@ interface SignDesignation {
   description: string;
   sheeting: SheetingType;
   dimensions: SignDimension[];
+  image_url?: string;
 }
 
 interface SignDimension {
@@ -172,6 +173,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
             <table className="w-full">
               <thead className="bg-muted/50 border-b">
                 <tr>
+                  <th className="text-left px-4 py-3 font-medium text-sm w-16"></th>
                   <th className="text-left px-4 py-3 font-medium text-sm">Designation</th>
                   <th className="text-left px-4 py-3 font-medium text-sm">Description</th>
                   <th className="text-left px-4 py-3 font-medium text-sm">Available Sizes</th>
@@ -181,7 +183,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
               <tbody>
                 {filteredDesignations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={5} className="text-center py-8 text-muted-foreground">
                       {searchQuery ? "No designations found matching your search." : "No designations available."}
                     </td>
                   </tr>
@@ -196,6 +198,32 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                         localSign.designation === item.designation && "bg-primary/5"
                       )}
                     >
+                      <td className="px-4 py-3">
+                        <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.designation}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
+                                  fallback.textContent = item.designation.substring(0, 2).toUpperCase();
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-xs font-medium">
+                              {item.designation.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">
@@ -269,20 +297,48 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                       : "border-border"
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">
-                        {dim.width}″ × {dim.height}″
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {selectedDesignation.sheeting}
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {selectedDesignation.image_url ? (
+                        <img
+                          src={selectedDesignation.image_url}
+                          alt={selectedDesignation.designation}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
+                              fallback.textContent = selectedDesignation.designation.substring(0, 2).toUpperCase();
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {selectedDesignation.designation.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {dim.width}″ × {dim.height}″
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {selectedDesignation.sheeting}
+                          </div>
+                        </div>
+                        {localSign.designation === selectedDesignation?.designation &&
+                         localSign.width === dim.width &&
+                         localSign.height === dim.height && (
+                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        )}
                       </div>
                     </div>
-                    {localSign.designation === selectedDesignation?.designation &&
-                     localSign.width === dim.width &&
-                     localSign.height === dim.height && (
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                    )}
                   </div>
                 </button>
               ))}
