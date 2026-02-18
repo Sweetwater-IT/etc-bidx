@@ -31,6 +31,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
   const [open, setOpen] = useState(false);
   const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDesignation, setSelectedDesignation] = useState<SignDesignation | null>(null);
+  const [dimensionModalOpen, setDimensionModalOpen] = useState(false);
 
   useEffect(() => {
     const loadSignData = async () => {
@@ -62,14 +64,21 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
     );
   }, [designationData, searchQuery]);
 
-  const handleSelectSign = (designation: string, width: number, height: number, sheeting: SheetingType, description: string) => {
+  const handleSelectDesignation = (designation: SignDesignation) => {
+    setSelectedDesignation(designation);
+    setDimensionModalOpen(true);
+  };
+
+  const handleSelectDimension = (width: number, height: number) => {
+    if (!selectedDesignation) return;
+
     const updatedSign = {
       ...localSign,
-      designation,
+      designation: selectedDesignation.designation,
       width,
       height,
-      sheeting,
-      description,
+      sheeting: selectedDesignation.sheeting,
+      description: selectedDesignation.description,
     };
 
     setLocalSign(updatedSign);
@@ -77,6 +86,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
       onDesignationSelected(updatedSign);
     }
     setOpen(false);
+    setDimensionModalOpen(false);
+    setSelectedDesignation(null);
     setSearchQuery("");
   };
 
@@ -98,10 +109,11 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
     setSearchQuery("");
   };
 
-  const isSelected = (designation: string, width: number, height: number) => {
-    return localSign.designation === designation &&
-           localSign.width === width &&
-           localSign.height === height;
+  const closeModals = () => {
+    setOpen(false);
+    setDimensionModalOpen(false);
+    setSelectedDesignation(null);
+    setSearchQuery("");
   };
 
   return (
@@ -162,7 +174,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-sm">Designation</th>
                   <th className="text-left px-4 py-3 font-medium text-sm">Description</th>
-                  <th className="text-left px-4 py-3 font-medium text-sm">Dimensions</th>
+                  <th className="text-left px-4 py-3 font-medium text-sm">Available Sizes</th>
                   <th className="text-left px-4 py-3 font-medium text-sm">Sheeting</th>
                 </tr>
               </thead>
@@ -175,45 +187,41 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                   </tr>
                 ) : (
                   filteredDesignations.map((item, index) => (
-                    <React.Fragment key={item.designation}>
-                      {item.dimensions.map((dim, dimIndex) => (
-                        <tr
-                          key={`${item.designation}-${dim.width}x${dim.height}`}
-                          onClick={() => handleSelectSign(item.designation, dim.width, dim.height, item.sheeting, item.description)}
-                          className={cn(
-                            "cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0",
-                            index % 2 === 0 ? "bg-background" : "bg-muted/20",
-                            isSelected(item.designation, dim.width, dim.height) && "bg-primary/5"
+                    <tr
+                      key={item.designation}
+                      onClick={() => handleSelectDesignation(item)}
+                      className={cn(
+                        "cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0",
+                        index % 2 === 0 ? "bg-background" : "bg-muted/20",
+                        localSign.designation === item.designation && "bg-primary/5"
+                      )}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {item.designation}
+                          </span>
+                          {localSign.designation === item.designation && (
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
                           )}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">
-                                {item.designation}
-                              </span>
-                              {isSelected(item.designation, dim.width, dim.height) && (
-                                <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              {item.description || '-'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm">
-                              {dim.width} x {dim.height}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm">
-                              {item.sheeting}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </React.Fragment>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {item.description || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm">
+                          {item.dimensions.length} size{item.dimensions.length !== 1 ? 's' : ''} available
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm">
+                          {item.sheeting}
+                        </span>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
@@ -223,6 +231,73 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
           <Separator />
           <div className="flex justify-end items-center p-4 px-6">
             <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dimension Selection Modal */}
+      <Dialog open={dimensionModalOpen} onOpenChange={setDimensionModalOpen}>
+        <DialogContent className="max-w-2xl h-[500px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>
+                Select Size for {selectedDesignation?.designation}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                {selectedDesignation?.description}
+              </p>
+            </DialogHeader>
+            <Separator className="w-full -mt-2" />
+          </div>
+
+          {/* Dimension Options */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {selectedDesignation?.dimensions.map((dim) => (
+                <button
+                  key={`${dim.width}x${dim.height}`}
+                  onClick={() => handleSelectDimension(dim.width, dim.height)}
+                  className={cn(
+                    "p-4 border rounded-lg text-left transition-colors hover:bg-muted/50",
+                    "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                    localSign.designation === selectedDesignation?.designation &&
+                    localSign.width === dim.width &&
+                    localSign.height === dim.height
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm">
+                        {dim.width}″ × {dim.height}″
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {selectedDesignation.sheeting}
+                      </div>
+                    </div>
+                    {localSign.designation === selectedDesignation?.designation &&
+                     localSign.width === dim.width &&
+                     localSign.height === dim.height && (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+          <div className="flex justify-between items-center p-4 px-6">
+            <Button
+              variant="outline"
+              onClick={() => setDimensionModalOpen(false)}
+            >
+              Back to Designations
+            </Button>
+            <Button variant="outline" onClick={closeModals}>
               Cancel
             </Button>
           </div>
