@@ -250,11 +250,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const handleDimensionSelect = (value: string) => {
         try {
-            // Parse dimensions from format "width x height"
+            // Parse dimensions from format "widthxheight" (no spaces)
             const dimensionParts = value.split("x");
             if (dimensionParts.length === 2) {
-                const width = parseFloat(dimensionParts[0].trim());
-                const height = parseFloat(dimensionParts[1].trim());
+                const width = parseFloat(dimensionParts[0]);
+                const height = parseFloat(dimensionParts[1]);
 
                 if (!isNaN(width) && !isNaN(height)) {
                     setLocalSign({
@@ -547,7 +547,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     value={
                                         (localSign.width && localSign.height && localSign.width > 0 && localSign.height > 0)
                                             ? `${localSign.width}x${localSign.height}`
-                                            : undefined
+                                            : ""
                                     }
                                     onValueChange={handleDimensionSelect}
                                     disabled={getAvailableDimensions().length === 1}
@@ -558,7 +558,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
                                             <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
-                                                {dim.width} x {dim.height}
+                                                {dim.width}" × {dim.height}"
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
