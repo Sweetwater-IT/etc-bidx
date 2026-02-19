@@ -199,12 +199,12 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                       )}
                     >
                       <td className="px-4 py-3">
-                        <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                        <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden">
                           {item.image_url ? (
                             <img
                               src={item.image_url}
                               alt={item.designation}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain p-1"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
@@ -298,12 +298,12 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                       {selectedDesignation.image_url ? (
                         <img
                           src={selectedDesignation.image_url}
                           alt={selectedDesignation.designation}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain p-1"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
