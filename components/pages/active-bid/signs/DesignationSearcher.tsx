@@ -4,33 +4,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { fetchSignDesignations } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { PrimarySign, SecondarySign, SheetingType } from '@/types/MPTEquipment';
-import { Check, Search, Plus } from 'lucide-react';
+import { PrimarySign, SecondarySign, SheetingType, SignsApiResponse, PataKit, PtsKit, SignDesignation } from '@/types/MPTEquipment';
+import { Check, Search, Plus, Package } from 'lucide-react';
 import React, { Dispatch, SetStateAction, useEffect, useState, useMemo } from 'react';
 import { processSignData } from './process-sign-data';
 
-interface SignDesignation {
-  designation: string;
-  description: string;
-  sheeting: SheetingType;
-  dimensions: SignDimension[];
-  image_url?: string;
-}
 
-interface SignDimension {
-  width: number;
-  height: number;
-}
 
 interface Props {
   localSign: PrimarySign | SecondarySign;
   setLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>;
   onDesignationSelected?: (updatedSign: PrimarySign | SecondarySign) => void;
+  onKitSelected?: (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => void;
 }
 
-const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }: Props) => {
+const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, onKitSelected }: Props) => {
   const [open, setOpen] = useState(false);
-  const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
+  const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDesignation, setSelectedDesignation] = useState<SignDesignation | null>(null);
   const [dimensionModalOpen, setDimensionModalOpen] = useState(false);
@@ -38,32 +28,60 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
   useEffect(() => {
     const loadSignData = async () => {
       try {
-        const data = await fetchSignDesignations();
-        if (data && Array.isArray(data) && data.length > 0) {
-          const processedData = await processSignData(data);
-          setDesignationData(processedData);
+        const response = await fetch('/api/signs');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setApiData(data.data);
         } else {
-          console.warn("No sign data returned from API or invalid format");
-          setDesignationData([]);
+          console.warn("No sign data returned from API");
+          setApiData({ signs: [], pataKits: [], ptsKits: [] });
         }
       } catch (error) {
         console.error("Error fetching sign data:", error);
-        setDesignationData([]);
+        setApiData({ signs: [], pataKits: [], ptsKits: [] });
       }
     };
 
     loadSignData();
   }, []);
 
-  const filteredDesignations = useMemo(() => {
-    if (!searchQuery.trim()) return designationData;
+  const filteredResults = useMemo(() => {
+    if (!apiData) return { signs: [], pataKits: [], ptsKits: [] };
+
+    if (!searchQuery.trim()) {
+      return apiData;
+    }
 
     const query = searchQuery.toLowerCase();
-    return designationData.filter(item =>
-      item.designation.toLowerCase().includes(query) ||
-      item.description.toLowerCase().includes(query)
+
+    // Filter signs
+    const filteredSigns = apiData.signs.filter(sign =>
+      sign.designation.toLowerCase().includes(query) ||
+      sign.description.toLowerCase().includes(query)
     );
-  }, [designationData, searchQuery]);
+
+    // Filter kits that contain signs matching the query
+    const signDesignations = new Set(filteredSigns.map(s => s.designation));
+
+    const filteredPataKits = apiData.pataKits.filter(kit =>
+      kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
+      kit.code.toLowerCase().includes(query) ||
+      kit.description.toLowerCase().includes(query)
+    );
+
+    const filteredPtsKits = apiData.ptsKits.filter(kit =>
+      kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
+      kit.code.toLowerCase().includes(query) ||
+      kit.description.toLowerCase().includes(query)
+    );
+
+    return {
+      signs: filteredSigns,
+      pataKits: filteredPataKits,
+      ptsKits: filteredPtsKits
+    };
+  }, [apiData, searchQuery]);
 
   const handleSelectDesignation = (designation: SignDesignation) => {
     setSelectedDesignation(designation);
@@ -105,6 +123,14 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
     setLocalSign(updatedSign);
     if (onDesignationSelected) {
       onDesignationSelected(updatedSign);
+    }
+    setOpen(false);
+    setSearchQuery("");
+  };
+
+  const handleSelectKit = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+    if (onKitSelected) {
+      onKitSelected(kit, kitType);
     }
     setOpen(false);
     setSearchQuery("");
@@ -168,92 +194,177 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected }:
             </div>
           </div>
 
-          {/* Scrollable Sign Table */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-sm w-16"></th>
-                  <th className="text-left px-4 py-3 font-medium text-sm">Designation</th>
-                  <th className="text-left px-4 py-3 font-medium text-sm">Description</th>
-                  <th className="text-left px-4 py-3 font-medium text-sm">Available Sizes</th>
-                  <th className="text-left px-4 py-3 font-medium text-sm">Sheeting</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDesignations.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                      {searchQuery ? "No designations found matching your search." : "No designations available."}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredDesignations.map((item, index) => (
-                    <tr
-                      key={item.designation}
-                      onClick={() => handleSelectDesignation(item)}
-                      className={cn(
-                        "cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0",
-                        index % 2 === 0 ? "bg-background" : "bg-muted/20",
-                        localSign.designation === item.designation && "bg-primary/5"
-                      )}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden">
-                          {item.image_url ? (
-                            <img
-                              src={item.image_url}
-                              alt={item.designation}
-                              className="w-full h-full object-contain p-1"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const fallback = document.createElement('div');
-                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
-                                  fallback.textContent = item.designation.substring(0, 2).toUpperCase();
-                                  parent.appendChild(fallback);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span className="text-muted-foreground text-xs font-medium">
-                              {item.designation.substring(0, 2).toUpperCase()}
-                            </span>
-                          )}
+          {/* Scrollable Content with Sections */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-6">
+            {/* MUTCD SIGNS Section */}
+            {(filteredResults.signs.length > 0 || (!searchQuery && apiData?.signs.length === 0)) && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-foreground">MUTCD SIGNS</h3>
+                <div className="space-y-2">
+                  {filteredResults.signs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No MUTCD signs found matching your search." : "No MUTCD signs available."}
+                    </div>
+                  ) : (
+                    filteredResults.signs.map((sign, index) => (
+                      <div
+                        key={sign.designation}
+                        onClick={() => handleSelectDesignation(sign)}
+                        className={cn(
+                          "cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4",
+                          localSign.designation === sign.designation && "border-primary bg-primary/5"
+                        )}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {sign.image_url ? (
+                              <img
+                                src={sign.image_url}
+                                alt={sign.designation}
+                                className="w-full h-full object-contain p-1"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    const fallback = document.createElement('div');
+                                    fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
+                                    fallback.textContent = sign.designation.substring(0, 2).toUpperCase();
+                                    parent.appendChild(fallback);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-muted-foreground text-xs font-medium">
+                                {sign.designation.substring(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-sm flex items-center gap-2">
+                                  {sign.designation}
+                                  {localSign.designation === sign.designation && (
+                                    <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {sign.description || '-'}
+                                </div>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                  <span>{sign.dimensions.length} size{sign.dimensions.length !== 1 ? 's' : ''} available</span>
+                                  <span>{sign.sheeting}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
-                            {item.designation}
-                          </span>
-                          {localSign.designation === item.designation && (
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                          )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* PATA Kits Section */}
+            {(filteredResults.pataKits.length > 0 || (!searchQuery && apiData?.pataKits.length === 0)) && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-foreground">PATA Kits</h3>
+                <div className="space-y-2">
+                  {filteredResults.pataKits.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No PATA kits found matching your search." : "No PATA kits available."}
+                    </div>
+                  ) : (
+                    filteredResults.pataKits.map((kit) => (
+                      <div
+                        key={kit.id}
+                        onClick={() => handleSelectKit(kit, 'pata')}
+                        className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 bg-blue-50/50 border-blue-200"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded border bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <Package className="h-8 w-8 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-sm flex items-center gap-2">
+                                  {kit.code}
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                    KIT
+                                  </span>
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {kit.description || '-'}
+                                </div>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                  <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {item.description || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">
-                          {item.dimensions.length} size{item.dimensions.length !== 1 ? 's' : ''} available
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">
-                          {item.sheeting}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* PTS Kits Section */}
+            {(filteredResults.ptsKits.length > 0 || (!searchQuery && apiData?.ptsKits.length === 0)) && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-foreground">PTS Kits</h3>
+                <div className="space-y-2">
+                  {filteredResults.ptsKits.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No PTS kits found matching your search." : "No PTS kits available."}
+                    </div>
+                  ) : (
+                    filteredResults.ptsKits.map((kit) => (
+                      <div
+                        key={kit.id}
+                        onClick={() => handleSelectKit(kit, 'pts')}
+                        className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 bg-green-50/50 border-green-200"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded border bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <Package className="h-8 w-8 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-sm flex items-center gap-2">
+                                  {kit.code}
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                    KIT
+                                  </span>
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {kit.description || '-'}
+                                </div>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                  <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* No Results */}
+            {filteredResults.signs.length === 0 && filteredResults.pataKits.length === 0 && filteredResults.ptsKits.length === 0 && searchQuery && (
+              <div className="text-center py-8 text-muted-foreground">
+                No results found matching your search.
+              </div>
+            )}
           </div>
 
           <Separator />

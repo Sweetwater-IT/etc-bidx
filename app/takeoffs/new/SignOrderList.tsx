@@ -213,6 +213,65 @@ export function SignOrderList({
     }
   }, [dispatch, currentPhase]);
 
+  const handleKitSelected = useCallback(async (kit: any, kitType: 'pata' | 'pts') => {
+    console.log('Kit selected:', kit.code, 'type:', kitType, 'for phase:', currentPhase);
+    try {
+      // Get the signs data to match designations with dimensions
+      const response = await fetch('/api/signs');
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        console.error('Failed to fetch signs data for kit processing');
+        return;
+      }
+
+      const signsMap = new Map();
+      data.data.signs.forEach((sign: any) => {
+        signsMap.set(sign.designation, sign);
+      });
+
+      // Add each sign in the kit
+      kit.contents.forEach((content: any) => {
+        const signData = signsMap.get(content.sign_designation);
+        if (signData && signData.dimensions.length > 0) {
+          // Use the first available dimension for each sign
+          const dimension = signData.dimensions[0];
+
+          const newSign: PrimarySign = {
+            id: generateUniqueId(),
+            designation: content.sign_designation,
+            width: dimension.width,
+            height: dimension.height,
+            quantity: content.quantity,
+            sheeting: signData.sheeting,
+            associatedStructure: 'none',
+            displayStructure: 'LOOSE',
+            bLights: 0,
+            cover: false,
+            isCustom: false,
+            bLightsColor: undefined,
+            description: signData.description,
+            substrate: 'Plastic',
+          };
+
+          dispatch({
+            type: 'ADD_MPT_SIGN',
+            payload: {
+              phaseNumber: currentPhase,
+              sign: newSign,
+            },
+          });
+        }
+      });
+
+      // Reset local sign to allow adding more signs
+      setLocalSign(undefined);
+      setOpen(false);
+    } catch (error) {
+      console.error('Error in handleKitSelected:', error);
+    }
+  }, [dispatch, currentPhase]);
+
   const getSecondarySignsForPrimary = useCallback((primarySignId: string): SecondarySign[] => {
     const desiredPhase = mptRental.phases[currentPhase];
     if (!desiredPhase) return [];
@@ -661,6 +720,7 @@ export function SignOrderList({
             localSign={localSign}
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
+            onKitSelected={handleKitSelected}
           />
         )}
         {localSign && open && (

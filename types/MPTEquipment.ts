@@ -64,6 +64,37 @@ export interface SignDimension {
   height: number;
 }
 
+// Kit-related interfaces
+export interface KitContent {
+  sign_designation: string;
+  quantity: number;
+  blight_quantity?: number;
+}
+
+export interface PataKit {
+  id: string;
+  code: string;
+  description: string;
+  image_url?: string;
+  contents: KitContent[];
+  signCount: number;
+}
+
+export interface PtsKit {
+  id: number;
+  code: string;
+  description: string;
+  image_url?: string;
+  contents: KitContent[];
+  signCount: number;
+}
+
+export interface SignsApiResponse {
+  signs: SignDesignation[];
+  pataKits: PataKit[];
+  ptsKits: PtsKit[];
+}
+
 export const labelMapping: Record<string, string> = {
   fourFootTypeIII: "4' Type III",
   hStand: "H Stand",
