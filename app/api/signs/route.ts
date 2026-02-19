@@ -39,16 +39,17 @@ export async function GET() {
       .from('pata_kits')
       .select(`
         id, code, description, image_url, finished, reviewed, has_variants,
-        pata_kit_contents (
+        pata_kit_contents!pata_kit_code (
           sign_designation,
-          quantity,
-          blight_quantity
+          quantity
         )
       `)
       .order('code');
 
     if (pataKitsError) {
       console.error('Error fetching PATA kits:', pataKitsError);
+    } else {
+      console.log(`Fetched ${pataKitsData?.length || 0} PATA kits`);
     }
 
     // Fetch PATA kit variants
@@ -68,7 +69,7 @@ export async function GET() {
       .from('pts_kits')
       .select(`
         id, code, description, image_url, finished, reviewed, has_variants,
-        pts_kit_contents (
+        pts_kit_contents!pts_kit_code (
           sign_designation,
           quantity
         )
@@ -77,6 +78,8 @@ export async function GET() {
 
     if (ptsKitsError) {
       console.error('Error fetching PTS kits:', ptsKitsError);
+    } else {
+      console.log(`Fetched ${ptsKitsData?.length || 0} PTS kits`);
     }
 
     // Fetch PTS kit variants
