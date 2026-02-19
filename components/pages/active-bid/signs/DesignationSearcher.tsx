@@ -28,6 +28,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
   const [selectedKitForPreview, setSelectedKitForPreview] = useState<PataKit | PtsKit | null>(null);
   const [kitPreviewType, setKitPreviewType] = useState<'pata' | 'pts' | null>(null);
   const [kitContentsWithImages, setKitContentsWithImages] = useState<Array<any>>([]);
+  const [variantSelectionModalOpen, setVariantSelectionModalOpen] = useState(false);
+  const [selectedKitForVariant, setSelectedKitForVariant] = useState<PataKit | PtsKit | null>(null);
+  const [kitVariantType, setKitVariantType] = useState<'pata' | 'pts' | null>(null);
 
   useEffect(() => {
     const loadSignData = async () => {
@@ -141,6 +144,19 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
   };
 
   const handleSelectKitForPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+    // If kit has variants, show variant selection first
+    if (kit.has_variants && kit.variants.length > 0) {
+      setSelectedKitForVariant(kit);
+      setKitVariantType(kitType);
+      setVariantSelectionModalOpen(true);
+      return;
+    }
+
+    // Otherwise, proceed directly to kit preview
+    await showKitPreview(kit, kitType);
+  };
+
+  const showKitPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
     setSelectedKitForPreview(kit);
     setKitPreviewType(kitType);
 
@@ -165,6 +181,17 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
     }
 
     setKitPreviewModalOpen(true);
+  };
+
+  const handleVariantSelected = async (variant: any) => {
+    if (!selectedKitForVariant || !kitVariantType) return;
+
+    // For now, variants use the same contents as the base kit
+    // In a full implementation, variants might have different contents
+    await showKitPreview(selectedKitForVariant, kitVariantType);
+    setVariantSelectionModalOpen(false);
+    setSelectedKitForVariant(null);
+    setKitVariantType(null);
   };
 
   const handleConfirmKitSelection = () => {
@@ -668,6 +695,72 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                 Add Kit to Estimate
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Variant Selection Modal */}
+      <Dialog open={variantSelectionModalOpen} onOpenChange={setVariantSelectionModalOpen}>
+        <DialogContent className="max-w-2xl h-[500px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>
+                Select Variant for {kitVariantType?.toUpperCase()} Kit: {selectedKitForVariant?.code}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                {selectedKitForVariant?.description}
+              </p>
+            </DialogHeader>
+            <Separator className="w-full -mt-2" />
+          </div>
+
+          {/* Variant Options */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              {selectedKitForVariant?.variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  onClick={() => handleVariantSelected(variant)}
+                  className="w-full p-4 border rounded-lg text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">
+                        {variant.label}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {variant.description || 'No description'}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {variant.finished && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            Finished
+                          </span>
+                        )}
+                        {variant.blights > 0 && (
+                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                            {variant.blights} B-lights
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+          <div className="flex justify-between items-center p-4 px-6">
+            <Button
+              variant="outline"
+              onClick={() => setVariantSelectionModalOpen(false)}
+            >
+              Back to Kits
+            </Button>
+            <Button variant="outline" onClick={closeModals}>
+              Cancel
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

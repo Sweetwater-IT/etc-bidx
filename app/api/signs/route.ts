@@ -17,11 +17,11 @@ export async function GET() {
       );
     }
 
-    // Fetch PATA kits with their contents
+    // Fetch PATA kits with their contents and variants
     const { data: pataKitsData, error: pataKitsError } = await supabase
       .from('pata_kits')
       .select(`
-        id, code, description, image_url, finished, reviewed,
+        id, code, description, image_url, finished, reviewed, has_variants,
         pata_kit_contents (
           sign_designation,
           quantity,
@@ -34,11 +34,23 @@ export async function GET() {
       console.error('Error fetching PATA kits:', pataKitsError);
     }
 
-    // Fetch PTS kits with their contents
+    // Fetch PATA kit variants
+    const { data: pataVariantsData, error: pataVariantsError } = await supabase
+      .from('kit_variants')
+      .select(`
+        id, kit_id, variant_label, description, finished, blights
+      `)
+      .order('variant_label');
+
+    if (pataVariantsError) {
+      console.error('Error fetching PATA variants:', pataVariantsError);
+    }
+
+    // Fetch PTS kits with their contents and variants
     const { data: ptsKitsData, error: ptsKitsError } = await supabase
       .from('pts_kits')
       .select(`
-        id, code, description, image_url, finished, reviewed,
+        id, code, description, image_url, finished, reviewed, has_variants,
         pts_kit_contents (
           sign_designation,
           quantity
@@ -48,6 +60,18 @@ export async function GET() {
 
     if (ptsKitsError) {
       console.error('Error fetching PTS kits:', ptsKitsError);
+    }
+
+    // Fetch PTS kit variants
+    const { data: ptsVariantsData, error: ptsVariantsError } = await supabase
+      .from('kit_variants')
+      .select(`
+        id, kit_id, variant_label, description, finished, blights
+      `)
+      .order('variant_label');
+
+    if (ptsVariantsError) {
+      console.error('Error fetching PTS variants:', ptsVariantsError);
     }
 
     // Transform signs data to match expected frontend format
@@ -85,12 +109,44 @@ export async function GET() {
 
     const signs = Array.from(signsMap.values());
 
+    // Create variant maps for easy lookup
+    const pataVariantsMap = new Map();
+    const ptsVariantsMap = new Map();
+
+    pataVariantsData?.forEach(variant => {
+      if (!pataVariantsMap.has(variant.kit_id)) {
+        pataVariantsMap.set(variant.kit_id, []);
+      }
+      pataVariantsMap.get(variant.kit_id).push({
+        id: variant.id,
+        label: variant.variant_label,
+        description: variant.description,
+        finished: variant.finished,
+        blights: variant.blights
+      });
+    });
+
+    ptsVariantsData?.forEach(variant => {
+      if (!ptsVariantsMap.has(variant.kit_id)) {
+        ptsVariantsMap.set(variant.kit_id, []);
+      }
+      ptsVariantsMap.get(variant.kit_id).push({
+        id: variant.id,
+        label: variant.variant_label,
+        description: variant.description,
+        finished: variant.finished,
+        blights: variant.blights
+      });
+    });
+
     // Transform PATA kits data
     const pataKits = pataKitsData?.map(kit => ({
       id: kit.id,
       code: kit.code,
       description: kit.description,
       image_url: kit.image_url,
+      has_variants: kit.has_variants,
+      variants: pataVariantsMap.get(kit.id) || [],
       contents: kit.pata_kit_contents || [],
       signCount: kit.pata_kit_contents?.length || 0
     })) || [];
@@ -101,6 +157,8 @@ export async function GET() {
       code: kit.code,
       description: kit.description,
       image_url: kit.image_url,
+      has_variants: kit.has_variants,
+      variants: ptsVariantsMap.get(kit.id) || [],
       contents: kit.pts_kit_contents || [],
       signCount: kit.pts_kit_contents?.length || 0
     })) || [];

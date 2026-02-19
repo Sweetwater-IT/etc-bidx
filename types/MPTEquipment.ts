@@ -71,11 +71,21 @@ export interface KitContent {
   blight_quantity?: number;
 }
 
+export interface KitVariant {
+  id: number;
+  label: string;
+  description: string;
+  finished: boolean;
+  blights: number;
+}
+
 export interface PataKit {
   id: string;
   code: string;
   description: string;
   image_url?: string;
+  has_variants: boolean;
+  variants: KitVariant[];
   contents: KitContent[];
   signCount: number;
 }
@@ -85,6 +95,8 @@ export interface PtsKit {
   code: string;
   description: string;
   image_url?: string;
+  has_variants: boolean;
+  variants: KitVariant[];
   contents: KitContent[];
   signCount: number;
 }
