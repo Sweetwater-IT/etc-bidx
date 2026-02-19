@@ -28,8 +28,6 @@ export async function GET() {
           blight_quantity
         )
       `)
-      .eq('finished', true)
-      .eq('reviewed', true)
       .order('code');
 
     if (pataKitsError) {
@@ -46,8 +44,6 @@ export async function GET() {
           quantity
         )
       `)
-      .eq('finished', true)
-      .eq('reviewed', true)
       .order('code');
 
     if (ptsKitsError) {
