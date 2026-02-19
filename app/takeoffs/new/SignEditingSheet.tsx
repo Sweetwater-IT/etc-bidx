@@ -617,15 +617,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             <SelectValue placeholder="Choose structure" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="4' T-III RIGHT">4' T-III RIGHT</SelectItem>
-                                            <SelectItem value="4' T-III LEFT">4' T-III LEFT</SelectItem>
-                                            <SelectItem value="6' T-III RIGHT">6' T-III RIGHT</SelectItem>
-                                            <SelectItem value="6' T-III LEFT">6' T-III LEFT</SelectItem>
+                                            <SelectItem value="4' T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
+                                            <SelectItem value="4' T-III LEFT">4&apos; T-III LEFT</SelectItem>
+                                            <SelectItem value="6' T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
+                                            <SelectItem value="6' T-III LEFT">6&apos; T-III LEFT</SelectItem>
                                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                            <SelectItem value="8' POST">8' POST</SelectItem>
-                                            <SelectItem value="10' POST">10' POST</SelectItem>
-                                            <SelectItem value="12' POST">12' POST</SelectItem>
-                                            <SelectItem value="14' POST">14' POST</SelectItem>
+                                            <SelectItem value="8' POST">8&apos; POST</SelectItem>
+                                            <SelectItem value="10' POST">10&apos; POST</SelectItem>
+                                            <SelectItem value="12' POST">12&apos; POST</SelectItem>
+                                            <SelectItem value="14' POST">14&apos; POST</SelectItem>
                                             <SelectItem value="LOOSE">LOOSE</SelectItem>
                                         </SelectContent>
                                     </Select>
