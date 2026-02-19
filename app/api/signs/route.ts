@@ -35,6 +35,7 @@ export async function GET() {
     }
 
     // Fetch PATA kits with their contents and variants
+    console.log('🔍 Fetching PATA kits...');
     const { data: pataKitsData, error: pataKitsError } = await supabase
       .from('pata_kits')
       .select(`
@@ -47,9 +48,10 @@ export async function GET() {
       .order('code');
 
     if (pataKitsError) {
-      console.error('Error fetching PATA kits:', pataKitsError);
+      console.error('❌ Error fetching PATA kits:', pataKitsError);
     } else {
-      console.log(`Fetched ${pataKitsData?.length || 0} PATA kits`);
+      console.log(`✅ Fetched ${pataKitsData?.length || 0} PATA kits`);
+      console.log('📊 PATA kits raw data:', JSON.stringify(pataKitsData, null, 2));
     }
 
     // Fetch PATA kit variants
@@ -65,6 +67,7 @@ export async function GET() {
     }
 
     // Fetch PTS kits with their contents and variants
+    console.log('🔍 Fetching PTS kits...');
     const { data: ptsKitsData, error: ptsKitsError } = await supabase
       .from('pts_kits')
       .select(`
@@ -77,9 +80,10 @@ export async function GET() {
       .order('code');
 
     if (ptsKitsError) {
-      console.error('Error fetching PTS kits:', ptsKitsError);
+      console.error('❌ Error fetching PTS kits:', ptsKitsError);
     } else {
-      console.log(`Fetched ${ptsKitsData?.length || 0} PTS kits`);
+      console.log(`✅ Fetched ${ptsKitsData?.length || 0} PTS kits`);
+      console.log('📊 PTS kits raw data:', JSON.stringify(ptsKitsData, null, 2));
     }
 
     // Fetch PTS kit variants
@@ -182,6 +186,11 @@ export async function GET() {
       contents: kit.pts_kit_contents || [],
       signCount: kit.pts_kit_contents?.length || 0
     })) || [];
+
+    console.log('🎯 Final transformed data:');
+    console.log(`   Signs: ${signs.length}`);
+    console.log(`   PATA kits: ${pataKits.length} (with contents: ${pataKits.filter(k => k.contents.length > 0).length})`);
+    console.log(`   PTS kits: ${ptsKits.length} (with contents: ${ptsKits.filter(k => k.contents.length > 0).length})`);
 
     return NextResponse.json({
       success: true,
