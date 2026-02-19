@@ -3,18 +3,35 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    // Fetch signs data
-    const { data: signsData, error: signsError } = await supabase
+    // Fetch signs data - try multiple possible table names
+    let signsData: any[] = [];
+    let signsError = null;
+
+    // Try signs_all first
+    const signsResult = await supabase
       .from('signs_all')
       .select('id, designation, description, category, sizes, sheeting, kits, created_at, image_url, image_uploaded_at')
       .order('designation');
 
+    if (signsResult.error) {
+      console.warn('signs_all table not found, trying signs table');
+      // Try signs table
+      const signsFallback = await supabase
+        .from('signs')
+        .select('id, designation, description, category, sizes, sheeting, kits, created_at, image_url, image_uploaded_at')
+        .order('designation');
+
+      signsData = signsFallback.data || [];
+      signsError = signsFallback.error;
+    } else {
+      signsData = signsResult.data || [];
+      signsError = signsResult.error;
+    }
+
     if (signsError) {
       console.error('Error fetching signs:', signsError);
-      return NextResponse.json(
-        { success: false, message: `Failed to fetch signs`, error: signsError.message },
-        { status: 500 }
-      );
+      // Continue without signs data for now
+      signsData = [];
     }
 
     // Fetch PATA kits with their contents and variants

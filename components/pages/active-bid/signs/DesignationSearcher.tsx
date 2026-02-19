@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchSignDesignations } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { PrimarySign, SecondarySign, SheetingType, SignsApiResponse, PataKit, PtsKit, SignDesignation } from '@/types/MPTEquipment';
@@ -266,16 +267,38 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
             </div>
           </div>
 
-          {/* Scrollable Content with Sections */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-6">
-            {/* MUTCD SIGNS Section */}
-            {(filteredResults.signs.length > 0 || (!searchQuery && apiData?.signs.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">MUTCD SIGNS</h3>
+          {/* Tabs for different content types */}
+          <Tabs defaultValue="signs" className="flex-1 min-h-0 flex flex-col">
+            <div className="px-6 py-2 border-b">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="signs" className="flex items-center gap-2">
+                  Signs
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                    {apiData?.signs.length || 0}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="pata" className="flex items-center gap-2">
+                  PATA Kits
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                    {apiData?.pataKits.length || 0}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="pts" className="flex items-center gap-2">
+                  PTS Kits
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                    {apiData?.ptsKits.length || 0}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {/* Signs Tab */}
+              <TabsContent value="signs" className="flex-1 min-h-0 overflow-y-auto px-6 py-4 m-0">
                 <div className="space-y-2">
                   {filteredResults.signs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      {searchQuery ? "No MUTCD signs found matching your search." : "No MUTCD signs available."}
+                      {searchQuery ? "No signs found matching your search." : "No signs available."}
                     </div>
                   ) : (
                     filteredResults.signs.map((sign, index) => (
@@ -336,13 +359,10 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
+              </TabsContent>
 
-            {/* PATA Kits Section */}
-            {(filteredResults.pataKits.length > 0 || (!searchQuery && apiData?.pataKits.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">PATA Kits</h3>
+              {/* PATA Kits Tab */}
+              <TabsContent value="pata" className="flex-1 min-h-0 overflow-y-auto px-6 py-4 m-0">
                 <div className="space-y-2">
                   {filteredResults.pataKits.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
@@ -401,13 +421,10 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
+              </TabsContent>
 
-            {/* PTS Kits Section */}
-            {(filteredResults.ptsKits.length > 0 || (!searchQuery && apiData?.ptsKits.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">PTS Kits</h3>
+              {/* PTS Kits Tab */}
+              <TabsContent value="pts" className="flex-1 min-h-0 overflow-y-auto px-6 py-4 m-0">
                 <div className="space-y-2">
                   {filteredResults.ptsKits.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
@@ -466,16 +483,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* No Results */}
-            {filteredResults.signs.length === 0 && filteredResults.pataKits.length === 0 && filteredResults.ptsKits.length === 0 && searchQuery && (
-              <div className="text-center py-8 text-muted-foreground">
-                No results found matching your search.
-              </div>
-            )}
-          </div>
+              </TabsContent>
+            </div>
+          </Tabs>
 
           <Separator />
           <div className="flex justify-end items-center p-4 px-6">
