@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Fetch signs data - try multiple possible table names
     let signsData: any[] = [];
-    let signsError = null;
+    let signsError: any = null;
 
     // Try signs_all first
     const signsResult = await supabase
