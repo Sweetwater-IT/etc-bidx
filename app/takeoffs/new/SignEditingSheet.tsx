@@ -558,7 +558,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
                                             <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
-                                                {dim.width}" × {dim.height}"
+                                                {dim.width}" &times; {dim.height}"
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -617,15 +617,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             <SelectValue placeholder="Choose structure" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
-                                            <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+                                            <SelectItem value="4' T-III RIGHT">4' T-III RIGHT</SelectItem>
+                                            <SelectItem value="4' T-III LEFT">4' T-III LEFT</SelectItem>
+                                            <SelectItem value="6' T-III RIGHT">6' T-III RIGHT</SelectItem>
+                                            <SelectItem value="6' T-III LEFT">6' T-III LEFT</SelectItem>
                                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                            <SelectItem value="8' POST">{`8'`} POST</SelectItem>
-                                            <SelectItem value="10' POST">{`10'`} POST</SelectItem>
-                                            <SelectItem value="12' POST">{`12'`} POST</SelectItem>
-                                            <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+                                            <SelectItem value="8' POST">8' POST</SelectItem>
+                                            <SelectItem value="10' POST">10' POST</SelectItem>
+                                            <SelectItem value="12' POST">12' POST</SelectItem>
+                                            <SelectItem value="14' POST">14' POST</SelectItem>
                                             <SelectItem value="LOOSE">LOOSE</SelectItem>
                                         </SelectContent>
                                     </Select>
