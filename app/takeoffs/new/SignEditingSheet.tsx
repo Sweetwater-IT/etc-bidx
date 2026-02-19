@@ -558,7 +558,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
                                             <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
-                                                {dim.width}" &times; {dim.height}"
+                                                {dim.width}&quot; &times; {dim.height}&quot;
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
