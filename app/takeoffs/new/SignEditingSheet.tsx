@@ -1036,7 +1036,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             </div>
 
                             <div className="text-sm text-muted-foreground">
-                                Dimensions: {config.width}" × {config.height}"
+                                Dimensions: {config.width}" &times; {config.height}"
                             </div>
                         </div>
                     ))}
