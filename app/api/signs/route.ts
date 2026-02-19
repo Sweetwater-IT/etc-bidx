@@ -55,7 +55,7 @@ export async function GET() {
     }
 
     // Transform signs data to match expected frontend format
-    const signs: any[] = [];
+    const signsMap = new Map();
 
     signsData?.forEach(sign => {
       // Parse sizes array like ["48 x 8", "72 x 12"] into dimension objects
@@ -66,38 +66,28 @@ export async function GET() {
         return !isNaN(width) && !isNaN(height) ? { width, height } : null;
       }).filter(dim => dim !== null) || [];
 
-      // Create one entry per dimension
-      dimensions.forEach(dimension => {
-        signs.push({
+      // Group by designation
+      if (!signsMap.has(sign.designation)) {
+        signsMap.set(sign.designation, {
           designation: sign.designation,
           description: sign.description,
           sheeting: sign.sheeting,
           image_url: sign.image_url,
-          sign_designations: {
-            designation: sign.designation,
-            description: sign.description,
-            sheeting: sign.sheeting
-          },
-          sign_dimensions: dimension
-        });
-      });
-
-      // If no valid dimensions, create one entry with default dimensions
-      if (dimensions.length === 0) {
-        signs.push({
-          designation: sign.designation,
-          description: sign.description,
-          sheeting: sign.sheeting,
-          image_url: sign.image_url,
-          sign_designations: {
-            designation: sign.designation,
-            description: sign.description,
-            sheeting: sign.sheeting
-          },
-          sign_dimensions: { width: 0, height: 0 }
+          dimensions: []
         });
       }
+
+      // Add dimensions to the sign
+      const signEntry = signsMap.get(sign.designation);
+      signEntry.dimensions.push(...dimensions);
+
+      // If no valid dimensions, add default
+      if (dimensions.length === 0 && signEntry.dimensions.length === 0) {
+        signEntry.dimensions.push({ width: 0, height: 0 });
+      }
     });
+
+    const signs = Array.from(signsMap.values());
 
     // Transform PATA kits data
     const pataKits = pataKitsData?.map(kit => ({
