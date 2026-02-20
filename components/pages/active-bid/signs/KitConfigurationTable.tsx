@@ -181,8 +181,8 @@ const KitConfigurationTable = ({
               <Table className="min-w-[1200px]">
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[60px] sticky left-0 z-20 bg-muted/50 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Image</TableHead>
-                    <TableHead className="w-[180px] sticky left-[60px] z-20 bg-muted/50 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Designation</TableHead>
+                    <TableHead className="w-[60px] sticky left-0 z-20 bg-white border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Image</TableHead>
+                    <TableHead className="w-[180px] sticky left-[60px] z-20 bg-white border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Designation</TableHead>
                     <TableHead className="w-[120px]">Dimensions</TableHead>
                     <TableHead className="w-[100px]">Quantity</TableHead>
                     <TableHead className="w-[100px]">Sheeting</TableHead>
