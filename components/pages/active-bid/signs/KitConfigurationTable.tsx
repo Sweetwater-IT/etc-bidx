@@ -184,10 +184,10 @@ const KitConfigurationTable = ({
                     <TableHead className="w-[60px]">Image</TableHead>
                     <TableHead className="w-[180px]">Designation</TableHead>
                     <TableHead className="w-[120px]">Dimensions</TableHead>
+                    <TableHead className="w-[100px]">Quantity</TableHead>
                     <TableHead className="w-[100px]">Sheeting</TableHead>
                     <TableHead className="w-[120px]">Substrate</TableHead>
                     <TableHead className="w-[120px]">Structure</TableHead>
-                    <TableHead className="w-[100px]">Quantity</TableHead>
                     <TableHead className="w-[100px]">B Lights</TableHead>
                     <TableHead className="w-[100px]">B Light Color</TableHead>
                     <TableHead className="w-[80px]">Cover</TableHead>
@@ -254,6 +254,43 @@ const KitConfigurationTable = ({
                         </TableCell>
 
                         <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateQuantity(index, -1)}
+                              disabled={config.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={config.quantity}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value) && value >= 1) {
+                                  updateConfiguration(index, 'quantity', value);
+                                }
+                              }}
+                              className="w-12 h-8 text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                              inputMode="numeric"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateQuantity(index, 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
                           <Select
                             value={config.sheeting}
                             onValueChange={(value) => updateConfiguration(index, 'sheeting', value)}
@@ -314,43 +351,6 @@ const KitConfigurationTable = ({
                               <SelectItem value="LOOSE">LOOSE</SelectItem>
                             </SelectContent>
                           </Select>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(index, -1)}
-                              disabled={config.quantity <= 1}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              min={1}
-                              value={config.quantity}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value);
-                                if (!isNaN(value) && value >= 1) {
-                                  updateConfiguration(index, 'quantity', value);
-                                }
-                              }}
-                              className="w-12 h-8 text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                              inputMode="numeric"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(index, 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
                         </TableCell>
 
                         <TableCell>
