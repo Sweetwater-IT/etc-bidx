@@ -113,6 +113,7 @@ const DesignationSearcher = ({
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
+              variants: [],
             };
           })
         );
@@ -136,6 +137,7 @@ const DesignationSearcher = ({
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
+              variants: [],
             };
           })
         );
