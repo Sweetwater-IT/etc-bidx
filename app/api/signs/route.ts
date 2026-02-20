@@ -34,15 +34,15 @@ export async function GET() {
       signsData = [];
     }
 
-    // Fetch PATA kits with their contents and variants
-    console.log('🔍 Fetching PATA kits...');
-    const { data: pataKitsData, error: pataKitsError } = await supabase
+    // PATA kits + contents
+    const { data: pataKitsData, error: pataErr } = await supabase
       .from('pata_kits')
       .select(`
         id, code, description, image_url, finished, reviewed, has_variants,
         pata_kit_contents!pata_kit_code (
           sign_designation,
-          quantity
+          quantity,
+          blight_quantity
         )
       `)
       .order('code');
@@ -66,9 +66,8 @@ export async function GET() {
       console.error('Error fetching PATA variants:', pataVariantsError);
     }
 
-    // Fetch PTS kits with their contents and variants
-    console.log('🔍 Fetching PTS kits...');
-    const { data: ptsKitsData, error: ptsKitsError } = await supabase
+    // PTS kits + contents
+    const { data: ptsKitsData, error: ptsErr } = await supabase
       .from('pts_kits')
       .select(`
         id, code, description, image_url, finished, reviewed, has_variants,
