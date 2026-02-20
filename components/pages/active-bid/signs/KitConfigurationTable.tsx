@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import {
   PataKit,
   PtsKit,
@@ -41,6 +43,7 @@ interface KitSignConfiguration {
   displayStructure: DisplayStructures;
   associatedStructure: AssociatedStructures;
   bLights: number;
+  bLightsColor?: 'Red' | 'Yellow' | 'White';
   cover: boolean;
   stiffener: boolean;
   description: string;
@@ -65,6 +68,7 @@ const KitConfigurationTable = ({
   isSignOrder = false
 }: Props) => {
   const [configurations, setConfigurations] = useState<KitSignConfiguration[]>([]);
+  const [selectedSignIndex, setSelectedSignIndex] = useState<number | null>(null);
 
   // Initialize configurations when kit changes
   useEffect(() => {
@@ -137,40 +141,14 @@ const KitConfigurationTable = ({
     onSave(configurations);
   };
 
+  const selectedSign = selectedSignIndex !== null ? configurations[selectedSignIndex] : null;
+  const selectedSignData = selectedSign ? signsData.find(s => s.designation === selectedSign.designation) : null;
+
   return (
     <div className="flex flex-col h-full">
       {/* Main content area with independent scrolling */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
-        {/* Left: Kit Diagram - independently scrollable */}
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Kit Diagram</h3>
-            <div className="text-sm text-muted-foreground">
-              {configurations.length} sign{configurations.length !== 1 ? 's' : ''} to configure
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="border rounded-lg p-4 bg-muted/20">
-              {kit.image_url ? (
-                <img
-                  src={kit.image_url}
-                  alt={`${kitType?.toUpperCase()} Kit ${kit.code} Diagram`}
-                  className="w-full h-auto object-contain rounded border"
-                  onError={(e) => {
-                    e.currentTarget.src = '/placeholder.svg';
-                    e.currentTarget.alt = 'Diagram failed to load';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-[400px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
-                  <p className="text-muted-foreground text-sm">No diagram available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Configuration Table - independently scrollable */}
+        {/* Left: Configuration Table - independently scrollable */}
         <div className="flex flex-col min-h-0">
           <h3 className="text-lg font-semibold mb-4">Sign Configuration</h3>
           <div className="flex-1 min-h-0 overflow-y-auto">
@@ -178,22 +156,33 @@ const KitConfigurationTable = ({
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[200px]">Designation</TableHead>
-                    <TableHead className="w-[150px]">Dimensions</TableHead>
-                    <TableHead className="w-[120px]">Sheeting</TableHead>
-                    <TableHead className="w-[140px]">Substrate</TableHead>
-                    <TableHead className="w-[140px]">Structure</TableHead>
-                    <TableHead className="w-[120px]">Quantity</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[180px]">Designation</TableHead>
+                    <TableHead className="w-[120px]">Dimensions</TableHead>
+                    <TableHead className="w-[100px]">Sheeting</TableHead>
+                    <TableHead className="w-[120px]">Substrate</TableHead>
+                    <TableHead className="w-[120px]">Structure</TableHead>
+                    <TableHead className="w-[80px]">Cover</TableHead>
+                    <TableHead className="w-[80px]">Stiffener</TableHead>
+                    <TableHead className="w-[100px]">B Lights</TableHead>
+                    <TableHead className="w-[100px]">B Light Color</TableHead>
+                    <TableHead className="w-[100px]">Quantity</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {configurations.map((config, index) => (
-                    <TableRow key={config.id}>
+                    <TableRow
+                      key={config.id}
+                      onClick={() => setSelectedSignIndex(index)}
+                      className={cn(
+                        "cursor-pointer",
+                        selectedSignIndex === index && "bg-muted/50"
+                      )}
+                    >
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-medium text-sm">{config.designation}</div>
-                          <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                          <div className="text-xs text-muted-foreground truncate max-w-[160px]">
                             {config.description}
                           </div>
                         </div>
@@ -254,83 +243,178 @@ const KitConfigurationTable = ({
                               </>
                             )}
                           </SelectContent>
-                      </Select>
-                    </TableCell>
+                        </Select>
+                      </TableCell>
 
-                    <TableCell>
-                      <Select
-                        value={config.displayStructure}
-                        onValueChange={(value) => updateConfiguration(index, 'displayStructure', value)}
-                      >
-                        <SelectTrigger className="w-full h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="4 FT T-III RIGHT">4 FT T-III RIGHT</SelectItem>
-                          <SelectItem value="4 FT T-III LEFT">4 FT T-III LEFT</SelectItem>
-                          <SelectItem value="6 FT T-III RIGHT">6 FT T-III RIGHT</SelectItem>
-                          <SelectItem value="6 FT T-III LEFT">6 FT T-III LEFT</SelectItem>
-                          <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                          <SelectItem value="8 FT POST">8 FT POST</SelectItem>
-                          <SelectItem value="10 FT POST">10 FT POST</SelectItem>
-                          <SelectItem value="12 FT POST">12 FT POST</SelectItem>
-                          <SelectItem value="14 FT POST">14 FT POST</SelectItem>
-                          <SelectItem value="LOOSE">LOOSE</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => updateQuantity(index, -1)}
-                          disabled={config.quantity <= 1}
+                      <TableCell>
+                        <Select
+                          value={config.displayStructure}
+                          onValueChange={(value) => updateConfiguration(index, 'displayStructure', value)}
                         >
-                          <Minus className="h-3 w-3" />
-                        </Button>
+                          <SelectTrigger className="w-full h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="4 FT T-III RIGHT">4 FT T-III RIGHT</SelectItem>
+                            <SelectItem value="4 FT T-III LEFT">4 FT T-III LEFT</SelectItem>
+                            <SelectItem value="6 FT T-III RIGHT">6 FT T-III RIGHT</SelectItem>
+                            <SelectItem value="6 FT T-III LEFT">6 FT T-III LEFT</SelectItem>
+                            <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                            <SelectItem value="8 FT POST">8 FT POST</SelectItem>
+                            <SelectItem value="10 FT POST">10 FT POST</SelectItem>
+                            <SelectItem value="12 FT POST">12 FT POST</SelectItem>
+                            <SelectItem value="14 FT POST">14 FT POST</SelectItem>
+                            <SelectItem value="LOOSE">LOOSE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      <TableCell>
+                        <Checkbox
+                          checked={config.cover}
+                          onCheckedChange={(checked) => updateConfiguration(index, 'cover', checked)}
+                        />
+                      </TableCell>
+
+                      <TableCell>
+                        <Checkbox
+                          checked={config.stiffener}
+                          onCheckedChange={(checked) => updateConfiguration(index, 'stiffener', checked)}
+                        />
+                      </TableCell>
+
+                      <TableCell>
                         <Input
                           type="number"
-                          min={1}
-                          value={config.quantity}
+                          min={0}
+                          value={config.bLights}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (!isNaN(value) && value >= 1) {
-                              updateConfiguration(index, 'quantity', value);
-                            }
+                            const value = parseInt(e.target.value) || 0;
+                            updateConfiguration(index, 'bLights', value);
                           }}
-                          className="w-12 h-8 text-center"
+                          className="w-full h-8 text-center"
                         />
+                      </TableCell>
+
+                      <TableCell>
+                        {config.bLights > 0 && (
+                          <Select
+                            value={config.bLightsColor || ""}
+                            onValueChange={(value) => updateConfiguration(index, 'bLightsColor', value)}
+                          >
+                            <SelectTrigger className="w-full h-8">
+                              <SelectValue placeholder="Color" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Red">Red</SelectItem>
+                              <SelectItem value="Yellow">Yellow</SelectItem>
+                              <SelectItem value="White">White</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => updateQuantity(index, -1)}
+                            disabled={config.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={config.quantity}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value >= 1) {
+                                updateConfiguration(index, 'quantity', value);
+                              }
+                            }}
+                            className="w-12 h-8 text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => updateQuantity(index, 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => updateQuantity(index, 1)}
+                          onClick={() => removeSign(index)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSign(index)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Sign Image Thumbnail - independently scrollable */}
+        <div className="flex flex-col min-h-0">
+          <h3 className="text-lg font-semibold mb-4">Sign Preview</h3>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="border rounded-lg p-4 bg-muted/20">
+              {selectedSign && selectedSignData ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h4 className="font-medium text-sm">{selectedSign.designation}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">{selectedSign.description}</p>
+                  </div>
+
+                  {selectedSignData.image_url ? (
+                    <img
+                      src={selectedSignData.image_url}
+                      alt={`${selectedSign.designation} preview`}
+                      className="w-full h-auto object-contain rounded border max-h-[300px]"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                        e.currentTarget.alt = 'Image failed to load';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-[200px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
+                      <p className="text-muted-foreground text-sm">No image available</p>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>Dimensions: {selectedSign.width}" × {selectedSign.height}"</div>
+                    <div>Sheeting: {selectedSignData.sheeting}</div>
+                    {selectedSign.bLights > 0 && (
+                      <div>B Lights: {selectedSign.bLights} ({selectedSign.bLightsColor || 'No color'})</div>
+                    )}
+                    {selectedSign.cover && <div>Cover: Yes</div>}
+                    {selectedSign.stiffener && <div>Stiffener: Yes</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-[300px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm mb-2">Click on a sign row to preview</p>
+                    <p className="text-xs text-muted-foreground">Image and details will appear here</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
