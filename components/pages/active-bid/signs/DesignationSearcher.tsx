@@ -27,6 +27,8 @@ import React, {
   useMemo,
 } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import KitConfigurationTable from './KitConfigurationTable';
+import { generateUniqueId } from './generate-stable-id';
 
 interface Props {
   localSign: PrimarySign | SecondarySign;
@@ -69,6 +71,9 @@ const DesignationSearcher = ({
   const [variantSelectionModalOpen, setVariantSelectionModalOpen] = useState(false);
   const [selectedKitForVariant, setSelectedKitForVariant] = useState<PataKit | PtsKit | null>(null);
   const [kitVariantType, setKitVariantType] = useState<'pata' | 'pts' | null>(null);
+  const [kitConfigurationModalOpen, setKitConfigurationModalOpen] = useState(false);
+  const [selectedKitForConfiguration, setSelectedKitForConfiguration] = useState<PataKit | PtsKit | null>(null);
+  const [kitConfigurationType, setKitConfigurationType] = useState<'pata' | 'pts' | null>(null);
 
   // Fetch all data once on mount
   useEffect(() => {
@@ -237,7 +242,10 @@ const DesignationSearcher = ({
       setVariantSelectionModalOpen(true);
       return;
     }
-    await showKitPreview(kit, kitType);
+    // Open kit configuration table instead of preview
+    setSelectedKitForConfiguration(kit);
+    setKitConfigurationType(kitType);
+    setKitConfigurationModalOpen(true);
   };
 
   const showKitPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
@@ -288,16 +296,56 @@ const DesignationSearcher = ({
     else setPtsSearch('');
   };
 
+  const handleKitConfigurationSave = (configurations: any[]) => {
+    // Convert configurations to PrimarySign objects and add them to the order
+    configurations.forEach(config => {
+      const newSign: PrimarySign = {
+        id: generateUniqueId(),
+        designation: config.designation,
+        width: config.width,
+        height: config.height,
+        quantity: config.quantity,
+        sheeting: config.sheeting,
+        associatedStructure: config.associatedStructure,
+        displayStructure: config.displayStructure,
+        bLights: config.bLights,
+        cover: config.cover,
+        isCustom: false,
+        bLightsColor: undefined,
+        description: config.description,
+        substrate: config.substrate,
+        stiffener: config.stiffener,
+      };
+
+      // Add the sign to the estimate context
+      // Note: This assumes the component is used within the EstimateContext
+      // The parent component will need to handle the actual dispatch
+      if (onDesignationSelected) {
+        onDesignationSelected(newSign);
+      }
+    });
+
+    setKitConfigurationModalOpen(false);
+    setSelectedKitForConfiguration(null);
+    setKitConfigurationType(null);
+    setOpen(false);
+    if (kitConfigurationType === 'pata') setPataSearch('');
+    else setPtsSearch('');
+  };
+
   const closeModals = () => {
     setOpen(false);
     setDimensionModalOpen(false);
     setKitPreviewModalOpen(false);
     setVariantSelectionModalOpen(false);
+    setKitConfigurationModalOpen(false);
     setSelectedDesignation(null);
     setSelectedKitForPreview(null);
     setKitPreviewType(null);
     setSelectedKitForVariant(null);
     setKitVariantType(null);
+    setSelectedKitForConfiguration(null);
+    setKitConfigurationType(null);
     setMutcdSearch('');
     setPataSearch('');
     setPtsSearch('');
@@ -816,6 +864,39 @@ const DesignationSearcher = ({
             <Button variant="outline" onClick={closeModals}>
               Cancel
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Kit Configuration Modal */}
+      <Dialog open={kitConfigurationModalOpen} onOpenChange={setKitConfigurationModalOpen}>
+        <DialogContent className="max-w-6xl h-[800px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>
+                Configure {kitConfigurationType?.toUpperCase()} Kit Signs
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                Customize each sign in the kit with your preferred settings.
+              </p>
+            </DialogHeader>
+            <Separator className="w-full -mt-2" />
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {selectedKitForConfiguration && kitConfigurationType && (
+              <KitConfigurationTable
+                kit={selectedKitForConfiguration}
+                kitType={kitConfigurationType}
+                signsData={signs}
+                onSave={handleKitConfigurationSave}
+                onCancel={() => {
+                  setKitConfigurationModalOpen(false);
+                  setSelectedKitForConfiguration(null);
+                  setKitConfigurationType(null);
+                }}
+                isSignOrder={false}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
