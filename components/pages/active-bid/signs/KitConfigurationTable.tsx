@@ -200,7 +200,7 @@ const KitConfigurationTable = ({
                     const signData = signsData.find(s => s.designation === config.designation);
                     return (
                       <TableRow key={config.id}>
-                        <TableCell className="sticky left-0 z-10 bg-background border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                        <TableCell className="sticky left-0 z-10 bg-white border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                           <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                             {signData?.image_url ? (
                               <img
@@ -226,7 +226,7 @@ const KitConfigurationTable = ({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="sticky left-[60px] z-10 bg-background border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] font-medium">
+                        <TableCell className="sticky left-[60px] z-10 bg-white border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] font-medium">
                           <div>
                             <div className="font-medium text-sm">{config.designation}</div>
                             <div className="text-xs text-muted-foreground truncate max-w-[160px]">
