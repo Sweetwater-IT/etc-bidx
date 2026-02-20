@@ -870,7 +870,7 @@ const DesignationSearcher = ({
 
       {/* Kit Configuration Modal */}
       <Dialog open={kitConfigurationModalOpen} onOpenChange={setKitConfigurationModalOpen}>
-        <DialogContent className="max-w-6xl h-[800px] flex flex-col p-0">
+        <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DialogHeader className="p-6 pb-4">
               <DialogTitle>
@@ -882,7 +882,7 @@ const DesignationSearcher = ({
             </DialogHeader>
             <Separator className="w-full -mt-2" />
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
             {selectedKitForConfiguration && kitConfigurationType && (
               <KitConfigurationTable
                 kit={selectedKitForConfiguration}
