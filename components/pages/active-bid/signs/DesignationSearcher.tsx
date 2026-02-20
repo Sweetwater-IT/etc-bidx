@@ -70,19 +70,33 @@ const DesignationSearcher = ({
   const [selectedKitForVariant, setSelectedKitForVariant] = useState<PataKit | PtsKit | null>(null);
   const [kitVariantType, setKitVariantType] = useState<'pata' | 'pts' | null>(null);
 
-  // Fetch all data once
+  // Fetch all data once on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // MUTCD signs
-        const { data: signsData } = await supabase
+        // MUTCD signs with dimensions transformation
+        const { data: signsDataRaw } = await supabase
           .from('signs')
           .select('id, designation, description, category, sizes, sheeting, image_url')
           .order('designation');
 
-        setSigns(signsData || []);
+        const signsData: SignDesignation[] = (signsDataRaw || []).map((sign: any) => {
+          const dimensions = (sign.sizes || []).map((sizeStr: string) => {
+            const [widthStr, heightStr] = sizeStr.split(' x ');
+            const width = parseFloat(widthStr);
+            const height = parseFloat(heightStr);
+            return !isNaN(width) && !isNaN(height) ? { width, height } : null;
+          }).filter((dim): dim is { width: number; height: number } => dim !== null);
 
-        // PATA kits + contents (flat fetch like sister site)
+          return {
+            ...sign,
+            dimensions: dimensions.length > 0 ? dimensions : [{ width: 0, height: 0 }],
+          };
+        });
+
+        setSigns(signsData);
+
+        // PATA kits + contents (flat fetch)
         const { data: pataKitsData } = await supabase
           .from('pata_kits')
           .select('id, code, description, image_url, finished, reviewed, has_variants')
@@ -99,7 +113,7 @@ const DesignationSearcher = ({
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
-            } as PataKit;
+            };
           })
         );
 
@@ -122,7 +136,7 @@ const DesignationSearcher = ({
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
-            } as PtsKit;
+            };
           })
         );
 
@@ -132,7 +146,7 @@ const DesignationSearcher = ({
       }
     };
 
-    fetchData();
+    fetchData(); // ← This was missing!
   }, []);
 
   // Filtered lists per tab
@@ -385,7 +399,7 @@ const DesignationSearcher = ({
                               {sign.description || '-'}
                             </div>
                             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>{sign.sizes?.length || 0} size{sign.sizes?.length !== 1 ? 's' : ''} available</span>
+                              <span>{sign.dimensions.length} size{sign.dimensions.length !== 1 ? 's' : ''} available</span>
                               <span>{sign.sheeting}</span>
                             </div>
                           </div>
