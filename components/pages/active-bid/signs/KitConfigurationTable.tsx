@@ -398,7 +398,9 @@ const KitConfigurationTable = ({
                   )}
 
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Dimensions: {selectedSign.width}" × {selectedSign.height}"</div>
+                    <div>
+                      Dimensions: {selectedSign.width}&quot; × {selectedSign.height}&quot;
+                    </div>                    
                     <div>Sheeting: {selectedSignData.sheeting}</div>
                     {selectedSign.bLights > 0 && (
                       <div>B Lights: {selectedSign.bLights} ({selectedSign.bLightsColor || 'No color'})</div>
