@@ -1,15 +1,32 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { fetchSignDesignations } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { PrimarySign, SecondarySign, SheetingType, SignsApiResponse, PataKit, PtsKit, SignDesignation } from '@/types/MPTEquipment';
+import {
+  PrimarySign,
+  SecondarySign,
+  PataKit,
+  PtsKit,
+  SignDesignation,
+} from '@/types/MPTEquipment';
 import { Check, Search, Plus, Package } from 'lucide-react';
-import React, { Dispatch, SetStateAction, useEffect, useState, useMemo } from 'react';
-import { processSignData } from './process-sign-data';
-
-
+import React, {
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+  useMemo,
+} from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 interface Props {
   localSign: PrimarySign | SecondarySign;
@@ -18,10 +35,31 @@ interface Props {
   onKitSelected?: (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => void;
 }
 
-const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, onKitSelected }: Props) => {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const DesignationSearcher = ({
+  localSign,
+  setLocalSign,
+  onDesignationSelected,
+  onKitSelected,
+}: Props) => {
   const [open, setOpen] = useState(false);
-  const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState('mutcd');
+
+  // Independent search per tab
+  const [mutcdSearch, setMutcdSearch] = useState('');
+  const [pataSearch, setPataSearch] = useState('');
+  const [ptsSearch, setPtsSearch] = useState('');
+
+  // Data states
+  const [signs, setSigns] = useState<SignDesignation[]>([]);
+  const [pataKits, setPataKits] = useState<PataKit[]>([]);
+  const [ptsKits, setPtsKits] = useState<PtsKit[]>([]);
+
+  // Modal states
   const [selectedDesignation, setSelectedDesignation] = useState<SignDesignation | null>(null);
   const [dimensionModalOpen, setDimensionModalOpen] = useState(false);
   const [kitPreviewModalOpen, setKitPreviewModalOpen] = useState(false);
@@ -32,85 +70,103 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
   const [selectedKitForVariant, setSelectedKitForVariant] = useState<PataKit | PtsKit | null>(null);
   const [kitVariantType, setKitVariantType] = useState<'pata' | 'pts' | null>(null);
 
+  // Fetch all data once
   useEffect(() => {
-    const loadSignData = async () => {
+    const fetchData = async () => {
       try {
-        console.log('Fetching /api/signs...'); // Confirm the effect runs
-  
-        const response = await fetch('/api/signs');
-        console.log('Response status:', response.status); // 200 = good, 404/500 = problem
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-  
-        const data = await response.json();
-  
-        if (data.success && data.data) {
-          // ← This is the perfect place for detailed logging
-          console.log('API success - setting data:', {
-            signs: data.data.signs?.length || 0,
-            pataKits: data.data.pataKits?.length || 0,
-            ptsKits: data.data.ptsKits?.length || 0,
-            pataWithContent: data.data.pataKits?.filter(
-              (k: any) => k.signCount > 0
-            ).length || 0,
-            ptsWithContent: data.data.ptsKits?.filter(
-              (k: any) => k.signCount > 0
-            ).length || 0,
-          });
-  
-          setApiData(data.data);
-          console.log('setApiData called — state should now have data');
-        } else {
-          console.warn("API returned no success/data:", data);
-          setApiData({ signs: [], pataKits: [], ptsKits: [] });
-        }
-      } catch (error) {
-        console.error("Error fetching sign data:", error);
-        setApiData({ signs: [], pataKits: [], ptsKits: [] });
+        // MUTCD signs
+        const { data: signsData } = await supabase
+          .from('signs')
+          .select('id, designation, description, category, sizes, sheeting, image_url')
+          .order('designation');
+
+        setSigns(signsData || []);
+
+        // PATA kits + contents (flat fetch like sister site)
+        const { data: pataKitsData } = await supabase
+          .from('pata_kits')
+          .select('id, code, description, image_url, finished, reviewed, has_variants')
+          .order('code');
+
+        const pataKitsWithContents = await Promise.all(
+          (pataKitsData || []).map(async (kit) => {
+            const { data: contents } = await supabase
+              .from('pata_kit_contents')
+              .select('sign_designation, quantity, blight_quantity')
+              .eq('pata_kit_code', kit.code);
+
+            return {
+              ...kit,
+              contents: contents || [],
+              signCount: contents?.length || 0,
+            } as PataKit;
+          })
+        );
+
+        setPataKits(pataKitsWithContents);
+
+        // PTS kits + contents
+        const { data: ptsKitsData } = await supabase
+          .from('pts_kits')
+          .select('id, code, description, image_url, finished, reviewed, has_variants')
+          .order('code');
+
+        const ptsKitsWithContents = await Promise.all(
+          (ptsKitsData || []).map(async (kit) => {
+            const { data: contents } = await supabase
+              .from('pts_kit_contents')
+              .select('sign_designation, quantity')
+              .eq('pts_kit_code', kit.code);
+
+            return {
+              ...kit,
+              contents: contents || [],
+              signCount: contents?.length || 0,
+            } as PtsKit;
+          })
+        );
+
+        setPtsKits(ptsKitsWithContents);
+      } catch (err) {
+        console.error('Error fetching data:', err);
       }
     };
-  
-    loadSignData();
+
+    fetchData();
   }, []);
 
-  const filteredResults = useMemo(() => {
-    if (!apiData) return { signs: [], pataKits: [], ptsKits: [] };
-
-    if (!searchQuery.trim()) {
-      return apiData;
-    }
-
-    const query = searchQuery.toLowerCase();
-
-    // Filter signs
-    const filteredSigns = apiData.signs.filter(sign =>
-      sign.designation.toLowerCase().includes(query) ||
-      sign.description.toLowerCase().includes(query)
+  // Filtered lists per tab
+  const filteredSigns = useMemo(() => {
+    if (!mutcdSearch.trim()) return signs;
+    const q = mutcdSearch.toLowerCase();
+    return signs.filter(
+      (s) =>
+        s.designation.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q)
     );
+  }, [signs, mutcdSearch]);
 
-    // Filter kits that contain signs matching the query
-    const signDesignations = new Set(filteredSigns.map(s => s.designation));
-
-    const filteredPataKits = apiData.pataKits.filter(kit =>
-      kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
-      kit.code.toLowerCase().includes(query) ||
-      kit.description.toLowerCase().includes(query)
+  const filteredPataKits = useMemo(() => {
+    if (!pataSearch.trim()) return pataKits;
+    const q = pataSearch.toLowerCase();
+    return pataKits.filter(
+      (kit) =>
+        kit.code.toLowerCase().includes(q) ||
+        kit.description?.toLowerCase().includes(q) ||
+        kit.contents.some((c) => c.sign_designation.toLowerCase().includes(q))
     );
+  }, [pataKits, pataSearch]);
 
-    const filteredPtsKits = apiData.ptsKits.filter(kit =>
-      kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
-      kit.code.toLowerCase().includes(query) ||
-      kit.description.toLowerCase().includes(query)
+  const filteredPtsKits = useMemo(() => {
+    if (!ptsSearch.trim()) return ptsKits;
+    const q = ptsSearch.toLowerCase();
+    return ptsKits.filter(
+      (kit) =>
+        kit.code.toLowerCase().includes(q) ||
+        kit.description?.toLowerCase().includes(q) ||
+        kit.contents.some((c) => c.sign_designation.toLowerCase().includes(q))
     );
-
-    return {
-      signs: filteredSigns,
-      pataKits: filteredPataKits,
-      ptsKits: filteredPtsKits
-    };
-  }, [apiData, searchQuery]);
+  }, [ptsKits, ptsSearch]);
 
   const handleSelectDesignation = (designation: SignDesignation) => {
     setSelectedDesignation(designation);
@@ -119,7 +175,6 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
 
   const handleSelectDimension = (width: number, height: number) => {
     if (!selectedDesignation) return;
-
     const updatedSign = {
       ...localSign,
       designation: selectedDesignation.designation,
@@ -128,53 +183,44 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
       sheeting: selectedDesignation.sheeting,
       description: selectedDesignation.description,
     };
-
     setLocalSign(updatedSign);
-    if (onDesignationSelected) {
-      onDesignationSelected(updatedSign);
-    }
+    if (onDesignationSelected) onDesignationSelected(updatedSign);
     setOpen(false);
     setDimensionModalOpen(false);
     setSelectedDesignation(null);
-    setSearchQuery("");
+    setMutcdSearch('');
   };
 
   const handleCustomDesignation = () => {
     const updatedSign = {
       ...localSign,
-      designation: "",
+      designation: '',
       width: 0,
       height: 0,
       sheeting: localSign.sheeting,
-      description: "",
+      description: '',
       isCustom: true,
     };
     setLocalSign(updatedSign);
-    if (onDesignationSelected) {
-      onDesignationSelected(updatedSign);
-    }
+    if (onDesignationSelected) onDesignationSelected(updatedSign);
     setOpen(false);
-    setSearchQuery("");
+    setMutcdSearch('');
   };
 
   const handleSelectKit = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
-    if (onKitSelected) {
-      onKitSelected(kit, kitType);
-    }
+    if (onKitSelected) onKitSelected(kit, kitType);
     setOpen(false);
-    setSearchQuery("");
+    if (kitType === 'pata') setPataSearch('');
+    else setPtsSearch('');
   };
 
   const handleSelectKitForPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
-    // If kit has variants, show variant selection first
-    if (kit.has_variants && kit.variants.length > 0) {
+    if (kit.has_variants && kit.variants?.length > 0) {
       setSelectedKitForVariant(kit);
       setKitVariantType(kitType);
       setVariantSelectionModalOpen(true);
       return;
     }
-
-    // Otherwise, proceed directly to kit preview
     await showKitPreview(kit, kitType);
   };
 
@@ -182,24 +228,24 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
     setSelectedKitForPreview(kit);
     setKitPreviewType(kitType);
 
-    // Enrich kit contents with sign images and descriptions
-    if (apiData) {
-      const signMap = new Map();
-      apiData.signs.forEach(sign => {
-        signMap.set(sign.designation, sign);
-      });
+    // Enrich contents with sign images/descriptions
+    if (signs.length > 0) {
+      const signMap = new Map<string, SignDesignation>();
+      signs.forEach((sign) => signMap.set(sign.designation, sign));
 
-      const enrichedContents = kit.contents.map(content => {
+      const enriched = kit.contents.map((content) => {
         const signData = signMap.get(content.sign_designation);
         return {
           ...content,
           image_url: signData?.image_url,
-          description: signData?.description,
-          sheeting: signData?.sheeting
+          description: signData?.description || '-',
+          sheeting: signData?.sheeting,
         };
       });
 
-      setKitContentsWithImages(enrichedContents);
+      setKitContentsWithImages(enriched);
+    } else {
+      setKitContentsWithImages(kit.contents);
     }
 
     setKitPreviewModalOpen(true);
@@ -207,9 +253,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
 
   const handleVariantSelected = async (variant: any) => {
     if (!selectedKitForVariant || !kitVariantType) return;
-
-    // For now, variants use the same contents as the base kit
-    // In a full implementation, variants might have different contents
+    // Variants use base kit contents for now
     await showKitPreview(selectedKitForVariant, kitVariantType);
     setVariantSelectionModalOpen(false);
     setSelectedKitForVariant(null);
@@ -224,17 +268,23 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
     setSelectedKitForPreview(null);
     setKitPreviewType(null);
     setOpen(false);
-    setSearchQuery("");
+    if (kitPreviewType === 'pata') setPataSearch('');
+    else setPtsSearch('');
   };
 
   const closeModals = () => {
     setOpen(false);
     setDimensionModalOpen(false);
     setKitPreviewModalOpen(false);
+    setVariantSelectionModalOpen(false);
     setSelectedDesignation(null);
     setSelectedKitForPreview(null);
     setKitPreviewType(null);
-    setSearchQuery("");
+    setSelectedKitForVariant(null);
+    setKitVariantType(null);
+    setMutcdSearch('');
+    setPataSearch('');
+    setPtsSearch('');
   };
 
   return (
@@ -246,67 +296,57 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
       >
         <span className="truncate">
           {localSign.designation
-            ? `${localSign.designation}${localSign.width && localSign.height ? ` (${localSign.width} x ${localSign.height})` : ''}`
-            : "Select designation..."
-          }
+            ? `${localSign.designation}${
+                localSign.width && localSign.height ? ` (${localSign.width} x ${localSign.height})` : ''
+              }`
+            : 'Select designation...'}
         </span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
-          <div className="flex flex-col gap-2 relative z-10 bg-background">
-            <DialogHeader className="p-6 pb-4">
-              <DialogTitle>Select Sign Designation</DialogTitle>
-            </DialogHeader>
-            <Separator className="w-full -mt-2" />
-          </div>
+        <DialogContent className="max-w-4xl h-[700px] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Select Sign Designation</DialogTitle>
+          </DialogHeader>
+          <Separator className="w-full -mt-2" />
 
-          {/* Fixed Controls Section */}
-          <div className="px-6 py-4 space-y-4 bg-background border-b">
-            {/* Add Custom Designation Button */}
-            <div className="flex justify-start">
-              <Button
-                variant="outline"
-                onClick={handleCustomDesignation}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Custom Designation
-              </Button>
-            </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <div className="px-6 py-4 bg-background border-b">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="mutcd">MUTCD Signs</TabsTrigger>
+                  <TabsTrigger value="pata">PATA Kits</TabsTrigger>
+                  <TabsTrigger value="pts">PTS Kits</TabsTrigger>
+                </TabsList>
+              </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search designations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* Scrollable Content with Sections */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-6">
-            {/* MUTCD SIGNS Section */}
-            {(filteredResults.signs.length > 0 || (!searchQuery && apiData?.signs.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">MUTCD SIGNS ({apiData?.signs.length || 0})</h3>
-                <div className="space-y-2">
-                  {filteredResults.signs.length === 0 ? (
+              {/* MUTCD Tab */}
+              <TabsContent value="mutcd" className="flex-1 overflow-hidden flex flex-col">
+                <div className="px-6 py-4 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search MUTCD designations..."
+                      value={mutcdSearch}
+                      onChange={(e) => setMutcdSearch(e.target.value)}
+                      className="pl-10"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  {filteredSigns.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      {searchQuery ? "No MUTCD signs found matching your search." : "No MUTCD signs available."}
+                      No MUTCD signs found.
                     </div>
                   ) : (
-                    filteredResults.signs.map((sign, index) => (
+                    filteredSigns.map((sign) => (
                       <div
                         key={sign.designation}
                         onClick={() => handleSelectDesignation(sign)}
                         className={cn(
-                          "cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4",
-                          localSign.designation === sign.designation && "border-primary bg-primary/5"
+                          'cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2',
+                          localSign.designation === sign.designation && 'border-primary bg-primary/5'
                         )}
                       >
                         <div className="flex items-start gap-4">
@@ -335,22 +375,18 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-sm flex items-center gap-2">
-                                  {sign.designation}
-                                  {localSign.designation === sign.designation && (
-                                    <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                                  )}
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {sign.description || '-'}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>{sign.dimensions.length} size{sign.dimensions.length !== 1 ? 's' : ''} available</span>
-                                  <span>{sign.sheeting}</span>
-                                </div>
-                              </div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {sign.designation}
+                              {localSign.designation === sign.designation && (
+                                <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {sign.description || '-'}
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span>{sign.sizes?.length || 0} size{sign.sizes?.length !== 1 ? 's' : ''} available</span>
+                              <span>{sign.sheeting}</span>
                             </div>
                           </div>
                         </div>
@@ -358,24 +394,32 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
+              </TabsContent>
 
-            {/* PATA Kits Section */}
-            {(filteredResults.pataKits.length > 0 || (!searchQuery && apiData?.pataKits.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">PATA Kits ({apiData?.pataKits.length || 0})</h3>
-                <div className="space-y-2">
-                  {filteredResults.pataKits.length === 0 ? (
+              {/* PATA Tab */}
+              <TabsContent value="pata" className="flex-1 overflow-hidden flex flex-col">
+                <div className="px-6 py-4 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search PATA kits..."
+                      value={pataSearch}
+                      onChange={(e) => setPataSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  {filteredPataKits.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      {searchQuery ? "No PATA kits found matching your search." : "No PATA kits available."}
+                      No PATA kits found.
                     </div>
                   ) : (
-                    filteredResults.pataKits.map((kit) => (
+                    filteredPataKits.map((kit) => (
                       <div
                         key={kit.id}
                         onClick={() => handleSelectKitForPreview(kit, 'pata')}
-                        className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 bg-blue-50/50 border-blue-200"
+                        className="cursor-pointer transition-colors hover:bg-blue-50/50 border rounded-lg p-4 mb-2 bg-blue-50/30"
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-16 h-16 rounded border bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -391,7 +435,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                                   if (parent) {
                                     const fallback = document.createElement('div');
                                     fallback.className = 'w-full h-full flex items-center justify-center text-blue-600';
-                                    fallback.innerHTML = '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                                    fallback.innerHTML =
+                                      '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
                                     parent.appendChild(fallback);
                                   }
                                 }}
@@ -401,21 +446,17 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-sm flex items-center gap-2">
-                                  {kit.code}
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                    KIT
-                                  </span>
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {kit.description || '-'}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
-                                </div>
-                              </div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {kit.code}
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                KIT
+                              </span>
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {kit.description || '-'}
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
                             </div>
                           </div>
                         </div>
@@ -423,24 +464,32 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
+              </TabsContent>
 
-            {/* PTS Kits Section */}
-            {(filteredResults.ptsKits.length > 0 || (!searchQuery && apiData?.ptsKits.length === 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">PTS Kits ({apiData?.ptsKits.length || 0})</h3>
-                <div className="space-y-2">
-                  {filteredResults.ptsKits.length === 0 ? (
+              {/* PTS Tab */}
+              <TabsContent value="pts" className="flex-1 overflow-hidden flex flex-col">
+                <div className="px-6 py-4 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search PTS kits..."
+                      value={ptsSearch}
+                      onChange={(e) => setPtsSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  {filteredPtsKits.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      {searchQuery ? "No PTS kits found matching your search." : "No PTS kits available."}
+                      No PTS kits found.
                     </div>
                   ) : (
-                    filteredResults.ptsKits.map((kit) => (
+                    filteredPtsKits.map((kit) => (
                       <div
                         key={kit.id}
                         onClick={() => handleSelectKitForPreview(kit, 'pts')}
-                        className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 bg-green-50/50 border-green-200"
+                        className="cursor-pointer transition-colors hover:bg-green-50/50 border rounded-lg p-4 mb-2 bg-green-50/30"
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-16 h-16 rounded border bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -456,7 +505,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                                   if (parent) {
                                     const fallback = document.createElement('div');
                                     fallback.className = 'w-full h-full flex items-center justify-center text-green-600';
-                                    fallback.innerHTML = '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                                    fallback.innerHTML =
+                                      '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
                                     parent.appendChild(fallback);
                                   }
                                 }}
@@ -466,21 +516,17 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-sm flex items-center gap-2">
-                                  {kit.code}
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                    KIT
-                                  </span>
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {kit.description || '-'}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
-                                </div>
-                              </div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {kit.code}
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                KIT
+                              </span>
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {kit.description || '-'}
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
                             </div>
                           </div>
                         </div>
@@ -488,15 +534,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     ))
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* No Results */}
-            {filteredResults.signs.length === 0 && filteredResults.pataKits.length === 0 && filteredResults.ptsKits.length === 0 && searchQuery && (
-              <div className="text-center py-8 text-muted-foreground">
-                No results found matching your search.
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           <Separator />
@@ -513,31 +552,27 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
         <DialogContent className="max-w-2xl h-[500px] flex flex-col p-0">
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DialogHeader className="p-6 pb-4">
-              <DialogTitle>
-                Select Size for {selectedDesignation?.designation}
-              </DialogTitle>
+              <DialogTitle>Select Size for {selectedDesignation?.designation}</DialogTitle>
               <p className="text-sm text-muted-foreground mt-2">
                 {selectedDesignation?.description}
               </p>
             </DialogHeader>
             <Separator className="w-full -mt-2" />
           </div>
-
-          {/* Dimension Options */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {selectedDesignation?.dimensions.map((dim) => (
+              {selectedDesignation?.dimensions?.map((dim) => (
                 <button
                   key={`${dim.width}x${dim.height}`}
                   onClick={() => handleSelectDimension(dim.width, dim.height)}
                   className={cn(
-                    "p-4 border rounded-lg text-left transition-colors hover:bg-muted/50",
-                    "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                    'p-4 border rounded-lg text-left transition-colors hover:bg-muted/50',
+                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                     localSign.designation === selectedDesignation?.designation &&
-                    localSign.width === dim.width &&
-                    localSign.height === dim.height
-                      ? "border-primary bg-primary/5"
-                      : "border-border"
+                      localSign.width === dim.width &&
+                      localSign.height === dim.height
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border'
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -576,10 +611,10 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                           </div>
                         </div>
                         {localSign.designation === selectedDesignation?.designation &&
-                         localSign.width === dim.width &&
-                         localSign.height === dim.height && (
-                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        )}
+                          localSign.width === dim.width &&
+                          localSign.height === dim.height && (
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                          )}
                       </div>
                     </div>
                   </div>
@@ -587,13 +622,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
               ))}
             </div>
           </div>
-
           <Separator />
           <div className="flex justify-between items-center p-4 px-6">
-            <Button
-              variant="outline"
-              onClick={() => setDimensionModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setDimensionModalOpen(false)}>
               Back to Designations
             </Button>
             <Button variant="outline" onClick={closeModals}>
@@ -617,10 +648,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
             </DialogHeader>
             <Separator className="w-full -mt-2" />
           </div>
-
-          {/* Kit Content */}
           <div className="flex-1 min-h-0 flex">
-            {/* Left Side - Kit Image */}
+            {/* Left: Kit Diagram */}
             <div className="w-1/2 p-6 border-r border-border">
               <h3 className="text-lg font-semibold mb-4">Kit Diagram</h3>
               {selectedKitForPreview?.image_url ? (
@@ -629,8 +658,8 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                   alt={`${kitPreviewType?.toUpperCase()} Kit ${selectedKitForPreview.code} Diagram`}
                   className="w-full h-auto max-h-[500px] object-contain border rounded"
                   onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg";
-                    e.currentTarget.alt = "Diagram failed to load";
+                    e.currentTarget.src = '/placeholder.svg';
+                    e.currentTarget.alt = 'Diagram failed to load';
                   }}
                 />
               ) : (
@@ -640,9 +669,11 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
               )}
             </div>
 
-            {/* Right Side - Sign List */}
+            {/* Right: Sign List with Thumbnails */}
             <div className="w-1/2 p-6 flex flex-col">
-              <h3 className="text-lg font-semibold mb-4">Signs in Kit ({kitContentsWithImages.length})</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Signs in Kit ({kitContentsWithImages.length})
+              </h3>
               <div className="flex-1 overflow-y-auto space-y-3">
                 {kitContentsWithImages.map((content, index) => (
                   <div
@@ -676,9 +707,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">
-                            {content.sign_designation}
-                          </div>
+                          <div className="font-medium text-sm">{content.sign_designation}</div>
                           <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
                             {content.description || '-'}
                           </div>
@@ -700,13 +729,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
               </div>
             </div>
           </div>
-
           <Separator />
           <div className="flex justify-between items-center p-4 px-6">
-            <Button
-              variant="outline"
-              onClick={() => setKitPreviewModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setKitPreviewModalOpen(false)}>
               Back to Kits
             </Button>
             <div className="flex gap-2">
@@ -735,11 +760,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
             </DialogHeader>
             <Separator className="w-full -mt-2" />
           </div>
-
-          {/* Variant Options */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
             <div className="space-y-3">
-              {selectedKitForVariant?.variants.map((variant) => (
+              {selectedKitForVariant?.variants?.map((variant) => (
                 <button
                   key={variant.id}
                   onClick={() => handleVariantSelected(variant)}
@@ -747,9 +770,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {variant.label}
-                      </div>
+                      <div className="font-medium text-sm">{variant.label}</div>
                       <div className="text-sm text-muted-foreground mt-1">
                         {variant.description || 'No description'}
                       </div>
@@ -771,13 +792,9 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
               ))}
             </div>
           </div>
-
           <Separator />
           <div className="flex justify-between items-center p-4 px-6">
-            <Button
-              variant="outline"
-              onClick={() => setVariantSelectionModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setVariantSelectionModalOpen(false)}>
               Back to Kits
             </Button>
             <Button variant="outline" onClick={closeModals}>
