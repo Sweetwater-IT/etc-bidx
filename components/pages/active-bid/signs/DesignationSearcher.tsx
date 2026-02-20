@@ -704,7 +704,7 @@ const DesignationSearcher = ({
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DialogHeader className="p-6 pb-4">
               <DialogTitle>
-                Configure Kit Signs: {kitConfigurationType?.toUpperCase()} {selectedKitForConfiguration?.code} - {selectedKitForConfiguration?.description}
+                {kitPreviewType?.toUpperCase()} Kit: {selectedKitForPreview?.code}
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-2">
                 {selectedKitForPreview?.description}
@@ -874,11 +874,8 @@ const DesignationSearcher = ({
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DialogHeader className="p-6 pb-4">
               <DialogTitle>
-                Configure {kitConfigurationType?.toUpperCase()} Kit Signs
+                Configure Kit Signs: {kitConfigurationType?.toUpperCase()} {selectedKitForConfiguration?.code} - {selectedKitForConfiguration?.description}
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-2">
-                Customize each sign in the kit with your preferred settings.
-              </p>
             </DialogHeader>
             <Separator className="w-full -mt-2" />
           </div>
