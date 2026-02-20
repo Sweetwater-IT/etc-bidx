@@ -449,7 +449,7 @@ const KitConfigurationTable = ({
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={configurations.length === 0}>
-          Add Signs to Order
+          Add Kit to Order
         </Button>
       </div>
     </div>
