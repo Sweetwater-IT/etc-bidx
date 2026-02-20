@@ -148,36 +148,7 @@ const KitConfigurationTable = ({
     <div className="flex flex-col h-full">
       {/* Main content area with independent scrolling */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
-        {/* Left: Kit Diagram - independently scrollable */}
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Kit Diagram</h3>
-            <div className="text-sm text-muted-foreground">
-              {configurations.length} sign{configurations.length !== 1 ? 's' : ''} to configure
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="border rounded-lg p-4 bg-muted/20">
-              {kit.image_url ? (
-                <img
-                  src={kit.image_url}
-                  alt={`${kitType?.toUpperCase()} Kit ${kit.code} Diagram`}
-                  className="w-full h-auto object-contain rounded border"
-                  onError={(e) => {
-                    e.currentTarget.src = '/placeholder.svg';
-                    e.currentTarget.alt = 'Diagram failed to load';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-[400px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
-                  <p className="text-muted-foreground text-sm">No diagram available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Configuration Table - independently scrollable */}
+        {/* Left: Configuration Table - independently scrollable */}
         <div className="flex flex-col min-h-0">
           <h3 className="text-lg font-semibold mb-4">Sign Configuration</h3>
           <div className="flex-1 min-h-0 overflow-y-auto">
@@ -185,59 +156,37 @@ const KitConfigurationTable = ({
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[60px]">Image</TableHead>
                     <TableHead className="w-[180px]">Designation</TableHead>
                     <TableHead className="w-[120px]">Dimensions</TableHead>
                     <TableHead className="w-[100px]">Sheeting</TableHead>
                     <TableHead className="w-[120px]">Substrate</TableHead>
                     <TableHead className="w-[120px]">Structure</TableHead>
-                    <TableHead className="w-[100px]">Quantity</TableHead>
-                    <TableHead className="w-[100px]">B Lights</TableHead>
-                    <TableHead className="w-[100px]">B Light Color</TableHead>
                     <TableHead className="w-[80px]">Cover</TableHead>
                     <TableHead className="w-[80px]">Stiffener</TableHead>
+                    <TableHead className="w-[100px]">B Lights</TableHead>
+                    <TableHead className="w-[100px]">B Light Color</TableHead>
+                    <TableHead className="w-[100px]">Quantity</TableHead>
                     <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {configurations.map((config, index) => {
-                    const signData = signsData.find(s => s.designation === config.designation);
-                    return (
-                      <TableRow key={config.id}>
-                        <TableCell>
-                          <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {signData?.image_url ? (
-                              <img
-                                src={signData.image_url}
-                                alt={config.designation}
-                                className="w-full h-full object-contain p-1"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
-                                    fallback.textContent = config.designation.substring(0, 2).toUpperCase();
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <span className="text-muted-foreground text-xs font-medium">
-                                {config.designation.substring(0, 2).toUpperCase()}
-                              </span>
-                            )}
+                  {configurations.map((config, index) => (
+                    <TableRow
+                      key={config.id}
+                      onClick={() => setSelectedSignIndex(index)}
+                      className={cn(
+                        "cursor-pointer",
+                        selectedSignIndex === index && "bg-muted/50"
+                      )}
+                    >
+                      <TableCell className="font-medium">
+                        <div>
+                          <div className="font-medium text-sm">{config.designation}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[160px]">
+                            {config.description}
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div className="font-medium text-sm">{config.designation}</div>
-                            <div className="text-xs text-muted-foreground truncate max-w-[160px]">
-                              {config.description}
-                            </div>
-                          </div>
-                        </TableCell>
+                        </div>
+                      </TableCell>
 
                       <TableCell>
                         <Select
@@ -321,40 +270,17 @@ const KitConfigurationTable = ({
                       </TableCell>
 
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => updateQuantity(index, -1)}
-                            disabled={config.quantity <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={config.quantity}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value);
-                              if (!isNaN(value) && value >= 1) {
-                                updateConfiguration(index, 'quantity', value);
-                              }
-                            }}
-                            className="w-12 h-8 text-center"
-                            inputMode="numeric"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => updateQuantity(index, 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <Checkbox
+                          checked={config.cover}
+                          onCheckedChange={(checked) => updateConfiguration(index, 'cover', checked)}
+                        />
+                      </TableCell>
+
+                      <TableCell>
+                        <Checkbox
+                          checked={config.stiffener}
+                          onCheckedChange={(checked) => updateConfiguration(index, 'stiffener', checked)}
+                        />
                       </TableCell>
 
                       <TableCell>
@@ -367,7 +293,6 @@ const KitConfigurationTable = ({
                             updateConfiguration(index, 'bLights', value);
                           }}
                           className="w-full h-8 text-center"
-                          inputMode="numeric"
                         />
                       </TableCell>
 
@@ -390,17 +315,39 @@ const KitConfigurationTable = ({
                       </TableCell>
 
                       <TableCell>
-                        <Checkbox
-                          checked={config.cover}
-                          onCheckedChange={(checked) => updateConfiguration(index, 'cover', checked)}
-                        />
-                      </TableCell>
-
-                      <TableCell>
-                        <Checkbox
-                          checked={config.stiffener}
-                          onCheckedChange={(checked) => updateConfiguration(index, 'stiffener', checked)}
-                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => updateQuantity(index, -1)}
+                            disabled={config.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={config.quantity}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value >= 1) {
+                                updateConfiguration(index, 'quantity', value);
+                              }
+                            }}
+                            className="w-12 h-8 text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => updateQuantity(index, 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
 
                       <TableCell>
@@ -418,6 +365,58 @@ const KitConfigurationTable = ({
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Sign Image Thumbnail - independently scrollable */}
+        <div className="flex flex-col min-h-0">
+          <h3 className="text-lg font-semibold mb-4">Sign Preview</h3>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="border rounded-lg p-4 bg-muted/20">
+              {selectedSign && selectedSignData ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h4 className="font-medium text-sm">{selectedSign.designation}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">{selectedSign.description}</p>
+                  </div>
+
+                  {selectedSignData.image_url ? (
+                    <img
+                      src={selectedSignData.image_url}
+                      alt={`${selectedSign.designation} preview`}
+                      className="w-full h-auto object-contain rounded border max-h-[300px]"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                        e.currentTarget.alt = 'Image failed to load';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-[200px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
+                      <p className="text-muted-foreground text-sm">No image available</p>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>
+                      Dimensions: {selectedSign.width}&quot; × {selectedSign.height}&quot;
+                    </div>                    
+                    <div>Sheeting: {selectedSignData.sheeting}</div>
+                    {selectedSign.bLights > 0 && (
+                      <div>B Lights: {selectedSign.bLights} ({selectedSign.bLightsColor || 'No color'})</div>
+                    )}
+                    {selectedSign.cover && <div>Cover: Yes</div>}
+                    {selectedSign.stiffener && <div>Stiffener: Yes</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-[300px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm mb-2">Click on a sign row to preview</p>
+                    <p className="text-xs text-muted-foreground">Image and details will appear here</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
