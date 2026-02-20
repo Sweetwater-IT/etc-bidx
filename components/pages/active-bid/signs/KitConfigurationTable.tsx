@@ -338,7 +338,7 @@ const KitConfigurationTable = ({
                                   updateConfiguration(index, 'quantity', value);
                                 }
                               }}
-                              className="w-12 h-8 text-center"
+                              className="w-12 h-8 text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                               inputMode="numeric"
                             />
                             <Button
@@ -354,17 +354,40 @@ const KitConfigurationTable = ({
                         </TableCell>
 
                         <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={config.bLights}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 0;
-                              updateConfiguration(index, 'bLights', value);
-                            }}
-                            className="w-full h-8 text-center"
-                            inputMode="numeric"
-                          />
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateConfiguration(index, 'bLights', Math.max(0, config.bLights - 1))}
+                              disabled={config.bLights <= 0}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={2}
+                              value={config.bLights}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 0;
+                                updateConfiguration(index, 'bLights', Math.min(2, Math.max(0, value)));
+                              }}
+                              className="w-12 h-8 text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                              inputMode="numeric"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateConfiguration(index, 'bLights', Math.min(2, config.bLights + 1))}
+                              disabled={config.bLights >= 2}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </TableCell>
 
                         <TableCell>
