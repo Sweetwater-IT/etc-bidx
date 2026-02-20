@@ -375,15 +375,14 @@ const DesignationSearcher = ({
           <Separator className="w-full -mt-2 shrink-0" />
 
           <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="px-6 py-4 bg-background border-b shrink-0">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="mutcd">MUTCD Signs ({signs.length})</TabsTrigger>
-                <TabsTrigger value="pata">PATA Kits ({pataKits.length})</TabsTrigger>
-                <TabsTrigger value="pts">PTS Kits ({ptsKits.length})</TabsTrigger>
-              </TabsList>
-            </div>
-
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-6 py-4 bg-background border-b shrink-0">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="mutcd">MUTCD Signs ({signs.length})</TabsTrigger>
+                  <TabsTrigger value="pata">PATA Kits ({pataKits.length})</TabsTrigger>
+                  <TabsTrigger value="pts">PTS Kits ({ptsKits.length})</TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* MUTCD Tab */}
               <TabsContent value="mutcd" className="flex-1 overflow-y-auto px-6 py-4">
