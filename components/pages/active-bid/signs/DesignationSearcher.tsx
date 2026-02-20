@@ -76,7 +76,7 @@ const DesignationSearcher = ({
       try {
         // MUTCD signs with dimensions transformation
         const { data: signsDataRaw } = await supabase
-          .from('signs')
+          .from('signs_all')
           .select('id, designation, description, category, sizes, sheeting, image_url')
           .order('designation');
 
@@ -148,7 +148,7 @@ const DesignationSearcher = ({
       }
     };
 
-    fetchData(); // ← This was missing!
+    fetchData(); 
   }, []);
 
   // Filtered lists per tab
