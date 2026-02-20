@@ -35,6 +35,7 @@ interface Props {
   setLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>;
   onDesignationSelected?: (updatedSign: PrimarySign | SecondarySign) => void;
   onKitSelected?: (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => void;
+  onKitSignsConfigured?: (signs: PrimarySign[]) => void;
 }
 
 const supabase = createClient(
@@ -47,6 +48,7 @@ const DesignationSearcher = ({
   setLocalSign,
   onDesignationSelected,
   onKitSelected,
+  onKitSignsConfigured,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('mutcd');
@@ -297,33 +299,29 @@ const DesignationSearcher = ({
   };
 
   const handleKitConfigurationSave = (configurations: any[]) => {
-    // Convert configurations to PrimarySign objects and add them to the order
-    configurations.forEach(config => {
-      const newSign: PrimarySign = {
-        id: generateUniqueId(),
-        designation: config.designation,
-        width: config.width,
-        height: config.height,
-        quantity: config.quantity,
-        sheeting: config.sheeting,
-        associatedStructure: config.associatedStructure,
-        displayStructure: config.displayStructure,
-        bLights: config.bLights,
-        cover: config.cover,
-        isCustom: false,
-        bLightsColor: undefined,
-        description: config.description,
-        substrate: config.substrate,
-        stiffener: config.stiffener,
-      };
+    // Convert configurations to PrimarySign objects
+    const configuredSigns: PrimarySign[] = configurations.map(config => ({
+      id: generateUniqueId(),
+      designation: config.designation,
+      width: config.width,
+      height: config.height,
+      quantity: config.quantity,
+      sheeting: config.sheeting,
+      associatedStructure: config.associatedStructure,
+      displayStructure: config.displayStructure,
+      bLights: config.bLights,
+      cover: config.cover,
+      isCustom: false,
+      bLightsColor: config.bLightsColor,
+      description: config.description,
+      substrate: config.substrate,
+      stiffener: config.stiffener,
+    }));
 
-      // Add the sign to the estimate context
-      // Note: This assumes the component is used within the EstimateContext
-      // The parent component will need to handle the actual dispatch
-      if (onDesignationSelected) {
-        onDesignationSelected(newSign);
-      }
-    });
+    // Use the dedicated kit signs callback to add signs without opening drawer
+    if (onKitSignsConfigured) {
+      onKitSignsConfigured(configuredSigns);
+    }
 
     setKitConfigurationModalOpen(false);
     setSelectedKitForConfiguration(null);

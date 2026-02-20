@@ -272,6 +272,28 @@ export function SignOrderList({
     }
   }, [dispatch, currentPhase]);
 
+  const handleKitSignsConfigured = useCallback((configuredSigns: PrimarySign[]) => {
+    console.log('Adding configured kit signs:', configuredSigns.length, 'for phase:', currentPhase);
+    try {
+      // Add each configured sign directly to the estimate
+      configuredSigns.forEach(sign => {
+        dispatch({
+          type: 'ADD_MPT_SIGN',
+          payload: {
+            phaseNumber: currentPhase,
+            sign: sign,
+          },
+        });
+      });
+
+      // Reset local sign to allow adding more signs
+      setLocalSign(undefined);
+      setOpen(false);
+    } catch (error) {
+      console.error('Error in handleKitSignsConfigured:', error);
+    }
+  }, [dispatch, currentPhase]);
+
   const getSecondarySignsForPrimary = useCallback((primarySignId: string): SecondarySign[] => {
     const desiredPhase = mptRental.phases[currentPhase];
     if (!desiredPhase) return [];
@@ -721,6 +743,7 @@ export function SignOrderList({
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
             onKitSelected={handleKitSelected}
+            onKitSignsConfigured={handleKitSignsConfigured}
           />
         )}
         {localSign && open && (
