@@ -368,236 +368,225 @@ const DesignationSearcher = ({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl h-[700px] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-4">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 shrink-0">
             <DialogTitle>Select Sign Designation</DialogTitle>
           </DialogHeader>
-          <Separator className="w-full -mt-2" />
+          <Separator className="w-full -mt-2 shrink-0" />
 
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <div className="px-6 py-4 bg-background border-b">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="mutcd">MUTCD Signs</TabsTrigger>
-                  <TabsTrigger value="pata">PATA Kits</TabsTrigger>
-                  <TabsTrigger value="pts">PTS Kits</TabsTrigger>
-                </TabsList>
-              </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 bg-background border-b shrink-0">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="mutcd">MUTCD Signs ({signs.length})</TabsTrigger>
+                <TabsTrigger value="pata">PATA Kits ({pataKits.length})</TabsTrigger>
+                <TabsTrigger value="pts">PTS Kits ({ptsKits.length})</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
 
               {/* MUTCD Tab */}
-              <TabsContent value="mutcd" className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 py-4 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search MUTCD designations..."
-                      value={mutcdSearch}
-                      onChange={(e) => setMutcdSearch(e.target.value)}
-                      className="pl-10"
-                      autoFocus
-                    />
-                  </div>
+              <TabsContent value="mutcd" className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search MUTCD designations..."
+                    value={mutcdSearch}
+                    onChange={(e) => setMutcdSearch(e.target.value)}
+                    className="pl-10"
+                    autoFocus
+                  />
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4">
-                  {filteredSigns.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No MUTCD signs found.
-                    </div>
-                  ) : (
-                    filteredSigns.map((sign) => (
-                      <div
-                        key={sign.designation}
-                        onClick={() => handleSelectDesignation(sign)}
-                        className={cn(
-                          'cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2',
-                          localSign.designation === sign.designation && 'border-primary bg-primary/5'
-                        )}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {sign.image_url ? (
-                              <img
-                                src={sign.image_url}
-                                alt={sign.designation}
-                                className="w-full h-full object-contain p-1"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
-                                    fallback.textContent = sign.designation.substring(0, 2).toUpperCase();
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <span className="text-muted-foreground text-xs font-medium">
-                                {sign.designation.substring(0, 2).toUpperCase()}
-                              </span>
+                {filteredSigns.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No MUTCD signs found.
+                  </div>
+                ) : (
+                  filteredSigns.map((sign) => (
+                    <div
+                      key={sign.designation}
+                      onClick={() => handleSelectDesignation(sign)}
+                      className={cn(
+                        'cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2',
+                        localSign.designation === sign.designation && 'border-primary bg-primary/5'
+                      )}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {sign.image_url ? (
+                            <img
+                              src={sign.image_url}
+                              alt={sign.designation}
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
+                                  fallback.textContent = sign.designation.substring(0, 2).toUpperCase();
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-xs font-medium">
+                              {sign.designation.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            {sign.designation}
+                            {localSign.designation === sign.designation && (
+                              <Check className="h-4 w-4 text-primary flex-shrink-0" />
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm flex items-center gap-2">
-                              {sign.designation}
-                              {localSign.designation === sign.designation && (
-                                <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {sign.description || '-'}
-                            </div>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>{sign.dimensions.length} size{sign.dimensions.length !== 1 ? 's' : ''} available</span>
-                              <span>{sign.sheeting}</span>
-                            </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {sign.description || '-'}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{sign.dimensions.length} size{sign.dimensions.length !== 1 ? 's' : ''} available</span>
+                            <span>{sign.sheeting}</span>
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </TabsContent>
 
               {/* PATA Tab */}
-              <TabsContent value="pata" className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 py-4 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search PATA kits..."
-                      value={pataSearch}
-                      onChange={(e) => setPataSearch(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+              <TabsContent value="pata" className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search PATA kits..."
+                    value={pataSearch}
+                    onChange={(e) => setPataSearch(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4">
-                  {filteredPataKits.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No PATA kits found.
-                    </div>
-                  ) : (
-                    filteredPataKits.map((kit) => (
-                      <div
-                        key={kit.id}
-                        onClick={() => handleSelectKitForPreview(kit, 'pata')}
-                        className="cursor-pointer transition-colors hover:bg-blue-50/50 border rounded-lg p-4 mb-2 bg-blue-50/30"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded border bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {kit.image_url ? (
-                              <img
-                                src={kit.image_url}
-                                alt={`PATA Kit ${kit.code}`}
-                                className="w-full h-full object-contain p-1"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = 'w-full h-full flex items-center justify-center text-blue-600';
-                                    fallback.innerHTML =
-                                      '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <Package className="h-8 w-8 text-blue-600" />
-                            )}
+                {filteredPataKits.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No PATA kits found.
+                  </div>
+                ) : (
+                  filteredPataKits.map((kit) => (
+                    <div
+                      key={kit.id}
+                      onClick={() => handleSelectKitForPreview(kit, 'pata')}
+                      className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {kit.image_url ? (
+                            <img
+                              src={kit.image_url}
+                              alt={`PATA Kit ${kit.code}`}
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground';
+                                  fallback.innerHTML =
+                                    '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            {kit.code}
+                            <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                              KIT
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm flex items-center gap-2">
-                              {kit.code}
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                KIT
-                              </span>
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {kit.description || '-'}
-                            </div>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
-                            </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {kit.description || '-'}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </TabsContent>
 
               {/* PTS Tab */}
-              <TabsContent value="pts" className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 py-4 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search PTS kits..."
-                      value={ptsSearch}
-                      onChange={(e) => setPtsSearch(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+              <TabsContent value="pts" className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search PTS kits..."
+                    value={ptsSearch}
+                    onChange={(e) => setPtsSearch(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4">
-                  {filteredPtsKits.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No PTS kits found.
-                    </div>
-                  ) : (
-                    filteredPtsKits.map((kit) => (
-                      <div
-                        key={kit.id}
-                        onClick={() => handleSelectKitForPreview(kit, 'pts')}
-                        className="cursor-pointer transition-colors hover:bg-green-50/50 border rounded-lg p-4 mb-2 bg-green-50/30"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded border bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {kit.image_url ? (
-                              <img
-                                src={kit.image_url}
-                                alt={`PTS Kit ${kit.code}`}
-                                className="w-full h-full object-contain p-1"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = 'w-full h-full flex items-center justify-center text-green-600';
-                                    fallback.innerHTML =
-                                      '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <Package className="h-8 w-8 text-green-600" />
-                            )}
+                {filteredPtsKits.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No PTS kits found.
+                  </div>
+                ) : (
+                  filteredPtsKits.map((kit) => (
+                    <div
+                      key={kit.id}
+                      onClick={() => handleSelectKitForPreview(kit, 'pts')}
+                      className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {kit.image_url ? (
+                            <img
+                              src={kit.image_url}
+                              alt={`PTS Kit ${kit.code}`}
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground';
+                                  fallback.innerHTML =
+                                    '<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            {kit.code}
+                            <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                              KIT
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm flex items-center gap-2">
-                              {kit.code}
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                KIT
-                              </span>
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {kit.description || '-'}
-                            </div>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
-                            </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {kit.description || '-'}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{kit.signCount} sign{kit.signCount !== 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </TabsContent>
             </Tabs>
           </div>
