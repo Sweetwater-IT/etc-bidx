@@ -177,12 +177,12 @@ const KitConfigurationTable = ({
         <div className="flex flex-col min-h-0">
           <h3 className="text-lg font-semibold mb-4">Sign Configuration</h3>
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
+            <div className="border rounded-lg overflow-x-auto">
+              <Table className="min-w-[1200px]">
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[60px]">Image</TableHead>
-                    <TableHead className="w-[180px]">Designation</TableHead>
+                    <TableHead className="w-[60px] sticky left-0 z-20 bg-muted/50 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Image</TableHead>
+                    <TableHead className="w-[180px] sticky left-[60px] z-20 bg-muted/50 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Designation</TableHead>
                     <TableHead className="w-[120px]">Dimensions</TableHead>
                     <TableHead className="w-[100px]">Quantity</TableHead>
                     <TableHead className="w-[100px]">Sheeting</TableHead>
@@ -200,7 +200,7 @@ const KitConfigurationTable = ({
                     const signData = signsData.find(s => s.designation === config.designation);
                     return (
                       <TableRow key={config.id}>
-                        <TableCell>
+                        <TableCell className="sticky left-0 z-10 bg-background border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                           <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                             {signData?.image_url ? (
                               <img
@@ -226,7 +226,7 @@ const KitConfigurationTable = ({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="sticky left-[60px] z-10 bg-background border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] font-medium">
                           <div>
                             <div className="font-medium text-sm">{config.designation}</div>
                             <div className="text-xs text-muted-foreground truncate max-w-[160px]">
