@@ -704,7 +704,7 @@ const DesignationSearcher = ({
           <div className="flex flex-col gap-2 relative z-10 bg-background">
             <DialogHeader className="p-6 pb-4">
               <DialogTitle>
-                {kitPreviewType?.toUpperCase()} Kit: {selectedKitForPreview?.code}
+                Configure Kit Signs: {kitConfigurationType?.toUpperCase()} {selectedKitForConfiguration?.code} - {selectedKitForConfiguration?.description}
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-2">
                 {selectedKitForPreview?.description}
