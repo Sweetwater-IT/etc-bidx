@@ -47,13 +47,6 @@ export async function GET() {
       `)
       .order('code');
 
-    if (pataKitsError) {
-      console.error('❌ Error fetching PATA kits:', pataKitsError);
-    } else {
-      console.log(`✅ Fetched ${pataKitsData?.length || 0} PATA kits`);
-      console.log('📊 PATA kits raw data:', JSON.stringify(pataKitsData, null, 2));
-    }
-
     // Fetch PATA kit variants
     const { data: pataVariantsData, error: pataVariantsError } = await supabase
       .from('kit_variants')
@@ -62,9 +55,6 @@ export async function GET() {
       `)
       .order('variant_label');
 
-    if (pataVariantsError) {
-      console.error('Error fetching PATA variants:', pataVariantsError);
-    }
 
     // PTS kits + contents
     const { data: ptsKitsData, error: ptsErr } = await supabase
@@ -78,13 +68,6 @@ export async function GET() {
       `)
       .order('code');
 
-    if (ptsKitsError) {
-      console.error('❌ Error fetching PTS kits:', ptsKitsError);
-    } else {
-      console.log(`✅ Fetched ${ptsKitsData?.length || 0} PTS kits`);
-      console.log('📊 PTS kits raw data:', JSON.stringify(ptsKitsData, null, 2));
-    }
-
     // Fetch PTS kit variants
     const { data: ptsVariantsData, error: ptsVariantsError } = await supabase
       .from('kit_variants')
@@ -93,9 +76,6 @@ export async function GET() {
       `)
       .order('variant_label');
 
-    if (ptsVariantsError) {
-      console.error('Error fetching PTS variants:', ptsVariantsError);
-    }
 
     // Transform signs data to match expected frontend format
     const signsMap = new Map();
