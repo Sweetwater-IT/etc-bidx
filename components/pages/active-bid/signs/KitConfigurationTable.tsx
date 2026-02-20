@@ -138,127 +138,122 @@ const KitConfigurationTable = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">
-            Configure {kitType.toUpperCase()} Kit: {kit.code}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {kit.description}
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {configurations.length} sign{configurations.length !== 1 ? 's' : ''} to configure
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Kit Diagram */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Kit Diagram</h3>
-          <div className="border rounded-lg p-4 bg-muted/20">
-            {kit.image_url ? (
-              <img
-                src={kit.image_url}
-                alt={`${kitType?.toUpperCase()} Kit ${kit.code} Diagram`}
-                className="w-full h-auto max-h-[500px] object-contain rounded border"
-                onError={(e) => {
-                  e.currentTarget.src = '/placeholder.svg';
-                  e.currentTarget.alt = 'Diagram failed to load';
-                }}
-              />
-            ) : (
-              <div className="w-full h-[300px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
-                <p className="text-muted-foreground text-sm">No diagram available</p>
-              </div>
-            )}
+    <div className="flex flex-col h-full">
+      {/* Main content area with independent scrolling */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
+        {/* Left: Kit Diagram - independently scrollable */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Kit Diagram</h3>
+            <div className="text-sm text-muted-foreground">
+              {configurations.length} sign{configurations.length !== 1 ? 's' : ''} to configure
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="border rounded-lg p-4 bg-muted/20">
+              {kit.image_url ? (
+                <img
+                  src={kit.image_url}
+                  alt={`${kitType?.toUpperCase()} Kit ${kit.code} Diagram`}
+                  className="w-full h-auto object-contain rounded border"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder.svg';
+                    e.currentTarget.alt = 'Diagram failed to load';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-[400px] bg-muted/50 flex items-center justify-center rounded border border-dashed">
+                  <p className="text-muted-foreground text-sm">No diagram available</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right: Configuration Table */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Sign Configuration</h3>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[200px]">Designation</TableHead>
-                  <TableHead className="w-[150px]">Dimensions</TableHead>
-                  <TableHead className="w-[120px]">Sheeting</TableHead>
-                  <TableHead className="w-[140px]">Substrate</TableHead>
-                  <TableHead className="w-[140px]">Structure</TableHead>
-                  <TableHead className="w-[120px]">Quantity</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {configurations.map((config, index) => (
-                  <TableRow key={config.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium text-sm">{config.designation}</div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[180px]">
-                          {config.description}
+        {/* Right: Configuration Table - independently scrollable */}
+        <div className="flex flex-col min-h-0">
+          <h3 className="text-lg font-semibold mb-4">Sign Configuration</h3>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                  <TableRow>
+                    <TableHead className="w-[200px]">Designation</TableHead>
+                    <TableHead className="w-[150px]">Dimensions</TableHead>
+                    <TableHead className="w-[120px]">Sheeting</TableHead>
+                    <TableHead className="w-[140px]">Substrate</TableHead>
+                    <TableHead className="w-[140px]">Structure</TableHead>
+                    <TableHead className="w-[120px]">Quantity</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {configurations.map((config, index) => (
+                    <TableRow key={config.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div className="font-medium text-sm">{config.designation}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                            {config.description}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <Select
-                        value={`${config.width}x${config.height}`}
-                        onValueChange={(value) => handleDimensionChange(index, value)}
-                      >
-                        <SelectTrigger className="w-full h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getDimensionOptions(config).map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+                      <TableCell>
+                        <Select
+                          value={`${config.width}x${config.height}`}
+                          onValueChange={(value) => handleDimensionChange(index, value)}
+                        >
+                          <SelectTrigger className="w-full h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getDimensionOptions(config).map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
 
-                    <TableCell>
-                      <Select
-                        value={config.sheeting}
-                        onValueChange={(value) => updateConfiguration(index, 'sheeting', value)}
-                      >
-                        <SelectTrigger className="w-full h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="HI">HI</SelectItem>
-                          <SelectItem value="DG">DG</SelectItem>
-                          <SelectItem value="FYG">FYG</SelectItem>
-                          <SelectItem value="TYPEXI">Type XI</SelectItem>
-                          <SelectItem value="Special">Special</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+                      <TableCell>
+                        <Select
+                          value={config.sheeting}
+                          onValueChange={(value) => updateConfiguration(index, 'sheeting', value)}
+                        >
+                          <SelectTrigger className="w-full h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HI">HI</SelectItem>
+                            <SelectItem value="DG">DG</SelectItem>
+                            <SelectItem value="FYG">FYG</SelectItem>
+                            <SelectItem value="TYPEXI">Type XI</SelectItem>
+                            <SelectItem value="Special">Special</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
 
-                    <TableCell>
-                      <Select
-                        value={config.substrate}
-                        onValueChange={(value) => updateConfiguration(index, 'substrate', value)}
-                      >
-                        <SelectTrigger className="w-full h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Plastic">Plastic</SelectItem>
-                          <SelectItem value="Aluminum">Aluminum</SelectItem>
-                          <SelectItem value="Aluminum-Composite">Aluminum Composite</SelectItem>
-                          {isSignOrder && (
-                            <>
-                              <SelectItem value="Roll Up">Roll Up</SelectItem>
-                              <SelectItem value="Face">Face</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
+                      <TableCell>
+                        <Select
+                          value={config.substrate}
+                          onValueChange={(value) => updateConfiguration(index, 'substrate', value)}
+                        >
+                          <SelectTrigger className="w-full h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Plastic">Plastic</SelectItem>
+                            <SelectItem value="Aluminum">Aluminum</SelectItem>
+                            <SelectItem value="Aluminum-Composite">Aluminum Composite</SelectItem>
+                            {isSignOrder && (
+                              <>
+                                <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                <SelectItem value="Face">Face</SelectItem>
+                              </>
+                            )}
+                          </SelectContent>
                       </Select>
                     </TableCell>
 
@@ -333,14 +328,16 @@ const KitConfigurationTable = ({
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      {/* Fixed footer */}
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t bg-background">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
