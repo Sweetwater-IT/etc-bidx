@@ -35,13 +35,35 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
   useEffect(() => {
     const loadSignData = async () => {
       try {
+        console.log('Fetching /api/signs...'); // Confirm the effect runs
+  
         const response = await fetch('/api/signs');
+        console.log('Response status:', response.status); // 200 = good, 404/500 = problem
+  
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+  
         const data = await response.json();
-
+  
         if (data.success && data.data) {
+          // ← This is the perfect place for detailed logging
+          console.log('API success - setting data:', {
+            signs: data.data.signs?.length || 0,
+            pataKits: data.data.pataKits?.length || 0,
+            ptsKits: data.data.ptsKits?.length || 0,
+            pataWithContent: data.data.pataKits?.filter(
+              (k: any) => k.signCount > 0
+            ).length || 0,
+            ptsWithContent: data.data.ptsKits?.filter(
+              (k: any) => k.signCount > 0
+            ).length || 0,
+          });
+  
           setApiData(data.data);
+          console.log('setApiData called — state should now have data');
         } else {
-          console.warn("No sign data returned from API");
+          console.warn("API returned no success/data:", data);
           setApiData({ signs: [], pataKits: [], ptsKits: [] });
         }
       } catch (error) {
@@ -49,7 +71,7 @@ const DesignationSearcher = ({ localSign, setLocalSign, onDesignationSelected, o
         setApiData({ signs: [], pataKits: [], ptsKits: [] });
       }
     };
-
+  
     loadSignData();
   }, []);
 
