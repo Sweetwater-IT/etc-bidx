@@ -3,49 +3,182 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const pageSize = 1000;
-    let from = 0;
-    let to = pageSize - 1;
-    let allData: any[] = [];
+    // Fetch signs data - try multiple possible table names
+    let signsData: any[] = [];
+    let signsError: any = null;
 
-    while (true) {
-      const { data, error } = await supabase
-        .from('sign_dimension_options')
-        .select(
-          `
-          sign_designations (designation, description, sheeting),
-          sign_dimensions (width, height)
-        `
-        )
-        .range(from, to);
+    // Try signs_all first
+    const signsResult = await supabase
+      .from('signs_all')
+      .select('id, designation, description, category, sizes, sheeting, kits, created_at, image_url, image_uploaded_at')
+      .order('designation');
 
-      if (error) {
-        console.error('Error fetching data:', error);
-        return NextResponse.json(
-          { success: false, message: `Failed to fetch signs`, error: error.message },
-          { status: 500 }
-        );
-      }
+    if (signsResult.error) {
+      console.warn('signs_all table not found, trying signs table');
+      // Try signs table
+      const signsFallback = await supabase
+        .from('signs')
+        .select('id, designation, description, category, sizes, sheeting, kits, created_at, image_url, image_uploaded_at')
+        .order('designation');
 
-      if (!data || data.length === 0) break;
-
-      allData = [...allData, ...data];
-
-      if (data.length < pageSize) break;
-
-      from += pageSize;
-      to += pageSize;
+      signsData = signsFallback.data || [];
+      signsError = signsFallback.error;
+    } else {
+      signsData = signsResult.data || [];
+      signsError = signsResult.error;
     }
 
-    const sortedData = allData
-      ?.filter(obj => !!(obj.sign_designations as any).designation)
-      ?.sort((a, b) =>
-        (a.sign_designations as any).designation.localeCompare(
-          (b.sign_designations as any).designation
-        )
-      );
+    if (signsError) {
+      console.error('Error fetching signs:', signsError);
+      // Continue without signs data for now
+      signsData = [];
+    }
 
-    return NextResponse.json({ success: true, data: sortedData });
+    // PATA kits + contents
+    const { data: pataKitsData, error: pataErr } = await supabase
+      .from('pata_kits')
+      .select(`
+        id, code, description, image_url, finished, reviewed, has_variants,
+        pata_kit_contents!pata_kit_code (
+          sign_designation,
+          quantity,
+          blight_quantity
+        )
+      `)
+      .order('code');
+
+    // Fetch PATA kit variants
+    const { data: pataVariantsData, error: pataVariantsError } = await supabase
+      .from('kit_variants')
+      .select(`
+        id, kit_id, variant_label, description, finished, blights
+      `)
+      .order('variant_label');
+
+
+    // PTS kits + contents
+    const { data: ptsKitsData, error: ptsErr } = await supabase
+      .from('pts_kits')
+      .select(`
+        id, code, description, image_url, finished, reviewed, has_variants,
+        pts_kit_contents!pts_kit_code (
+          sign_designation,
+          quantity
+        )
+      `)
+      .order('code');
+
+    // Fetch PTS kit variants
+    const { data: ptsVariantsData, error: ptsVariantsError } = await supabase
+      .from('kit_variants')
+      .select(`
+        id, kit_id, variant_label, description, finished, blights
+      `)
+      .order('variant_label');
+
+
+    // Transform signs data to match expected frontend format
+    const signsMap = new Map();
+
+    signsData?.forEach(sign => {
+      // Parse sizes array like ["48 x 8", "72 x 12"] into dimension objects
+      const dimensions = sign.sizes?.map((sizeStr: string) => {
+        const [widthStr, heightStr] = sizeStr.split(' x ');
+        const width = parseFloat(widthStr);
+        const height = parseFloat(heightStr);
+        return !isNaN(width) && !isNaN(height) ? { width, height } : null;
+      }).filter(dim => dim !== null) || [];
+
+      // Group by designation
+      if (!signsMap.has(sign.designation)) {
+        signsMap.set(sign.designation, {
+          designation: sign.designation,
+          description: sign.description,
+          sheeting: sign.sheeting,
+          image_url: sign.image_url,
+          dimensions: []
+        });
+      }
+
+      // Add dimensions to the sign
+      const signEntry = signsMap.get(sign.designation);
+      signEntry.dimensions.push(...dimensions);
+
+      // If no valid dimensions, add default
+      if (dimensions.length === 0 && signEntry.dimensions.length === 0) {
+        signEntry.dimensions.push({ width: 0, height: 0 });
+      }
+    });
+
+    const signs = Array.from(signsMap.values());
+
+    // Create variant maps for easy lookup
+    const pataVariantsMap = new Map();
+    const ptsVariantsMap = new Map();
+
+    pataVariantsData?.forEach(variant => {
+      if (!pataVariantsMap.has(variant.kit_id)) {
+        pataVariantsMap.set(variant.kit_id, []);
+      }
+      pataVariantsMap.get(variant.kit_id).push({
+        id: variant.id,
+        label: variant.variant_label,
+        description: variant.description,
+        finished: variant.finished,
+        blights: variant.blights
+      });
+    });
+
+    ptsVariantsData?.forEach(variant => {
+      if (!ptsVariantsMap.has(variant.kit_id)) {
+        ptsVariantsMap.set(variant.kit_id, []);
+      }
+      ptsVariantsMap.get(variant.kit_id).push({
+        id: variant.id,
+        label: variant.variant_label,
+        description: variant.description,
+        finished: variant.finished,
+        blights: variant.blights
+      });
+    });
+
+    // Transform PATA kits data
+    const pataKits = pataKitsData?.map(kit => ({
+      id: kit.id,
+      code: kit.code,
+      description: kit.description,
+      image_url: kit.image_url,
+      has_variants: kit.has_variants,
+      variants: pataVariantsMap.get(kit.id) || [],
+      contents: kit.pata_kit_contents || [],
+      signCount: kit.pata_kit_contents?.length || 0
+    })) || [];
+
+    // Transform PTS kits data
+    const ptsKits = ptsKitsData?.map(kit => ({
+      id: kit.id,
+      code: kit.code,
+      description: kit.description,
+      image_url: kit.image_url,
+      has_variants: kit.has_variants,
+      variants: ptsVariantsMap.get(kit.id) || [],
+      contents: kit.pts_kit_contents || [],
+      signCount: kit.pts_kit_contents?.length || 0
+    })) || [];
+
+    console.log('🎯 Final transformed data:');
+    console.log(`   Signs: ${signs.length}`);
+    console.log(`   PATA kits: ${pataKits.length} (with contents: ${pataKits.filter(k => k.contents.length > 0).length})`);
+    console.log(`   PTS kits: ${ptsKits.length} (with contents: ${ptsKits.filter(k => k.contents.length > 0).length})`);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        signs,
+        pataKits,
+        ptsKits
+      }
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(

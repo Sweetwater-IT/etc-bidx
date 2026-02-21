@@ -21,6 +21,7 @@ export async function processSignData (apiData: any[]) {
         const description = item.sign_designations.description || "";
         const sheeting =
           (item.sign_designations.sheeting as SheetingType) || "DG";
+        const image_url = item.image_url;
 
         let width: number;
         let height: number;
@@ -50,6 +51,7 @@ export async function processSignData (apiData: any[]) {
             description,
             sheeting,
             dimensions: [{ width, height }],
+            image_url,
           });
         }
       });

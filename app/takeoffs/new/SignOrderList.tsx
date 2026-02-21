@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { useEstimate } from '@/contexts/EstimateContext';
+import { toast } from 'sonner';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
 import {
@@ -210,6 +211,91 @@ export function SignOrderList({
       setOpen(true);
     } catch (error) {
       console.error('Error in handleDesignationSelected:', error);
+    }
+  }, [dispatch, currentPhase]);
+
+  const handleKitSelected = useCallback(async (kit: any, kitType: 'pata' | 'pts') => {
+    console.log('Kit selected:', kit.code, 'type:', kitType, 'for phase:', currentPhase);
+    try {
+      // Get the signs data to match designations with dimensions
+      const response = await fetch('/api/signs');
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        console.error('Failed to fetch signs data for kit processing');
+        return;
+      }
+
+      const signsMap = new Map();
+      data.data.signs.forEach((sign: any) => {
+        signsMap.set(sign.designation, sign);
+      });
+
+      // Add each sign in the kit
+      kit.contents.forEach((content: any) => {
+        const signData = signsMap.get(content.sign_designation);
+        if (signData && signData.dimensions.length > 0) {
+          // Use the first available dimension for each sign
+          const dimension = signData.dimensions[0];
+
+          const newSign: PrimarySign = {
+            id: generateUniqueId(),
+            designation: content.sign_designation,
+            width: dimension.width,
+            height: dimension.height,
+            quantity: content.quantity,
+            sheeting: signData.sheeting,
+            associatedStructure: 'none',
+            displayStructure: 'LOOSE',
+            bLights: 0,
+            cover: false,
+            isCustom: false,
+            bLightsColor: undefined,
+            description: signData.description,
+            substrate: 'Plastic',
+          };
+
+          dispatch({
+            type: 'ADD_MPT_SIGN',
+            payload: {
+              phaseNumber: currentPhase,
+              sign: newSign,
+            },
+          });
+        }
+      });
+
+      // Reset local sign to allow adding more signs
+      setLocalSign(undefined);
+      setOpen(false);
+    } catch (error) {
+      console.error('Error in handleKitSelected:', error);
+    }
+  }, [dispatch, currentPhase]);
+
+  const handleKitSignsConfigured = useCallback((configuredSigns: PrimarySign[], kit: any) => {
+    console.log('Adding configured kit signs:', configuredSigns.length, 'for phase:', currentPhase, 'kit:', kit.code);
+    try {
+      // Add each configured sign directly to the estimate
+      configuredSigns.forEach(sign => {
+        dispatch({
+          type: 'ADD_MPT_SIGN',
+          payload: {
+            phaseNumber: currentPhase,
+            sign: sign,
+          },
+        });
+      });
+
+      // Show success toast
+      toast.success(`${kit.code} kit has been successfully added to your order`);
+
+      // Reset local sign to allow adding more signs
+      setLocalSign(undefined);
+      setOpen(false);
+    } catch (error) {
+      console.error('Error in handleKitSignsConfigured:', error);
+      toast.error('Failed to add kit signs to order');
     }
   }, [dispatch, currentPhase]);
 
@@ -661,6 +747,8 @@ export function SignOrderList({
             localSign={localSign}
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
+            onKitSelected={handleKitSelected}
+            onKitSignsConfigured={handleKitSignsConfigured}
           />
         )}
         {localSign && open && (

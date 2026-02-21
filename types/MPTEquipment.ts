@@ -56,11 +56,55 @@ export interface SignDesignation {
   description: string;
   sheeting: SheetingType;
   dimensions: SignDimension[];
+  image_url?: string;
 }
 
 export interface SignDimension {
   width: number;
   height: number;
+}
+
+// Kit-related interfaces
+export interface KitContent {
+  sign_designation: string;
+  quantity: number;
+  blight_quantity?: number;
+}
+
+export interface KitVariant {
+  id: number;
+  label: string;
+  description: string;
+  finished: boolean;
+  blights: number;
+}
+
+export interface PataKit {
+  id: string;
+  code: string;
+  description: string;
+  image_url?: string;
+  has_variants: boolean;
+  variants: KitVariant[];
+  contents: KitContent[];
+  signCount: number;
+}
+
+export interface PtsKit {
+  id: number;
+  code: string;
+  description: string;
+  image_url?: string;
+  has_variants: boolean;
+  variants: KitVariant[];
+  contents: KitContent[];
+  signCount: number;
+}
+
+export interface SignsApiResponse {
+  signs: SignDesignation[];
+  pataKits: PataKit[];
+  ptsKits: PtsKit[];
 }
 
 export const labelMapping: Record<string, string> = {
