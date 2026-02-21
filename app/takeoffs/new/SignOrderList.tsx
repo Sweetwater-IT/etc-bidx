@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { useEstimate } from '@/contexts/EstimateContext';
+import { toast } from 'sonner';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
 import {
@@ -272,8 +273,8 @@ export function SignOrderList({
     }
   }, [dispatch, currentPhase]);
 
-  const handleKitSignsConfigured = useCallback((configuredSigns: PrimarySign[]) => {
-    console.log('Adding configured kit signs:', configuredSigns.length, 'for phase:', currentPhase);
+  const handleKitSignsConfigured = useCallback((configuredSigns: PrimarySign[], kit: any) => {
+    console.log('Adding configured kit signs:', configuredSigns.length, 'for phase:', currentPhase, 'kit:', kit.code);
     try {
       // Add each configured sign directly to the estimate
       configuredSigns.forEach(sign => {
@@ -286,11 +287,15 @@ export function SignOrderList({
         });
       });
 
+      // Show success toast
+      toast.success(`${kit.code} kit has been successfully added to your order`);
+
       // Reset local sign to allow adding more signs
       setLocalSign(undefined);
       setOpen(false);
     } catch (error) {
       console.error('Error in handleKitSignsConfigured:', error);
+      toast.error('Failed to add kit signs to order');
     }
   }, [dispatch, currentPhase]);
 

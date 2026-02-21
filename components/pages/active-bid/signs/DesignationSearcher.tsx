@@ -35,7 +35,7 @@ interface Props {
   setLocalSign: Dispatch<SetStateAction<PrimarySign | SecondarySign | undefined>>;
   onDesignationSelected?: (updatedSign: PrimarySign | SecondarySign) => void;
   onKitSelected?: (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => void;
-  onKitSignsConfigured?: (signs: PrimarySign[]) => void;
+  onKitSignsConfigured?: (signs: PrimarySign[], kit: PataKit | PtsKit) => void;
 }
 
 const supabase = createClient(
@@ -319,8 +319,8 @@ const DesignationSearcher = ({
     }));
 
     // Use the dedicated kit signs callback to add signs without opening drawer
-    if (onKitSignsConfigured) {
-      onKitSignsConfigured(configuredSigns);
+    if (onKitSignsConfigured && selectedKitForConfiguration) {
+      onKitSignsConfigured(configuredSigns, selectedKitForConfiguration);
     }
 
     setKitConfigurationModalOpen(false);
