@@ -132,23 +132,27 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           throw new Error('Failed to fetch products')
         }
 
-        const data = await response.json()
+        const result = await response.json()
+
+        if (result.status !== 200 || !result.data) {
+          throw new Error('Invalid API response structure')
+        }
 
         // Combine all product types into a flat array
         const allProducts: Product[] = [
-          ...data.bidItems.map((item: any) => ({
+          ...result.data.bidItems.map((item: any) => ({
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // We'll need to get pricing from a different source
             category: 'bid'
           })),
-          ...data.saleItems.map((item: any) => ({
+          ...result.data.saleItems.map((item: any) => ({
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // Same here
             category: 'sale'
           })),
-          ...data.rentalItems.map((item: any) => ({
+          ...result.data.rentalItems.map((item: any) => ({
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // And here
@@ -1065,15 +1069,15 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           <Card className="p-4 bg-card border-border">
             <Label className="text-sm font-semibold block mb-3">Add Items</Label>
             <div className="space-y-3">
-              <Select value={selectedProduct || ""} onValueChange={setSelectedProduct}>
+              <Select value={selectedProduct} onValueChange={(value) => value && setSelectedProduct(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a product..." />
                 </SelectTrigger>
                 <SelectContent>
                   {loadingProducts ? (
-                    <SelectItem value="" disabled>Loading products...</SelectItem>
+                    <SelectItem value="loading" disabled>Loading products...</SelectItem>
                   ) : productsError ? (
-                    <SelectItem value="" disabled>Error loading products</SelectItem>
+                    <SelectItem value="error" disabled>Error loading products</SelectItem>
                   ) : (
                     products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
