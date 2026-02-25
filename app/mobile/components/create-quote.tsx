@@ -292,7 +292,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [taxRate, setTaxRate] = useState<number>(6)
   const [items, setItems] = useState<QuoteItem[]>([])
   const [selectedProduct, setSelectedProduct] = useState("")
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
+  const [selectedProductItemNumber, setSelectedProductItemNumber] = useState<string | null>(null)
   const [showItemConfig, setShowItemConfig] = useState(false)
   const [itemConfigStep, setItemConfigStep] = useState<'basic' | 'notes' | 'single'>('basic')
   const [itemConfig, setItemConfig] = useState({
@@ -437,12 +437,12 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   }
 
   const addItem = () => {
-    if (!selectedProductId) {
+    if (!selectedProductItemNumber) {
       toast.error("Please select a product")
       return
     }
 
-    const product = products.find(p => p.id === selectedProductId)
+    const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
     if (!product) return
 
     const newItem: QuoteItem = {
@@ -458,7 +458,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
 
     setItems([...items, newItem])
     setSelectedProduct("")
-    setSelectedProductId(null)
+    setSelectedProductItemNumber(null)
   }
 
   const handleAddItemClick = () => {
@@ -467,7 +467,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    const product = products.find(p => p.id === selectedProductId)
+    const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
     if (!product) return
 
     // Check if selected product is MPT or permanent sign item (these need two-step modal)
@@ -734,7 +734,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 </div>
               </div>
 
-              {selectedProductId && itemConfigStep === 'basic' && (
+              {selectedProductItemNumber && itemConfigStep === 'basic' && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-md">
                   <div className="text-sm font-medium">{selectedProduct}</div>
                 </div>
@@ -851,7 +851,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 // Step 2: Notes Configuration
                 <div className="space-y-4">
                   {(() => {
-                    const product = products.find(p => p.id === selectedProductId)
+                    const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
                     const hasVariables = product ? parseSquareBrackets(product.notes).length > 0 : false
 
                     if (hasVariables) {
@@ -1006,7 +1006,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                       type="button"
                       onClick={() => {
                         // Process the item before adding
-                        const product = products.find(p => p.id === selectedProductId)
+                        const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
                         if (product) {
                           const placeholders = parseSquareBrackets(product.notes)
                           let finalNotes = itemConfig.notes
@@ -1651,10 +1651,10 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 <div className="p-3 text-sm text-red-500 text-center">Error loading products</div>
               ) : (
                 <Select
-                  value={selectedProductId || ""}
+                  value={selectedProductItemNumber || ""}
                   onValueChange={(value) => {
-                    setSelectedProductId(value)
-                    const product = products.find(p => p.id === value)
+                    setSelectedProductItemNumber(value)
+                    const product = products.find(p => p.name.split(" - ")[1] === value)
                     if (product) {
                       setSelectedProduct(product.name)
                     }
@@ -1665,7 +1665,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
+                      <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
                         <div className="flex flex-col">
                           <span className="font-medium">{product.name}</span>
                           <span className="text-xs text-muted-foreground">
@@ -1684,7 +1684,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
               <Button
                 type="button"
                 onClick={handleAddItemClick}
-                disabled={!selectedProductId || loadingProducts}
+                disabled={!selectedProductItemNumber || loadingProducts}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
