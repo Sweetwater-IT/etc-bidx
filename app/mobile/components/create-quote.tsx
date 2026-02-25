@@ -467,21 +467,24 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    // Check if selected product has square bracket placeholders
+    // Check if selected product is MPT or permanent sign item (only these need two-step modal)
     const product = products.find(p => p.id === selectedProductId)
-    if (product) {
+    if (product && (product.category === 'mpt' || product.category === 'permanent_sign')) {
       const placeholders = parseSquareBrackets(product.notes)
       if (placeholders.length > 0) {
-        // Item has variables - initialize variables object
+        // MPT/Permanent sign item with variables - initialize variables object
         const initialVariables: Record<string, string> = {}
         placeholders.forEach(placeholder => {
           initialVariables[placeholder] = ""
         })
         setItemConfig(prev => ({ ...prev, variables: initialVariables }))
       } else {
-        // Item has no variables - clear variables
+        // MPT/Permanent sign item without variables - clear variables
         setItemConfig(prev => ({ ...prev, variables: {} }))
       }
+    } else {
+      // Regular item (bid, sale, rental) - no variables
+      setItemConfig(prev => ({ ...prev, variables: {} }))
     }
 
     setShowItemConfig(true)

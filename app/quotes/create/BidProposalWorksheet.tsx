@@ -305,7 +305,6 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                 );
               })}
 
-              <tr className='w-full border-b-black border-1 my-2 '></tr>
               <tr className="text-[12px]">
                 <td colSpan={5}></td>
                 <td colSpan={1} className="px-1 py-1 text-center font-bold">
