@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { EquipmentType, SheetingType, MPTRentalEstimating, equipmentList } from "@/types/MPTEquipment";
 import { getWeightedAverageDays } from "@/lib/mptRentalHelperFunctions";

@@ -4,6 +4,7 @@ import { memo, useEffect } from "react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer"
 import { X } from "lucide-react"
 import DiscountChecks from "./pages/active-bid/steps/discount-checks"
+import { useEstimate } from "@/contexts/EstimateContext"
 import RevenueAndProfitSummary from "./sheets/RevenueAndProfitSummary"
 import FlaggingRevenueAndProfit from "./sheets/FlaggingRevenueAndProfit"
 import RentalRevenueAndProfit from "./sheets/RentalRevenueAndProfit"
@@ -29,7 +30,7 @@ interface BidSummaryDrawerProps {
 
 export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenChange, defaultBid, disableDiscounts }: BidSummaryDrawerProps) {
 
-  const { dispatch } = useEstimate();
+  const { dispatch, mptRental } = useEstimate();
 
   useEffect(() => {
     if(!defaultBid) return;
@@ -91,7 +92,10 @@ export const BidSummaryDrawer = memo(function BidSummaryDrawer({ open, onOpenCha
                 {/* Top row - Discount Checks and Bid Summary */}
                 <div className="flex space-x-2">
                   <div className="flex-1 min-w-0">
-                    <DiscountChecks editableDiscounts={!defaultBid && !disableDiscounts}/>
+                    <DiscountChecks 
+                      key={mptRental?.phases?.map(p => p.days).join(',') || 'default'}
+                      editableDiscounts={!defaultBid && !disableDiscounts}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <BidSummaryByItem />
