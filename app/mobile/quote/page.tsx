@@ -1,30 +1,59 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Eye, Edit3, Menu, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Plus, Eye, Edit3, Menu, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import CreateQuote from "../components/create-quote"
 import ViewQuotes from "../components/view-quote"
 import EditQuote from "../components/edit-quote"
 
-// Mock data - replace with real data from your backend
-const mockQuotes = [
-  { id: 1, number: "Q-001", customer: "Acme Corp", amount: "$5,200", status: "SENT", date: "2025-02-20" },
-  { id: 2, number: "Q-002", customer: "Tech Solutions Inc", amount: "$8,950", status: "ACCEPTED", date: "2025-02-19" },
-  { id: 3, number: "Q-003", customer: "BuildPro Ltd", amount: "$12,400", status: "DRAFT", date: "2025-02-18" },
-  { id: 4, number: "Q-004", customer: "Urban Designs", amount: "$3,750", status: "SENT", date: "2025-02-17" },
-  { id: 5, number: "Q-005", customer: "Coast Builders", amount: "$9,200", status: "REJECTED", date: "2025-02-16" },
-]
+interface Quote {
+  id: number
+  quote_number: string
+  customer_name: string
+  status: string
+  created_at: string
+  total_items?: number
+}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"home" | "create" | "view" | "edit">("home")
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch quotes on component mount
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const response = await fetch('/api/quotes?limit=10&page=1')
+        const result = await response.json()
+
+        if (result.success) {
+          setQuotes(result.data)
+        } else {
+          setError(result.message || 'Failed to fetch quotes')
+        }
+      } catch (err) {
+        setError('Network error')
+        console.error('Failed to fetch quotes:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchQuotes()
+  }, [])
 
   // Calculate stats
-  const totalQuotes = mockQuotes.length
+  const totalQuotes = quotes.length
 
   // Get recent quotes (last 3)
-  const recentQuotes = mockQuotes.slice(0, 3)
+  const recentQuotes = quotes.slice(0, 3)
 
   if (activeTab === "create") {
     return (
@@ -148,10 +177,10 @@ export default function Home() {
                 <tbody>
                   {recentQuotes.map((quote) => (
                     <tr key={quote.id} className="border-b border-border hover:bg-muted transition-colors">
-                      <td className="px-4 py-3 font-mono font-medium text-primary whitespace-nowrap">{quote.number}</td>
-                      <td className="px-4 py-3 text-foreground">{quote.customer}</td>
-                      <td className="px-4 py-3 font-semibold text-foreground">{quote.amount}</td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{quote.date}</td>
+                      <td className="px-4 py-3 font-mono font-medium text-primary whitespace-nowrap">{quote.quote_number}</td>
+                      <td className="px-4 py-3 text-foreground">{quote.customer_name}</td>
+                      <td className="px-4 py-3 font-semibold text-foreground">{quote.total_items || 0} items</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{new Date(quote.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>

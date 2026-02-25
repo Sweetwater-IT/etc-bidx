@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, Save, X, Trash2, Plus, Eye, ChevronDown, Check, MoreVertical, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { InputGroup, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
+import BidProposalWorksheet from "@/app/quotes/create/BidProposalWorksheet"
 
 interface QuoteItem {
   id: string
@@ -28,15 +29,17 @@ interface CreateQuoteProps {
   onBack: () => void
 }
 
-const PRODUCT_OPTIONS = [
-  { id: "1", name: "Product A - SKU001", price: 100 },
-  { id: "2", name: "Product B - SKU002", price: 250 },
-  { id: "3", name: "Product C - SKU003", price: 500 },
-  { id: "4", name: "Service X - SVC001", price: 150 },
-  { id: "5", name: "Service Y - SVC002", price: 200 },
-]
+interface Product {
+  id: string
+  name: string
+  price: number
+  category: string
+}
 
 export default function CreateQuote({ onBack }: CreateQuoteProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [productsError, setProductsError] = useState<string | null>(null)
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">("straight_sale")
   const [showPreview, setShowPreview] = useState(false)
 
@@ -117,6 +120,55 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const customerProgress = getCustomerInfoProgress()
   const etcProgress = getEtcInfoProgress()
 
+  // Fetch products on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoadingProducts(true)
+        setProductsError(null)
+
+        const response = await fetch('/api/bid-item-numbers')
+        if (!response.ok) {
+          throw new Error('Failed to fetch products')
+        }
+
+        const data = await response.json()
+
+        // Combine all product types into a flat array
+        const allProducts: Product[] = [
+          ...data.bidItems.map((item: any) => ({
+            id: item.id.toString(),
+            name: `${item.description} - ${item.item_number}`,
+            price: 0, // We'll need to get pricing from a different source
+            category: 'bid'
+          })),
+          ...data.saleItems.map((item: any) => ({
+            id: item.id.toString(),
+            name: `${item.description} - ${item.item_number}`,
+            price: 0, // Same here
+            category: 'sale'
+          })),
+          ...data.rentalItems.map((item: any) => ({
+            id: item.id.toString(),
+            name: `${item.description} - ${item.item_number}`,
+            price: 0, // And here
+            category: 'rental'
+          }))
+        ]
+
+        setProducts(allProducts)
+      } catch (error) {
+        console.error('Failed to fetch products:', error)
+        setProductsError(error instanceof Error ? error.message : 'Failed to load products')
+        toast.error('Failed to load products')
+      } finally {
+        setLoadingProducts(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -130,7 +182,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    const product = PRODUCT_OPTIONS.find(p => p.id === selectedProduct)
+    const product = products.find(p => p.id === selectedProduct)
     if (!product) return
 
     const newItem: QuoteItem = {
@@ -220,19 +272,74 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    // TODO: Connect to backend API when ready
-    toast.success("Quote created successfully!")
-    onBack()
+    try {
+      // Prepare quote data for API
+      const quoteData = {
+        type_quote: quoteType,
+        customer_name: customerName,
+        customer_contact: customerPOC,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        customer_address: customerAddress,
+        customer_job_number: customerJobNumber,
+        purchase_order: purchaseOrder,
+        etc_point_of_contact: etcPOC,
+        etc_poc_email: etcEmail,
+        etc_phone_number: etcPhone,
+        etc_branch: etcBranch,
+        etc_job_number: etcJobNumber,
+        township,
+        county,
+        sr_route: srRoute,
+        job_address: jobAddress,
+        ecms_number: ecmsNumber,
+        bid_date: bidDate || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        notes,
+        payment_terms: 'NET30',
+        standard_terms: true,
+        items: items.map(item => ({
+          item_number: item.sku,
+          description: item.description,
+          quantity: item.qty,
+          unit_price: item.unitPrice,
+          uom: item.uom,
+          discount: item.discount,
+          apply_tax: item.applyTax
+        }))
+      }
+
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(quoteData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success("Quote created successfully!")
+        onBack()
+      } else {
+        toast.error(result.message || "Failed to create quote")
+      }
+    } catch (error) {
+      console.error('Error creating quote:', error)
+      toast.error("Failed to create quote")
+    }
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Preview Modal */}
+      {/* Live PDF Preview Modal */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <Card className="w-full rounded-t-2xl max-h-[90vh] overflow-y-auto">
+          <Card className="w-full rounded-t-2xl max-h-[90vh] overflow-hidden">
             <div className="sticky top-0 bg-primary text-primary-foreground p-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Quote Preview</h2>
+              <h2 className="text-lg font-bold">Live PDF Preview</h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -243,72 +350,55 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
               </Button>
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Customer Info */}
-              <div className="border-b border-border pb-4">
-                <h3 className="font-semibold mb-2">Customer Information</h3>
-                {customerName && <p className="text-sm"><span className="text-muted-foreground">Name:</span> {customerName}</p>}
-                {customerEmail && <p className="text-sm"><span className="text-muted-foreground">Email:</span> {customerEmail}</p>}
-                {customerPhone && <p className="text-sm"><span className="text-muted-foreground">Phone:</span> {customerPhone}</p>}
-                {customerAddress && <p className="text-sm"><span className="text-muted-foreground">Address:</span> {customerAddress}</p>}
-                {purchaseOrder && <p className="text-sm"><span className="text-muted-foreground">PO:</span> {purchaseOrder}</p>}
-              </div>
-
-              {/* Project Info */}
-              {(quoteType === "to_project" || quoteType === "estimate_bid") && (jobAddress || township || county || srRoute || bidDate || startDate || endDate) && (
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold mb-2">Project Information</h3>
-                  {jobAddress && <p className="text-sm"><span className="text-muted-foreground">Job Address:</span> {jobAddress}</p>}
-                  {township && <p className="text-sm"><span className="text-muted-foreground">Township:</span> {township}</p>}
-                  {county && <p className="text-sm"><span className="text-muted-foreground">County:</span> {county}</p>}
-                  {srRoute && <p className="text-sm"><span className="text-muted-foreground">State Route:</span> {srRoute}</p>}
-                  {bidDate && <p className="text-sm"><span className="text-muted-foreground">Bid Date:</span> {bidDate}</p>}
-                  {startDate && <p className="text-sm"><span className="text-muted-foreground">Start Date:</span> {startDate}</p>}
-                  {endDate && <p className="text-sm"><span className="text-muted-foreground">End Date:</span> {endDate}</p>}
-                </div>
-              )}
-
-              {/* Items */}
-              <div className="border-b border-border pb-4">
-                <h3 className="font-semibold mb-3">Line Items</h3>
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-start border-b border-border pb-2 last:border-0">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{item.description}</p>
-                        <p className="text-xs text-muted-foreground">{item.sku} • {item.qty} × ${item.unitPrice.toFixed(2)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">${calculateExtPrice(item).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="space-y-2 text-sm font-medium">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${totals.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Tax ({taxRate}%):</span>
-                  <span>${totals.taxAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
-                  <span>Total:</span>
-                  <span>${totals.total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {notes && (
-                <div className="border-t border-border pt-4">
-                  <h3 className="font-semibold mb-2 text-sm">Notes</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{notes}</p>
-                </div>
-              )}
+            <div className="flex-1 overflow-hidden">
+              <BidProposalWorksheet
+                items={items.map(item => ({
+                  id: item.id,
+                  itemNumber: item.sku,
+                  description: item.description,
+                  uom: item.uom,
+                  quantity: item.qty,
+                  unitPrice: item.unitPrice,
+                  discount: item.discount,
+                  discountType: 'percentage' as const,
+                  associatedItems: [],
+                  isCustom: false,
+                  tax: item.applyTax ? taxRate : 0,
+                  is_tax_percentage: item.applyTax,
+                  quote_id: null,
+                  created: false,
+                  notes: ""
+                }))}
+                quoteDate={new Date()}
+                notes={notes}
+                quoteType={quoteType}
+                quoteData={{
+                  customer_name: customerName,
+                  customer_contact: customerPOC,
+                  customer_email: customerEmail,
+                  customer_phone: customerPhone,
+                  customer_address: customerAddress,
+                  customer_job_number: customerJobNumber,
+                  purchase_order: purchaseOrder,
+                  etc_point_of_contact: etcPOC,
+                  etc_poc_email: etcEmail,
+                  etc_poc_phone_number: etcPhone,
+                  etc_branch: etcBranch,
+                  etc_job_number: etcJobNumber,
+                  township,
+                  county,
+                  sr_route: srRoute,
+                  job_address: jobAddress,
+                  ecsm_contract_number: ecmsNumber,
+                  bid_date: bidDate,
+                  start_date: startDate,
+                  end_date: endDate,
+                }}
+                termsAndConditions={true}
+                files={[]}
+                exclusions=""
+                terms=""
+              />
             </div>
           </Card>
         </div>
@@ -980,11 +1070,17 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   <SelectValue placeholder="Select a product..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRODUCT_OPTIONS.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - ${product.price.toFixed(2)}
-                    </SelectItem>
-                  ))}
+                  {loadingProducts ? (
+                    <SelectItem value="" disabled>Loading products...</SelectItem>
+                  ) : productsError ? (
+                    <SelectItem value="" disabled>Error loading products</SelectItem>
+                  ) : (
+                    products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <Button

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, Search, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,28 +20,46 @@ interface ViewQuotesProps {
 }
 
 interface Quote {
-  id: string
+  id: number
   quote_number: string
   type_quote: string
   status: string
   customer_name: string
-  date_sent: string
+  date_sent: string | null
   created_at: string
 }
 
-// Mock data
-const mockQuotes: Quote[] = [
-  { id: "1", quote_number: "Q-001", type_quote: "straight_sale", status: "SENT", customer_name: "Acme Corp", date_sent: "2025-02-20", created_at: "2025-02-20" },
-  { id: "2", quote_number: "Q-002", type_quote: "to_project", status: "ACCEPTED", customer_name: "Tech Solutions Inc", date_sent: "2025-02-19", created_at: "2025-02-19" },
-  { id: "3", quote_number: "Q-003", type_quote: "estimate_bid", status: "DRAFT", customer_name: "BuildPro Ltd", date_sent: "2025-02-18", created_at: "2025-02-18" },
-  { id: "4", quote_number: "Q-004", type_quote: "straight_sale", status: "SENT", customer_name: "Urban Designs", date_sent: "2025-02-17", created_at: "2025-02-17" },
-  { id: "5", quote_number: "Q-005", type_quote: "to_project", status: "REJECTED", customer_name: "Coast Builders", date_sent: "2025-02-16", created_at: "2025-02-16" },
-]
-
 export default function ViewQuotes({ onBack }: ViewQuotesProps) {
-  const [quotes] = useState<Quote[]>(mockQuotes)
-  const [isLoading] = useState(false)
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+
+  // Fetch quotes on component mount
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const response = await fetch('/api/quotes?limit=50&page=1')
+        const result = await response.json()
+
+        if (result.success) {
+          setQuotes(result.data)
+        } else {
+          setError(result.message || 'Failed to fetch quotes')
+        }
+      } catch (err) {
+        setError('Network error')
+        console.error('Failed to fetch quotes:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchQuotes()
+  }, [])
 
   const filteredQuotes = quotes.filter((quote) =>
     quote.quote_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
