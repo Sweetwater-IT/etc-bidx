@@ -153,6 +153,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [taxRate, setTaxRate] = useState<number>(6)
   const [items, setItems] = useState<QuoteItem[]>([])
   const [selectedProduct, setSelectedProduct] = useState("")
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [showItemConfig, setShowItemConfig] = useState(false)
   const [itemConfig, setItemConfig] = useState({
     uom: "EA",
@@ -258,12 +259,12 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   }
 
   const addItem = () => {
-    if (!selectedProduct) {
+    if (!selectedProductId) {
       toast.error("Please select a product")
       return
     }
 
-    const product = products.find(p => p.id === selectedProduct)
+    const product = products.find(p => p.id === selectedProductId)
     if (!product) return
 
     const newItem: QuoteItem = {
@@ -279,6 +280,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
 
     setItems([...items, newItem])
     setSelectedProduct("")
+    setSelectedProductId(null)
   }
 
   const handleAddItemClick = () => {
@@ -491,6 +493,14 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           <Card className="w-full max-w-sm">
             <div className="p-6">
               <h2 className="text-lg font-bold mb-4">Configure Item</h2>
+              {selectedProductId && (
+                <div className="mb-4 p-3 bg-muted/50 rounded-md">
+                  <div className="text-sm font-medium">{selectedProduct}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Price: ${products.find(p => p.id === selectedProductId)?.price.toFixed(2) || "0.00"}
+                  </div>
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
@@ -1187,7 +1197,10 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                         <button
                           key={product.id}
                           type="button"
-                          onClick={() => setSelectedProduct(product.name)}
+                          onClick={() => {
+                            setSelectedProduct(product.name)
+                            setSelectedProductId(product.id)
+                          }}
                           className="w-full text-left p-3 hover:bg-muted/50 border-b border-border last:border-b-0 transition-colors"
                         >
                           <div className="text-sm font-medium truncate">
