@@ -62,13 +62,20 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       if (query.trim()) {
         params.append('search', query)
       }
-      params.append('limit', '20')
+      // Load more customers initially, like the web version
+      params.append('limit', query.trim() ? '100' : '1000')
+      params.append('orderBy', 'name')
+      params.append('ascending', 'true')
 
       const response = await fetch(`/api/contractors?${params}`)
       if (!response.ok) throw new Error('Failed to fetch customers')
 
       const result = await response.json()
-      setCustomers(result.data || [])
+      // Sort customers alphabetically like the web version
+      const sortedCustomers = (result.data || []).sort((a: any, b: any) =>
+        a.name.localeCompare(b.name)
+      )
+      setCustomers(sortedCustomers)
     } catch (error) {
       console.error('Failed to fetch customers:', error)
       toast.error('Failed to load customers')
@@ -102,13 +109,21 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     setCustomerPhone(contact.phone || "")
   }
 
+  // Load customers when modal opens
+  useEffect(() => {
+    if (showCustomerSearch && customers.length === 0) {
+      fetchCustomers("")
+    }
+  }, [showCustomerSearch])
+
   // Handle customer search
   const handleCustomerSearch = (query: string) => {
     setCustomerSearchQuery(query)
     if (query.trim().length >= 2) {
       fetchCustomers(query)
-    } else {
-      setCustomers([])
+    } else if (query.trim().length === 0) {
+      // Load all customers when search is cleared
+      fetchCustomers("")
     }
   }
 
@@ -459,7 +474,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   tax: item.applyTax ? taxRate : 0,
                   is_tax_percentage: item.applyTax,
                   quote_id: null,
-                  created: false,
+                  created: true,
                   notes: ""
                 }))}
                 quoteDate={new Date()}
@@ -489,8 +504,35 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 }}
                 termsAndConditions={true}
                 files={[]}
-                exclusions=""
-                terms=""
+                exclusions={`PLEASE NOTE THE FOLLOWING ITEMS OR SERVICES ARE EXCLUDED FROM OUR PROPOSAL UNLESS OTHERWISE STATED:
+\t• Traffic control supervisor, unless otherwise noted.
+\t• Notification of (including permits from) officials (i.e. police, government, DOT), business and / or property owners.
+\t• Core drilling, backfilling, grading, excavation or removal of excavated material.
+\t• Snow and / or ice removal for placement maintenance and / or removal of temporary signs.
+\t• Short-term signs and stands.
+\t• Constant surveillance, daily adjustments / resets, pedestrian protection.
+\t• Shop / plan drawings and / or layout for MPT signing.
+\t• High reach trucks and / or overhead signage.
+\t• Shadow vehicles and operators, unless specified above.
+\t• Arrow panels, message boards, shadow vehicles, radar trailers, shadow vehicles (and operators), unless specified above.
+\t• Reinstallation of signs removed by the contractor for construction.
+\t• Restoration or surface repairs.
+\t• Temporary signals, lighting, related signage.
+\t• Temporary rumble strips, pavement marking or delineators, unless otherwise specified.
+\t• Holiday or work stoppage removal of signs and / or devices.`}
+                terms={`PLEASE NOTE THE FOLLOWING CONDITIONS MUST BE INCLUDED ON ALL SUBCONTRACT AGREEMENTS:
+\t• The Contractor is responsible for all lost, stolen, damaged materials and equipment. In the event of lost, stolen or damaged material or equipment the contractor will be invoiced at replacement cost. Payment terms for lost, stolen, or damaged material are Net 30 days.
+\t• All material supplied and quoted pricing is project specific and shall only be used for the quoted project.
+\t• Payment terms for sale items accepted as a part of this proposal are Net 14 days. All rental invoices accepted as a part of this proposal are net 30 days.
+\t• Quoted pricing does not include sales tax, delivery or shipping unless explicitly stated.
+\t• No additional work will be performed without a written change order. Extra work orders signed by an agent of the contractor shall provide full payment within 30 days of invoice date, regardless of whether the project owner has paid the contractor.
+\t• If payment by owner to contractor is delayed due to a dispute between owner and contractor, not involving the work performed by Established Traffic Control, Inc. ("ETC"), then payment by the contractor to ETC shall not likewise be delayed.
+\t• All pricing for sale items is valid for 60 days from quote date. Sale items requested 60 days or more after quote date require a revised quote.
+\t• Permanent sign items are subject to a 5% escalation per year throughout the contract duration, effective December 31 of every year from original quote date to contract end.
+\t• ETC requires a minimum notice of 14 business days' (28 days for permanent signs) for all projects start and/or changes with approved drawings or additional fees may apply.
+\t• Retainage will not be withheld on subcontractor agreements less than $50,000.
+\t• No retainage will be withheld on rental or sale items regardless of value / price.
+\t• Contractor must supply certificate of insurance for rental items upon pick-up.`}
               />
             </div>
           </Card>

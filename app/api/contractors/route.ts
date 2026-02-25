@@ -6,13 +6,14 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const orderBy = searchParams.get('orderBy') || 'name';
     const ascending = searchParams.get('ascending') === 'true';
-    
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '25');
     const offset = (page - 1) * limit;
-    
+
     const filterDeleted = searchParams.get('filterDeleted') !== 'false';
-    
+    const search = searchParams.get('search')?.trim();
+
     let query = supabase
       .from('contractors')
       .select(`
@@ -49,9 +50,14 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
-      
+
     if (filterDeleted) {
       query = query.eq('is_deleted', false);
+    }
+
+    // Add search functionality
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
     }
     
     const { data, error, count } = await query;
