@@ -23,20 +23,6 @@ export async function GET(request: NextRequest) {
 
     // 📊 Counts
     if (counts) {
-      // Fetch all users for mapping
-      const { data: allUsers, error: usersError } = await supabase
-        .from("users")
-        .select("email, name");
-
-      if (usersError) {
-        return NextResponse.json(
-          { success: false, message: "Failed to fetch users", error: usersError },
-          { status: 500 }
-        );
-      }
-
-      const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
-
       const countQuery = supabase
         .from("quotes")
         .select("id, status, user_created");
@@ -50,20 +36,25 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      // Direct mapping from segment names to email addresses
+      const userEmailMap: Record<string, string> = {
+        'Napoleon': 'ndunn@establishedtraffic.com',
+        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Rad': 'rbodkin@establishedtraffic.com',
+        'Ken': 'kaustin@establishedtraffic.com',
+        'Turner': 'jturner@establishedtraffic.com',
+        'Redden': 'jredden@establishedtraffic.com',
+        'John': 'jnelson@establishedtraffic.com'
+      };
+
       // Compute counts
       const countData: any = { all: allQuotes.length };
-      const userNames = ['Napoleon', 'Eric', 'Rad', 'Ken', 'Turner', 'Redden', 'John'];
-      for (const user of userNames) {
-        const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${user}%`).maybeSingle();
-        if (creator) {
-          const { count } = await supabase
-            .from("quotes")
-            .select("id", { count: "exact", head: true })
-            .eq('user_created', creator.email);
-          countData[user] = count || 0;
-        } else {
-          countData[user] = 0;
-        }
+      for (const [segmentName, email] of Object.entries(userEmailMap)) {
+        const { count } = await supabase
+          .from("quotes")
+          .select("id", { count: "exact", head: true })
+          .eq('user_created', email);
+        countData[segmentName] = count || 0;
       }
 
       return NextResponse.json(countData);
@@ -133,9 +124,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
-      if (creator) {
-        query = query.eq('user_created', creator.email);
+      // Direct mapping from segment names to email addresses
+      const userEmailMap: Record<string, string> = {
+        'Napoleon': 'ndunn@establishedtraffic.com',
+        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Rad': 'rbodkin@establishedtraffic.com',
+        'Ken': 'kaustin@establishedtraffic.com',
+        'Turner': 'jturner@establishedtraffic.com',
+        'Redden': 'jredden@establishedtraffic.com',
+        'John': 'jnelson@establishedtraffic.com'
+      };
+
+      const userEmail = userEmailMap[created_by];
+      if (userEmail) {
+        query = query.eq('user_created', userEmail);
       }
     }
 
@@ -224,9 +226,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      const { data: creator } = await supabase.from('users').select('email').ilike('name', `%${created_by}%`).maybeSingle();
-      if (creator) {
-        countQuery = countQuery.eq('user_created', creator.email);
+      // Direct mapping from segment names to email addresses
+      const userEmailMap: Record<string, string> = {
+        'Napoleon': 'ndunn@establishedtraffic.com',
+        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Rad': 'rbodkin@establishedtraffic.com',
+        'Ken': 'kaustin@establishedtraffic.com',
+        'Turner': 'jturner@establishedtraffic.com',
+        'Redden': 'jredden@establishedtraffic.com',
+        'John': 'jnelson@establishedtraffic.com'
+      };
+
+      const userEmail = userEmailMap[created_by];
+      if (userEmail) {
+        countQuery = countQuery.eq('user_created', userEmail);
       }
     }
 
