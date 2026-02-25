@@ -294,7 +294,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [selectedProduct, setSelectedProduct] = useState("")
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [showItemConfig, setShowItemConfig] = useState(false)
-  const [itemConfigStep, setItemConfigStep] = useState<'basic' | 'notes'>('basic')
+  const [itemConfigStep, setItemConfigStep] = useState<'basic' | 'notes' | 'single'>('basic')
   const [itemConfig, setItemConfig] = useState({
     uom: "EA",
     qty: 1,
@@ -467,24 +467,29 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    // Check if selected product is MPT or permanent sign item (only these need two-step modal)
     const product = products.find(p => p.id === selectedProductId)
-    if (product && (product.category === 'mpt' || product.category === 'permanent_sign')) {
+    if (!product) return
+
+    // Check if selected product is MPT or permanent sign item (these need two-step modal)
+    if (product.category === 'mpt' || product.category === 'permanent_sign') {
+      // MPT/Permanent sign items: two-step modal
       const placeholders = parseSquareBrackets(product.notes)
       if (placeholders.length > 0) {
-        // MPT/Permanent sign item with variables - initialize variables object
+        // Initialize variables object for template
         const initialVariables: Record<string, string> = {}
         placeholders.forEach(placeholder => {
           initialVariables[placeholder] = ""
         })
         setItemConfig(prev => ({ ...prev, variables: initialVariables }))
       } else {
-        // MPT/Permanent sign item without variables - clear variables
+        // MPT/Permanent sign item without variables
         setItemConfig(prev => ({ ...prev, variables: {} }))
       }
+      setItemConfigStep('basic') // Start with basic step
     } else {
-      // Regular item (bid, sale, rental) - no variables
+      // Regular items (bid, sale, rental): single-step modal
       setItemConfig(prev => ({ ...prev, variables: {} }))
+      setItemConfigStep('single') // Single step for regular items
     }
 
     setShowItemConfig(true)
