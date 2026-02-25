@@ -45,6 +45,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [productsError, setProductsError] = useState<string | null>(null)
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">("straight_sale")
   const [showPreview, setShowPreview] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0)
 
   // Customer search state
   const [customers, setCustomers] = useState<any[]>([])
@@ -443,6 +444,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
 
             <div className="flex-1 overflow-hidden">
               <BidProposalWorksheet
+                key={previewKey}
                 items={items.map(item => ({
                   id: item.id,
                   itemNumber: item.sku,
@@ -1414,7 +1416,10 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           {/* Preview Button */}
           <Button
             type="button"
-            onClick={() => setShowPreview(true)}
+            onClick={() => {
+              setPreviewKey(prev => prev + 1)
+              setShowPreview(true)
+            }}
             variant="destructive"
             className="w-full"
           >
