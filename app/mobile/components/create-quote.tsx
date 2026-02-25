@@ -294,33 +294,14 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [selectedProduct, setSelectedProduct] = useState("")
   const [selectedProductItemNumber, setSelectedProductItemNumber] = useState<string | null>(null)
   const [showItemConfig, setShowItemConfig] = useState(false)
-  const [itemConfigStep, setItemConfigStep] = useState<'basic' | 'notes' | 'single'>('basic')
   const [itemConfig, setItemConfig] = useState({
     uom: "EA",
     qty: 1,
     unitPrice: 0,
     applyTax: "no" as "yes" | "no",
-    notes: "",
-    variables: {} as Record<string, string>,
   })
 
-  // Function to parse square bracket placeholders from notes
-  const parseSquareBrackets = (notes: string) => {
-    const regex = /\[([^\]]+)\]/g
-    const placeholders: string[] = []
-    let match
-    while ((match = regex.exec(notes)) !== null) {
-      placeholders.push(match[1])
-    }
-    return placeholders
-  }
 
-  // Function to replace square brackets with variable values
-  const replaceSquareBrackets = (notes: string, variables: Record<string, string>) => {
-    return notes.replace(/\[([^\]]+)\]/g, (match, key) => {
-      return variables[key] || match
-    })
-  }
 
   // Validation functions
   const getCustomerInfoProgress = () => {
@@ -465,31 +446,6 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     if (!selectedProduct) {
       toast.error("Please select a product")
       return
-    }
-
-    const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
-    if (!product) return
-
-    // Check if selected product is MPT or permanent sign item (these need two-step modal)
-    if (product.category === 'mpt' || product.category === 'permanent_sign') {
-      // MPT/Permanent sign items: two-step modal
-      const placeholders = parseSquareBrackets(product.notes)
-      if (placeholders.length > 0) {
-        // Initialize variables object for template
-        const initialVariables: Record<string, string> = {}
-        placeholders.forEach(placeholder => {
-          initialVariables[placeholder] = ""
-        })
-        setItemConfig(prev => ({ ...prev, variables: initialVariables }))
-      } else {
-        // MPT/Permanent sign item without variables
-        setItemConfig(prev => ({ ...prev, variables: {} }))
-      }
-      setItemConfigStep('basic') // Start with basic step
-    } else {
-      // Regular items (bid, sale, rental): single-step modal
-      setItemConfig(prev => ({ ...prev, variables: {} }))
-      setItemConfigStep('single') // Single step for regular items
     }
 
     setShowItemConfig(true)
@@ -719,334 +675,129 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
         </div>
       )}
 
-      {/* Item Configuration Modal - Two Step Process */}
+      {/* Item Configuration Modal */}
       {showItemConfig && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-sm">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold">
-                  {itemConfigStep === 'basic' ? 'Configure Item' : 'Item Notes'}
-                </h2>
-                <div className="flex gap-1">
-                  <div className={`w-2 h-2 rounded-full ${itemConfigStep === 'basic' ? 'bg-primary' : 'bg-muted'}`} />
-                  <div className={`w-2 h-2 rounded-full ${itemConfigStep === 'notes' ? 'bg-primary' : 'bg-muted'}`} />
-                </div>
+                <h2 className="text-lg font-bold">Configure Item</h2>
               </div>
 
-              {selectedProductItemNumber && itemConfigStep === 'basic' && (
+              {selectedProductItemNumber && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-md">
                   <div className="text-sm font-medium">{selectedProduct}</div>
                 </div>
               )}
 
-              {itemConfigStep === 'basic' ? (
-                // Step 1: Basic Configuration
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Unit Price</Label>
-                    <InputGroup>
-                      <InputGroupButton className="px-3">$</InputGroupButton>
-                      <Input
-                        type="number"
-                        value={itemConfig.unitPrice}
-                        onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                        onFocus={(e) => e.target.select()}
-                        step="0.01"
-                        min="0"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        className="flex-1"
-                      />
-                    </InputGroup>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
-                    <InputGroup className="w-fit">
-                      <InputGroupButton
-                        onClick={decrementQuantity}
-                        disabled={itemConfig.qty <= 1}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </InputGroupButton>
-                      <InputGroupInput
-                        type="number"
-                        value={itemConfig.qty}
-                        onChange={(e) => setItemConfig(prev => ({ ...prev, qty: parseInt(e.target.value) || 1 }))}
-                        onFocus={(e) => e.target.select()}
-                        min="1"
-                        inputMode="numeric"
-                        className="w-16 text-center"
-                      />
-                      <InputGroupButton onClick={incrementQuantity}>
-                        <Plus className="h-4 w-4" />
-                      </InputGroupButton>
-                    </InputGroup>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Unit of Measure (UOM)</Label>
-                    <Select value={itemConfig.uom} onValueChange={(value) => setItemConfig(prev => ({ ...prev, uom: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="EA">EA (Each)</SelectItem>
-                        <SelectItem value="FT">FT (Feet)</SelectItem>
-                        <SelectItem value="IN">IN (Inches)</SelectItem>
-                        <SelectItem value="LB">LB (Pounds)</SelectItem>
-                        <SelectItem value="GAL">GAL (Gallons)</SelectItem>
-                        <SelectItem value="HR">HR (Hours)</SelectItem>
-                        <SelectItem value="DAY">DAY (Days)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Apply Tax</Label>
-                    <RadioGroup
-                      value={itemConfig.applyTax}
-                      onValueChange={(value) => setItemConfig(prev => ({ ...prev, applyTax: value as "yes" | "no" }))}
-                      className="flex flex-row gap-6"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="no" id="tax-no" />
-                        <Label htmlFor="tax-no" className="text-sm font-medium cursor-pointer">
-                          No
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="yes" id="tax-yes" />
-                        <Label htmlFor="tax-yes" className="text-sm font-medium cursor-pointer">
-                          Yes
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setShowItemConfig(false)
-                        setItemConfigStep('basic')
-                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "", variables: {} })
-                      }}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Unit Price</Label>
+                  <InputGroup>
+                    <InputGroupButton className="px-3">$</InputGroupButton>
+                    <Input
+                      type="number"
+                      value={itemConfig.unitPrice}
+                      onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                      onFocus={(e) => e.target.select()}
+                      step="0.01"
+                      min="0"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setItemConfigStep('notes')}
-                      className="flex-1"
-                    >
-                      Next: Notes
-                    </Button>
-                  </div>
+                    />
+                  </InputGroup>
                 </div>
-              ) : (
-                // Step 2: Notes Configuration
-                <div className="space-y-4">
-                  {(() => {
-                    const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
-                    const hasVariables = product ? parseSquareBrackets(product.notes).length > 0 : false
 
-                    if (hasVariables) {
-                      // MPT/Permanent Sign items with variables
-                      const placeholders = parseSquareBrackets(product!.notes)
-
-                      return (
-                        <>
-                          {/* Template Preview */}
-                          <div>
-                            <Label className="text-sm font-semibold mb-2 block">Template Preview</Label>
-                            <div className="p-3 bg-muted/50 rounded-md text-sm">
-                              {replaceSquareBrackets(product!.notes, itemConfig.variables)}
-                            </div>
-                          </div>
-
-                          {/* Variable Inputs */}
-                          <div>
-                            <Label className="text-sm font-semibold mb-2 block">Configure Variables</Label>
-                            <div className="space-y-3">
-                              {placeholders.map((placeholder) => (
-                                <div key={placeholder}>
-                                  <Label className="text-xs font-medium text-muted-foreground">
-                                    {placeholder.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                                  </Label>
-                                  <Input
-                                    value={itemConfig.variables[placeholder] || ""}
-                                    onChange={(e) => setItemConfig(prev => ({
-                                      ...prev,
-                                      variables: {
-                                        ...prev.variables,
-                                        [placeholder]: e.target.value
-                                      }
-                                    }))}
-                                    placeholder={`Enter ${placeholder.toLowerCase().replace(/_/g, ' ')}`}
-                                    className="mt-1"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Additional Notes */}
-                          <div>
-                            <Label className="text-sm font-semibold mb-2 block">Additional Notes</Label>
-                            <Textarea
-                              value={itemConfig.notes}
-                              onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
-                              placeholder="Enter any additional notes..."
-                              className="min-h-[80px]"
-                              maxLength={1000}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {1000 - itemConfig.notes.length} characters remaining
-                            </p>
-                          </div>
-                        </>
-                      )
-                    } else {
-                      // Regular items without variables
-                      return (
-                        <>
-                          <div>
-                            <Label className="text-sm font-semibold mb-2 block">Item Notes</Label>
-                            <Textarea
-                              value={itemConfig.notes}
-                              onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
-                              placeholder="Enter any additional notes for this item..."
-                              className="min-h-[120px]"
-                              maxLength={1000}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {1000 - itemConfig.notes.length} characters remaining
-                            </p>
-                          </div>
-
-                          {/* Notes Variables Section */}
-                          <div>
-                            <Label className="text-sm font-semibold mb-2 block">Quick Insert Variables</Label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {CUSTOMER_NAME}" }))}
-                                className="text-xs"
-                              >
-                                Customer Name
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {JOB_ADDRESS}" }))}
-                                className="text-xs"
-                              >
-                                Job Address
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {QUANTITY}" }))}
-                                className="text-xs"
-                              >
-                                Quantity
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {UOM}" }))}
-                                className="text-xs"
-                              >
-                                Unit of Measure
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {START_DATE}" }))}
-                                className="text-xs"
-                              >
-                                Start Date
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {END_DATE}" }))}
-                                className="text-xs"
-                              >
-                                End Date
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      )
-                    }
-                  })()}
-
-                  <div className="flex gap-3 mt-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setItemConfigStep('basic')}
-                      className="flex-1"
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
+                  <InputGroup className="w-fit">
+                    <InputGroupButton
+                      onClick={decrementQuantity}
+                      disabled={itemConfig.qty <= 1}
                     >
-                      Back
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        // Process the item before adding
-                        const product = products.find(p => p.name.split(" - ")[1] === selectedProductItemNumber)
-                        if (product) {
-                          const placeholders = parseSquareBrackets(product.notes)
-                          let finalNotes = itemConfig.notes
-
-                          if (placeholders.length > 0) {
-                            // For items with variables, combine template with additional notes
-                            const templateNotes = replaceSquareBrackets(product.notes, itemConfig.variables)
-                            finalNotes = templateNotes + (itemConfig.notes ? `\n\n${itemConfig.notes}` : '')
-                          }
-
-                          // Update itemConfig with final notes
-                          const finalItemConfig = { ...itemConfig, notes: finalNotes }
-                          setItemConfig(finalItemConfig)
-
-                          // Add item with processed notes
-                          const newItem: QuoteItem = {
-                            id: Math.random().toString(),
-                            sku: product.name.split(" - ")[1] || "",
-                            description: product.name.split(" - ")[0] || "",
-                            uom: finalItemConfig.uom,
-                            qty: finalItemConfig.qty,
-                            unitPrice: finalItemConfig.unitPrice,
-                            discount: 0,
-                            applyTax: finalItemConfig.applyTax === "yes",
-                          }
-
-                          setItems([...items, newItem])
-                        }
-
-                        setShowItemConfig(false)
-                        setItemConfigStep('basic')
-                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "", variables: {} })
-                      }}
-                      className="flex-1"
-                    >
-                      Add Item
-                    </Button>
-                  </div>
+                      <Minus className="h-4 w-4" />
+                    </InputGroupButton>
+                    <InputGroupInput
+                      type="number"
+                      value={itemConfig.qty}
+                      onChange={(e) => setItemConfig(prev => ({ ...prev, qty: parseInt(e.target.value) || 1 }))}
+                      onFocus={(e) => e.target.select()}
+                      min="1"
+                      inputMode="numeric"
+                      className="w-16 text-center"
+                    />
+                    <InputGroupButton onClick={incrementQuantity}>
+                      <Plus className="h-4 w-4" />
+                    </InputGroupButton>
+                  </InputGroup>
                 </div>
-              )}
+
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Unit of Measure (UOM)</Label>
+                  <Select value={itemConfig.uom} onValueChange={(value) => setItemConfig(prev => ({ ...prev, uom: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EA">EA (Each)</SelectItem>
+                      <SelectItem value="FT">FT (Feet)</SelectItem>
+                      <SelectItem value="IN">IN (Inches)</SelectItem>
+                      <SelectItem value="LB">LB (Pounds)</SelectItem>
+                      <SelectItem value="GAL">GAL (Gallons)</SelectItem>
+                      <SelectItem value="HR">HR (Hours)</SelectItem>
+                      <SelectItem value="DAY">DAY (Days)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Apply Tax</Label>
+                  <RadioGroup
+                    value={itemConfig.applyTax}
+                    onValueChange={(value) => setItemConfig(prev => ({ ...prev, applyTax: value as "yes" | "no" }))}
+                    className="flex flex-row gap-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="no" id="tax-no" />
+                      <Label htmlFor="tax-no" className="text-sm font-medium cursor-pointer">
+                        No
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="yes" id="tax-yes" />
+                      <Label htmlFor="tax-yes" className="text-sm font-medium cursor-pointer">
+                        Yes
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowItemConfig(false)
+                      setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      addItem()
+                      setShowItemConfig(false)
+                      setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
+                    }}
+                    className="flex-1"
+                  >
+                    Add Item
+                  </Button>
+                </div>
+              </div>
             </div>
           </Card>
         </div>
