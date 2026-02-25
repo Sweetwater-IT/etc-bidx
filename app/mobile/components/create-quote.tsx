@@ -54,6 +54,18 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [customerSearchQuery, setCustomerSearchQuery] = useState("")
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
 
+  // Contact search state
+  const [contacts, setContacts] = useState<any[]>([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
+  const [showContactSearch, setShowContactSearch] = useState(false)
+  const [contactSearchQuery, setContactSearchQuery] = useState("")
+  const [selectedContact, setSelectedContact] = useState<any | null>(null)
+
+  // Create modal state
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createModalType, setCreateModalType] = useState<'customer' | 'contact' | null>(null)
+  const [createModalData, setCreateModalData] = useState<Record<string, string>>({})
+
   // Fetch customers for search
   const fetchCustomers = async (query: string = "") => {
     try {
@@ -102,12 +114,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     setCustomerSearchQuery("")
   }
 
-  // Handle contact selection from customer
-  const handleContactSelect = (contact: any) => {
-    setCustomerPOC(contact.name || "")
-    setCustomerEmail(contact.email || "")
-    setCustomerPhone(contact.phone || "")
-  }
+
 
   // Load customers when modal opens
   useEffect(() => {
@@ -115,6 +122,30 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       fetchCustomers("")
     }
   }, [showCustomerSearch])
+
+  // Fetch contacts for selected customer
+  const fetchContacts = async (customerId: string, query: string = "") => {
+    try {
+      setLoadingContacts(true)
+      const params = new URLSearchParams()
+      if (query.trim()) {
+        params.append('search', query)
+      }
+      params.append('contractor_id', customerId)
+      params.append('limit', '100')
+
+      const response = await fetch(`/api/customer-contacts?${params}`)
+      if (!response.ok) throw new Error('Failed to fetch contacts')
+
+      const result = await response.json()
+      setContacts(result.data || [])
+    } catch (error) {
+      console.error('Failed to fetch contacts:', error)
+      toast.error('Failed to load contacts')
+    } finally {
+      setLoadingContacts(false)
+    }
+  }
 
   // Handle customer search
   const handleCustomerSearch = (query: string) => {
@@ -124,6 +155,90 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     } else if (query.trim().length === 0) {
       // Load all customers when search is cleared
       fetchCustomers("")
+    }
+  }
+
+  // Handle contact search
+  const handleContactSearch = (query: string) => {
+    setContactSearchQuery(query)
+    if (selectedCustomer) {
+      fetchContacts(selectedCustomer.id, query)
+    }
+  }
+
+  // Handle contact selection
+  const handleContactSelect = (contact: any) => {
+    setSelectedContact(contact)
+    setCustomerPOC(contact.name || "")
+    setCustomerEmail(contact.email || "")
+    setCustomerPhone(contact.phone || "")
+    setShowContactSearch(false)
+    setContactSearchQuery("")
+  }
+
+  // Handle create modal
+  const handleCreateModalOpen = (type: 'customer' | 'contact') => {
+    setCreateModalType(type)
+    setCreateModalData({})
+    setShowCreateModal(true)
+  }
+
+  const handleCreateModalConfirm = async () => {
+    if (createModalType === 'customer') {
+      try {
+        const response = await fetch('/api/contractors/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: createModalData.name,
+            address: createModalData.address || null,
+            url: createModalData.url || null,
+            city: createModalData.city || null,
+            state: createModalData.state || null,
+            zip: createModalData.zip || null,
+            phone: createModalData.phone || null,
+            customerNumber: createModalData.customerNumber || null
+          })
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Customer created successfully')
+          // Refresh customers list
+          fetchCustomers("")
+          setShowCreateModal(false)
+        } else {
+          toast.error(result.message || 'Failed to create customer')
+        }
+      } catch (error) {
+        console.error('Error creating customer:', error)
+        toast.error('Failed to create customer')
+      }
+    } else if (createModalType === 'contact' && selectedCustomer) {
+      try {
+        const response = await fetch('/api/customer-contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contractor_id: selectedCustomer.id,
+            name: createModalData.name,
+            role: createModalData.role || null,
+            email: createModalData.email,
+            phone: createModalData.phone || null,
+          })
+        })
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Contact created successfully')
+          // Refresh contacts list
+          fetchContacts(selectedCustomer.id, "")
+          setShowCreateModal(false)
+        } else {
+          toast.error(result.message || 'Failed to create contact')
+        }
+      } catch (error) {
+        console.error('Error creating contact:', error)
+        toast.error('Failed to create contact')
+      }
     }
   }
 
@@ -178,11 +293,13 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [selectedProduct, setSelectedProduct] = useState("")
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [showItemConfig, setShowItemConfig] = useState(false)
+  const [itemConfigStep, setItemConfigStep] = useState<'basic' | 'notes'>('basic')
   const [itemConfig, setItemConfig] = useState({
     uom: "EA",
     qty: 1,
     unitPrice: 0,
     applyTax: "no" as "yes" | "no",
+    notes: "",
   })
 
   // Validation functions
@@ -539,125 +656,236 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
         </div>
       )}
 
-      {/* Item Configuration Modal */}
+      {/* Item Configuration Modal - Two Step Process */}
       {showItemConfig && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-sm">
             <div className="p-6">
-              <h2 className="text-lg font-bold mb-4">Configure Item</h2>
-              {selectedProductId && (
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">
+                  {itemConfigStep === 'basic' ? 'Configure Item' : 'Item Notes'}
+                </h2>
+                <div className="flex gap-1">
+                  <div className={`w-2 h-2 rounded-full ${itemConfigStep === 'basic' ? 'bg-primary' : 'bg-muted'}`} />
+                  <div className={`w-2 h-2 rounded-full ${itemConfigStep === 'notes' ? 'bg-primary' : 'bg-muted'}`} />
+                </div>
+              </div>
+
+              {selectedProductId && itemConfigStep === 'basic' && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-md">
                   <div className="text-sm font-medium">{selectedProduct}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Price: ${products.find(p => p.id === selectedProductId)?.price.toFixed(2) || "0.00"}
+                </div>
+              )}
+
+              {itemConfigStep === 'basic' ? (
+                // Step 1: Basic Configuration
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Unit Price</Label>
+                    <InputGroup>
+                      <InputGroupButton className="px-3">$</InputGroupButton>
+                      <Input
+                        type="number"
+                        value={itemConfig.unitPrice}
+                        onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                        onFocus={(e) => e.target.select()}
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        className="flex-1"
+                      />
+                    </InputGroup>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
+                    <InputGroup className="w-fit">
+                      <InputGroupButton
+                        onClick={decrementQuantity}
+                        disabled={itemConfig.qty <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </InputGroupButton>
+                      <InputGroupInput
+                        type="number"
+                        value={itemConfig.qty}
+                        onChange={(e) => setItemConfig(prev => ({ ...prev, qty: parseInt(e.target.value) || 1 }))}
+                        onFocus={(e) => e.target.select()}
+                        min="1"
+                        inputMode="numeric"
+                        className="w-16 text-center"
+                      />
+                      <InputGroupButton onClick={incrementQuantity}>
+                        <Plus className="h-4 w-4" />
+                      </InputGroupButton>
+                    </InputGroup>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Unit of Measure (UOM)</Label>
+                    <Select value={itemConfig.uom} onValueChange={(value) => setItemConfig(prev => ({ ...prev, uom: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EA">EA (Each)</SelectItem>
+                        <SelectItem value="FT">FT (Feet)</SelectItem>
+                        <SelectItem value="IN">IN (Inches)</SelectItem>
+                        <SelectItem value="LB">LB (Pounds)</SelectItem>
+                        <SelectItem value="GAL">GAL (Gallons)</SelectItem>
+                        <SelectItem value="HR">HR (Hours)</SelectItem>
+                        <SelectItem value="DAY">DAY (Days)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Apply Tax</Label>
+                    <RadioGroup
+                      value={itemConfig.applyTax}
+                      onValueChange={(value) => setItemConfig(prev => ({ ...prev, applyTax: value as "yes" | "no" }))}
+                      className="flex flex-row gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="no" id="tax-no" />
+                        <Label htmlFor="tax-no" className="text-sm font-medium cursor-pointer">
+                          No
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yes" id="tax-yes" />
+                        <Label htmlFor="tax-yes" className="text-sm font-medium cursor-pointer">
+                          Yes
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowItemConfig(false)
+                        setItemConfigStep('basic')
+                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "" })
+                      }}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setItemConfigStep('notes')}
+                      className="flex-1"
+                    >
+                      Next: Notes
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Step 2: Notes Configuration
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Item Notes</Label>
+                    <Textarea
+                      value={itemConfig.notes}
+                      onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Enter any additional notes for this item..."
+                      className="min-h-[120px]"
+                      maxLength={1000}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {1000 - itemConfig.notes.length} characters remaining
+                    </p>
+                  </div>
+
+                  {/* Notes Variables Section */}
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Quick Insert Variables</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {CUSTOMER_NAME}" }))}
+                        className="text-xs"
+                      >
+                        Customer Name
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {JOB_ADDRESS}" }))}
+                        className="text-xs"
+                      >
+                        Job Address
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {QUANTITY}" }))}
+                        className="text-xs"
+                      >
+                        Quantity
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {UOM}" }))}
+                        className="text-xs"
+                      >
+                        Unit of Measure
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {START_DATE}" }))}
+                        className="text-xs"
+                      >
+                        Start Date
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {END_DATE}" }))}
+                        className="text-xs"
+                      >
+                        End Date
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setItemConfigStep('basic')}
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        addItem()
+                        setShowItemConfig(false)
+                        setItemConfigStep('basic')
+                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "" })
+                      }}
+                      className="flex-1"
+                    >
+                      Add Item
+                    </Button>
                   </div>
                 </div>
               )}
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Unit Price</Label>
-                  <Input
-                    type="number"
-                    value={itemConfig.unitPrice}
-                    onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                    onFocus={(e) => e.target.select()}
-                    step="0.01"
-                    min="0"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    className="w-full"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
-                  <InputGroup className="w-fit">
-                    <InputGroupButton
-                      onClick={decrementQuantity}
-                      disabled={itemConfig.qty <= 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </InputGroupButton>
-                    <InputGroupInput
-                      type="number"
-                      value={itemConfig.qty}
-                      onChange={(e) => setItemConfig(prev => ({ ...prev, qty: parseInt(e.target.value) || 1 }))}
-                      onFocus={(e) => e.target.select()}
-                      min="1"
-                      inputMode="numeric"
-                      className="w-16 text-center"
-                    />
-                    <InputGroupButton onClick={incrementQuantity}>
-                      <Plus className="h-4 w-4" />
-                    </InputGroupButton>
-                  </InputGroup>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Unit of Measure (UOM)</Label>
-                  <Select value={itemConfig.uom} onValueChange={(value) => setItemConfig(prev => ({ ...prev, uom: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EA">EA (Each)</SelectItem>
-                      <SelectItem value="FT">FT (Feet)</SelectItem>
-                      <SelectItem value="IN">IN (Inches)</SelectItem>
-                      <SelectItem value="LB">LB (Pounds)</SelectItem>
-                      <SelectItem value="GAL">GAL (Gallons)</SelectItem>
-                      <SelectItem value="HR">HR (Hours)</SelectItem>
-                      <SelectItem value="DAY">DAY (Days)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Apply Tax</Label>
-                  <RadioGroup
-                    value={itemConfig.applyTax}
-                    onValueChange={(value) => setItemConfig(prev => ({ ...prev, applyTax: value as "yes" | "no" }))}
-                    className="flex flex-row gap-6"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="no" id="tax-no" />
-                      <Label htmlFor="tax-no" className="text-sm font-medium cursor-pointer">
-                        No
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="yes" id="tax-yes" />
-                      <Label htmlFor="tax-yes" className="text-sm font-medium cursor-pointer">
-                        Yes
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowItemConfig(false)
-                    setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    addItem()
-                    setShowItemConfig(false)
-                    setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
-                  }}
-                  className="flex-1"
-                >
-                  Add Item
-                </Button>
-              </div>
             </div>
           </Card>
         </div>
@@ -844,19 +1072,6 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 </div>
 
                 <div>
-                  <Label htmlFor="customer-name" className="text-sm font-semibold">
-                    Customer Name *
-                  </Label>
-                  <Input
-                    id="customer-name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
                   <Label htmlFor="customer-poc" className="text-sm font-semibold">
                     Customer Point of Contact
                   </Label>
@@ -874,11 +1089,9 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // Show contact selection modal or dropdown
-                          const primaryContact = selectedCustomer.customer_contacts.find((c: any) => c.role === 'PRIMARY CONTACT') || selectedCustomer.customer_contacts[0]
-                          if (primaryContact) {
-                            handleContactSelect(primaryContact)
-                          }
+                          // Load contacts and show contact search modal
+                          fetchContacts(selectedCustomer.id, "")
+                          setShowContactSearch(true)
                         }}
                         className="px-3"
                       >
@@ -887,6 +1100,8 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                     )}
                   </div>
                 </div>
+
+
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1577,7 +1792,15 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           </div>
 
           <div className="flex justify-between items-center p-4 px-6 border-t">
-            <div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleCreateModalOpen('customer')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Customer
+              </Button>
               {selectedCustomer && (
                 <Button
                   variant="outline"
@@ -1605,6 +1828,313 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                 </Button>
               )}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contact Search Modal */}
+      <Dialog open={showContactSearch} onOpenChange={setShowContactSearch}>
+        <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>Select Contact</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search contacts by name or email..."
+                  value={contactSearchQuery}
+                  onChange={(e) => handleContactSearch(e.target.value)}
+                  className="pl-10"
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Contact Table */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            {loadingContacts ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading contacts...</p>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {contactSearchQuery ? "No contacts found matching your search." : "No contacts available for this customer."}
+                </p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Role</th>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contacts.map((contact, index) => (
+                    <tr
+                      key={contact.id}
+                      onClick={() => handleContactSelect(contact)}
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0 ${
+                        index % 2 === 0 ? "bg-background" : "bg-muted/20"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm truncate">
+                              {contact.name}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {contact.role || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {contact.email || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {contact.phone || "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center p-4 px-6 border-t">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleCreateModalOpen('contact')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Contact
+              </Button>
+              {selectedContact && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedContact(null)
+                    setCustomerPOC("")
+                    setCustomerEmail("")
+                    setCustomerPhone("")
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear Selection
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowContactSearch(false)}>
+                Cancel
+              </Button>
+              {selectedContact && (
+                <Button onClick={() => setShowContactSearch(false)}>
+                  Select Contact
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {createModalType === 'customer' ? 'Create New Customer' : 'Create New Contact'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {createModalType === 'customer' ? (
+              <>
+                <div>
+                  <Label htmlFor="create-name" className="text-sm font-semibold">
+                    Customer Name *
+                  </Label>
+                  <Input
+                    id="create-name"
+                    value={createModalData.name || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter customer name"
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="create-address" className="text-sm font-semibold">
+                    Address
+                  </Label>
+                  <Input
+                    id="create-address"
+                    value={createModalData.address || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Enter address"
+                    className="mt-2"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="create-city" className="text-sm font-semibold">
+                      City
+                    </Label>
+                    <Input
+                      id="create-city"
+                      value={createModalData.city || ''}
+                      onChange={(e) => setCreateModalData(prev => ({ ...prev, city: e.target.value }))}
+                      placeholder="Enter city"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="create-state" className="text-sm font-semibold">
+                      State
+                    </Label>
+                    <Input
+                      id="create-state"
+                      value={createModalData.state || ''}
+                      onChange={(e) => setCreateModalData(prev => ({ ...prev, state: e.target.value }))}
+                      placeholder="Enter state"
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="create-zip" className="text-sm font-semibold">
+                      ZIP Code
+                    </Label>
+                    <Input
+                      id="create-zip"
+                      value={createModalData.zip || ''}
+                      onChange={(e) => setCreateModalData(prev => ({ ...prev, zip: e.target.value }))}
+                      placeholder="Enter ZIP"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="create-phone" className="text-sm font-semibold">
+                      Phone
+                    </Label>
+                    <Input
+                      id="create-phone"
+                      value={createModalData.phone || ''}
+                      onChange={(e) => setCreateModalData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter phone"
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="create-customerNumber" className="text-sm font-semibold">
+                    Customer Number
+                  </Label>
+                  <Input
+                    id="create-customerNumber"
+                    type="number"
+                    value={createModalData.customerNumber || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, customerNumber: e.target.value }))}
+                    placeholder="Enter customer number"
+                    className="mt-2"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="create-name" className="text-sm font-semibold">
+                    Contact Name *
+                  </Label>
+                  <Input
+                    id="create-name"
+                    value={createModalData.name || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter contact name"
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="create-email" className="text-sm font-semibold">
+                    Email *
+                  </Label>
+                  <Input
+                    id="create-email"
+                    type="email"
+                    value={createModalData.email || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="create-role" className="text-sm font-semibold">
+                    Role
+                  </Label>
+                  <Select
+                    value={createModalData.role || ''}
+                    onValueChange={(value) => setCreateModalData(prev => ({ ...prev, role: value }))}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ESTIMATOR">Estimator</SelectItem>
+                      <SelectItem value="PROJECT MANAGER">Project Manager</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectItem value="FIELD / SUPERVISOR">Field / Supervisor</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="create-phone" className="text-sm font-semibold">
+                    Phone
+                  </Label>
+                  <Input
+                    id="create-phone"
+                    value={createModalData.phone || ''}
+                    onChange={(e) => setCreateModalData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Enter phone number"
+                    className="mt-2"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCreateModal(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateModalConfirm}
+              className="flex-1"
+            >
+              Create {createModalType === 'customer' ? 'Customer' : 'Contact'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
