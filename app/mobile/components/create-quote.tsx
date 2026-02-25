@@ -94,6 +94,13 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     setCustomerSearchQuery("")
   }
 
+  // Handle contact selection from customer
+  const handleContactSelect = (contact: any) => {
+    setCustomerPOC(contact.name || "")
+    setCustomerEmail(contact.email || "")
+    setCustomerPhone(contact.phone || "")
+  }
+
   // Handle customer search
   const handleCustomerSearch = (query: string) => {
     setCustomerSearchQuery(query)
@@ -158,6 +165,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const [itemConfig, setItemConfig] = useState({
     uom: "EA",
     qty: 1,
+    unitPrice: 0,
     applyTax: "no" as "yes" | "no",
   })
 
@@ -273,7 +281,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       description: product.name.split(" - ")[0] || "",
       uom: itemConfig.uom,
       qty: itemConfig.qty,
-      unitPrice: product.price,
+      unitPrice: itemConfig.unitPrice,
       discount: 0,
       applyTax: itemConfig.applyTax === "yes",
     }
@@ -503,6 +511,21 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
               )}
               <div className="space-y-4">
                 <div>
+                  <Label className="text-sm font-semibold mb-2 block">Unit Price</Label>
+                  <Input
+                    type="number"
+                    value={itemConfig.unitPrice}
+                    onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                    onFocus={(e) => e.target.select()}
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
                   <Label className="text-sm font-semibold mb-2 block">Quantity</Label>
                   <InputGroup className="w-fit">
                     <InputGroupButton
@@ -573,7 +596,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   variant="outline"
                   onClick={() => {
                     setShowItemConfig(false)
-                    setItemConfig({ uom: "EA", qty: 1, applyTax: "no" })
+                    setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
                   }}
                   className="flex-1"
                 >
@@ -584,7 +607,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   onClick={() => {
                     addItem()
                     setShowItemConfig(false)
-                    setItemConfig({ uom: "EA", qty: 1, applyTax: "no" })
+                    setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no" })
                   }}
                   className="flex-1"
                 >
@@ -793,13 +816,32 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   <Label htmlFor="customer-poc" className="text-sm font-semibold">
                     Customer Point of Contact
                   </Label>
-                  <Input
-                    id="customer-poc"
-                    value={customerPOC}
-                    onChange={(e) => setCustomerPOC(e.target.value)}
-                    placeholder="Enter POC name"
-                    className="mt-2"
-                  />
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      id="customer-poc"
+                      value={customerPOC}
+                      onChange={(e) => setCustomerPOC(e.target.value)}
+                      placeholder="Enter POC name"
+                      className="flex-1"
+                    />
+                    {selectedCustomer && selectedCustomer.customer_contacts && selectedCustomer.customer_contacts.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Show contact selection modal or dropdown
+                          const primaryContact = selectedCustomer.customer_contacts.find((c: any) => c.role === 'PRIMARY CONTACT') || selectedCustomer.customer_contacts[0]
+                          if (primaryContact) {
+                            handleContactSelect(primaryContact)
+                          }
+                        }}
+                        className="px-3"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
