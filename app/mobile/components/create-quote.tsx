@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, Save, X, Trash2, Plus, Eye, ChevronDown, Check, MoreVertical, Minus } from "lucide-react"
+import { ChevronLeft, Save, X, Trash2, Plus, Eye, Edit3, ChevronDown, Check, MoreVertical, Minus, Search, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { InputGroup, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 import BidProposalWorksheet from "@/app/quotes/create/BidProposalWorksheet"
 
 interface QuoteItem {
@@ -37,11 +39,72 @@ interface Product {
 }
 
 export default function CreateQuote({ onBack }: CreateQuoteProps) {
+  const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [productsError, setProductsError] = useState<string | null>(null)
   const [quoteType, setQuoteType] = useState<"straight_sale" | "to_project" | "estimate_bid">("straight_sale")
   const [showPreview, setShowPreview] = useState(false)
+
+  // Customer search state
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false)
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("")
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
+
+  // Fetch customers for search
+  const fetchCustomers = async (query: string = "") => {
+    try {
+      setLoadingCustomers(true)
+      const params = new URLSearchParams()
+      if (query.trim()) {
+        params.append('search', query)
+      }
+      params.append('limit', '20')
+
+      const response = await fetch(`/api/contractors?${params}`)
+      if (!response.ok) throw new Error('Failed to fetch customers')
+
+      const result = await response.json()
+      setCustomers(result.data || [])
+    } catch (error) {
+      console.error('Failed to fetch customers:', error)
+      toast.error('Failed to load customers')
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer: any) => {
+    setSelectedCustomer(customer)
+    setCustomerName(customer.display_name || customer.name || "")
+    setCustomerAddress(customer.address || "")
+    setCustomerPhone(customer.main_phone || "")
+
+    // Find primary contact
+    const primaryContact = customer.customer_contacts?.find((c: any) => c.role === 'PRIMARY CONTACT')
+    if (primaryContact) {
+      setCustomerPOC(primaryContact.name || "")
+      setCustomerEmail(primaryContact.email || "")
+    }
+
+    setShowCustomerSearch(false)
+    setCustomerSearchQuery("")
+  }
+
+  // Handle customer search
+  const handleCustomerSearch = (query: string) => {
+    setCustomerSearchQuery(query)
+    if (query.trim().length >= 2) {
+      fetchCustomers(query)
+    } else {
+      setCustomers([])
+    }
+  }
+
+
 
   // Expandable section states
   const [expandedSections, setExpandedSections] = useState({
@@ -172,6 +235,20 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
 
     fetchProducts()
   }, [])
+
+  // User autofill effect
+  useEffect(() => {
+    if (user && !etcPOC && !etcEmail && !etcPhone) {
+      // Autofill ETC information from user profile
+      const userName = user.user_metadata?.full_name || user.user_metadata?.name || ""
+      const userEmail = user.email || ""
+      const userPhone = user.user_metadata?.phone || ""
+
+      if (userName) setEtcPOC(userName)
+      if (userEmail) setEtcEmail(userEmail)
+      if (userPhone) setEtcPhone(userPhone)
+    }
+  }, [user, etcPOC, etcEmail, etcPhone])
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -676,6 +753,19 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
 
             {expandedSections.customer && (
               <div className="p-4 border-t border-border space-y-4">
+                {/* Customer Search Button */}
+                <div className="flex justify-start">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCustomerSearch(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    Search Customers
+                  </Button>
+                </div>
+
                 <div>
                   <Label htmlFor="customer-name" className="text-sm font-semibold">
                     Customer Name *
@@ -1069,28 +1159,56 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           <Card className="p-4 bg-card border-border">
             <Label className="text-sm font-semibold block mb-3">Add Items</Label>
             <div className="space-y-3">
-              <Select value={selectedProduct} onValueChange={(value) => value && setSelectedProduct(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a product..." />
-                </SelectTrigger>
-                <SelectContent>
+              {/* Searchable Product Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={selectedProduct}
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Product Search Results */}
+              {selectedProduct && (
+                <div className="max-h-40 overflow-y-auto border border-border rounded-md">
                   {loadingProducts ? (
-                    <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                    <div className="p-3 text-sm text-muted-foreground">Loading products...</div>
                   ) : productsError ? (
-                    <SelectItem value="error" disabled>Error loading products</SelectItem>
+                    <div className="p-3 text-sm text-red-500">Error loading products</div>
                   ) : (
-                    products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))
+                    products
+                      .filter(product =>
+                        product.name.toLowerCase().includes(selectedProduct.toLowerCase())
+                      )
+                      .slice(0, 10) // Limit results
+                      .map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => setSelectedProduct(product.name)}
+                          className="w-full text-left p-3 hover:bg-muted/50 border-b border-border last:border-b-0 transition-colors"
+                        >
+                          <div className="text-sm font-medium truncate">
+                            {product.name}
+                          </div>
+                        </button>
+                      ))
                   )}
-                </SelectContent>
-              </Select>
+                  {selectedProduct && !loadingProducts && !productsError &&
+                    products.filter(product =>
+                      product.name.toLowerCase().includes(selectedProduct.toLowerCase())
+                    ).length === 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">No products found</div>
+                  )}
+                </div>
+              )}
+
               <Button
                 type="button"
                 onClick={handleAddItemClick}
-                disabled={!selectedProduct}
+                disabled={!selectedProduct || loadingProducts}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -1276,6 +1394,118 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           </Button>
         </div>
       </footer>
+
+      {/* Customer Search Modal */}
+      <Dialog open={showCustomerSearch} onOpenChange={setShowCustomerSearch}>
+        <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+          <div className="flex flex-col gap-2 relative z-10 bg-background">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>Select Customer</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search customers by name..."
+                  value={customerSearchQuery}
+                  onChange={(e) => handleCustomerSearch(e.target.value)}
+                  className="pl-10"
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Customer Table */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            {loadingCustomers ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading customers...</p>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {customerSearchQuery ? "No customers found matching your search." : "Start typing to search customers."}
+                </p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Phone</th>
+                    <th className="text-left px-4 py-3 font-medium text-sm">Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((customer, index) => (
+                    <tr
+                      key={customer.id}
+                      onClick={() => handleCustomerSelect(customer)}
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0 ${
+                        index % 2 === 0 ? "bg-background" : "bg-muted/20"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">
+                                {customer.display_name || customer.name}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {customer.main_phone || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground truncate">
+                          {customer.address || "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center p-4 px-6 border-t">
+            <div>
+              {selectedCustomer && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCustomer(null)
+                    setCustomerName("")
+                    setCustomerPOC("")
+                    setCustomerPhone("")
+                    setCustomerEmail("")
+                    setCustomerAddress("")
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear Selection
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowCustomerSearch(false)}>
+                Cancel
+              </Button>
+              {selectedCustomer && (
+                <Button onClick={() => setShowCustomerSearch(false)}>
+                  Select Customer
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
