@@ -394,6 +394,32 @@ const DesignationSearcher = ({
                     autoFocus
                   />
                 </div>
+                {/* Custom Designation Entry */}
+                <div
+                  onClick={handleCustomDesignation}
+                  className="cursor-pointer transition-colors hover:bg-muted/50 border rounded-lg p-4 mb-2 border-dashed border-primary/50 bg-primary/5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <Plus className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm flex items-center gap-2 text-primary">
+                        Custom Sign
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                          CUSTOM
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Create a custom sign designation not in the database
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span>Enter your own designation</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {filteredSigns.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No MUTCD signs found.
